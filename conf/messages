@@ -138,6 +138,8 @@ dataSource.notFound=Datasource not found on datastore server. Might still be ini
 dataSource.add.pathsNotAllowed=Cannot directly add a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.
 dataSource.update.newExplicitPaths=Cannot update a dataset with new explicit paths. To add mags or layers, please use the compose functionality.
 
+agglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
+
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
 dataStore.create.failed=Failed to create DataStore.

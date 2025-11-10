@@ -35,6 +35,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
+import telemetry.SlackNotificationService
 import utils.{MetadataAssertions, WkConf}
 
 import javax.inject.Inject
@@ -140,6 +141,7 @@ class DatasetController @Inject()(userService: UserService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   usedStorageService: UsedStorageService,
                                   conf: WkConf,
+                                  slackNotificationService: SlackNotificationService,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -283,7 +285,8 @@ class DatasetController @Inject()(userService: UserService,
             searchQuery,
             request.identity.map(_._id),
             recursive.getOrElse(false),
-            limitOpt = limit
+            limitOpt = limit,
+            requestingUserOrga = request.identity.map(_._organization)
           )
         } yield Json.toJson(datasetInfos)
       } else {
@@ -581,15 +584,23 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
-  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
+  def delete(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      for {
-        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ~> FORBIDDEN
-        _ <- datasetService.deleteVirtualOrDiskDataset(dataset)
-      } yield Ok
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          for {
+            dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+            _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
+            before = Instant.now
+            _ = logger.info(
+              s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")
+            _ <- datasetService.deleteDataset(dataset)
+            _ = Instant.logSince(before, s"Deleting dataset $datasetId")
+          } yield Ok
+        }
+      }
     }
 
   def compose(): Action[ComposeRequest] =
@@ -659,11 +670,8 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
-        _ = datasetService.trackNewDataset(dataset,
-                                           request.identity,
-                                           needsConversion = false,
-                                           datasetSizeBytes = 0,
-                                           addVariantLabel = "via uploadToPaths/publish")
+        _ = logger.info(
+          s"Successfully finished uploadToPaths/publish of dataset $datasetId for user ${request.identity._id}")
       } yield Ok
     }
 

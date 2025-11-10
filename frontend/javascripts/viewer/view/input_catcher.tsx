@@ -101,7 +101,7 @@ const cursorForTool: Record<AnnotationToolId, string> = {
   TRACE: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
   ERASE_TRACE: "url(/assets/images/eraser-pointed-solid-border.svg) 0 16,auto",
   FILL_CELL: "url(/assets/images/fill-pointed-solid-border.svg) 0 16,auto",
-  PICK_CELL: "url(/assets/images/eye-dropper-solid-border.svg) 0 12,auto",
+  VOXEL_PIPETTE: "url(/assets/images/eye-dropper-solid-border.svg) 0 12,auto",
   BOUNDING_BOX: "copy",
   QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",

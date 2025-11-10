@@ -26,6 +26,9 @@ type ShowQuickSelectSettingsAction = ReturnType<typeof showQuickSelectSettingsAc
 type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipAction>;
 type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
 type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
+type SetVoxelPipetteTooltipPinnedPositionAction = ReturnType<
+  typeof setVoxelPipetteTooltipPinnedPositionAction
+>;
 type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
 type ShowContextMenuAction = ReturnType<typeof showContextMenuAction>;
 type HideContextMenuAction = ReturnType<typeof hideContextMenuAction>;
@@ -67,6 +70,7 @@ export type UiAction =
   | HideMeasurementTooltipAction
   | SetLastMeasuredPositionAction
   | SetIsMeasuringAction
+  | SetVoxelPipetteTooltipPinnedPositionAction
   | SetNavbarHeightAction
   | ShowContextMenuAction
   | HideContextMenuAction
@@ -211,6 +215,13 @@ export const setIsMeasuringAction = (isMeasuring: boolean) =>
     type: "SET_IS_MEASURING",
     isMeasuring,
   }) as const;
+
+export const setVoxelPipetteTooltipPinnedPositionAction = (position: Vector3 | null) =>
+  ({
+    type: "SET_VOXEL_PIPETTE_TOOLTIP_PINNED_POSITION",
+    position,
+  }) as const;
+
 export const setNavbarHeightAction = (navbarHeight: number) =>
   ({
     type: "SET_NAVBAR_HEIGHT",

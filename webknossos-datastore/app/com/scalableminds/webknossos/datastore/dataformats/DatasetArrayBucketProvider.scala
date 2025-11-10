@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataSourceId, ElementClass, StaticLayer}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.duration._
@@ -24,7 +24,7 @@ import scala.concurrent.ExecutionContext
 
 class DatasetArrayBucketProvider(dataLayer: StaticLayer,
                                  dataSourceId: DataSourceId,
-                                 remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                                 dataVaultServiceOpt: Option[DataVaultService],
                                  sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with FoxImplicits
@@ -69,13 +69,12 @@ class DatasetArrayBucketProvider(dataLayer: StaticLayer,
     magLocatorOpt match {
       case None => Fox.empty
       case Some(magLocator) =>
-        remoteSourceDescriptorServiceOpt match {
-          case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
+        dataVaultServiceOpt match {
+          case Some(dataVaultServiceOpt: DataVaultService) =>
             for {
-              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
-                                                                               readInstruction.dataSourceId,
-                                                                               readInstruction.dataLayer.name,
-                                                                               magLocator)
+              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(magLocator,
+                                                                     readInstruction.dataSourceId,
+                                                                     readInstruction.dataLayer.name)
               chunkContentsCache <- sharedChunkContentsCacheOpt.toFox
               datasetArray <- dataLayer.dataFormat match {
                 case DataFormat.zarr =>

@@ -52,6 +52,7 @@ import {
   getLayerByName,
   getMagInfo,
   getMappingInfo,
+  getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -1517,7 +1518,7 @@ class TracingApi {
 
   /**
    * Returns the active tool which is either
-   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "VOXEL_PIPETTE"
    */
   getAnnotationTool(): AnnotationToolId {
     return Store.getState().uiInformation.activeTool.id;
@@ -1525,7 +1526,7 @@ class TracingApi {
 
   /**
    * Sets the active tool which should be either
-   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "VOXEL_PIPETTE"
    * _Volume tracing only!_
    */
   setAnnotationTool(toolId: AnnotationToolId) {
@@ -1864,42 +1865,87 @@ class DataApi {
    */
   async getDataValue(
     layerName: string,
-    position: Vector3,
+    position: Vector3, // in layer space
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
+    respectMapping: boolean = false,
+    channelIndex: number = 0,
   ): Promise<number> {
     let zoomStep;
+    const state = Store.getState();
 
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      const layer = getLayerByName(Store.getState().dataset, layerName);
+      const layer = getLayerByName(state.dataset, layerName);
       const magInfo = getMagInfo(layer.mags);
       zoomStep = magInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
-    additionalCoordinates = additionalCoordinates || Store.getState().flycam.additionalCoordinates;
+    additionalCoordinates = additionalCoordinates || state.flycam.additionalCoordinates;
     const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
     await this.getLoadedBucket(layerName, bucketAddress);
+
+    let mapping = null;
+    if (respectMapping) {
+      const activeMappingInfo = getMappingInfoOrNull(
+        state.temporaryConfiguration.activeMappingByLayer,
+        layerName,
+      );
+      mapping =
+        activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
+          ? activeMappingInfo.mapping
+          : null;
+    }
+
     // Bucket has been loaded by now or was loaded already
-    const dataValue = cube.getDataValue(position, additionalCoordinates, null, zoomStep);
+    const dataValue = cube.getDataValue(
+      position,
+      additionalCoordinates,
+      mapping,
+      zoomStep,
+      channelIndex,
+    );
     return dataValue;
+  }
+
+  /**
+   * Returns the channel count of a layer. Except for RGB layers (which have three channels),
+   * layers always have one channel.
+   *
+   * @example
+   * api.data.getChannelCount("color") === 1; // true
+   * api.data.getChannelCount("uint32_segmentation") === 1; // true
+   * api.data.getChannelCount("rgb-layer") === 3; // true
+   */
+  getChannelCount(layerName: string): number {
+    const state = Store.getState();
+
+    const layer = getLayerByName(state.dataset, layerName);
+    const channelCount = getConstructorForElementClass(layer.elementClass)[1];
+    return channelCount;
   }
 
   /**
    * Returns the magnification that is _currently_ rendered at the given position.
    */
-  getRenderedZoomStepAtPosition(layerName: string, position: Vector3 | null | undefined): number {
-    return this.model.getCurrentlyRenderedZoomStepAtPosition(layerName, position);
+  getRenderedZoomStepAtPosition(
+    layerName: string,
+    positionInLayerSpace: Vector3 | null | undefined,
+  ): number {
+    return this.model.getCurrentlyRenderedZoomStepAtPosition(layerName, positionInLayerSpace);
   }
 
   /**
    * Returns the maginfication that will _ultimately_ be rendered at the given position, once
    * all respective buckets are loaded.
    */
-  getUltimatelyRenderedZoomStepAtPosition(layerName: string, position: Vector3): Promise<number> {
-    return this.model.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
+  getUltimatelyRenderedZoomStepAtPosition(
+    layerName: string,
+    positionInLayerSpace: Vector3,
+  ): Promise<number> {
+    return this.model.getUltimatelyRenderedZoomStepAtPosition(layerName, positionInLayerSpace);
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: BucketAddress): Promise<Bucket> {

@@ -289,6 +289,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       }
 
       if (isBrushTool(activeTool)) {
+        console.log("Brushing between:", lastPosition, addToLayerAction.position);
         const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
           lastPosition,
           addToLayerAction.position,

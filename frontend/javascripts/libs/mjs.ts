@@ -30,7 +30,7 @@ export type Vector16 = [
   number,
   number,
 ];
-export type Matrix4x4 = Vector16;
+export type Matrix4x4 = Vector16 | Float32Array;
 
 const M4x4 = {
   ...BareM4x4,
@@ -239,7 +239,7 @@ const V2 = {
     return [Math.max(vec1[0], vec2[0]), Math.max(vec1[1], vec2[1])];
   },
   scale2(a: Vector2, k: Vector2, r?: Vector2Like): Vector2Like {
-    if (r == null) r = new Float32Array(2);
+    if (r == null) r = new Array(2) as Vector2;
     r[0] = a[0] * k[0];
     r[1] = a[1] * k[1];
     return r;

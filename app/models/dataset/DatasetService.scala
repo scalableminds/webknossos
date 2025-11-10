@@ -99,7 +99,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       includeSubfolders = true,
       statusOpt = Some(DataSourceStatus.notYetUploaded),
       // Only list pending uploads since the two last weeks.
-      createdSinceOpt = Some(Instant.now - (14 days))
+      createdSinceOpt = Some(Instant.now - (14 days)),
+      requestingUserOrga = Some(organizationId)
     ) ?~> "dataset.list.fetchFailed"
 
   def createAndSetUpDataset(datasetName: String,
@@ -609,8 +610,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-      usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
-        organizationDAO.getUsedStorageForDataset(dataset._id))
+      usedStorageBytes <- if (requestingUserOpt.exists(u => u._organization == dataset._organization))
+        organizationDAO.getUsedStorageForDataset(dataset._id)
+      else Fox.successful(0L)
     } yield {
       Json.obj(
         "id" -> dataset._id,

@@ -421,6 +421,24 @@ program
   });
 
 program
+  .command("enable-storage-scan")
+  .description("Activates dataset storage scan in WEBKNOSSOS for the default datastore.")
+  .action(() => {
+    console.log("Activating dataset storage scan in WEBKNOSSOS for the default datastore...");
+    console.log(
+      callPsql(
+        `UPDATE webknossos.datastores SET reportUsedStorageEnabled = TRUE WHERE name = 'localhost'`,
+      ),
+    );
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET lastStorageScanTime = '1970-01-01T00:00:00.000Z' WHERE _id = 'sample_organization'`,
+      ),
+    );
+    console.log("✨✨ Done");
+  });
+
+program
   .command("dump-schema <schemaDir>")
   .description("Dumps current schema into a folder")
   .action((schemaDir) => {

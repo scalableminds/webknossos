@@ -263,7 +263,6 @@ const V2 = {
 
 const _tmpVec: Vector3 = [0, 0, 0];
 
-// @ts-ignore TS claims that the implementation doesn't match the overloading
 function round(v: Vector3, r?: Vector3 | null | undefined): Vector3;
 function round(v: Vector3Like, r?: Vector3Like | null | undefined) {
   if (r == null) {

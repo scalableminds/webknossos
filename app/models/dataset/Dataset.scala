@@ -900,7 +900,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       paths <- pathsStrOpts.flatten.map(UPath.fromString).toList.toSingleBox("Invalid UPath").toFox
     } yield paths
 
-  // Note equivalent in DataLayerAttachmentsDAO
+  // Note equivalent in DatasetLayerAttachmentsDAO
   def findDatasetsWithMagsInDir(absolutePath: UPath,
                                 dataStore: DataStore,
                                 ignoredDataset: ObjectId): Fox[Seq[ObjectId]] = {

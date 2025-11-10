@@ -1651,7 +1651,7 @@ export function* updateMappingWithMerge(
     targetAgglomerateId,
   );
   if (mergedMapping === activeMapping.mapping) {
-    /* TODO: in case setMappingAction is called with the same mapping
+    /* TODO #9064: in case setMappingAction is called with the same mapping
      * as already active, the reducer will set the state to ACTIVATING
      * but the listenToStoreProperty handler in mappings.ts will never be
      * triggered, because the callback is only called if the identity of the

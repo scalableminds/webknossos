@@ -30,7 +30,7 @@ export type Vector16 = [
   number,
   number,
 ];
-export type Matrix4x4 = Vector16 | Float32Array;
+export type Matrix4x4 = Vector16;
 
 const M4x4 = {
   ...BareM4x4,

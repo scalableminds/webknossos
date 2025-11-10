@@ -5,7 +5,7 @@ const glob = require("glob");
 
 const ROOT = path.resolve(".");
 const importSelectFromTypedReduxSaga =
-  /import\s*\{[^}]*\bselect\b[^}]*\}\s*from\s*['"]typed-redux-saga['"]/s;
+  /import\s*\{[^}]*\bselect\b[^}]*\}\s*from\s*['"](typed-)?redux-saga/s;
 // Relative paths from repo root to allow with untyped select statements.
 const WHITELIST = [
   // Our typed wrapper is allowed to import the not well typed variation of the select saga effect.
@@ -26,7 +26,7 @@ for (const file of files) {
 }
 
 if (violations.length > 0) {
-  console.error("\n🚨 Forbidden `select` import from typed-redux-saga found!\n");
+  console.error("\n🚨 Forbidden `select` import from (typed-)redux-saga found!\n");
   for (const file of violations) {
     console.error("  -", file);
   }

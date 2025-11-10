@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(144);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(145);
 COMMIT TRANSACTION;
 
 
@@ -437,6 +437,13 @@ CREATE TABLE webknossos.user_team_roles(
   PRIMARY KEY (_user, _team)
 );
 
+CREATE TABLE webknossos.invite_team_roles(
+  _invite TEXT CONSTRAINT _invite_objectId CHECK (_invite ~ '^[0-9a-f]{24}$') NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
+  isTeamManager BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (_invite, _team)
+);
+
 CREATE TABLE webknossos.user_experiences(
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   domain TEXT NOT NULL,
@@ -562,6 +569,9 @@ CREATE TABLE webknossos.invites(
   tokenValue Text NOT NULL,
   _organization TEXT NOT NULL,
   autoActivate BOOLEAN NOT NULL,
+  isAdmin BOOLEAN NOT NULL DEFAULT FALSE,
+  isOrganizationOwner BOOLEAN NOT NULL DEFAULT FALSE,
+  isDatasetManager BOOLEAN NOT NULL DEFAULT FALSE,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE

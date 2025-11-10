@@ -285,7 +285,8 @@ class DatasetController @Inject()(userService: UserService,
             searchQuery,
             request.identity.map(_._id),
             recursive.getOrElse(false),
-            limitOpt = limit
+            limitOpt = limit,
+            requestingUserOrga = request.identity.map(_._organization)
           )
         } yield Json.toJson(datasetInfos)
       } else {
@@ -669,11 +670,8 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
-        _ = datasetService.trackNewDataset(dataset,
-                                           request.identity,
-                                           needsConversion = false,
-                                           datasetSizeBytes = 0,
-                                           addVariantLabel = "via uploadToPaths/publish")
+        _ = logger.info(
+          s"Successfully finished uploadToPaths/publish of dataset $datasetId for user ${request.identity._id}")
       } yield Ok
     }
 

@@ -233,7 +233,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   owningOrganization: string;
   publication: null | undefined;
   tags: Array<string>;
-  usedStorageBytes: number | null;
+  usedStorageBytes: number;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -266,6 +266,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "lastUsedByUser"
   | "tags"
   | "isUnreported"
+  | "usedStorageBytes"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id: string;
@@ -295,6 +296,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     isUnreported: dataset.isUnreported,
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,
+    usedStorageBytes: dataset.usedStorageBytes,
   };
 }
 
@@ -330,6 +332,7 @@ export type NovelUserExperienceInfoType = {
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
+  suppressManyBucketUpdatesWarning?: boolean;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -760,6 +763,7 @@ export type APIFeatureToggles = {
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
+  readonly bucketSaveWarningThreshold: number;
   readonly defaultToLegacyBindings: boolean;
   readonly editableMappingsEnabled?: boolean;
   readonly optInTabs?: Array<string>;

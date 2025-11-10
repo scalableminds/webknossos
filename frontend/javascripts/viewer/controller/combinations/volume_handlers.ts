@@ -11,7 +11,10 @@ import {
   getTransformsForLayer,
   globalToLayerTransformedPosition,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
+import {
+  calculateGlobalPos,
+  PositionWithRounding,
+} from "viewer/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   addToContourListAction,
@@ -33,11 +36,11 @@ import type { WebknossosState } from "viewer/store";
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
   const globalPosRounded = calculateGlobalPos(state, pos).rounded;
-  const untransformedPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-  Store.dispatch(startEditingAction(untransformedPos, plane));
-  Store.dispatch(addToContourListAction(untransformedPos));
+  Store.dispatch(startEditingAction(layerPos, plane));
+  Store.dispatch(addToContourListAction(layerPos));
 }
 
 export function getUntransformedSegmentationPosition(
@@ -59,25 +62,25 @@ export function getUntransformedSegmentationPosition(
     layer,
     nativelyRenderedLayerName,
   );
-  const untransformedPos = transformPointUnscaled(invertTransform(segmentationTransforms))(
+  const layerPos = transformPointUnscaled(invertTransform(segmentationTransforms))(
     globalPosRounded,
   );
-  return untransformedPos;
+  return layerPos;
 }
 
 export function handleEraseStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
   const globalPosRounded = calculateGlobalPos(state, pos).rounded;
-  const untransformedPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
-  Store.dispatch(startEditingAction(untransformedPos, plane));
+  Store.dispatch(startEditingAction(layerPos, plane));
 }
 export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
   const globalPosRounded = calculateGlobalPos(state, pos).rounded;
-  const untransformedPos = getUntransformedSegmentationPosition(state, globalPosRounded);
-  Store.dispatch(addToContourListAction(untransformedPos));
+  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+  Store.dispatch(addToContourListAction(layerPos));
 }
 export function handleEndForDrawOrErase() {
   Store.dispatch(finishEditingAction());
@@ -85,13 +88,9 @@ export function handleEndForDrawOrErase() {
 }
 export function handlePickCell(pos: Point2) {
   const state = Store.getState();
-  const globalPosRounded = calculateGlobalPos(state, pos).rounded;
-  const untransformedPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+  const globalPos = calculateGlobalPos(state, pos);
 
-  return handlePickCellFromGlobalPosition(
-    untransformedPos,
-    state.flycam.additionalCoordinates || [],
-  );
+  return handlePickCellFromGlobalPosition(globalPos, state.flycam.additionalCoordinates || []);
 }
 
 const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
@@ -217,27 +216,22 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
   );
 }
-function handlePickCellFromGlobalPosition(
-  globalPos: Vector3,
+export function handlePickCellFromGlobalPosition(
+  globalPos: PositionWithRounding,
   additionalCoordinates: AdditionalCoordinate[],
 ) {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
-  if (visibleSegmentationLayer == null) {
-    return;
-  }
-  const posInLayerSpace = globalToLayerTransformedPosition(
-    globalPos,
-    visibleSegmentationLayer.name,
-    "segmentation",
-    Store.getState(),
-  );
-
-  const segmentId = getSegmentIdForPosition(globalPos);
+  const segmentId = getSegmentIdForPosition(globalPos.rounded);
 
   if (segmentId === 0) {
     return;
   }
-  Store.dispatch(setActiveCellAction(segmentId, posInLayerSpace, additionalCoordinates));
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+  if (visibleSegmentationLayer == null) {
+    return;
+  }
+  const state = Store.getState();
+  const layerPos = getUntransformedSegmentationPosition(state, globalPos.floating);
+  Store.dispatch(setActiveCellAction(segmentId, layerPos, additionalCoordinates));
 
   Store.dispatch(
     updateSegmentAction(

@@ -353,6 +353,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ = totalFileSizeInBytesOpt.foreach { reservedFileSize =>
         tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map { actualFileSize =>
           if (actualFileSize > reservedFileSize.toLong) {
+            // For the moment, the upload is not rejected, only a slack notification is sent. We’ll add the rejection again once we are certain there are no false positives.
             val msg =
               s"Finished upload for $datasetId that exceeded reserved upload size. $reservedFileSize bytes were reserved but $actualFileSize were uploaded according to FileUtils."
             logger.warn(msg)

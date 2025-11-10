@@ -22,6 +22,7 @@ declare module "mjs" {
         number,
         number,
       ]
+      | Float32Array;
 
   export default (f: Float32ArrayConstructor) => ({
     M4x4: {

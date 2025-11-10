@@ -5,7 +5,7 @@ import models.user.User
 import utils.WkConf
 import views._
 
-import java.net.URL
+import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
@@ -83,7 +83,7 @@ class DefaultMails @Inject()(conf: WkConf) {
                  autoVerify: Boolean,
                  organizationName: String,
                  senderName: String): Mail = {
-    val host = Try { new URL(uri) }.toOption.getOrElse(uri)
+    val host = Try { new URI(uri) }.toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",

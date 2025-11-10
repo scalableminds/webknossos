@@ -526,9 +526,9 @@ export class DataBucket {
     const segmentId = castForArrayType(uncastSegmentId, data);
 
     const limits = {
-      u: { min: 0, max: Constants.BUCKET_WIDTH },
-      v: { min: 0, max: Constants.BUCKET_WIDTH },
-      w: { min: 0, max: Constants.BUCKET_WIDTH },
+      u: { min: 0, max: Constants.BUCKET_WIDTH as number },
+      v: { min: 0, max: Constants.BUCKET_WIDTH as number },
+      w: { min: 0, max: Constants.BUCKET_WIDTH as number },
     };
 
     if (this.containment.type === "partial") {

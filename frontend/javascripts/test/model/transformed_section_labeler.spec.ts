@@ -171,7 +171,7 @@ describe("TransformedSectionLabeler", () => {
     ]);
   });
 
-  // Does not work yet
+  // Todo #8965. Does not work yet
   it.skip("[L4] Rotation by 90deg around all axes should be handled correctly", async () => {
     const coordinateTransformations = [
       {
@@ -231,15 +231,15 @@ describe("TransformedSectionLabeler", () => {
       false,
       [0, 1],
     ]);
-    // expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual([
-    //   "PLANE_XY",
-    //   false,
-    //   [2, 1],
-    // ]);
-    // expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual([
-    //   "PLANE_XZ",
-    //   true,
-    //   [2, 0],
-    // ]);
+    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual([
+      "PLANE_XY",
+      false,
+      [2, 1],
+    ]);
+    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual([
+      "PLANE_XZ",
+      true,
+      [2, 0],
+    ]);
   });
 });

@@ -12,8 +12,8 @@ import {
   globalToLayerTransformedPosition,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
+  type PositionWithRounding,
   calculateGlobalPos,
-  PositionWithRounding,
 } from "viewer/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {

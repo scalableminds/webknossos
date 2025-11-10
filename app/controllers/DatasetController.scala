@@ -285,7 +285,8 @@ class DatasetController @Inject()(userService: UserService,
             searchQuery,
             request.identity.map(_._id),
             recursive.getOrElse(false),
-            limitOpt = limit
+            limitOpt = limit,
+            requestingUserOrga = request.identity.map(_._organization)
           )
         } yield Json.toJson(datasetInfos)
       } else {

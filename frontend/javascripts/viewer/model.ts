@@ -23,7 +23,6 @@ import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
 
 import Deferred from "libs/async/deferred";
-import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
 const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
@@ -167,18 +166,18 @@ export class WebKnossosModel {
 
   getCurrentlyRenderedZoomStepAtPosition(
     layerName: string,
-    position: Vector3 | null | undefined,
+    positionInLayerSpace: Vector3 | null | undefined,
   ): number {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
 
     const zoomStep = getActiveMagIndexForLayer(state, layerName);
-    if (position == null) return zoomStep;
+    if (positionInLayerSpace == null) return zoomStep;
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, which magnifications are loaded and other settings,
     // the currently rendered zoom step has to be determined.
     const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(
-      position,
+      positionInLayerSpace,
       additionalCoordinates,
       zoomStep,
     );
@@ -187,7 +186,7 @@ export class WebKnossosModel {
 
   async getUltimatelyRenderedZoomStepAtPosition(
     layerName: string,
-    position: Vector3,
+    positionInLayerSpace: Vector3,
   ): Promise<number> {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
@@ -196,63 +195,11 @@ export class WebKnossosModel {
     // Depending on the zoom value, the available magnifications and other settings,
     // the ultimately rendered zoom step has to be determined.
     const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
-      position,
+      positionInLayerSpace,
       additionalCoordinates,
       zoomStep,
     );
     return renderedZoomStep;
-  }
-
-  getHoveredCellId(globalMousePosition: Vector3 | null | undefined):
-    | {
-        id: number;
-        isMapped: boolean;
-        unmappedId: number;
-      }
-    | null
-    | undefined {
-    // Returns
-    // - id (which might be mapped)
-    // - isMapped (specifies whether id is mapped)
-    // - unmappedId (equal to id if isMapped is false)
-    const segmentationLayer = this.getVisibleSegmentationLayer();
-
-    if (!segmentationLayer || !globalMousePosition) {
-      return null;
-    }
-
-    const segmentationLayerName = segmentationLayer.name;
-    const { cube } = segmentationLayer;
-    const renderedZoomStepForMousePosition = this.getCurrentlyRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      globalMousePosition,
-    );
-
-    const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
-      const state = Store.getState();
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const posInLayerSpace = globalToLayerTransformedPosition(
-        pos,
-        segmentationLayer.name,
-        "segmentation",
-        state,
-      );
-      const id = cube.getDataValue(posInLayerSpace, additionalCoordinates, null, usableZoomStep);
-      return {
-        // Note that this id can be an unmapped id even when
-        // a mapping is active, if it is a HDF5 mapping that is partially loaded
-        // and no entry exists yet for the input id.
-        id: cube.mapId(id),
-        unmappedId: id,
-      };
-    };
-
-    const { id, unmappedId } = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
-    return {
-      id,
-      isMapped: cube.isMappingEnabled(),
-      unmappedId,
-    };
   }
 
   getCubeByLayerName(name: string): DataCube {

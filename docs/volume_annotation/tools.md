@@ -24,9 +24,6 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
 - The fill behavior can be modified using the 2D/3D fill modifiers (see below).
 - This tool only takes existing labels into account and does not look at any other underlying (microscopy) layers. Have a look at the [quick-select-tool](#quick-select-tool) for quickly annotating new structures.
 
-![Segment Picker Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
-**Segment Picker**: Click any segment to use its label ID as the active segment ID and keep annotating with that ID. This is alternative to selecting the segment ID from the [Segments list](./segments_list.md) sidebar or context menu.
-
 ![Quick Select Tool](../ui/images/quickselect-tool.jpg){align=left width="60"} 
 **Quick Select**: Automatically annotate segments using either:
 

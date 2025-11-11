@@ -39,7 +39,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)).toFox ?~> s"moneySpent $moneySpent is not a valid decimal"
-      _ <- Fox.fromBool(moneySpentInDecimal > 0) ?~> "moneySpent must be a positive number"
+      _ <- Fox.fromBool(moneySpentInDecimal >= 0) ?~> "moneySpent must be a positive number"
       _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"
       commentNoOptional = comment.getOrElse(s"Adding $creditAmount credits for $moneySpentInDecimal $currency.")
       _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)

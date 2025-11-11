@@ -392,7 +392,8 @@ function JobListView() {
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
       job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
-      job.type === APIJobType.INFER_MITOCHONDRIA
+      job.type === APIJobType.INFER_MITOCHONDRIA ||
+      job.type === APIJobType.INFER_INSTANCES
     ) {
       return (
         <span>

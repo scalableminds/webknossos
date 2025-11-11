@@ -7,12 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
 import com.webauthn4j.data.client.challenge.Challenge
-import com.webauthn4j.data.{
-  AuthenticationParameters,
-  PublicKeyCredentialParameters,
-  PublicKeyCredentialType,
-  RegistrationParameters
-}
+import com.webauthn4j.data.{AuthenticationParameters, PublicKeyCredentialParameters, PublicKeyCredentialType, RegistrationParameters}
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
@@ -22,6 +17,7 @@ import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
+import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
@@ -444,7 +440,8 @@ class AuthenticationController @Inject()(
                                              request.identity,
                                              request.body.autoActivate,
                                              request.body.isAdmin,
-                                             request.body.isDatasetManager))
+                                             request.body.isDatasetManager,
+              request.body.teamMemberships))
         _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
       } yield Ok
@@ -982,11 +979,11 @@ class AuthenticationController @Inject()(
 }
 
 case class InviteParameters(
-    recipients: List[String],
+    recipients: Seq[String],
     autoActivate: Boolean,
     isAdmin: Boolean,
-    isDatasetManager: Boolean
-    // TODO team roles
+    isDatasetManager: Boolean,
+    teamMemberships: Seq[TeamMembership]
 )
 
 object InviteParameters {

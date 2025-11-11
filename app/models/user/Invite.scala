@@ -11,6 +11,7 @@ import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import models.team.TeamMembership
 import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -46,10 +47,12 @@ class InviteService @Inject()(conf: WkConf,
                          sender: User,
                          autoActivate: Boolean,
                          isAdmin: Boolean,
-                         isDatasetManager: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+                         isDatasetManager: Boolean,
+                         teamMemberships: Seq[TeamMembership])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate, isAdmin, isDatasetManager))
       _ <- inviteDAO.insertOne(invite)
+      // TODO insert teamMemberships
       _ <- sendInviteMail(recipient, sender, invite)
     } yield ()
 

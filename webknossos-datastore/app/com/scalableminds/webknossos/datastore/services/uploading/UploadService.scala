@@ -357,7 +357,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             val msg =
               s"Finished upload for $datasetId that exceeded reserved upload size. $reservedFileSize bytes were reserved but $actualFileSize were uploaded according to FileUtils."
             logger.warn(msg)
-            slackNotificationService.noticeTooLargeUploadChunkRequest(msg)
+            slackNotificationService.noticeTooLargeUploadRequest(msg)
           }
         }
       }

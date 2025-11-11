@@ -5,7 +5,6 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -38,16 +37,20 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: List[MagPathInfo])
+case class DataSourcePathInfo(dataSourceId: DataSourceId,
+                              magPathInfos: Seq[RealPathInfo],
+                              attachmentPathInfos: Seq[RealPathInfo]) {
+  def nonEmpty: Boolean = magPathInfos.nonEmpty || attachmentPathInfos.nonEmpty
+}
 
 object DataSourcePathInfo {
   implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
 }
 
-case class MagPathInfo(layerName: String, mag: Vec3Int, path: UPath, realPath: UPath, hasLocalData: Boolean)
+case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean)
 
-object MagPathInfo {
-  implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
+object RealPathInfo {
+  implicit val jsonFormat: OFormat[RealPathInfo] = Json.format[RealPathInfo]
 }
 
 trait RemoteWebknossosClient {
@@ -108,8 +111,8 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSources)
 
-  def reportRealPaths(dataSourcePaths: List[DataSourcePathInfo]): Fox[_] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
+  def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/realpaths")
       .addQueryParam("key", dataStoreKey)
       .silent
       .putJson(dataSourcePaths)

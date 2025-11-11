@@ -139,11 +139,15 @@ function JobListView() {
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   useEffect(() => {
-    fetchData();
+    initialize();
+  }, []);
+
+  async function initialize() {
+    await fetchData();
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
     setIsLoading(false);
-  }, []);
+  }
 
   async function fetchData() {
     setJobs(await getJobs());
@@ -303,6 +307,12 @@ function JobListView() {
     } else {
       return <span>{job.type}</span>;
     }
+  }
+
+  function renderWorkflowLink(__: any, job: APIJob) {
+    return job.voxelyticsWorkflowHash != null ? (
+      <Link to={`/workflows/${job.voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+    ) : null;
   }
 
   function renderActions(__: any, job: APIJob) {
@@ -507,15 +517,18 @@ function JobListView() {
             )}
           />
           <Column
+            title="Cost in Credits"
+            key="creditCost"
+            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
+          />
+          {isCurrentUserSuperUser ? (
+            <Column title="Workflow" key="workflow" width={150} render={renderWorkflowLink} />
+          ) : null}
+          <Column
             title="State"
             key="state"
             render={renderState}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
-          />
-          <Column
-            title="Cost in Credits"
-            key="creditCost"
-            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

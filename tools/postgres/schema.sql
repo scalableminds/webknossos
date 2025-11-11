@@ -166,14 +166,16 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
 CREATE TYPE webknossos.LAYER_ATTACHMENT_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh', 'cumsum');
 CREATE TYPE webknossos.LAYER_ATTACHMENT_DATAFORMAT AS ENUM ('hdf5', 'zarr3', 'json', 'neuroglancerPrecomputed');
 CREATE TABLE webknossos.dataset_layer_attachments(
-   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
-   layerName TEXT NOT NULL,
-   name TEXT NOT NULL,
-   path TEXT NOT NULL,
-   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
-   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
-   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
-   PRIMARY KEY(_dataset, layerName, name, type)
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  layerName TEXT NOT NULL,
+  name TEXT NOT NULL,
+  path TEXT NOT NULL,
+  realPath TEXT,
+  hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
+  type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
+  dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
+  uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY(_dataset, layerName, name, type)
 );
 
 CREATE TABLE webknossos.dataset_allowedTeams(

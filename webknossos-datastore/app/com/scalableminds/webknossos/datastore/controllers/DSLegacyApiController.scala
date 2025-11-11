@@ -555,7 +555,8 @@ class DSLegacyApiController @Inject()(
       // Dataset is not present in DB. This can be because reload was called after a dataset was written into the directory
       val dataSource = dataSourceService.dataSourceFromDir(
         dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
-        organizationId)
+        organizationId,
+        resolveMagPaths = true)
       dataSource match {
         case UsableDataSource(_, _, _, _, _) =>
           for {

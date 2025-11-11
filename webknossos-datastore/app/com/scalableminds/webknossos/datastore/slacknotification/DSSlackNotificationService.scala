@@ -25,13 +25,13 @@ class DSSlackNotificationService @Inject()(rpc: RPC, config: DataStoreConfig) ex
 
   def noticeFailedUploadRequest(msg: String): Unit =
     slackClient.warn(
-      title = "Failed upload request",
+      title = "Failed dataset upload request",
       msg = msg
     )
 
-  def noticeTooLargeUploadChunkRequest(msg: String): Unit =
+  def noticeTooLargeUploadRequest(msg: String): Unit =
     slackClient.warn(
-      title = "Too large total upload",
+      title = "Too large dataset upload",
       msg = msg
     )
 }

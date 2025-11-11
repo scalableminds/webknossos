@@ -159,7 +159,7 @@ const defaultState: WebknossosState = {
     lastUsedByUser: 0,
     sortingKey: 123,
     publication: null,
-    usedStorageBytes: null,
+    usedStorageBytes: 0,
   },
   annotation: {
     ...initialAnnotationInfo,
@@ -276,6 +276,9 @@ const defaultState: WebknossosState = {
     measurementToolInfo: {
       lastMeasuredPosition: null,
       isMeasuring: false,
+    },
+    voxelPipetteToolInfo: {
+      pinnedPosition: null,
     },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
     contextInfo: {

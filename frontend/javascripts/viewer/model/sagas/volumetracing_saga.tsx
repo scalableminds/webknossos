@@ -2,7 +2,7 @@ import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
-import type { ContourMode, OrthoView, OverwriteMode, Vector3 } from "viewer/constants";
+import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
@@ -13,6 +13,7 @@ import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { AnnotationLayerEnum } from "types/api_types";
+import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
@@ -22,7 +23,7 @@ import {
   isTraceTool,
   isVolumeDrawingTool,
 } from "viewer/model/accessors/tool_accessor";
-import { calculateMaybeGlobalPos } from "viewer/model/accessors/view_mode_accessor";
+import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -611,22 +612,6 @@ function* maintainSegmentsMap(): Saga<void> {
   );
 }
 
-function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
-  return yield* select((state) => {
-    const mousePosition = state.temporaryConfiguration.mousePosition;
-
-    if (mousePosition) {
-      const [x, y] = mousePosition;
-      return calculateMaybeGlobalPos(state, {
-        x,
-        y,
-      })?.rounded;
-    }
-
-    return undefined;
-  });
-}
-
 function* updateHoveredSegmentId(): Saga<void> {
   const activeViewport = yield* select((store) => store.viewModeData.plane.activeViewport);
 
@@ -634,16 +619,16 @@ function* updateHoveredSegmentId(): Saga<void> {
     return;
   }
 
-  const globalMousePosition = yield* call(getGlobalMousePosition);
-  const hoveredSegmentInfo = yield* call(
-    { context: Model, fn: Model.getHoveredCellId },
-    globalMousePosition,
-  );
-  // Note that hoveredSegmentInfo.id can be an unmapped id even when
+  const globalMousePosition = yield* select(getGlobalMousePositionFloating);
+
+  // Note that `id` can be an unmapped id even when
   // a mapping is active, if it is a HDF5 mapping that is partially loaded
   // and no entry exists yet for the input id.
-  const id = hoveredSegmentInfo != null ? hoveredSegmentInfo.id : 0;
-  const unmappedId = hoveredSegmentInfo != null ? hoveredSegmentInfo.unmappedId : 0;
+  const { mapped: id, unmapped: unmappedId } =
+    globalMousePosition != null
+      ? getSegmentIdInfoForPosition(globalMousePosition)
+      : { mapped: 0, unmapped: 0 };
+
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,
   );

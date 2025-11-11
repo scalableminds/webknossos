@@ -192,7 +192,7 @@ describe("VolumeTracing", () => {
     newState = UiReducer(newState, cycleToolAction());
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.FILL_CELL);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.PICK_CELL);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.VOXEL_PIPETTE);
     newState = UiReducer(newState, cycleToolAction());
     expect(newState.uiInformation.activeTool).toBe(AnnotationTool.QUICK_SELECT);
     newState = UiReducer(newState, cycleToolAction());

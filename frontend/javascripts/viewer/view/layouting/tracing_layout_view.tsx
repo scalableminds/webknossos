@@ -21,6 +21,7 @@ import MergerModeController from "viewer/controller/merger_mode_controller";
 import { destroySceneController } from "viewer/controller/scene_controller_provider";
 import UrlManager from "viewer/controller/url_manager";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction } from "viewer/model/actions/actions";
 import { resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -52,6 +53,7 @@ import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skel
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
 import TabTitle from "../components/tab_title_component";
+import VoxelValueTooltip from "../voxel_pipette_tooltip";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
@@ -316,7 +318,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isUpdateTracingAllowed, distanceMeasurementTooltipPosition } = this.props;
+    const { isUpdateTracingAllowed } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -338,10 +340,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
         {status === "loaded" && <WkContextMenu />}
-
-        {status === "loaded" && distanceMeasurementTooltipPosition != null && (
-          <DistanceMeasurementTooltip />
-        )}
 
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
@@ -399,6 +397,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   height: "100%",
                 }}
               >
+                {status === "loaded" && this.props.activeTool === AnnotationTool.VOXEL_PIPETTE && (
+                  <VoxelValueTooltip />
+                )}
+                {status === "loaded" && MeasurementTools.includes(this.props.activeTool) && (
+                  <DistanceMeasurementTooltip />
+                )}
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
                   <React.Fragment>
@@ -441,8 +445,7 @@ function mapStateToProps(state: WebknossosState) {
     is2d: is2dDataset(state.dataset),
     displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
-    distanceMeasurementTooltipPosition:
-      state.uiInformation.measurementToolInfo.lastMeasuredPosition,
+    activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
   };

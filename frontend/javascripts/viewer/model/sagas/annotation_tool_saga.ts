@@ -114,7 +114,7 @@ export function* watchToolReset(): Saga<never> {
   while (true) {
     yield* take("ESCAPE");
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
-    if (MeasurementTools.indexOf(activeTool) >= 0) {
+    if (MeasurementTools.includes(activeTool)) {
       const sceneController = yield* call(getSceneController);
       const geometry =
         activeTool === AnnotationTool.AREA_MEASUREMENT
@@ -124,6 +124,8 @@ export function* watchToolReset(): Saga<never> {
       geometry.reset();
       yield* put(hideMeasurementTooltipAction());
       yield* put(setIsMeasuringAction(false));
+    } else if (activeTool === AnnotationTool.VOXEL_PIPETTE) {
+      yield* put(hideMeasurementTooltipAction());
     }
   }
 }

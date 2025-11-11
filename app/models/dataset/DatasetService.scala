@@ -99,7 +99,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       includeSubfolders = true,
       statusOpt = Some(DataSourceStatus.notYetUploaded),
       // Only list pending uploads since the two last weeks.
-      createdSinceOpt = Some(Instant.now - (14 days))
+      createdSinceOpt = Some(Instant.now - (14 days)),
+      requestingUserOrga = Some(organizationId)
     ) ?~> "dataset.list.fetchFailed"
 
   def createAndSetUpDataset(datasetName: String,
@@ -475,26 +476,26 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
-  private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
-    if (pathInfo.magPathInfos.isEmpty) {
-      Fox.successful(())
-    } else {
-      val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
-      dataset.flatMap {
-        case Full(dataset) if !dataset.isVirtual =>
-          datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
-        case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
-          Fox.successful(())
-        case Empty => // Dataset reported but ignored (non-existing/forbidden org)
-          Fox.successful(())
-        case e: EmptyBox =>
-          Fox.failure("dataset.notFound", e)
-      }
+  private def updateRealPathsForDataSource(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val datasetBox = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
+    datasetBox.flatMap {
+      case Full(dataset) if !dataset.isVirtual =>
+        for {
+          _ <- datasetMagsDAO.updateMagRealPathsForDataset(dataset._id, pathInfo.magPathInfos)
+          _ <- datasetLayerAttachmentsDAO.updateAttachmentRealPathsForDataset(dataset._id, pathInfo.attachmentPathInfos)
+        } yield ()
+      case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
+        Fox.successful(())
+      case Empty => // Dataset reported but ignored (non-existing/forbidden org)
+        Fox.successful(())
+      case e: EmptyBox =>
+        Fox.failure("dataset.notFound", e)
     }
+  }
 
   def updateRealPaths(pathInfos: List[DataSourcePathInfo])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.serialCombined(pathInfos)(updateRealPath)
+      _ <- Fox.serialCombined(pathInfos)(updateRealPathsForDataSource)
     } yield ()
 
   def validatePaths(paths: Seq[UPath], dataStore: DataStore): Fox[Unit] =
@@ -609,8 +610,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-      usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
-        organizationDAO.getUsedStorageForDataset(dataset._id))
+      usedStorageBytes <- if (requestingUserOpt.exists(u => u._organization == dataset._organization))
+        organizationDAO.getUsedStorageForDataset(dataset._id)
+      else Fox.successful(0L)
     } yield {
       Json.obj(
         "id" -> dataset._id,

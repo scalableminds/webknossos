@@ -209,7 +209,7 @@ export const finishEditingAction = () =>
 
 export const setActiveCellAction = (
   segmentId: number,
-  somePosition?: Vector3,
+  somePosition?: Vector3, // in layer space
   someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   activeUnmappedSegmentId?: number | null,
 ) =>

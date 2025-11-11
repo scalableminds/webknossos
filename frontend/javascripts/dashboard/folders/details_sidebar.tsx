@@ -204,7 +204,10 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Used Storage</div>
-          <Tooltip title="Note that linked and remote layers aren’t measured." placement="left">
+          <Tooltip
+            title={`${Intl.NumberFormat().format(fullDataset.usedStorageBytes)} bytes`}
+            placement="left"
+          >
             <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
           </Tooltip>
         </div>

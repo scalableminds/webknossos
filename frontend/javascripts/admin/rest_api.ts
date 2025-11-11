@@ -2260,6 +2260,7 @@ export type MinCutTargetEdge = {
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
+  version: number,
   segmentsInfo: {
     partition1: NumberLike[];
     partition2: NumberLike[];
@@ -2279,6 +2280,7 @@ export async function getEdgesForAgglomerateMinCut(
             partition1: segmentsInfo.partition1.map(Number),
             partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),
+            version,
           },
         },
       ),

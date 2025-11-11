@@ -200,6 +200,7 @@ const mockEdgesForAgglomerateMinCut = (
     async (
       _tracingStoreUrl: string,
       _tracingId: string,
+      version: number,
       segmentsInfo: {
         partition1: NumberLike[];
         partition2: NumberLike[];
@@ -208,6 +209,9 @@ const mockEdgesForAgglomerateMinCut = (
         editableMappingId: string;
       },
     ): Promise<Array<MinCutTargetEdge>> => {
+      if (version !== 7) {
+        throw new Error("Unexpected version of min cut request:" + version);
+      }
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
       if (agglomerateId === 1 && _.isEqual(partition1, [3]) && _.isEqual(partition2, [2])) {
         return [

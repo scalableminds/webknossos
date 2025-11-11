@@ -193,6 +193,7 @@ describe("Proofreading (with mesh actions)", () => {
       async (
         _tracingStoreUrl: string,
         _tracingId: string,
+        version: number,
         segmentsInfo: {
           partition1: NumberLike[];
           partition2: NumberLike[];
@@ -201,6 +202,9 @@ describe("Proofreading (with mesh actions)", () => {
           editableMappingId: string;
         },
       ): Promise<Array<MinCutTargetEdge>> => {
+        if (version !== 6) {
+          throw new Error("Unexpected version of min cut request:" + version);
+        }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
         if (agglomerateId === 6 && _.isEqual(partition1, [1337]) && _.isEqual(partition2, [1338])) {
           return [
@@ -411,6 +415,7 @@ describe("Proofreading (with mesh actions)", () => {
       async (
         _tracingStoreUrl: string,
         _tracingId: string,
+        version: number,
         segmentsInfo: {
           partition1: NumberLike[];
           partition2: NumberLike[];
@@ -419,6 +424,9 @@ describe("Proofreading (with mesh actions)", () => {
           editableMappingId: string;
         },
       ): Promise<Array<MinCutTargetEdge>> => {
+        if (version !== 6) {
+          throw new Error("Unexpected version of min cut request:" + version);
+        }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
         if (
           agglomerateId === 1 &&

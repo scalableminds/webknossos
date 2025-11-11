@@ -433,7 +433,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracing, annotationVersion } = preparation;
   let { activeMapping } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
@@ -506,6 +506,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       agglomerateFileMag,
       volumeTracingId,
       sourceTree,
+      annotationVersion,
       items,
     );
     if (hasErrored) {
@@ -615,6 +616,7 @@ function* performMinCut(
   agglomerateFileMag: Vector3,
   volumeTracingId: string,
   sourceTree: Tree | null,
+  version: number,
   items: UpdateActionWithoutIsolationRequirement[],
 ): Saga<[boolean, MinCutTargetEdge[]]> {
   if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -639,6 +641,7 @@ function* performMinCut(
       getEdgesForAgglomerateMinCut,
       tracingStoreUrl,
       volumeTracingId,
+      version,
       segmentsInfo,
     );
   } catch (exception) {
@@ -705,7 +708,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     return;
   }
   const volumeTracingId = preparation.volumeTracing.tracingId;
-  const { agglomerateFileMag } = preparation;
+  const { agglomerateFileMag, annotationVersion } = preparation;
   const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));
 
   const items: UpdateActionWithoutIsolationRequirement[] = [];
@@ -719,6 +722,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
     agglomerateFileMag,
     volumeTracingId,
     null,
+    annotationVersion,
     items,
   );
   if (hasErrored || edgesToRemove.length === 0) {
@@ -951,7 +955,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (!preparation) {
     return;
   }
-  let { agglomerateFileMag, volumeTracing, activeMapping } = preparation;
+  let { agglomerateFileMag, volumeTracing, activeMapping, annotationVersion } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
   const idInfos = yield* call(gatherInfoForOperation, action, preparation);
 
@@ -1019,6 +1023,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       agglomerateFileMag,
       volumeTracingId,
       null,
+      annotationVersion,
       updateActions,
     );
     if (hasErrored) {
@@ -1308,10 +1313,12 @@ type Preparation = {
   ) => Promise<{ agglomerateId: number; unmappedId: number }>;
   activeMapping: ActiveMappingInfo;
   volumeTracing: VolumeTracing & { mappingName: string };
+  annotationVersion: number;
 };
 
 function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
     return null;
@@ -1433,6 +1440,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     mapSegmentId,
     activeMapping,
     volumeTracing: { ...volumeTracing, mappingName },
+    annotationVersion,
   };
 }
 

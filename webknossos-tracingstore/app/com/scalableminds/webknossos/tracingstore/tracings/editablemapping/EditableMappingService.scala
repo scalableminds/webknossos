@@ -59,7 +59,8 @@ case class MinCutParameters(
     partition1: List[Long],
     partition2: List[Long],
     mag: Vec3Int,
-    agglomerateId: Long
+    agglomerateId: Long,
+    version: Long,
 )
 
 object MinCutParameters {

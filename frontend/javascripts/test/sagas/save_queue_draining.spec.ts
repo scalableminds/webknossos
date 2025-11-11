@@ -16,7 +16,7 @@ import {
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
-} from "viewer/model/sagas/saving/save_queue_draining";
+} from "viewer/model/sagas/saving/save_queue_draining_saga";
 import { TIMESTAMP } from "test/global_mocks";
 import { sendSaveRequestWithToken } from "admin/rest_api";
 import "test/helpers/apiHelpers"; // ensures Store is available

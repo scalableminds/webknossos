@@ -37,9 +37,9 @@ import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/pro
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updateSaveQueueEntriesToStateAfterRebase,
-} from "./rebasing_helpers";
-import { pushSaveQueueAsync } from "./save_queue_draining";
-import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling";
+} from "./rebasing_helpers_sagas";
+import { pushSaveQueueAsync } from "./save_queue_draining_saga";
+import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.

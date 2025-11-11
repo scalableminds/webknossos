@@ -52,7 +52,7 @@ class InviteService @Inject()(conf: WkConf,
     for {
       invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate, isAdmin, isDatasetManager))
       _ <- inviteDAO.insertOne(invite)
-      // TODO insert teamMemberships
+      _ <- inviteDAO.insertTeamMemberships(invite._id, teamMemberships)
       _ <- sendInviteMail(recipient, sender, invite)
     } yield ()
 
@@ -135,6 +135,16 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             ${i.isAdmin}, ${i.isDatasetManager},
             ${i.expirationDateTime}, ${i.created}, ${i.isDeleted})""".asUpdate)
     } yield ()
+
+  private def insertTeamMembershipQuery(inviteId: ObjectId, teamMembership: TeamMembership) =
+    q"INSERT INTO webknossos.invite_team_roles(_user, _team, isTeamManager) VALUES($inviteId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
+
+  def insertTeamMemberships(inviteId: ObjectId, teamMemberships: Seq[TeamMembership]): Fox[Unit] = {
+    val insertQueries = teamMemberships.map(insertTeamMembershipQuery(inviteId, _))
+    for {
+      _ <- run(DBIO.sequence(insertQueries).transactionally)
+    } yield ()
+  }
 
   def deleteAllExpired(): Fox[Unit] = {
     val query = for {

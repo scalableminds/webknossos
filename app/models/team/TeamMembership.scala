@@ -20,12 +20,10 @@ class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
   def publicWrites(teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(teamMembership.teamId)
-    } yield {
+    } yield
       Json.obj(
         "id" -> teamMembership.teamId,
         "name" -> team.name,
         "isTeamManager" -> teamMembership.isTeamManager
       )
-    }
-
 }

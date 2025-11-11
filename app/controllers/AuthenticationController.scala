@@ -7,7 +7,12 @@ import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
 import com.webauthn4j.data.client.challenge.Challenge
-import com.webauthn4j.data.{AuthenticationParameters, PublicKeyCredentialParameters, PublicKeyCredentialType, RegistrationParameters}
+import com.webauthn4j.data.{
+  AuthenticationParameters,
+  PublicKeyCredentialParameters,
+  PublicKeyCredentialType,
+  RegistrationParameters
+}
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
@@ -17,7 +22,7 @@ import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
-import models.team.TeamMembership
+import models.team.{TeamDAO, TeamMembership}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
@@ -199,6 +204,7 @@ class AuthenticationController @Inject()(
     userDAO: UserDAO,
     tokenDAO: TokenDAO,
     multiUserDAO: MultiUserDAO,
+    teamDAO: TeamDAO,
     defaultMails: DefaultMails,
     conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
@@ -434,6 +440,7 @@ class AuthenticationController @Inject()(
   def sendInvites: Action[InviteParameters] = sil.SecuredAction.async(validateJson[InviteParameters]) {
     implicit request =>
       for {
+        _ <- validateInvitePermissions(request.identity, request.body)
         _ <- Fox.serialCombined(request.body.recipients)(
           recipient =>
             inviteService.inviteOneRecipient(recipient,
@@ -441,11 +448,19 @@ class AuthenticationController @Inject()(
                                              request.body.autoActivate,
                                              request.body.isAdmin,
                                              request.body.isDatasetManager,
-              request.body.teamMemberships))
+                                             request.body.teamMemberships))
         _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
       } yield Ok
   }
+
+  private def validateInvitePermissions(requestingUser: User, inviteParameters: InviteParameters): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(inviteParameters.teamMemberships)(teamMembership =>
+        userService.isTeamManagerOrAdminOf(requestingUser, teamMembership.teamId)) ?~> "Can only send invites with team roles for teams you manage."
+      _ <- Fox.runIf(inviteParameters.isDatasetManager || inviteParameters.isAdmin)(Fox.fromBool(
+        requestingUser.isAdmin)) ?~> "Only admins can send invites that promote new users to admin or dataset manager."
+    } yield ()
 
   // If a user has forgotten their password
   def handleStartResetPassword: Action[AnyContent] = Action.async { implicit request =>
@@ -987,7 +1002,7 @@ case class InviteParameters(
 )
 
 object InviteParameters {
-  implicit val jsonFormat: Format[InviteParameters] = Json.format[InviteParameters]
+  implicit val jsonReads: Reads[InviteParameters] = Json.reads[InviteParameters]
 }
 
 trait AuthForms {

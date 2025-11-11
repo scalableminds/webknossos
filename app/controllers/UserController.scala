@@ -29,7 +29,6 @@ class UserController @Inject()(userService: UserService,
                                credentialsProvider: CredentialsProvider,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
-                               teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)

@@ -1,11 +1,19 @@
 import { ColoredLogger } from "libs/utils";
-import { call, select, put } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import { call, put } from "redux-saga/effects";
+import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { actionChannel, flush } from "typed-redux-saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import {
+  setIsUpdatingAnnotationCurrentlyAllowedAction,
+  setOthersMayEditForAnnotationAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   disableSavingAction,
   dispatchEnsureHasNewestVersionAsync,
 } from "viewer/model/actions/save_actions";
+import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
@@ -19,13 +27,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import {
-  setIsUpdatingAnnotationCurrentlyAllowedAction,
-  setOthersMayEditForAnnotationAction,
-} from "viewer/model/actions/annotation_actions";
-import { WkDevFlags } from "viewer/api/wk_dev";
-import { actionChannel, flush } from "typed-redux-saga";
 
 describe("Proofreading (Poll only)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

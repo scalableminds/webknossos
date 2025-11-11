@@ -1,6 +1,8 @@
-import { actionChannel, call, flush, put, select, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import { actionChannel, call, flush, put, take } from "redux-saga/effects";
+import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   cutAgglomerateFromNeighborsAction,
   proofreadMergeAction,
@@ -9,6 +11,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
@@ -23,8 +26,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

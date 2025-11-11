@@ -1,18 +1,27 @@
-import { call, put, select, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import type { MinCutTargetEdge } from "admin/rest_api";
+import _ from "lodash";
+import { call, put, take } from "redux-saga/effects";
+import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { WkDevFlags } from "viewer/api/wk_dev";
+import { TreeTypeEnum, type Vector3 } from "viewer/constants";
+import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
+import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import {
   type NumberLike,
   type SkeletonTracing,
-  startSaga,
   type WebknossosState,
+  startSaga,
 } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";
@@ -20,14 +29,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
-import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
-import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
-import type { MinCutTargetEdge } from "admin/rest_api";
-import _ from "lodash";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 function* performMergeTreesProofreading(
   context: WebknossosTestContext,

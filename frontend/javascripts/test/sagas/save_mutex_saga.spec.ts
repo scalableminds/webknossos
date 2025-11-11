@@ -2,12 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import update from "immutability-helper";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { call, put, select, take } from "redux-saga/effects";
+import { call, put, take } from "redux-saga/effects";
 import { startSaga } from "viewer/store";
 import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading_test_utils";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import type { ServerSkeletonTracing, ServerVolumeTracing } from "types/api_types";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import { select } from "viewer/model/sagas/effect-generators";
 import {
   updateSegmentAction,
   setActiveCellAction,

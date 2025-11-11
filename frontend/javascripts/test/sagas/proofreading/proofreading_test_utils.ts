@@ -1,9 +1,15 @@
+import type { NeighborInfo } from "admin/rest_api";
 import type { RequestOptionsWithData } from "libs/request";
 import { sleep } from "libs/utils";
-import { call, put, select, take } from "redux-saga/effects";
+import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
+import {
+  type BucketOverride,
+  type WebknossosTestContext,
+  createBucketResponseFunction,
+} from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import type { APIUpdateActionBatch } from "types/api_types";
 import Constants, { type Vector3, type Vector2 } from "viewer/constants";
@@ -14,6 +20,7 @@ import { setActiveOrganizationAction } from "viewer/model/actions/organization_a
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
+import { select } from "viewer/model/sagas/effect-generators";
 import type {
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
@@ -21,12 +28,6 @@ import type {
 import type { NumberLike, SaveQueueEntry } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping } from "./proofreading_fixtures";
-import {
-  createBucketResponseFunction,
-  type BucketOverride,
-  type WebknossosTestContext,
-} from "test/helpers/apiHelpers";
-import type { NeighborInfo } from "admin/rest_api";
 import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,

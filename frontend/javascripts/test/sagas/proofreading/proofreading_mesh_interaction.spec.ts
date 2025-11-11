@@ -1,24 +1,32 @@
-import { call, put, select, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import type { MinCutTargetEdge } from "admin/rest_api";
+import _ from "lodash";
+import { call, put, take } from "redux-saga/effects";
+import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { delay } from "typed-redux-saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
+import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   minCutPartitionsAction,
   proofreadMergeAction,
   toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import {
   type ActiveMappingInfo,
   type NumberLike,
-  startSaga,
   type WebknossosState,
+  startSaga,
 } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
@@ -26,13 +34,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import type { Vector3 } from "viewer/constants";
-import type { MinCutTargetEdge } from "admin/rest_api";
-import _ from "lodash";
-import { delay } from "typed-redux-saga";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 describe("Proofreading (with mesh actions)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

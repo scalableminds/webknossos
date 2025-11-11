@@ -121,6 +121,7 @@ dataset.upload.finishFailed=Failed to finalize upload for dataset {0}.
 dataset.upload.moveToTarget.failed=Failed to move uploaded dataset to target directory.
 dataset.upload.moreBytesThanReserved=The uploaded dataset contains more bytes than originally reserved. Please make sure to reserve the correct amount of bytes.
 dataset.upload.creation.failed=Failed to create dataset.
+dataset.upload.disallowedPaths=Cannot upload a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.
 dataset.reserveUploadToPaths.noLayers=Cannot reserve upload for dataset with no layers.
 dataset.uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 dataset.explore.failed.readFile=Failed to read remote file

@@ -175,9 +175,9 @@ class DataSourceService @Inject()(
       s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel), took ${formatDuration(Instant.since(before))}: ${foundDataSources
         .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
     val msg = if (verbose) {
-      val byTeam: Map[String, Seq[DataSource]] = foundDataSources.groupBy(_.id.organizationId)
-      shortForm + ". " + byTeam.keys.map { team =>
-        val byUsable: Map[Boolean, Seq[DataSource]] = byTeam(team).groupBy(_.isUsable)
+      val byOrganization: Map[String, Seq[DataSource]] = foundDataSources.groupBy(_.id.organizationId)
+      shortForm + ". " + byOrganization.keys.map { team =>
+        val byUsable: Map[Boolean, Seq[DataSource]] = byOrganization(team).groupBy(_.isUsable)
         team + ": [" + byUsable.keys.map { usable =>
           val label = if (usable) "active: [" else "inactive: ["
           label + byUsable(usable).map { ds =>

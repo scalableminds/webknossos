@@ -112,7 +112,7 @@ class DSRemoteWebknossosClient @Inject()(
       .putJson(dataSources)
 
   def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[_] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/realpaths")
       .addQueryParam("key", dataStoreKey)
       .silent
       .putJson(dataSourcePaths)

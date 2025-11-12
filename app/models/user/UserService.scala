@@ -40,6 +40,7 @@ class UserService @Inject()(conf: WkConf,
                             teamMembershipService: TeamMembershipService,
                             datasetDAO: DatasetDAO,
                             tokenDAO: TokenDAO,
+                            inviteDAO: InviteDAO,
                             emailVerificationService: EmailVerificationService,
                             defaultMails: DefaultMails,
                             passwordHasher: PasswordHasher,
@@ -98,7 +99,8 @@ class UserService @Inject()(conf: WkConf,
              isAdmin: Boolean,
              isDatasetManager: Boolean,
              isOrganizationOwner: Boolean,
-             isEmailVerified: Boolean): Fox[User] = {
+             isEmailVerified: Boolean,
+             teamMemberships: Seq[TeamMembership]): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
@@ -111,8 +113,6 @@ class UserService @Inject()(conf: WkConf,
         isEmailVerified = isEmailVerified
       )
       _ <- multiUserDAO.insertOne(multiUser)
-      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
       newUserId = ObjectId.generate
       user = User(
         newUserId,
@@ -132,7 +132,7 @@ class UserService @Inject()(conf: WkConf,
       )
       _ <- Fox.runIf(!isEmailVerified)(emailVerificationService.sendEmailVerification(user))
       _ <- userDAO.insertOne(user)
-      _ <- Fox.combined(teamMemberships.map(userDAO.insertTeamMembership(user._id, _)))
+      _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
     } yield user
   }
 
@@ -142,15 +142,28 @@ class UserService @Inject()(conf: WkConf,
       existingIdentity: Box[User] <- userDAO
         .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
         .shiftBox
+      teamMemberships <- initialTeamMemberships(organizationId, None)
       _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
         joinOrganization(originalUser,
                          organizationId,
                          autoActivate = true,
                          isAdmin = true,
                          isDatasetManager = false,
-                         isUnlisted = true)
+                         isUnlisted = true,
+                         teamMemberships = teamMemberships)
       } else Fox.successful(())
     } yield ()
+
+  def initialTeamMemberships(organizationId: String, inviteIdOpt: Option[ObjectId]): Fox[Seq[TeamMembership]] =
+    for {
+      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
+      organizationTeamMembership = Seq(TeamMembership(organizationTeamId, isTeamManager = false))
+      inviteTeamMemberships <- inviteIdOpt match {
+        case Some(inviteId) => inviteDAO.findTeamMembershipsFor(inviteId) ?~> "failed to get invite team memberships"
+        case None           => Fox.successful(Seq.empty)
+      }
+      uniqueTeamMemberships = inviteTeamMemberships ++ organizationTeamMembership
+    } yield uniqueTeamMemberships
 
   def joinOrganization(originalUser: User,
                        organizationId: String,
@@ -158,11 +171,10 @@ class UserService @Inject()(conf: WkConf,
                        isAdmin: Boolean,
                        isDatasetManager: Boolean,
                        isUnlisted: Boolean = false,
-                       isOrganizationOwner: Boolean = false): Fox[User] =
+                       isOrganizationOwner: Boolean = false,
+                       teamMemberships: Seq[TeamMembership]): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
-      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      organizationTeamMembership = TeamMembership(organizationTeamId, isTeamManager = false)
       loginInfo = LoginInfo(CredentialsProvider.ID, newUserId.id)
       user = originalUser.copy(
         _id = newUserId,
@@ -178,7 +190,7 @@ class UserService @Inject()(conf: WkConf,
         created = Instant.now
       )
       _ <- userDAO.insertOne(user)
-      _ <- userDAO.insertTeamMembership(user._id, organizationTeamMembership)(GlobalAccessContext)
+      _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)(GlobalAccessContext)
       _ = logger.info(
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user

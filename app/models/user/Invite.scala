@@ -137,7 +137,7 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   private def insertTeamMembershipQuery(inviteId: ObjectId, teamMembership: TeamMembership) =
-    q"INSERT INTO webknossos.invite_team_roles(_user, _team, isTeamManager) VALUES($inviteId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
+    q"INSERT INTO webknossos.invite_team_roles(_invite, _team, isTeamManager) VALUES($inviteId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
 
   def insertTeamMemberships(inviteId: ObjectId, teamMemberships: Seq[TeamMembership]): Fox[Unit] = {
     val insertQueries = teamMemberships.map(insertTeamMembershipQuery(inviteId, _))
@@ -145,6 +145,14 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(DBIO.sequence(insertQueries).transactionally)
     } yield ()
   }
+
+  def findTeamMembershipsFor(inviteId: ObjectId): Fox[Seq[TeamMembership]] =
+    for {
+      rows <- run(
+        q"SELECT _team, isTeamManager FROM WEBKNOSSOS.invite_team_roles WHERE _invite = $inviteId"
+          .as[(ObjectId, Boolean)])
+      parsed = rows.map(row => TeamMembership(row._1, row._2))
+    } yield parsed
 
   def deleteAllExpired(): Fox[Unit] = {
     val query = for {

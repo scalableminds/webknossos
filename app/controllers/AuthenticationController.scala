@@ -22,7 +22,7 @@ import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
-import models.team.{TeamDAO, TeamMembership}
+import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
@@ -204,7 +204,6 @@ class AuthenticationController @Inject()(
     userDAO: UserDAO,
     tokenDAO: TokenDAO,
     multiUserDAO: MultiUserDAO,
-    teamDAO: TeamDAO,
     defaultMails: DefaultMails,
     conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
@@ -292,6 +291,8 @@ class AuthenticationController @Inject()(
                          isEmailVerified: Boolean = false): Fox[User] = {
     val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
     for {
+      teamMemberships <- userService.initialTeamMemberships(organization._id,
+                                                            inviteIdOpt = inviteBox.map(_._id).toOption)
       user <- userService.insert(
         organization._id,
         email,
@@ -302,7 +303,8 @@ class AuthenticationController @Inject()(
         isAdmin = inviteBox.map(_.isAdmin).getOrElse(false),
         isDatasetManager = inviteBox.map(_.isDatasetManager).getOrElse(false),
         isOrganizationOwner = false,
-        isEmailVerified = isEmailVerified
+        isEmailVerified = isEmailVerified,
+        teamMemberships = teamMemberships
       ) ?~> "user.creation.failed"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
@@ -419,11 +421,15 @@ class AuthenticationController @Inject()(
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser && alreadyPayingOrgaForMultiUser.isEmpty)(organizationService
         .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
-      _ <- userService.joinOrganization(request.identity,
-                                        organization._id,
-                                        autoActivate = invite.autoActivate,
-                                        isAdmin = invite.isAdmin,
-                                        isDatasetManager = invite.isDatasetManager)
+      teamMemberships <- userService.initialTeamMemberships(organization._id, Some(invite._id))
+      _ <- userService.joinOrganization(
+        request.identity,
+        organization._id,
+        autoActivate = invite.autoActivate,
+        isAdmin = invite.isAdmin,
+        isDatasetManager = invite.isDatasetManager,
+        teamMemberships = teamMemberships
+      )
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
       newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
@@ -873,6 +879,7 @@ class AuthenticationController @Inject()(
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationName) ?~> "organization.create.failed"
+                    teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
                     user <- userService.insert(
                       organization._id,
                       email,
@@ -883,7 +890,8 @@ class AuthenticationController @Inject()(
                       isAdmin = true,
                       isDatasetManager = false,
                       isOrganizationOwner = true,
-                      isEmailVerified = false
+                      isEmailVerified = false,
+                      teamMemberships = teamMemberships
                     ) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)

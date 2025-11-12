@@ -77,12 +77,14 @@ class OrganizationController @Inject()(
         owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
         org <- organizationService.createOrganization(request.body.organization, request.body.organizationName)
         user <- userDAO.findFirstByMultiUser(owner._id)
+        teamMemberships <- userService.initialTeamMemberships(org._id, inviteIdOpt = None)
         _ <- userService.joinOrganization(user,
                                           org._id,
                                           autoActivate = true,
                                           isAdmin = true,
                                           isDatasetManager = false,
-                                          isOrganizationOwner = true)
+                                          isOrganizationOwner = true,
+                                          teamMemberships = teamMemberships)
         _ <- freeCreditTransactionService.handOutMonthlyFreeCredits()
       } yield Ok(org._id)
     }
@@ -180,11 +182,13 @@ class OrganizationController @Inject()(
         multiUser <- multiUserDAO.findOneByEmail(request.body)
         organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
         user <- userDAO.findFirstByMultiUser(multiUser._id)
+        teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
         user <- userService.joinOrganization(user,
                                              organization._id,
                                              autoActivate = true,
                                              isAdmin = false,
-                                             isDatasetManager = false)
+                                             isDatasetManager = false,
+                                             teamMemberships = teamMemberships)
       } yield Ok(user._id.toString)
     }
 

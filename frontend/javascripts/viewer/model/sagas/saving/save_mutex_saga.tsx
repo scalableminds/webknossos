@@ -42,11 +42,11 @@ const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
 const ACQUIRE_MUTEX_INTERVAL = process.env.IS_TESTING ? 1 * 1000 : 60 * 1000;
 const DELAY_AFTER_FAILED_MUTEX_FETCH = process.env.IS_TESTING ? 1 * 1000 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
-const INITIAL_BACKOFF_TIME = 1000;
-const BACKOFF_TIME_MULTIPLIER = 1.5;
+const INITIAL_BACKOFF_TIME = 750;
+const BACKOFF_TIME_MULTIPLIER = 1.2;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
-const MAX_RELEASE_RETRY_INTERVAL = 30 * 1000;
+const MAX_RELEASE_RETRY_INTERVAL = 10 * 1000;
 
 export enum MutexFetchingStrategy {
   AdHoc = "AdHoc",

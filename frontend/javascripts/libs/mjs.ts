@@ -7,7 +7,7 @@ import { chunk3 } from "viewer/model/helpers/chunk";
 
 import mjs from "mjs";
 
-const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Float32Array); // todo_c can we change this
+const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Float32Array);
 
 type Vector3Like = Vector3 | Float32Array;
 type Vector2Like = Vector2 | Float32Array;

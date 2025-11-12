@@ -444,8 +444,8 @@ export function formatDurationToSeconds(durationInMillisecons: number) {
   return duration.format("s");
 }
 
-export function formatShortId(id: string): string {
-  return id.slice(-8);
+export function formatHash(id: string): string {
+  return id.slice(-6);
 }
 
 export function formatDateMedium(date: Date | number): string {

@@ -27,11 +27,10 @@ import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
-import FormattedId from "components/formatted_id";
 import TextWithDescription from "components/text_with_description";
 import update from "immutability-helper";
 import { handleGenericError } from "libs/error_handling";
-import { stringToColor } from "libs/format_utils";
+import { formatHash, stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -567,7 +566,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             }}
           />
         </Tooltip>
-        {formatShortId(annotation.id)}
+        {formatHash(annotation.id)}
       </div>
     );
   }
@@ -650,7 +649,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         width: 100,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <>
-            <FormattedId id={annotation.id} />
+            <div className="monospace-id">{this.renderIdAndCopyButton(annotation)}</div>
 
             {!this.isAnnotationEditable(annotation) ? (
               <div style={disabledColor}>{READ_ONLY_ICON} read-only</div>

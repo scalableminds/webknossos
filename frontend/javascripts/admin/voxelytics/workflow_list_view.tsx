@@ -1,7 +1,7 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { getVoxelyticsWorkflows } from "admin/rest_api";
-import { Button, Input, Progress, Spin, Table, Tooltip } from "antd";
+import { Button, Input, Progress, Table, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { usePolling } from "libs/react_hooks";
@@ -188,13 +188,6 @@ export default function WorkflowListView() {
         bordered
         rowKey={(run: RenderRunInfo) => `${run.id}-${run.workflowHash}`}
         pagination={{ pageSize: 100 }}
-        locale={{
-          emptyText: isLoading ? (
-            <Spin size="large" />
-          ) : (
-            "There are no voxelytics workflow reports yet."
-          ),
-        }}
         columns={[
           {
             title: "Workflow",

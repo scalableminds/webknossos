@@ -15,7 +15,6 @@ import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
-import FormattedId from "components/formatted_id";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -481,12 +480,19 @@ function JobListView() {
           }}
         >
           <Column
-            title="ID"
+            title="Job Id"
+            dataIndex="id"
             key="id"
             sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
-            render={(job) => <FormattedId id={job.id} />}
           />
           <Column title="Description" key="datasetName" render={renderDescription} />
+          <Column
+            title="Created at"
+            key="createdAt"
+            render={(job) => <FormattedDate timestamp={job.createdAt} />}
+            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
+            defaultSortOrder="descend"
+          />
           <Column
             title="Owner"
             dataIndex="owner"
@@ -500,22 +506,15 @@ function JobListView() {
             )}
           />
           <Column
-            title="Date"
-            key="createdAt"
-            render={(job) => <FormattedDate timestamp={job.createdAt} />}
-            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
-            defaultSortOrder="descend"
+            title="State"
+            key="state"
+            render={renderState}
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
           />
           <Column
             title="Cost in Credits"
             key="creditCost"
             render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
-          />
-          <Column
-            title="State"
-            key="state"
-            render={renderState}
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

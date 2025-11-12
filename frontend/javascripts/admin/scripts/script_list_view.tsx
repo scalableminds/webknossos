@@ -2,7 +2,6 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
 import { App, Button, Input, Spin, Table } from "antd";
-import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
@@ -140,8 +139,8 @@ function ScriptListView() {
             <Column
               title="ID"
               dataIndex="id"
-              render={(id) => <FormattedId id={id} />}
               key="id"
+              className="monospace-id"
               sorter={Utils.localeCompareBy<APIScript>((script) => script.id)}
               width={150}
             />

@@ -1,4 +1,5 @@
 import {
+  CopyOutlined,
   EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
@@ -8,10 +9,10 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { getOrganization } from "admin/rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
-import FormattedId from "components/formatted_id";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import { useEffect } from "react";
@@ -175,7 +176,15 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           <div className="sidebar-label">ID</div>
           {fullDataset && (
             <Tag>
-              <FormattedId id={fullDataset.id} />
+              {fullDataset.id.substring(0, 10)}...{" "}
+              <Tooltip title="Copy Dataset ID">
+                <CopyOutlined
+                  onClick={() => {
+                    navigator.clipboard.writeText(fullDataset.id);
+                    Toast.success("Dataset ID copied.");
+                  }}
+                />
+              </Tooltip>
             </Tag>
           )}
         </div>

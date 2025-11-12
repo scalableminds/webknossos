@@ -439,6 +439,11 @@ class AnnotationController @Inject()(
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
+          _ = if (mutexResult.canEdit)
+            logger.info(s"User ${request.identity._id} acquired mutex for annotation ${annotation._id}.")
+          else
+            logger.info(
+              s"User ${request.identity._id} tried to acquire mutex for annotation ${annotation._id} but was rejected. ${mutexResult.blockedByUser.map(_.toString).getOrElse("")} is currently having the mutex.")
           resultJson <- annotationMutexService.publicWrites(mutexResult)
         } yield Ok(resultJson)
       }
@@ -448,6 +453,7 @@ class AnnotationController @Inject()(
     logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
       for {
         _ <- annotationMutexService.release(id, request.identity._id) ?~> "annotation.mutex.release.failed"
+        _ = logger.info(s"User ${request.identity._id} released mutex for $id.")
       } yield Ok
     }
   }

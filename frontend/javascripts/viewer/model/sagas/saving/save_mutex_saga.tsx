@@ -6,11 +6,9 @@ import {
   type FixedTask,
   call,
   cancel,
-  cancelled,
   delay,
   fork,
   put,
-  race,
   retry,
   take,
   takeEvery,
@@ -45,8 +43,9 @@ const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
 const INITIAL_BACKOFF_TIME = 750;
 const BACKOFF_TIME_MULTIPLIER = 1.2;
 const BACKOFF_JITTER_LOWER_PERCENT = 0.0;
+const MAX_AD_HOC_RETRY_TIME = 10 * 1000;
 const BACKOFF_JITTER_UPPER_PERCENT = 0.15;
-const MAX_RELEASE_RETRY_INTERVAL = 10 * 1000;
+const MAX_RELEASE_RETRY_INTERVAL = 30 * 1000;
 
 export enum MutexFetchingStrategy {
   AdHoc = "AdHoc",
@@ -235,28 +234,27 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
   }
 }
 
-function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void> {
-  /*
-   * Try to acquire mutex indefinitely (saga can be cancelled from the outside with cancel or
-   * race).
-   */
-  console.log("started tryAcquireMutexForSaving");
-  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
-  mutexLogicState.isInitialRequest = true; // Never show popup about the mutex now being acquired.
-  let hasMutex = false;
+function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
   let backoffTime = INITIAL_BACKOFF_TIME;
+  const startingTime = new Date().getMilliseconds();
+  let canEdit = false;
+  let blockedByUser = null;
+  let showingToast = false;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when othersMayEdit is set to false.
-  while (!hasMutex) {
+  while (true) {
     console.log("tryAcquireMutexForSaving loop");
     try {
-      const { canEdit, blockedByUser } = yield* call(acquireAnnotationMutex, annotationId);
-      if (canEdit) {
-        hasMutex = true;
-      }
+      const mutexResult = yield* call(acquireAnnotationMutex, annotationId);
+      canEdit = mutexResult.canEdit;
+      blockedByUser = mutexResult.blockedByUser;
+
       yield* put(setUserHoldingMutexAction(blockedByUser));
       yield* put(setIsMutexAcquiredAction(canEdit));
+      if (canEdit) {
+        return;
+      }
     } catch (error) {
       if (process.env.IS_TESTING) {
         // In unit tests, that explicitly control this generator function,
@@ -267,25 +265,36 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
       }
       console.error("Error while trying to acquire mutex.", error);
     }
-    const wasCanceled = yield* cancelled();
-    console.log("wasCanceled", wasCanceled);
-    if (wasCanceled) {
-      return;
+    if (!showingToast && new Date().getMilliseconds() - startingTime > MAX_AD_HOC_RETRY_TIME) {
+      const blockingUserName = blockedByUser
+        ? `${blockedByUser.firstName} ${blockedByUser.lastName}`
+        : "unknown";
+      Toast.warning(
+        `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds. 
+        User ${blockingUserName} is currently blocking the annotation. 
+        This might be due to using non-live collab supported features. 
+        Ensure they are sticking to tools supporting live collaboration.`,
+        { sticky: true },
+      );
+      showingToast = true;
     }
+
     const backOffJitter =
       Math.random() * (BACKOFF_JITTER_UPPER_PERCENT - BACKOFF_JITTER_LOWER_PERCENT) +
       BACKOFF_JITTER_LOWER_PERCENT;
     backoffTime = Math.min(
       backoffTime * BACKOFF_TIME_MULTIPLIER + backoffTime * backOffJitter,
-      ACQUIRE_MUTEX_INTERVAL,
+      MAX_AD_HOC_RETRY_TIME,
     );
     yield* call(delay, backoffTime);
   }
-  console.log("tryAcquireMutexForSaving got mutex once");
+}
+
+function* keepAnnotationMutex(annotationId: string): Saga<void> {
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
-  while (hasMutex) {
-    let canEdit = true;
-    let blockedByUser = null;
+  let canEdit = true;
+  let blockedByUser = null;
+  while (true) {
     try {
       const mutexInfo = yield* call(acquireAnnotationMutex, annotationId);
       console.log("tryAcquireMutexForSaving keeping mutex", mutexInfo);
@@ -320,6 +329,20 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
       );
     }
   }
+}
+
+function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void> {
+  /*
+   * Try to acquire mutex indefinitely (saga can be cancelled from the outside with cancel or
+   * race).
+   */
+  console.log("started tryAcquireMutexForSaving");
+  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
+  mutexLogicState.isInitialRequest = true; // Never show popup about the mutex now being acquired.
+
+  yield* call(acquireMutexForSavingInitially, annotationId);
+  console.log("tryAcquireMutexForSaving got mutex once");
+  yield* call(keepAnnotationMutex, annotationId);
 }
 
 function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<void> {
@@ -385,16 +408,15 @@ function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
     yield* call(releaseMutex);
   }
   while (true) {
+    // Wait for action telling to acquire annotation mutex.
     yield* take("ENSURE_HAS_ANNOTATION_MUTEX");
-    const { doneSaving } = yield* race({
-      tryAcquireMutexForSaving: fork(tryAcquireMutexForSaving, mutexLogicState),
-      doneSaving: take("DONE_SAVING"),
-    });
-    console.log("tryAcquireMutexAdHoc finished", doneSaving);
-    if (doneSaving) {
-      console.log("releasing mutex");
-      yield* call(releaseMutex);
-    }
+    const taskPermanentlyAcquiringMutex = yield* fork(tryAcquireMutexForSaving, mutexLogicState);
+    // Then wait for signal to stop keeping the mutex as saving is done.
+    yield* take("DONE_SAVING");
+    console.log("in save mutex saga; Got done saving; releasing mutex");
+    // Stop acquiring the mutex and release it.
+    yield* cancel(taskPermanentlyAcquiringMutex);
+    yield* call(releaseMutex);
   }
 }
 

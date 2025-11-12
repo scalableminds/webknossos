@@ -95,7 +95,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
   }
 }
 
-function* synchronizeAnnotationWithBackend(
+export function* synchronizeAnnotationWithBackend(
   maybeForcePush: SaveNowAction | undefined,
 ): Saga<{ shouldRetryOnConflict: boolean }> {
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);

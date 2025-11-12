@@ -17,7 +17,7 @@ import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/v
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
 import type { SkeletonTracing, VolumeTracing } from "viewer/store";
 import { takeEveryWithBatchActionSupport } from "../saga_helpers";
@@ -188,7 +188,7 @@ function* watchForSaveConflicts(): Saga<void> {
     return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
   }
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   while (true) {
     const interval = yield* call(getPollInterval);

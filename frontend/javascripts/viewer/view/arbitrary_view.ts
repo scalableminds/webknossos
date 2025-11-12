@@ -17,6 +17,7 @@ import getSceneController, {
 import type ArbitraryPlane from "viewer/geometries/arbitrary_plane";
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
+import { uiReadyAction } from "viewer/model/actions/actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import {
@@ -35,7 +36,6 @@ class ArbitraryView {
   cameras: OrthoViewMap<OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
-  animate: () => void;
   setClippingDistance: (value: number) => void;
   needsRerender: boolean;
   additionalInfo: string = "";
@@ -52,7 +52,6 @@ class ArbitraryView {
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.animate = this.animateImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
 
     const { scene } = getSceneController();
@@ -86,6 +85,11 @@ class ArbitraryView {
     if (!this.isRunning) {
       this.isRunning = true;
 
+      // We only measure the time to first render in orthogonal
+      // mode. If the flight or oblique modes are active during page
+      // load, the navigation timings are no longer accurate and should not be used.
+      window.measuredTimeToFirstRender = true;
+
       this.unsubscribeFunctions.push(
         app.vent.on("rerender", () => {
           this.needsRerender = true;
@@ -102,10 +106,18 @@ class ArbitraryView {
 
       this.group = new Object3D();
       this.group.add(this.camera);
-      getSceneController().rootGroup.add(this.group);
+      const { rootGroup, renderer, scene } = getSceneController();
+      rootGroup.add(this.group);
       this.resizeImpl();
-      // start the rendering loop
-      this.animationRequestId = window.requestAnimationFrame(this.animate);
+
+      renderer.compileAsync(scene, this.camera).then(() => {
+        // Counter-intuitively this is not the moment where the webgl program is fully compiled.
+        // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
+        // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+        this.animate();
+        Store.dispatch(uiReadyAction());
+      });
+
       // Dont forget to handle window resizing!
       window.addEventListener("resize", this.resizeThrottled);
       this.unsubscribeFunctions.push(
@@ -141,12 +153,13 @@ class ArbitraryView {
     }
   }
 
-  animateImpl(): void {
+  animate(): void {
     if (!this.isRunning) {
       return;
     }
+
     this.renderFunction();
-    this.animationRequestId = window.requestAnimationFrame(this.animate);
+    this.animationRequestId = window.requestAnimationFrame(() => this.animate());
   }
 
   renderFunction() {

@@ -12,7 +12,7 @@ export default function FormattedId({
   const _shortId = id.slice(-6);
 
   return (
-    <FastTooltip title={`Click to copy long ID ${id}`}>
+    <FastTooltip title={`Click to copy full ID ${id}`}>
       <div
         onClick={() => {
           navigator.clipboard.writeText(id);

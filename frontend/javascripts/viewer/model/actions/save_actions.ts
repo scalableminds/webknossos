@@ -19,7 +19,7 @@ export type PushSaveQueueTransaction = {
   transactionId: string;
 };
 export type NotifyAboutUpdatedBucketsAction = ReturnType<typeof notifyAboutUpdatedBucketsAction>;
-type SaveNowAction = ReturnType<typeof saveNowAction>;
+export type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueueAction = ReturnType<typeof discardSaveQueueAction>;
 export type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;

@@ -15,6 +15,7 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  type SaveNowAction,
   dispatchEnsureHasAnnotationMutexAsync,
   dispatchEnsureHasNewestVersionAsync,
   doneSavingAction,
@@ -37,6 +38,8 @@ import {
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
 import { MutexFetchingStrategy, getCurrentMutexFetchingStrategy } from "./save_mutex_saga";
+
+const MAX_ON_CONFLICT_RETRIES = 10;
 
 export function* pushSaveQueueAsync(): Saga<never> {
   /*
@@ -71,69 +74,102 @@ export function* pushSaveQueueAsync(): Saga<never> {
     });
     console.log("in save queue draining saga, got forcePush?", forcePush);
     yield* put(setSaveBusyAction(true));
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    if (othersMayEdit && WkDevFlags.liveCollab) {
-      // Wait until we may save (due to mutex acquisition).
-      console.log("in save queue draining saga, start fetching mutex", forcePush);
-      yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
-      // Wait until we have the newest version. This *must* happen after
-      // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
-      // race condition where the frontend thinks that it knows about the newest
-      // version when in fact somebody else saved a newer version in the meantime.
-      console.log("in save queue draining saga, start incorporating actions", forcePush);
-      yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-    }
-    console.log("in save queue draining saga, maybe rebase finished", forcePush);
-    // Send (parts of) the save queue to the server.
-    // There are two main cases:
-    // 1) forcePush is true
-    //    The user explicitly requested to save an annotation.
-    //    In this case, batches are sent to the server until the save
-    //    queue is empty. Note that the save queue might be added to
-    //    while saving is in progress. Still, the save queue will be
-    //    drained until it is empty. If the user hits save and continuously
-    //    annotates further, a high number of save-requests might be sent.
-    // 2) forcePush is false
-    //    The auto-save interval was reached at time T. The following code
-    //    will determine how many items are in the save queue at this time T.
-    //    Exactly that many items will be sent to the server.
-    //    New items that might be added to the save queue during saving, will be
-    //    ignored (they will be picked up in the next iteration of this loop).
-    //    Otherwise, the risk of a high number of save-requests (see case 1)
-    //    would be present here, too (note the risk would be greater, because the
-    //    user didn't use the save button which is usually accompanied by a small pause).
-    // 3) In a live collab scenario we need to drain the whole save queue to get a state
-    //    where we are sure that server is in sync with the backend and after the saving the
-    //    annotation state can be used as a new rebase-able version (RebaseRelevantAnnotationState).
-    //    TODO: Later iterations of live collaboration might need to change this behaviour here.
-    //    e.g. continuous skeleton tracing might save too long / endlessly if traced very fast.
-    //    See https://github.com/scalableminds/webknossos/pull/8723#discussion_r2419981285
-    const currentMutexFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
-    const isLiveCollabActive = currentMutexFetchingStrategy === MutexFetchingStrategy.AdHoc;
-
-    const itemCountToSave =
-      forcePush || isLiveCollabActive
-        ? Number.POSITIVE_INFINITY
-        : yield* select((state) => state.save.queue.length);
-    let savedItemCount = 0;
-    while (savedItemCount < itemCountToSave) {
-      saveQueue = yield* select((state) => state.save.queue);
-
-      if (saveQueue.length > 0) {
-        console.log("in save queue draining saga, calling sendSaveRequestToServer", forcePush);
-        savedItemCount += yield* call(sendSaveRequestToServer);
-      } else {
-        break;
+    let shouldRetryOnConflict = true;
+    let retryCount = 0;
+    while (shouldRetryOnConflict) {
+      shouldRetryOnConflict = (yield* call(synchronizeAnnotationWithBackend, forcePush))
+        .shouldRetryOnConflict;
+      ++retryCount;
+      if (retryCount > MAX_ON_CONFLICT_RETRIES) {
+        const annotation = yield* select((state) => state.annotation);
+        yield* call(
+          [ErrorHandling, ErrorHandling.notify],
+          new Error("Saving annotation repeatedly failed due to conflict '409' status code"),
+          { annotationVersion: annotation.version, annotationId: annotation.annotationId },
+        );
+        Toast.error(
+          "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will use your latest unsaved changes.",
+        );
       }
     }
-    console.log("in save queue draining saga, finished saving", isLiveCollabActive);
-    if (isLiveCollabActive) {
-      // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
-      console.log("in save queue draining saga, dispatching doneSavingAction");
-      yield* put(doneSavingAction());
-    }
-    yield* put(setSaveBusyAction(false));
   }
+}
+
+function* synchronizeAnnotationWithBackend(
+  maybeForcePush: SaveNowAction | undefined,
+): Saga<{ shouldRetryOnConflict: boolean }> {
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  if (othersMayEdit && WkDevFlags.liveCollab) {
+    // Wait until we may save (due to mutex acquisition).
+    console.log("in save queue draining saga, start fetching mutex", maybeForcePush);
+    yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
+    // Wait until we have the newest version. This *must* happen after
+    // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
+    // race condition where the frontend thinks that it knows about the newest
+    // version when in fact somebody else saved a newer version in the meantime.
+    console.log("in save queue draining saga, start incorporating actions", maybeForcePush);
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+  }
+  console.log("in save queue draining saga, maybe rebase finished", maybeForcePush);
+  // Send (parts of) the save queue to the server.
+  // There are two main cases:
+  // 1) forcePush is true
+  //    The user explicitly requested to save an annotation.
+  //    In this case, batches are sent to the server until the save
+  //    queue is empty. Note that the save queue might be added to
+  //    while saving is in progress. Still, the save queue will be
+  //    drained until it is empty. If the user hits save and continuously
+  //    annotates further, a high number of save-requests might be sent.
+  // 2) forcePush is false
+  //    The auto-save interval was reached at time T. The following code
+  //    will determine how many items are in the save queue at this time T.
+  //    Exactly that many items will be sent to the server.
+  //    New items that might be added to the save queue during saving, will be
+  //    ignored (they will be picked up in the next iteration of this loop).
+  //    Otherwise, the risk of a high number of save-requests (see case 1)
+  //    would be present here, too (note the risk would be greater, because the
+  //    user didn't use the save button which is usually accompanied by a small pause).
+  // 3) In a live collab scenario we need to drain the whole save queue to get a state
+  //    where we are sure that server is in sync with the backend and after the saving the
+  //    annotation state can be used as a new rebase-able version (RebaseRelevantAnnotationState).
+  //    TODO: Later iterations of live collaboration might need to change this behaviour here.
+  //    e.g. continuous skeleton tracing might save too long / endlessly if traced very fast.
+  //    See https://github.com/scalableminds/webknossos/pull/8723#discussion_r2419981285
+  const currentMutexFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
+  const isLiveCollabActive = currentMutexFetchingStrategy === MutexFetchingStrategy.AdHoc;
+  const shouldSaveRequestFailOnConflict = !isLiveCollabActive;
+
+  const itemCountToSave =
+    maybeForcePush || isLiveCollabActive
+      ? Number.POSITIVE_INFINITY
+      : yield* select((state) => state.save.queue.length);
+  let savedItemCount = 0;
+  while (savedItemCount < itemCountToSave) {
+    const saveQueue = yield* select((state) => state.save.queue);
+
+    if (saveQueue.length > 0) {
+      console.log("in save queue draining saga, calling sendSaveRequestToServer", maybeForcePush);
+      const { numberOfSentItems, hadConflict } = yield* call(
+        sendSaveRequestToServer,
+        shouldSaveRequestFailOnConflict,
+      );
+      savedItemCount += numberOfSentItems;
+      if (hadConflict) {
+        console.log("in save queue draining saga, got conflict. Retrying saving");
+        return { shouldRetryOnConflict: true };
+      }
+    } else {
+      break;
+    }
+  }
+  console.log("in save queue draining saga, finished saving", isLiveCollabActive);
+  if (isLiveCollabActive) {
+    // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
+    console.log("in save queue draining saga, dispatching doneSavingAction");
+    yield* put(doneSavingAction());
+  }
+  yield* put(setSaveBusyAction(false));
+  return { shouldRetryOnConflict: false };
 }
 
 function getRetryWaitTime(retryCount: number) {
@@ -141,7 +177,9 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
-export function* sendSaveRequestToServer(): Saga<number> {
+export function* sendSaveRequestToServer(
+  shouldFailOnConflict: boolean,
+): Saga<{ numberOfSentItems: number; hadConflict: boolean }> {
   /*
    * Saves a reasonably-sized part of the save queue to the server (plus retry-mechanism).
    * The saga returns the number of save queue items that were saved.
@@ -157,6 +195,7 @@ export function* sendSaveRequestToServer(): Saga<number> {
   let versionIncrement;
   [compactedSaveQueue, versionIncrement] = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
+  console.log("in save queue draining, sending updates", compactedSaveQueue);
 
   // This while-loop only exists for the purpose of a retry-mechanism
   while (true) {
@@ -201,13 +240,18 @@ export function* sendSaveRequestToServer(): Saga<number> {
       }
 
       yield* call(toggleErrorHighlighting, false);
-      return saveQueue.length;
+      return { numberOfSentItems: saveQueue.length, hadConflict: false };
     } catch (error) {
       if (exceptionDuringMarkBucketsAsNotDirty) {
         throw error;
       }
 
       console.warn("Error during saving. Will retry. Error:", error);
+      // @ts-ignore
+      if (error.status === 409 && !shouldFailOnConflict) {
+        return { numberOfSentItems: 0, hadConflict: true };
+      }
+
       const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
       const isViewOrSandboxMode =
         controlMode === ControlModeEnum.VIEW || controlMode === ControlModeEnum.SANDBOX;

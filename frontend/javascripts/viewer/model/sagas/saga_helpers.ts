@@ -58,6 +58,9 @@ export function* enforceExecutionAsBusyBlockingUnlessAllowed<T>(
 ): Saga<T> {
   let busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
   while (busyInfo.isBusy && !busyInfo.allowedSagas.includes(sagaIdentifier)) {
+    console.log(
+      "in enforceExecutionAsBusyBlockingUnlessAllowed, waiting for busy state to be released",
+    );
     yield* take("SET_BUSY_BLOCKING_INFO_ACTION");
     busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
   }

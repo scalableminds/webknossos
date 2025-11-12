@@ -281,12 +281,14 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
     );
     yield* call(delay, backoffTime);
   }
+  console.log("tryAcquireMutexForSaving got mutex once");
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   while (hasMutex) {
     let canEdit = true;
     let blockedByUser = null;
     try {
       const mutexInfo = yield* call(acquireAnnotationMutex, annotationId);
+      console.log("tryAcquireMutexForSaving keeping mutex", mutexInfo);
       canEdit = mutexInfo.canEdit;
       blockedByUser = mutexInfo.blockedByUser;
       yield* put(setUserHoldingMutexAction(blockedByUser));
@@ -388,6 +390,7 @@ function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
       tryAcquireMutexForSaving: fork(tryAcquireMutexForSaving, mutexLogicState),
       doneSaving: take("DONE_SAVING"),
     });
+    console.log("tryAcquireMutexAdHoc finished", doneSaving);
     if (doneSaving) {
       console.log("releasing mutex");
       yield* call(releaseMutex);

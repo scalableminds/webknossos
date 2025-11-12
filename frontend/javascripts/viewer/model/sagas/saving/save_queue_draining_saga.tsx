@@ -69,17 +69,21 @@ export function* pushSaveQueueAsync(): Saga<never> {
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
+    console.log("in save queue draining saga, got forcePush?", forcePush);
     yield* put(setSaveBusyAction(true));
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
     if (othersMayEdit && WkDevFlags.liveCollab) {
       // Wait until we may save (due to mutex acquisition).
+      console.log("in save queue draining saga, start fetching mutex", forcePush);
       yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
       // Wait until we have the newest version. This *must* happen after
       // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
       // race condition where the frontend thinks that it knows about the newest
       // version when in fact somebody else saved a newer version in the meantime.
+      console.log("in save queue draining saga, start incorporating actions", forcePush);
       yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
     }
+    console.log("in save queue draining saga, maybe rebase finished", forcePush);
     // Send (parts of) the save queue to the server.
     // There are two main cases:
     // 1) forcePush is true
@@ -116,13 +120,16 @@ export function* pushSaveQueueAsync(): Saga<never> {
       saveQueue = yield* select((state) => state.save.queue);
 
       if (saveQueue.length > 0) {
+        console.log("in save queue draining saga, calling sendSaveRequestToServer", forcePush);
         savedItemCount += yield* call(sendSaveRequestToServer);
       } else {
         break;
       }
     }
+    console.log("in save queue draining saga, finished saving", isLiveCollabActive);
     if (isLiveCollabActive) {
       // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
+      console.log("in save queue draining saga, dispatching doneSavingAction");
       yield* put(doneSavingAction());
     }
     yield* put(setSaveBusyAction(false));

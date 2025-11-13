@@ -88,29 +88,29 @@ const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: We
 );
 
 class SceneController {
-  skeletons: Record<number, Skeleton> = {};
-  isPlaneVisible: OrthoViewMap<boolean>;
-  clippingDistanceInUnit: number;
-  datasetBoundingBox!: Cube;
-  userBoundingBoxGroup!: Group;
-  layerBoundingBoxGroup!: Group;
-  userBoundingBoxes!: Array<Cube>;
-  layerBoundingBoxes!: { [layerName: string]: Cube };
-  annotationToolsGeometryGroup!: Group;
-  highlightedBBoxId: number | null | undefined;
-  taskCubeByTracingId: Record<string, Cube | null | undefined> = {};
-  contour!: ContourGeometry;
-  quickSelectGeometry!: QuickSelectGeometry;
-  lineMeasurementGeometry!: LineMeasurementGeometry;
-  areaMeasurementGeometry!: ContourGeometry;
-  planes!: OrthoViewWithoutTDMap<Plane>;
-  rootNode!: Group;
-  renderer!: WebGLRenderer;
-  scene!: Scene;
-  rootGroup!: Group;
-  segmentMeshController: SegmentMeshController;
-  storePropertyUnsubscribers: Array<() => void>;
-  splitBoundaryMesh: Mesh | null = null;
+  public skeletons: Record<number, Skeleton> = {};
+  private isPlaneVisible: OrthoViewMap<boolean>;
+  private clippingDistanceInUnit: number;
+  private datasetBoundingBox!: Cube;
+  private userBoundingBoxGroup!: Group;
+  private layerBoundingBoxGroup!: Group;
+  private userBoundingBoxes!: Array<Cube>;
+  private layerBoundingBoxes!: { [layerName: string]: Cube };
+  private annotationToolsGeometryGroup!: Group;
+  private highlightedBBoxId: number | null | undefined;
+  private taskCubeByTracingId: Record<string, Cube | null | undefined> = {};
+  public contour!: ContourGeometry;
+  public quickSelectGeometry!: QuickSelectGeometry;
+  public lineMeasurementGeometry!: LineMeasurementGeometry;
+  public areaMeasurementGeometry!: ContourGeometry;
+  private planes!: OrthoViewWithoutTDMap<Plane>;
+  private rootNode!: Group;
+  public renderer!: WebGLRenderer;
+  public scene!: Scene;
+  public rootGroup!: Group;
+  public segmentMeshController: SegmentMeshController;
+  private storePropertyUnsubscribers: Array<() => void>;
+  private splitBoundaryMesh: Mesh | null = null;
 
   // Created as instance properties to avoid creating objects in each update call.
   private rotatedPositionOffsetVector = new ThreeVector3();
@@ -567,7 +567,13 @@ class SceneController {
     }
   }
 
-  updateUserBoundingBoxesAndMeshesAccordingToTransforms(): void {
+  updateGeometriesToTransforms(): void {
+    /*
+     * The following geometries are updated in accordance to the current transforms:
+     * - user bounding boxes
+     * - meshes
+     * - annotation specific geometries (e.g., the contour)
+     */
     const state = Store.getState();
     const tracingStoringUserBBoxes = getSomeTracing(state.annotation);
     const transformForBBoxes =
@@ -597,6 +603,8 @@ class SceneController {
       transformForMeshes,
       this.segmentMeshController.meshesLayerLODRootGroup,
     );
+
+    this.applyTransformToGroup(transformForMeshes, this.annotationToolsGeometryGroup);
   }
 
   updateMeshesAccordingToLayerVisibility(): void {
@@ -768,7 +776,7 @@ class SceneController {
         (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
         () => {
           this.updateLayerBoundingBoxes();
-          this.updateUserBoundingBoxesAndMeshesAccordingToTransforms();
+          this.updateGeometriesToTransforms();
         },
       ),
       listenToStoreProperty(getVisibleSegmentationLayerNames, () =>

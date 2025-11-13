@@ -167,6 +167,6 @@ export const transformPointUnscaled = (transforms: Transform) => {
     const matrix = M4x4.transpose(transforms.affineMatrix);
     return (pos: Vector3) => M4x4.transformVectorsAffine(matrix, [pos])[0];
   } else {
+    return (pos: Vector3) => transforms.scaledTps.transformUnscaled(pos[0], pos[1], pos[2]);
   }
-  return (pos: Vector3) => transforms.scaledTps.transformUnscaled(pos[0], pos[1], pos[2]);
 };

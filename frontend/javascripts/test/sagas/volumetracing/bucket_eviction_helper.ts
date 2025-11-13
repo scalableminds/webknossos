@@ -8,7 +8,7 @@ import { setToolAction } from "viewer/model/actions/ui_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import {
   setActiveCellAction,
-  addToLayerAction,
+  addToContourListAction,
   startEditingAction,
   finishEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -60,7 +60,7 @@ export async function testLabelingManyBuckets(
   for (const paintPosition of paintPositions1) {
     Store.dispatch(setPositionAction(paintPosition));
     Store.dispatch(startEditingAction(paintPosition, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintPosition));
+    Store.dispatch(addToContourListAction(paintPosition));
     Store.dispatch(finishEditingAction());
   }
 
@@ -73,7 +73,7 @@ export async function testLabelingManyBuckets(
   for (const paintPosition of paintPositions2) {
     Store.dispatch(setPositionAction(paintPosition));
     Store.dispatch(startEditingAction(paintPosition, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintPosition));
+    Store.dispatch(addToContourListAction(paintPosition));
     Store.dispatch(finishEditingAction());
   }
 

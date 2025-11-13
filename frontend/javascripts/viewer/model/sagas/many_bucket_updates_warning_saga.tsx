@@ -1,8 +1,8 @@
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import Toast from "libs/toast";
-import { select, takeEvery } from "typed-redux-saga";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import { takeEvery } from "typed-redux-saga";
+import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import type { WebknossosState } from "viewer/store";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";
@@ -25,7 +25,7 @@ function* manyBucketUpdatesWarning(): Saga<void> {
 
     const onClose = () => {
       Toast.notificationAPI?.destroy(TOO_MANY_BUCKETS_TOAST_KEY);
-      if (neverShowAgain) {
+      if (neverShowAgain && activeUser) {
         updateNovelUserExperienceInfos(activeUser, {
           suppressManyBucketUpdatesWarning: true,
         });
@@ -38,7 +38,7 @@ function* manyBucketUpdatesWarning(): Saga<void> {
     const warningMessage =
       "You are annotating a large area with fine magnifications. This can significantly slow down WEBKNOSSOS. Consider creating an annotation or annotation layer with restricted magnifications.";
     const linkToDocs =
-      "https://docs.webknossos.org/volume_annotation/import_export.html#restricting-magnifications";
+      "https://docs.webknossos.org/webknossos/volume_annotation/import_export.html#restricting-magnifications";
     const neverShowAgainCheckbox = (
       <Checkbox onChange={handleCheckboxChange} style={{ marginTop: "8px", marginBottom: "5px" }}>
         Never show this again

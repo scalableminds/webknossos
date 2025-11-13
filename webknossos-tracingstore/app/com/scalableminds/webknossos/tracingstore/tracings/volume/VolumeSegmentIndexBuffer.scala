@@ -26,8 +26,7 @@ trait SegmentIndexKeyHelper extends AdditionalCoordinateKey {
                                 mag: Vec3Int,
                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                                 axes: Option[Seq[AdditionalAxis]]) =
-    s"$tracingId/$segmentId/${mag
-      .toMagLiteral()}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()), axes.getOrElse(Seq()), "/")}"
+    s"$tracingId/$segmentId/${mag.toMagLiteral(allowScalar = false)}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()), axes.getOrElse(Seq()), "/")}"
 }
 
 // To introduce buffering for updating the segment-to-bucket index for a volume tracing

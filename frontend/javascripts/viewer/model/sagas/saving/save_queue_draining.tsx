@@ -24,7 +24,7 @@ import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import {
   MAXIMUM_ACTION_COUNT_PER_SAVE,
   MAX_SAVE_RETRY_WAITING_TIME,
@@ -37,7 +37,7 @@ import type { SaveQueueEntry } from "viewer/store";
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
 export function* pushSaveQueueAsync(): Saga<never> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
 
   yield* put(setLastSaveTimestampAction());
   let loopCounter = 0;

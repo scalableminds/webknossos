@@ -335,8 +335,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     // If wk is not initialized yet, only render the cover. If it is initialized, start rendering the controllers
     // in the background, hidden by the cover.
-    // The _isMounted check is important, because when switching pages without a reload, there is a short amount of time
+    // The _isMounted check is important, because when switching pages without a reload, there is a short period of time
     // where the old tracing view instance still exists and isWkInitialized is true, although it has not been newly initialized yet.
+    // In this scenario, this `render` method here is called before `componentWillUnmount` of the TracingLayoutView is called.
     if (!this._isMounted || !isWkInitialized) {
       return cover;
     }

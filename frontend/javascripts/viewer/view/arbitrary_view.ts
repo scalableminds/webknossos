@@ -1,4 +1,6 @@
 import app from "app";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
 import {
@@ -110,13 +112,21 @@ class ArbitraryView {
       rootGroup.add(this.group);
       this.resizeImpl();
 
-      renderer.compileAsync(scene, this.camera).then(() => {
-        // Counter-intuitively this is not the moment where the webgl program is fully compiled.
-        // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
-        // Only once that is done, the compilation process is fully finished, see `renderFunction`.
-        this.animate();
-        Store.dispatch(uiReadyAction());
-      });
+      renderer
+        .compileAsync(scene, this.camera)
+        .then(() => {
+          // Counter-intuitively this is not the moment where the webgl program is fully compiled.
+          // There is another stall once render or getProgramInfoLog is called, since not all work is done yet.
+          // Only once that is done, the compilation process is fully finished, see `renderFunction`.
+          this.animate();
+          Store.dispatch(uiReadyAction());
+        })
+        .catch((error) => {
+          // This code will not be hit if there are shader compilation errors. To react to those, see https://github.com/mrdoob/three.js/pull/25679
+          Toast.error(`An unexpected error occurred while compiling the WebGL shaders: ${error}`);
+          console.error(error);
+          ErrorHandling.notify(error);
+        });
 
       // Dont forget to handle window resizing!
       window.addEventListener("resize", this.resizeThrottled);

@@ -29,7 +29,7 @@ export default function traverse(
   const voxelSize = getBucketExtent(mags[zoomStep]);
   // In addition, the variables stepX and stepY are initialized to either 1 or -1 indicating whether X and Y are
   // incremented or decremented as the ray crosses voxel boundaries (this is determined by the sign of the x and y components of → v).
-  const [stepX, stepY, stepZ] = v.map((el) => Math.sign(el));
+  const [stepX, stepY, stepZ] = v.map((el: number) => Math.sign(el));
   const step = [stepX, stepY, stepZ];
   let [tMaxX, tMaxY, tMaxZ] = initializeTMax(u, v, [stepX, stepY, stepZ], voxelSize);
   // Finally, we compute tDeltaX and tDeltaY. TDeltaX indicates how far along the ray we must move (in units of t) for the horizontal component

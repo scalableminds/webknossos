@@ -7,7 +7,7 @@ import {
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
 import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
@@ -17,6 +17,7 @@ import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
@@ -2743,8 +2744,24 @@ class DataApi {
    * );
    */
   _createTransformsFromSpecs(specs: Array<TransformSpec>) {
-    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 =>
-      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 => [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      x,
+      y,
+      z,
+      1,
+    ];
     const makeScale = (scale: Vector3, anchor: Vector3) =>
       M4x4.mul(
         M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),
@@ -2755,11 +2772,11 @@ class DataApi {
         M4x4.mul(
           makeTranslation(pos[0], pos[1], pos[2]),
           // biome-ignore format: don't format array
-          new Float32Array([
+          [
             Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
             -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
             0, 0, 1, 0, 0, 0, 0, 1,
-          ]),
+          ],
         ),
         makeTranslation(-pos[0], -pos[1], -pos[2]),
       );

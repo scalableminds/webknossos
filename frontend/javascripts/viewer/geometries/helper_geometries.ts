@@ -89,7 +89,7 @@ export class ContourGeometry {
   addEdgePoint(pos: Vector3) {
     const pointCount = this.vertexBuffer.getLength();
     const lastPoint = this.vertexBuffer.getBuffer().subarray((pointCount - 1) * 3, pointCount * 3);
-    if (V3.equals(pos, lastPoint)) {
+    if (V3.isEqual([lastPoint[0], lastPoint[1], lastPoint[2]], pos)) {
       // Skip adding the point if it is the same as the last one.
       return;
     }
@@ -275,7 +275,7 @@ export class QuickSelectGeometry {
       Dimensions.transDim([0, 0, 1], activeViewport),
     );
 
-    const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
+    const centerPosition: Vector3 = V3.scale(V3.add(startPosition, endPosition), 0.5);
     const extentXYZ = V3.abs(V3.sub(endPositionWithDepth, startPosition));
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
 

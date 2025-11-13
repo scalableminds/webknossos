@@ -294,6 +294,8 @@ function* keepAnnotationMutex(annotationId: string): Saga<void> {
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   let canEdit = true;
   let blockedByUser = null;
+  // Wait a little since we already just acquired the mutex in acquireMutexForSavingInitially.
+  yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   while (true) {
     try {
       const mutexInfo = yield* call(acquireAnnotationMutex, annotationId);

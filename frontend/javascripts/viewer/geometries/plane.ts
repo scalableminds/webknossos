@@ -194,7 +194,7 @@ class Plane {
     // Thus, this scale needs to be applied manually to the position here.
     const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
     // The offset is in world space already so no scaling is necessary.
-    const offsetPosition = V3.add(scaledPosition, positionOffset);
+    const offsetPosition: Vector3 = V3.add(scaledPosition, positionOffset);
     this.TDViewBorders.position.set(...offsetPosition);
     this.crosshair[0].position.set(...offsetPosition);
     this.crosshair[1].position.set(...offsetPosition);

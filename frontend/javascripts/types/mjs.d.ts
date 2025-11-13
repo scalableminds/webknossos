@@ -52,7 +52,7 @@ export type Matrix4x4 = Vector16;
     },
     V3: {
       add: function (x: Vector3, y: Vector3, res?: Vector3): Vector3 {},
-      sub: function (x: Vector3Like, y: Vector3Like, res?: Vector3Like): Vector3 {},
+      sub: function (x: Vector3, y: Vector3, res?: Vector3): Vector3 {},
       cross: function (x: Vector3, y: Vector3, res?: Vector3): Vector3 {},
       length: function (x: Vector3): number {},
       lengthSquared: function (x: Vector3): number {},

@@ -171,7 +171,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
       const priority = V3.sub(
         bucketAddress as unknown as Vector3,
         centerAddress as unknown as Vector3,
-      ).reduce((a, b) => a + Math.abs(b), 0);
+      ).reduce((a: number, b: number) => a + Math.abs(b), 0);
       const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(
         loadingStrategy,
         zoomStepDiff,

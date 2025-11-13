@@ -237,7 +237,6 @@ const V2 = {
 
 const _tmpVec: Vector3 = [0, 0, 0];
 
-function round(v: Vector3, r?: Vector3 | null | undefined): Vector3;
 function round(v: Vector3, r?: Vector3 | null | undefined) {
   if (r == null) {
     r = new Array(3) as Vector3;

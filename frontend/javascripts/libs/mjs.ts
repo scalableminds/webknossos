@@ -5,41 +5,18 @@ import _ from "lodash";
 import type { Vector2, Vector3, Vector4 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
 
-import mjs from "mjs";
+import mjs, { type Vector16, type Matrix4x4 } from "mjs";
 
-const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Float32Array);
-
-type Vector3Like = Vector3 | Float32Array;
-type Vector2Like = Vector2 | Float32Array;
-
-export type Vector16 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-];
-export type Matrix4x4 = Vector16 | Float32Array;
+const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Array);
 
 const M4x4 = {
   ...BareM4x4,
   // Applies an affine transformation matrix on an array of points.
   transformPointsAffine(
     m: Matrix4x4,
-    points: number[] | Float32Array,
-    r?: Float32Array | Int32Array | Array<number> | null | undefined,
-  ): Float32Array | Int32Array | Array<number> {
+    points: number[],
+    r?: Int32Array | Array<number> | null | undefined,
+  ): Int32Array | Array<number> {
     if (r == null) {
       r = new Array(points.length);
     }
@@ -84,8 +61,8 @@ const M4x4 = {
   transformPoints(
     m: Matrix4x4,
     points: number[],
-    r?: Float32Array | Array<number> | null | undefined,
-  ): Float32Array | Array<number> {
+    r?: Array<number> | null | undefined,
+  ): Array<number> {
     if (r == null) {
       r = new Array(points.length);
     }
@@ -209,10 +186,7 @@ const M4x4 = {
     return r;
   },
 
-  extractTranslation(
-    m: Matrix4x4,
-    r?: Float32Array | Vector3 | null | undefined,
-  ): Float32Array | Vector3 {
+  extractTranslation(m: Matrix4x4, r?: Vector3 | null | undefined): Vector3 {
     if (r == null) {
       r = new Array(3) as Vector3;
     }
@@ -238,7 +212,7 @@ const V2 = {
   max(vec1: Vector2, vec2: Vector2): Vector2 {
     return [Math.max(vec1[0], vec2[0]), Math.max(vec1[1], vec2[1])];
   },
-  scale2(a: Vector2, k: Vector2, r?: Vector2Like): Vector2Like {
+  scale2(a: Vector2, k: Vector2, r?: Vector2): Vector2 {
     if (r == null) r = new Array(2) as Vector2;
     r[0] = a[0] * k[0];
     r[1] = a[1] * k[1];
@@ -264,7 +238,7 @@ const V2 = {
 const _tmpVec: Vector3 = [0, 0, 0];
 
 function round(v: Vector3, r?: Vector3 | null | undefined): Vector3;
-function round(v: Vector3Like, r?: Vector3Like | null | undefined) {
+function round(v: Vector3, r?: Vector3 | null | undefined) {
   if (r == null) {
     r = new Array(3) as Vector3;
   }
@@ -275,9 +249,7 @@ function round(v: Vector3Like, r?: Vector3Like | null | undefined) {
   return r;
 }
 
-// @ts-ignore TS claims that the implementation doesn't match the overloading
-function divide3(a: Vector3, k: Vector3, r?: Vector3): Vector3;
-function divide3(a: Float32Array, k: Float32Array, r?: Vector3Like) {
+function divide3(a: Vector3, k: Vector3, r?: Vector3): Vector3 {
   if (r == null) r = new Array(3) as Vector3;
   r[0] = a[0] / k[0];
   r[1] = a[1] / k[1];
@@ -285,8 +257,7 @@ function divide3(a: Float32Array, k: Float32Array, r?: Vector3Like) {
   return r;
 }
 
-function scale3(a: Vector3, k: Vector3, r?: Vector3): Vector3;
-function scale3(a: Vector3Like, k: Vector3Like, r?: Vector3Like): Vector3Like {
+function scale3(a: Vector3, k: Vector3, r?: Vector3): Vector3 {
   if (r == null) r = new Array(3) as Vector3;
   r[0] = a[0] * k[0];
   r[1] = a[1] * k[1];
@@ -297,16 +268,16 @@ function scale3(a: Vector3Like, k: Vector3Like, r?: Vector3Like): Vector3Like {
 const V3 = {
   ...BareV3,
   // Component-wise minimum of two vectors.
-  min(vec1: Vector3Like, vec2: Vector3Like): Vector3 {
+  min(vec1: Vector3, vec2: Vector3): Vector3 {
     return [Math.min(vec1[0], vec2[0]), Math.min(vec1[1], vec2[1]), Math.min(vec1[2], vec2[2])];
   },
 
   // Component-wise maximum of two vectors.
-  max(vec1: Vector3Like, vec2: Vector3Like): Vector3 {
+  max(vec1: Vector3, vec2: Vector3): Vector3 {
     return [Math.max(vec1[0], vec2[0]), Math.max(vec1[1], vec2[1]), Math.max(vec1[2], vec2[2])];
   },
 
-  equals(vec1: Vector3Like, vec2: Vector3Like): boolean {
+  equals(vec1: Vector3, vec2: Vector3): boolean {
     return vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
   },
 
@@ -344,7 +315,7 @@ const V3 = {
     return V3.floor(V3.scale3(vec, sourceMag));
   },
 
-  scaledSquaredDist(a: Vector3Like, b: Vector3Like, scale: Vector3) {
+  scaledSquaredDist(a: Vector3, b: Vector3, scale: Vector3) {
     // Computes the distance between two vectors while respecting a 3 dimensional scale
     // Use _tmpVec as result variable (third parameter) to avoid allocations
     V3.sub(a, b, _tmpVec);
@@ -352,7 +323,7 @@ const V3 = {
     return V3.lengthSquared(_tmpVec);
   },
 
-  scaledDist(a: Vector3Like, b: Vector3Like, scale: Vector3) {
+  scaledDist(a: Vector3, b: Vector3, scale: Vector3) {
     const squaredDist = V3.scaledSquaredDist(a, b, scale);
     return Math.sqrt(squaredDist);
   },
@@ -399,4 +370,4 @@ const V4 = {
   },
 };
 
-export { M4x4, V2, V3, V4 };
+export { M4x4, V2, V3, V4, type Matrix4x4 };

@@ -1,49 +1,45 @@
 declare module "mjs" {
-  type Vector3 = [number, number, number];
-  type Vector3Like = Vector3 | Float32Array;
-  type Vector2Like = Vector2 | Float32Array;
+export type Vector16 = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
+export type Matrix4x4 = Vector16;
 
-  export type Matrix4x4 =
-    | [
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-        number,
-      ]
-    | Float32Array;
 
-  export default (f: Float32ArrayConstructor) => ({
+  export default (f: ArrayConstructor) => ({
     M4x4: {
       identity: Matrix4x4,
       translate: function (
         m: Vector3,
         points: Matrix4x4,
-        r?: Float32Array | number[] | null | undefined,
+        r?: number[] | null | undefined,
       ): Matrix4x4 {},
       scale: function (
         s: Vector3,
         m: Matrix4x4,
-        r?: Float32Array | number[] | null | undefined,
+        r?: number[] | null | undefined,
       ): Matrix4x4 {},
-      scale1: function (s: number, m: Matrix4x4, r?: Float32Array | null | undefined): Matrix4x4 {},
+      scale1: function (s: number, m: Matrix4x4, r?: number[] | null | undefined): Matrix4x4 {},
       mul: function (a: Matrix4x4, b: Matrix4x4, r?: Matrix4x4 | null | undefined): Matrix4x4 {},
       rotate: function (
         angle: number,
         axis: Vector3,
         m: Matrix4x4,
-        r?: Float32Array | number[] | null | undefined,
+        r?: number[] | null | undefined,
       ): Matrix4x4 {},
       clone: function (m: Matrix4x4): Matrix4x4 {},
       transformLineAffine: function (m: Matrix4x4, v1: Vector3, v2: Vector3): Matrix4x4 {},

@@ -89,7 +89,7 @@ export class ContourGeometry {
   addEdgePoint(pos: Vector3) {
     const pointCount = this.vertexBuffer.getLength();
     const lastPoint = this.vertexBuffer.getBuffer().subarray((pointCount - 1) * 3, pointCount * 3);
-    if (V3.equals(pos, lastPoint)) {
+    if (V3.isEqual([lastPoint[0], lastPoint[1], lastPoint[2]], pos)) {
       // Skip adding the point if it is the same as the last one.
       return;
     }

@@ -124,10 +124,11 @@ class EditableMappingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId)
+            versionOpt = Some(request.body.version)
+            tracing <- annotationService.findVolume(annotationId, tracingId, versionOpt)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
-            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
+            editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, versionOpt)
             (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(tracingId,
                                                                                    editableMappingInfo,
                                                                                    tracing.version,
@@ -148,7 +149,7 @@ class EditableMappingController @Inject()(
             remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
             agglomerateGraph <- if (tracing.getHasEditableMapping) {
               for {
-                editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
+                editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
                 agglomerateGraphWithFallback <- editableMappingService.getAgglomerateGraphForIdWithFallback(
                   editableMappingInfo,
                   tracingId,
@@ -177,7 +178,7 @@ class EditableMappingController @Inject()(
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId, version)
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-          editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
+          editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
                                                                                                 tracing.version,

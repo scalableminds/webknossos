@@ -165,6 +165,7 @@ class BackendMock {
   getNeighborsForAgglomerateNode = async (
     _tracingStoreUrl: string,
     _tracingId: string,
+    _version: number,
     segmentInfo: {
       segmentId: NumberLike;
       mag: Vector3;

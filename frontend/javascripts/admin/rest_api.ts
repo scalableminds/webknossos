@@ -2061,7 +2061,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   tracingId: string,
   segmentIds: Array<T>,
   annotationId: string,
-  version?: number | null | undefined,
+  version: number,
 ): Promise<Mapping> {
   if (segmentIds.length === 0) {
     return new Map();
@@ -2296,6 +2296,7 @@ export type NeighborInfo = {
 export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
+  version: number,
   segmentInfo: {
     segmentId: NumberLike;
     mag: Vector3;
@@ -2309,6 +2310,7 @@ export async function getNeighborsForAgglomerateNode(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
         {
           data: {
+            version,
             ...segmentInfo,
             // TODO: Proper 64 bit support (#6921)
             segmentId: Number(segmentInfo.segmentId),

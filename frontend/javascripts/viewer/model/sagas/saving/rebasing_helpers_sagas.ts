@@ -132,7 +132,7 @@ export function* addMissingSegmentsToLoadedMappings(
   }
 }
 
-// Gathers info mapped info for segment ids from proofreading actions where the mapping is unknown.
+// Gathers mapped info for segment ids from proofreading actions where the mapping is unknown.
 // This happens in case of mesh proofreading actions. To re-apply the user's changes in the rebasing
 // up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
 // is first loaded and then the save queue update actions are remapped to update their agglomerate id infos

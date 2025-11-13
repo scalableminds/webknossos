@@ -542,6 +542,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       );
       return;
     }
+    const annotationVersion = yield* select((state) => state.annotation.version);
 
     // Because we ensured a saved state a few lines above, we can now split the mapping locally
     // as this still requires some communication with the back-end.
@@ -549,6 +550,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       activeMapping,
       sourceAgglomerateId,
       volumeTracingId,
+      annotationVersion,
     );
 
     console.log("dispatch setMappingAction in proofreading saga");
@@ -844,6 +846,7 @@ function* performCutFromNeighbors(
   segmentPosition: Vector3 | null,
   agglomerateFileMag: Vector3,
   volumeTracingId: string,
+  annotationVersion: number,
   sourceTree: Tree | null | undefined,
   items: UpdateActionWithoutIsolationRequirement[],
 ): Saga<
@@ -863,6 +866,7 @@ function* performCutFromNeighbors(
       getNeighborsForAgglomerateNode,
       tracingStoreUrl,
       volumeTracingId,
+      annotationVersion,
       segmentsInfo,
     );
   } catch (exception) {
@@ -1072,12 +1076,14 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       ) ?? targetAgglomerateId,
     );
 
+    const annotationVersion = yield* select((state) => state.annotation.version);
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
     const splitMapping = yield* splitAgglomerateInMapping(
       activeMapping,
       sourceAgglomerateId,
       volumeTracingId,
+      annotationVersion,
     );
 
     console.log("dispatch setMappingAction in proofreading saga");
@@ -1180,7 +1186,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  const { agglomerateFileMag, getDataValue, volumeTracing, annotationVersion } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
   let idInfos;
@@ -1221,6 +1227,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     targetPosition,
     agglomerateFileMag,
     volumeTracingId,
+    annotationVersion,
     action.tree,
     updateActions,
   );
@@ -1242,12 +1249,14 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       targetAgglomerateId,
   );
 
+  const newAnnotationVersion = yield* select((state) => state.annotation.version);
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
   const mappingAfterSplit = yield* splitAgglomerateInMapping(
     activeMapping,
     targetAgglomerateId,
     volumeTracingId,
+    newAnnotationVersion,
   );
 
   console.log("dispatch setMappingAction in proofreading saga");
@@ -1580,7 +1589,7 @@ export function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   volumeTracingId: string,
-  version?: number | undefined,
+  version: number,
   additionalSegmentsToRequest: number[] = [],
 ) {
   const segmentIdsFromLocalMapping = getSegmentIdsThatMapToAgglomerate(

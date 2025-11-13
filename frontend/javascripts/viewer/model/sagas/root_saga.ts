@@ -9,7 +9,7 @@ import DatasetSagas from "viewer/model/sagas/dataset_saga";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import loadHistogramDataSaga from "viewer/model/sagas/load_histogram_data_saga";
 import { watchDataRelevantChanges } from "viewer/model/sagas/prefetch_saga";
-import ReadySagas, { setSceneControllerUninitialized } from "viewer/model/sagas/ready_sagas";
+import ReadySagas from "viewer/model/sagas/ready_sagas";
 import SaveSagas from "viewer/model/sagas/saving/save_saga";
 import SettingsSaga from "viewer/model/sagas/settings_saga";
 import SkeletontracingSagas from "viewer/model/sagas/skeletontracing_saga";
@@ -41,7 +41,6 @@ export default function* rootSaga(): Saga<void> {
     yield* cancel(task);
     if (restart) {
       yield* put(setIsWkInitializedAction(false));
-      setSceneControllerUninitialized();
     }
     if (doCancel) {
       // No restart, leave the while-true-loop

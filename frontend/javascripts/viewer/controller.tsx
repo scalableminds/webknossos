@@ -178,12 +178,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     window.webknossos = new ApiLoader(Model);
     app.vent.emit("webknossos:initialized");
     Store.dispatch(wkInitializedAction());
-    setTimeout(() => {
-      // Give wk (sagas and bucket loading) a bit time to catch air before
-      // showing the UI as "ready". The goal here is to avoid that the
-      // UI is still freezing after the loading indicator is gone.
-      this.props.setControllerStatus("loaded");
-    }, 200);
+    this.props.setControllerStatus("loaded");
   }
 
   async initTaskScript() {
@@ -311,22 +306,22 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const status = this.props.controllerStatus;
-    const { user, viewMode, isWkInitialized } = this.props;
+    const { user, viewMode, isUiReady, isWkInitialized } = this.props;
     const { gotUnhandledError, organizationToSwitchTo } = this.state;
 
     let cover = null;
     // Show the brain spinner during loading and until the UI is ready
-    if (status === "loading") {
-      return <BrainSpinner />;
+    if (status === "loading" || (status === "loaded" && !isUiReady)) {
+      cover = <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
-      return (
+      cover = (
         <BrainSpinnerWithError
           gotUnhandledError={gotUnhandledError}
           organizationToSwitchTo={organizationToSwitchTo}
         />
       );
     } else if (status === "failedLoading") {
-      return (
+      cover = (
         <CoverWithLogin
           onLoggedIn={() => {
             // Close existing error toasts for "Not Found" errors before trying again.
@@ -340,7 +335,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     // If wk is not initialized yet, only render the cover. If it is initialized, start rendering the controllers
     // in the background, hidden by the cover.
-    if (!isWkInitialized) {
+    // The _isMounted check is important, because when switching pages without a reload, there is a short period of time
+    // where the old tracing view instance still exists and isWkInitialized is true, although it has not been newly initialized yet.
+    // In this scenario, this `render` method here is called before `componentWillUnmount` of the TracingLayoutView is called.
+    if (!this._isMounted || !isWkInitialized) {
       return cover;
     }
 

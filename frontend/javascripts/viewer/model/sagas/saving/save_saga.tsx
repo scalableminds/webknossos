@@ -26,9 +26,9 @@ import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/v
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
 import type { NumberLike, SkeletonTracing, VolumeTracing } from "viewer/store";
-import { ensureWkInitialized } from "../ready_sagas";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,

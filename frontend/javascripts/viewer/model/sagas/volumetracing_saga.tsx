@@ -84,7 +84,7 @@ import { Model, api } from "viewer/singletons";
 import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
@@ -92,7 +92,7 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   yield* takeEveryUnlessBusy(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,
@@ -662,7 +662,7 @@ export function* maintainHoveredSegmentId(): Saga<void> {
 }
 
 function* maintainContourGeometry(): Saga<void> {
-  yield* take("SCENE_CONTROLLER_READY");
+  yield* take("SCENE_CONTROLLER_INITIALIZED");
   const SceneController = yield* call(getSceneController);
   const { contour } = SceneController;
 
@@ -715,7 +715,7 @@ function* ensureValidBrushSize(): Saga<void> {
 
   yield* takeLatest(
     [
-      "WK_READY",
+      "WK_INITIALIZED",
       (action: Action) =>
         action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     ] as ActionPattern<Action>,
@@ -724,7 +724,7 @@ function* ensureValidBrushSize(): Saga<void> {
 }
 
 function* handleDeleteSegmentData(): Saga<void> {
-  yield* take("WK_READY");
+  yield* take("WK_INITIALIZED");
   while (true) {
     const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
 

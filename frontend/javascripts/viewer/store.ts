@@ -506,7 +506,8 @@ type UiInformation = {
   readonly hasOrganizations: boolean;
   readonly borderOpenStatus: BorderOpenStatus;
   readonly theme: Theme;
-  readonly isWkReady: boolean;
+  readonly isWkInitialized: boolean;
+  readonly isUiReady: boolean;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
     | "inactive"

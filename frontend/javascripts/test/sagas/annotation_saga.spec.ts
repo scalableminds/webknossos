@@ -10,8 +10,8 @@ import {
   setBlockedByUserAction,
   setOthersMayEditForAnnotationAction,
 } from "viewer/model/actions/annotation_actions";
-import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
-import { wkReadyAction } from "viewer/model/actions/actions";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
+import { wkInitializedAction } from "viewer/model/actions/actions";
 import { acquireAnnotationMutexMaybe } from "viewer/model/sagas/annotation_saga";
 
 const createInitialState = (
@@ -39,7 +39,7 @@ describe("Annotation Saga", () => {
     const storeState = createInitialState(false, false);
     const saga = acquireAnnotationMutexMaybe();
     saga.next();
-    saga.next(wkReadyAction());
+    saga.next(wkInitializedAction());
     saga.next(storeState.annotation.restrictions.allowUpdate);
     saga.next(storeState.annotation.annotationId);
     expect(saga.next().done, "The saga should terminate.").toBe(true);
@@ -51,9 +51,9 @@ describe("Annotation Saga", () => {
     const storeState = createInitialState(othersMayEdit);
     const saga = acquireAnnotationMutexMaybe();
 
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
     expect(
-      saga.next(wkReadyAction()).value.type,
+      saga.next(wkInitializedAction()).value.type,
       "The saga should select the allowUpdate next.",
     ).toBe("SELECT");
     expect(

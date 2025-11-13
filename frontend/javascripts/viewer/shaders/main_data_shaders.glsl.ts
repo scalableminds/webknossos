@@ -58,8 +58,8 @@ export type Params = {
     }
   >;
   magnificationsCount: number;
-  voxelSizeFactor: Vector3;
-  voxelSizeFactorInverted: Vector3;
+  // voxelSizeFactor: Vector3;
+  // voxelSizeFactorInverted: Vector3;
   isOrthogonal: boolean;
   useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
@@ -155,8 +155,8 @@ uniform uint hoveredUnmappedSegmentIdHigh;
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
 // is directly inserted into the source via templating.
-const vec3 voxelSizeFactor = <%= formatVector3AsVec3(voxelSizeFactor) %>;
-const vec3 voxelSizeFactorInverted = <%= formatVector3AsVec3(voxelSizeFactorInverted) %>;
+uniform vec3 voxelSizeFactor; //  = <%= 1 /*formatVector3AsVec3(voxelSizeFactor)*/ %>;
+uniform vec3 voxelSizeFactorInverted; //  = <%= 1 /*formatVector3AsVec3(voxelSizeFactorInverted)*/ %>;
 
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;

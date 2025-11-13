@@ -21,6 +21,7 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import {
   getMagInfo,
   getMappingInfo,
+  getTransformedVoxelSize,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -483,7 +484,11 @@ function* maybeLoadMeshChunk(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(paddedPositionWithinLayer, true);
-  const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
+  const scaleFactor = yield* select(
+    (state) =>
+      getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)
+        .factor,
+  );
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {

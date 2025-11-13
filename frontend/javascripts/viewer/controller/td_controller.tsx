@@ -20,6 +20,7 @@ import {
   ProofreadToolController,
   SkeletonToolController,
 } from "viewer/controller/combinations/tool_controls";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -398,7 +399,10 @@ class TDController extends React.PureComponent<Props> {
 
 export function mapStateToProps(state: WebknossosState): StateProps {
   return {
-    voxelSize: state.dataset.dataSource.scale,
+    voxelSize: getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ),
     activeTool: state.uiInformation.activeTool,
   };
 }

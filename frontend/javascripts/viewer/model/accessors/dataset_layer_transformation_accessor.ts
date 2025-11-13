@@ -297,11 +297,12 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
       ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
       : null;
     return toIdentityTransformMaybe(someLayersTransformsMaybe);
-  } else if (nativelyRenderedLayerName != null && allLayersSameRotation) {
+  } else if (allLayersSameRotation) {
     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
     return null;
   }
 
+  // nativelyRenderedLayerName is not null and the layers don't have a common rotation:
   // Compute the inverse of the layer that should be rendered natively.
   const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
   const transformsOfNativeLayer = getOriginalTransformsForLayerOrNull(dataset, nativeLayer);

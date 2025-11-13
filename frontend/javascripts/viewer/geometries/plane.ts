@@ -23,6 +23,7 @@ import constants, {
 import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 
 // A subdivision of 100 means that there will be 100 segments per axis
@@ -53,6 +54,8 @@ class Plane {
   crosshair: Array<LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: Line;
+  // lastScaleFactors is set with the return value from getPlaneScalingFactor which depends on the size of the
+  // viewport and the zoom value.
   lastScaleFactors: [number, number];
   // baseRotation is the base rotation the plane has in an unrotated scene. It will be applied additional to the flycams rotation.
   // Different baseRotations for each of the planes ensures that the planes stay orthogonal to each other.
@@ -164,7 +167,10 @@ class Plane {
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
     // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
-    const scaleVector: Vector3 = V3.multiply([xFactor, yFactor, 1], this.datasetScaleFactor);
+    const scaleVector: Vector3 = V3.multiply(
+      [1 * xFactor, 1 * yFactor, 1],
+      this.datasetScaleFactor,
+    );
     this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 
@@ -223,8 +229,13 @@ class Plane {
   bindToEvents(): void {
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
-        (storeState) => storeState.dataset.dataSource.scale.factor,
+        (storeState) =>
+          getTransformedVoxelSize(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ).factor,
         (scaleFactor) => (this.datasetScaleFactor = scaleFactor),
+        true,
       ),
     ];
   }

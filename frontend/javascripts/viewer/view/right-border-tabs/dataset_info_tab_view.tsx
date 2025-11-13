@@ -25,6 +25,7 @@ import {
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
+  getTransformedVoxelSize,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -188,6 +189,11 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
 }
 
 export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
+  const nativelyRenderedLayerName = useWkSelector(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const transformedVoxelSize = getTransformedVoxelSize(dataset, nativelyRenderedLayerName);
+
   return (
     <FastTooltip title="Dataset voxel size" placement="left" wrapper="tr">
       <td
@@ -197,7 +203,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       >
         <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
       </td>
-      <td>{formatScale(dataset.dataSource.scale)}</td>
+      <td>{formatScale(transformedVoxelSize)}</td>
     </FastTooltip>
   );
 }

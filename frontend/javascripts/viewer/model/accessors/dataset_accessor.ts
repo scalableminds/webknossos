@@ -14,6 +14,7 @@ import type {
   APISegmentationLayer,
   AdditionalAxis,
   ElementClass,
+  VoxelSize,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "viewer/constants";
@@ -30,6 +31,8 @@ import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsForSkeletonLayer } from "./dataset_layer_transformation_accessor";
+import { transformPointUnscaled } from "../helpers/transformation_helpers";
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
   return new MagInfo(magnifications.map((magObj) => magObj.mag));
@@ -287,6 +290,37 @@ export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   };
   return extent;
 }
+
+export function getTransformedVoxelSize(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+  ignoreTransformation: boolean = false,
+): VoxelSize {
+  const { scale } = dataset.dataSource;
+  if (ignoreTransformation) {
+    return scale;
+  }
+  const scaleFactor = scale.factor;
+  const transforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  const transformFn = transformPointUnscaled(transforms);
+
+  // Transform (0,0,0) and (scaleFactor) to compute effective scale ratio:
+  const base = transformFn([0, 0, 0]);
+  const scaled = transformFn(scaleFactor);
+
+  // Compute the resulting scale difference
+  const transformedScale: Vector3 = [
+    Math.abs(scaled[0] - base[0]),
+    Math.abs(scaled[1] - base[1]),
+    Math.abs(scaled[2] - base[2]),
+  ];
+  console.log("transformedScale", transformedScale);
+  return {
+    factor: transformedScale,
+    unit: scale.unit,
+  };
+}
+
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,
   inVoxel: boolean = true,

@@ -15,7 +15,10 @@ import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
-import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
+import {
+  getTransformedVoxelSize,
+  getUnifiedAdditionalCoordinates,
+} from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -181,7 +184,11 @@ export function setDirectionReducer(state: WebknossosState, direction: Vector3) 
 export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
-    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale.factor);
+    let matrix = resetMatrix(
+      state.flycam.currentMatrix,
+      getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)
+        .factor,
+    );
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);

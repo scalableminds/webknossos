@@ -11,6 +11,7 @@ import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import models.team.TeamMembership
 import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -24,6 +25,8 @@ case class Invite(
     tokenValue: String,
     _organization: String,
     autoActivate: Boolean,
+    isAdmin: Boolean,
+    isDatasetManager: Boolean,
     expirationDateTime: Instant,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
@@ -40,15 +43,23 @@ class InviteService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  def inviteOneRecipient(recipient: String, sender: User, autoActivate: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def inviteOneRecipient(recipient: String,
+                         sender: User,
+                         autoActivate: Boolean,
+                         isAdmin: Boolean,
+                         isDatasetManager: Boolean,
+                         teamMemberships: Seq[TeamMembership])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate))
+      invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate, isAdmin, isDatasetManager))
       _ <- inviteDAO.insertOne(invite)
+      _ <- inviteDAO.insertTeamMemberships(invite._id, teamMemberships)
       _ <- sendInviteMail(recipient, sender, invite)
     } yield ()
 
-  private def generateInvite(organizationId: String, autoActivate: Boolean): Future[Invite] =
+  private def generateInvite(organizationId: String,
+                             autoActivate: Boolean,
+                             isAdmin: Boolean,
+                             isDatasetManager: Boolean): Future[Invite] =
     for {
       tokenValue <- tokenValueGenerator.generate
     } yield
@@ -57,6 +68,8 @@ class InviteService @Inject()(conf: WkConf,
         tokenValue,
         organizationId,
         autoActivate,
+        isAdmin,
+        isDatasetManager,
         Instant.in(conf.WebKnossos.User.inviteExpiry)
       )
 
@@ -98,6 +111,8 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.tokenvalue,
         r._Organization,
         r.autoactivate,
+        r.isadmin,
+        r.isdatasetmanager,
         Instant.fromSql(r.expirationdatetime),
         Instant.fromSql(r.created),
         r.isdeleted
@@ -112,11 +127,32 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def insertOne(i: Invite): Fox[Unit] =
     for {
-      _ <- run(
-        q"""INSERT INTO webknossos.invites(_id, tokenValue, _organization, autoActivate, expirationDateTime, created, isDeleted)
+      _ <- run(q"""INSERT INTO webknossos.invites(
+                   _id, tokenValue, _organization, autoActivate,
+                   isAdmin, isDatasetManager,
+                   expirationDateTime, created, isDeleted)
             VALUES(${i._id}, ${i.tokenValue}, ${i._organization}, ${i.autoActivate},
+            ${i.isAdmin}, ${i.isDatasetManager},
             ${i.expirationDateTime}, ${i.created}, ${i.isDeleted})""".asUpdate)
     } yield ()
+
+  private def insertTeamMembershipQuery(inviteId: ObjectId, teamMembership: TeamMembership) =
+    q"INSERT INTO webknossos.invite_team_roles(_invite, _team, isTeamManager) VALUES($inviteId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
+
+  def insertTeamMemberships(inviteId: ObjectId, teamMemberships: Seq[TeamMembership]): Fox[Unit] = {
+    val insertQueries = teamMemberships.map(insertTeamMembershipQuery(inviteId, _))
+    for {
+      _ <- run(DBIO.sequence(insertQueries).transactionally)
+    } yield ()
+  }
+
+  def findTeamMembershipsFor(inviteId: ObjectId): Fox[Seq[TeamMembership]] =
+    for {
+      rows <- run(
+        q"SELECT _team, isTeamManager FROM WEBKNOSSOS.invite_team_roles WHERE _invite = $inviteId"
+          .as[(ObjectId, Boolean)])
+      parsed = rows.map(row => TeamMembership(row._1, row._2))
+    } yield parsed
 
   def deleteAllExpired(): Fox[Unit] = {
     val query = for {

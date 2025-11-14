@@ -15,6 +15,7 @@ import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -139,11 +140,15 @@ function JobListView() {
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   useEffect(() => {
-    fetchData();
+    initialize();
+  }, []);
+
+  async function initialize() {
+    await fetchData();
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
     setIsLoading(false);
-  }, []);
+  }
 
   async function fetchData() {
     setJobs(await getJobs());
@@ -305,6 +310,12 @@ function JobListView() {
     }
   }
 
+  function renderWorkflowLink(__: any, job: APIJob) {
+    return job.voxelyticsWorkflowHash != null ? (
+      <Link to={`/workflows/${job.voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+    ) : null;
+  }
+
   function renderActions(__: any, job: APIJob) {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
@@ -392,7 +403,8 @@ function JobListView() {
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
       job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
-      job.type === APIJobType.INFER_MITOCHONDRIA
+      job.type === APIJobType.INFER_MITOCHONDRIA ||
+      job.type === APIJobType.INFER_INSTANCES
     ) {
       return (
         <span>
@@ -483,16 +495,10 @@ function JobListView() {
             title="Job Id"
             dataIndex="id"
             key="id"
+            render={(id) => <FormattedId id={id} />}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
           />
           <Column title="Description" key="datasetName" render={renderDescription} />
-          <Column
-            title="Created at"
-            key="createdAt"
-            render={(job) => <FormattedDate timestamp={job.createdAt} />}
-            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
-            defaultSortOrder="descend"
-          />
           <Column
             title="Owner"
             dataIndex="owner"
@@ -506,15 +512,25 @@ function JobListView() {
             )}
           />
           <Column
+            title="Cost in Credits"
+            key="creditCost"
+            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
+          />
+          <Column
+            title="Date"
+            key="createdAt"
+            render={(job) => <FormattedDate timestamp={job.createdAt} />}
+            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
+            defaultSortOrder="descend"
+          />
+          {isCurrentUserSuperUser ? (
+            <Column title="Workflow" key="workflow" width={150} render={renderWorkflowLink} />
+          ) : null}
+          <Column
             title="State"
             key="state"
             render={renderState}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
-          />
-          <Column
-            title="Cost in Credits"
-            key="creditCost"
-            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

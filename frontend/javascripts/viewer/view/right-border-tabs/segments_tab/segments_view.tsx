@@ -1792,6 +1792,7 @@ class SegmentsView extends React.Component<Props, State> {
               disabled: true,
             },
             this.getSetGroupColorMenuItem(id),
+            this.getResetGroupColorMenuItem(id),
             this.getShowSegmentStatistics(id),
             this.getLoadMeshesFromFileMenuItem(id),
             this.getComputeMeshesAdHocMenuItem(id),

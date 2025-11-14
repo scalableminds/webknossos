@@ -61,7 +61,8 @@ class Plane {
   // Different baseRotations for each of the planes ensures that the planes stay orthogonal to each other.
   baseRotation: Euler;
   storePropertyUnsubscribers: Array<() => void> = [];
-  datasetScaleFactor: Vector3 = [1, 1, 1];
+  originalDatasetScaleFactor: Vector3 = [1, 1, 1];
+  transformedDatasetScaleFactor: Vector3 = [1, 1, 1];
 
   // Properties are only created here to avoid new creating objects for each setRotation call.
   baseRotationMatrix = new Matrix4();
@@ -169,7 +170,7 @@ class Plane {
     // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
     const scaleVector: Vector3 = V3.multiply(
       [1 * xFactor, 1 * yFactor, 1],
-      this.datasetScaleFactor,
+      this.originalDatasetScaleFactor,
     );
     this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
@@ -195,10 +196,9 @@ class Plane {
     positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
   ): void => {
     // The world scaling by the dataset scale factor is inverted by the scene group
-
     // containing all planes to avoid sheering in anisotropic scaled datasets.
     // Thus, this scale needs to be applied manually to the position here.
-    const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
+    const scaledPosition = V3.multiply(originalPosition, this.transformedDatasetScaleFactor);
     // The offset is in world space already so no scaling is necessary.
     const offsetPosition = V3.add(scaledPosition, positionOffset);
     this.TDViewBorders.position.set(...offsetPosition);
@@ -234,7 +234,25 @@ class Plane {
             storeState.dataset,
             storeState.datasetConfiguration.nativelyRenderedLayerName,
           ).factor,
-        (scaleFactor) => (this.datasetScaleFactor = scaleFactor),
+        (scaleFactor) => {
+          // todop / workaround so that setScale uses new factor
+          this.lastScaleFactors[0] = -1;
+          this.transformedDatasetScaleFactor = scaleFactor;
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformedVoxelSize(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+            true,
+          ).factor,
+        (scaleFactor) => {
+          // todop / workaround so that setScale uses new factor
+          this.lastScaleFactors[0] = -1;
+          this.originalDatasetScaleFactor = scaleFactor;
+        },
         true,
       ),
     ];

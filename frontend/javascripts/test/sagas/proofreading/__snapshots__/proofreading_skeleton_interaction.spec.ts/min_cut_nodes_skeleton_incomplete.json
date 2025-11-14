@@ -1,0 +1,66 @@
+[
+  [
+    {
+      "actions": [
+        {
+          "name": "splitAgglomerate",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "agglomerateId": 1,
+            "segmentId1": 3,
+            "segmentId2": 2,
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","MIN_CUT_AGGLOMERATE_WITH_NODE_IDS","SET_BUSY_BLOCKING_INFO_ACTION","DELETE_EDGE"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 3,
+          "nodeCount": 6,
+          "treeCount": 3,
+        },
+        "volumeTracingId": {
+          "segmentCount": 1,
+        },
+      },
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 9,
+    },
+  ],
+  [
+    {
+      "actions": [
+        {
+          "name": "deleteSegment",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "id": 1,
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME","REMOVE_SEGMENT"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 3,
+          "nodeCount": 6,
+          "treeCount": 3,
+        },
+        "volumeTracingId": {
+          "segmentCount": 0,
+        },
+      },
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 10,
+    },
+  ],
+]

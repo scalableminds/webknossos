@@ -1,24 +1,38 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
-import { enforceSkeletonTracing, getTree } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  findTreeByNodeId,
+  getTree,
+  getTreeGroupsMap,
+} from "viewer/model/accessors/skeletontracing_accessor";
+import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   setTreeEdgeVisibilityAction,
   setTreeGroupsAction,
+  setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
-import type { ApplicableSkeletonUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Tree } from "viewer/model/types/tree_types";
+import type { ApplicableSkeletonServerUpdateAction } from "viewer/model/sagas/volume/update_actions";
+import type { Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { Reducer, WebknossosState } from "viewer/store";
-import { getMaximumNodeId } from "../skeletontracing_reducer_helpers";
+import { updateUserBoundingBox } from "../annotation_reducer";
+import {
+  getMaximumNodeId,
+  setExpandedTreeGroups,
+  toggleAllTreesReducer,
+  toggleTreeGroupReducer,
+} from "../skeletontracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
+import { withoutActionTimestamp, withoutServerSpecificFields } from "./shared_update_helper";
 
 export function applySkeletonUpdateActionsFromServer(
   SkeletonTracingReducer: Reducer,
-  actions: ApplicableSkeletonUpdateAction[],
+  actions: ApplicableSkeletonServerUpdateAction[],
   state: WebknossosState,
 ): WebknossosState {
   let newState = state;
@@ -31,13 +45,13 @@ export function applySkeletonUpdateActionsFromServer(
 
 function applySingleAction(
   SkeletonTracingReducer: Reducer,
-  ua: ApplicableSkeletonUpdateAction,
+  ua: ApplicableSkeletonServerUpdateAction,
   state: WebknossosState,
 ): WebknossosState {
   switch (ua.name) {
     case "createTree": {
       // updatedId is part of the updateAction format but was never really used.
-      const { id, updatedId: _updatedId, actionTracingId: _actionTracingId, ...rest } = ua.value;
+      const { id, updatedId: _updatedId, ...rest } = withoutServerSpecificFields(ua).value;
       const newTree: Tree = {
         treeId: id,
         ...rest,
@@ -59,11 +73,10 @@ function applySingleAction(
     case "updateTree": {
       const {
         id: treeId,
-        actionTracingId: _actionTracingId,
         // updatedId is part of the updateAction format but was never really used.
         updatedId: _updatedId,
         ...treeRest
-      } = ua.value;
+      } = withoutServerSpecificFields(ua).value;
       const skeleton = enforceSkeletonTracing(state.annotation);
       const tree = getTree(skeleton, treeId);
       if (tree == null) {
@@ -82,13 +95,8 @@ function applySingleAction(
       });
     }
     case "createNode": {
-      const { treeId, ...serverNode } = ua.value;
-      const {
-        position: untransformedPosition,
-        resolution: mag,
-        actionTracingId: _actionTracingId,
-        ...node
-      } = serverNode;
+      const { treeId, ...serverNode } = withoutServerSpecificFields(ua).value;
+      const { position: untransformedPosition, resolution: mag, ...node } = serverNode;
       const clientNode = { untransformedPosition, mag, ...node };
 
       const skeleton = enforceSkeletonTracing(state.annotation);
@@ -115,13 +123,8 @@ function applySingleAction(
       });
     }
     case "updateNode": {
-      const { treeId, ...serverNode } = ua.value;
-      const {
-        position: untransformedPosition,
-        actionTracingId: _actionTracingId,
-        mag,
-        ...node
-      } = serverNode;
+      const { treeId, ...serverNode } = withoutServerSpecificFields(ua).value;
+      const { position: untransformedPosition, mag, ...node } = serverNode;
       const clientNode = { untransformedPosition, mag, ...node };
 
       const skeleton = enforceSkeletonTracing(state.annotation);
@@ -319,11 +322,6 @@ function applySingleAction(
       return SkeletonTracingReducer(state, setTreeGroupsAction(ua.value.treeGroups));
     }
 
-    case "updateTreeGroupsExpandedState": {
-      // changes to user specific state does not need to be reacted to
-      return state;
-    }
-
     case "updateTreeEdgesVisibility": {
       return SkeletonTracingReducer(
         state,
@@ -331,19 +329,133 @@ function applySingleAction(
       );
     }
 
+    case "deleteUserBoundingBoxInSkeletonTracing": {
+      return applyDeleteUserBoundingBox(
+        state,
+        enforceSkeletonTracing(state.annotation),
+        withoutActionTimestamp(ua),
+      );
+    }
+
     case "updateUserBoundingBoxInSkeletonTracing": {
-      return applyUpdateUserBoundingBox(state, enforceSkeletonTracing(state.annotation), ua);
+      return applyUpdateUserBoundingBox(
+        state,
+        enforceSkeletonTracing(state.annotation),
+        withoutActionTimestamp(ua),
+      );
     }
     case "addUserBoundingBoxInSkeletonTracing": {
-      return applyAddUserBoundingBox(state, enforceSkeletonTracing(state.annotation), ua);
+      return applyAddUserBoundingBox(
+        state,
+        enforceSkeletonTracing(state.annotation),
+        withoutActionTimestamp(ua),
+      );
     }
+
+    // These update actions below are user specific and only need to be applied
+    // if these actions originate from the current user (this happens when rebasing such actions).
+    case "updateTreeGroupsExpandedState": {
+      const skeletonTracing = enforceSkeletonTracing(state.annotation);
+      const treeGroupsMap = getTreeGroupsMap(skeletonTracing);
+      const currentlyExpandedTreeGroupIds = new Set(
+        Object.values(treeGroupsMap).filter((group) => group.isExpanded),
+      );
+      const groupIdSet = new Set(ua.value.groupIds);
+      const newlyExpandedTreeGroupIds = ua.value.areExpanded
+        ? currentlyExpandedTreeGroupIds.union(groupIdSet)
+        : currentlyExpandedTreeGroupIds.difference(groupIdSet);
+      // changes to user specific state does not need to be reacted to
+      return setExpandedTreeGroups(state, (group: TreeGroup) =>
+        newlyExpandedTreeGroupIds.has(group.groupId),
+      );
+    }
+
     case "updateUserBoundingBoxVisibilityInSkeletonTracing": {
-      // Visibility updates are user-specific and don't need to be
-      // incorporated for the current user.
+      // Visibility updates are user-specific and should only be incorporated
+      // when rebasing the user's actions from the save queue.
+      return updateUserBoundingBox(
+        state,
+        changeUserBoundingBoxAction(ua.value.boundingBoxId, {
+          isVisible: ua.value.isVisible,
+        }),
+      );
+    }
+
+    // User specific actions
+    case "updateActiveNode": {
+      if (ua.value.activeNode == null) {
+        return update(state, {
+          annotation: {
+            skeleton: {
+              activeNodeId: {
+                $set: null,
+              },
+            },
+          },
+        });
+      }
+      const tree = findTreeByNodeId(
+        enforceSkeletonTracing(state.annotation).trees,
+        ua.value.activeNode,
+      );
+      if (tree) {
+        return update(state, {
+          annotation: {
+            skeleton: {
+              activeNodeId: {
+                $set: ua.value.activeNode,
+              },
+              activeTreeId: {
+                $set: tree.treeId,
+              },
+            },
+          },
+        });
+      }
       return state;
     }
-    case "deleteUserBoundingBoxInSkeletonTracing": {
-      return applyDeleteUserBoundingBox(state, enforceSkeletonTracing(state.annotation), ua);
+    case "updateActiveTree": {
+      const skeletonTracing = enforceSkeletonTracing(state.annotation);
+      if (ua.value.activeTree) {
+        const tree = getTree(skeletonTracing, ua.value.activeTree);
+        if (!tree) {
+          return state;
+        }
+      }
+      return update(state, {
+        annotation: {
+          skeleton: {
+            activeTreeId: {
+              $set: ua.value.activeTree,
+            },
+            activeNodeId: {
+              $set: ua.value.activeNode,
+            },
+          },
+        },
+      });
+    }
+    case "updateTreeVisibility": {
+      return SkeletonTracingReducer(
+        state,
+        setTreeVisibilityAction(ua.value.treeId, ua.value.isVisible),
+      );
+    }
+    case "updateTreeGroupVisibility": {
+      if (ua.value.treeGroupId != null) {
+        return toggleTreeGroupReducer(
+          state,
+          enforceSkeletonTracing(state.annotation),
+          ua.value.treeGroupId,
+          ua.value.isVisible,
+        );
+      } else {
+        return toggleAllTreesReducer(
+          state,
+          enforceSkeletonTracing(state.annotation),
+          ua.value.isVisible,
+        );
+      }
     }
     default: {
       ua satisfies never;

@@ -9,6 +9,7 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
@@ -135,8 +136,12 @@ export function convertServerAnnotationToFrontendAnnotation(
   const restrictions = {
     ...annotation.restrictions,
     ...annotation.settings,
-    initialAllowUpdate: annotation.restrictions.allowUpdate,
   };
+  // If othersMayEdit is true and liveCollab is disabled, updating is only allowed in case the user has the mutex.
+  // The mutex fetching is done by the respective saga.
+  const isUpdatingCurrentlyAllowed = annotation.othersMayEdit
+    ? WkDevFlags.liveCollab
+    : annotation.restrictions.allowUpdate;
   return {
     annotationId,
     restrictions,
@@ -155,7 +160,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     contributors,
     othersMayEdit,
     annotationLayers,
-    blockedByUser: null,
+    isUpdatingCurrentlyAllowed,
   };
 }
 
@@ -177,7 +182,7 @@ export function isToolAvailable(
   if (isDisabled) {
     return false;
   }
-  if (!state.annotation.restrictions.allowUpdate) {
+  if (!state.annotation.isUpdatingCurrentlyAllowed) {
     return Toolkits.READ_ONLY_TOOLS.includes(tool);
   }
   return true;

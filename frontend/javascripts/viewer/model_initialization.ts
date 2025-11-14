@@ -118,7 +118,10 @@ import type {
 import Store from "viewer/store";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
-import { setVersionNumberAction } from "./model/actions/save_actions";
+import {
+  setVersionNumberAction,
+  snapshotMappingDataForNextRebaseAction,
+} from "./model/actions/save_actions";
 import {
   convertBoundingBoxProtoToObject,
   convertServerAdditionalAxesToFrontEnd,
@@ -887,11 +890,13 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
     if (layerState.mappingInfo != null) {
       const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
       Store.dispatch(
-        setMappingAction(effectiveLayerName, mappingName, mappingType, {
+        setMappingAction(effectiveLayerName, mappingName, mappingType, true, {
           showLoadingIndicator: true,
         }),
       );
       Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
+      // Store initial changes of setMappingAction and setMappingEnabledAction in RebaseRelevantAnnotationState.
+      Store.dispatch(snapshotMappingDataForNextRebaseAction(layerName));
 
       if (agglomerateIdsToImport != null) {
         const { annotation } = Store.getState();

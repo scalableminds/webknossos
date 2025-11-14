@@ -768,9 +768,11 @@ export function deleteComment(
 export function toggleAllTreesReducer(
   state: WebknossosState,
   skeletonTracing: SkeletonTracing,
+  shouldBecomeVisible?: boolean,
 ): WebknossosState {
   // Let's make all trees visible if there is one invisible tree
-  const shouldBecomeVisible = skeletonTracing.trees.values().some((tree) => !tree.isVisible);
+  shouldBecomeVisible =
+    shouldBecomeVisible ?? skeletonTracing.trees.values().some((tree) => !tree.isVisible);
 
   const newTrees = skeletonTracing.trees.clone();
   for (const [treeId, tree] of skeletonTracing.trees.entries()) {

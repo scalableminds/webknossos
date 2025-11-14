@@ -14,7 +14,7 @@ export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
 export type UpdateTemporarySettingAction = ReturnType<typeof updateTemporarySettingAction>;
 export type ToggleTemporarySettingAction = ReturnType<typeof toggleTemporarySettingAction>;
-type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
+export type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
 export type InitializeSettingsAction = ReturnType<typeof initializeSettingsAction>;
 export type SetViewModeAction = ReturnType<typeof setViewModeAction>;
 type SetHistogramDataForLayerAction = ReturnType<typeof setHistogramDataForLayerAction>;
@@ -206,6 +206,9 @@ export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
   mappingType: MappingType = "JSON",
+  // If true, the mapping saga automatically makes sure that the new mapping info is stored in RebaseRelevantAnnotationState
+  // for future rebases. Only set to true, if this info is really stored this was on the server.
+  isVersionStoredOnServer: boolean,
   {
     mapping,
     mappingColors,
@@ -224,6 +227,7 @@ export const setMappingAction = (
     hideUnmappedIds,
     showLoadingIndicator,
     isMergerModeMapping,
+    isVersionStoredOnServer,
   }) as const;
 
 export const setMappingNameAction = (

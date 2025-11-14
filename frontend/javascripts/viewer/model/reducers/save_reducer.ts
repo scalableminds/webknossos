@@ -132,7 +132,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       return state;
     }
 
-    case "DISCARD_SAVE_QUEUES": {
+    case "DISCARD_SAVE_QUEUE": {
       return update(state, {
         save: {
           queue: {
@@ -145,6 +145,21 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
             totalActionCount: {
               $set: 0,
             },
+          },
+        },
+      });
+    }
+
+    case "REPLACE_SAVE_QUEUE": {
+      // Only used during rebasing to update save queue entries in case their data was outdated and needed syncing with the newest backend version.
+      if (state.save.queue.length !== action.newSaveQueue.length) {
+        // This should never occur but is a save guard to not miss an update. Better crash instead of sending incomplete updates.
+        throw new Error("Tried to replace save queue with incomplete entries!");
+      }
+      return update(state, {
+        save: {
+          queue: {
+            $set: action.newSaveQueue,
           },
         },
       });
@@ -178,6 +193,95 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
 
       return updateKey2(state, "annotation", "restrictions", {
         allowSave: false,
+      });
+    }
+
+    case "SET_IS_MUTEX_ACQUIRED": {
+      const { isMutexAcquired } = action;
+      return updateKey2(state, "save", "mutexState", {
+        hasAnnotationMutex: isMutexAcquired,
+      });
+    }
+
+    case "SET_USER_HOLDING_MUTEX": {
+      const { blockedByUser } = action;
+      return updateKey2(state, "save", "mutexState", {
+        blockedByUser,
+      });
+    }
+
+    case "PREPARE_REBASING": {
+      const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
+      return update(state, {
+        annotation: {
+          version: {
+            $set: rebaseInfo.annotationVersion,
+          },
+          description: {
+            $set: rebaseInfo.annotationDescription,
+          },
+          skeleton: {
+            $set: rebaseInfo.skeleton,
+          },
+        },
+        temporaryConfiguration: {
+          activeMappingByLayer: {
+            $set: rebaseInfo.activeMappingByLayer,
+          },
+        },
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasing: { $set: true },
+          },
+        },
+      });
+    }
+
+    case "FINISHED_REBASING": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasing: { $set: false },
+          },
+        },
+      });
+    }
+
+    case "SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION": {
+      const mappingInfoOfLayer =
+        state.temporaryConfiguration.activeMappingByLayer[action.volumeLayerIdToUpdate];
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            activeMappingByLayer: {
+              [action.volumeLayerIdToUpdate]: {
+                $set: mappingInfoOfLayer,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    case "DONE_SAVING":
+    case "FINISHED_APPLYING_MISSING_UPDATES": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            annotationDescription: {
+              $set: state.annotation.description,
+            },
+            annotationVersion: {
+              $set: state.annotation.version,
+            },
+            activeMappingByLayer: {
+              $set: state.temporaryConfiguration.activeMappingByLayer,
+            },
+            skeleton: {
+              $set: state.annotation.skeleton,
+            },
+          },
+        },
       });
     }
 

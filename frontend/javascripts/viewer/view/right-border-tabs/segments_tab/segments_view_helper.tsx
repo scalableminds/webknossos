@@ -108,7 +108,7 @@ export function withMappingActivationConfirmation(
           return;
         }
         if (mappingName != null) {
-          Store.dispatch(setMappingAction(layerName, mappingName, "HDF5"));
+          Store.dispatch(setMappingAction(layerName, mappingName, "HDF5", false));
           await waitForCondition(
             () =>
               getMappingInfo(

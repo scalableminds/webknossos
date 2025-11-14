@@ -11,6 +11,7 @@ import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/s
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
+import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateAnnotation = (
@@ -56,6 +57,27 @@ const updateUserBoundingBoxes = (
   });
 };
 
+export const updateUserBoundingBox = (
+  state: WebknossosState,
+  action: ChangeUserBoundingBoxAction,
+) => {
+  const tracing = maybeGetSomeTracing(state.annotation);
+
+  if (tracing == null) {
+    return state;
+  }
+
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
+    bbox.id === action.id
+      ? {
+          ...bbox,
+          ...action.newProps,
+        }
+      : bbox,
+  );
+  return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+};
+
 const maybeAddAdditionalCoordinatesToMeshState = (
   state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
@@ -79,7 +101,26 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      return updateAnnotation(state, {
+      // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
+      // It always is in sync with the latest known version on the server. After initializing it is the current version.
+      // activeMappingByLayer are initialized automatically when they are being loaded by the saga.
+      const stateWithAnnotationRebaseInformation = update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            annotationVersion: {
+              $set: action.annotation.version,
+            },
+            annotationDescription: {
+              $set: action.annotation.description,
+            },
+            activeMappingByLayer: {
+              $set: {},
+            },
+          },
+        },
+      });
+
+      return updateAnnotation(stateWithAnnotationRebaseInformation, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],
@@ -124,16 +165,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "SET_ANNOTATION_ALLOW_UPDATE": {
-      const { allowUpdate } = action;
-      return updateKey2(state, "annotation", "restrictions", {
-        allowUpdate,
-      });
-    }
-
-    case "SET_BLOCKED_BY_USER": {
-      const { blockedByUser } = action;
+      const { currentlyAllowUpdate } = action;
       return updateKey(state, "annotation", {
-        blockedByUser,
+        isUpdatingCurrentlyAllowed: currentlyAllowUpdate,
       });
     }
 
@@ -142,21 +176,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "CHANGE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.annotation);
-
-      if (tracing == null) {
-        return state;
-      }
-
-      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
-        bbox.id === action.id
-          ? {
-              ...bbox,
-              ...action.newProps,
-            }
-          : bbox,
-      );
-      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBox(state, action);
       return updateKey(updatedState, "uiInformation", {
         activeUserBoundingBoxId: action.id,
       });

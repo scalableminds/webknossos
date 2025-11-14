@@ -1,4 +1,4 @@
-import { vi, type TestContext as BaseTestContext } from "vitest";
+import { type Mock, vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
@@ -38,8 +38,14 @@ import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
 import {
+  acquireAnnotationMutex,
+  releaseAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
+  getEditableAgglomerateSkeleton,
+  getNeighborsForAgglomerateNode,
+  getPositionForSegmentInAgglomerate,
+  getUpdateActionLog,
   sendSaveRequestWithToken,
   type MinCutTargetEdge,
 } from "admin/rest_api";
@@ -54,7 +60,21 @@ import {
   annotation as HYBRID_ANNOTATION,
   annotationProto as HYBRID_ANNOTATION_PROTO,
 } from "test/fixtures/hybridtracing_server_objects";
-import type { ElementClass, ServerTracing } from "types/api_types";
+import {
+  tracings as MULTI_VOLUME_TRACINGS,
+  annotation as MULTI_VOLUME_ANNOTATION,
+  annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
+} from "test/fixtures/multivolume_server_objects";
+import type {
+  APIAnnotation,
+  APIDataset,
+  APITracingStoreAnnotation,
+  ServerSkeletonTracing,
+  ServerTracing,
+  ServerVolumeTracing,
+  ElementClass,
+} from "types/api_types";
+import type { ArbitraryObject } from "types/globals";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import { __setFeatures } from "features";
 
@@ -69,6 +89,14 @@ export interface WebknossosTestContext extends BaseTestContext {
     Request: typeof Request;
     getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
     getEdgesForAgglomerateMinCut: typeof getEdgesForAgglomerateMinCut;
+    acquireAnnotationMutex: Mock<typeof acquireAnnotationMutex>;
+    releaseAnnotationMutex: Mock<typeof releaseAnnotationMutex>;
+    getNeighborsForAgglomerateNode: Mock<typeof getNeighborsForAgglomerateNode>;
+    getUpdateActionLog: Mock<typeof getUpdateActionLog>;
+    sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
+    getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
+    getEditableAgglomerateSkeleton: Mock<typeof getEditableAgglomerateSkeleton>;
+    parseProtoTracing: Mock<typeof parseProtoTracing>;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -92,9 +120,11 @@ vi.mock("libs/request", () => ({
   },
 }));
 
-const getCurrentMappingEntriesFromServer = vi.fn((): Array<[number, number]> => {
-  return [];
-});
+const getCurrentMappingEntriesFromServer = vi.fn(
+  (_version?: number | null | undefined): Array<[number, number]> => {
+    return [];
+  },
+);
 
 vi.mock("admin/rest_api.ts", async () => {
   const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
@@ -106,9 +136,12 @@ vi.mock("admin/rest_api.ts", async () => {
   });
   (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
 
-  const getAgglomeratesForSegmentsImpl = async (segmentIds: Array<NumberLike>) => {
+  const getAgglomeratesForSegmentsImpl = async (
+    segmentIds: Array<NumberLike>,
+    version?: number | null | undefined,
+  ) => {
     const segmentIdSet = new Set(segmentIds);
-    const entries = getCurrentMappingEntriesFromServer().filter(([id]) =>
+    const entries = getCurrentMappingEntriesFromServer(version).filter(([id]) =>
       segmentIdSet.has(id),
     ) as Vector2[];
     if (entries.length < segmentIdSet.size) {
@@ -136,9 +169,9 @@ vi.mock("admin/rest_api.ts", async () => {
       _tracingId: string,
       segmentIds: Array<NumberLike>,
       _annotationId: string,
-      _version?: number | null | undefined,
+      version?: number | null | undefined,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds);
+      return getAgglomeratesForSegmentsImpl(segmentIds, version);
     },
   );
 
@@ -147,6 +180,7 @@ vi.mock("admin/rest_api.ts", async () => {
     getDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
+    getMappingsForDatasetLayer: vi.fn(() => []),
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
@@ -161,6 +195,34 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
+    acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    releaseAnnotationMutex: vi.fn(() => {}),
+    getNeighborsForAgglomerateNode: vi.fn(
+      (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
+    getUpdateActionLog: vi.fn(() => Promise.resolve([])),
+    getPositionForSegmentInAgglomerate: vi.fn(
+      (
+        _datastoreUrl: string,
+        _datasetId: string,
+        _layerName: string,
+        _mappingName: string,
+        _segmentId: number,
+      ) => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
+    getEditableAgglomerateSkeleton: vi.fn(
+      (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        _agglomerateId: number,
+      ): Promise<ArrayBuffer> => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
   };
 });
 
@@ -168,10 +230,15 @@ vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("viewer/model/helpers/proto_helpers", () => {
+vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
+  const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
   return {
-    parseProtoTracing: vi.fn(),
+    PROTO_FILES: originalProtoHelperModule.PROTO_FILES,
+    PROTO_TYPES: originalProtoHelperModule.PROTO_TYPES,
+    parseProtoTracing: vi.fn(originalProtoHelperModule.parseProtoTracing),
     parseProtoAnnotation: vi.fn(),
+    serializeProtoListOfLong: vi.fn(),
+    parseProtoListOfLong: vi.fn(),
   };
 });
 
@@ -185,6 +252,14 @@ function receiveJSONMockImplementation(
     url.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)
   ) {
     return Promise.resolve(_.cloneDeep(annotationFixture));
+  }
+  if (url.startsWith("http://localhost:9000/tracings/mapping/volumeTracingId/info")) {
+    return Promise.resolve({
+      tracingId: "volumeTracingId",
+      baseMappingName: "mocked-mapping",
+      largestAgglomerateId: 42,
+      createdTimestamp: 1753360021075,
+    });
   }
 
   if (
@@ -221,7 +296,7 @@ vi.mock("viewer/model/bucket_data_handling/data_rendering_logic", async (importO
   };
 });
 
-type Override = {
+export type BucketOverride = {
   position: [number, number, number]; // [x, y, z]
   value: number;
 };
@@ -230,7 +305,7 @@ export function createBucketResponseFunction(
   dataTypePerLayer: Record<string, ElementClass>,
   fillValue: number,
   delay = 0,
-  overrides: Override[] = [],
+  overrides: BucketOverride[] = [],
 ) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
     await sleep(delay);
@@ -303,6 +378,12 @@ const modelData = {
     annotation: HYBRID_ANNOTATION,
     annotationProto: HYBRID_ANNOTATION_PROTO,
   },
+  multiVolume: {
+    dataset: DATASET,
+    tracings: MULTI_VOLUME_TRACINGS,
+    annotation: MULTI_VOLUME_ANNOTATION,
+    annotationProto: MULTI_VOLUME_ANNOTATION_PROTO,
+  },
   task: {
     dataset: DATASET,
     tracings: [TASK_TRACING],
@@ -315,10 +396,18 @@ setModel(Model);
 setStore(Store);
 setupApi();
 startSaga(rootSaga);
+type ModelDataForTests = {
+  tracings: (ServerSkeletonTracing | ServerVolumeTracing)[];
+  annotationProto: APITracingStoreAnnotation;
+  dataset: APIDataset;
+  annotation: APIAnnotation;
+};
+type ModelModifyingFun = (data: ModelDataForTests) => ModelDataForTests;
 
 export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
+  applyChangesToModelData?: ModelModifyingFun,
   options?: { dontDispatchWkInitialized?: boolean },
 ): Promise<void> {
   /*
@@ -337,7 +426,15 @@ export async function setupWebknossosForTesting(
   testContext.mocks = {
     Request: vi.mocked(Request),
     getCurrentMappingEntriesFromServer,
-    getEdgesForAgglomerateMinCut,
+    getEdgesForAgglomerateMinCut: vi.mocked(getEdgesForAgglomerateMinCut),
+    acquireAnnotationMutex: vi.mocked(acquireAnnotationMutex),
+    releaseAnnotationMutex: vi.mocked(releaseAnnotationMutex),
+    getNeighborsForAgglomerateNode: vi.mocked(getNeighborsForAgglomerateNode),
+    getUpdateActionLog: vi.mocked(getUpdateActionLog),
+    sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
+    getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
+    getEditableAgglomerateSkeleton: vi.mocked(getEditableAgglomerateSkeleton),
+    parseProtoTracing: vi.mocked(parseProtoTracing),
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>
@@ -347,9 +444,14 @@ export async function setupWebknossosForTesting(
   testContext.receivedDataPerSaveRequest = (
     sendSaveRequestWithToken as any
   ).receivedDataPerSaveRequest;
+  testContext.receivedDataPerSaveRequest.length = 0; // Clear array in-place.
 
   const webknossos = new WebknossosApi(Model);
-  const { tracings, annotationProto, dataset, annotation } = modelData[mode];
+  let modelDataForTest: ModelDataForTests = modelData[mode];
+  if (applyChangesToModelData != null) {
+    modelDataForTest = applyChangesToModelData(modelDataForTest);
+  }
+  const { tracings, annotationProto, dataset, annotation } = modelDataForTest;
 
   vi.mocked(Request).receiveJSON.mockImplementation((url, options) =>
     receiveJSONMockImplementation(url, options, annotation),
@@ -365,21 +467,31 @@ export async function setupWebknossosForTesting(
     },
   );
 
-  vi.mocked(parseProtoTracing).mockImplementation(
-    (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
-      const tracing = tracings.find((tracing) => tracing.typ.toLowerCase() === annotationType);
-      if (tracing == null) {
-        throw new Error(`Could not find tracing for ${annotationType}.`);
-      }
-      return tracing;
-    },
+  testContext.mocks.parseProtoTracing.mockImplementation(
+    // Wrapping function to track already returned volume tracings in case of multiVolume test mode type.
+    // Needed to return both tracings and not one of them twice.
+    (function wrapperTrackingRepliedVolumeTracings() {
+      const volumeTracings = tracings.filter((tracing) => tracing.typ.toLowerCase() === "volume");
+      const skeletonTracing = tracings.find((tracing) => tracing.typ.toLowerCase() === "skeleton");
+
+      return (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
+        const tracing = annotationType === "volume" ? volumeTracings.shift() : skeletonTracing;
+        if (tracing == null) {
+          throw new Error(`Could not find tracing for ${annotationType}.`);
+        }
+        return tracing;
+      };
+    })(),
   );
   vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(annotationProto));
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-ignore
-    segmentMeshController: { meshesGroupsPerSegmentId: {} },
+    segmentMeshController: {
+      meshesGroupsPerSegmentId: {},
+      updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
+    },
   });
 
   __setFeatures({});

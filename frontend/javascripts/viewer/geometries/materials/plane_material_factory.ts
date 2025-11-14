@@ -39,10 +39,10 @@ import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
-  getActiveSegmentPosition,
   getActiveSegmentationTracing,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
+  getProofreadingMarkerPosition,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
@@ -189,7 +189,7 @@ class PlaneMaterialFactory {
       globalMousePosition: {
         value: new ThreeVector3(0, 0, 0),
       },
-      activeSegmentPosition: {
+      proofreadingMarkerPosition: {
         value: new ThreeVector3(-1, -1, -1),
       },
       brushSizeInPixel: {
@@ -813,12 +813,12 @@ class PlaneMaterialFactory {
         ),
 
         listenToStoreProperty(
-          (storeState) => getActiveSegmentPosition(storeState),
-          (activeSegmentPosition) => {
-            if (activeSegmentPosition != null) {
-              this.uniforms.activeSegmentPosition.value.set(...activeSegmentPosition);
+          (storeState) => getProofreadingMarkerPosition(storeState),
+          (proofreadingMarkerPosition) => {
+            if (proofreadingMarkerPosition != null) {
+              this.uniforms.proofreadingMarkerPosition.value.set(...proofreadingMarkerPosition);
             } else {
-              this.uniforms.activeSegmentPosition.value.set(-1, -1, -1);
+              this.uniforms.proofreadingMarkerPosition.value.set(-1, -1, -1);
             }
           },
           true,

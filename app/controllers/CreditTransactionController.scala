@@ -51,7 +51,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
         organizationId,
         None,
         None,
-        BigDecimal(creditAmount),
+        creditAmount,
         commentNoOptional,
         CreditTransactionState.Complete,
         CreditState.AddCredits,

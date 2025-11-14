@@ -2,7 +2,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
 import { Button, Col, Row, Spin, Tooltip, Typography } from "antd";
-import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
+import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { type Key, useEffect, useState } from "react";
@@ -165,8 +165,8 @@ export function OrganizationOverviewView() {
       key: "credits",
       title: "WEBKNOSSOS Credits",
       content:
-        organization.creditBalance != null
-          ? formatCreditsString(organization.creditBalance)
+        organization.creditBalanceInMillis != null
+          ? formatMilliCreditsString(organization.creditBalanceInMillis)
           : "N/A",
       action: buyMoreCreditsAction,
     },

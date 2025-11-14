@@ -51,8 +51,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
-      creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
-        creditTransactionDAO.getCreditBalance(organization._id))
+      creditBalanceInMillisOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+        creditTransactionDAO.getMilliCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -67,7 +67,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
         "ownerName" -> ownerNameOpt,
-        "creditBalance" -> creditBalanceOpt.map(_.toString)
+        "creditBalanceInMillis" -> creditBalanceInMillisOpt
       ) ++ adminOnlyInfo
   }
 

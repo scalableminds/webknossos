@@ -16,7 +16,7 @@ import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
+import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -513,8 +513,10 @@ function JobListView() {
           />
           <Column
             title="Cost in Credits"
-            key="creditCost"
-            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
+            key="creditCostInMillis"
+            render={(job: APIJob) =>
+              job.creditCostInMillis ? formatMilliCreditsString(job.creditCostInMillis) : "-"
+            }
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

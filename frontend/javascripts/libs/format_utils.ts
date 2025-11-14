@@ -556,10 +556,10 @@ export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
     : bboxString;
 }
 
-export function formatCreditsString(credits: string): string {
-  return credits
-    .replace(/(\.\d*?[1-9])0+$/g, "$1") // Remove trailing zeros after decimal
-    .replace(/\.0*$/g, ""); // Remove the decimal point if no digits remain
+export function formatMilliCreditsString(credits: number): string {
+  const millis = Math.round(credits % 1000);
+  const fullCredits = Math.round(credits / 1000);
+  return `${fullCredits}.${millis}`;
 }
 
 export function formatCurrency(amount: number, currency: string): string {

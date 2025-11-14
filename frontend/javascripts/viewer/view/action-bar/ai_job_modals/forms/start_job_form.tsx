@@ -77,7 +77,7 @@ export function StartJobForm(props: StartJobFormProps) {
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
   const organizationCredits = useWkSelector(
-    (state) => state.activeOrganization?.creditBalance || "0",
+    (state) => state.activeOrganization?.creditBalanceInMillis || "0",
   );
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -103,7 +103,7 @@ export function StartJobForm(props: StartJobFormProps) {
   );
 
   useEffect(() => {
-    const newAmountOfCredits = jobCreditCostInfo?.organizationCredits;
+    const newAmountOfCredits = jobCreditCostInfo?.organizationMilliCredits;
     if (newAmountOfCredits && organizationCredits !== newAmountOfCredits) {
       dispatch(setActiveOrganizationsCreditBalance(newAmountOfCredits));
     }

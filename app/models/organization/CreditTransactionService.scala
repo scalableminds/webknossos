@@ -14,11 +14,11 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     extends FoxImplicits
     with LazyLogging {
 
-  def hasEnoughCredits(organizationId: String, creditsToSpend: BigDecimal)(
+  def hasEnoughCredits(organizationId: String, milliCreditsToSpend: Int)(
       implicit ctx: DBAccessContext): Fox[Boolean] =
-    creditTransactionDAO.getCreditBalance(organizationId).map(balance => balance >= creditsToSpend)
+    creditTransactionDAO.getMilliCreditBalance(organizationId).map(balance => balance >= milliCreditsToSpend)
 
-  def reserveCredits(organizationId: String, creditsToSpent: BigDecimal, comment: String)(
+  def reserveCredits(organizationId: String, milliCreditsToSpent: Int, comment: String)(
       implicit ctx: DBAccessContext): Fox[CreditTransaction] =
     for {
       _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
@@ -26,7 +26,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
                                                    organizationId,
                                                    None,
                                                    None,
-                                                   -creditsToSpent,
+                                                   -milliCreditsToSpent,
                                                    comment,
                                                    CreditTransactionState.Pending,
                                                    CreditState.Pending)
@@ -93,7 +93,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         "organization_id" -> transaction._organization,
         "relatedTransaction" -> transaction._relatedTransaction,
         "paidJobId" -> transaction._paidJob,
-        "creditChange" -> transaction.creditDelta,
+        "creditChange" -> transaction.milliCreditDelta,
         "comment" -> transaction.comment,
         "transactionState" -> transaction.transactionState,
         "creditState" -> transaction.creditState,

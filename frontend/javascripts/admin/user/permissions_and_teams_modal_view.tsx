@@ -10,24 +10,24 @@ import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
-enum ROLES {
+export enum ROLES {
   teammanager = "teammanager",
   user = "user",
 }
-enum PERMISSIONS {
+export enum PERMISSIONS {
   admin = "admin",
   datasetManager = "datasetManager",
   member = "member",
 }
 
 type TeamRoleComponentProps = {
-  selectedUserIds: Key[];
   selectedTeams: Record<string, APITeamMembership>;
   setSelectedTeams: (teams: Record<string, APITeamMembership>) => void;
   selectedPermission: PERMISSIONS;
   setSelectedPermission: (permission: PERMISSIONS) => void;
   userIsAdmin: boolean;
   onlyEditingSingleUser: boolean;
+  verticallyAligned: boolean;
 };
 
 type TeamRoleModalProps = {
@@ -66,6 +66,7 @@ export function PermissionsAndTeamsComponent({
   setSelectedPermission,
   userIsAdmin,
   onlyEditingSingleUser,
+  verticallyAligned = true,
 }: TeamRoleComponentProps) {
   const teams = useFetch(getEditableTeams, [], []);
 
@@ -197,17 +198,15 @@ export function PermissionsAndTeamsComponent({
 
   const permissionEditingSection = getPermissionSelection(onlyEditingSingleUser, userIsAdmin);
   const isAdminSelected = selectedPermission === PERMISSIONS.admin;
-  const teamsRoleComponents = teams.map((team) => (
+  const teamsRoleRows = teams.map((team) => (
     <Row key={team.id}>
       <Col span={12}>{getTeamComponent(team, isAdminSelected)}</Col>
       <Col span={12}>{getRoleComponent(team, isAdminSelected)}</Col>
     </Row>
   ));
 
-  return (
+  const teamsRoleComponents = (
     <>
-      {permissionEditingSection}
-      <Divider />
       <h4>Team Permissions</h4>
       <div>
         <Row>
@@ -218,8 +217,21 @@ export function PermissionsAndTeamsComponent({
             <h4>Role</h4>
           </Col>
         </Row>
-        {teamsRoleComponents}
+        {teamsRoleRows}
       </div>
+    </>
+  );
+
+  return verticallyAligned ? (
+    <>
+      {permissionEditingSection}
+      <Divider />
+      {teamsRoleComponents}
+    </>
+  ) : (
+    <>
+      {permissionEditingSection}
+      {teamsRoleComponents}
     </>
   );
 }
@@ -346,9 +358,9 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
         setSelectedTeams={setSelectedTeams}
         selectedPermission={selectedPermission}
         setSelectedPermission={setSelectedPermission}
-        selectedUserIds={selectedUserIds}
         userIsAdmin={userIsAdmin}
         onlyEditingSingleUser={onlyEditingSingleUser}
+        verticallyAligned
       />
     </Modal>
   );

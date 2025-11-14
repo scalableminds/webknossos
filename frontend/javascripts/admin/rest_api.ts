@@ -45,6 +45,7 @@ import {
   type APIScriptUpdater,
   type APITaskType,
   type APITeam,
+  type APITeamMembership,
   type APITimeInterval,
   type APITimeTrackingPerAnnotation,
   type APITimeTrackingPerUser,
@@ -1722,12 +1723,18 @@ export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganiz
 export function sendInvitesForOrganization(
   recipients: Array<string>,
   autoActivate: boolean,
+  isAdmin: boolean,
+  isDatasetManager: boolean,
+  teamMemberships: APITeamMembership[],
 ): Promise<void> {
   return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
     method: "POST",
     data: {
       recipients,
       autoActivate,
+      isAdmin,
+      isDatasetManager,
+      teamMemberships,
     },
   });
 }

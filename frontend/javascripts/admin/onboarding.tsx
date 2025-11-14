@@ -17,7 +17,19 @@ import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
 import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
-import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
+import {
+  Alert,
+  AutoComplete,
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Space,
+  Steps,
+} from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
@@ -28,7 +40,9 @@ import Toast from "libs/toast";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";
+import { PERMISSIONS, PermissionsAndTeamsComponent } from "./user/permissions_and_teams_modal_view";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -220,6 +234,8 @@ export function InviteUsersModal({
   maxUserCountPerOrganization?: number;
 }) {
   const [inviteesString, setInviteesString] = useState("");
+  const [selectedTeams, setSelectedTeams] = useState<Record<string, APITeamMembership>>({});
+  const [selectedPermission, setSelectedPermission] = useState<PERMISSIONS>(PERMISSIONS.member);
   const isOrganizationLimitAlreadyReached = useMemo(
     () => currentUserCount >= maxUserCountPerOrganization,
     [currentUserCount, maxUserCountPerOrganization],
@@ -237,13 +253,23 @@ export function InviteUsersModal({
   const sendInvite = useCallback(async () => {
     const addresses = extractEmailAddresses();
 
-    await sendInvitesForOrganization(addresses, true);
+    const isAdmin = selectedPermission === PERMISSIONS.admin;
+    const isDatasetManager = selectedPermission === PERMISSIONS.datasetManager;
+    const selectedTeamsForInvite = Object.values(selectedTeams);
+
+    await sendInvitesForOrganization(
+      addresses,
+      true,
+      isAdmin,
+      isDatasetManager,
+      selectedTeamsForInvite,
+    );
     Toast.success("An invitation was sent to the provided email addresses.");
 
     setInviteesString("");
     if (handleVisibleChange != null) handleVisibleChange(false);
     if (destroy != null) destroy();
-  }, [destroy, extractEmailAddresses, handleVisibleChange]);
+  }, [destroy, extractEmailAddresses, handleVisibleChange, selectedPermission, selectedTeams]);
 
   const doNewUsersExceedLimit =
     currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
@@ -281,11 +307,7 @@ export function InviteUsersModal({
           Share datasets, collaboratively work on annotations, and organize complex analysis
           projects.
         </p>
-        <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>
-        <p>
-          Note that new users have limited access permissions by default. Please doublecheck their
-          roles and team assignments after they join your organization.
-        </p>
+        <p>The following permissions will be assigned to the invited users:</p>
         {isOrganizationLimitAlreadyReached ? (
           <p>
             As your organization has reached its user limit, you can only invite guests to your
@@ -294,15 +316,30 @@ export function InviteUsersModal({
           </p>
         ) : null}
         {exceedingUserLimitAlert}
-        <Input.TextArea
-          spellCheck={false}
-          autoSize={{
-            minRows: 6,
-          }}
-          onChange={handleInviteesStringChange}
-          placeholder={"jane@example.com\njoe@example.com"}
-          defaultValue={inviteesString}
-        />
+        <Space direction="vertical">
+          <PermissionsAndTeamsComponent
+            selectedTeams={selectedTeams}
+            setSelectedTeams={setSelectedTeams}
+            selectedPermission={selectedPermission}
+            setSelectedPermission={setSelectedPermission}
+            userIsAdmin={true}
+            onlyEditingSingleUser={true}
+            verticallyAligned={false}
+          />
+          <h4>Invitee Email Addresses</h4>
+          <p style={{ marginTop: -10 }}>
+            Multiple email addresses should be separated with a comma, a space or a new line.
+          </p>
+          <Input.TextArea
+            spellCheck={false}
+            autoSize={{
+              minRows: 6,
+            }}
+            onChange={handleInviteesStringChange}
+            placeholder={"jane@example.com\njoe@example.com"}
+            defaultValue={inviteesString}
+          />
+        </Space>
       </Fragment>
     );
   }, [
@@ -311,6 +348,8 @@ export function InviteUsersModal({
     inviteesString,
     isOrganizationLimitAlreadyReached,
     organizationId,
+    selectedPermission,
+    selectedTeams,
   ]);
 
   return (

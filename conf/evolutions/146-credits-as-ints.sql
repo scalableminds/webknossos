@@ -9,10 +9,12 @@ DROP FUNCTION webknossos.enforce_non_negative_balance();
 DROP FUNCTION webknossos.hand_out_monthly_free_credits(DECIMAL); -- old signature
 
 -- 2. migrate table
+DROP VIEW webknossos.credit_transactions_;
 ALTER TABLE webknossos.credit_transactions ADD COLUMN milli_credit_delta INT;
 UPDATE webknossos.credit_transactions SET milli_credit_delta = (credit_delta * 1000)::INT;
 ALTER TABLE webknossos.credit_transactions ALTER COLUMN milli_credit_delta SET NOT NULL;
 ALTER TABLE webknossos.credit_transactions DROP COLUMN credit_delta;
+CREATE VIEW webknossos.credit_transactions_ as SELECT * FROM webknossos.credit_transactions WHERE NOT is_deleted;
 
 -- 3. recreate triggers and functions.
 CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$

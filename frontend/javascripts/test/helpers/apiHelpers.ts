@@ -198,11 +198,9 @@ vi.mock("admin/rest_api.ts", async () => {
     acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
     releaseAnnotationMutex: vi.fn(() => {}),
     getNeighborsForAgglomerateNode: vi.fn(
-      (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) =>
-        Promise.resolve({
-          segmentId: _segmentInfo.segmentId,
-          neighbors: [],
-        }),
+      (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
     ),
     getUpdateActionLog: vi.fn(() => Promise.resolve([])),
     getPositionForSegmentInAgglomerate: vi.fn(

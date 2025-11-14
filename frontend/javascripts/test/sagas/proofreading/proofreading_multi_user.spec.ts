@@ -15,7 +15,7 @@ import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
-import { startSaga } from "viewer/store";
+import { type NumberLike, startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   expectedMappingAfterMerge,
@@ -26,6 +26,8 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import type { NeighborInfo } from "admin/rest_api";
+import type { Vector3 } from "viewer/constants";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -219,9 +221,85 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
+  function prepareGetNeighborsForAgglomerateNode(mocks: WebknossosTestContext["mocks"]) {
+    // Prepare getNeighborsForAgglomerateNode mock
+    mocks.getNeighborsForAgglomerateNode.mockImplementation(
+      async (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        version: number,
+        segmentInfo: {
+          segmentId: NumberLike;
+          mag: Vector3;
+          agglomerateId: NumberLike;
+          editableMappingId: string;
+        },
+      ): Promise<NeighborInfo> => {
+        if (version !== 6) {
+          throw new Error(
+            `Version mismatch. Expected requested version to be 6 but got ${version}`,
+          );
+        }
+        if (segmentInfo.segmentId === 2) {
+          return {
+            segmentId: 2,
+            neighbors: [
+              {
+                segmentId: 3,
+                position: [3, 3, 3],
+              },
+            ],
+          };
+        }
+        return {
+          segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
+          neighbors: [],
+        };
+      },
+    );
+  }
+
+  function* performCutFromAllNeighbours(
+    context: WebknossosTestContext,
+    tracingId: string,
+  ): Generator<any, void, any> {
+    yield call(initializeMappingAndTool, context, tracingId);
+    const mapping0 = yield select(
+      (state) =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+    );
+    expect(mapping0).toEqual(initialMapping);
+
+    // Set up the merge-related segment partners. Normally, this would happen
+    // due to the user's interactions.
+    yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+    yield put(setActiveCellAction(2));
+
+    yield call(createEditableMapping);
+    // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+    const mapping1 = yield select(
+      (state) =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+    );
+    expect(mapping1).toEqual(initialMapping);
+    yield put(setOthersMayEditForAnnotationAction(true));
+    const annotationVersion = yield select((state) => state.annotation.version);
+    console.log("annotationVersion", annotationVersion);
+
+    // Execute the actual merge and wait for the finished mapping.
+    yield put(
+      cutAgglomerateFromNeighborsAction(
+        [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
+      ),
+    );
+    yield take("DONE_SAVING");
+    yield call(() => context.api.tracing.save());
+  }
+
   it("should cut agglomerate from all neighbors after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
-    const { api } = context;
+    const { mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
+    prepareGetNeighborsForAgglomerateNode(mocks);
 
     backendMock.planVersionInjection(7, [
       {
@@ -239,35 +317,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
-      yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
-      yield put(setActiveCellAction(2));
-
-      yield call(createEditableMapping);
-      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-      const mapping1 = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping1).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
-
-      // Execute the actual merge and wait for the finished mapping.
-      yield put(
-        cutAgglomerateFromNeighborsAction(
-          [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
-        ),
-      );
-      yield take("DONE_SAVING");
-      yield call(() => api.tracing.save());
+      yield performCutFromAllNeighbours(context, tracingId);
 
       const splitSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
@@ -295,6 +345,69 @@ describe("Proofreading (Multi User)", () => {
           [3, 1340],
           [4, 4],
           [5, 4],
+          [6, 6],
+          [7, 6],
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should not cut agglomerate from all neighbors due to interfering merge action", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    prepareGetNeighborsForAgglomerateNode(mocks);
+
+    backendMock.planVersionInjection(7, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 4,
+          segmentId2: 2,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield performCutFromAllNeighbours(context, tracingId);
+
+      const splitSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(splitSaveActionBatch).toEqual([
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            segmentId1: 2,
+            segmentId2: 3,
+            agglomerateId: 1,
+          },
+        },
+      ]);
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(
+        // A new edge from 4 to 2 was created and one between 2 and 3 was removed.
+        // -> agglomerate 1 was merged into agglomerate 4 and then segment 3 was cut off from it due to the remove from allneighbours.
+        // But as answer to the edges to remove was on version before the merge, the newly added edge afterwards is not included in the edges that need to be removed to completely isolate the segment 2.
+        // Thus, only 3 was cut off from segment 2.
+        new Map([
+          [1, 4],
+          [2, 4],
+          [3, 1339],
+          [5, 4],
+          [4, 4],
           [6, 6],
           [7, 6],
         ]),

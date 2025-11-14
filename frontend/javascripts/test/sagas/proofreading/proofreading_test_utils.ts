@@ -1,4 +1,3 @@
-import type { NeighborInfo } from "admin/rest_api";
 import type { RequestOptionsWithData } from "libs/request";
 import { sleep } from "libs/utils";
 import { call, put, take } from "redux-saga/effects";
@@ -25,7 +24,7 @@ import type {
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { NumberLike, SaveQueueEntry } from "viewer/store";
+import type { SaveQueueEntry } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping } from "./proofreading_fixtures";
 import {
@@ -162,33 +161,6 @@ class BackendMock {
       ),
     }));
   };
-  getNeighborsForAgglomerateNode = async (
-    _tracingStoreUrl: string,
-    _tracingId: string,
-    _version: number,
-    segmentInfo: {
-      segmentId: NumberLike;
-      mag: Vector3;
-      agglomerateId: NumberLike;
-      editableMappingId: string;
-    },
-  ): Promise<NeighborInfo> => {
-    if (segmentInfo.segmentId === 2) {
-      return {
-        segmentId: 2,
-        neighbors: [
-          {
-            segmentId: 3,
-            position: [3, 3, 3],
-          },
-        ],
-      };
-    }
-    return {
-      segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
-      neighbors: [],
-    };
-  };
 
   sendSaveRequestWithToken = async (
     _urlWithoutToken: string,
@@ -218,12 +190,6 @@ class BackendMock {
           if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
             throw new Error("Segment Id is null");
           }
-          // TODOM: test  whether the current implementation is sufficient.
-          /*if (agglomerateActionCounter > 0) {
-            throw new Error(
-              "Not implemented yet. AgglomerateMapping needs to support multiple actions while incrementing the version only by one.",
-            );
-          }*/
           this.agglomerateMapping.addEdge(
             updateAction.value.segmentId1,
             updateAction.value.segmentId2,
@@ -234,12 +200,6 @@ class BackendMock {
           if (updateAction.value.segmentId1 == null || updateAction.value.segmentId2 == null) {
             throw new Error("Segment Id is null");
           }
-          // TODOM: test  whether the current implementation is sufficient.
-          /*if (agglomerateActionCounter > 0) {
-            throw new Error(
-              "Not implemented yet. AgglomerateMapping needs to support multiple actions while incrementing the version only by one.",
-            );
-          }*/
           this.agglomerateMapping.removeEdge(
             updateAction.value.segmentId1,
             updateAction.value.segmentId2,
@@ -377,9 +337,6 @@ export function mockInitialBucketAndAgglomerateData(
   );
   mocks.acquireAnnotationMutex.mockImplementation(backendMock.acquireAnnotationMutex);
   mocks.releaseAnnotationMutex.mockImplementation(backendMock.releaseAnnotationMutex);
-  mocks.getNeighborsForAgglomerateNode.mockImplementation(
-    backendMock.getNeighborsForAgglomerateNode,
-  );
   backendMock.receivedDataPerSaveRequest = context.receivedDataPerSaveRequest;
   mocks.sendSaveRequestWithToken.mockImplementation(backendMock.sendSaveRequestWithToken);
   mocks.getUpdateActionLog.mockImplementation(backendMock.getUpdateActionLog);

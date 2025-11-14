@@ -20,13 +20,23 @@ enum PERMISSIONS {
   member = "member",
 }
 
-type TeamRoleModalProps = {
-  onChange: (...args: Array<any>) => any;
-  onCancel: (...args: Array<any>) => any;
-  isOpen: boolean;
+type TeamRoleComponentProps = {
   selectedUserIds: Key[];
-  users: Array<APIUser>;
+  selectedTeams: Record<string, APITeamMembership>;
+  setSelectedTeams: (teams: Record<string, APITeamMembership>) => void;
+  selectedPermission: PERMISSIONS;
+  setSelectedPermission: (permission: PERMISSIONS) => void;
+  userIsAdmin: boolean;
+  onlyEditingSingleUser: boolean;
+};
+
+type TeamRoleModalProps = {
+  isOpen: boolean;
   activeUser: APIUser;
+  users: APIUser[];
+  selectedUserIds: Key[];
+  onCancel: (...args: Array<any>) => any;
+  onChange: (...args: Array<any>) => any;
 };
 
 function getPermissionGroupOfUser(user: APIUser) {
@@ -41,117 +51,23 @@ function getPermissionGroupOfUser(user: APIUser) {
   return PERMISSIONS.member;
 }
 
-function PermissionsAndTeamsModalView({
-  onChange,
-  onCancel,
-  isOpen,
-  selectedUserIds,
-  users,
-  activeUser,
-}: TeamRoleModalProps) {
-  const { modal } = App.useApp();
+function getSingleUserMaybe(selectedUserIds: Key[], users: APIUser[]): APIUser | undefined {
+  if (selectedUserIds.length === 1) {
+    return users.find((_user) => _user.id === selectedUserIds[0]);
+  }
 
-  const [selectedTeams, setSelectedTeams] = useState<Record<string, APITeamMembership>>({});
-  const [selectedPermission, setSelectedPermission] = useState(PERMISSIONS.member);
+  return undefined;
+}
 
+export function PermissionsAndTeamsComponent({
+  selectedTeams,
+  setSelectedTeams,
+  selectedPermission,
+  setSelectedPermission,
+  userIsAdmin,
+  onlyEditingSingleUser,
+}: TeamRoleComponentProps) {
   const teams = useFetch(getEditableTeams, [], []);
-
-  useEffect(() => {
-    // If a single user is selected, pre-select his teams
-    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
-
-    if (singleUserMaybe) {
-      const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
-
-      const userPermission = getPermissionGroupOfUser(singleUserMaybe);
-      setSelectedTeams(newSelectedTeams);
-      setSelectedPermission(userPermission);
-    }
-  }, [selectedUserIds, users]);
-
-  function didPermissionsChange() {
-    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
-
-    if (!singleUserMaybe) {
-      return false;
-    }
-
-    let previousPermission = PERMISSIONS.member;
-
-    if (singleUserMaybe.isAdmin) {
-      previousPermission = PERMISSIONS.admin;
-    } else if (singleUserMaybe.isDatasetManager) {
-      previousPermission = PERMISSIONS.datasetManager;
-    }
-
-    return previousPermission !== selectedPermission;
-  }
-
-  function handleUpdatePermissionsAndTeams() {
-    if (didPermissionsChange()) {
-      const user = getSingleUserMaybe(selectedUserIds, users);
-
-      if (user) {
-        const userName = `${user.firstName} ${user.lastName}`;
-        let message = messages["users.revoke_all_permissions"];
-
-        if (selectedPermission === PERMISSIONS.admin) {
-          message = messages["users.set_admin"];
-        }
-
-        if (selectedPermission === PERMISSIONS.datasetManager) {
-          message = messages["users.set_dataset_manager"];
-        }
-
-        modal.confirm({
-          title: messages["users.change_permissions_title"],
-          content: message({
-            userName,
-          }),
-          onOk: setPermissionsAndTeams,
-        });
-      }
-    } else {
-      setPermissionsAndTeams();
-    }
-  }
-
-  function setPermissionsAndTeams() {
-    const newUserPromises = users.map((user) => {
-      if (selectedUserIds.includes(user.id)) {
-        const newTeams = Utils.values(selectedTeams);
-        let permissions = { isAdmin: false, isDatasetManager: false };
-
-        if (activeUser.isAdmin && selectedUserIds.length === 1) {
-          // If the current user is admin and only one user is edited we also update the permissions.
-          if (selectedPermission === PERMISSIONS.admin) {
-            permissions["isAdmin"] = true;
-            permissions["isDatasetManager"] = false;
-          } else if (selectedPermission === PERMISSIONS.datasetManager) {
-            permissions["isDatasetManager"] = true;
-            permissions["isAdmin"] = false;
-          }
-        }
-        const newUser = { ...user, ...permissions, teams: newTeams };
-
-        // server-side validation can reject a user's new teams
-        return updateUser(newUser).then(
-          (serverUser) => Promise.resolve(serverUser),
-          () => Promise.reject(user),
-        );
-      }
-
-      return Promise.resolve(user);
-    });
-    Promise.all(newUserPromises).then(
-      (newUsers) => {
-        onChange(newUsers);
-      },
-      () => {
-        // do nothing and keep modal open
-      },
-    );
-  }
 
   function handlePermissionChanged(evt: RadioChangeEvent) {
     const selectedPermission: PERMISSIONS = evt.target.value;
@@ -174,14 +90,6 @@ function PermissionsAndTeamsModalView({
 
   function handleUnselectTeam(teamName: string) {
     setSelectedTeams(_.omit(selectedTeams, teamName));
-  }
-
-  function getSingleUserMaybe(selectedUserIds: Key[], users: APIUser[]): APIUser | undefined {
-    if (selectedUserIds.length === 1) {
-      return users.find((_user) => _user.id === selectedUserIds[0]);
-    }
-
-    return undefined;
   }
 
   function getTeamComponent(team: APITeam, isDisabled: boolean) {
@@ -287,8 +195,6 @@ function PermissionsAndTeamsModalView({
     );
   }
 
-  const userIsAdmin = activeUser.isAdmin;
-  const onlyEditingSingleUser = selectedUserIds.length === 1;
   const permissionEditingSection = getPermissionSelection(onlyEditingSingleUser, userIsAdmin);
   const isAdminSelected = selectedPermission === PERMISSIONS.admin;
   const teamsRoleComponents = teams.map((team) => (
@@ -299,14 +205,7 @@ function PermissionsAndTeamsModalView({
   ));
 
   return (
-    <Modal
-      maskClosable={false}
-      closable={false}
-      open={isOpen}
-      onCancel={onCancel}
-      onOk={handleUpdatePermissionsAndTeams}
-      okText="Set Teams &amp; Permissions"
-    >
+    <>
       {permissionEditingSection}
       <Divider />
       <h4>Team Permissions</h4>
@@ -321,6 +220,136 @@ function PermissionsAndTeamsModalView({
         </Row>
         {teamsRoleComponents}
       </div>
+    </>
+  );
+}
+
+function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
+  const { modal } = App.useApp();
+
+  const [selectedTeams, setSelectedTeams] = useState<Record<string, APITeamMembership>>({});
+  const [selectedPermission, setSelectedPermission] = useState(PERMISSIONS.member);
+
+  const { selectedUserIds, users, activeUser, onChange, onCancel, isOpen } = props;
+
+  const userIsAdmin = activeUser.isAdmin;
+  const onlyEditingSingleUser = selectedUserIds.length === 1;
+
+  useEffect(() => {
+    // If a single user is selected, pre-select his teams
+    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
+
+    if (singleUserMaybe) {
+      const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
+
+      const userPermission = getPermissionGroupOfUser(singleUserMaybe);
+      setSelectedTeams(newSelectedTeams);
+      setSelectedPermission(userPermission);
+    }
+  }, [selectedUserIds, users]);
+
+  function didPermissionsChange() {
+    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
+
+    if (!singleUserMaybe) {
+      return false;
+    }
+
+    let previousPermission = PERMISSIONS.member;
+
+    if (singleUserMaybe.isAdmin) {
+      previousPermission = PERMISSIONS.admin;
+    } else if (singleUserMaybe.isDatasetManager) {
+      previousPermission = PERMISSIONS.datasetManager;
+    }
+
+    return previousPermission !== selectedPermission;
+  }
+
+  function setPermissionsAndTeams() {
+    const newUserPromises = users.map((user) => {
+      if (selectedUserIds.includes(user.id)) {
+        const newTeams = Utils.values(selectedTeams);
+        let permissions = { isAdmin: false, isDatasetManager: false };
+
+        if (activeUser.isAdmin && selectedUserIds.length === 1) {
+          // If the current user is admin and only one user is edited we also update the permissions.
+          if (selectedPermission === PERMISSIONS.admin) {
+            permissions["isAdmin"] = true;
+            permissions["isDatasetManager"] = false;
+          } else if (selectedPermission === PERMISSIONS.datasetManager) {
+            permissions["isDatasetManager"] = true;
+            permissions["isAdmin"] = false;
+          }
+        }
+        const newUser = { ...user, ...permissions, teams: newTeams };
+
+        // server-side validation can reject a user's new teams
+        return updateUser(newUser).then(
+          (serverUser) => Promise.resolve(serverUser),
+          () => Promise.reject(user),
+        );
+      }
+
+      return Promise.resolve(user);
+    });
+    Promise.all(newUserPromises).then(
+      (newUsers) => {
+        onChange(newUsers);
+      },
+      () => {
+        // do nothing and keep modal open
+      },
+    );
+  }
+
+  function handleUpdatePermissionsAndTeams() {
+    if (didPermissionsChange()) {
+      const user = getSingleUserMaybe(selectedUserIds, users);
+
+      if (user) {
+        const userName = `${user.firstName} ${user.lastName}`;
+        let message = messages["users.revoke_all_permissions"];
+
+        if (selectedPermission === PERMISSIONS.admin) {
+          message = messages["users.set_admin"];
+        }
+
+        if (selectedPermission === PERMISSIONS.datasetManager) {
+          message = messages["users.set_dataset_manager"];
+        }
+
+        modal.confirm({
+          title: messages["users.change_permissions_title"],
+          content: message({
+            userName,
+          }),
+          onOk: setPermissionsAndTeams,
+        });
+      }
+    } else {
+      setPermissionsAndTeams();
+    }
+  }
+
+  return (
+    <Modal
+      maskClosable={false}
+      closable={false}
+      open={isOpen}
+      onCancel={onCancel}
+      onOk={handleUpdatePermissionsAndTeams}
+      okText="Set Teams &amp; Permissions"
+    >
+      <PermissionsAndTeamsComponent
+        selectedTeams={selectedTeams}
+        setSelectedTeams={setSelectedTeams}
+        selectedPermission={selectedPermission}
+        setSelectedPermission={setSelectedPermission}
+        selectedUserIds={selectedUserIds}
+        userIsAdmin={userIsAdmin}
+        onlyEditingSingleUser={onlyEditingSingleUser}
+      />
     </Modal>
   );
 }

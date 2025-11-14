@@ -11,7 +11,7 @@ import type { WebknossosState } from "viewer/store";
 import type { LoadingStrategy } from "viewer/store";
 import AsyncGetMaximumZoomForAllMags from "viewer/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
-import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
+import { getDataLayers, getMagInfo, getTransformedVoxelSize } from "../accessors/dataset_accessor";
 import {
   getTransformsForLayer,
   invertAndTranspose,
@@ -100,7 +100,10 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         ).affineMatrix,
       );
 
-      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
+      const dummyFlycamMatrix = _getDummyFlycamMatrix(
+        getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)
+          .factor,
+      );
 
       const zoomLevels = yield* call(
         getZoomLevelsFn,

@@ -1,6 +1,6 @@
 import type { JobCreditCostInfo } from "admin/rest_api";
 import { Alert, Row } from "antd";
-import { formatCreditsString } from "libs/format_utils";
+import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 
@@ -12,13 +12,15 @@ export function JobCreditCostInformation({
   jobCreditCostPerGVx: number;
 }) {
   const organizationCreditsFromStore = useWkSelector(
-    (state) => state.activeOrganization?.creditBalance || "0",
+    (state) => state.activeOrganization?.creditBalanceInMillis || 0,
   );
   const organizationCredits =
-    jobCreditCostInfo?.organizationCredits || organizationCreditsFromStore;
-  const jobCreditCost = jobCreditCostInfo?.costInCredits;
+    jobCreditCostInfo?.organizationMilliCredits || organizationCreditsFromStore;
+  const jobCreditCost = jobCreditCostInfo?.costInMilliCredits;
   const jobCostInfoString =
-    jobCreditCost != null ? ` and would cost ${formatCreditsString(jobCreditCost)} credits` : "";
+    jobCreditCost != null
+      ? ` and would cost ${formatMilliCreditsString(jobCreditCost)} credits`
+      : "";
   return (
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>
@@ -28,7 +30,7 @@ export function JobCreditCostInformation({
               Billing for this job is not active during testing phase. This job is billed at{" "}
               {jobCreditCostPerGVx} {pluralize("credit", jobCreditCostPerGVx)} per Gigavoxel
               {jobCostInfoString}. Your organization currently has{" "}
-              {formatCreditsString(organizationCredits)} WEBKNOSSOS credits.
+              {formatMilliCreditsString(organizationCredits)} WEBKNOSSOS credits.
             </>
           }
           type="info"

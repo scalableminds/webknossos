@@ -198,8 +198,8 @@ export function _getMaximumZoomForAllMags(
 }
 
 // Only exported for testing.
-export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
-  const scaleMatrix = getMatrixScale(scale);
+export const _getDummyFlycamMatrix = memoizeOne((voxelSize: Vector3) => {
+  const scaleMatrix = getMatrixScale(voxelSize);
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 

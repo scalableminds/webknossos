@@ -213,7 +213,13 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       return update(state, {
         flycam: {
           currentMatrix: {
-            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale.factor),
+            $set: resetMatrix(
+              state.flycam.currentMatrix,
+              getTransformedVoxelSize(
+                state.dataset,
+                state.datasetConfiguration.nativelyRenderedLayerName,
+              ).factor,
+            ),
           },
           rotation: {
             $set: [0, 0, 0],
@@ -305,6 +311,13 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
 
     case "SET_DIRECTION": {
       return setDirectionReducer(state, action.direction);
+    }
+
+    case "UPDATE_DATASET_SETTING": {
+      if (action.propertyName === "nativelyRenderedLayerName") {
+        return setRotationReducer(state, state.flycam.rotation);
+      }
+      return state;
     }
 
     case "MOVE_FLYCAM": {

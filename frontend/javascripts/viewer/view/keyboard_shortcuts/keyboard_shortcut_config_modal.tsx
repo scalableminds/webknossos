@@ -5,8 +5,8 @@ import { Validator } from "jsonschema";
 import {
   ALL_HANDLER_IDS,
   GeneralEditingKeyboardShortcuts,
-  GeneralKeyboardShortcutsSchema,
-} from "viewer/controller_keyboard_shortcuts";
+  KeyboardShortcutsSchema,
+} from "viewer/view/keyboard_shortcuts/controller_keyboard_shortcut_builder";
 import {
   getDefaultShortcuts,
   loadKeyboardShortcuts,
@@ -50,7 +50,7 @@ function validateShortcutMapText(input: string): {
 
   // 2. Schema validation
   const validator = new Validator();
-  const schemaResult = validator.validate(parsed, GeneralKeyboardShortcutsSchema);
+  const schemaResult = validator.validate(parsed, KeyboardShortcutsSchema);
 
   if (!schemaResult.valid) {
     errors.push(...schemaResult.errors.map((e) => `Schema: ${e.stack}`));

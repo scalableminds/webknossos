@@ -3,7 +3,7 @@ import type { KeyboardShortcutsMap } from "libs/input";
 import {
   DEFAULT_GENERAL_KEYBOARD_SHORTCUTS,
   DEFAULT_GENERAL_EDITING_KEYBOARD_SHORTCUTS,
-} from "viewer/controller_keyboard_shortcuts";
+} from "viewer/view/keyboard_shortcuts/controller_keyboard_shortcut_builder";
 
 // STORAGE KEY
 const STORAGE_KEY = "webknossosCustomShortcuts";

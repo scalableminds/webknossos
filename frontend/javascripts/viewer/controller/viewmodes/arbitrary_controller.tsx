@@ -366,12 +366,12 @@ class ArbitraryController extends React.PureComponent<Props> {
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Crosshair' is not assignable to ... Remove this comment to see the full error message
     this.arbitraryView.addGeometry(this.crosshair);
     this.bindToEvents();
-    this.initKeyboard();
     this.initMouse();
     this.init();
     const { clippingDistance } = Store.getState().userConfiguration;
     getSceneController().setClippingDistance(clippingDistance);
     this.arbitraryView.draw();
+    this.initKeyboard();
     this.isStarted = true;
     this.forceUpdate();
   }
@@ -383,6 +383,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   stop(): void {
     this.unsubscribeStoreListeners();
+    // TODOM: destroy keyboards
 
     if (this.isStarted) {
       this.destroyInput();

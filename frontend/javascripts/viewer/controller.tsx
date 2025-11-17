@@ -27,7 +27,7 @@ import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { buildGeneralKeyBindings } from "./controller_keyboard_shortcuts";
+import { buildGeneralKeyBindings } from "./view/keyboard_shortcuts/controller_keyboard_shortcut_builder";
 import { loadKeyboardShortcuts } from "./view/keyboard_shortcuts/keyboard_shortcut_persistence";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";

@@ -4,7 +4,9 @@ import type { BucketAddress } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import {
+  BucketServiceWS,
   connectViaWS,
+  createBucketServiceWS,
   requestWithFallback,
 } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "viewer/store";
@@ -21,7 +23,7 @@ export const PullQueueConstants = {
   PRIORITY_HIGHEST: -1,
   BATCH_LIMIT: 6,
 } as const;
-const BATCH_SIZE = 6;
+const BATCH_SIZE = 1;
 const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
 const MAX_RETRY_DELAY = 5000;
 
@@ -35,6 +37,9 @@ class PullQueue {
   private consecutiveErrorCount: number;
   private isRetryScheduled: boolean;
   private isDestroyed: boolean = false;
+  private bucketServiceWS: Promise<BucketServiceWS>;
+
+  private sentCount: number = 0;
 
   constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
     this.cube = cube;
@@ -52,9 +57,7 @@ class PullQueue {
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
 
-    if (window.test == null) {
-      window.test = () => connectViaWS(layerInfo);
-    }
+    this.bucketServiceWS = createBucketServiceWS(layerInfo);
   }
 
   pull(): void {
@@ -97,11 +100,18 @@ class PullQueue {
     let hasErrored = false;
     let failedBucketAddresses = [];
     try {
-      const bucketBuffers = await asAbortable(
-        requestWithFallback(layerInfo, batch),
-        this.abortController.signal,
-        PULL_ABORTION_ERROR,
-      );
+      // const bucketBuffers = await asAbortable(
+      //   requestWithFallback(layerInfo, batch),
+      //   this.abortController.signal,
+      //   PULL_ABORTION_ERROR,
+      // );
+
+      this.sentCount++;
+      if (this.sentCount < 10) {
+        const service = await this.bucketServiceWS;
+        service.requestBucket(batch[0]);
+      }
+      return;
 
       for (const [index, bucketAddress] of batch.entries()) {
         try {

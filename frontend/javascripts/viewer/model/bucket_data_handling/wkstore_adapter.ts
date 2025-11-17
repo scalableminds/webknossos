@@ -270,46 +270,64 @@ export async function requestFromStore(
   }
 }
 
-export function connectViaWS(layerInfo: DataLayerType) {
+export class BucketServiceWS {
+  constructor(
+    private ws: WebSocket,
+    public layerInfo: DataLayerType,
+    resolve: (wss: BucketServiceWS) => void,
+    private reject: (error: unknown) => void,
+  ) {
+    ws.onopen = () => {
+      resolve(this);
+    };
+    ws.onerror = this.onError;
+    ws.onmessage = this.handleResponse;
+  }
+
+  close() {
+    this.ws.close();
+  }
+
+  private onError(error: unknown) {
+    console.error(error);
+    this.reject(error);
+  }
+
+  handleResponse(message: unknown) {
+    console.log("message", message);
+  }
+
+  requestBucket(address: BucketAddress) {
+    const magInfo = getMagInfo(this.layerInfo.mags);
+    const version = null;
+    const agglomerateMappingNameToApplyOnServer = null;
+    const fourbit = false;
+    const bucketInfo = createRequestBucketInfo(
+      address,
+      magInfo,
+      fourbit,
+      agglomerateMappingNameToApplyOnServer,
+      version,
+    );
+
+    this.ws.send(JSON.stringify(bucketInfo));
+  }
+}
+
+export function createBucketServiceWS(layerInfo: DataLayerType): Promise<BucketServiceWS> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams({
       token,
     });
     return new Promise((resolve, reject) => {
       const urlWithHost = getDataStoreUrl(layerInfo); //
-      const url = urlWithHost.replace(/^https?:\/\//, "");
+      const url = urlWithHost.replace(/^https?:\/\//, "").replace("9000", "9001");
 
       const ws = new WebSocket(`ws://${url}/dataWS?${params}`);
       ws.binaryType = "arraybuffer";
 
-      let messageReceivedCounter = 0;
-
-      ws.onopen = () => {
-        console.log("on open");
-        sendReq();
-      };
-
-      ws.onmessage = (message) => {
-        console.log("on message", message);
-        messageReceivedCounter++;
-        if (messageReceivedCounter < 5) {
-          sendReq();
-        } else {
-          ws.close();
-          resolve(messageReceivedCounter);
-        }
-      };
-
-      function sendReq() {
-        console.log("sendReq");
-        ws.send(
-          JSON.stringify({
-            customContent: `hello flo. I already received ${messageReceivedCounter} from you.`,
-          }),
-        );
-      }
-
-      ws.onerror = reject;
+      const bucketService = new BucketServiceWS(ws, layerInfo, resolve, reject);
+      return bucketService;
     });
   });
 }

@@ -5,6 +5,7 @@ import { getAntdTheme, getThemeFromUser } from "theme";
 import Constants from "viewer/constants";
 import {
   setDownloadModalVisibilityAction,
+  setKeyboardShortcutConfigModalVisibilityAction,
   setMergeModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
@@ -18,6 +19,7 @@ import ShareModalView from "viewer/view/action-bar/share_modal_view";
 import UserScriptsModalView from "viewer/view/action-bar/user_scripts_modal_view";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
+import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 
 const handleShareClose = () => {
   Store.dispatch(setShareModalVisibilityAction(false));
@@ -43,6 +45,10 @@ const handleRenderAnimationClose = () => {
   Store.dispatch(setRenderAnimationModalVisibilityAction(false));
 };
 
+const handleKeyboardShortcutConfigClose = () => {
+  Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(false));
+};
+
 function TracingModals() {
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -59,6 +65,9 @@ function TracingModals() {
   const showAddScriptModal = useWkSelector((state) => state.uiInformation.showAddScriptModal);
   const showZarrPrivateLinksModal = useWkSelector(
     (state) => state.uiInformation.showZarrPrivateLinksModal,
+  );
+  const showKeyboardShortcutConfigModal = useWkSelector(
+    (state) => state.uiInformation.showKeyboardShortcutConfigModal,
   );
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
@@ -100,6 +109,13 @@ function TracingModals() {
       />,
     );
 
+    modalList.push(
+      <KeyboardShortcutConfigModal
+        isOpen={showKeyboardShortcutConfigModal}
+        onClose={handleKeyboardShortcutConfigClose}
+      />,
+    );
+
     if (restrictions.allowDownload) {
       modalList.push(
         <DownloadModalView
@@ -130,6 +146,7 @@ function TracingModals() {
     showShareModal,
     showAddScriptModal,
     showRenderAnimationModal,
+    showKeyboardShortcutConfigModal,
     viewMode,
     annotationId,
     annotationType,

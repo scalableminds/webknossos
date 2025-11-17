@@ -32,8 +32,9 @@ import play.api.mvc.{AnyContent, _}
 
 import scala.concurrent.duration.DurationInt
 import java.io.ByteArrayOutputStream
+import java.nio.charset.Charset
 import java.nio.{ByteBuffer, ByteOrder}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 class BinaryDataController @Inject()(
     datasetCache: DatasetCache,
@@ -49,15 +50,12 @@ class BinaryDataController @Inject()(
     with MissingBucketHeaders {
 
   private object MyBucketWebSocketActor {
-    def props(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String]): Props = {
-      logger.info(s"constructing Props object, token=$token.")
+    def props(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String]): Props =
       Props(new MyBucketWebSocketActor(out, datasetId, dataLayerName, token))
-    }
   }
 
   private class MyBucketWebSocketActor(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String])
       extends Actor {
-    logger.info(s"constructing Actor, token = $token")
     def receive: Receive = {
       case requestBytes: Array[Byte] =>
         val bucketFox = for {
@@ -65,8 +63,8 @@ class BinaryDataController @Inject()(
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
           bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))
         } yield bucketResult._1
-        out ! bucketFox.await("hackathon!")
-      case _ => logger.info("receive case _")
+        val bucketBox = Await.result(bucketFox.futureBox, 1 minute)
+        out ! bucketBox.getOrElse("Failure loading bucket!".getBytes(Charset.forName("UTF-8")))
     }
   }
 

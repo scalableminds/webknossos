@@ -307,6 +307,15 @@ export class BucketServiceWS {
     this.receivedCounter++;
     const cb = this.callbackQueue.shift();
     if (cb) {
+      const endTime = window.performance.now();
+      const receivedBucketsCount = 1;
+      const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(this.layerInfo);
+      getGlobalDataConnectionInfo().log(
+        cb.startingTime,
+        endTime,
+        receivedBucketsCount * BUCKET_BYTE_LENGTH,
+      );
+
       cb(new Uint8Array(message.data));
     }
   };
@@ -330,6 +339,8 @@ export class BucketServiceWS {
     for (let i = 0, strLen = str.length; i < strLen; i++) {
       bufView[i] = str.charCodeAt(i);
     }
+
+    callback.startingTime = window.performance.now();
     this.callbackQueue.push(callback);
     if (this.ws.readyState === 3) {
       console.log("closing? :( received/sent:", this.receivedCounter, "/", this.sentCounter);

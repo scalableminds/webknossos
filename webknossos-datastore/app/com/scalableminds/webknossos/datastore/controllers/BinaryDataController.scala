@@ -57,11 +57,14 @@ class BinaryDataController @Inject()(
       extends Actor {
     def receive: Receive = {
       case msg: String =>
+        logger.info(s"Received message $msg")
         out ! s"Received your message $msg for dataset $datasetId and layer $dataLayerName, token is $token"
+      case _ => logger.info("receive case _")
     }
   }
 
   def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[String, String] { request =>
+    logger.info("bucketWS!")
     ActorFlow.actorRef(out => MyWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
   }
 

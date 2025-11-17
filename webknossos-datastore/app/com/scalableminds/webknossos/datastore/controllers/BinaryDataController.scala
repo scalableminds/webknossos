@@ -58,13 +58,18 @@ class BinaryDataController @Inject()(
       extends Actor {
     def receive: Receive = {
       case requestBytes: Array[Byte] =>
+        logger.info("received data request!")
         val bucketFox = for {
           parsedRequest <- JsonHelper.parseAs[WebknossosDataRequest](requestBytes).toFox
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
           bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))
         } yield bucketResult._1
-        val bucketBox = Await.result(bucketFox.futureBox, 1 minute)
+        logger.info("awaiting bucket loading fox...")
+        val bucketBox = Await.result(bucketFox.futureBox, 15 seconds)
+        logger.info("returning bytes")
         out ! bucketBox.getOrElse("Failure loading bucket!".getBytes(Charset.forName("UTF-8")))
+      case _ =>
+        logger.info("received malformed data request!")
     }
   }
 

@@ -106,18 +106,18 @@ jobs:
       - name: Run backend unit tests
         run: sbt -v "testOnly backend.*"
 
-      # - name: Start Fossildb for e2e tests
-      #   run: docker compose --file .github/docker-compose.yml up -d fossildb
-      # - name: Prepare binaryData folder for e2e tests
-      #   run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
-      # - name: Run end-to-end tests
-      #   uses: ./.github/actions/retry
-      #   with:
-      #     run: |
-      #       sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
-      #     retries: 3
-      # - name: Assert non-empty e2e files
-      #   run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
+      - name: Start Fossildb for e2e tests
+        run: docker compose --file .github/docker-compose.yml up -d fossildb
+      - name: Prepare binaryData folder for e2e tests
+        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
+      - name: Run end-to-end tests
+        uses: ./.github/actions/retry
+        with:
+          run: |
+            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+          retries: 3
+      - name: Assert non-empty e2e files
+        run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
       # - name: Check response types of e2e tests
       #   run: yarn tsc
 

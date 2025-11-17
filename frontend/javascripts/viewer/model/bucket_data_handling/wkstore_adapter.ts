@@ -92,18 +92,23 @@ function getNullIndices<T>(arr: Array<T | null | undefined>): Array<number> {
   return arr.map((el, idx) => (el != null ? -1 : idx)).filter((idx) => idx > -1);
 }
 
+const getDataStoreUrl = (layerInfo: DataLayerType, optLayerName?: string) => {
+  const state = Store.getState();
+  const datasetId = state.dataset.id;
+  const dataStoreHost = state.dataset.dataStore.url;
+  return `${dataStoreHost}/data/datasets/${datasetId}/layers/${optLayerName || layerInfo.name}`;
+};
+const getTracingStoreUrl = (layerInfo: DataLayerType) => {
+  const state = Store.getState();
+  const tracingStoreHost = state.annotation.tracingStore.url;
+  return `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
+};
+
 export async function requestWithFallback(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
 ): Promise<Array<Uint8Array<ArrayBuffer> | null | undefined>> {
   const state = Store.getState();
-  const datasetId = state.dataset.id;
-  const dataStoreHost = state.dataset.dataStore.url;
-  const tracingStoreHost = state.annotation.tracingStore.url;
-
-  const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${datasetId}/layers/${optLayerName || layerInfo.name}`;
-  const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   const maybeVolumeTracing =
     "tracingId" in layerInfo && layerInfo.tracingId != null
@@ -118,8 +123,8 @@ export async function requestWithFallback(
     maybeVolumeTracing == null || needsLocalHdf5Mapping(state, layerInfo.name);
 
   const requestUrl = shouldUseDataStore
-    ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
-    : getTracingStoreUrl();
+    ? getDataStoreUrl(layerInfo, maybeVolumeTracing?.fallbackLayer)
+    : getTracingStoreUrl(layerInfo);
   const bucketBuffers = await requestFromStore(
     requestUrl,
     layerInfo,
@@ -152,7 +157,7 @@ export async function requestWithFallback(
   // Request missing buckets from the datastore as a fallback
   const fallbackBatch = missingBucketIndices.map((idx) => batch[idx]);
   const fallbackBuffers = await requestFromStore(
-    getDataStoreUrl(maybeVolumeTracing.fallbackLayer),
+    getDataStoreUrl(layerInfo, maybeVolumeTracing.fallbackLayer),
     layerInfo,
     fallbackBatch,
     maybeVolumeTracing,
@@ -263,6 +268,48 @@ export async function requestFromStore(
     });
     throw errorResponse;
   }
+}
+
+export function connectViaWS(layerInfo: DataLayerType) {
+  return doWithToken(async (token) => {
+    const params = new URLSearchParams({
+      token,
+    });
+    return new Promise((resolve, reject) => {
+      const url = getDataStoreUrl(layerInfo);
+      const ws = new WebSocket(`ws://${url}/dataWS?${params}`);
+      ws.binaryType = "arraybuffer";
+
+      let messageReceivedCounter = 0;
+
+      ws.onopen = () => {
+        console.log("on open");
+        sendReq();
+      };
+
+      ws.onmessage = (message) => {
+        console.log("on message", message);
+        messageReceivedCounter++;
+        if (messageReceivedCounter < 5) {
+          sendReq();
+        } else {
+          ws.close();
+          resolve(messageReceivedCounter);
+        }
+      };
+
+      function sendReq() {
+        console.log("sendReq");
+        ws.send(
+          JSON.stringify({
+            customContent: `hello flo. I already received ${messageReceivedCounter} from you.`,
+          }),
+        );
+      }
+
+      ws.onerror = reject;
+    });
+  });
 }
 
 function sliceBufferIntoPieces(

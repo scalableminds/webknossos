@@ -3,7 +3,10 @@ import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
-import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import {
+  connectViaWS,
+  requestWithFallback,
+} from "viewer/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "viewer/store";
 import Store from "viewer/store";
 import type { DataBucket } from "./bucket";
@@ -81,6 +84,11 @@ class PullQueue {
     this.fetchingBatchCount++;
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
+
+    if (window.test == null) {
+      window.test = () => connectViaWS(layerInfo);
+    }
+
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     let hasErrored = false;

@@ -62,7 +62,7 @@ const html = `
 
     async function runHTTP(batchSize, chunkSize, parallel) {
       let count = 0;
-      const endTime = Date.now() + 10000;
+      const endTime = Date.now() + 5000;
       const url = p => \`/data?batchSize=\${batchSize}&chunkSize=\${chunkSize}\`;
 
       async function worker() {
@@ -82,7 +82,7 @@ const html = `
         ws.binaryType = "arraybuffer";
 
         let count = 0;
-        const endTime = Date.now() + 10000;
+        const endTime = Date.now() + 5000;
         let active = 0;
 
         ws.onopen = () => {

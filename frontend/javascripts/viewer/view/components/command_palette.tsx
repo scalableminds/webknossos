@@ -114,16 +114,13 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     }
     if (command.name === DynamicCommands.viewDataset) {
       const items = await getDatasetItems();
-      setCloseOnSelect(false);
-      setShowSpinnerOnSelect(false);
       setCommands(items);
     } else if (command.name === DynamicCommands.viewAnnotation) {
       const items = await getAnnotationItems();
-      setCloseOnSelect(false);
-      setShowSpinnerOnSelect(false);
       setCommands(items);
     } else {
       command.command();
+      setOpen(false);
     }
   }, []);
 
@@ -281,6 +278,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       commands.push({
         name: `Switch to ${tool.readableName}`,
         command: () => Store.dispatch(setToolAction(tool)),
+        shortcut: "Esc",
         color: commandEntryColor,
       });
     });
@@ -310,20 +308,36 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   ];
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
-  const [closeOnSelect, setCloseOnSelect] = useState(false);
-  const [showSpinnerOnSelect, setShowSpinnerOnSelect] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <ReactCommandPalette
       commands={commands.map((command, index) => ({ ...command, id: index }))}
       hotKeys={["ctrl+p", "command+p"]}
       trigger={label}
-      closeOnSelect={closeOnSelect}
+      closeOnSelect={false}
       resetInputOnOpen
       maxDisplayed={100}
       theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
       onSelect={handleSelect}
-      showSpinnerOnSelect={showSpinnerOnSelect}
+      showSpinnerOnSelect={false}
+      open={open}
+      renderCommand={(command) => {
+        const { name, shortcut, highlight } = command;
+        return (
+          <div
+            className="item"
+            style={{ display: "flex", justifyContent: "space-between", width: "100%" }}
+          >
+            {highlight ? (
+              <span dangerouslySetInnerHTML={{ __html: highlight }} />
+            ) : (
+              <span>{name}</span>
+            )}
+            <kbd>{shortcut}</kbd>
+          </div>
+        );
+      }}
     />
   );
 };

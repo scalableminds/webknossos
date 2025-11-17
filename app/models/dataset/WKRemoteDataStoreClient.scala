@@ -40,7 +40,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
-      .addQueryParam("mag", mag.toMagLiteral())
+      .addQueryParam("mag", mag.toMagLiteral(allowScalar = false))
       .addQueryParam("x", mag1BoundingBox.topLeft.x)
       .addQueryParam("y", mag1BoundingBox.topLeft.y)
       .addQueryParam("z", mag1BoundingBox.topLeft.z)

@@ -3,7 +3,7 @@ import { alert } from "libs/window";
 import { setSaveBusyAction } from "viewer/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
-import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 import { UnitLong } from "viewer/constants";
@@ -94,7 +94,7 @@ describe("Save Saga", () => {
     ];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
     saga.next(); // setLastSaveTimestampAction
 
     saga.next(); // select state
@@ -248,7 +248,7 @@ describe("Save Saga", () => {
     ];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
 
     saga.next();
     saga.next(); // select state
@@ -276,7 +276,7 @@ describe("Save Saga", () => {
     ];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
     saga.next();
     saga.next(); // select state
 

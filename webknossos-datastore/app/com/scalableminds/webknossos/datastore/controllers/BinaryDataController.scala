@@ -32,7 +32,7 @@ import play.api.mvc.{AnyContent, _}
 
 import scala.concurrent.duration.DurationInt
 import java.io.ByteArrayOutputStream
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.Charset
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.{Await, ExecutionContext}
 

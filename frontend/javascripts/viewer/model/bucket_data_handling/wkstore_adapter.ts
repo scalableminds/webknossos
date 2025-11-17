@@ -276,7 +276,9 @@ export function connectViaWS(layerInfo: DataLayerType) {
       token,
     });
     return new Promise((resolve, reject) => {
-      const url = getDataStoreUrl(layerInfo);
+      const urlWithHost = getDataStoreUrl(layerInfo); //
+      const url = urlWithHost.replace(/^https?:\/\//, "");
+
       const ws = new WebSocket(`ws://${url}/dataWS?${params}`);
       ws.binaryType = "arraybuffer";
 

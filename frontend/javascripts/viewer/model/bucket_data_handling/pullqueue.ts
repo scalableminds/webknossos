@@ -48,6 +48,13 @@ class PullQueue {
     this.consecutiveErrorCount = 0;
     this.isRetryScheduled = false;
     this.abortController = new AbortController();
+
+    const { dataset } = Store.getState();
+    const layerInfo = getLayerByName(dataset, this.layerName);
+
+    if (window.test == null) {
+      window.test = () => connectViaWS(layerInfo);
+    }
   }
 
   pull(): void {
@@ -84,10 +91,6 @@ class PullQueue {
     this.fetchingBatchCount++;
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
-
-    if (window.test == null) {
-      window.test = () => connectViaWS(layerInfo);
-    }
 
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 

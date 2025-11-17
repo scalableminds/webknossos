@@ -723,3 +723,24 @@ button.narrow {
     margin-top: 0 !important;
   }
 }
+
+
+
+
+.adv-parent {
+  display: grid;
+  grid-template: auto / auto 1fr 1fr;
+  height: 100%;
+
+  .adv-left-side {
+    grid-column: 1 / 2;
+  }
+
+  .adv-middle {
+    grid-column: 2 / 3;
+  }
+
+  .adv-right-side {
+    grid-column: 3 / 4;
+  }
+}

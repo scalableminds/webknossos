@@ -51,6 +51,17 @@ const onMessage = async (event) => {
       break;
     }
 
+    case "getAllTrees": {
+      returnValue = api.tracing.getAllTrees();
+      break;
+    }
+
+    case "setAffineLayerTransforms": {
+      const [layerName, transforms] = args;
+      api.data._setAffineLayerTransforms(layerName, transforms);
+      break;
+    }
+
     case "importNml": {
       const nmlAsString = args[0];
 
@@ -95,12 +106,12 @@ const onMessage = async (event) => {
     }
 
     case "getAvailableMeshFiles": {
-      returnValue = await api.data.getAvailableMeshFiles();
+      returnValue = api.data.getAvailableMeshFiles();
       break;
     }
 
     case "getActiveMeshFile": {
-      returnValue = await api.data.getActiveMeshFile();
+      returnValue = api.data.getActiveMeshFile();
       break;
     }
 

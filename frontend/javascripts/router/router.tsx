@@ -75,6 +75,7 @@ import {
   TracingViewRouteWrapper,
   UserDetailsRouteWrapper,
 } from "./route_wrappers";
+import AlignDatasetsView from "viewer/view/layouting/align_datasets_view";
 
 const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
 const AsyncWorkflowListView = loadable<EmptyObject>(
@@ -86,7 +87,7 @@ function RootLayout() {
   const isAdminView = useWkSelector((state) => !state.uiInformation.isInAnnotationView);
 
   return (
-    <Layout>
+    <Layout style={{ height: "100%" }}>
       {/* TODO: always show command palette; remove logic from router
       within tracing view, the command palette is rendered in the status bar. */}
       {isAuthenticated && isAdminView && <CommandPalette label={null} />}
@@ -463,6 +464,7 @@ const routes = createRoutesFromElements(
     <Route path="/privacy" element={<Privacy />} />
     <Route path="/links/:key" element={<ShortLinksRouteWrapper />} />
     <Route path="/onboarding" element={<OnboardingRouteWrapper />} />
+    <Route path="/align-datasets" element={<AlignDatasetsView />} />
     <Route
       path="/account"
       element={

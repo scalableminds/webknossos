@@ -249,6 +249,7 @@ class PullQueue {
   }
 
   destroy() {
+    this.bucketServiceWS.then((s) => s.close());
     this.isDestroyed = true;
     this.clear();
     this.abortRequests();

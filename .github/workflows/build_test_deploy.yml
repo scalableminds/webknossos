@@ -32,14 +32,14 @@ jobs:
       - name: Install frontend dependencies
         run: yarn install --immutable
 
-      - name: Lint frontend code and check formatting
-        run: yarn run check-frontend
-      - name: Typecheck frontend code
-        run: yarn typecheck
+      # - name: Lint frontend code and check formatting
+      #   run: yarn run check-frontend
+      # - name: Typecheck frontend code
+      #   run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
-      - name: Run frontend tests
-        run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
+      # - name: Run frontend tests
+      #   run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
       - name: Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         run: |

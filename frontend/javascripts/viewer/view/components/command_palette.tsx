@@ -27,7 +27,6 @@ import {
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
-
 type CommandWithoutId = Omit<Command, "id">;
 
 const commandEntryColor = "#5660ff";
@@ -109,6 +108,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   };
 
   const handleSelect = useCallback(async (command: Command | string) => {
+    console.log("h");
     if (typeof command === "string") {
       return;
     }
@@ -145,8 +145,10 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   };
 
   const getAnnotationItems = async () => {
+    //usecallback
     const annotations = await getReadableAnnotations(false);
-    return annotations.map((annotation, index) => ({
+    const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
+    return sortedAnnotations.map((annotation, index) => ({
       name: `View annotation: ${annotation.name.length > 0 ? annotation.name : formatHash(annotation.id)}`,
       command: () => {
         window.location.href = `/annotations/${annotation.id}`;
@@ -267,6 +269,19 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
+  const shortCutDictForTools: Record<string, string> = {
+    [AnnotationTool.MOVE.id]: "Ctrl + K, M",
+    [AnnotationTool.SKELETON.id]: "Ctrl + K, S",
+    [AnnotationTool.BRUSH.id]: "Ctrl + K, B",
+    [AnnotationTool.ERASE_BRUSH.id]: "Ctrl + K, E",
+    [AnnotationTool.TRACE.id]: "Ctrl + K, L",
+    [AnnotationTool.ERASE_TRACE.id]: "Ctrl + K, R",
+    [AnnotationTool.VOXEL_PIPETTE.id]: "Ctrl + K, P",
+    [AnnotationTool.QUICK_SELECT.id]: "Ctrl + K, Q",
+    [AnnotationTool.BOUNDING_BOX.id]: "Ctrl + K, X",
+    [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
+  };
+
   const getToolEntries = () => {
     if (!isInTracingView) return [];
     const commands: CommandWithoutId[] = [];
@@ -278,7 +293,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       commands.push({
         name: `Switch to ${tool.readableName}`,
         command: () => Store.dispatch(setToolAction(tool)),
-        shortcut: "Esc",
+        shortcut: shortCutDictForTools[tool.id] || "",
         color: commandEntryColor,
       });
     });
@@ -295,17 +310,20 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return tracingMenuItems;
   }, [isInTracingView, isViewMode, tracingMenuItems]);
 
-  const allStaticCommands = [
-    ...getNavigationEntries(),
-    ...getThemeEntries(),
-    ...getToolEntries(),
-    ...getViewModeEntries(),
-    ...mapMenuActionsToCommands(menuActions),
-    ...getTabsAndSettingsMenuItems(),
-    ...getSuperUserItems(),
-    getDatasetItem(),
-    getAnnotationItem(),
-  ];
+  const allStaticCommands = useMemo(
+    () => [
+      ...getNavigationEntries(),
+      ...getThemeEntries(),
+      ...getToolEntries(),
+      ...getViewModeEntries(),
+      ...mapMenuActionsToCommands(menuActions),
+      ...getTabsAndSettingsMenuItems(),
+      ...getSuperUserItems(),
+      getDatasetItem(),
+      getAnnotationItem(),
+    ],
+    [],
+  );
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
   const [open, setOpen] = useState(false);
@@ -334,7 +352,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
             ) : (
               <span>{name}</span>
             )}
-            <kbd>{shortcut}</kbd>
+            <span>{shortcut}</span>
           </div>
         );
       }}

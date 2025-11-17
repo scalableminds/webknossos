@@ -23,10 +23,10 @@ import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, A
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
-import org.apache.pekko.actor.{Actor, ActorRef, ActorRefFactory, ActorSystem, Props}
+import org.apache.pekko.actor.{Actor, ActorRef, ActorRefFactory, Props}
 import org.apache.pekko.stream.Materializer
 import play.api.i18n.Messages
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import play.api.libs.streams.ActorFlow
 import play.api.mvc.{AnyContent, _}
 
@@ -48,19 +48,21 @@ class BinaryDataController @Inject()(
     extends Controller
     with MissingBucketHeaders {
 
-  object MyWebSocketActor {
-    def props(out: ActorRef, token: Option[String]): Props = Props(new MyWebSocketActor(out, token))
+  private object MyWebSocketActor {
+    def props(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String]): Props =
+      Props(new MyWebSocketActor(out, datasetId, dataLayerName, token))
   }
 
-  class MyWebSocketActor(out: ActorRef, token: Option[String]) extends Actor {
+  private class MyWebSocketActor(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String])
+      extends Actor {
     def receive: Receive = {
       case msg: String =>
-        out ! (s"Received your message $msg, token is $token")
+        out ! s"Received your message $msg for dataset $datasetId and layer $dataLayerName, token is $token"
     }
   }
 
   def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[String, String] { request =>
-    ActorFlow.actorRef(out => MyWebSocketActor.props(out, request.getQueryString("token")))
+    ActorFlow.actorRef(out => MyWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
   }
 
   override def allowRemoteOrigin: Boolean = true

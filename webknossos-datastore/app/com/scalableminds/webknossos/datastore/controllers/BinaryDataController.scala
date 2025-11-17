@@ -25,6 +25,7 @@ import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorContext, ActorRef, ActorRefFactory, ActorSystem, Props}
 import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Flow
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.libs.streams.ActorFlow
@@ -48,13 +49,16 @@ class BinaryDataController @Inject()(
     extends Controller
     with MissingBucketHeaders {
 
-  private object MyWebSocketActor {
-    def props(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String]): Props =
-      Props(new MyWebSocketActor(out, datasetId, dataLayerName, token))
+  private object MyBucketWebSocketActor {
+    def props(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String]): Props = {
+      logger.info(s"constructing Props object, token=$token.")
+      Props(new MyBucketWebSocketActor(out, datasetId, dataLayerName, token))
+    }
   }
 
-  private class MyWebSocketActor(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String])
+  private class MyBucketWebSocketActor(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String])
       extends Actor {
+    logger.info(s"constructing Actor, token = $token")
     def receive: Receive = {
       case msg: String =>
         logger.info(s"Received message $msg")
@@ -63,9 +67,31 @@ class BinaryDataController @Inject()(
     }
   }
 
+  object MyWebSocketActor {
+    def props(out: ActorRef) = Props(new MyWebSocketActor(out))
+  }
+
+  class MyWebSocketActor(out: ActorRef) extends Actor {
+    def receive = {
+      case msg: String =>
+        out ! ("I received your message: " + msg)
+    }
+  }
+
   def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[String, String] { request =>
     logger.info("bucketWS!")
-    ActorFlow.actorRef(out => MyWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
+    val res: Flow[Any, Nothing, _] =
+      ActorFlow.actorRef(out =>
+        MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
+
+    logger.info(res.toString())
+    res
+  }
+
+  def socket = WebSocket.accept[String, String] { request =>
+    ActorFlow.actorRef { out =>
+      MyWebSocketActor.props(out)
+    }
   }
 
   override def allowRemoteOrigin: Boolean = true

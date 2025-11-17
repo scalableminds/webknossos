@@ -358,9 +358,9 @@ export function createBucketServiceWS(layerInfo: DataLayerType): Promise<BucketS
     });
     return new Promise((resolve, reject) => {
       const urlWithHost = getDataStoreUrl(layerInfo); //
-      const url = urlWithHost.replace(/^https?:\/\//, "").replace("9000", "9001");
+      const url = urlWithHost.replace(/^http/, "ws").replace("9000", "9001");
 
-      const ws = new WebSocket(`ws://${url}/dataWS?${params}`);
+      const ws = new WebSocket(`${url}/dataWS?${params}`);
       ws.binaryType = "arraybuffer";
 
       const bucketService = new BucketServiceWS(ws, layerInfo, resolve, reject);

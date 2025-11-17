@@ -310,7 +310,13 @@ export class BucketServiceWS {
       version,
     );
 
-    this.ws.send(JSON.stringify(bucketInfo));
+    const str = JSON.stringify(bucketInfo);
+    const buf = new ArrayBuffer(str.length);
+    const bufView = new Uint8Array(buf);
+    for (let i = 0, strLen = str.length; i < strLen; i++) {
+      bufView[i] = str.charCodeAt(i);
+    }
+    this.ws.send(buf);
   }
 }
 

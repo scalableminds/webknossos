@@ -93,7 +93,7 @@ class PullQueue {
     // Loading a bunch of buckets
     this.fetchingBatchCount++;
     const { dataset } = Store.getState();
-    const layerInfo = getLayerByName(dataset, this.layerName);
+    // const layerInfo = getLayerByName(dataset, this.layerName);
 
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 

@@ -32,7 +32,7 @@ import play.api.mvc.{AnyContent, _}
 
 import scala.concurrent.duration.DurationInt
 import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.{Await, ExecutionContext}
 
@@ -57,26 +57,26 @@ class BinaryDataController @Inject()(
   private class MyBucketWebSocketActor(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String])
       extends Actor {
     def receive: Receive = {
-      case requestBytes: Array[Byte] =>
+      case requestStr: String =>
         logger.info("received data request!")
         val bucketFox = for {
-          parsedRequest <- JsonHelper.parseAs[WebknossosDataRequest](requestBytes).toFox
+          parsedRequest <- JsonHelper.parseAs[WebknossosDataRequest](requestStr).toFox
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
           bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))
         } yield bucketResult._1
         logger.info("awaiting bucket loading fox...")
         val bucketBox = Await.result(bucketFox.futureBox, 15 seconds)
         logger.info("returning bytes")
-        out ! bucketBox.getOrElse("Failure loading bucket!".getBytes(Charset.forName("UTF-8")))
+        val result: Array[Byte] = bucketBox.getOrElse("Failure loading bucket!".getBytes(Charset.forName("UTF-8")))
+        out ! new String(result, StandardCharsets.UTF_8)
       case _ =>
         logger.info("received malformed data request!")
     }
   }
 
-  def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[Array[Byte], Array[Byte]] {
-    request =>
-      ActorFlow.actorRef(out =>
-        MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
+  def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[String, String] { request =>
+    ActorFlow.actorRef(out =>
+      MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
   }
 
   override def allowRemoteOrigin: Boolean = true

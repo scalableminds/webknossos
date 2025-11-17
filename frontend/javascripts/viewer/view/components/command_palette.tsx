@@ -1,20 +1,21 @@
-import { getDatasets, updateSelectedThemeOfUser } from "admin/rest_api";
+import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
-import { useFetch } from "libs/react_helpers";
+import { formatHash } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { ViewModeValues } from "viewer/constants";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
@@ -24,11 +25,17 @@ import {
   useTracingViewMenuItems,
 } from "../action-bar/use_tracing_view_menu_items";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
+import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
 type CommandWithoutId = Omit<Command, "id">;
 
 const commandEntryColor = "#5660ff";
+
+enum DynamicCommands {
+  viewDataset = "> View Dataset...",
+  viewAnnotation = "> View Annotation...",
+}
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
   if ("title" in action && action.title != null) {
@@ -71,13 +78,6 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
-  const datasets = useFetch(
-    async () => {
-      return await getDatasets(false, null, null, null, 1000);
-    },
-    [],
-    [],
-  );
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -108,14 +108,63 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const getDatasetItems = () => {
-    return datasets.map((dataset) => ({
+  const handleSelect = useCallback(async (command: Command | string) => {
+    if (typeof command === "string") {
+      return;
+    }
+    if (command.name === DynamicCommands.viewDataset) {
+      const items = await getDatasetItems();
+      setCloseOnSelect(false);
+      setShowSpinnerOnSelect(false);
+      setCommands(items);
+    } else if (command.name === DynamicCommands.viewAnnotation) {
+      const items = await getAnnotationItems();
+      setCloseOnSelect(false);
+      setShowSpinnerOnSelect(false);
+      setCommands(items);
+    } else {
+      command.command();
+    }
+  }, []);
+
+  const getDatasetItems = async () => {
+    const datasets = await getDatasets();
+    return datasets.map((dataset, index) => ({
       name: `View dataset: ${dataset.name}`,
       command: () => {
         window.location.href = getViewDatasetURL(dataset);
       },
       color: commandEntryColor,
+      id: index,
     }));
+  };
+
+  const getDatasetItem = () => {
+    return {
+      name: DynamicCommands.viewDataset,
+      command: () => {},
+      color: commandEntryColor,
+    };
+  };
+
+  const getAnnotationItems = async () => {
+    const annotations = await getReadableAnnotations(false);
+    return annotations.map((annotation, index) => ({
+      name: `View annotation: ${annotation.name.length > 0 ? annotation.name : formatHash(annotation.id)}`,
+      command: () => {
+        window.location.href = `/annotations/${annotation.id}`;
+      },
+      color: commandEntryColor,
+      id: index,
+    }));
+  };
+
+  const getAnnotationItem = () => {
+    return {
+      name: DynamicCommands.viewAnnotation,
+      command: () => {},
+      color: commandEntryColor,
+    };
   };
 
   const getSuperUserItems = (): CommandWithoutId[] => {
@@ -204,6 +253,23 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
+  const getViewModeEntries = () => {
+    if (!isInTracingView) return [];
+    const commands = ViewModeValues.map((mode) => ({
+      name: `Switch to ${mode} mode`,
+      command: () => {
+        Store.dispatch(setViewModeAction(mode));
+      },
+      color: commandEntryColor,
+    }));
+    commands.push({
+      name: "Reset layout",
+      command: () => layoutEmitter.emit(LayoutEvents.resetLayout),
+      color: commandEntryColor,
+    });
+    return commands;
+  };
+
   const getToolEntries = () => {
     if (!isInTracingView) return [];
     const commands: CommandWithoutId[] = [];
@@ -231,29 +297,33 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return tracingMenuItems;
   }, [isInTracingView, isViewMode, tracingMenuItems]);
 
-  const allCommands = [
+  const allStaticCommands = [
     ...getNavigationEntries(),
     ...getThemeEntries(),
     ...getToolEntries(),
+    ...getViewModeEntries(),
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getSuperUserItems(),
-    ...getDatasetItems(),
+    getDatasetItem(),
+    getAnnotationItem(),
   ];
+
+  const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
+  const [closeOnSelect, setCloseOnSelect] = useState(false);
+  const [showSpinnerOnSelect, setShowSpinnerOnSelect] = useState(false);
+
   return (
     <ReactCommandPalette
-      commands={allCommands.map((command, counter) => {
-        return {
-          ...command,
-          id: counter,
-        };
-      })}
+      commands={commands.map((command, index) => ({ ...command, id: index }))}
       hotKeys={["ctrl+p", "command+p"]}
       trigger={label}
-      closeOnSelect
+      closeOnSelect={closeOnSelect}
       resetInputOnOpen
       maxDisplayed={100}
       theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
+      onSelect={handleSelect}
+      showSpinnerOnSelect={showSpinnerOnSelect}
     />
   );
 };

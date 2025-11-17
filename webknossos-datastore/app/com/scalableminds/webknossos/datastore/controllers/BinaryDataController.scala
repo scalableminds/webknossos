@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificat
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
-import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.{Materializer, OverflowStrategy}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.libs.streams.ActorFlow
@@ -73,8 +73,11 @@ class BinaryDataController @Inject()(
 
   def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[Array[Byte], Array[Byte]] {
     request =>
-      ActorFlow.actorRef(out =>
-        MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
+      ActorFlow.actorRef(
+        out => MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")),
+        bufferSize = 256,
+        overflowStrategy = OverflowStrategy.dropTail
+      )
   }
 
   override def allowRemoteOrigin: Boolean = true

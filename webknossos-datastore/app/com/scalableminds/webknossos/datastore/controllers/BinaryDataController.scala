@@ -58,6 +58,8 @@ class BinaryDataController @Inject()(
       extends Actor {
     def receive: Receive = {
       case requestStr: String =>
+        logger.info("received string!")
+      case requestStr: Array[Byte] =>
         logger.info("received data request!")
         val bucketFox = for {
           parsedRequest <- JsonHelper.parseAs[WebknossosDataRequest](requestStr).toFox
@@ -68,15 +70,16 @@ class BinaryDataController @Inject()(
         val bucketBox = Await.result(bucketFox.futureBox, 15 seconds)
         logger.info("returning bytes")
         val result: Array[Byte] = bucketBox.getOrElse("Failure loading bucket!".getBytes(Charset.forName("UTF-8")))
-        out ! new String(result, StandardCharsets.UTF_8)
+        out ! result
       case _ =>
         logger.info("received malformed data request!")
     }
   }
 
-  def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[String, String] { request =>
-    ActorFlow.actorRef(out =>
-      MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
+  def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[Array[Byte], Array[Byte]] {
+    request =>
+      ActorFlow.actorRef(out =>
+        MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
   }
 
   override def allowRemoteOrigin: Boolean = true

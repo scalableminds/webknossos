@@ -271,6 +271,9 @@ export async function requestFromStore(
 }
 
 export class BucketServiceWS {
+  callbackQueue: Array<(buf: Uint8Array<ArrayBuffer>) => void> = [];
+  sentCounter: number = 0;
+  receivedCounter: number = 0;
   constructor(
     private ws: WebSocket,
     public layerInfo: DataLayerType,
@@ -282,6 +285,13 @@ export class BucketServiceWS {
     };
     ws.onerror = this.onError;
     ws.onmessage = this.handleResponse;
+
+    ws.addEventListener("close", (event) => {
+      console.log("The connection has been closed successfully.", event);
+    });
+    ws.addEventListener("error", (event) => {
+      console.warn("The connection got an error.", event);
+    });
   }
 
   close() {
@@ -293,11 +303,15 @@ export class BucketServiceWS {
     this.reject(error);
   }
 
-  handleResponse(message: unknown) {
-    console.log("message", message);
-  }
+  handleResponse = (message: unknown) => {
+    this.receivedCounter++;
+    const cb = this.callbackQueue.shift();
+    if (cb) {
+      cb(new Uint8Array(message.data));
+    }
+  };
 
-  requestBucket(address: BucketAddress) {
+  requestBucket(address: BucketAddress, callback: (buf: Uint8Array<ArrayBuffer>) => void) {
     const magInfo = getMagInfo(this.layerInfo.mags);
     const version = null;
     const agglomerateMappingNameToApplyOnServer = null;
@@ -316,7 +330,13 @@ export class BucketServiceWS {
     for (let i = 0, strLen = str.length; i < strLen; i++) {
       bufView[i] = str.charCodeAt(i);
     }
-    this.ws.send(buf);
+    this.callbackQueue.push(callback);
+    if (this.ws.readyState === 3) {
+      console.log("closing? :( received/sent:", this.receivedCounter, "/", this.sentCounter);
+    } else {
+      this.ws.send(buf);
+      this.sentCounter++;
+    }
   }
 }
 

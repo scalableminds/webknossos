@@ -107,10 +107,22 @@ class PullQueue {
       // );
 
       this.sentCount++;
-      if (this.sentCount < 10) {
-        const service = await this.bucketServiceWS;
-        service.requestBucket(batch[0]);
-      }
+      // if (this.sentCount < 10) {
+      const service = await this.bucketServiceWS;
+      service.requestBucket(batch[0], (bucketBuffer: Uint8Array<ArrayBuffer>) => {
+        const bucket = this.cube.getOrCreateBucket(batch[0]);
+
+        if (bucket.type !== "data") {
+          return;
+        }
+
+        if (bucketBuffer == null && !renderMissingDataBlack) {
+          bucket.markAsFailed(true);
+        } else {
+          this.handleBucket(bucket, bucketBuffer);
+        }
+      });
+      // }
       return;
 
       for (const [index, bucketAddress] of batch.entries()) {

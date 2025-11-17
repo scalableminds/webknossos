@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
@@ -23,9 +23,8 @@ import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, A
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
-import org.apache.pekko.actor.{Actor, ActorContext, ActorRef, ActorRefFactory, ActorSystem, Props}
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.Flow
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.libs.streams.ActorFlow
@@ -60,38 +59,21 @@ class BinaryDataController @Inject()(
       extends Actor {
     logger.info(s"constructing Actor, token = $token")
     def receive: Receive = {
-      case msg: String =>
-        logger.info(s"Received message $msg")
-        out ! s"Received your message $msg for dataset $datasetId and layer $dataLayerName, token is $token"
+      case requestBytes: Array[Byte] =>
+        val bucketFox = for {
+          parsedRequest <- JsonHelper.parseAs[WebknossosDataRequest](requestBytes).toFox
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
+          bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))
+        } yield bucketResult._1
+        out ! bucketFox.await("hackathon!")
       case _ => logger.info("receive case _")
     }
   }
 
-  object MyWebSocketActor {
-    def props(out: ActorRef) = Props(new MyWebSocketActor(out))
-  }
-
-  class MyWebSocketActor(out: ActorRef) extends Actor {
-    def receive = {
-      case msg: String =>
-        out ! ("I received your message: " + msg)
-    }
-  }
-
-  def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[String, String] { request =>
-    logger.info("bucketWS!")
-    val res: Flow[Any, Nothing, _] =
+  def bucketWS(datasetId: ObjectId, dataLayerName: String): WebSocket = WebSocket.accept[Array[Byte], Array[Byte]] {
+    request =>
       ActorFlow.actorRef(out =>
         MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")))
-
-    logger.info(res.toString())
-    res
-  }
-
-  def socket = WebSocket.accept[String, String] { request =>
-    ActorFlow.actorRef { out =>
-      MyWebSocketActor.props(out)
-    }
   }
 
   override def allowRemoteOrigin: Boolean = true

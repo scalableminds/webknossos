@@ -1096,13 +1096,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
-    const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
       icon: <i className="fas fa-undo" />,
       label: (
         <div
-          title={title}
           onClick={() => {
             if (getVisibleSegmentationLayer == null) {
               return;
@@ -1111,7 +1109,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.hideContextMenu();
           }}
         >
-          Reset Segment Color
+          Reset Segment Colors
         </div>
       ),
     };
@@ -1792,6 +1790,7 @@ class SegmentsView extends React.Component<Props, State> {
               disabled: true,
             },
             this.getSetGroupColorMenuItem(id),
+            this.getResetGroupColorMenuItem(id),
             this.getShowSegmentStatistics(id),
             this.getLoadMeshesFromFileMenuItem(id),
             this.getComputeMeshesAdHocMenuItem(id),

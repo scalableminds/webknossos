@@ -10,10 +10,10 @@ import type DataLayer from "viewer/model/data_layer";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 export default function* loadHistogramDataSaga(): Saga<void> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   yield* takeEvery("RELOAD_HISTOGRAM", reloadHistogramForLayer);
 
   const dataLayers: Array<DataLayer> = yield* call([Model, Model.getColorLayers]);

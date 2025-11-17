@@ -57,18 +57,13 @@ class BinaryDataController @Inject()(
   private class MyBucketWebSocketActor(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String])
       extends Actor {
     def receive: Receive = {
-      case requestStr: String =>
-        logger.info("received string!")
       case requestStr: Array[Byte] =>
-        logger.info("received data request!")
         val bucketFox = for {
           parsedRequest <- JsonHelper.parseAs[WebknossosDataRequest](requestStr).toFox
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
           bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))
         } yield bucketResult._1
-        logger.info("awaiting bucket loading fox...")
         val bucketBox = Await.result(bucketFox.futureBox, 15 seconds)
-        logger.info("returning bytes")
         val result: Array[Byte] = bucketBox.getOrElse("Failure loading bucket!".getBytes(Charset.forName("UTF-8")))
         out ! result
       case _ =>

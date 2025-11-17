@@ -750,6 +750,10 @@ export function getReadableURLPart(
   return `${getURLSanitizedName(dataset)}-${dataset.id}`;
 }
 
+export function getViewDatasetURL(dataset: APIDataset | APIDatasetCompact) {
+  return `/datasets/${getReadableURLPart(dataset)}/view`;
+}
+
 export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {
   const datasetIdOrName = datasetNameAndId.split("-").pop();
   const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");

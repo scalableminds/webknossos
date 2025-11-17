@@ -1,5 +1,6 @@
-import { updateSelectedThemeOfUser } from "admin/rest_api";
+import { getDatasets, updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
@@ -10,6 +11,7 @@ import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -69,6 +71,13 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const datasets = useFetch(
+    async () => {
+      return await getDatasets(false, null, null, null, 1000);
+    },
+    [],
+    [],
+  );
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -97,6 +106,16 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       }
     });
     return commands;
+  };
+
+  const getDatasetItems = () => {
+    return datasets.map((dataset) => ({
+      name: `View dataset: ${dataset.name}`,
+      command: () => {
+        window.location.href = getViewDatasetURL(dataset);
+      },
+      color: commandEntryColor,
+    }));
   };
 
   const getSuperUserItems = (): CommandWithoutId[] => {
@@ -219,6 +238,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getSuperUserItems(),
+    ...getDatasetItems(),
   ];
   return (
     <ReactCommandPalette

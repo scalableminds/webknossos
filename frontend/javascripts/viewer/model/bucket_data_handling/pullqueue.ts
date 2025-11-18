@@ -5,7 +5,6 @@ import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import {
   BucketServiceWS,
-  connectViaWS,
   createBucketServiceWS,
   requestWithFallback,
 } from "viewer/model/bucket_data_handling/wkstore_adapter";
@@ -92,13 +91,13 @@ class PullQueue {
   private async pullBatch(batch: Array<BucketAddress>): Promise<void> {
     // Loading a bunch of buckets
     this.fetchingBatchCount++;
-    const { dataset } = Store.getState();
+    // const { dataset } = Store.getState();
     // const layerInfo = getLayerByName(dataset, this.layerName);
 
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     let hasErrored = false;
-    let failedBucketAddresses = [];
+    // let failedBucketAddresses = [];
     try {
       // const bucketBuffers = await asAbortable(
       //   requestWithFallback(layerInfo, batch),
@@ -109,7 +108,7 @@ class PullQueue {
       this.sentCount++;
       // if (this.sentCount < 10) {
       const service = await this.bucketServiceWS;
-      service.requestBucket(batch[0], (bucketBuffer: Uint8Array<ArrayBuffer>) => {
+      service.requestBucket(batch[0], (bucketBuffer: Uint8Array<ArrayBuffer> | null) => {
         const bucket = this.cube.getOrCreateBucket(batch[0]);
 
         if (bucket.type !== "data") {
@@ -125,28 +124,28 @@ class PullQueue {
       // }
       return;
 
-      for (const [index, bucketAddress] of batch.entries()) {
-        try {
-          const bucketBuffer = bucketBuffers[index];
-          const bucket = this.cube.getOrCreateBucket(bucketAddress);
+      // for (const [index, bucketAddress] of batch.entries()) {
+      //   try {
+      //     const bucketBuffer = bucketBuffers[index];
+      //     const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
-          if (bucket.type !== "data") {
-            continue;
-          }
+      //     if (bucket.type !== "data") {
+      //       continue;
+      //     }
 
-          if (bucketBuffer == null && !renderMissingDataBlack) {
-            bucket.markAsFailed(true);
-          } else {
-            this.handleBucket(bucket, bucketBuffer);
-          }
-        } catch {
-          failedBucketAddresses.push(bucketAddress);
-        }
-      }
+      //     if (bucketBuffer == null && !renderMissingDataBlack) {
+      //       bucket.markAsFailed(true);
+      //     } else {
+      //       this.handleBucket(bucket, bucketBuffer);
+      //     }
+      //   } catch {
+      //     failedBucketAddresses.push(bucketAddress);
+      //   }
+      // }
 
-      if (failedBucketAddresses.length > 0) {
-        throw new Error("Some buckets could not be handled.");
-      }
+      // if (failedBucketAddresses.length > 0) {
+      //   throw new Error("Some buckets could not be handled.");
+      // }
     } catch (error) {
       if (this.isDestroyed) {
         return;

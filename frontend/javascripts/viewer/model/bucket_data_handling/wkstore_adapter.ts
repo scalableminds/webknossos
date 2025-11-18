@@ -305,13 +305,13 @@ export class BucketServiceWS {
 
   handleResponse = (message: { data: ArrayBuffer }) => {
     this.receivedCounter++;
-    const messageId = Number(new BigInt64Array(message.data, 0, 4)[0]);
+    const messageId = Number(new DataView(message.data).getBigInt64(0, false));
 
     const cb = this.callbackById[messageId];
     delete this.callbackById[messageId];
     if (cb) {
       const endTime = window.performance.now();
-      const receivedBucketsCount = message.data.byteLength > 4 ? 1 : 0;
+      const receivedBucketsCount = message.data.byteLength > 8 ? 1 : 0;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(this.layerInfo);
       getGlobalDataConnectionInfo().log(
         cb.startingTime,
@@ -319,7 +319,7 @@ export class BucketServiceWS {
         receivedBucketsCount * BUCKET_BYTE_LENGTH,
       );
 
-      cb(receivedBucketsCount === 1 ? new Uint8Array(message.data, 5) : null);
+      cb(receivedBucketsCount === 1 ? new Uint8Array(message.data, 8) : null);
     } else {
       console.error("couldn't look up cb for messageId", messageId);
     }

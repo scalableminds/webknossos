@@ -20,7 +20,7 @@ export const PullQueueConstants = {
   // For buckets that should be loaded immediately and
   // should never be removed from the queue
   PRIORITY_HIGHEST: -1,
-  BATCH_LIMIT: 6,
+  BATCH_LIMIT: 36,
 } as const;
 const BATCH_SIZE = 1;
 const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
@@ -109,6 +109,7 @@ class PullQueue {
       // if (this.sentCount < 10) {
       const service = await this.bucketServiceWS;
       service.requestBucket(batch[0], (bucketBuffer: Uint8Array<ArrayBuffer> | null) => {
+        this.fetchingBatchCount--;
         const bucket = this.cube.getOrCreateBucket(batch[0]);
 
         if (bucket.type !== "data") {
@@ -174,7 +175,7 @@ class PullQueue {
       } else {
         this.consecutiveErrorCount = 0;
       }
-      this.fetchingBatchCount--;
+      // this.fetchingBatchCount--;
 
       if (!hasErrored) {
         // Continue to process the pull queue without delay.

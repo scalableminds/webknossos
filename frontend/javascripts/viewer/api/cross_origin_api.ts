@@ -62,7 +62,12 @@ const onMessage = async (event) => {
     }
 
     case "centerPositionAnimated": {
-      api.tracing.centerPositionAnimated(args[0]);
+      api.tracing.centerPositionAnimated(args[0], false);
+      break;
+    }
+
+    case "setLayerVisibility": {
+      api.data.setLayerVisibility(args[0], args[1]);
       break;
     }
 

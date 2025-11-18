@@ -2874,6 +2874,10 @@ class DataApi {
       }
     }
   }
+
+  setLayerVisibility(layerName: string, isVisible: boolean) {
+    Store.dispatch(updateLayerSettingAction(layerName, "isDisabled", !isVisible));
+  }
 }
 /**
  * All user configuration related API methods.

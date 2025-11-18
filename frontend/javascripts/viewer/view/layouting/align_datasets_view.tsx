@@ -4,16 +4,18 @@ import Deferred from "libs/async/deferred";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { useEffect, useRef, useState } from "react";
 import type { Tree } from "viewer/model/types/tree_types";
-import { Identity4x4, type Vector3 } from "viewer/constants";
+import { Identity4x4, type Vector3, IdentityTransform } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { M4x4 } from "libs/mjs";
 import { useInterval } from "libs/react_helpers";
 import { PushpinOutlined } from "@ant-design/icons";
 import {
+  createAffineTransform,
   invertTransform,
   Transform,
   transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
+import { Matrix4x4 } from "mjs";
 
 const deferredsByMessageId: Record<string, Deferred<unknown, unknown>> = {};
 
@@ -87,6 +89,37 @@ function AlignDatasetsView() {
   const [correspondences1, setCorrespondences1] = useState<Vector3[]>([]);
   const [correspondences2, setCorrespondences2] = useState<Vector3[]>([]);
 
+  const [transformMatrix1to2, setTransformMatrix1to2] = useState<Transform>(IdentityTransform);
+
+  const [showBoth, setShowBoth] = useState(false);
+
+  const toggleShowBoth = () => {
+    if (iframe1.current == null || iframe2.current == null) {
+      return;
+    }
+    const newShowBoth = !showBoth;
+    setShowBoth(newShowBoth);
+    if (newShowBoth) {
+      for (const layerName of [layerName1, layerName2]) {
+        for (const iframe of [iframe1.current, iframe2.current]) {
+          sendMessage(iframe, {
+            type: "setLayerVisibility",
+            args: [layerName, true],
+          });
+        }
+      }
+    } else {
+      sendMessage(iframe1.current, {
+        type: "setLayerVisibility",
+        args: [layerName2, false],
+      });
+      sendMessage(iframe2.current, {
+        type: "setLayerVisibility",
+        args: [layerName1, false],
+      });
+    }
+  };
+
   useInterval(async () => {
     if (iframe1.current == null || iframe2.current == null) {
       return;
@@ -126,8 +159,11 @@ function AlignDatasetsView() {
 
     /* Estimates an affine matrix that transforms from diamond to versaCT. */
 
-    const transformMatrix = estimateAffineMatrix4x4(correspondencePoints1, correspondencePoints2);
-    const transformMatrixInv = M4x4.inverse(transformMatrix);
+    const transforms1to2 = createAffineTransform(correspondencePoints1, correspondencePoints2);
+    const transformMatrix = transforms1to2.affineMatrix;
+    const transformMatrixInv = transforms1to2.affineMatrixInv;
+
+    setTransformMatrix1to2(transforms1to2);
 
     console.log("correspondencePoints1", correspondencePoints1);
     console.log("correspondencePoints2", correspondencePoints2);
@@ -206,24 +242,46 @@ function AlignDatasetsView() {
   return (
     <div className="adv-parent">
       <div className="adv-left-side section flex-column" style={{ padding: 5 }}>
-        <Button onClick={onReset}>Reset</Button>
-        <Button onClick={onAlign}>Align</Button>
-
+        <div className="centered-items">
+          <Button onClick={onReset} style={{ marginBottom: 4 }}>
+            Reset
+          </Button>
+        </div>
+        <div className="centered-items">
+          <Button onClick={onAlign}>Align</Button>
+        </div>
         <div className="centered-items">
           <Button onClick={onLeftToRight}>→</Button>
           <Button onClick={onRightToLeft}>←</Button>
         </div>
-
+        <div className="centered-items">
+          <Button onClick={toggleShowBoth}> {showBoth ? "Hide Other" : "Show Both"} </Button>
+        </div>
         <table>
-          {_.zip(correspondences1, correspondences2).map(([p1, p2], index) => (
-            <tr key={index}>
-              <td>
-                <PushpinOutlined onClick={() => onFocusCorrespondence(p1, p2)} />
-              </td>
-              <td>[{p1?.join(", ")}]</td>
-              <td>[{p2?.join(", ")}]</td>
-            </tr>
-          ))}
+          {_.zip(correspondences1, correspondences2).map(
+            ([p1, p2], index) =>
+              p1 &&
+              p2 && (
+                <tr key={index}>
+                  <td>
+                    <PushpinOutlined onClick={() => onFocusCorrespondence(p1, p2)} />
+                  </td>
+                  <td>[{p1.join(", ")}]</td>
+                  <td>[{p2.join(", ")}]</td>
+                  <td>
+                    [
+                    {[transformPointUnscaled(transformMatrix1to2)(p1)]
+                      .map(([x, y, z]) => [
+                        Math.ceil(Math.abs(x - p2[0])),
+                        Math.ceil(Math.abs(y - p2[1])),
+                        Math.ceil(Math.abs(z - p2[2])),
+                      ])
+                      .join(", ")}
+                    ]
+                  </td>
+                </tr>
+              ),
+          )}
         </table>
       </div>
       <div className="adv-middle section">

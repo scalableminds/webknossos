@@ -165,7 +165,7 @@ void main() {
       mod(floor(treeId / ${COLOR_TEXTURE_WIDTH_FIXED}), ${COLOR_TEXTURE_WIDTH_FIXED})
     );
     vec4 rgba = texelFetch(treeColors, treeIdToTextureCoordinate, 0);
-    bool isVisible = rgba.a == 1.0;
+    bool isVisible = 0.; // rgba.a == 1.0;
 
     if (!isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);

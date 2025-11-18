@@ -56,7 +56,10 @@ import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  flatToNestedMatrix,
+  getTransformsForLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -596,7 +599,7 @@ class TracingApi {
     Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
   }
 
-  async exportTreesAsNmlString() {
+  async exportTreesAsNmlString(applyTransform: boolean = false) {
     const buildInfo = await getBuildInfo();
     const state = Store.getState();
     const nml = serializeToNml(
@@ -604,7 +607,7 @@ class TracingApi {
       state.annotation,
       state.annotation.skeleton!,
       buildInfo,
-      false,
+      applyTransform,
     );
 
     return nml;
@@ -2737,6 +2740,18 @@ class DataApi {
     ];
 
     Store.dispatch(setLayerTransformsAction(layerName, coordinateTransforms));
+  }
+
+  getTransformsForLayer(layerName: string) {
+    const state = Store.getState();
+    const layer = getLayerByName(state.dataset, layerName);
+    return getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+
+    // C555_DIAMOND_2f
   }
 
   /*

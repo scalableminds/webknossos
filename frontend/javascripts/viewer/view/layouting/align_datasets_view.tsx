@@ -55,13 +55,13 @@ function AlignDatasetsView() {
     }
     const nmlString1 = (await sendMessage(iframe1.current, {
       type: "exportTreesAsNmlString",
-      args: [],
+      args: [true],
     })) as string;
     const treeCollection1 = (await parseNml(nmlString1)).trees;
 
     const nmlString2 = (await sendMessage(iframe2.current, {
       type: "exportTreesAsNmlString",
-      args: [],
+      args: [false],
     })) as string;
 
     console.log("nmlString1", nmlString1);
@@ -97,7 +97,7 @@ function AlignDatasetsView() {
 
     console.log("correspondencePoints1", correspondencePoints1);
     console.log("correspondencePoints2", correspondencePoints2);
-
+    return;
     await sendMessage(iframe1.current, {
       type: "setAffineLayerTransforms",
       args: [layerName1, transformMatrix],
@@ -133,6 +133,7 @@ function AlignDatasetsView() {
           ref={iframe2}
           style={{ width: "100%", height: "100%", border: 0 }}
           src="http://localhost:9000/annotations/691b6d002f01005f03b3d418#450,555,321,0,0.909"
+          // todop: use http://localhost:9000/annotations/691c6b9d2f0100e91ab3d51d#1280,2113,3836,0,9.166
           title="Second Column Iframe"
         />
       </div>

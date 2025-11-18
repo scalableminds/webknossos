@@ -52,7 +52,7 @@ const onMessage = async (event) => {
     }
 
     case "exportTreesAsNmlString": {
-      returnValue = await api.tracing.exportTreesAsNmlString();
+      returnValue = await api.tracing.exportTreesAsNmlString(args[0] ?? false);
       break;
     }
 

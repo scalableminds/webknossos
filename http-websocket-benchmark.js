@@ -1,18 +1,20 @@
-import express from "express";
 import { WebSocketServer } from "ws";
-import http from "http";
+import http2 from "node:http2";
+import fs from "node:fs";
+import url from "node:url";
 
 // --- CONFIG ---
 const PORT = 8888;
 
-// --- SETUP SERVER ---
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+// --- CREATE HTTP/2 SERVER ---
+const server = http2.createSecureServer({
+  key: fs.readFileSync("bench-dev.key.pem"),
+  cert: fs.readFileSync("bench-dev.cert.pem"),
+  allowHTTP1: true, // important for fetch()
+});
 
 // --- FRONTEND HTML ---
-const html = `
-<!DOCTYPE html>
+const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -63,7 +65,7 @@ const html = `
     async function runHTTP(batchSize, chunkSize, parallel) {
       let count = 0;
       const endTime = Date.now() + 5000;
-      const url = p => \`/data?batchSize=\${batchSize}&chunkSize=\${chunkSize}\`;
+      const url = () => \`/data?batchSize=\${batchSize}&chunkSize=\${chunkSize}\`;
 
       async function worker() {
         while (Date.now() < endTime) {
@@ -78,7 +80,7 @@ const html = `
 
     async function runWS(batchSize, chunkSize, parallel) {
       return new Promise((resolve, reject) => {
-        const ws = new WebSocket(\`ws://\${location.host}/ws\`);
+        const ws = new WebSocket(\`wss://\${location.host}/ws\`);
         ws.binaryType = "arraybuffer";
 
         let count = 0;
@@ -134,22 +136,37 @@ const html = `
     };
   </script>
 </body>
-</html>
-`;
+</html>`;
 
-// --- BACKEND ROUTES ---
-app.get("/", (req, res) => res.send(html));
+// --- RAW HTTP HANDLER (no Express) ---
+server.on("request", (req, res) => {
+  const parsed = url.parse(req.url, true);
 
-app.get("/data", (req, res) => {
-  const batchSize = parseInt(req.query.batchSize || "1", 10);
-  const chunkSizeKB = parseInt(req.query.chunkSize || "32", 10);
-  const totalBytes = batchSize * chunkSizeKB * 1024;
-  const buf = Buffer.alloc(totalBytes);
-  res.setHeader("Content-Type", "application/octet-stream");
-  res.send(buf);
+  if (parsed.pathname === "/") {
+    res.writeHead(200, { "Content-Type": "text/html" });
+    res.end(html);
+    return;
+  }
+
+  if (parsed.pathname === "/data") {
+    const batchSize = parseInt(parsed.query.batchSize || "1", 10);
+    const chunkSizeKB = parseInt(parsed.query.chunkSize || "32", 10);
+    const totalBytes = batchSize * chunkSizeKB * 1024;
+
+    const buf = Buffer.alloc(totalBytes);
+
+    res.writeHead(200, { "Content-Type": "application/octet-stream" });
+    res.end(buf);
+    return;
+  }
+
+  res.writeHead(404);
+  res.end("Not Found");
 });
 
-// --- WEBSOCKET HANDLER ---
+// --- WEBSOCKET SERVER ---
+const wss = new WebSocketServer({ server, path: "/ws" });
+
 wss.on("connection", (ws) => {
   ws.on("message", (msg) => {
     try {
@@ -164,4 +181,4 @@ wss.on("connection", (ws) => {
 });
 
 // --- START SERVER ---
-server.listen(PORT, () => console.log(`Benchmark server running at http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Benchmark server running at https://localhost:${PORT}`));

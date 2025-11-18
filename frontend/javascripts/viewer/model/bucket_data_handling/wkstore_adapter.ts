@@ -305,14 +305,14 @@ export class BucketServiceWS {
 
   async decompressBlob(arrayBuffer) {
     let ds = new DecompressionStream("gzip");
-    const stream = new Blob(arrayBuffer).stream();
+    const stream = new Blob([arrayBuffer]).stream();
     let decompressedStream = stream.pipeThrough(ds);
-    return await new Response(decompressedStream).blob();
+    return new Response(decompressedStream).arrayBuffer();
   }
 
-  handleResponse = (message: { data: ArrayBuffer }) => {
+  handleResponse = async (message: { data: ArrayBuffer }) => {
     this.receivedCounter++;
-    const messageDataDecompressed = this.decompressBlob(message.data);
+    const messageDataDecompressed = await this.decompressBlob(message.data);
     const messageId = Number(new DataView(messageDataDecompressed).getBigInt64(0, false));
 
     const cb = this.callbackById[messageId];

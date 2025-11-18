@@ -3,7 +3,7 @@ import type { KeyboardShortcutsMap } from "libs/input";
 import {
   DEFAULT_GENERAL_KEYBOARD_SHORTCUTS,
   DEFAULT_GENERAL_EDITING_KEYBOARD_SHORTCUTS,
-} from "viewer/view/keyboard_shortcuts/controller_keyboard_shortcut_builder";
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 
 // STORAGE KEY
 const STORAGE_KEY = "webknossosCustomShortcuts";
@@ -17,6 +17,7 @@ export function loadKeyboardShortcuts(): KeyboardShortcutsMap<string> {
   if (!json) return getDefaultShortcuts();
 
   try {
+    // TODOM: add schema check and so on
     return JSON.parse(json) as KeyboardShortcutsMap<string>;
   } catch {
     return getDefaultShortcuts();

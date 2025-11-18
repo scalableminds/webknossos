@@ -1,7 +1,7 @@
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
 import { fetchGistContent } from "libs/gist";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboardNoLoop, KeyboardShortcutHandlerMap } from "libs/input";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
@@ -21,14 +21,22 @@ import UrlManager from "viewer/controller/url_manager";
 import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
 import { wkInitializedAction } from "viewer/model/actions/actions";
-import { saveNowAction } from "viewer/model/actions/save_actions";
+import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save_actions";
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
 import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { buildGeneralKeyBindings } from "./view/keyboard_shortcuts/controller_keyboard_shortcut_builder";
+import {
+  buildGeneralKeyBindings,
+  buildKeyBindingsFromConfigAndMapping,
+  GeneralEditingKeyboardShortcuts,
+  GeneralKeyboardShortcuts,
+} from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "./view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import { AnnotationTool } from "./model/accessors/tool_accessor";
+import { setViewModeAction, updateLayerSettingAction } from "./model/actions/settings_actions";
+import DataLayer from "./model/data_layer";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
@@ -49,6 +57,14 @@ type State = {
   gotUnhandledError: boolean;
   organizationToSwitchTo: APIOrganization | null | undefined;
 };
+
+type ControllerEditAllowedKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<
+  GeneralKeyboardShortcuts | GeneralEditingKeyboardShortcuts
+>;
+type ControllerViewOnlyKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<GeneralKeyboardShortcuts>;
+type ControllerKeyboardHandlerIdMap =
+  | ControllerEditAllowedKeyboardHandlerIdMap
+  | ControllerViewOnlyKeyboardHandlerIdMap;
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
@@ -209,6 +225,89 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     );
   }
 
+  getKeyboardShortcutsHandlerMap(): ControllerKeyboardHandlerIdMap {
+    let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
+    function toggleSegmentationOpacity() {
+      let segmentationLayer = Model.getVisibleSegmentationLayer();
+
+      if (segmentationLayer != null) {
+        // If there is a visible segmentation layer, disable and remember it.
+        leastRecentlyUsedSegmentationLayer = segmentationLayer;
+      } else if (leastRecentlyUsedSegmentationLayer != null) {
+        // If no segmentation layer is visible, use the least recently toggled
+        // layer (note that toggling the layer via the switch-button won't update
+        // the local variable here).
+        segmentationLayer = leastRecentlyUsedSegmentationLayer;
+      } else {
+        // As a fallback, simply use some segmentation layer
+        segmentationLayer = Model.getSomeSegmentationLayer();
+      }
+
+      if (segmentationLayer == null) {
+        return;
+      }
+
+      const segmentationLayerName = segmentationLayer.name;
+      const isSegmentationDisabled =
+        Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
+      Store.dispatch(
+        updateLayerSettingAction(segmentationLayerName, "isDisabled", !isSegmentationDisabled),
+      );
+    }
+
+    const isInViewMode =
+      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+
+    const editRelatedHandlers: KeyboardShortcutHandlerMap<GeneralEditingKeyboardShortcuts> = {
+      [GeneralEditingKeyboardShortcuts.SAVE]: (event: KeyboardEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        Model.forceSave();
+      },
+      // Undo
+      [GeneralEditingKeyboardShortcuts.UNDO]: (event: KeyboardEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        Store.dispatch(undoAction());
+      },
+      [GeneralEditingKeyboardShortcuts.REDO]: (event: KeyboardEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        Store.dispatch(redoAction());
+      },
+    };
+
+    // Wrapped in a function to ensure each time the map is used, a new instance of getHandleToggleSegmentation
+    // is created and thus "leastRecentlyUsedSegmentationLayer" not being shared between key binding maps.
+    const keyboardShortcutsHandlerMapForController: ControllerKeyboardHandlerIdMap = {
+      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: () => {
+        Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING));
+      },
+      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: () => {
+        Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
+      },
+      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: () => {
+        Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
+      },
+      [GeneralKeyboardShortcuts.CYCLE_VIEWMODE]: () => {
+        // rotate allowed modes
+        const state = Store.getState();
+        const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+        const currentViewMode = state.temporaryConfiguration.viewMode;
+        if (isProofreadingActive && currentViewMode === constants.MODE_PLANE_TRACING) {
+          // Skipping cycling view mode as m in proofreading is used to toggle multi cut tool.
+          return;
+        }
+        const { allowedModes } = state.annotation.restrictions;
+        const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
+        Store.dispatch(setViewModeAction(allowedModes[index]));
+      },
+      [GeneralKeyboardShortcuts.TOGGLE_SEGMENTATION]: toggleSegmentationOpacity,
+      ...(isInViewMode ? {} : editRelatedHandlers),
+    };
+    return keyboardShortcutsHandlerMapForController;
+  }
+
   initKeyboard() {
     // avoid scrolling while pressing space
     document.addEventListener("keydown", (event: KeyboardEvent) => {
@@ -229,11 +328,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     if (this.keyboardNoLoop) {
       this.keyboardNoLoop.destroy();
     }
-    const { controlMode } = Store.getState().temporaryConfiguration;
     const keybindingConfig = loadKeyboardShortcuts();
-    const keyboardControls = buildGeneralKeyBindings(
+    const keyboardControls = buildKeyBindingsFromConfigAndMapping(
       keybindingConfig,
-      controlMode === ControlModeEnum.VIEW,
+      this.getKeyboardShortcutsHandlerMap(),
     );
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);

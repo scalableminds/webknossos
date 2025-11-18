@@ -6,7 +6,7 @@ import {
   ALL_HANDLER_IDS,
   GeneralEditingKeyboardShortcuts,
   KeyboardShortcutsSchema,
-} from "viewer/view/keyboard_shortcuts/controller_keyboard_shortcut_builder";
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
   getDefaultShortcuts,
   loadKeyboardShortcuts,
@@ -20,17 +20,6 @@ const { Text, Title } = Typography;
 export type ShortcutConfigModalProps = {
   isOpen: boolean;
   onClose: () => void;
-};
-
-const HandlerIdToNameMap = {
-  SWITCH_VIEWMODE_PLANE: "View in plane mode",
-  SWITCH_VIEWMODE_ARBITRARY: "View in plane arbitrary mode",
-  SWITCH_VIEWMODE_ARBITRARY_PLANE: "View in plane arbitrary plane mode",
-  CYCLE_VIEWMODE: "Cycle through viewing modes",
-  TOGGLE_SEGMENTATION: "Toggle segmentation layer",
-  SAVE: "Save annotation changes",
-  UNDO: "Undo latest annotation change",
-  REDO: "Redo latest annotation change",
 };
 
 function validateShortcutMapText(input: string): {
@@ -83,9 +72,9 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
 
   // Convert config into grouped table rows
   const tableData = useMemo(() => {
-    const rows = Object.entries(localConfig).map(([keyCombo, handlerId]) => ({
-      key: keyCombo,
-      combo: keyCombo,
+    const rows = Object.entries(localConfig).map(([handlerId, keyCombos]) => ({
+      key: handlerId,
+      combos: keyCombos,
       handlerId,
       group: handlerId in GeneralEditingKeyboardShortcuts ? "General Editing" : "General",
     }));

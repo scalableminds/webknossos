@@ -25,7 +25,7 @@ export type KeyboardKeyOrCombo = string;
 type MouseButton = string;
 export type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
-type KeyboardLoopHandler = {
+export type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
   delayed?: boolean;
   lastTime?: number | null | undefined;
@@ -34,16 +34,7 @@ type KeyboardLoopHandler = {
 type KeyboardBindingPress = [KeyboardKeyOrCombo, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKeyOrCombo, KeyboardHandler, KeyboardHandler];
 export type KeyBindingMap = Record<KeyboardKeyOrCombo, KeyboardHandler>;
-type KeyBindingLoopMap = Record<KeyboardKeyOrCombo, KeyboardLoopHandler>;
-export type KeyboardShortcutsMap<KeyboardShortcutHandlerId extends string> = Record<
-  KeyboardKeyOrCombo,
-  KeyboardShortcutHandlerId
->;
-
-export type KeyboardShortcutHandlerMap<KeyboardShortcutHandlerId extends string> = Record<
-  KeyboardShortcutHandlerId,
-  KeyboardHandler
->;
+export type KeyBindingLoopMap = Record<KeyboardKeyOrCombo, KeyboardLoopHandler>;
 
 export type MouseBindingMap = Record<MouseButton, MouseHandler>;
 type MouseButtonWhich = 1 | 2 | 3;

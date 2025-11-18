@@ -104,7 +104,7 @@ class BinaryDataController @Inject()(
     request =>
       ActorFlow.actorRef(
         out => MyBucketWebSocketActor.props(out, datasetId, dataLayerName, request.getQueryString("token")),
-        bufferSize = 256,
+        bufferSize = 2048,
         overflowStrategy = OverflowStrategy.dropTail
       )
   }

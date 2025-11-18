@@ -1,13 +1,12 @@
 import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
-import { useThrottledCallback } from "beautiful-react-hooks";
 import { formatHash } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
@@ -68,6 +67,8 @@ const getLabelForPath = (key: string) =>
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   console.log("Rendering Command Palette");
+  const [mode, setMode] = useState<"static" | "dataset" | "annotation">("static");
+
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
   const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
@@ -109,39 +110,49 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const handleSelect = useThrottledCallback(async (command: Command | string) => {
+  const handleSelect = _.memoize(async (command: Command | string) => {
     console.log("h");
     if (typeof command === "string") {
       return;
     }
+
     if (command.name === DynamicCommands.viewDataset) {
+      setMode("dataset");
       const items = await getDatasetItems();
       setCommands(items);
-    } else if (command.name === DynamicCommands.viewAnnotation) {
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewAnnotation) {
+      setMode("annotation");
       const items = await getAnnotationItems();
       setCommands(items);
-    } else {
-      command.command();
-      setOpen(false);
+      return;
     }
-  }, []);
 
-  const getDatasetItems = useCallback(async () => {
+    // static commands
+    setMode("static");
+    command.command();
+    //closePalette();
+  });
+
+  const getDatasetItems = _.memoize(async () => {
     const datasets = await getDatasets();
-    return datasets.map((dataset, index) => ({
+    return datasets.map((dataset) => ({
       name: `View dataset: ${dataset.name}`,
       command: () => {
         window.location.href = getViewDatasetURL(dataset);
       },
       color: commandEntryColor,
-      id: index,
     }));
-  }, []);
+  });
 
   const getDatasetItem = () => {
     return {
       name: DynamicCommands.viewDataset,
-      command: () => {},
+      command: () => {
+        return new Promise(() => {});
+      },
       color: commandEntryColor,
     };
   };
@@ -149,20 +160,21 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const getAnnotationItems = _.memoize(async () => {
     const annotations = await getReadableAnnotations(false);
     const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
-    return sortedAnnotations.map((annotation, index) => ({
+    return sortedAnnotations.map((annotation) => ({
       name: `View annotation: ${annotation.name.length > 0 ? annotation.name : formatHash(annotation.id)}`,
       command: () => {
         window.location.href = `/annotations/${annotation.id}`;
       },
       color: commandEntryColor,
-      id: index,
     }));
   });
 
   const getAnnotationItem = () => {
     return {
       name: DynamicCommands.viewAnnotation,
-      command: () => {},
+      command: () => {
+        return new Promise(() => {});
+      },
       color: commandEntryColor,
     };
   };
@@ -311,24 +323,33 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return tracingMenuItems;
   });
 
-  const getAllStaticCommands = _.memoize(() => [
-    ...getNavigationEntries(),
-    ...getThemeEntries(),
-    ...getToolEntries(),
-    ...getViewModeEntries(),
-    ...mapMenuActionsToCommands(menuActions()),
-    ...getTabsAndSettingsMenuItems(),
-    ...getSuperUserItems(),
-    getDatasetItem(),
-    getAnnotationItem(),
-  ]);
+  const getAllStaticCommands = () =>
+    _.memoize(() => [
+      ...getNavigationEntries(),
+      ...getThemeEntries(),
+      ...getToolEntries(),
+      ...getViewModeEntries(),
+      ...mapMenuActionsToCommands(menuActions()),
+      ...getTabsAndSettingsMenuItems(),
+      ...getSuperUserItems(),
+      getDatasetItem(),
+      getAnnotationItem(),
+    ]);
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(getAllStaticCommands());
-  const [open, setOpen] = useState(false);
+
+  /*   const closePalette = () => {
+      setPaletteKey((prevKey) => prevKey + 1);
+    } */
 
   return (
     <ReactCommandPalette
-      commands={commands.map((command, index) => ({ ...command, id: index }))}
+      commands={commands.map((command, index) => {
+        let offset = 0;
+        if (mode === "dataset") offset = 100000;
+        if (mode === "annotation") offset = 200000;
+        return { ...command, id: offset + index };
+      })}
       hotKeys={["ctrl+p", "command+p"]}
       trigger={label}
       maxDisplayed={100}
@@ -336,8 +357,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       onSelect={handleSelect}
       showSpinnerOnSelect={false}
       resetInputOnOpen
-      resetCommandsOnOpen
-      open={open}
+      closeOnSelect={true}
       renderCommand={(command) => {
         const { name, shortcut, highlight } = command;
         return (

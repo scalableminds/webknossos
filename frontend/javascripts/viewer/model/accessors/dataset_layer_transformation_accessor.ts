@@ -287,7 +287,7 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
       ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
       : null;
     return toIdentityTransformMaybe(someLayersTransformsMaybe);
-  } else if (nativelyRenderedLayerName != null && allLayersSameRotation) {
+  } else if (allLayersSameRotation) {
     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
     return null;
   }
@@ -303,6 +303,58 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
 
   return toIdentityTransformMaybe(invertTransform(transformsOfNativeLayer));
 }
+
+// function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
+//   dataset: APIDataset,
+//   nativelyRenderedLayerName: string | null,
+// ): Transform | null {
+//   const layers = dataset.dataSource.dataLayers;
+//   const allLayersSameRotation = doAllLayersHaveTheSameRotation(layers);
+//   if (nativelyRenderedLayerName == null) {
+//     // No layer is requested to be rendered natively. -> We can use each layer's transforms as is.
+//     if (!allLayersSameRotation) {
+//       // If the dataset's layers do not have a consistent transformation (which only rotates the dataset),
+//       // we cannot guess what transformation should be applied to the layer.
+//       // As skeleton layer and volume layer without fallback don't have a transforms property currently.
+//       const usableReferenceLayer = layers
+//         .slice(1)
+//         .find((layer) => !isLayerWithoutTransformationConfigSupport(layer));
+//       console.log("usableReferenceLayer", usableReferenceLayer);
+//       const someLayersTransformsMaybe = usableReferenceLayer
+//         ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
+//         : null;
+//       return someLayersTransformsMaybe;
+//       // return null;
+//     }
+
+//     // The skeleton layer / volume layer without fallback needs transformed just like the other layers.
+//     // Thus, we simply use the first usable layer which supports transforms.
+//     console.log("layers", layers);
+//     const usableReferenceLayer = layers.find(
+//       (layer) => !isLayerWithoutTransformationConfigSupport(layer),
+//     );
+//     console.log("usableReferenceLayer", usableReferenceLayer);
+//     const someLayersTransformsMaybe = usableReferenceLayer
+//       ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
+//       : null;
+//     return toIdentityTransformMaybe(someLayersTransformsMaybe);
+//   } else if (allLayersSameRotation) {
+//     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
+//     return null;
+//   }
+
+//   // Compute the inverse of the layer that should be rendered natively.
+//   const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+//   const transformsOfNativeLayer = getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+
+//   if (transformsOfNativeLayer == null) {
+//     // The inverse of no transforms, are no transforms.
+//     return null;
+//   }
+
+//   return toIdentityTransformMaybe(transformsOfNativeLayer);
+//   // return toIdentityTransformMaybe(invertTransform(transformsOfNativeLayer));
+// }
 
 export const getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull = memoizeOne(
   _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,

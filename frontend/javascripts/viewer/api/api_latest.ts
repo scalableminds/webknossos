@@ -2,6 +2,7 @@ import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
   finishAnnotation,
+  getBuildInfo,
   getMappingsForDatasetLayer,
   sendAnalyticsEvent,
 } from "admin/rest_api";
@@ -153,7 +154,7 @@ import type DataLayer from "viewer/model/data_layer";
 import Dimensions from "viewer/model/dimensions";
 import dimensions from "viewer/model/dimensions";
 import { MagInfo } from "viewer/model/helpers/mag_info";
-import { parseNml } from "viewer/model/helpers/nml_helpers";
+import { parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
 import { overwriteAction } from "viewer/model/helpers/overwrite_action_middleware";
 import {
   bucketPositionToGlobalAddress,
@@ -593,6 +594,20 @@ class TracingApi {
   async importNmlAsString(nmlString: string) {
     const { treeGroups, trees } = await parseNml(nmlString);
     Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
+  }
+
+  async exportTreesAsNmlString() {
+    const buildInfo = await getBuildInfo();
+    const state = Store.getState();
+    const nml = serializeToNml(
+      state,
+      state.annotation,
+      state.annotation.skeleton!,
+      buildInfo,
+      false,
+    );
+
+    return nml;
   }
 
   /**

@@ -1,12 +1,13 @@
 import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
+import { useThrottledCallback } from "beautiful-react-hooks";
 import { formatHash } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
@@ -66,6 +67,7 @@ const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
+  console.log("Rendering Command Palette");
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
   const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
@@ -107,7 +109,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const handleSelect = useCallback(async (command: Command | string) => {
+  const handleSelect = useThrottledCallback(async (command: Command | string) => {
     console.log("h");
     if (typeof command === "string") {
       return;
@@ -124,7 +126,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     }
   }, []);
 
-  const getDatasetItems = async () => {
+  const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
     return datasets.map((dataset, index) => ({
       name: `View dataset: ${dataset.name}`,
@@ -134,7 +136,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       color: commandEntryColor,
       id: index,
     }));
-  };
+  }, []);
 
   const getDatasetItem = () => {
     return {
@@ -144,8 +146,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     };
   };
 
-  const getAnnotationItems = async () => {
-    //usecallback
+  const getAnnotationItems = _.memoize(async () => {
     const annotations = await getReadableAnnotations(false);
     const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
     return sortedAnnotations.map((annotation, index) => ({
@@ -156,7 +157,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       color: commandEntryColor,
       id: index,
     }));
-  };
+  });
 
   const getAnnotationItem = () => {
     return {
@@ -302,30 +303,27 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const tracingMenuItems = useTracingViewMenuItems(props, null);
 
-  const menuActions = useMemo(() => {
+  const menuActions = _.memoize(() => {
     if (!isInTracingView) return [];
     if (isViewMode) {
       return viewDatasetMenu;
     }
     return tracingMenuItems;
-  }, [isInTracingView, isViewMode, tracingMenuItems]);
+  });
 
-  const allStaticCommands = useMemo(
-    () => [
-      ...getNavigationEntries(),
-      ...getThemeEntries(),
-      ...getToolEntries(),
-      ...getViewModeEntries(),
-      ...mapMenuActionsToCommands(menuActions),
-      ...getTabsAndSettingsMenuItems(),
-      ...getSuperUserItems(),
-      getDatasetItem(),
-      getAnnotationItem(),
-    ],
-    [],
-  );
+  const getAllStaticCommands = _.memoize(() => [
+    ...getNavigationEntries(),
+    ...getThemeEntries(),
+    ...getToolEntries(),
+    ...getViewModeEntries(),
+    ...mapMenuActionsToCommands(menuActions()),
+    ...getTabsAndSettingsMenuItems(),
+    ...getSuperUserItems(),
+    getDatasetItem(),
+    getAnnotationItem(),
+  ]);
 
-  const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
+  const [commands, setCommands] = useState<CommandWithoutId[]>(getAllStaticCommands());
   const [open, setOpen] = useState(false);
 
   return (
@@ -333,12 +331,12 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       commands={commands.map((command, index) => ({ ...command, id: index }))}
       hotKeys={["ctrl+p", "command+p"]}
       trigger={label}
-      closeOnSelect={false}
-      resetInputOnOpen
       maxDisplayed={100}
       theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
       onSelect={handleSelect}
       showSpinnerOnSelect={false}
+      resetInputOnOpen
+      resetCommandsOnOpen
       open={open}
       renderCommand={(command) => {
         const { name, shortcut, highlight } = command;

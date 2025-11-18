@@ -271,7 +271,7 @@ export async function requestFromStore(
 }
 
 export class BucketServiceWS {
-  callbackQueue: Array<(buf: Uint8Array<ArrayBuffer>) => void> = [];
+  callbackById: Record<number, (buf: Uint8Array<ArrayBuffer> | null) => void> = {};
   sentCounter: number = 0;
   receivedCounter: number = 0;
   constructor(
@@ -303,12 +303,15 @@ export class BucketServiceWS {
     this.reject(error);
   }
 
-  handleResponse = (message: unknown) => {
+  handleResponse = (message: { data: ArrayBuffer }) => {
     this.receivedCounter++;
-    const cb = this.callbackQueue.shift();
+    const messageId = Number(new BigInt64Array(message.data, 0, 4)[0]);
+
+    const cb = this.callbackById[messageId];
+    delete this.callbackById[messageId];
     if (cb) {
       const endTime = window.performance.now();
-      const receivedBucketsCount = 1;
+      const receivedBucketsCount = message.data.byteLength > 4 ? 1 : 0;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(this.layerInfo);
       getGlobalDataConnectionInfo().log(
         cb.startingTime,
@@ -316,11 +319,13 @@ export class BucketServiceWS {
         receivedBucketsCount * BUCKET_BYTE_LENGTH,
       );
 
-      cb(new Uint8Array(message.data));
+      cb(receivedBucketsCount === 1 ? new Uint8Array(message.data, 5) : null);
+    } else {
+      console.error("couldn't look up cb for messageId", messageId);
     }
   };
 
-  requestBucket(address: BucketAddress, callback: (buf: Uint8Array<ArrayBuffer>) => void) {
+  requestBucket(address: BucketAddress, callback: (buf: Uint8Array<ArrayBuffer> | null) => void) {
     const magInfo = getMagInfo(this.layerInfo.mags);
     const version = null;
     const agglomerateMappingNameToApplyOnServer = null;
@@ -333,7 +338,7 @@ export class BucketServiceWS {
       version,
     );
 
-    const str = JSON.stringify(bucketInfo);
+    const str = JSON.stringify({ ...bucketInfo, messageId: this.sentCounter });
     const buf = new ArrayBuffer(str.length);
     const bufView = new Uint8Array(buf);
     for (let i = 0, strLen = str.length; i < strLen; i++) {
@@ -341,7 +346,7 @@ export class BucketServiceWS {
     }
 
     callback.startingTime = window.performance.now();
-    this.callbackQueue.push(callback);
+    this.callbackById[this.sentCounter] = callback;
     if (this.ws.readyState === 3) {
       console.log("closing? :( received/sent:", this.receivedCounter, "/", this.sentCounter);
     } else {

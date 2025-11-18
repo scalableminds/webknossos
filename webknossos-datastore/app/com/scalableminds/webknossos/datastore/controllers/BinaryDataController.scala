@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, Full, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
@@ -32,7 +32,6 @@ import play.api.mvc.{AnyContent, _}
 
 import scala.concurrent.duration.DurationInt
 import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.{Await, ExecutionContext}
 
@@ -57,15 +56,22 @@ class BinaryDataController @Inject()(
   private class MyBucketWebSocketActor(out: ActorRef, datasetId: ObjectId, dataLayerName: String, token: Option[String])
       extends Actor {
     def receive: Receive = {
-      case requestStr: Array[Byte] =>
-        val bucketFox = for {
-          parsedRequest <- JsonHelper.parseAs[WebknossosDataRequest](requestStr).toFox
-          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
-          bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))
-        } yield bucketResult._1
-        val bucketBox = Await.result(bucketFox.futureBox, 15 seconds)
-        val result: Array[Byte] = bucketBox.getOrElse("Failure loading bucket!".getBytes(Charset.forName("UTF-8")))
-        out ! result
+      case requestBytes: Array[Byte] =>
+        val parsedRequestBox = JsonHelper.parseAs[WebknossosDataRequest](requestBytes)
+        parsedRequestBox match {
+          case Full(parsedRequest) =>
+            val messageId = parsedRequest.messageId.getOrElse(0L)
+            val messageIdBytes = BigInt(messageId).toByteArray
+            val messageIdBytesPadded = messageIdBytes.reverse.padTo(8, 0).reverse
+            val bucketFox = for {
+              (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
+              bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))
+            } yield bucketResult._1
+            val bucketAndMessageIdBox = Await.result(bucketFox.futureBox, 15 seconds)
+            val result: Array[Byte] = bucketAndMessageIdBox.getOrElse(Array[Byte]())
+            out ! messageIdBytesPadded ++ result
+          case _ => logger.info("received malformed data request!")
+        }
       case _ =>
         logger.info("received malformed data request!")
     }

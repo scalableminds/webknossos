@@ -31,7 +31,8 @@ case class WebknossosDataRequest(
     fourBit: Option[Boolean],
     applyAgglomerate: Option[String],
     additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-    version: Option[Long]
+    version: Option[Long],
+    messageId: Option[Long] = None
 ) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer): Cuboid =

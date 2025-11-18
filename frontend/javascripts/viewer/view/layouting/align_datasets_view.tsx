@@ -2,11 +2,18 @@ import _ from "lodash";
 import { Button } from "antd";
 import Deferred from "libs/async/deferred";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Tree } from "viewer/model/types/tree_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import { M4x4 } from "libs/mjs";
+import { useInterval } from "libs/react_helpers";
+import { PushpinOutlined } from "@ant-design/icons";
+import {
+  invertTransform,
+  Transform,
+  transformPointUnscaled,
+} from "viewer/model/helpers/transformation_helpers";
 
 const deferredsByMessageId: Record<string, Deferred<unknown, unknown>> = {};
 
@@ -31,9 +38,67 @@ function sendMessage(iframe: HTMLIFrameElement, message: Object): Promise<unknow
 const layerName1 = "C555_DIAMOND_2f";
 const layerName2 = "C555_versaCT";
 
+async function getCorrespondences(iframe1: HTMLIFrameElement, iframe2: HTMLIFrameElement) {
+  const nmlString1 = (await sendMessage(iframe1, {
+    type: "exportTreesAsNmlString",
+    args: [false],
+  })) as string;
+  const treeCollection1 = (await parseNml(nmlString1)).trees;
+
+  const nmlString2 = (await sendMessage(iframe2, {
+    type: "exportTreesAsNmlString",
+    args: [false],
+  })) as string;
+
+  console.log("nmlString1", nmlString1);
+  console.log("nmlString2", nmlString2);
+
+  const treeCollection2 = (await parseNml(nmlString2)).trees;
+
+  const trees1 = Array.from(treeCollection1.values()).toSorted((a, b) => a.treeId - b.treeId);
+  const trees2 = Array.from(treeCollection2.values()).toSorted((a, b) => a.treeId - b.treeId);
+
+  const correspondencePoints1 = [];
+  const correspondencePoints2 = [];
+
+  for (const [tree1, tree2] of _.zip(trees1, trees2)) {
+    if (tree1 == null || tree2 == null) {
+      continue;
+    }
+    const nodes1 = Array.from(tree1.nodes.values()).toSorted((a, b) => a.id - b.id);
+    const nodes2 = Array.from(tree2.nodes.values()).toSorted((a, b) => a.id - b.id);
+
+    for (const [node1, node2] of _.zip(nodes1, nodes2)) {
+      if (node1 == null || node2 == null) {
+        continue;
+      }
+      correspondencePoints1.push(node1.untransformedPosition);
+      correspondencePoints2.push(node2.untransformedPosition);
+    }
+  }
+
+  return [correspondencePoints1, correspondencePoints2];
+}
+
 function AlignDatasetsView() {
   const iframe1 = useRef<HTMLIFrameElement | null>(null);
   const iframe2 = useRef<HTMLIFrameElement | null>(null);
+
+  const [correspondences1, setCorrespondences1] = useState<Vector3[]>([]);
+  const [correspondences2, setCorrespondences2] = useState<Vector3[]>([]);
+
+  useInterval(async () => {
+    if (iframe1.current == null || iframe2.current == null) {
+      return;
+    }
+    const [correspondencePoints1, correspondencePoints2] = await getCorrespondences(
+      iframe1.current,
+      iframe2.current,
+    );
+
+    setCorrespondences1(correspondencePoints1);
+    setCorrespondences2(correspondencePoints2);
+  }, 500);
 
   const onReset = async () => {
     if (iframe1.current == null || iframe2.current == null) {
@@ -54,43 +119,10 @@ function AlignDatasetsView() {
     if (iframe1.current == null || iframe2.current == null) {
       return;
     }
-    const nmlString1 = (await sendMessage(iframe1.current, {
-      type: "exportTreesAsNmlString",
-      args: [false],
-    })) as string;
-    const treeCollection1 = (await parseNml(nmlString1)).trees;
-
-    const nmlString2 = (await sendMessage(iframe2.current, {
-      type: "exportTreesAsNmlString",
-      args: [false],
-    })) as string;
-
-    console.log("nmlString1", nmlString1);
-    console.log("nmlString2", nmlString2);
-
-    const treeCollection2 = (await parseNml(nmlString2)).trees;
-
-    const trees1 = Array.from(treeCollection1.values()).toSorted((a, b) => a.treeId - b.treeId);
-    const trees2 = Array.from(treeCollection2.values()).toSorted((a, b) => a.treeId - b.treeId);
-
-    const correspondencePoints1 = [];
-    const correspondencePoints2 = [];
-
-    for (const [tree1, tree2] of _.zip(trees1, trees2)) {
-      if (tree1 == null || tree2 == null) {
-        continue;
-      }
-      const nodes1 = Array.from(tree1.nodes.values()).toSorted((a, b) => a.id - b.id);
-      const nodes2 = Array.from(tree2.nodes.values()).toSorted((a, b) => a.id - b.id);
-
-      for (const [node1, node2] of _.zip(nodes1, nodes2)) {
-        if (node1 == null || node2 == null) {
-          continue;
-        }
-        correspondencePoints1.push(node1.untransformedPosition);
-        correspondencePoints2.push(node2.untransformedPosition);
-      }
-    }
+    const [correspondencePoints1, correspondencePoints2] = await getCorrespondences(
+      iframe1.current,
+      iframe2.current,
+    );
 
     /* Estimates an affine matrix that transforms from diamond to versaCT. */
 
@@ -110,6 +142,62 @@ function AlignDatasetsView() {
     });
   };
 
+  const onFocusCorrespondence = (p1: Vector3, p2: Vector3) => {
+    if (iframe1.current == null || iframe2.current == null) {
+      return;
+    }
+
+    sendMessage(iframe1.current, {
+      type: "centerPositionAnimated",
+      args: [p1],
+    });
+    sendMessage(iframe2.current, {
+      type: "centerPositionAnimated",
+      args: [p2],
+    });
+  };
+
+  const onLeftToRight = async () => {
+    if (iframe1.current == null || iframe2.current == null) {
+      return;
+    }
+    const pos = (await sendMessage(iframe1.current, {
+      type: "getCameraPosition",
+      args: [],
+    })) as Vector3;
+    const transforms2 = (await sendMessage(iframe1.current, {
+      type: "getTransformsForLayer",
+      args: [layerName2],
+    })) as Transform;
+
+    const transformedPos = transformPointUnscaled(invertTransform(transforms2))(pos);
+
+    sendMessage(iframe2.current, {
+      type: "centerPositionAnimated",
+      args: [transformedPos],
+    });
+  };
+  const onRightToLeft = async () => {
+    if (iframe1.current == null || iframe2.current == null) {
+      return;
+    }
+    const pos = (await sendMessage(iframe2.current, {
+      type: "getCameraPosition",
+      args: [],
+    })) as Vector3;
+    const transforms1 = (await sendMessage(iframe2.current, {
+      type: "getTransformsForLayer",
+      args: [layerName1],
+    })) as Transform;
+
+    const transformedPos = transformPointUnscaled(invertTransform(transforms1))(pos);
+
+    sendMessage(iframe1.current, {
+      type: "centerPositionAnimated",
+      args: [transformedPos],
+    });
+  };
+
   useEffect(() => {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -117,12 +205,28 @@ function AlignDatasetsView() {
 
   return (
     <div className="adv-parent">
-      <div className="adv-left-side section">
-        Left Sidebar
+      <div className="adv-left-side section flex-column" style={{ padding: 5 }}>
         <Button onClick={onReset}>Reset</Button>
         <Button onClick={onAlign}>Align</Button>
+
+        <div className="centered-items">
+          <Button onClick={onLeftToRight}>→</Button>
+          <Button onClick={onRightToLeft}>←</Button>
+        </div>
+
+        <table>
+          {_.zip(correspondences1, correspondences2).map(([p1, p2], index) => (
+            <tr key={index}>
+              <td>
+                <PushpinOutlined onClick={() => onFocusCorrespondence(p1, p2)} />
+              </td>
+              <td>[{p1?.join(", ")}]</td>
+              <td>[{p2?.join(", ")}]</td>
+            </tr>
+          ))}
+        </table>
       </div>
-      <div className="adv-middle section coral">
+      <div className="adv-middle section">
         <iframe
           ref={iframe1}
           style={{ width: "100%", height: "100%", border: 0 }}

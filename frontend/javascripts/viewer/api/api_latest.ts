@@ -2750,8 +2750,6 @@ class DataApi {
       layer,
       state.datasetConfiguration.nativelyRenderedLayerName,
     );
-
-    // C555_DIAMOND_2f
   }
 
   /*

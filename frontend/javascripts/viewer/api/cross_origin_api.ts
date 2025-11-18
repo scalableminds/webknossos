@@ -56,6 +56,21 @@ const onMessage = async (event) => {
       break;
     }
 
+    case "getCameraPosition": {
+      returnValue = api.tracing.getCameraPosition();
+      break;
+    }
+
+    case "centerPositionAnimated": {
+      api.tracing.centerPositionAnimated(args[0]);
+      break;
+    }
+
+    case "getTransformsForLayer": {
+      returnValue = api.data.getTransformsForLayer(args[0]);
+      break;
+    }
+
     case "setAffineLayerTransforms": {
       const [layerName, transforms] = args;
       api.data._setAffineLayerTransforms(layerName, transforms);

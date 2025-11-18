@@ -55,7 +55,7 @@ services:
       PGPASSWORD: postgres
 
   apply-evolutions:
-    image: scalableminds/webknossos:${DOCKER_TAG:-25.07.0}
+    image: scalableminds/webknossos:${DOCKER_TAG:-25.11.0}
     depends_on:
       postgres:
         condition: service_healthy

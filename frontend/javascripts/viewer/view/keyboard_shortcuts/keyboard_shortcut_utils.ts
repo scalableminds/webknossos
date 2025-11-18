@@ -3,6 +3,7 @@ import type {
   KeyboardShortcutsMap,
   KeyboardShortcutHandlerMap,
   KeyboardShortcutLoopedHandlerMap,
+  KeyboardComboChain,
 } from "./keyboard_shortcut_constants";
 import _ from "lodash";
 
@@ -47,7 +48,7 @@ export function normalizeKeyName(raw: string): string {
   }
 }
 
-export function formatStrokeFromOrder(order: string[]): string {
+export function formatKeyCombo(combo: string[]): string {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
   const modifiersOrder = ["ctrl", "super", "alt", "shift"];
@@ -55,7 +56,7 @@ export function formatStrokeFromOrder(order: string[]): string {
   const nonModifiers: string[] = [];
 
   const seen = new Set<string>();
-  for (const k of order) {
+  for (const k of combo) {
     const n = k.toLowerCase();
     if (MODIFIER_KEYS.has(n)) {
       seen.add(n);
@@ -78,16 +79,20 @@ export function formatStrokeFromOrder(order: string[]): string {
   return parts.join(" + ");
 }
 
+export function formatKeyComboChain(comboChain: KeyboardComboChain): string {
+  return comboChain.map((combo) => formatKeyCombo(combo)).join(", ");
+}
+
 export const buildKeyBindingsFromConfigAndMapping = (
   config: KeyboardShortcutsMap<string>,
   handlerIdMapping: KeyboardShortcutHandlerMap<string>,
 ): KeyBindingMap => {
   const mappedShortcuts = _.flatten(
-    Object.entries(config).map(([handlerId, keyCombos]) => {
+    Object.entries(config).map(([handlerId, keyChainCombos]) => {
       const isInHandlerMapping = handlerId in handlerIdMapping;
       if (isInHandlerMapping) {
-        return keyCombos.map((keyCombo) => {
-          const keyComboStr = formatStrokeFromOrder(keyCombo);
+        return keyChainCombos.map((chainCombo) => {
+          const keyComboStr = formatKeyComboChain(chainCombo);
           return [keyComboStr, handlerIdMapping[handlerId]];
         });
       } else {
@@ -103,11 +108,11 @@ export const buildKeyBindingsFromConfigAndLoopedMapping = (
   handlerIdMapping: KeyboardShortcutLoopedHandlerMap<string>,
 ): KeyBindingLoopMap => {
   const mappedShortcuts = _.flatten(
-    Object.entries(config).map(([handlerId, keyCombos]) => {
+    Object.entries(config).map(([handlerId, keyChainCombos]) => {
       const isInHandlerMapping = handlerId in handlerIdMapping;
       if (isInHandlerMapping) {
-        return keyCombos.map((keyCombo) => {
-          const keyComboStr = formatStrokeFromOrder(keyCombo);
+        return keyChainCombos.map((chainCombo) => {
+          const keyComboStr = formatKeyComboChain(chainCombo);
           return [keyComboStr, handlerIdMapping[handlerId]];
         });
       } else {

@@ -1,19 +1,22 @@
 import { useState, useMemo } from "react";
 import { Modal, Table, Switch, Input, Button, Typography, Space, Flex } from "antd";
-import { EditOutlined, RollbackOutlined } from "@ant-design/icons";
-import { Validator } from "jsonschema";
+import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
 import {
-  ALL_HANDLER_IDS,
-  GeneralEditingKeyboardShortcuts,
-  KeyboardShortcutsSchema,
+  ALL_KEYBOARD_SHORTCUT_META_INFOS,
+  getAllDefaultKeyboardShortcuts,
+  type KeyboardComboChain,
+  KeyboardShortcutDomain,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
-  getDefaultShortcuts,
   loadKeyboardShortcuts,
   saveKeyboardShortcuts,
+  validateShortcutMapText,
 } from "./keyboard_shortcut_persistence";
 import app from "app";
 import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
+import { formatKeyComboChain } from "./keyboard_shortcut_utils";
+import Toast from "libs/toast";
+import _ from "lodash";
 
 const { Text, Title } = Typography;
 
@@ -22,81 +25,127 @@ export type ShortcutConfigModalProps = {
   onClose: () => void;
 };
 
-function validateShortcutMapText(input: string): {
-  valid: boolean;
-  errors: string[];
-  parsed: Record<string, string> | null;
-} {
-  const errors: string[] = [];
-  let parsed: any = null;
-
-  // 1. JSON parsing
-  try {
-    parsed = JSON.parse(input);
-  } catch (err) {
-    return { valid: false, errors: ["Invalid JSON: " + err], parsed: null };
-  }
-
-  // 2. Schema validation
-  const validator = new Validator();
-  const schemaResult = validator.validate(parsed, KeyboardShortcutsSchema);
-
-  if (!schemaResult.valid) {
-    errors.push(...schemaResult.errors.map((e) => `Schema: ${e.stack}`));
-  }
-
-  // 3. Custom "each handler must appear"
-  const values = new Set(Object.values(parsed));
-
-  for (const id of ALL_HANDLER_IDS) {
-    if (!values.has(id)) {
-      errors.push(`Handler '${id}' is missing. Add a keybinding for this action.`);
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    parsed,
-  };
-}
-
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
   const [recorderTargetHandlerId, setRecorderTargetHandlerId] = useState<string | null>(null);
+  const [recorderEditingKeyCombo, setRecorderEditingKeyCombo] = useState<KeyboardComboChain | null>(
+    null,
+  );
   const [localConfig, setLocalConfig] = useState(loadKeyboardShortcuts());
 
   const [jsonString, setJsonString] = useState(() => JSON.stringify(localConfig, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
 
+  const handleRemoveComboChain = (handlerId: string, comboChain: string[][]) => {
+    setLocalConfig((prevConfig) => {
+      const updatedCombos = prevConfig[handlerId].filter((c) => c !== comboChain);
+
+      if (updatedCombos.length > 0) {
+        return { ...prevConfig, [handlerId]: updatedCombos };
+      }
+      // @ts-ignore TODOM
+      const defaultCombo = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
+      Toast.info("Default shortcut restored to keep the shortcut reachable.");
+      return { ...prevConfig, [handlerId]: defaultCombo };
+    });
+  };
+
   // Convert config into grouped table rows
+  type TableDataEntry = {
+    key: string;
+    combos: KeyboardComboChain[];
+    handlerId: string;
+    domain: string;
+    description: string;
+  };
+
   const tableData = useMemo(() => {
-    const rows = Object.entries(localConfig).map(([handlerId, keyCombos]) => ({
-      key: handlerId,
-      combos: keyCombos,
-      handlerId,
-      group: handlerId in GeneralEditingKeyboardShortcuts ? "General Editing" : "General",
-    }));
+    const rows: TableDataEntry[] = Object.entries(localConfig).map(([handlerId, keyCombos]) => {
+      const metaInfo =
+        ALL_KEYBOARD_SHORTCUT_META_INFOS[
+          handlerId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
+        ];
+      return {
+        key: handlerId,
+        combos: keyCombos,
+        handlerId,
+        domain: metaInfo.domain,
+        description: metaInfo.description,
+      };
+    });
     return rows;
   }, [localConfig]);
 
   const columns = [
     {
-      title: "Shortcut",
-      dataIndex: "combo",
-      key: "combo",
+      title: "Shortcuts",
+      dataIndex: "combos",
+      key: "combos",
+      render: (combos: KeyboardComboChain[], record: TableDataEntry) => (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          {combos.map((comboChain, index) => (
+            <span
+              key={index}
+              style={{
+                border: "1px solid gray",
+                borderRadius: 4,
+                borderColor: "var(--ant-color-border)",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              {<span style={{ padding: "0px 12px" }}>{formatKeyComboChain(comboChain)}</span>}
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                style={{ padding: "0px 20px" }}
+                onClick={() => {
+                  setRecorderTargetHandlerId(record.handlerId);
+                  setRecorderEditingKeyCombo(comboChain);
+                  setIsRecorderOpen(true);
+                }}
+              />
+              <Button
+                type="text"
+                icon={<CloseOutlined />}
+                style={{ padding: "0px 20px" }}
+                onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
+              />
+            </span>
+          ))}{" "}
+          <Button
+            style={{ padding: "0px 20px" }}
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setRecorderTargetHandlerId(record.handlerId);
+              setRecorderEditingKeyCombo(null);
+              setIsRecorderOpen(true);
+            }}
+          />
+        </span>
+      ),
     },
     {
       title: "Action",
       dataIndex: "handlerId",
+      width: 400,
       key: "handlerId",
-      render: (handlerId: string) =>
-        handlerId in HandlerIdToNameMap
-          ? HandlerIdToNameMap[handlerId as keyof typeof HandlerIdToNameMap]
-          : handlerId,
+      render: (handlerId: string) => {
+        const metaInfo =
+          ALL_KEYBOARD_SHORTCUT_META_INFOS[
+            handlerId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
+          ];
+        return metaInfo?.description ?? handlerId;
+      },
     },
-    {
+    /*{
       title: "Edit",
       key: "edit",
       render: (_: any, record: any) => (
@@ -109,7 +158,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           }}
         />
       ),
-    },
+    },*/
   ];
 
   // Handle JSON editor changes
@@ -135,7 +184,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     onClose();
   };
   const onReset = () => {
-    setLocalConfig(getDefaultShortcuts());
+    setLocalConfig(getAllDefaultKeyboardShortcuts());
   };
 
   return (
@@ -143,7 +192,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       open={isOpen}
       onCancel={onClose}
       onOk={handleSave}
-      width={800}
+      width={1000}
       style={{ padding: 20 }}
       title="Keyboard Shortcut Configuration"
     >
@@ -162,22 +211,18 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       {/* TABLE VIEW */}
       {!isJsonView && (
         <>
-          <Title level={5}>General Shortcuts</Title>
-          <Table
-            dataSource={tableData.filter((r) => r.group === "General")}
-            columns={columns}
-            pagination={false}
-            size="small"
-            style={{ marginBottom: 24 }}
-          />
-
-          <Title level={5}>General Editing Shortcuts</Title>
-          <Table
-            dataSource={tableData.filter((r) => r.group === "General Editing")}
-            columns={columns}
-            pagination={false}
-            size="small"
-          />
+          {Object.values(KeyboardShortcutDomain).map((domainName) => (
+            <div key={domainName}>
+              <Title level={5}>{domainName} Shortcuts</Title>
+              <Table
+                dataSource={tableData.filter((r) => r.domain === domainName)}
+                columns={columns}
+                pagination={false}
+                size="small"
+                style={{ marginBottom: 24 }}
+              />
+            </div>
+          ))}
         </>
       )}
 
@@ -204,29 +249,28 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       {/*Keyboard Shortcut Recorder*/}
       <ShortcutRecorderModal
         isOpen={isRecorderOpen}
-        initialShortcut={
-          recorderTargetHandlerId
-            ? Object.entries(localConfig).find(
-                ([_combo, handlerId]) => handlerId === recorderTargetHandlerId,
-              )?.[0]
-            : undefined
-        }
+        initialKeyComboChain={recorderEditingKeyCombo ?? undefined}
         onCancel={() => {
           setIsRecorderOpen(false);
           setRecorderTargetHandlerId(null);
         }}
-        onSave={(newCombo) => {
+        onSave={(newComboChain) => {
           if (!recorderTargetHandlerId) return;
 
           // Build updated map: remove any existing key(s) that pointed to this handlerId
-          const updated: Record<string, string> = {};
-          for (const [keyCombo, handlerId] of Object.entries(localConfig)) {
+          const updated: Record<string, KeyboardComboChain[]> = {};
+          const updatedKeyComboChains = recorderEditingKeyCombo
+            ? localConfig[recorderTargetHandlerId].map((keyComboChain) =>
+                _.isEqual(keyComboChain, recorderEditingKeyCombo) ? newComboChain : keyComboChain,
+              )
+            : [...localConfig[recorderTargetHandlerId], newComboChain];
+          for (const [handlerId, keyComboChains] of Object.entries(localConfig)) {
             if (handlerId !== recorderTargetHandlerId) {
-              updated[keyCombo] = handlerId;
+              updated[handlerId] = keyComboChains;
             }
           }
           // assign the new combo
-          updated[newCombo] = recorderTargetHandlerId;
+          updated[recorderTargetHandlerId] = updatedKeyComboChains;
 
           setLocalConfig(updated);
           setJsonString(JSON.stringify(updated, null, 2));

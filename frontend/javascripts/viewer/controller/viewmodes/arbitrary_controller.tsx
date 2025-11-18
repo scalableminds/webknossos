@@ -6,6 +6,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import React from "react";
+import app from "app";
 import type { Point2, Vector3, ViewMode, Viewport } from "viewer/constants";
 import constants, { ArbitraryViewport } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -54,10 +55,15 @@ import { SkeletonToolController } from "../combinations/tool_controls";
 import {
   ArbitraryControllerNavigationConfigKeyboardShortcuts,
   ArbitraryControllerNavigationKeyboardShortcuts,
+  ArbitraryControllerNoLoopKeyboardShortcuts,
   type KeyboardShortcutLoopedHandlerMap,
+  type KeyboardShortcutHandlerMap,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
-import { buildKeyBindingsFromConfigAndLoopedMapping } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
+import {
+  buildKeyBindingsFromConfigAndLoopedMapping,
+  buildKeyBindingsFromConfigAndMapping,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {
@@ -88,6 +94,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  unsubscribeKeyboardListener: any = () => {};
 
   componentDidMount() {
     this.input = {
@@ -99,6 +106,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   componentWillUnmount() {
     this.stop();
+    this.unsubscribeKeyboardListener();
   }
 
   initMouse(): void {
@@ -241,57 +249,28 @@ class ArbitraryController extends React.PureComponent<Props> {
         this.changeMoveValue(-25),
     };
   }
-  reloadKeyboardShortcuts() {
-    if (this.input.keyboard) {
-      this.input.keyboard.destroy();
-    }
-    if (this.input.keyboardLoopDelayed) {
-      this.input.keyboardLoopDelayed.destroy();
-    }
-    const keybindingConfig = loadKeyboardShortcuts();
-    const navigationKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
-      keybindingConfig,
-      this.getKeyboardNavigationShortcutsHandlerMap(),
-    );
-    this.input.keyboard = new InputKeyboard(navigationKeyboardBindings);
 
-    const navigationConfigKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
-      keybindingConfig,
-      this.getKeyboardNavigationShortcutsHandlerMap(),
-    );
-
-    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
-    this.input.keyboardLoopDelayed = new InputKeyboard(navigationConfigKeyboardBindings, {
-      delay: Store.getState().userConfiguration.keyboardDelay,
-    });
-  }
-
-  initKeyboard(): void {
-    this.reloadKeyboardShortcuts();
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop({
-      "1": () => {
+  getKeyboardNoLoopShortcutsHandlerMap(): KeyboardShortcutHandlerMap<ArbitraryControllerNoLoopKeyboardShortcuts> {
+    return {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES]: () => {
         Store.dispatch(toggleAllTreesAction());
       },
-      "2": () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES]: () => {
         Store.dispatch(toggleInactiveTreesAction());
       },
-      // Delete active node
-      delete: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE]: () => {
         Store.dispatch(deleteNodeAsUserAction(Store.getState()));
       },
-      backspace: () => {
-        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
-      },
-      c: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_TREE]: () => {
         Store.dispatch(createTreeAction());
       },
-      // Branches
-      b: () => this.pushBranch(),
-      j: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT]: () => {
+        this.pushBranch();
+      },
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT]: () => {
         Store.dispatch(requestDeleteBranchPointAction());
       },
-      // Recenter active node
-      s: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE]: () => {
         const state = Store.getState();
         const skeletonTracing = state.annotation.skeleton;
 
@@ -308,24 +287,57 @@ class ArbitraryController extends React.PureComponent<Props> {
           );
         }
       },
-      ".": () => this.nextNode(true),
-      ",": () => this.nextNode(false),
-      // Rotate view by 180 deg
-      r: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD]: () => {
+        this.nextNode(true);
+      },
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD]: () => {
+        this.nextNode(false);
+      },
+      [ArbitraryControllerNoLoopKeyboardShortcuts.ROTATE_VIEW_180]: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
       },
-      // Delete active node and recenter last node
-      "shift + space": () => {
-        const skeletonTracing = Store.getState().annotation.skeleton;
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: downloadScreenshot,
+    };
+  }
 
-        if (!skeletonTracing) {
-          return;
-        }
+  reloadKeyboardShortcuts() {
+    if (this.input.keyboard) {
+      this.input.keyboard.destroy();
+    }
+    if (this.input.keyboardLoopDelayed) {
+      this.input.keyboardLoopDelayed.destroy();
+    }
+    if (this.input.keyboardNoLoop) {
+      this.input.keyboardNoLoop.destroy();
+    }
+    const keybindingConfig = loadKeyboardShortcuts();
+    const navigationKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+      keybindingConfig,
+      this.getKeyboardNavigationShortcutsHandlerMap(),
+    );
+    this.input.keyboard = new InputKeyboard(navigationKeyboardBindings);
 
-        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
-      },
-      q: downloadScreenshot,
+    const navigationConfigKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+      keybindingConfig,
+      this.getKeyboardNavigationConfigShortcutsHandlerMap(),
+    );
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
+    this.input.keyboardLoopDelayed = new InputKeyboard(navigationConfigKeyboardBindings, {
+      delay: Store.getState().userConfiguration.keyboardDelay,
     });
+
+    const noLoopKeyboardBindings = buildKeyBindingsFromConfigAndMapping(
+      keybindingConfig,
+      this.getKeyboardNoLoopShortcutsHandlerMap(),
+    );
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(noLoopKeyboardBindings);
+  }
+
+  initKeyboard(): void {
+    this.reloadKeyboardShortcuts();
+    this.unsubscribeKeyboardListener = app.vent.on("refreshKeyboardShortcuts", () =>
+      this.reloadKeyboardShortcuts(),
+    );
   }
 
   setRecord(record: boolean): void {

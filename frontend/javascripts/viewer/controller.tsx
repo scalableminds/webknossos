@@ -1,7 +1,6 @@
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
 import { fetchGistContent } from "libs/gist";
-import { InputKeyboardNoLoop, KeyboardShortcutHandlerMap } from "libs/input";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
@@ -28,15 +27,16 @@ import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import {
-  buildGeneralKeyBindings,
-  buildKeyBindingsFromConfigAndMapping,
   GeneralEditingKeyboardShortcuts,
   GeneralKeyboardShortcuts,
+  type KeyboardShortcutHandlerMap,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "./view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import { setViewModeAction, updateLayerSettingAction } from "./model/actions/settings_actions";
-import DataLayer from "./model/data_layer";
+import type DataLayer from "./model/data_layer";
+import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
+import { InputKeyboardNoLoop } from "libs/input";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {

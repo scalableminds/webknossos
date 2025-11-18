@@ -1,26 +1,27 @@
 import { Modal, Typography, Button, Flex } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { normalizeKeyName, formatStrokeFromOrder } from "./keyboard_shortcut_utils";
+import { normalizeKeyName, formatKeyCombo, formatKeyComboChain } from "./keyboard_shortcut_utils";
+import type { KeyboardComboChain } from "./keyboard_shortcut_constants";
 
 const { Text } = Typography;
 
 type ShortcutRecorderModalProps = {
   isOpen: boolean;
-  initialShortcut?: string; // optional preview of current binding
+  initialKeyComboChain?: KeyboardComboChain; // optional preview of current binding
   onCancel: () => void; // do not overwrite
-  onSave: (shortcut: string) => void; // returns final combo like "ctrl + a, o"
+  onSave: (newKeyComboChain: KeyboardComboChain) => void; // returns final combo like "ctrl + a, o"
 };
 
 export function ShortcutRecorderModal({
   isOpen,
-  initialShortcut,
+  initialKeyComboChain,
   onCancel,
   onSave,
 }: ShortcutRecorderModalProps) {
-  const [strokes, setStrokes] = useState<string[]>(() =>
-    initialShortcut ? initialShortcut.split(",").map((s) => s.trim()) : [],
+  const [keyComboChain, setKeyComboChain] = useState<KeyboardComboChain>(
+    initialKeyComboChain ?? [],
   );
-  const [previewStroke, setPreviewStroke] = useState<string[]>([]);
+  const [previewKeyCombo, setPreviewKeyCombo] = useState<string[]>([]);
 
   const currentDownSetRef = useRef<Set<string>>(new Set());
   const currentSeenSetRef = useRef<Set<string>>(new Set());
@@ -29,11 +30,11 @@ export function ShortcutRecorderModal({
     currentDownSetRef.current.clear();
     currentSeenSetRef.current.clear();
     console.log("clearing");
-    setPreviewStroke([]);
+    setPreviewKeyCombo([]);
   }, []);
 
   const handleReset = useCallback(() => {
-    setStrokes([]);
+    setKeyComboChain([]);
     console.log("resetting");
     clearCurrentPreview();
   }, [clearCurrentPreview]);
@@ -70,7 +71,7 @@ export function ShortcutRecorderModal({
       currentSeenSetRef.current.add(normalized);
 
       // Update the preview state
-      setPreviewStroke((prevPreviewStroke) => [...prevPreviewStroke, normalized]);
+      setPreviewKeyCombo((prevPreviewStroke) => [...prevPreviewStroke, normalized]);
     }
 
     function handleKeyUp(e: KeyboardEvent) {
@@ -87,13 +88,11 @@ export function ShortcutRecorderModal({
 
       if (currentDownSetRef.current.size === 0) {
         // Finalize this stroke using lastStrokeOrderRef
-        setPreviewStroke((prevPreviewStroke) => {
-          if (prevPreviewStroke.length > 0) {
-            const combinedKeyStroke = formatStrokeFromOrder(prevPreviewStroke);
-            console.log("setting keystores as combo finished");
-            setStrokes([...strokes, combinedKeyStroke]);
+        setPreviewKeyCombo((prevPreviewKeyCombo) => {
+          if (prevPreviewKeyCombo.length > 0) {
+            setKeyComboChain([...keyComboChain, prevPreviewKeyCombo]);
           }
-          return [...prevPreviewStroke];
+          return prevPreviewKeyCombo; // TODO maybe undo
         });
         // clear order and last snapshot
         console.log("clearing as no keys pressed");
@@ -125,7 +124,7 @@ export function ShortcutRecorderModal({
       console.log("clearing as useEffect remount");
       clearCurrentPreview();
     };
-  }, [clearCurrentPreview, isOpen, handleReset, strokes]);
+  }, [clearCurrentPreview, isOpen, handleReset, keyComboChain]);
 
   function handleCancel() {
     // do not overwrite; simply call onCancel
@@ -136,9 +135,8 @@ export function ShortcutRecorderModal({
 
   function handleOk() {
     // final string
-    const combo = strokes.join(", ");
-    if (combo) {
-      onSave(combo);
+    if (keyComboChain.length > 0) {
+      onSave(keyComboChain);
     } else {
       // nothing recorded -> treat as cancel (or you can choose to save empty)
       onCancel();
@@ -149,17 +147,17 @@ export function ShortcutRecorderModal({
 
   // remove last stroke
   function handleRemoveLastStroke() {
-    setStrokes((prev) => prev.slice(0, -1));
+    setKeyComboChain((prev) => prev.slice(0, -1));
   }
 
-  console.log("rendering", previewStroke);
+  console.log("rendering", previewKeyCombo);
 
   return (
     <Modal
       open={isOpen}
       onCancel={handleCancel}
       onOk={handleOk}
-      okButtonProps={{ disabled: strokes.length <= 0 || currentDownSetRef.current.size > 0 }}
+      okButtonProps={{ disabled: keyComboChain.length <= 0 || currentDownSetRef.current.size > 0 }}
       title="Record Shortcut"
       destroyOnClose={true}
     >
@@ -193,11 +191,13 @@ export function ShortcutRecorderModal({
             >
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
-                <span style={{ marginLeft: 8 }}>{strokes.join(", ") || "— waiting —"}</span>
+                <span style={{ marginLeft: 8 }}>
+                  {formatKeyComboChain(keyComboChain) || "— waiting —"}
+                </span>
               </div>
             </div>
             <Flex style={{ marginTop: 8 }} justify={"flex-end"} align={"flex-start"} gap="middle">
-              <Button onClick={handleRemoveLastStroke} disabled={strokes.length === 0}>
+              <Button onClick={handleRemoveLastStroke} disabled={keyComboChain.length === 0}>
                 Remove last stroke
               </Button>
               <Button onClick={handleReset}>Reset</Button>
@@ -217,7 +217,7 @@ export function ShortcutRecorderModal({
             }}
           >
             <Text italic>
-              {previewStroke.length > 0 ? formatStrokeFromOrder(previewStroke) : "— no keys down —"}
+              {previewKeyCombo.length > 0 ? formatKeyCombo(previewKeyCombo) : "— no keys down —"}
             </Text>
           </div>
         </div>

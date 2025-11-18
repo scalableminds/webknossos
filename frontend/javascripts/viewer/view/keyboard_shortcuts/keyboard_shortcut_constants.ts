@@ -1,9 +1,12 @@
 import type { KeyboardHandler, KeyboardLoopHandler } from "libs/input";
+import _ from "lodash";
+import type { Mutable } from "types/globals";
 
 export type ComparableKeyboardCombo = string[];
+export type KeyboardComboChain = ComparableKeyboardCombo[];
 export type KeyboardShortcutsMap<KeyboardShortcutHandlerId extends string> = Record<
   KeyboardShortcutHandlerId,
-  ComparableKeyboardCombo[]
+  KeyboardComboChain[]
 >;
 
 type KeyboardShortcutMetaInfo = {
@@ -31,43 +34,18 @@ export type KeyboardShortcutLoopedHandlerMap<KeyboardShortcutHandlerId extends s
   KeyboardLoopHandler
 >;
 
-export const KeyboardShortcutsSchema = {
-  $schema: "http://json-schema.org/draft-07/schema#",
-  title: "KeyboardShortcutsMap",
-  type: "object",
-
-  description: "A mapping from key combos to valid handler IDs.",
-
-  patternProperties: {
-    ".*": {
-      type: "string",
-      enum: [
-        "SWITCH_VIEWMODE_PLANE",
-        "SWITCH_VIEWMODE_ARBITRARY",
-        "SWITCH_VIEWMODE_ARBITRARY_PLANE",
-        "CYCLE_VIEWMODE",
-        "TOGGLE_SEGMENTATION",
-        "SAVE",
-        "UNDO",
-        "REDO",
-      ],
-    },
-  },
-
-  additionalProperties: false,
-};
-
-enum KeyboardShortcutDomain {
-  GENERAL = "general",
-  GENERAL_EDITING = "general_editing",
-  ARBITRARY_NAVIGATION = "arbitrary_navigation",
+export enum KeyboardShortcutDomain {
+  GENERAL = "General",
+  GENERAL_EDITING = "General Editing",
+  ARBITRARY_NAVIGATION = "Navigation in Arbitrary Mode",
+  ARBITRARY_EDITING = "Editing in Arbitrary Mode",
 }
 
 // Default is general -> colliding with all other shortcuts.
 enum KeyboardShortcutCollisionDomain {
   MOVE_TOOL = "move_tool",
-  GENERAL_EDITING = "general_editing",
-  ARBITRARY_NAVIGATION = "arbitrary_navigation",
+  GENERAL = "general",
+  ARBITRARY_MODE = "arbitrary_mode",
 }
 
 // ----------------------------------------------------- Shortcuts used by controller.ts -----------------------------------------------------------------
@@ -86,19 +64,19 @@ export enum GeneralEditingKeyboardShortcuts {
 }
 
 export const DEFAULT_GENERAL_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<GeneralKeyboardShortcuts> = {
-  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: [["shift", "1"]],
-  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: [["shift", "2"]],
-  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: [["shift", "3"]],
-  [GeneralKeyboardShortcuts.CYCLE_VIEWMODE]: [["m"]],
-  [GeneralKeyboardShortcuts.TOGGLE_SEGMENTATION]: [["3"]],
-};
+  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: [[["shift", "1"]]],
+  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: [[["shift", "2"]]],
+  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: [[["shift", "3"]]],
+  [GeneralKeyboardShortcuts.CYCLE_VIEWMODE]: [[["m"]]],
+  [GeneralKeyboardShortcuts.TOGGLE_SEGMENTATION]: [[["3"]]],
+} as const;
 
 export const DEFAULT_GENERAL_EDITING_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<GeneralEditingKeyboardShortcuts> =
   {
-    [GeneralEditingKeyboardShortcuts.SAVE]: [["super", "s"], ["ctrl" + "s"]],
-    [GeneralEditingKeyboardShortcuts.UNDO]: [["super", "z"], ["ctrl" + "z"]],
-    [GeneralEditingKeyboardShortcuts.REDO]: [["super", "y"], ["ctrl" + "y"]],
-  };
+    [GeneralEditingKeyboardShortcuts.SAVE]: [[["super", "s"]], [["ctrl", "s"]]],
+    [GeneralEditingKeyboardShortcuts.UNDO]: [[["super", "z"]], [["ctrl", "z"]]],
+    [GeneralEditingKeyboardShortcuts.REDO]: [[["super", "y"]], [["ctrl", "y"]]],
+  } as const;
 
 // @ts-ignore TODOM
 const GeneralKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<GeneralKeyboardShortcuts> =
@@ -137,7 +115,7 @@ const GeneralEditingKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap
             description,
             domain: KeyboardShortcutDomain.GENERAL_EDITING,
             looped: false,
-            collisionDomains: [KeyboardShortcutCollisionDomain.GENERAL_EDITING],
+            collisionDomains: [KeyboardShortcutCollisionDomain.GENERAL],
           },
         ] as [GeneralEditingKeyboardShortcuts, KeyboardShortcutMetaInfo],
     );
@@ -165,31 +143,33 @@ export enum ArbitraryControllerNavigationKeyboardShortcuts {
 
 export const DEFAULT_ARBITRARY_NAVIGATION_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<ArbitraryControllerNavigationKeyboardShortcuts> =
   {
-    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITH_RECORDING]: [["space"]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITH_RECORDING]: [[["space"]]],
     [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITH_RECORDING]: [
-      ["ctrl", "space"],
+      [["ctrl", "space"]],
     ],
-    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING]: [["f"]],
-    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING]: [["d"]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING]: [[["f"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING]: [[["d"]]],
     [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_AT_CENTER]: [
-      ["shift", "left"],
+      [["shift", "left"]],
     ],
     [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_AT_CENTER]: [
-      ["shift", "right"],
+      [["shift", "right"]],
     ],
     [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_POSITIVE_AT_CENTER]: [
-      ["shift", "up"],
+      [["shift", "up"]],
     ],
     [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_AT_CENTER]: [
-      ["shift", "down"],
+      [["shift", "down"]],
     ],
-    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_IN_DISTANCE]: [["left"]],
-    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_IN_DISTANCE]: [["right"]],
-    [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_POSITIVE_IN_DISTANCE]: [["down"]],
-    [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_IN_DISTANCE]: [["up"]],
-    [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_IN_ARBITRARY]: [["i"]],
-    [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_OUT_ARBITRARY]: [["o"]],
-  };
+    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_IN_DISTANCE]: [[["left"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_IN_DISTANCE]: [[["right"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_POSITIVE_IN_DISTANCE]: [
+      [["down"]],
+    ],
+    [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_IN_DISTANCE]: [[["up"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_IN_ARBITRARY]: [[["i"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_OUT_ARBITRARY]: [[["o"]]],
+  } as const;
 
 // @ts-ignore TODOM
 const ArbitraryNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<ArbitraryControllerNavigationKeyboardShortcuts> =
@@ -230,7 +210,7 @@ const ArbitraryNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaIn
             description,
             domain: KeyboardShortcutDomain.ARBITRARY_NAVIGATION,
             looped: true,
-            collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_NAVIGATION],
+            collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
           },
         ] as [GeneralEditingKeyboardShortcuts, KeyboardShortcutMetaInfo],
     );
@@ -244,31 +224,96 @@ export enum ArbitraryControllerNavigationConfigKeyboardShortcuts {
 
 export const DEFAULT_ARBITRARY_NAVIGATION_CONFIG_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<ArbitraryControllerNavigationConfigKeyboardShortcuts> =
   {
-    [ArbitraryControllerNavigationConfigKeyboardShortcuts.INCREASE_MOVE_VALUE]: [["h"]],
-    [ArbitraryControllerNavigationConfigKeyboardShortcuts.DECREASE_MOVE_VALUE]: [["g"]],
-  };
+    [ArbitraryControllerNavigationConfigKeyboardShortcuts.INCREASE_MOVE_VALUE]: [[["h"]]],
+    [ArbitraryControllerNavigationConfigKeyboardShortcuts.DECREASE_MOVE_VALUE]: [[["g"]]],
+  } as const;
 const ArbitraryNavigationConfigKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<ArbitraryControllerNavigationConfigKeyboardShortcuts> =
   {
     [ArbitraryControllerNavigationConfigKeyboardShortcuts.INCREASE_MOVE_VALUE]: {
       description: "Increase move value",
       domain: KeyboardShortcutDomain.ARBITRARY_NAVIGATION,
       looped: false,
-      collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_NAVIGATION],
+      collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
     },
     [ArbitraryControllerNavigationConfigKeyboardShortcuts.DECREASE_MOVE_VALUE]: {
       description: "Decrease move value",
       domain: KeyboardShortcutDomain.ARBITRARY_NAVIGATION,
       looped: false,
-      collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_NAVIGATION],
+      collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
     },
   };
 
-// TODOM Default & meta info
+export enum ArbitraryControllerNoLoopKeyboardShortcuts {
+  TOGGLE_ALL_TREES = "TOGGLE_ALL_TREES",
+  TOGGLE_INACTIVE_TREES = "TOGGLE_INACTIVE_TREES",
+  DELETE_ACTIVE_NODE = "DELETE_ACTIVE_NODE",
+  CREATE_TREE = "CREATE_TREE",
+  CREATE_BRANCH_POINT = "CREATE_BRANCH_POINT",
+  DELETE_BRANCH_POINT = "DELETE_BRANCH_POINT",
+  RECENTER_ACTIVE_NODE = "RECENTER_ACTIVE_NODE",
+  NEXT_NODE_FORWARD = "NEXT_NODE_FORWARD",
+  NEXT_NODE_BACKWARD = "NEXT_NODE_BACKWARD",
+  ROTATE_VIEW_180 = "ROTATE_VIEW_180",
+  DOWNLOAD_SCREENSHOT = "DOWNLOAD_SCREENSHOT",
+}
+
+export const DEFAULT_ARBITRARY_NO_LOOP_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<ArbitraryControllerNoLoopKeyboardShortcuts> =
+  {
+    [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES]: [[["1"]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES]: [[["2"]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE]: [
+      [["delete"]],
+      [["backspace"]],
+      [["shift", "space"]],
+    ],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_TREE]: [[["c"]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT]: [[["b"]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT]: [[["j"]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE]: [[["s"]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD]: [[["."]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD]: [[[","]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.ROTATE_VIEW_180]: [[["r"]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: [[["q"]]],
+  } as const;
+
+// @ts-ignore TODOM
+const ArbitraryNoLoopKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<ArbitraryControllerNoLoopKeyboardShortcuts> =
+  (() => {
+    const withDescription = {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES]: "Toggle all trees",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES]: "Toggle inactive trees",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE]: "Delete active node",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_TREE]: "Create new tree",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT]: "Create branch point",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT]: "Delete branch point",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE]: "Recenter active node",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD]: "Jump to next node",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD]: "Jump to previous node",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.ROTATE_VIEW_180]: "Rotate view 180 degrees",
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: "Download screenshot",
+    };
+    const withAllInfo = Object.entries(withDescription).map(
+      ([handlerId, description]) =>
+        [
+          handlerId,
+          {
+            description,
+            domain: KeyboardShortcutDomain.ARBITRARY_EDITING,
+            looped: false,
+            collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
+          },
+        ] as [ArbitraryControllerNoLoopKeyboardShortcuts, KeyboardShortcutMetaInfo],
+    );
+    return Object.fromEntries(withAllInfo);
+  })();
 
 // ----- combined objects, types and so on -------------------
-export const ALL_HANDLER_IDS = [
+export const ALL_KEYBOARD_HANDLER_IDS = [
   ...Object.values(GeneralKeyboardShortcuts),
   ...Object.values(GeneralEditingKeyboardShortcuts),
+  ...Object.values(ArbitraryControllerNavigationKeyboardShortcuts),
+  ...Object.values(ArbitraryControllerNavigationConfigKeyboardShortcuts),
+  ...Object.values(ArbitraryControllerNoLoopKeyboardShortcuts),
 ] as const;
 
 export const ALL_KEYBOARD_SHORTCUT_META_INFOS = {
@@ -276,4 +321,17 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS = {
   ...GeneralEditingKeyboardShortcutMetaInfo,
   ...ArbitraryNavigationKeyboardShortcutMetaInfo,
   ...ArbitraryNavigationConfigKeyboardShortcutMetaInfo,
+  ...ArbitraryNoLoopKeyboardShortcutMetaInfo,
 };
+
+const ALL_KEYBOARD_SHORTCUT_DEFAULTS = {
+  ...DEFAULT_GENERAL_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_GENERAL_EDITING_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ARBITRARY_NAVIGATION_CONFIG_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ARBITRARY_NO_LOOP_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ARBITRARY_NAVIGATION_KEYBOARD_SHORTCUTS,
+} as const;
+
+export function getAllDefaultKeyboardShortcuts(): Mutable<typeof ALL_KEYBOARD_SHORTCUT_DEFAULTS> {
+  return _.clone(ALL_KEYBOARD_SHORTCUT_DEFAULTS);
+}

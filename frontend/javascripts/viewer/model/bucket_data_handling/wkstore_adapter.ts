@@ -303,15 +303,23 @@ export class BucketServiceWS {
     this.reject(error);
   }
 
+  async decompressBlob(blob) {
+    let ds = new DecompressionStream("gzip");
+    let stream = Readable.from(blob);
+    let decompressedStream = stream.pipeThrough(ds);
+    return await new Response(decompressedStream).blob();
+  }
+
   handleResponse = (message: { data: ArrayBuffer }) => {
+    const messageDecompressed = this.decompressBlob(message.data)
     this.receivedCounter++;
-    const messageId = Number(new BigInt64Array(message.data, 0, 4)[0]);
+    const messageId = Number(new BigInt64Array(messageDecompressed, 0, 4)[0]);
 
     const cb = this.callbackById[messageId];
     delete this.callbackById[messageId];
     if (cb) {
       const endTime = window.performance.now();
-      const receivedBucketsCount = message.data.byteLength > 4 ? 1 : 0;
+      const receivedBucketsCount = messageDecompressed.byteLength > 4 ? 1 : 0;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(this.layerInfo);
       getGlobalDataConnectionInfo().log(
         cb.startingTime,
@@ -319,7 +327,7 @@ export class BucketServiceWS {
         receivedBucketsCount * BUCKET_BYTE_LENGTH,
       );
 
-      cb(receivedBucketsCount === 1 ? new Uint8Array(message.data, 5) : null);
+      cb(receivedBucketsCount === 1 ? new Uint8Array(messageDecompressed, 5) : null);
     } else {
       console.error("couldn't look up cb for messageId", messageId);
     }

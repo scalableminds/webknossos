@@ -31,8 +31,9 @@ import play.api.libs.streams.ActorFlow
 import play.api.mvc.{AnyContent, _}
 
 import scala.concurrent.duration.DurationInt
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream}
 import java.nio.{ByteBuffer, ByteOrder}
+import java.util.zip.GZIPOutputStream
 import scala.concurrent.{Await, ExecutionContext}
 
 class BinaryDataController @Inject()(
@@ -69,11 +70,33 @@ class BinaryDataController @Inject()(
             } yield bucketResult._1
             val bucketAndMessageIdBox = Await.result(bucketFox.futureBox, 15 seconds)
             val result: Array[Byte] = bucketAndMessageIdBox.getOrElse(Array[Byte]())
-            out ! messageIdBytesPadded ++ result
+            out ! compressGzip(messageIdBytesPadded ++ result)
           case _ => logger.info("received malformed data request!")
         }
       case _ =>
         logger.info("received malformed data request!")
+    }
+  }
+
+  private def compressGzip(input: Array[Byte]): Array[Byte] = {
+    val is = new ByteArrayInputStream(input)
+    val os = new ByteArrayOutputStream()
+
+    val dos = new GZIPOutputStream(os, 1)
+    try passThrough(is, dos)
+    finally if (dos != null) dos.close()
+    os.toByteArray
+  }
+
+  private def passThrough(is: InputStream, os: OutputStream): Unit = {
+    val bytes = new Array[Byte](4096)
+    var read = is.read(bytes)
+    while ({
+      read >= 0
+    }) {
+      if (read > 0)
+        os.write(bytes, 0, read)
+      read = is.read(bytes)
     }
   }
 

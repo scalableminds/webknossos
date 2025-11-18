@@ -1,3 +1,4 @@
+import _ from "lodash";
 import PriorityQueue from "js-priority-queue";
 import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
@@ -36,7 +37,8 @@ class PullQueue {
   private consecutiveErrorCount: number;
   private isRetryScheduled: boolean;
   private isDestroyed: boolean = false;
-  private bucketServiceWS: Promise<BucketServiceWS>;
+  private bucketServiceWSs: Promise<BucketServiceWS[]>;
+  private serviceIndex: number = 0;
 
   private sentCount: number = 0;
 
@@ -56,7 +58,7 @@ class PullQueue {
     const { dataset } = Store.getState();
     const layerInfo = getLayerByName(dataset, this.layerName);
 
-    this.bucketServiceWS = createBucketServiceWS(layerInfo);
+    this.bucketServiceWSs = Promise.all(_.range(0, 6).map(() => createBucketServiceWS(layerInfo)));
   }
 
   pull(): void {
@@ -107,7 +109,9 @@ class PullQueue {
 
       this.sentCount++;
       // if (this.sentCount < 10) {
-      const service = await this.bucketServiceWS;
+      const services = await this.bucketServiceWSs;
+      this.serviceIndex = (this.serviceIndex + 1) % services.length;
+      const service = services[this.serviceIndex];
       service.requestBucket(batch[0], (bucketBuffer: Uint8Array<ArrayBuffer> | null) => {
         this.fetchingBatchCount--;
         const bucket = this.cube.getOrCreateBucket(batch[0]);

@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import type { Tree } from "viewer/model/types/tree_types";
 import { Identity4x4, type Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
+import { M4x4 } from "libs/mjs";
 
 const deferredsByMessageId: Record<string, Deferred<unknown, unknown>> = {};
 
@@ -55,7 +56,7 @@ function AlignDatasetsView() {
     }
     const nmlString1 = (await sendMessage(iframe1.current, {
       type: "exportTreesAsNmlString",
-      args: [true],
+      args: [false],
     })) as string;
     const treeCollection1 = (await parseNml(nmlString1)).trees;
 
@@ -94,13 +95,14 @@ function AlignDatasetsView() {
     /* Estimates an affine matrix that transforms from diamond to versaCT. */
 
     const transformMatrix = estimateAffineMatrix4x4(correspondencePoints1, correspondencePoints2);
+    const transformMatrixInv = M4x4.inverse(transformMatrix);
 
     console.log("correspondencePoints1", correspondencePoints1);
     console.log("correspondencePoints2", correspondencePoints2);
-    return;
+
     await sendMessage(iframe1.current, {
       type: "setAffineLayerTransforms",
-      args: [layerName1, transformMatrix],
+      args: [layerName2, transformMatrixInv],
     });
     await sendMessage(iframe2.current, {
       type: "setAffineLayerTransforms",
@@ -124,7 +126,7 @@ function AlignDatasetsView() {
         <iframe
           ref={iframe1}
           style={{ width: "100%", height: "100%", border: 0 }}
-          src="http://localhost:9000/annotations/691b50692f0100bb03d26966?skipFirst=true#464,427,321,0,0.149"
+          src="http://localhost:9000/annotations/691c6b9d2f0100e91ab3d51d#1280,2113,3836,0,9.166"
           title="Second Column Iframe"
         />
       </div>
@@ -133,7 +135,6 @@ function AlignDatasetsView() {
           ref={iframe2}
           style={{ width: "100%", height: "100%", border: 0 }}
           src="http://localhost:9000/annotations/691b6d002f01005f03b3d418#450,555,321,0,0.909"
-          // todop: use http://localhost:9000/annotations/691c6b9d2f0100e91ab3d51d#1280,2113,3836,0,9.166
           title="Second Column Iframe"
         />
       </div>

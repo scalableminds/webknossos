@@ -62,7 +62,7 @@ class BinaryDataController @Inject()(
           case Full(parsedRequest) =>
             val messageId = parsedRequest.messageId.getOrElse(0L)
             val messageIdBytes = BigInt(messageId).toByteArray
-            val messageIdBytesPadded = messageIdBytes.reverse.padTo(8, 0).reverse
+            val messageIdBytesPadded: Array[Byte] = messageIdBytes.reverse.padTo(8, 0.toByte).reverse
             val bucketFox = for {
               (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName)
               bucketResult <- requestData(dataSource.id, dataLayer, List(parsedRequest))(TokenContext(token))

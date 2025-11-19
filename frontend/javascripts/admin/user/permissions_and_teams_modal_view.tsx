@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getEditableTeams, updateUser } from "admin/rest_api";
-import { App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import { App, Checkbox, Col, Divider, Modal, Radio, type RadioChangeEvent, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -226,6 +226,7 @@ export function PermissionsAndTeamsComponent({
   return (
     <>
       {permissionEditingSection}
+      <Divider />
       {teamsRoleComponents}
     </>
   );

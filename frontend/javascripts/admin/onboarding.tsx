@@ -23,6 +23,7 @@ import {
   Button,
   Card,
   Col,
+  Divider,
   Form,
   Input,
   Modal,
@@ -316,6 +317,7 @@ export function InviteUsersModal({
           </p>
         ) : null}
         {exceedingUserLimitAlert}
+        <Divider />
         <Space direction="vertical">
           <PermissionsAndTeamsComponent
             selectedTeams={selectedTeams}
@@ -326,6 +328,7 @@ export function InviteUsersModal({
             onlyEditingSingleUser={true}
             verticallyAligned={false}
           />
+          <Divider />
           <h5>
             <b>Invitee Email Addresses</b>
           </h5>

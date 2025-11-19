@@ -11,7 +11,7 @@ import {
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { getActiveSegmentationTracingLayer } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  ensureTracingsWereDiffedToSaveQueueAction,
+  dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   saveNowAction,
 } from "viewer/model/actions/save_actions";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -21,8 +21,6 @@ import type DataLayer from "viewer/model/data_layer";
 import { getTotalSaveQueueLength } from "viewer/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
-
-import Deferred from "libs/async/deferred";
 import { initialize } from "./model_initialization";
 
 const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
@@ -305,31 +303,22 @@ export class WebKnossosModel {
     // That way, we can be sure that the diffing sagas have processed all user actions
     // up until the time of where waitForDifferResponses was invoked.
     async function waitForDifferResponses() {
+      console.log("waitForDifferResponses");
       const { annotation } = Store.getState();
-      // All skeleton and volume tracings should respond to the dispatched action.
-      const tracingIds = new Set(
-        _.compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
-      );
-      const reportedTracingIds = new Set();
-      const deferred = new Deferred();
-      function callback(tracingId: string) {
-        reportedTracingIds.add(tracingId);
-        if (Utils.areSetsEqual(tracingIds, reportedTracingIds)) {
-          deferred.resolve(null);
-        }
-      }
-
-      if (tracingIds.size > 0) {
-        Store.dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
-        await deferred.promise();
-      }
+      await dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
       return true;
     }
 
-    while ((await waitForDifferResponses()) && !this.stateSaved()) {
+    while (
+      // Wait while rebasing is in progress.
+      Store.getState().save.rebaseRelevantServerAnnotationState.isRebasing ||
+      // If no rebasing is in progress enforce diffed state to save queue.
+      ((await waitForDifferResponses()) && !this.stateSaved())
+    ) {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
+      console.log("stuck in ensureSavedState loop");
       if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction());
       }

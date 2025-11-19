@@ -758,8 +758,9 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const othersMayEdit = useWkSelector((state) => state.annotation.othersMayEdit);
-  const blockedByUser = useWkSelector((state) => state.annotation.blockedByUser);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
+
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwnerName = useWkSelector((state) =>
     formatUserName(state.activeUser, state.annotation.owner),

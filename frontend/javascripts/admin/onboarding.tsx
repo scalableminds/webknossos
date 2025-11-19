@@ -23,6 +23,7 @@ import {
   Button,
   Card,
   Col,
+  Divider,
   Form,
   Input,
   Modal,
@@ -326,7 +327,13 @@ export function InviteUsersModal({
             onlyEditingSingleUser={true}
             verticallyAligned={false}
           />
-          <h4>Invitee Email Addresses</h4>
+          <Divider
+            style={{
+              margin: "18px 0",
+            }}
+          >
+            Invitee Email Addresses
+          </Divider>
           <p style={{ marginTop: -10 }}>
             Multiple email addresses should be separated with a comma, a space or a new line.
           </p>

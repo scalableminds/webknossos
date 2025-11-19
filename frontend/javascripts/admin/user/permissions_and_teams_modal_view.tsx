@@ -66,7 +66,6 @@ export function PermissionsAndTeamsComponent({
   setSelectedPermission,
   userIsAdmin,
   onlyEditingSingleUser,
-  verticallyAligned = true,
 }: TeamRoleComponentProps) {
   const teams = useFetch(getEditableTeams, [], []);
 
@@ -149,7 +148,11 @@ export function PermissionsAndTeamsComponent({
     } as React.CSSProperties;
     return (
       <React.Fragment>
-        <h4>
+        <Divider
+          style={{
+            margin: "18px 0",
+          }}
+        >
           Organization Permissions{" "}
           <a
             href="https://docs.webknossos.org/webknossos/users/index.html"
@@ -158,7 +161,7 @@ export function PermissionsAndTeamsComponent({
           >
             <InfoCircleOutlined />
           </a>
-        </h4>
+        </Divider>
         {!isUserAdmin && !onlyEditingSingleUser ? (
           <p>{messages["users.needs_admin_rights"]}</p>
         ) : null}
@@ -207,14 +210,20 @@ export function PermissionsAndTeamsComponent({
 
   const teamsRoleComponents = (
     <>
-      <h4>Team Permissions</h4>
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      >
+        Team Permissions
+      </Divider>
       <div>
         <Row>
           <Col span={12}>
-            <h4>Teams</h4>
+            <h5>Teams</h5>
           </Col>
           <Col span={12}>
-            <h4>Role</h4>
+            <h5>Role</h5>
           </Col>
         </Row>
         {teamsRoleRows}
@@ -222,13 +231,7 @@ export function PermissionsAndTeamsComponent({
     </>
   );
 
-  return verticallyAligned ? (
-    <>
-      {permissionEditingSection}
-      <Divider />
-      {teamsRoleComponents}
-    </>
-  ) : (
+  return (
     <>
       {permissionEditingSection}
       {teamsRoleComponents}

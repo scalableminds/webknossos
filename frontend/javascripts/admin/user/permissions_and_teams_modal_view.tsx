@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getEditableTeams, updateUser } from "admin/rest_api";
-import { App, Checkbox, Col, Divider, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import { App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -148,12 +148,8 @@ export function PermissionsAndTeamsComponent({
     } as React.CSSProperties;
     return (
       <React.Fragment>
-        <Divider
-          style={{
-            margin: "18px 0",
-          }}
-        >
-          Organization Permissions{" "}
+        <h5>
+          <b>Organization Permissions </b>
           <a
             href="https://docs.webknossos.org/webknossos/users/index.html"
             target="_blank"
@@ -161,7 +157,7 @@ export function PermissionsAndTeamsComponent({
           >
             <InfoCircleOutlined />
           </a>
-        </Divider>
+        </h5>
         {!isUserAdmin && !onlyEditingSingleUser ? (
           <p>{messages["users.needs_admin_rights"]}</p>
         ) : null}
@@ -210,13 +206,9 @@ export function PermissionsAndTeamsComponent({
 
   const teamsRoleComponents = (
     <>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
-        Team Permissions
-      </Divider>
+      <h5>
+        <b>Team Permissions</b>
+      </h5>
       <div>
         <Row>
           <Col span={12}>

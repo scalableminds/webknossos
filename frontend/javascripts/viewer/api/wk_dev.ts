@@ -29,7 +29,7 @@ export const WkDevFlags = {
     disableLayerNameSanitization: false,
   },
   debugging: {
-    showCurrentVersionInInfoTab: true,
+    showCurrentVersionInInfoTab: false,
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,

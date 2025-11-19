@@ -162,7 +162,6 @@ export function* setupSavingForTracingType(
     );
     if (!allowUpdate || isRebasing) {
       if (ensureAction) {
-        console.log("Ignoring ensure action due to current rebase operation.");
         yield* call(resolveEnsureDiffedActions);
       }
       continue;

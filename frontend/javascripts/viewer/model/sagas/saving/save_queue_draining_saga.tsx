@@ -71,7 +71,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    console.log("in save queue draining saga, got forcePush?", forcePush);
     yield* put(setSaveBusyAction(true));
     const enforceEmptySaveQueue = forcePush != null;
     let shouldRetryOnConflict = true;
@@ -161,10 +160,8 @@ export function* synchronizeAnnotationWithBackend(
       break;
     }
   }
-  console.log("in save queue draining saga, finished saving", isLiveCollabActive);
   if (saveQueue.length === 0) {
     // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
-    console.log("in save queue draining saga, dispatching doneSavingAction");
     yield* put(doneSavingAction());
   }
   yield* put(setSaveBusyAction(false));
@@ -194,7 +191,6 @@ export function* sendSaveRequestToServer(
   let versionIncrement;
   [compactedSaveQueue, versionIncrement] = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
-  console.log("in save queue draining, sending updates", compactedSaveQueue);
 
   // This while-loop only exists for the purpose of a retry-mechanism
   while (true) {

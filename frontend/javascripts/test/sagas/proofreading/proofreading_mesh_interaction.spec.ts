@@ -500,8 +500,6 @@ describe("Proofreading (with mesh actions)", () => {
     // Execute the actual merge and wait for the finished mapping.
     yield put(minCutPartitionsAction());
     yield take("FINISH_MAPPING_INITIALIZATION");
-    const version = yield select((state) => state.annotation.version);
-    console.log(version);
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   }

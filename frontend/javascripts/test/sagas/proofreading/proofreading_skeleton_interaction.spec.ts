@@ -183,8 +183,6 @@ function* performMinCutWithNodesProofreading(
   expect(targetNode.untransformedPosition).toStrictEqual([2, 2, 2]);
   const sourceNode = agglomerateTrees[0].nodes.getOrThrow(6);
   expect(sourceNode.untransformedPosition).toStrictEqual([3, 3, 3]);
-  const a = context.receivedDataPerSaveRequest;
-  console.log(a);
   yield put(minCutAgglomerateAction(sourceNode.id, targetNode.id));
 
   yield take("FINISH_MAPPING_INITIALIZATION");

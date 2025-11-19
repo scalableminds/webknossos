@@ -122,13 +122,10 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) {
     // We are in an read-only annotation. There's no point in acquiring mutexes.
-    console.log("exit mutex saga");
     return;
   }
 
   const mutexLogicState = yield* call(determineInitialMutexLogicState);
-
-  console.log("initial mutexLogicState", mutexLogicState);
 
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
   yield* fork(watchForOthersMayEditChange, mutexLogicState);
@@ -168,7 +165,6 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
 function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState: MutexLogicState,
 ): Saga<void> {
-  console.log("Acquiring mutex fetchingStrategy", mutexLogicState.fetchingStrategy);
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
     yield* call(tryAcquireMutexAdHoc, mutexLogicState);
   } else {
@@ -181,7 +177,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
    * Try to acquire mutex indefinitely (saga can be cancelled from the outside with cancel or
    * race).
    */
-  console.log("started tryAcquireMutexContinuously");
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   const activeUser = yield* select((state) => state.activeUser);
   mutexLogicState.isInitialRequest = true;
@@ -189,7 +184,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when othersMayEdit is set to false.
   while (true) {
-    console.log("tryAcquireMutexContinuously loop");
     const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
     if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
       // If the annotation is currently not blocked by the active user,
@@ -244,7 +238,6 @@ function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when othersMayEdit is set to false.
   while (true) {
-    console.log("tryAcquireMutexForSaving loop");
     try {
       const mutexResult = yield* call(acquireAnnotationMutex, annotationId);
       canEdit = mutexResult.canEdit;
@@ -299,7 +292,6 @@ function* keepAnnotationMutex(annotationId: string): Saga<void> {
   while (true) {
     try {
       const mutexInfo = yield* call(acquireAnnotationMutex, annotationId);
-      console.log("tryAcquireMutexForSaving keeping mutex", mutexInfo);
       canEdit = mutexInfo.canEdit;
       blockedByUser = mutexInfo.blockedByUser;
       yield* put(setUserHoldingMutexAction(blockedByUser));
@@ -338,12 +330,10 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
    * Try to acquire mutex indefinitely (saga can be cancelled from the outside with cancel or
    * race).
    */
-  console.log("started tryAcquireMutexForSaving");
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   mutexLogicState.isInitialRequest = true; // Never show popup about the mutex now being acquired.
 
   yield* call(acquireMutexForSavingInitially, annotationId);
-  console.log("tryAcquireMutexForSaving got mutex once");
   yield* call(keepAnnotationMutex, annotationId);
 }
 
@@ -415,7 +405,6 @@ function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
     const taskPermanentlyAcquiringMutex = yield* fork(tryAcquireMutexForSaving, mutexLogicState);
     // Then wait for signal to stop keeping the mutex as saving is done.
     yield* take("DONE_SAVING");
-    console.log("in save mutex saga; Got done saving; releasing mutex");
     // Stop acquiring the mutex and release it.
     yield* cancel(taskPermanentlyAcquiringMutex);
     yield* call(releaseMutex);

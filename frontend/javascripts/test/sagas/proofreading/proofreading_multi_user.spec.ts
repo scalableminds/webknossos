@@ -283,8 +283,6 @@ describe("Proofreading (Multi User)", () => {
     );
     expect(mapping1).toEqual(initialMapping);
     yield put(setOthersMayEditForAnnotationAction(true));
-    const annotationVersion = yield select((state) => state.annotation.version);
-    console.log("annotationVersion", annotationVersion);
 
     // Execute the actual merge and wait for the finished mapping.
     yield put(

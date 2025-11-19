@@ -15,8 +15,8 @@ const M4x4 = {
   transformPointsAffine(
     m: Matrix4x4,
     points: number[],
-    r?: Int32Array | Array<number> | null | undefined,
-  ): Int32Array | Array<number> {
+    r?: Array<number> | null | undefined,
+  ): Array<number> {
     if (r == null) {
       r = new Array(points.length);
     }

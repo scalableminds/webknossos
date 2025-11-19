@@ -1,6 +1,6 @@
 import { describe, expect, vi, it } from "vitest";
 import { alert } from "libs/window";
-import { setSaveBusyAction } from "viewer/model/actions/save_actions";
+import { doneSavingAction, setSaveBusyAction } from "viewer/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
@@ -141,6 +141,11 @@ describe("Save Saga", () => {
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendSaga.next([]), // select save queue
+      put(doneSavingAction()),
+    );
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(), // select save queue
       put(setSaveBusyAction(false)),
     );
     expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
@@ -371,6 +376,11 @@ describe("Save Saga", () => {
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendSaga.next([]), // select save queue
+      put(doneSavingAction()),
+    );
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(), // select save queue
       put(setSaveBusyAction(false)),
     );
     expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);

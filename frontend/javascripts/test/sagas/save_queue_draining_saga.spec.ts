@@ -115,12 +115,11 @@ describe("Save Saga", () => {
     );
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = true;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, {
-        type: "SAVE_NOW",
-      }),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;
@@ -170,12 +169,11 @@ describe("Save Saga", () => {
     });
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = true;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, {
-        type: "SAVE_NOW",
-      }),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;
@@ -347,12 +345,11 @@ describe("Save Saga", () => {
     }); // put setSaveBusyAction
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = true;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, {
-        type: "SAVE_NOW",
-      }),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;
@@ -401,10 +398,11 @@ describe("Save Saga", () => {
     }); // put setSaveBusyAction
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next({ shouldRetryOnConflict: false }); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = false;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, undefined),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;

@@ -243,34 +243,34 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   getKeyboardNavigationConfigShortcutsHandlerMap(): KeyboardShortcutLoopedHandlerMap<ArbitraryControllerNavigationConfigKeyboardShortcuts> {
     return {
-      [ArbitraryControllerNavigationConfigKeyboardShortcuts.INCREASE_MOVE_VALUE]: () =>
+      [ArbitraryControllerNavigationConfigKeyboardShortcuts.INCREASE_MOVE_VALUE_ARBITRARY]: () =>
         this.changeMoveValue(25),
-      [ArbitraryControllerNavigationConfigKeyboardShortcuts.DECREASE_MOVE_VALUE]: () =>
+      [ArbitraryControllerNavigationConfigKeyboardShortcuts.DECREASE_MOVE_VALUE_ARBITRARY]: () =>
         this.changeMoveValue(-25),
     };
   }
 
   getKeyboardNoLoopShortcutsHandlerMap(): KeyboardShortcutHandlerMap<ArbitraryControllerNoLoopKeyboardShortcuts> {
     return {
-      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES_ARBITRARY]: () => {
         Store.dispatch(toggleAllTreesAction());
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES_ARBITRARY]: () => {
         Store.dispatch(toggleInactiveTreesAction());
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE_ARBITRARY]: () => {
         Store.dispatch(deleteNodeAsUserAction(Store.getState()));
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_TREE]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_TREE_ARBITRARY]: () => {
         Store.dispatch(createTreeAction());
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT_ARBITRARY]: () => {
         this.pushBranch();
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT_ARBITRARY]: () => {
         Store.dispatch(requestDeleteBranchPointAction());
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE_ARBITRARY]: () => {
         const state = Store.getState();
         const skeletonTracing = state.annotation.skeleton;
 
@@ -287,16 +287,17 @@ class ArbitraryController extends React.PureComponent<Props> {
           );
         }
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD_ARBITRARY]: () => {
         this.nextNode(true);
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD]: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD_ARBITRARY]: () => {
         this.nextNode(false);
       },
       [ArbitraryControllerNoLoopKeyboardShortcuts.ROTATE_VIEW_180]: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
       },
-      [ArbitraryControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: downloadScreenshot,
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT_ARBITRARY]:
+        downloadScreenshot,
     };
   }
 

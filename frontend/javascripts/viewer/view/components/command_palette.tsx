@@ -6,7 +6,7 @@ import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
@@ -110,7 +110,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const handleSelect = _.memoize(async (command: Command | string) => {
+  const handleSelect = useCallback(async (command: Command | string) => {
     console.log("h");
     if (typeof command === "string") {
       return;
@@ -133,8 +133,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     // static commands
     setMode("static");
     command.command();
-    //closePalette();
-  });
+    closePalette();
+  }, []);
 
   const getDatasetItems = _.memoize(async () => {
     const datasets = await getDatasets();
@@ -337,10 +337,11 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     ]);
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(getAllStaticCommands());
+  const [paletteKey, setPaletteKey] = useState(0);
 
-  /*   const closePalette = () => {
-      setPaletteKey((prevKey) => prevKey + 1);
-    } */
+  const closePalette = () => {
+    setPaletteKey((prevKey) => prevKey + 1);
+  };
 
   return (
     <ReactCommandPalette
@@ -350,6 +351,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         if (mode === "annotation") offset = 200000;
         return { ...command, id: offset + index };
       })}
+      key={paletteKey}
       hotKeys={["ctrl+p", "command+p"]}
       trigger={label}
       maxDisplayed={100}
@@ -357,7 +359,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       onSelect={handleSelect}
       showSpinnerOnSelect={false}
       resetInputOnOpen
-      closeOnSelect={true}
+      closeOnSelect={false}
       renderCommand={(command) => {
         const { name, shortcut, highlight } = command;
         return (

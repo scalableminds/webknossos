@@ -289,17 +289,16 @@ function applyEvolutions() {
 
   // apply evolutions
   if (evolutions.length > 0) {
-    console.log(`Applying evolutions: ${evolutions}`);
-    safePsqlSpawn([
-      PG_CONFIG.url,
-      "-v",
-      "ON_ERROR_STOP=ON",
-      "-q",
-      ...evolutions.flatMap((evolutionFilename) => [
+    for (const evolutionFilename of evolutions) {
+      console.log(`Applying evolution: ${evolutionFilename}`);
+      safePsqlSpawn([
+        PG_CONFIG.url,
+        "-v",
+        "ON_ERROR_STOP=ON",
         "-f",
         path.join(evolutionsPath, evolutionFilename),
-      ]),
-    ]);
+      ]);
+    }
     console.log("✨✨ Successfully applied the evolutions");
   } else {
     console.log("There are no evolutions that can be applied.");

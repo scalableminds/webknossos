@@ -15,7 +15,6 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
-  type SaveNowAction,
   dispatchEnsureHasAnnotationMutexAsync,
   dispatchEnsureHasNewestVersionAsync,
   doneSavingAction,
@@ -74,11 +73,12 @@ export function* pushSaveQueueAsync(): Saga<never> {
     });
     console.log("in save queue draining saga, got forcePush?", forcePush);
     yield* put(setSaveBusyAction(true));
+    const enforceEmptySaveQueue = forcePush != null;
     let shouldRetryOnConflict = true;
     let retryCount = 0;
     while (shouldRetryOnConflict) {
-      shouldRetryOnConflict = (yield* call(synchronizeAnnotationWithBackend, forcePush))
-        .shouldRetryOnConflict;
+      shouldRetryOnConflict = (yield* call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue))
+        .hadConflict;
       ++retryCount;
       if (retryCount > MAX_ON_CONFLICT_RETRIES) {
         const annotation = yield* select((state) => state.annotation);
@@ -88,7 +88,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
           { annotationVersion: annotation.version, annotationId: annotation.annotationId },
         );
         Toast.error(
-          "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will use your latest unsaved changes.",
+          "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will lose your latest unsaved changes.",
         );
       }
     }
@@ -96,21 +96,18 @@ export function* pushSaveQueueAsync(): Saga<never> {
 }
 
 export function* synchronizeAnnotationWithBackend(
-  maybeForcePush: SaveNowAction | undefined,
-): Saga<{ shouldRetryOnConflict: boolean }> {
+  enforceEmptySaveQueue: boolean,
+): Saga<{ hadConflict: boolean }> {
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   if (othersMayEdit && WkDevFlags.liveCollab) {
     // Wait until we may save (due to mutex acquisition).
-    console.log("in save queue draining saga, start fetching mutex", maybeForcePush);
     yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
     // Wait until we have the newest version. This *must* happen after
     // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
     // race condition where the frontend thinks that it knows about the newest
     // version when in fact somebody else saved a newer version in the meantime.
-    console.log("in save queue draining saga, start incorporating actions", maybeForcePush);
     yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
   }
-  console.log("in save queue draining saga, maybe rebase finished", maybeForcePush);
   // Send (parts of) the save queue to the server.
   // There are two main cases:
   // 1) forcePush is true
@@ -140,36 +137,35 @@ export function* synchronizeAnnotationWithBackend(
   const shouldSaveRequestFailOnConflict = !isLiveCollabActive;
 
   const itemCountToSave =
-    maybeForcePush || isLiveCollabActive
+    enforceEmptySaveQueue || isLiveCollabActive
       ? Number.POSITIVE_INFINITY
       : yield* select((state) => state.save.queue.length);
   let savedItemCount = 0;
+  let saveQueue = [];
   while (savedItemCount < itemCountToSave) {
-    const saveQueue = yield* select((state) => state.save.queue);
+    saveQueue = yield* select((state) => state.save.queue);
 
     if (saveQueue.length > 0) {
-      console.log("in save queue draining saga, calling sendSaveRequestToServer", maybeForcePush);
       const { numberOfSentItems, hadConflict } = yield* call(
         sendSaveRequestToServer,
         shouldSaveRequestFailOnConflict,
       );
       savedItemCount += numberOfSentItems;
       if (hadConflict) {
-        console.log("in save queue draining saga, got conflict. Retrying saving");
-        return { shouldRetryOnConflict: true };
+        return { hadConflict: true };
       }
     } else {
       break;
     }
   }
   console.log("in save queue draining saga, finished saving", isLiveCollabActive);
-  if (isLiveCollabActive) {
+  if (saveQueue.length === 0) {
     // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
     console.log("in save queue draining saga, dispatching doneSavingAction");
     yield* put(doneSavingAction());
   }
   yield* put(setSaveBusyAction(false));
-  return { shouldRetryOnConflict: false };
+  return { hadConflict: false };
 }
 
 function getRetryWaitTime(retryCount: number) {

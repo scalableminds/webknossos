@@ -1,3 +1,4 @@
+import app from "app";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -76,6 +77,21 @@ import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
+import {
+  PlaneControllerLoopedNavigationKeyboardShortcuts,
+  PlaneControllerLoopDelayedConfigKeyboardShortcuts,
+  PlaneControllerNoLoopKeyboardShortcuts,
+  type KeyboardShortcutHandlerMap,
+  type KeyboardShortcutLoopedHandlerMap,
+  PlaneControllerLoopDelayedNavigationKeyboardShortcuts,
+  PlaneSkeletonNoLoopedKeyboardShortcuts,
+  PlaneSkeletonLoopedKeyboardShortcuts,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import {
+  buildKeyBindingsFromConfigAndLoopedMapping,
+  buildKeyBindingsFromConfigAndMapping,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -118,39 +134,49 @@ type StateProps = {
 type Props = StateProps;
 
 class SkeletonKeybindings {
-  static getKeyboardControls() {
+  static getKeyboardControls(): KeyboardShortcutLoopedHandlerMap<PlaneSkeletonNoLoopedKeyboardShortcuts> {
     return {
-      "1": () => Store.dispatch(toggleAllTreesAction()),
-      "2": () => Store.dispatch(toggleInactiveTreesAction()),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]: () =>
+        Store.dispatch(toggleAllTreesAction()),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]: () =>
+        Store.dispatch(toggleInactiveTreesAction()),
       // Delete active node
-      delete: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
-      backspace: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
-      c: () => Store.dispatch(createTreeAction()),
-      e: () => SkeletonHandlers.moveAlongDirection(),
-      r: () => SkeletonHandlers.moveAlongDirection(true),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: () =>
+        Store.dispatch(deleteNodeAsUserAction(Store.getState())),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: () =>
+        Store.dispatch(createTreeAction()),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]: () =>
+        SkeletonHandlers.moveAlongDirection(),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]: () =>
+        SkeletonHandlers.moveAlongDirection(true),
       // Branches
-      b: () => Store.dispatch(createBranchPointAction()),
-      j: () => Store.dispatch(requestDeleteBranchPointAction()),
-      s: () => {
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: () =>
+        Store.dispatch(createBranchPointAction()),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: () =>
+        Store.dispatch(requestDeleteBranchPointAction()),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: () => {
         api.tracing.centerNode();
         api.tracing.centerTDView();
       },
       // navigate nodes
-      "ctrl + ,": () => SkeletonHandlers.toPrecedingNode(),
-      "ctrl + .": () => SkeletonHandlers.toSubsequentNode(),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: () =>
+        SkeletonHandlers.toPrecedingNode(),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: () =>
+        SkeletonHandlers.toSubsequentNode(),
     };
   }
 
-  static getLoopedKeyboardControls() {
+  static getLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<PlaneSkeletonLoopedKeyboardShortcuts> {
     return {
-      "ctrl + left": () => SkeletonHandlers.moveNode(-1, 0),
-      "ctrl + right": () => SkeletonHandlers.moveNode(1, 0),
-      "ctrl + up": () => SkeletonHandlers.moveNode(0, -1),
-      "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: () => SkeletonHandlers.moveNode(-1, 0),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: () => SkeletonHandlers.moveNode(1, 0),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: () => SkeletonHandlers.moveNode(0, -1),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: () => SkeletonHandlers.moveNode(0, 1),
     };
   }
 
   static getExtendedKeyboardControls() {
+    // TODOM: migrate to keystrokes.
     return { s: () => setTool(AnnotationTool.SKELETON) };
   }
 }
@@ -307,6 +333,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
   isStarted: boolean = false;
+  unsubscribeKeyboardListener: any = () => {};
 
   componentDidMount() {
     this.input = {
@@ -407,8 +434,7 @@ class PlaneController extends React.PureComponent<Props> {
     return controls;
   }
 
-  initKeyboard(): void {
-    // avoid scrolling while pressing space
+  getLoopedHandlerMap(): KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopedNavigationKeyboardShortcuts> {
     const axisIndexToRotation = {
       0: pitchFlycamAction,
       1: yawFlycamAction,
@@ -431,7 +457,210 @@ class PlaneController extends React.PureComponent<Props> {
       const rotationAction = axisIndexToRotation[viewportIndices[dimensionIndex]];
       Store.dispatch(rotationAction(rotationAngle));
     };
+    return {
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_LEFT]: (timeFactor: number) =>
+        MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_RIGHT]: (timeFactor: number) =>
+        MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_UP]: (timeFactor: number) =>
+        MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_DOWN]: (timeFactor: number) =>
+        MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_LEFT]: (timeFactor: number) =>
+        rotateViewportAware(timeFactor, 1, false),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_RIGHT]: (timeFactor: number) =>
+        rotateViewportAware(timeFactor, 1, true),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_UP]: (timeFactor: number) =>
+        rotateViewportAware(timeFactor, 0, false),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_DOWN]: (timeFactor: number) =>
+        rotateViewportAware(timeFactor, 0, true),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_LEFT]: (timeFactor: number) =>
+        rotateViewportAware(timeFactor, 2, false),
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: (timeFactor: number) =>
+        rotateViewportAware(timeFactor, 2, true),
+    } as KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopedNavigationKeyboardShortcuts>;
+  }
 
+  getLoopDelayedHandlerMap(): KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopDelayedConfigKeyboardShortcuts> {
+    const loopedFromSkeleton = this.getLoopedKeyboardControls(); // re-use existing skeleton looped map if needed
+    return {
+      [PlaneControllerLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: () =>
+        VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
+      [PlaneControllerLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: () =>
+        VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_FORWARD]:
+        createDelayAwareMoveHandler(5, true),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_BACKWARD]:
+        createDelayAwareMoveHandler(-5, true),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD]:
+        createDelayAwareMoveHandler(-1),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD]:
+        createDelayAwareMoveHandler(1),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE]:
+        createDelayAwareMoveHandler(1, true),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD_DIRECTION_AWARE]:
+        createDelayAwareMoveHandler(-1, true),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_IN_PLANE]: () =>
+        MoveHandlers.zoom(1, false),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_OUT_PLANE]: () =>
+        MoveHandlers.zoom(-1, false),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.INCREASE_MOVE_VALUE_PLANE]: () =>
+        this.changeMoveValue(25),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.DECREASE_MOVE_VALUE_PLANE]: () =>
+        this.changeMoveValue(-25),
+      // merge any skeleton looped handlers if present (keys must be unique across domains)
+      ...(loopedFromSkeleton as any),
+    } as KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopDelayedConfigKeyboardShortcuts>;
+  }
+
+  getNoLoopHandlerMap(): KeyboardShortcutHandlerMap<PlaneControllerNoLoopKeyboardShortcuts> {
+    // compute dynamic handlers that depend on props/state like before
+    const baseSkeleton =
+      this.props.annotation.skeleton != null ? SkeletonKeybindings.getKeyboardControls() : {};
+    const baseVolume =
+      this.props.annotation.volumes.length > 0 ? VolumeKeybindings.getKeyboardControls() : {};
+    const boundingBox = BoundingBoxKeybindings.getKeyboardControls();
+    // derive the tool-dependent c/ctrl/meta handlers as before:
+    const skeletonCHandler =
+      this.props.annotation.skeleton != null ? SkeletonKeybindings.getKeyboardControls().c : null;
+    const volumeCHandler =
+      this.props.annotation.volumes.length > 0 ? VolumeKeybindings.getKeyboardControls().c : null;
+    const boundingBoxCHandler = boundingBox.c;
+    const skeletonCtrlHandler = boundingBox.ctrl;
+    const skeletonMetaHandler = boundingBox.meta;
+
+    return {
+      [PlaneControllerNoLoopKeyboardShortcuts.COPY_SEGMENT_ID]: (event: KeyboardEvent | any) => {
+        const segmentationLayer = Model.getVisibleSegmentationLayer();
+        const { additionalCoordinates } = Store.getState().flycam;
+
+        if (!segmentationLayer) {
+          return;
+        }
+
+        const { mousePosition } = Store.getState().temporaryConfiguration;
+
+        if (mousePosition) {
+          const [x, y] = mousePosition;
+          const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
+            x,
+            y,
+          }).rounded;
+          const { cube } = segmentationLayer;
+          const mapping = event && event.altKey ? cube.getMapping() : null;
+          const hoveredId = cube.getDataValue(
+            globalMousePositionRounded,
+            additionalCoordinates,
+            mapping,
+            getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
+          );
+          navigator.clipboard
+            .writeText(String(hoveredId))
+            .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
+        } else {
+          Toast.warning("No segment under cursor.");
+        }
+      },
+      [PlaneControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: () => downloadScreenshot(),
+      [PlaneControllerNoLoopKeyboardShortcuts.CYCLE_TOOLS]: () => cycleTools(),
+      [PlaneControllerNoLoopKeyboardShortcuts.CYCLE_TOOLS_BACKWARDS]: () => cycleToolsBackwards(),
+      [PlaneControllerNoLoopKeyboardShortcuts.SET_TOOL_MOVE]: () => setTool(AnnotationTool.MOVE),
+      [PlaneControllerNoLoopKeyboardShortcuts.BRUSH_PRESET_SMALL]: () =>
+        this.handleUpdateBrushSize("small"),
+      [PlaneControllerNoLoopKeyboardShortcuts.BRUSH_PRESET_MEDIUM]: () =>
+        this.handleUpdateBrushSize("medium"),
+      [PlaneControllerNoLoopKeyboardShortcuts.BRUSH_PRESET_LARGE]: () =>
+        this.handleUpdateBrushSize("large"),
+      [PlaneControllerNoLoopKeyboardShortcuts.BOUNDING_BOX_EXTENDED]: () =>
+        BoundingBoxKeybindings.getExtendedKeyboardControls().x(),
+      [PlaneControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]: () =>
+        Store.dispatch(toggleAllTreesAction()),
+      [PlaneControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]: () =>
+        Store.dispatch(toggleInactiveTreesAction()),
+      [PlaneControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: () =>
+        Store.dispatch(deleteNodeAsUserAction(Store.getState())),
+      [PlaneControllerNoLoopKeyboardShortcuts.CREATE_TREE_PLANE]: () =>
+        Store.dispatch(createTreeAction()),
+      [PlaneControllerNoLoopKeyboardShortcuts.MOVE_ALONG_DIRECTION]: () =>
+        SkeletonHandlers.moveAlongDirection(),
+      [PlaneControllerNoLoopKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]: () =>
+        SkeletonHandlers.moveAlongDirection(true),
+      [PlaneControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: () =>
+        Store.dispatch(createBranchPointAction()),
+      [PlaneControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: () =>
+        Store.dispatch(requestDeleteBranchPointAction()),
+      [PlaneControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: () => {
+        api.tracing.centerNode();
+        api.tracing.centerTDView();
+      },
+      [PlaneControllerNoLoopKeyboardShortcuts.NAV_PREV_NODE]: () =>
+        SkeletonHandlers.toPrecedingNode(),
+      [PlaneControllerNoLoopKeyboardShortcuts.NAV_NEXT_NODE]: () =>
+        SkeletonHandlers.toSubsequentNode(),
+      // Tool-dependent handlers (recreate the same composite handlers as before)
+      [PlaneControllerNoLoopKeyboardShortcuts.TOOL_DEPENDENT_C]:
+        this.createToolDependentKeyboardHandler(
+          skeletonCHandler,
+          volumeCHandler,
+          boundingBoxCHandler,
+        ),
+      [PlaneControllerNoLoopKeyboardShortcuts.TOOL_DEPENDENT_CTRL]:
+        this.createToolDependentKeyboardHandler(null, null, skeletonCtrlHandler),
+      [PlaneControllerNoLoopKeyboardShortcuts.TOOL_DEPENDENT_META]:
+        this.createToolDependentKeyboardHandler(null, null, skeletonMetaHandler),
+    } as KeyboardShortcutHandlerMap<PlaneControllerNoLoopKeyboardShortcuts>;
+  }
+
+  reloadKeyboardShortcuts() {
+    // destroy existing keyboards
+    this.input.keyboard?.destroy();
+    this.input.keyboardLoopDelayed?.destroy();
+    this.input.keyboardNoLoop?.destroy();
+
+    const keybindingConfig = loadKeyboardShortcuts();
+
+    // looped keyboard
+    const loopedBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+      keybindingConfig,
+      this.getLoopedHandlerMap(),
+    );
+    this.input.keyboard = new InputKeyboard(loopedBindings);
+
+    // delayed looped keyboard
+    const delayedBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+      keybindingConfig,
+      this.getLoopDelayedHandlerMap(),
+    );
+    const withAdditionalActions = {
+      ...delayedBindings,
+      // Enter & Escape need to be separate due to being constant and not configurable.
+      enter: () => Store.dispatch(enterAction()),
+      esc: () => Store.dispatch(escapeAction()),
+    };
+    this.input.keyboardLoopDelayed = new InputKeyboard(withAdditionalActions, {
+      delay: Store.getState().userConfiguration.keyboardDelay,
+    });
+
+    // no-loop keyboard
+    const noLoopBindings = buildKeyBindingsFromConfigAndMapping(
+      keybindingConfig,
+      this.getNoLoopHandlerMap(),
+    );
+
+    // InputKeyboardNoLoop uses: (bindings, options, extendedHandlers, keyUpHandlers)
+    // We previously constructed some of those dynamically; for compatibility we build "extended" from getNotLoopedKeyboardControls
+    const { extendedControls: extendedNotLoopedKeyboardControls, keyUpControls } =
+      this.getNotLoopedKeyboardControls();
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
+      noLoopBindings,
+      {},
+      extendedNotLoopedKeyboardControls,
+      keyUpControls,
+    );
+  }
+
+  initKeyboard(): void {
+    // avoid scrolling while pressing space
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
@@ -440,72 +669,16 @@ class PlaneController extends React.PureComponent<Props> {
         event.preventDefault();
       }
     });
-    this.input.keyboard = new InputKeyboard({
-      // Move
-      left: (timeFactor) => MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
-      right: (timeFactor) => MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
-      up: (timeFactor) => MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
-      down: (timeFactor) => MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
-      "shift + left": (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
-      "shift + right": (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
-      "shift + up": (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
-      "shift + down": (timeFactor: number) => rotateViewportAware(timeFactor, 0, true),
-      "alt + left": (timeFactor: number) => rotateViewportAware(timeFactor, 2, false),
-      "alt + right": (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
-    });
-    const {
-      baseControls: notLoopedKeyboardControls,
-      keyUpControls,
-      extendedControls: extendedNotLoopedKeyboardControls,
-    } = this.getNotLoopedKeyboardControls();
-    const loopedKeyboardControls = this.getLoopedKeyboardControls();
-    ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
-    this.input.keyboardLoopDelayed = new InputKeyboard(
-      {
-        // KeyboardJS is sensitive to ordering (complex combos first)
-        "shift + i": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
-        "shift + o": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
-        "shift + f": createDelayAwareMoveHandler(5, true),
-        "shift + d": createDelayAwareMoveHandler(-5, true),
-        "shift + space": createDelayAwareMoveHandler(-1),
-        "ctrl + space": createDelayAwareMoveHandler(-1),
-        enter: () => Store.dispatch(enterAction()),
-        esc: () => Store.dispatch(escapeAction()),
-        space: createDelayAwareMoveHandler(1),
-        f: createDelayAwareMoveHandler(1, true),
-        d: createDelayAwareMoveHandler(-1, true),
-        // Zoom in/out
-        i: () => MoveHandlers.zoom(1, false),
-        o: () => MoveHandlers.zoom(-1, false),
-        h: () => this.changeMoveValue(25),
-        g: () => this.changeMoveValue(-25),
-        ...loopedKeyboardControls,
-      },
-      {
-        delay: Store.getState().userConfiguration.keyboardDelay,
-      },
+
+    // create keyboards from persisted config
+    this.reloadKeyboardShortcuts();
+
+    // register refresh listener
+    this.unsubscribeKeyboardListener = app.vent.on("refreshKeyboardShortcuts", () =>
+      this.reloadKeyboardShortcuts(),
     );
 
-    const ignoredTimeFactor = 0;
-    const rotateViewportAwareFixedWithoutTiming = (
-      dimensionIndex: DimensionIndices,
-      oppositeDirection: boolean,
-    ) => rotateViewportAware(ignoredTimeFactor, dimensionIndex, oppositeDirection, true);
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
-      {
-        ...notLoopedKeyboardControls,
-        // Directly rotate by 90 degrees.
-        "ctrl + shift + left": () => rotateViewportAwareFixedWithoutTiming(1, false),
-        "ctrl + shift + right": () => rotateViewportAwareFixedWithoutTiming(1, true),
-        "ctrl + shift + up": () => rotateViewportAwareFixedWithoutTiming(0, false),
-        "ctrl + shift + down": () => rotateViewportAwareFixedWithoutTiming(0, true),
-        "ctrl + alt + left": () => rotateViewportAwareFixedWithoutTiming(2, false),
-        "ctrl + alt + right": () => rotateViewportAwareFixedWithoutTiming(0, true),
-      },
-      {},
-      extendedNotLoopedKeyboardControls,
-      keyUpControls,
-    );
+    // keep existing listener for keyboardDelay change
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.userConfiguration.keyboardDelay,
@@ -679,6 +852,13 @@ class PlaneController extends React.PureComponent<Props> {
   stop(): void {
     if (this.isStarted) {
       this.destroyInput();
+    }
+
+    // unregister keyboard refresh listener
+    try {
+      this.unsubscribeKeyboardListener();
+    } catch (e) {
+      // ignore if already removed
     }
 
     // SceneController will already be null, if the user left the dataset view

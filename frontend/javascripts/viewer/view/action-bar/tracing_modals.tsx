@@ -17,9 +17,9 @@ import DownloadModalView from "viewer/view/action-bar/download_modal_view";
 import MergeModalView from "viewer/view/action-bar/merge_modal_view";
 import ShareModalView from "viewer/view/action-bar/share_modal_view";
 import UserScriptsModalView from "viewer/view/action-bar/user_scripts_modal_view";
+import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
-import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 
 const handleShareClose = () => {
   Store.dispatch(setShareModalVisibilityAction(false));

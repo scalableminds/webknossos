@@ -1,22 +1,22 @@
-import { useState, useMemo } from "react";
-import { Modal, Table, Switch, Input, Button, Typography, Space, Flex } from "antd";
 import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
+import { Button, Flex, Input, Modal, Space, Switch, Table, Typography } from "antd";
+import app from "app";
+import Toast from "libs/toast";
+import _ from "lodash";
+import { useMemo, useState } from "react";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
-  getAllDefaultKeyboardShortcuts,
   type KeyboardComboChain,
   KeyboardShortcutDomain,
+  getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
   loadKeyboardShortcuts,
   saveKeyboardShortcuts,
   validateShortcutMapText,
 } from "./keyboard_shortcut_persistence";
-import app from "app";
-import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
 import { formatKeyComboChain } from "./keyboard_shortcut_utils";
-import Toast from "libs/toast";
-import _ from "lodash";
+import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
 
 const { Text, Title } = Typography;
 

@@ -1,11 +1,11 @@
 import type { KeyBindingLoopMap, KeyBindingMap } from "libs/input";
+import _ from "lodash";
 import type {
-  KeyboardShortcutsMap,
+  KeyboardComboChain,
   KeyboardShortcutHandlerMap,
   KeyboardShortcutLoopedHandlerMap,
-  KeyboardComboChain,
+  KeyboardShortcutsMap,
 } from "./keyboard_shortcut_constants";
-import _ from "lodash";
 
 export const MODIFIER_KEYS = new Set(["ctrl", "super", "alt", "shift"]);
 

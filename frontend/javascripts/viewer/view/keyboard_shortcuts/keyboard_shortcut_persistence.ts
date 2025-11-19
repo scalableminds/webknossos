@@ -1,7 +1,7 @@
 import { Validator } from "jsonschema";
 import {
-  type KeyboardShortcutsMap,
   ALL_KEYBOARD_HANDLER_IDS,
+  type KeyboardShortcutsMap,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 

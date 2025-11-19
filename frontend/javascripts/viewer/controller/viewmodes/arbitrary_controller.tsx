@@ -1,3 +1,4 @@
+import app from "app";
 import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
@@ -6,7 +7,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import React from "react";
-import app from "app";
 import type { Point2, Vector3, ViewMode, Viewport } from "viewer/constants";
 import constants, { ArbitraryViewport } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -50,20 +50,20 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import ArbitraryView from "viewer/view/arbitrary_view";
-import { downloadScreenshot } from "viewer/view/rendering_utils";
-import { SkeletonToolController } from "../combinations/tool_controls";
 import {
   ArbitraryControllerNavigationConfigKeyboardShortcuts,
   ArbitraryControllerNavigationKeyboardShortcuts,
   ArbitraryControllerNoLoopKeyboardShortcuts,
-  type KeyboardShortcutLoopedHandlerMap,
   type KeyboardShortcutHandlerMap,
+  type KeyboardShortcutLoopedHandlerMap,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import {
   buildKeyBindingsFromConfigAndLoopedMapping,
   buildKeyBindingsFromConfigAndMapping,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
+import { downloadScreenshot } from "viewer/view/rendering_utils";
+import { SkeletonToolController } from "../combinations/tool_controls";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {

@@ -337,14 +337,20 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
 
       continue;
     }
-    const { successful, shouldTerminate } = yield* call(
-      // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
-      enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
-      performRebasingIfNecessary,
-      REBASING_BUSY_BLOCK_REASON,
-      // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
-      SagaIdentifier.SAVE_SAGA,
-    );
+    // In live collab scenario, the user can update the annotation.
+    // Therefore to ensure a proper rebase during which no update action can interfere, lock the annotation.
+    const guardAsBlocking = WkDevFlags.liveCollab;
+    const { successful, shouldTerminate } = guardAsBlocking
+      ? yield* call(
+          // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
+          enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
+          performRebasingIfNecessary,
+          REBASING_BUSY_BLOCK_REASON,
+          // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
+          SagaIdentifier.SAVE_SAGA,
+        )
+      : yield* call(performRebasingIfNecessary);
+
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.
       break;

@@ -78,9 +78,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
     while (shouldRetryOnConflict) {
       shouldRetryOnConflict = (yield* call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue))
         .hadConflict;
-      if (shouldRetryOnConflict) {
-        Toast.info("Had conflict. Retrying...");
-      }
       ++retryCount;
       if (retryCount > MAX_ON_CONFLICT_RETRIES) {
         const annotation = yield* select((state) => state.annotation);

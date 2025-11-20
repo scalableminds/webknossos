@@ -1,11 +1,12 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getEditableTeams, updateUser } from "admin/rest_api";
-import { App, Checkbox, Col, Divider, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import { App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import { useFetch } from "libs/react_helpers";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import React, { type Key, useEffect, useState } from "react";
+import React, { type Key, useEffect, useMemo, useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -27,7 +28,8 @@ type TeamRoleComponentProps = {
   setSelectedPermission: (permission: PERMISSIONS) => void;
   userIsAdmin: boolean;
   onlyEditingSingleUser: boolean;
-  verticallyAligned: boolean;
+  renderTitlesWithDivider?: boolean;
+  setDefaultTeam?: boolean;
 };
 
 type TeamRoleModalProps = {
@@ -66,8 +68,22 @@ export function PermissionsAndTeamsComponent({
   setSelectedPermission,
   userIsAdmin,
   onlyEditingSingleUser,
+  setDefaultTeam = false,
+  renderTitlesWithDivider = false,
 }: TeamRoleComponentProps) {
   const teams = useFetch(getEditableTeams, [], []);
+  const defaultTeam = useMemo(() => teams.find((t) => t.name === "Default"), [teams]);
+  useEffect(() => {
+    if (setDefaultTeam && defaultTeam) {
+      setSelectedTeams({
+        [defaultTeam.name]: {
+          id: defaultTeam.id,
+          name: defaultTeam.name,
+          isTeamManager: false,
+        },
+      });
+    }
+  }, [setDefaultTeam, defaultTeam, setSelectedTeams]);
 
   function handlePermissionChanged(evt: RadioChangeEvent) {
     const selectedPermission: PERMISSIONS = evt.target.value;
@@ -138,6 +154,18 @@ export function PermissionsAndTeamsComponent({
     );
   }
 
+  function renderTitleOrSubtitle(title: React.ReactNode) {
+    return renderTitlesWithDivider ? (
+      <DividerWithSubtitle>
+        <h5>
+          <b>{title}</b>
+        </h5>
+      </DividerWithSubtitle>
+    ) : (
+      <h4>{title}</h4>
+    );
+  }
+
   function getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
     const roleStyle = {
       fontWeight: "bold",
@@ -146,18 +174,21 @@ export function PermissionsAndTeamsComponent({
       paddingBottom: 12,
       color: "var(--ant-color-text-secondary)",
     } as React.CSSProperties;
+    const title = (
+      <>
+        Organization Permissions{" "}
+        <a
+          href="https://docs.webknossos.org/webknossos/users/index.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <InfoCircleOutlined />
+        </a>
+      </>
+    );
     return (
       <React.Fragment>
-        <h5>
-          <b>Organization Permissions </b>
-          <a
-            href="https://docs.webknossos.org/webknossos/users/index.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <InfoCircleOutlined />
-          </a>
-        </h5>
+        {renderTitleOrSubtitle(title)}
         {!isUserAdmin && !onlyEditingSingleUser ? (
           <p>{messages["users.needs_admin_rights"]}</p>
         ) : null}
@@ -204,11 +235,11 @@ export function PermissionsAndTeamsComponent({
     </Row>
   ));
 
+  const title = "Team Permissions";
+
   const teamsRoleComponents = (
     <>
-      <h5>
-        <b>Team Permissions</b>
-      </h5>
+      {renderTitleOrSubtitle(title)}
       <div>
         <Row>
           <Col span={12}>
@@ -226,7 +257,6 @@ export function PermissionsAndTeamsComponent({
   return (
     <>
       {permissionEditingSection}
-      <Divider />
       {teamsRoleComponents}
     </>
   );
@@ -356,7 +386,6 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
         setSelectedPermission={setSelectedPermission}
         userIsAdmin={userIsAdmin}
         onlyEditingSingleUser={onlyEditingSingleUser}
-        verticallyAligned
       />
     </Modal>
   );

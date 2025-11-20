@@ -17,24 +17,12 @@ import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
 import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
-import {
-  Alert,
-  AutoComplete,
-  Button,
-  Card,
-  Col,
-  Divider,
-  Form,
-  Input,
-  Modal,
-  Row,
-  Space,
-  Steps,
-} from "antd";
+import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -308,7 +296,7 @@ export function InviteUsersModal({
           Share datasets, collaboratively work on annotations, and organize complex analysis
           projects.
         </p>
-        <p>The following permissions will be assigned to the invited users:</p>
+        <p>All invited users will be assigned the permissions and roles specified below.</p>
         {isOrganizationLimitAlreadyReached ? (
           <p>
             As your organization has reached its user limit, you can only invite guests to your
@@ -317,34 +305,33 @@ export function InviteUsersModal({
           </p>
         ) : null}
         {exceedingUserLimitAlert}
-        <Divider />
-        <Space direction="vertical">
-          <PermissionsAndTeamsComponent
-            selectedTeams={selectedTeams}
-            setSelectedTeams={setSelectedTeams}
-            selectedPermission={selectedPermission}
-            setSelectedPermission={setSelectedPermission}
-            userIsAdmin={true}
-            onlyEditingSingleUser={true}
-            verticallyAligned={false}
-          />
-          <Divider />
+        <DividerWithSubtitle>
           <h5>
             <b>Invitee Email Addresses</b>
           </h5>
-          <p style={{ marginTop: -10 }}>
-            Multiple email addresses should be separated with a comma, a space or a new line.
-          </p>
-          <Input.TextArea
-            spellCheck={false}
-            autoSize={{
-              minRows: 6,
-            }}
-            onChange={handleInviteesStringChange}
-            placeholder={"jane@example.com\njoe@example.com"}
-            defaultValue={inviteesString}
-          />
-        </Space>
+        </DividerWithSubtitle>
+        <p style={{ marginTop: -10 }}>
+          Multiple email addresses should be separated with a comma, a space or a new line.
+        </p>
+        <Input.TextArea
+          spellCheck={false}
+          autoSize={{
+            minRows: 6,
+          }}
+          onChange={handleInviteesStringChange}
+          placeholder={"jane@example.com\njoe@example.com"}
+          defaultValue={inviteesString}
+        />
+        <PermissionsAndTeamsComponent
+          selectedTeams={selectedTeams}
+          setSelectedTeams={setSelectedTeams}
+          selectedPermission={selectedPermission}
+          setSelectedPermission={setSelectedPermission}
+          userIsAdmin={true}
+          onlyEditingSingleUser={true}
+          renderTitlesWithDivider={true}
+          setDefaultTeam={true}
+        />
       </Fragment>
     );
   }, [

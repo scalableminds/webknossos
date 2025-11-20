@@ -6,7 +6,7 @@ import { useFetch } from "libs/react_helpers";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import React, { type Key, useEffect, useMemo, useState } from "react";
+import React, { type Key, useEffect, useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -28,8 +28,7 @@ type TeamRoleComponentProps = {
   setSelectedPermission: (permission: PERMISSIONS) => void;
   userIsAdmin: boolean;
   onlyEditingSingleUser: boolean;
-  renderTitlesWithDivider?: boolean;
-  setDefaultTeam?: boolean;
+  renderSubtitlesWithDivider?: boolean;
 };
 
 type TeamRoleModalProps = {
@@ -68,22 +67,9 @@ export function PermissionsAndTeamsComponent({
   setSelectedPermission,
   userIsAdmin,
   onlyEditingSingleUser,
-  setDefaultTeam = false,
-  renderTitlesWithDivider = false,
+  renderSubtitlesWithDivider = false,
 }: TeamRoleComponentProps) {
   const teams = useFetch(getEditableTeams, [], []);
-  const defaultTeam = useMemo(() => teams.find((t) => t.name === "Default"), [teams]);
-  useEffect(() => {
-    if (setDefaultTeam && defaultTeam) {
-      setSelectedTeams({
-        [defaultTeam.name]: {
-          id: defaultTeam.id,
-          name: defaultTeam.name,
-          isTeamManager: false,
-        },
-      });
-    }
-  }, [setDefaultTeam, defaultTeam, setSelectedTeams]);
 
   function handlePermissionChanged(evt: RadioChangeEvent) {
     const selectedPermission: PERMISSIONS = evt.target.value;
@@ -154,8 +140,8 @@ export function PermissionsAndTeamsComponent({
     );
   }
 
-  function renderTitleOrSubtitle(title: React.ReactNode) {
-    return renderTitlesWithDivider ? (
+  function renderSubtitles(title: React.ReactNode) {
+    return renderSubtitlesWithDivider ? (
       <DividerWithSubtitle>
         <h5>
           <b>{title}</b>
@@ -188,7 +174,7 @@ export function PermissionsAndTeamsComponent({
     );
     return (
       <React.Fragment>
-        {renderTitleOrSubtitle(title)}
+        {renderSubtitles(title)}
         {!isUserAdmin && !onlyEditingSingleUser ? (
           <p>{messages["users.needs_admin_rights"]}</p>
         ) : null}
@@ -239,7 +225,7 @@ export function PermissionsAndTeamsComponent({
 
   const teamsRoleComponents = (
     <>
-      {renderTitleOrSubtitle(title)}
+      {renderSubtitles(title)}
       <div>
         <Row>
           <Col span={12}>

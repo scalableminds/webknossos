@@ -260,7 +260,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
   const onlyEditingSingleUser = selectedUserIds.length === 1;
 
   useEffect(() => {
-    // If a single user is selected, pre-select his teams
+    // If a single user is selected, pre-select their teams
     const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
     if (singleUserMaybe) {
@@ -294,9 +294,10 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
     const newUserPromises = users.map((user) => {
       if (selectedUserIds.includes(user.id)) {
         const newTeams = Utils.values(selectedTeams);
-        let permissions = { isAdmin: false, isDatasetManager: false };
+        let permissions = { isAdmin: user.isAdmin, isDatasetManager: user.isDatasetManager };
 
         if (activeUser.isAdmin && selectedUserIds.length === 1) {
+          permissions = { isAdmin: false, isDatasetManager: false };
           // If the current user is admin and only one user is edited we also update the permissions.
           if (selectedPermission === PERMISSIONS.admin) {
             permissions["isAdmin"] = true;

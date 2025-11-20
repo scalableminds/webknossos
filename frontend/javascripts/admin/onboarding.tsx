@@ -235,7 +235,6 @@ export function InviteUsersModal({
   const defaultTeam = useMemo(() => teams.find((t) => t.name === "Default"), [teams]);
 
   const setDefaultTeam = useCallback(() => {
-    console.log("Setting default team in invite modal");
     if (defaultTeam != null) {
       setSelectedTeams({
         [defaultTeam.name]: {

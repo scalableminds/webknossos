@@ -22,7 +22,11 @@ import {
 } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
-import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  applyVolumeUpdateActionsFromServerAction,
+  setHasEditableMappingAction,
+  setMappingIsLockedAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
@@ -40,6 +44,9 @@ import {
 } from "./rebasing_helpers_sagas";
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
+import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
+import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -546,6 +553,36 @@ export function* tryToIncorporateActions(
           break;
         }
 
+        case "updateMappingName": {
+          // TODO migrate to applyVolumeUpdateActionsFromServerAction.
+          // Refactor mapping activation first before implementing this.
+          const { actionTracingId, mappingName, isEditable, isLocked } = action.value;
+          let mappingType = undefined;
+          if (mappingName) {
+            let volumeDataLayer = yield* select((state) =>
+              getSegmentationLayerByName(state.dataset, actionTracingId),
+            );
+            if (volumeDataLayer.mappings == null || volumeDataLayer.agglomerates == null) {
+              yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
+              yield* take("SET_LAYER_MAPPINGS");
+            }
+            mappingType =
+              (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
+                ? ("HDF5" as const)
+                : ("JSON" as const);
+          }
+          yield* put(setMappingAction(actionTracingId, mappingName, mappingType, true));
+          const volume = yield* select((state) =>
+            getVolumeTracingById(state.annotation, actionTracingId),
+          );
+          if (!volume.hasEditableMapping && isEditable) {
+            yield* put(setHasEditableMappingAction(actionTracingId));
+          }
+          if (!volume.mappingIsLocked && isLocked) {
+            yield* put(setMappingIsLockedAction(actionTracingId));
+          }
+          break;
+        }
         /*
          * Currently NOT supported:
          */
@@ -563,7 +600,6 @@ export function* tryToIncorporateActions(
 
         // Volume
         case "removeFallbackLayer":
-        case "updateMappingName": // Refactor mapping activation first before implementing this.
 
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.

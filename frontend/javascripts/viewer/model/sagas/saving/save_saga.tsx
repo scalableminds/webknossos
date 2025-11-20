@@ -266,7 +266,8 @@ type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
-  // saveQueueEntries should not change during performRebasing saga as this should only be executed while busy blocking is active.
+  // saveQueueEntries should not change during performRebasing saga. When liveCollab is enabled, this is enforced via busy blocking.
+  // When liveCollab is disabled, this code typically runs in read-only mode where the save queue is empty.
   const saveQueueEntries = yield* select((state) => state.save.queue);
 
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing
@@ -333,18 +334,26 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     const shouldCheckForUpdatesOnServer = yield* call(shouldCheckForNewerAnnotationVersions);
     const isVersionRestoreActive = yield* select((state) => state.uiInformation.showVersionRestore);
     if (!shouldCheckForUpdatesOnServer || isVersionRestoreActive) {
-      // TODOM: Maybe not resolving fulfillAllEnsureHasNewestVersionActions requests here was the fault for the bug?
-
       continue;
     }
-    const { successful, shouldTerminate } = yield* call(
-      // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
-      enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
-      performRebasingIfNecessary,
-      REBASING_BUSY_BLOCK_REASON,
-      // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
-      SagaIdentifier.SAVE_SAGA,
+    // In live collab mode, the user could update the annotation concurrently with rebasing.
+    // Therefore, acquire the busy lock to prevent user update actions from interfering with the rebase.
+    // In non-live-collab mode (typically read-only polling), skip busy blocking to avoid freezing the UI.
+    const isUpdatingCurrentlyAllowed = yield* select(
+      (state) => state.annotation.isUpdatingCurrentlyAllowed,
     );
+    const guardAsBlocking = WkDevFlags.liveCollab && isUpdatingCurrentlyAllowed;
+    const { successful, shouldTerminate } = guardAsBlocking
+      ? yield* call(
+          // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
+          enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
+          performRebasingIfNecessary,
+          REBASING_BUSY_BLOCK_REASON,
+          // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
+          SagaIdentifier.SAVE_SAGA,
+        )
+      : yield* call(performRebasingIfNecessary);
+
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.
       break;

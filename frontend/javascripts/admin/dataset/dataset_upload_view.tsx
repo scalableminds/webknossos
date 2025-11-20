@@ -111,18 +111,21 @@ type State = {
   unfinishedUploads: UnfinishedUpload[];
 };
 
-function WkwExample() {
+function Zarr3Example() {
   const description = `
-  great_dataset          # Root folder
-  ├─ color               # Dataset layer (e.g., color, segmentation)
-  │  ├─ 1                # Magnification step (1, 2, 4, 8, 16 etc.)
-  │  │  ├─ header.wkw    # Header wkw file
-  │  │  ├─ z0
-  │  │  │  ├─ y0
-  │  │  │  │  ├─ x0.wkw  # Actual data wkw file
-  │  │  │  │  └─ x1.wkw  # Actual data wkw file
-  │  │  │  └─ y1/...
-  │  │  └─ z1/...
+  great_dataset           # Root folder
+  ├─ color                # Dataset layer (e.g., color, segmentation)
+  │  ├─ zarr.json         # Zarr3 metadata (layer)
+  │  ├─ 1                 # Magnification step (1, 2, 4, 8, 16 etc.)
+  │  │  ├─ zarr.json      # Zarr3 metadata (magnication step)
+  │  │  └─ c
+  │  │     └─ 0
+  │  │        ├─ 0
+  │  │        │  ├─ 0
+  │  │        │  │  ├─ 0  # Actual image data shards
+  │  │        │  │  └─ 1
+  │  │        │  └─ 1/...
+  │  │        └─ 1/...
   │  └─ 2/...
   ├─ segmentation/...
   └─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existent)
@@ -630,7 +633,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       Modal.info({
         content: (
           <div>
-            The selected dataset does not seem to be in the WKW or Zarr format. Please convert the
+            The selected dataset does not seem to be in the Zarr or WKW format. Please convert the
             dataset using the{" "}
             <a target="_blank" href="https://docs.webknossos.org/cli" rel="noopener noreferrer">
               webknossos CLI
@@ -1178,7 +1181,7 @@ function FileUploadArea({
         >
           {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
             <>
-              Drag and drop your files in WKW format.
+              Drag and drop your files in WEBKNOSSOS format.
               <div
                 style={{
                   textAlign: "left",
@@ -1219,8 +1222,8 @@ function FileUploadArea({
                 The following file formats are supported:
                 <ul>
                   <li>
-                    <Popover content={<WkwExample />} trigger="hover">
-                      WKW dataset
+                    <Popover content={<Zarr3Example />} trigger="hover">
+                      Zarr or WKW dataset
                       <InfoCircleOutlined
                         style={{
                           marginLeft: 4,

@@ -1,4 +1,4 @@
-import type { OrthoView, Vector3 } from "viewer/constants";
+import type { OrthoView, SagaIdentifier, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
 import type { StartAIJobModalState } from "viewer/view/action-bar/ai_job_modals/constants";
@@ -15,8 +15,10 @@ export type CycleToolAction = ReturnType<typeof cycleToolAction>;
 type SetThemeAction = ReturnType<typeof setThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
-type SetIsWkReadyAction = ReturnType<typeof setIsWkReadyAction>;
-type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
+export type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+type AllowSagaWhileBusyAction = ReturnType<typeof allowSagaWhileBusyAction>;
+type DisallowSagaWhileBusyAction = ReturnType<typeof disallowSagaWhileBusyAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 type SetAIJobModalStateAction = ReturnType<typeof setAIJobModalStateAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
@@ -62,7 +64,9 @@ export type UiAction =
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
   | SetBusyBlockingInfoAction
-  | SetIsWkReadyAction
+  | AllowSagaWhileBusyAction
+  | DisallowSagaWhileBusyAction
+  | SetIsWkInitializedAction
   | EnterAction
   | EscapeAction
   | SetQuickSelectStateAction
@@ -170,10 +174,25 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
       reason,
     },
   }) as const;
-export const setIsWkReadyAction = (isReady: boolean) =>
+export const allowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
   ({
-    type: "SET_IS_WK_READY",
-    isReady,
+    type: "ALLOW_SAGA_WHILE_BUSY_ACTION",
+    value: {
+      allowedSaga,
+    },
+  }) as const;
+
+export const disallowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
+  ({
+    type: "DISALLOW_SAGA_WHILE_BUSY_ACTION",
+    value: {
+      allowedSaga,
+    },
+  }) as const;
+export const setIsWkInitializedAction = (isInitialized: boolean) =>
+  ({
+    type: "SET_IS_WK_INITIALIZED",
+    isInitialized,
   }) as const;
 
 export const setPythonClientModalVisibilityAction = (visible: boolean) =>

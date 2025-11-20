@@ -1,8 +1,13 @@
+import { sendAnalyticsEvent } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import type * as React from "react";
-import { setViewModeAction } from "viewer/model/actions/settings_actions";
+import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
+import {
+  setViewModeAction,
+  updateDatasetSettingAction,
+} from "viewer/model/actions/settings_actions";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 
@@ -24,6 +29,7 @@ const registerWebGlCrashHandler = (canvas) => {
       });
       console.error("Webgl context lost", e);
       ErrorHandling.notify(new Error("WebGLContextLost"));
+      sendAnalyticsEvent("webgl_context_lost", getWebGlAnalyticsInformation(Store.getState()));
     },
     false,
   );
@@ -32,6 +38,15 @@ const registerWebGlCrashHandler = (canvas) => {
     "webglcontextrestored",
     (e: MessageEvent) => {
       e.preventDefault();
+
+      // WebGL context losses are often caused by graphics driver issues during shader compilation.
+      // Try again with a more simple shader by turning off the interpolation setting.
+      if (Store.getState().datasetConfiguration.interpolation) {
+        Store.dispatch(updateDatasetSettingAction("interpolation", false));
+        Toast.info(
+          "Disabled interpolation setting to simplify WebGL shader and avoid WebGL context losses.",
+        );
+      }
 
       // To bring webKnossos back to life, switching the current view mode
       // to another one and then switching back proved to be the most robust way,

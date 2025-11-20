@@ -1,9 +1,9 @@
 import { describe, expect, vi, it } from "vitest";
 import { alert } from "libs/window";
-import { setSaveBusyAction } from "viewer/model/actions/save_actions";
+import { doneSavingAction, setSaveBusyAction } from "viewer/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
-import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
+import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 import { UnitLong } from "viewer/constants";
@@ -16,9 +16,12 @@ import {
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
-} from "viewer/model/sagas/saving/save_queue_draining";
+  synchronizeAnnotationWithBackend,
+} from "viewer/model/sagas/saving/save_queue_draining_saga";
 import { TIMESTAMP } from "test/global_mocks";
 import { sendSaveRequestWithToken } from "admin/rest_api";
+import "test/helpers/apiHelpers"; // ensures Store is available
+import { MutexFetchingStrategy } from "viewer/model/sagas/saving/save_mutex_saga";
 
 vi.mock("viewer/model/sagas/root_saga", () => {
   return {
@@ -65,6 +68,7 @@ const initialState = {
       allowAccess: true,
       allowDownload: true,
     },
+    isUpdatingCurrentlyAllowed: true,
   },
 };
 const LAST_VERSION = 2;
@@ -94,7 +98,7 @@ describe("Save Saga", () => {
     ];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
     saga.next(); // setLastSaveTimestampAction
 
     saga.next(); // select state
@@ -110,15 +114,102 @@ describe("Save Saga", () => {
       put(setSaveBusyAction(true)),
     );
 
-    saga.next(); // advance to next select state
+    const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = true;
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendCallEffect,
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+    );
+    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
+      synchronizeAnnotationWithBackendCallEffect.value.payload;
 
-    expectValueDeepEqual(expect, saga.next(saveQueue), call(sendSaveRequestToServer));
-    saga.next(saveQueue.length); // select state
+    // Start synchronizeAnnotationWithBackend sub saga
+    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
+    synchronizeAnnotationWithBackendSaga.next();
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(saveQueue),
+      call(sendSaveRequestToServer, true),
+    );
+    synchronizeAnnotationWithBackendSaga.next({
+      numberOfSentItems: saveQueue.length,
+      hadConflict: false,
+    });
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next([]), // select save queue
+      put(doneSavingAction()),
+    );
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(), // select save queue
+      put(setSaveBusyAction(false)),
+    );
+    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
 
-    expectValueDeepEqual(expect, saga.next([]), put(setSaveBusyAction(false)));
+    saga.next({ shouldRetryOnConflict: false }); // select state
+    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
+  });
 
-    // Test that loop repeats
+  it("should dispatch doneSavingAction when mutex fetching strategy is ad hoc", () => {
+    const updateActions = [
+      [UpdateActions.createEdge(1, 0, 1, tracingId)],
+      [UpdateActions.createEdge(1, 1, 2, tracingId)],
+    ];
+    const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
+    const saga = pushSaveQueueAsync();
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
+    saga.next(); // setLastSaveTimestampAction
+
     saga.next(); // select state
+
+    saga.next([]);
+    saga.next(); // race
+
+    saga.next({
+      forcePush: SaveActions.saveNowAction(),
+    });
+
+    const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = true;
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendCallEffect,
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+    );
+    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
+      synchronizeAnnotationWithBackendCallEffect.value.payload;
+
+    // Start synchronizeAnnotationWithBackend sub saga
+    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
+    synchronizeAnnotationWithBackendSaga.next();
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.AdHoc); // select mutex fetching strategy
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(saveQueue),
+      call(sendSaveRequestToServer, false),
+    );
+    synchronizeAnnotationWithBackendSaga.next({
+      numberOfSentItems: saveQueue.length,
+      hadConflict: false,
+    });
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next([]),
+      put(SaveActions.doneSavingAction()),
+    );
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(),
+      put(setSaveBusyAction(false)),
+    );
+    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
+
+    saga.next({ shouldRetryOnConflict: false }); // select state
     expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   });
 
@@ -130,7 +221,7 @@ describe("Save Saga", () => {
       ],
       TIMESTAMP,
     );
-    const saga = sendSaveRequestToServer();
+    const saga = sendSaveRequestToServer(true);
 
     saga.next();
     saga.next(saveQueue);
@@ -176,7 +267,7 @@ describe("Save Saga", () => {
         showErrorToast: false,
       },
     );
-    const saga = sendSaveRequestToServer();
+    const saga = sendSaveRequestToServer(true);
 
     saga.next();
     saga.next(saveQueue);
@@ -201,7 +292,7 @@ describe("Save Saga", () => {
       ],
       TIMESTAMP,
     );
-    const saga = sendSaveRequestToServer();
+    const saga = sendSaveRequestToServer(true);
 
     saga.next();
     saga.next(saveQueue);
@@ -236,8 +327,6 @@ describe("Save Saga", () => {
     const alertEffect = saga.next().value;
     expect(alertEffect.payload.fn).toBe(alert);
 
-    saga.next(); // sleep
-
     expect(() => saga.next()).toThrow();
   });
 
@@ -248,7 +337,7 @@ describe("Save Saga", () => {
     ];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
 
     saga.next();
     saga.next(); // select state
@@ -260,13 +349,44 @@ describe("Save Saga", () => {
       forcePush: SaveActions.saveNowAction(),
     }); // put setSaveBusyAction
 
-    saga.next(); // select state
+    const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = true;
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendCallEffect,
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+    );
+    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
+      synchronizeAnnotationWithBackendCallEffect.value.payload;
 
-    saga.next(saveQueue); // call sendSaveRequestToServer
+    // Start synchronizeAnnotationWithBackend sub saga
+    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
+    synchronizeAnnotationWithBackendSaga.next();
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(saveQueue),
+      call(sendSaveRequestToServer, true),
+    );
+    synchronizeAnnotationWithBackendSaga.next({
+      numberOfSentItems: saveQueue.length,
+      hadConflict: false,
+    });
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next([]), // select save queue
+      put(doneSavingAction()),
+    );
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(), // select save queue
+      put(setSaveBusyAction(false)),
+    );
+    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
 
-    saga.next(1); // advance to select state
-
-    expectValueDeepEqual(expect, saga.next([]), put(setSaveBusyAction(false)));
+    saga.next({ shouldRetryOnConflict: false }); // select state
+    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   });
 
   it("should not try to reach state with all actions being saved when saving is triggered by a timeout", () => {
@@ -276,7 +396,7 @@ describe("Save Saga", () => {
     ];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkReady));
+    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
     saga.next();
     saga.next(); // select state
 
@@ -287,9 +407,39 @@ describe("Save Saga", () => {
       timeout: "a placeholder",
     }); // put setSaveBusyAction
 
-    saga.next(saveQueue); // call sendSaveRequestToServer
+    const synchronizeAnnotationWithBackendCallEffect = saga.next({ shouldRetryOnConflict: false }); // calling synchronizeAnnotationWithBackend
+    const enforceEmptySaveQueue = false;
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendCallEffect,
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+    );
+    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
+      synchronizeAnnotationWithBackendCallEffect.value.payload;
 
-    expectValueDeepEqual(expect, saga.next([]), put(setSaveBusyAction(false)));
+    // Start synchronizeAnnotationWithBackend sub saga
+    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
+    synchronizeAnnotationWithBackendSaga.next();
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
+    synchronizeAnnotationWithBackendSaga.next(saveQueue.length); // select save queue length
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next(saveQueue),
+      call(sendSaveRequestToServer, true),
+    );
+
+    expectValueDeepEqual(
+      expect,
+      synchronizeAnnotationWithBackendSaga.next({
+        numberOfSentItems: saveQueue.length,
+        hadConflict: false,
+      }),
+      put(setSaveBusyAction(false)),
+    );
+    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
+
+    saga.next([]);
   });
 
   it("should remove the correct update actions", () => {
@@ -300,7 +450,7 @@ describe("Save Saga", () => {
       ],
       TIMESTAMP,
     );
-    const saga = sendSaveRequestToServer();
+    const saga = sendSaveRequestToServer(true);
 
     saga.next();
     saga.next(saveQueue);
@@ -322,7 +472,7 @@ describe("Save Saga", () => {
       ],
       TIMESTAMP,
     );
-    const saga = sendSaveRequestToServer();
+    const saga = sendSaveRequestToServer(true);
 
     saga.next();
     saga.next(saveQueue);
@@ -348,7 +498,7 @@ describe("Save Saga", () => {
       ],
       TIMESTAMP,
     );
-    const saga = sendSaveRequestToServer();
+    const saga = sendSaveRequestToServer(true);
 
     saga.next();
     saga.next(saveQueue);

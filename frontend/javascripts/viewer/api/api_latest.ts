@@ -92,7 +92,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { restartSagaAction, wkInitializedAction } from "viewer/model/actions/actions";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
@@ -103,7 +103,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
-import { disableSavingAction, discardSaveQueuesAction } from "viewer/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueueAction } from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -1162,8 +1162,8 @@ class TracingApi {
       false,
       version,
     );
-    Store.dispatch(discardSaveQueuesAction());
-    Store.dispatch(wkReadyAction());
+    Store.dispatch(discardSaveQueueAction());
+    Store.dispatch(wkInitializedAction());
     UrlManager.updateUnthrottled();
   }
 
@@ -1737,7 +1737,9 @@ class DataApi {
       showLoadingIndicator,
       isMergerModeMapping,
     };
-    Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
+    Store.dispatch(
+      setMappingAction(layerName, "<custom mapping>", "JSON", false, mappingProperties),
+    );
   }
 
   /**
@@ -1806,7 +1808,7 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
+    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType, false));
   }
 
   /**
@@ -2258,7 +2260,7 @@ class DataApi {
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.restrictions.allowUpdate;
+    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates

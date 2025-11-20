@@ -65,7 +65,7 @@ import {
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getSomeTracing, getTaskBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
-import { sceneControllerReadyAction } from "viewer/model/actions/actions";
+import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
@@ -794,7 +794,7 @@ export function initializeSceneController() {
   const controller = new SceneController();
   setSceneController(controller);
   controller.initialize();
-  Store.dispatch(sceneControllerReadyAction());
+  Store.dispatch(sceneControllerInitializedAction());
 }
 
 // Please use scene_controller_provider to get a reference to SceneController. This avoids

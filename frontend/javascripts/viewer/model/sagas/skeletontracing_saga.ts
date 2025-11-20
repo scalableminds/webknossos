@@ -72,6 +72,7 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
+  updateActiveTree,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -88,7 +89,7 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
@@ -257,17 +258,17 @@ export function* watchTreeNames(): Saga<void> {
 }
 
 export function* watchAgglomerateLoading(): Saga<void> {
-  // Buffer actions since they might be dispatched before WK_READY
+  // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
 }
 export function* watchConnectomeAgglomerateLoading(): Saga<void> {
-  // Buffer actions since they might be dispatched before WK_READY
+  // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
   // The order of these two actions is not guaranteed, but they both need to be dispatched
-  yield* all([take("INITIALIZE_CONNECTOME_TRACING"), take("WK_READY")]);
+  yield* all([take("INITIALIZE_CONNECTOME_TRACING"), take("WK_INITIALIZED")]);
   yield* takeEvery(channel, loadConnectomeAgglomerateSkeletonWithId);
   yield* takeEvery(
     "REMOVE_CONNECTOME_AGGLOMERATE_SKELETON",
@@ -307,6 +308,7 @@ function* getAgglomerateSkeletonTracing(
         annotation.tracingStore.url,
         editableMapping.tracingId,
         agglomerateId,
+        annotation.version,
       );
     }
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
@@ -379,7 +381,7 @@ function handleAgglomerateLoadingError(
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
@@ -490,7 +492,7 @@ function* removeConnectomeAgglomerateSkeletonWithId(
 
 export function* watchSkeletonTracingAsync(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
-  yield* takeEvery("WK_READY", watchTreeNames);
+  yield* takeEvery("WK_INITIALIZED", watchTreeNames);
   yield* takeEvery(
     [
       "SET_ACTIVE_TREE",
@@ -669,6 +671,10 @@ export function* diffSkeletonTracing(
     );
   }
 
+  if (prevSkeletonTracing.activeTreeId !== skeletonTracing.activeTreeId) {
+    yield updateActiveTree(skeletonTracing);
+  }
+  // Active node id should always have precedence over the tree id, thus set it last.
   if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
     yield updateActiveNode(skeletonTracing);
   }

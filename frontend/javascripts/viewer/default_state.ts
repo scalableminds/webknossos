@@ -26,7 +26,6 @@ const initialAnnotationInfo = {
   restrictions: {
     branchPointsAllowed: false,
     allowUpdate: false,
-    initialAllowUpdate: false,
     allowSave: false,
     allowFinish: false,
     allowAccess: true,
@@ -179,12 +178,12 @@ const defaultState: WebknossosState = {
     isLockedByOwner: false,
     contributors: [],
     othersMayEdit: false,
-    blockedByUser: null,
     annotationLayers: [],
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},
     organization: "",
+    isUpdatingCurrentlyAllowed: initialAnnotationInfo.restrictions.allowUpdate,
   },
   save: {
     queue: [],
@@ -193,6 +192,14 @@ const defaultState: WebknossosState = {
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,
+    },
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null },
+    rebaseRelevantServerAnnotationState: {
+      annotationDescription: "",
+      annotationVersion: 1,
+      skeleton: undefined,
+      activeMappingByLayer: {},
+      isRebasing: false,
     },
   },
   flycam: {
@@ -260,8 +267,10 @@ const defaultState: WebknossosState = {
     theme: getSystemColorTheme(),
     busyBlockingInfo: {
       isBusy: false,
+      allowedSagas: [],
     },
-    isWkReady: false,
+    isWkInitialized: false,
+    isUiReady: false,
     quickSelectState: "inactive",
     areQuickSelectSettingsOpen: false,
     measurementToolInfo: {

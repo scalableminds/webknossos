@@ -19,13 +19,13 @@ import MappingSaga from "viewer/model/sagas/volume/mapping_saga";
 import ProofreadSaga from "viewer/model/sagas/volume/proofread_saga";
 import VolumetracingSagas from "viewer/model/sagas/volumetracing_saga";
 import type { EscalateErrorAction } from "../actions/actions";
-import { setIsWkReadyAction } from "../actions/ui_actions";
+import { setIsWkInitializedAction } from "../actions/ui_actions";
 import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
 import manyBucketUpdatesWarningSaga from "./many_bucket_updates_warning_saga";
 import adHocMeshSaga from "./meshes/ad_hoc_mesh_saga";
 import commonMeshSaga, { handleAdditionalCoordinateUpdate } from "./meshes/common_mesh_saga";
 import precomputedMeshSaga from "./meshes/precomputed_mesh_saga";
-import { toggleErrorHighlighting } from "./saving/save_queue_draining";
+import { toggleErrorHighlighting } from "./saving/save_queue_draining_saga";
 import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
@@ -40,7 +40,7 @@ export default function* rootSaga(): Saga<void> {
     });
     yield* cancel(task);
     if (restart) {
-      yield* put(setIsWkReadyAction(false));
+      yield* put(setIsWkInitializedAction(false));
     }
     if (doCancel) {
       // No restart, leave the while-true-loop

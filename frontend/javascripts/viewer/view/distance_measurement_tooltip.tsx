@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -46,10 +47,14 @@ export default function DistanceMeasurementTooltip() {
   const flycamRotation = useWkSelector((state) => getRotationInRadian(state.flycam));
   const zoomStep = useWkSelector((state) => state.flycam.zoomStep);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
-  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
-  const planeRatio = useWkSelector((state) =>
-    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
-  );
+  const transformedVoxelSize = useWkSelector((state) => {
+    return getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+  });
+  const untransformedVoxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const planeRatio = getBaseVoxelFactorsInUnit(transformedVoxelSize);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
@@ -105,15 +110,15 @@ export default function DistanceMeasurementTooltip() {
     const { lineMeasurementGeometry } = getSceneController();
     valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToLength(
-      lineMeasurementGeometry.getDistance(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
+      lineMeasurementGeometry.getDistance(untransformedVoxelSize.factor),
+      LongUnitToShortUnitMap[untransformedVoxelSize.unit],
     );
   } else if (activeTool === AnnotationTool.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
     valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToArea(
-      areaMeasurementGeometry.getArea(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
+      areaMeasurementGeometry.getArea(untransformedVoxelSize.factor),
+      LongUnitToShortUnitMap[untransformedVoxelSize.unit],
     );
   }
 

@@ -30,6 +30,7 @@ import { computeBvhAsync } from "libs/compute_bvh_async";
 import Constants from "viewer/constants";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
+// import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -238,6 +239,12 @@ export default class SegmentMeshController {
         layerLODGroup.addLODMesh(targetGroup, lod);
       }
       targetGroup.segmentId = segmentId;
+      // const state = Store.getState();
+      // const transformedVoxelSize = getTransformedVoxelSize(
+      //   state.dataset,
+      //   state.datasetConfiguration.nativelyRenderedLayerName,
+      // );
+      // const dsScaleFactor = transformedVoxelSize.factor;
       const dsScaleFactor = Store.getState().dataset.dataSource.scale.factor;
       // If the mesh was calculated on a different magnification level,
       // the backend sends the scale factor of this magnification.
@@ -251,6 +258,7 @@ export default class SegmentMeshController {
         scale[1] / dsScaleFactor[1],
         scale[2] / dsScaleFactor[2],
       ];
+      // todop? does this need to be dynamic?
       targetGroup.scale.copy(new ThreeVector3(...adaptedScale));
     }
     const meshChunk = this.constructMesh(segmentId, layerName, geometry, opacity, isMerged);

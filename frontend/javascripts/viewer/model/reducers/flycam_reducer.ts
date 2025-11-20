@@ -381,7 +381,9 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         );
         deltaInWorld.set(...vector).applyMatrix4(flycamRotationMatrix);
         const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
+        const scaleFactor = getBaseVoxelFactorsInUnit(
+          getTransformedVoxelSize(dataset, state.datasetConfiguration.nativelyRenderedLayerName),
+        );
         let deltaInWorldZoomed = V3.multiply(
           V3.scale(deltaInWorld.toArray(), zoomFactor),
           scaleFactor,

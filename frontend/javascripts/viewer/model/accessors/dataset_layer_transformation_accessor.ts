@@ -177,11 +177,8 @@ function _getOriginalTransformsForLayerOrNull(
   if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
-
-  return combineCoordinateTransformations(
-    coordinateTransformations,
-    dataset.dataSource.scale.factor,
-  );
+  const untransformedVoxelSize = dataset.dataSource.scale;
+  return combineCoordinateTransformations(coordinateTransformations, untransformedVoxelSize.factor);
 }
 
 export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(

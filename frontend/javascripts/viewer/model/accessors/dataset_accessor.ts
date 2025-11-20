@@ -30,9 +30,9 @@ import type {
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
+import { transformPointUnscaled } from "../helpers/transformation_helpers";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsForSkeletonLayer } from "./dataset_layer_transformation_accessor";
-import { transformPointUnscaled } from "../helpers/transformation_helpers";
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
   return new MagInfo(magnifications.map((magObj) => magObj.mag));
@@ -278,20 +278,20 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
 }
 export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const scaleFactor = dataset.dataSource.scale.factor;
+  const unscaledScaleFactor = dataset.dataSource.scale.factor;
   const topLeft = extentInVoxel.topLeft.map(
-    (val, index) => val * scaleFactor[index],
+    (val, index) => val * unscaledScaleFactor[index],
   ) as any as Vector3;
   const extent = {
     topLeft,
-    width: extentInVoxel.width * scaleFactor[0],
-    height: extentInVoxel.height * scaleFactor[1],
-    depth: extentInVoxel.depth * scaleFactor[2],
+    width: extentInVoxel.width * unscaledScaleFactor[0],
+    height: extentInVoxel.height * unscaledScaleFactor[1],
+    depth: extentInVoxel.depth * unscaledScaleFactor[2],
   };
   return extent;
 }
 
-export function getTransformedVoxelSize(
+function _getTransformedVoxelSize(
   dataset: APIDataset,
   nativelyRenderedLayerName: string | null,
   ignoreTransformation: boolean = false,
@@ -320,6 +320,7 @@ export function getTransformedVoxelSize(
     unit: scale.unit,
   };
 }
+export const getTransformedVoxelSize = memoizeOne(_getTransformedVoxelSize);
 
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,

@@ -18,7 +18,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import Constants from "viewer/constants";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { getMappingInfo, getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type {
@@ -1094,7 +1094,12 @@ function checkLineIntersection(bentMesh: Mesh, pointAVec3: Vector3, pointBVec3: 
   if (!geometry.boundsTree) {
     geometry.computeBoundsTree();
   }
-  const scale = Store.getState().dataset.dataSource.scale.factor;
+  const state = Store.getState();
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const scale = transformedVoxelSize.factor;
   const pointA = new ThreeVector3(...V3.scale3(pointAVec3, scale));
   const pointB = new ThreeVector3(...V3.scale3(pointBVec3, scale));
 

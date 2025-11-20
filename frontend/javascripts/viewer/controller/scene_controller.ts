@@ -69,7 +69,7 @@ import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { transformPointUnscaled, type Transform } from "viewer/model/helpers/transformation_helpers";
+import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { Model } from "viewer/singletons";
 import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -154,10 +154,11 @@ class SceneController {
     // scene.scale does not have an effect.
     // The dimension(s) with the highest mag will not be distorted.
     const state = Store.getState();
-    const transformedVoxelSize = getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName);
-    this.rootGroup.scale.copy(
-      new ThreeVector3(...transformedVoxelSize.factor),
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
     );
+    this.rootGroup.scale.copy(new ThreeVector3(...transformedVoxelSize.factor));
     this.setupDebuggingMethods();
   }
 
@@ -276,11 +277,12 @@ class SceneController {
     }
     // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
     // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
-    const transformedVoxelSize = getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName);
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     this.planeGroup.scale.copy(
-      new ThreeVector3(1, 1, 1).divide(
-        new ThreeVector3(...transformedVoxelSize.factor),
-      ),
+      new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
     );
 
     this.rootNode = new Group().add(
@@ -587,14 +589,14 @@ class SceneController {
     const transformForBBoxes =
       tracingStoringUserBBoxes.type === "volume"
         ? getTransformsForLayer(
-          state.dataset,
-          getLayerByName(state.dataset, tracingStoringUserBBoxes.tracingId),
-          state.datasetConfiguration.nativelyRenderedLayerName,
-        )
+            state.dataset,
+            getLayerByName(state.dataset, tracingStoringUserBBoxes.tracingId),
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          )
         : getTransformsForSkeletonLayer(
-          state.dataset,
-          state.datasetConfiguration.nativelyRenderedLayerName,
-        );
+            state.dataset,
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          );
     this.applyTransformToGroup(transformForBBoxes, this.userBoundingBoxGroup);
 
     const skeletonTransforms = getTransformsForSkeletonLayer(
@@ -602,11 +604,7 @@ class SceneController {
       state.datasetConfiguration.nativelyRenderedLayerName,
     );
 
-    this.applyTransformToGroup(
-      skeletonTransforms,
-      this.bucketDebbugingGroup,
-    );
-
+    this.applyTransformToGroup(skeletonTransforms, this.bucketDebbugingGroup);
 
     const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
     if (visibleSegmentationLayers.length === 0) {
@@ -677,15 +675,17 @@ class SceneController {
     this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
     this.rootNode.add(this.layerBoundingBoxGroup);
 
-    const voxelSize = state.dataset.dataSource.scale;
-    const transformedVoxelSize = getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName);
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     const transformedScale = new ThreeVector3(...transformedVoxelSize.factor);
 
-    this.rootGroup.scale.copy(
-      transformedScale,
-    );
+    this.rootGroup.scale.copy(transformedScale);
     // todop
-    this.planeGroup.scale.copy(new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)));
+    this.planeGroup.scale.copy(
+      new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
+    );
   }
 
   highlightUserBoundingBox(bboxId: number | null | undefined): void {

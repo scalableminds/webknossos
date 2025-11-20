@@ -7,7 +7,10 @@ import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
 import { OrthoBaseRotations, OrthoViewToNumber, OrthoViews } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
+import {
+  getEnabledColorLayers,
+  getTransformedVoxelSize,
+} from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
   getFlycamRotationWithAppendedRotation,
@@ -203,7 +206,11 @@ export function moveNode(
   const vectorRotated = movementVector.set(...vector).applyMatrix4(flycamRotationMatrix);
 
   const zoomFactor = state.flycam.zoomStep;
-  const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const scaleFactor = getBaseVoxelFactorsInUnit(transformedVoxelSize);
 
   const op = (val: number) => {
     if (useFloat || isFlycamRotated) {

@@ -17,6 +17,7 @@ import {
 } from "viewer/model/helpers/position_converter";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
+import { getTransformedVoxelSize } from "../accessors/dataset_accessor";
 import { invertAndTranspose } from "../accessors/dataset_layer_transformation_accessor";
 import {
   type Transform,
@@ -392,9 +393,13 @@ class SectionLabeler {
     const { brushSize } = state.userConfiguration;
     const radius = Math.round(brushSize / 2);
     // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     const scale = this.get2DCoordinate(
       scaleGlobalPositionWithMagnificationFloat(
-        getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+        getBaseVoxelFactorsInUnit(transformedVoxelSize),
         this.activeMag,
       ),
     );
@@ -470,9 +475,13 @@ class SectionLabeler {
       Math.floor(floatingCoord2d[1] - height / 2),
     ];
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] =
-      scale ?? this.get2DCoordinate(getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale));
+      scale ?? this.get2DCoordinate(getBaseVoxelFactorsInUnit(transformedVoxelSize));
 
     const setMap = (x: number, y: number) => {
       buffer2D.setValue(x, y, 1);
@@ -697,9 +706,12 @@ export class TransformedSectionLabeler {
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
-    let scale = this.adaptScaleFn(
-      getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
+    const state = Store.getState();
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
     );
+    let scale = this.adaptScaleFn(getBaseVoxelFactorsInUnit(transformedVoxelSize));
 
     return this.base.getCircleVoxelBuffer2D(position, scale);
   }

@@ -204,16 +204,24 @@ export const _getDummyFlycamMatrix = memoizeOne((voxelSize: Vector3) => {
 });
 
 export function getMoveOffset(state: WebknossosState, timeFactor: number) {
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   return (
     (state.userConfiguration.moveValue * timeFactor) /
-    getBaseVoxelInUnit(state.dataset.dataSource.scale.factor) /
+    getBaseVoxelInUnit(transformedVoxelSize.factor) /
     constants.FPS
   );
 }
 
 export function getMoveOffset3d(state: WebknossosState, timeFactor: number) {
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   const { moveValue3d } = state.userConfiguration;
-  const baseVoxel = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
+  const baseVoxel = getBaseVoxelInUnit(transformedVoxelSize.factor);
   return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
 }
 
@@ -608,13 +616,31 @@ function getAreas(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  voxelSize: VoxelSize,
+  transformedVoxelSize: VoxelSize,
 ): OrthoViewMap<Area> {
   // @ts-expect-error ts-migrate(2741) FIXME: Property 'TDView' is missing in type '{ PLANE_XY: ... Remove this comment to see the full error message
   return {
-    [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XY),
-    [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XZ),
-    [OrthoViews.PLANE_YZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_YZ),
+    [OrthoViews.PLANE_XY]: getArea(
+      rects,
+      position,
+      zoomStep,
+      transformedVoxelSize,
+      OrthoViews.PLANE_XY,
+    ),
+    [OrthoViews.PLANE_XZ]: getArea(
+      rects,
+      position,
+      zoomStep,
+      transformedVoxelSize,
+      OrthoViews.PLANE_XZ,
+    ),
+    [OrthoViews.PLANE_YZ]: getArea(
+      rects,
+      position,
+      zoomStep,
+      transformedVoxelSize,
+      OrthoViews.PLANE_YZ,
+    ),
   };
 }
 
@@ -622,11 +648,11 @@ export function getAreasFromState(state: WebknossosState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
   const rects = getViewportRects(state);
   const { zoomStep } = state.flycam;
-  const voxelSize = getTransformedVoxelSize(
+  const maybeTransformedVoxelSize = getTransformedVoxelSize(
     state.dataset,
     state.datasetConfiguration.nativelyRenderedLayerName,
   );
-  return getAreas(rects, position, zoomStep, voxelSize);
+  return getAreas(rects, position, zoomStep, maybeTransformedVoxelSize);
 }
 
 type UnrenderableLayersInfos = {

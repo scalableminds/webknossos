@@ -22,6 +22,7 @@ import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { Flycam, WebknossosState } from "viewer/store";
 import Dimensions from "../dimensions";
+import { getTransformedVoxelSize } from "./dataset_accessor";
 
 export function getTDViewportSize(state: WebknossosState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
@@ -30,9 +31,14 @@ export function getTDViewportSize(state: WebknossosState): [number, number] {
 export function getTDViewZoom(state: WebknossosState) {
   const { width } = getInputCatcherRect(state, OrthoViews.TDView);
   const [viewplaneWidth] = getTDViewportSize(state);
-  const { factor } = state.dataset.dataSource.scale;
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const dsScaleFactor = transformedVoxelSize.factor;
+
   // We only need to calculate scaleX as scaleY would have the same value.
-  const scaleX = viewplaneWidth / (width * factor[0]);
+  const scaleX = viewplaneWidth / (width * dsScaleFactor[0]);
   return scaleX;
 }
 export function getInputCatcherRect(state: WebknossosState, viewport: Viewport): Rect {
@@ -110,7 +116,12 @@ function _calculateMaybeGlobalPos(
   const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+
+  const planeRatio = getBaseVoxelFactorsInUnit(transformedVoxelSize);
   const { width, height } = getInputCatcherRect(state, planeId);
   // Subtract clickPos from only half of the viewport extent as
   // the center of the viewport / the flycam position is used as a reference point.
@@ -207,7 +218,11 @@ function _calculateMaybePlaneScreenPos(
 
   const flycamPosition = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const planeRatio = getBaseVoxelFactorsInUnit(transformedVoxelSize);
 
   const positionInViewportPerspective = calculateInViewportPos(
     globalPosition,
@@ -249,7 +264,11 @@ function _calculateMaybeGlobalDelta(
 ): Vector3 | null | undefined {
   let position: Vector3;
   planeId = planeId || state.viewModeData.plane.activeViewport;
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const planeRatio = getBaseVoxelFactorsInUnit(transformedVoxelSize);
   const diffX = delta.x * state.flycam.zoomStep;
   const diffY = delta.y * state.flycam.zoomStep;
 
@@ -335,7 +354,9 @@ function _calculateGlobalDelta(
 }
 
 export function getDisplayedDataExtentInPlaneMode(state: WebknossosState) {
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  // Use untransformed scale, because bounding boxes are stored in untransformed space
+  const untransformedVoxelSize = state.dataset.dataSource.scale;
+  const planeRatio = getBaseVoxelFactorsInUnit(untransformedVoxelSize);
   const curGlobalCenterPos = getPosition(state.flycam);
   const extents = OrthoViewValuesWithoutTDView.map((orthoView) =>
     getPlaneExtentInVoxelFromStore(state, state.flycam.zoomStep, orthoView),
@@ -343,8 +364,7 @@ export function getDisplayedDataExtentInPlaneMode(state: WebknossosState) {
   const [xyExtent, yzExtent, xzExtent] = extents;
   const minExtent = 1;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'val1' implicitly has an 'any' type.
-  const getMinExtent = (val1, val2) =>
+  const getMinExtent = (val1: number, val2: number) =>
     _.min([val1, val2].filter((v) => v >= minExtent)) || minExtent;
 
   const xMinExtent = getMinExtent(xyExtent[0], xzExtent[0]) * planeRatio[0];

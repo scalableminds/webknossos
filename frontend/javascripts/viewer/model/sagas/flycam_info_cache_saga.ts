@@ -105,11 +105,17 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
           .factor,
       );
 
+      const transformedVoxelSize = getTransformedVoxelSize(
+        state.dataset,
+        state.datasetConfiguration.nativelyRenderedLayerName,
+      );
+      const dsScaleFactor = transformedVoxelSize.factor;
+
       const zoomLevels = yield* call(
         getZoomLevelsFn,
         viewMode,
         state.datasetConfiguration.loadingStrategy,
-        state.dataset.dataSource.scale.factor,
+        dsScaleFactor,
         getMagInfo(layer.mags).getDenseMags(),
         getViewportRects(state),
         Math.min(

@@ -4,6 +4,7 @@ import _ from "lodash";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,
@@ -169,7 +170,11 @@ export function getClosestHoveredBoundingBox(
 
   const { userBoundingBoxes } = getSomeTracing(state.annotation);
   const indices = Dimension.getIndices(plane);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const planeRatio = getBaseVoxelFactorsInUnit(transformedVoxelSize);
   const thirdDim = indices[2];
   const zoomedMaxDistanceToSelection = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
   let currentNearestDistance = zoomedMaxDistanceToSelection;

@@ -1160,7 +1160,6 @@ class PlaneMaterialFactory {
       this.getLayersToRender(maximumLayerCountToRender);
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = state;
     // const voxelSizeFactor = dataset.dataSource.scale.factor;
     // const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const { interpolation } = state.datasetConfiguration;

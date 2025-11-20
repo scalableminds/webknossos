@@ -4,6 +4,7 @@ import { connect } from "react-redux";
 import type { APIDataset } from "types/api_types";
 import type { OrthoView } from "viewer/constants";
 import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "viewer/constants";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { getTDViewZoom, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
@@ -16,6 +17,7 @@ type OwnProps = {
 };
 type StateProps = {
   dataset: APIDataset;
+  nativelyRenderedLayerName: string | null;
   zoomValue: number;
   viewportWidthInPixels: number;
   viewportHeightInPixels: number;
@@ -26,8 +28,10 @@ function convertPixelsToUnit(
   lengthInPixel: number,
   zoomValue: number,
   dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
 ): number {
-  return lengthInPixel * zoomValue * getBaseVoxelInUnit(dataset.dataSource.scale.factor);
+  const transformedVoxelSize = getTransformedVoxelSize(dataset, nativelyRenderedLayerName);
+  return lengthInPixel * zoomValue * getBaseVoxelInUnit(transformedVoxelSize.factor);
 }
 
 const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
@@ -52,10 +56,26 @@ const idealScalebarWidthFactor = 0.3;
 const maxScaleBarWidthFactor = 0.45;
 const minWidthToFillScalebar = 130;
 
-function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
+function Scalebar({
+  zoomValue,
+  dataset,
+  viewportWidthInPixels,
+  viewportHeightInPixels,
+  nativelyRenderedLayerName,
+}: Props) {
   const voxelSizeUnit = dataset.dataSource.scale.unit;
-  const viewportWidthInUnit = convertPixelsToUnit(viewportWidthInPixels, zoomValue, dataset);
-  const viewportHeightInUnit = convertPixelsToUnit(viewportHeightInPixels, zoomValue, dataset);
+  const viewportWidthInUnit = convertPixelsToUnit(
+    viewportWidthInPixels,
+    zoomValue,
+    dataset,
+    nativelyRenderedLayerName,
+  );
+  const viewportHeightInUnit = convertPixelsToUnit(
+    viewportHeightInPixels,
+    zoomValue,
+    dataset,
+    nativelyRenderedLayerName,
+  );
   const idealWidthInUnit = viewportWidthInUnit * idealScalebarWidthFactor;
   const scalebarWidthInUnit = getBestScalebarAnchorInNm(idealWidthInUnit);
   const scaleBarWidthFactor = Math.min(
@@ -126,6 +146,7 @@ const mapStateToProps = (state: WebknossosState, ownProps: OwnProps): StateProps
   return {
     zoomValue,
     dataset: state.dataset,
+    nativelyRenderedLayerName: state.datasetConfiguration.nativelyRenderedLayerName,
     viewportWidthInPixels: width,
     viewportHeightInPixels: height,
   };

@@ -91,7 +91,7 @@ type OwnProps = {
   annotation?: StoreAnnotation;
 };
 type StateProps = {
-  voxelSize: VoxelSize;
+  transformedVoxelSize: VoxelSize;
   activeTool: AnnotationTool;
 };
 type Props = OwnProps & StateProps;
@@ -109,8 +109,8 @@ class TDController extends React.PureComponent<Props> {
   isStarted: boolean = false;
 
   componentDidMount() {
-    const { dataset, flycam } = Store.getState();
-    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
+    const { flycam } = Store.getState();
+    this.oldUnitPos = voxelToUnit(this.props.transformedVoxelSize, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -160,7 +160,7 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const { flycam } = Store.getState();
 
-    const pos = voxelToUnit(this.props.voxelSize, getPosition(flycam));
+    const pos = voxelToUnit(this.props.transformedVoxelSize, getPosition(flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
@@ -240,7 +240,7 @@ class TDController extends React.PureComponent<Props> {
         }
         const { hitPosition } = intersection;
 
-        const unscaledPosition = V3.divide3(hitPosition, this.props.voxelSize.factor);
+        const unscaledPosition = V3.divide3(hitPosition, this.props.transformedVoxelSize.factor);
 
         const state = Store.getState();
         const isMultiCutToolActive = state.userConfiguration.isMultiSplitActive;
@@ -327,7 +327,7 @@ class TDController extends React.PureComponent<Props> {
     const { flycam } = Store.getState();
     const { controls } = this;
     position = position || getPosition(flycam);
-    const nmPosition = voxelToUnit(this.props.voxelSize, position);
+    const nmPosition = voxelToUnit(this.props.transformedVoxelSize, position);
 
     if (controls != null) {
       controls.target.set(...nmPosition);
@@ -399,7 +399,7 @@ class TDController extends React.PureComponent<Props> {
 
 export function mapStateToProps(state: WebknossosState): StateProps {
   return {
-    voxelSize: getTransformedVoxelSize(
+    transformedVoxelSize: getTransformedVoxelSize(
       state.dataset,
       state.datasetConfiguration.nativelyRenderedLayerName,
     ),

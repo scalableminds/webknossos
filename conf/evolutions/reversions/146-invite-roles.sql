@@ -4,8 +4,8 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 146 
 
 DROP VIEW webknossos.invites_;
 
-ALTER TABLE webknossos.invites DROP COLUMN isAdmin BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE webknossos.invites DROP COLUMN isDatasetManager BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE webknossos.invites DROP COLUMN isAdmin;
+ALTER TABLE webknossos.invites DROP COLUMN isDatasetManager;
 
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 

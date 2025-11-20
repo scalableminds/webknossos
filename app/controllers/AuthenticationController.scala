@@ -463,7 +463,7 @@ class AuthenticationController @Inject()(
   private def validateInvitePermissions(requestingUser: User, inviteParameters: InviteParameters): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(inviteParameters.teamMemberships)(teamMembership =>
-        userService.isTeamManagerOrAdminOf(requestingUser, teamMembership.teamId)) ?~> "Can only send invites with team roles for teams you manage."
+        Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, teamMembership.teamId))) ?~> "Can only send invites with team roles for teams you manage."
       _ <- Fox.runIf(inviteParameters.isDatasetManager || inviteParameters.isAdmin)(Fox.fromBool(
         requestingUser.isAdmin)) ?~> "Only admins can send invites that promote new users to admin or dataset manager."
     } yield ()

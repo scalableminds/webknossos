@@ -358,7 +358,6 @@ export function InviteUsersModal({
           }}
           onChange={handleInviteesStringChange}
           placeholder={"jane@example.com\njoe@example.com"}
-          defaultValue={inviteesString}
           value={inviteesString}
         />
         <PermissionsAndTeamsComponent

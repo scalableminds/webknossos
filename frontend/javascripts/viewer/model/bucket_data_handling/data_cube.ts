@@ -40,6 +40,7 @@ import {
 } from "viewer/model/volumetracing/section_labeling";
 import type { Mapping } from "viewer/store";
 import Store from "viewer/store";
+import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
 
@@ -1094,7 +1095,12 @@ function checkLineIntersection(bentMesh: Mesh, pointAVec3: Vector3, pointBVec3: 
   if (!geometry.boundsTree) {
     geometry.computeBoundsTree();
   }
-  const scale = Store.getState().dataset.dataSource.scale.factor;
+  const state = Store.getState();
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const scale = transformedVoxelSize.factor;
   const pointA = new ThreeVector3(...V3.scale3(pointAVec3, scale));
   const pointB = new ThreeVector3(...V3.scale3(pointBVec3, scale));
 

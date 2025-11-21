@@ -275,18 +275,19 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
 }
 export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const scaleFactor = dataset.dataSource.scale.factor;
+  const unscaledScaleFactor = dataset.dataSource.scale.factor;
   const topLeft = extentInVoxel.topLeft.map(
-    (val, index) => val * scaleFactor[index],
+    (val, index) => val * unscaledScaleFactor[index],
   ) as any as Vector3;
   const extent = {
     topLeft,
-    width: extentInVoxel.width * scaleFactor[0],
-    height: extentInVoxel.height * scaleFactor[1],
-    depth: extentInVoxel.depth * scaleFactor[2],
+    width: extentInVoxel.width * unscaledScaleFactor[0],
+    height: extentInVoxel.height * unscaledScaleFactor[1],
+    depth: extentInVoxel.depth * unscaledScaleFactor[2],
   };
   return extent;
 }
+
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,
   inVoxel: boolean = true,

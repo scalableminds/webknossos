@@ -16,6 +16,7 @@ import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -181,7 +182,11 @@ export function setDirectionReducer(state: WebknossosState, direction: Vector3) 
 export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
-    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale.factor);
+    let matrix = resetMatrix(
+      state.flycam.currentMatrix,
+      getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)
+        .factor,
+    );
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
@@ -206,7 +211,13 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       return update(state, {
         flycam: {
           currentMatrix: {
-            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale.factor),
+            $set: resetMatrix(
+              state.flycam.currentMatrix,
+              getTransformedVoxelSize(
+                state.dataset,
+                state.datasetConfiguration.nativelyRenderedLayerName,
+              ).factor,
+            ),
           },
           rotation: {
             $set: [0, 0, 0],
@@ -300,6 +311,13 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       return setDirectionReducer(state, action.direction);
     }
 
+    case "UPDATE_DATASET_SETTING": {
+      if (action.propertyName === "nativelyRenderedLayerName") {
+        return setRotationReducer(state, state.flycam.rotation);
+      }
+      return state;
+    }
+
     case "MOVE_FLYCAM": {
       if (action.vector.includes(Number.NaN)) {
         // if the action vector is invalid, do not update
@@ -361,7 +379,9 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         );
         deltaInWorld.set(...vector).applyMatrix4(flycamRotationMatrix);
         const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
+        const scaleFactor = getBaseVoxelFactorsInUnit(
+          getTransformedVoxelSize(dataset, state.datasetConfiguration.nativelyRenderedLayerName),
+        );
         let deltaInWorldZoomed = V3.multiply(
           V3.scale(deltaInWorld.toArray(), zoomFactor),
           scaleFactor,

@@ -53,6 +53,7 @@ import {
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getTransformedVoxelSize,
   getTransformsForLayer,
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,
@@ -92,7 +93,9 @@ class SceneController {
   private isPlaneVisible: OrthoViewMap<boolean>;
   private clippingDistanceInUnit: number;
   private datasetBoundingBox!: Cube;
+  private planeGroup!: Group;
   private userBoundingBoxGroup!: Group;
+  private bucketDebbugingGroup!: Group;
   private layerBoundingBoxGroup!: Group;
   private userBoundingBoxes!: Array<Cube>;
   private layerBoundingBoxes!: { [layerName: string]: Cube };
@@ -150,9 +153,12 @@ class SceneController {
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
     // The dimension(s) with the highest mag will not be distorted.
-    this.rootGroup.scale.copy(
-      new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
+    const state = Store.getState();
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
     );
+    this.rootGroup.scale.copy(new ThreeVector3(...transformedVoxelSize.factor));
     this.setupDebuggingMethods();
   }
 
@@ -181,7 +187,7 @@ class SceneController {
       cube.position.x = position[0] + bucketSize[0] / 2;
       cube.position.y = position[1] + bucketSize[1] / 2;
       cube.position.z = position[2] + bucketSize[2] / 2;
-      this.rootNode.add(cube);
+      this.bucketDebbugingGroup.add(cube);
       return cube;
     };
 
@@ -199,7 +205,7 @@ class SceneController {
       cube.position.x = position[0] + cubeLength[0] / 2;
       cube.position.y = position[1] + cubeLength[1] / 2;
       cube.position.z = position[2] + cubeLength[2] / 2;
-      this.rootNode.add(cube);
+      this.bucketDebbugingGroup.add(cube);
       return cube;
     };
 
@@ -216,7 +222,7 @@ class SceneController {
       points.push(new ThreeVector3(...b));
       const geometry = new BufferGeometry().setFromPoints(points);
       const line = new Line(geometry, material);
-      this.rootNode.add(line);
+      this.bucketDebbugingGroup.add(line);
       renderedLines.push(line);
     };
 
@@ -224,19 +230,20 @@ class SceneController {
     // @ts-ignore
     window.removeLines = () => {
       for (const line of renderedLines) {
-        this.rootNode.remove(line);
+        this.bucketDebbugingGroup.remove(line);
       }
 
       renderedLines = [];
     };
 
     // @ts-ignore
-    window.removeBucketMesh = (mesh: LineSegments) => this.rootNode.remove(mesh);
+    window.removeBucketMesh = (mesh: LineSegments) => this.bucketDebbugingGroup.remove(mesh);
   }
 
   createMeshes(): void {
     this.userBoundingBoxes = [];
     this.userBoundingBoxGroup = new Group();
+    this.bucketDebbugingGroup = new Group();
     this.layerBoundingBoxGroup = new Group();
     this.annotationToolsGeometryGroup = new Group();
     const state = Store.getState();
@@ -264,20 +271,23 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
-    const planeGroup = new Group();
+    this.planeGroup = new Group();
     for (const plane of _.values(this.planes)) {
-      planeGroup.add(...plane.getMeshes());
+      this.planeGroup.add(...plane.getMeshes());
     }
     // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
     // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
-    planeGroup.scale.copy(
-      new ThreeVector3(1, 1, 1).divide(
-        new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
-      ),
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    this.planeGroup.scale.copy(
+      new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
     );
 
     this.rootNode = new Group().add(
       this.userBoundingBoxGroup,
+      this.bucketDebbugingGroup,
       this.layerBoundingBoxGroup,
       this.annotationToolsGeometryGroup.add(
         ...this.contour.getMeshes(),
@@ -286,7 +296,7 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
-      planeGroup,
+      this.planeGroup,
     );
 
     if (state.annotation.skeleton != null) {
@@ -588,6 +598,14 @@ class SceneController {
             state.datasetConfiguration.nativelyRenderedLayerName,
           );
     this.applyTransformToGroup(transformForBBoxes, this.userBoundingBoxGroup);
+
+    const skeletonTransforms = getTransformsForSkeletonLayer(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+
+    this.applyTransformToGroup(skeletonTransforms, this.bucketDebbugingGroup);
+
     const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
     if (visibleSegmentationLayers.length === 0) {
       return;
@@ -656,6 +674,18 @@ class SceneController {
     this.rootNode.remove(this.layerBoundingBoxGroup);
     this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
     this.rootNode.add(this.layerBoundingBoxGroup);
+
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const transformedScale = new ThreeVector3(...transformedVoxelSize.factor);
+
+    this.rootGroup.scale.copy(transformedScale);
+    // todop
+    this.planeGroup.scale.copy(
+      new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
+    );
   }
 
   highlightUserBoundingBox(bboxId: number | null | undefined): void {

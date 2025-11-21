@@ -1961,6 +1961,7 @@ export function computeAdHocMesh(
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
+          // todop: is this supposed to be the original scale factor?
           voxelSizeFactorInUnit: scaleFactor,
           mag,
           ...rest,

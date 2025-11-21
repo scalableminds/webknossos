@@ -13,6 +13,7 @@ import AsyncGetMaximumZoomForAllMags from "viewer/workers/async_get_maximum_zoom
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
+  getTransformedVoxelSize,
   getTransformsForLayer,
   invertAndTranspose,
 } from "../accessors/dataset_layer_transformation_accessor";
@@ -100,13 +101,22 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         ).affineMatrix,
       );
 
-      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
+      const dummyFlycamMatrix = _getDummyFlycamMatrix(
+        getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)
+          .factor,
+      );
+
+      const transformedVoxelSize = getTransformedVoxelSize(
+        state.dataset,
+        state.datasetConfiguration.nativelyRenderedLayerName,
+      );
+      const dsScaleFactor = transformedVoxelSize.factor;
 
       const zoomLevels = yield* call(
         getZoomLevelsFn,
         viewMode,
         state.datasetConfiguration.loadingStrategy,
-        state.dataset.dataSource.scale.factor,
+        dsScaleFactor,
         getMagInfo(layer.mags).getDenseMags(),
         getViewportRects(state),
         Math.min(

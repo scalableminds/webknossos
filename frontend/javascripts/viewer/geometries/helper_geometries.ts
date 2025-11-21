@@ -21,6 +21,7 @@ import {
   Vector2,
 } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
@@ -197,7 +198,12 @@ export class QuickSelectGeometry {
     });
     this.rectangle = new Mesh(geometry, material);
 
-    const baseWidth = getBaseVoxelInUnit(Store.getState().dataset.dataSource.scale.factor);
+    const state = Store.getState();
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const baseWidth = getBaseVoxelInUnit(transformedVoxelSize.factor);
     const centerGeometry = new PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new MeshBasicMaterial({
       color: this.centerMarkerColor,
@@ -240,7 +246,12 @@ export class QuickSelectGeometry {
 
   rotateToViewport() {
     const { activeViewport } = Store.getState().viewModeData.plane;
-    const { factor: scaleFactor } = Store.getState().dataset.dataSource.scale;
+    const state = Store.getState();
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const scaleFactor = transformedVoxelSize.factor;
     const rotation = rotations[activeViewport];
     if (!rotation) {
       return;

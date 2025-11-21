@@ -103,7 +103,7 @@ export function SegmentStatisticsModal({
   const { dataset, annotation } = useWkSelector((state) => state);
   const magInfo = getMagInfo(visibleSegmentationLayer.mags);
   const layersFinestMag = magInfo.getFinestMag();
-  const voxelSize = dataset.dataSource.scale;
+  const untransformedVoxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
   const storeInfoType = {
@@ -168,7 +168,7 @@ export function SegmentStatisticsModal({
             const boundingBoxInMag1 = getBoundingBoxInMag1(currentBoundingBox, layersFinestMag);
             const currentSegmentSizeInVx = segmentSizes[i];
             const volumeInUnit3 = voxelToVolumeInUnit(
-              voxelSize,
+              untransformedVoxelSize,
               layersFinestMag,
               currentSegmentSizeInVx,
             );
@@ -185,12 +185,12 @@ export function SegmentStatisticsModal({
               volumeInUnit3,
               formattedSize: formatNumberToVolume(
                 volumeInUnit3,
-                LongUnitToShortUnitMap[voxelSize.unit],
+                LongUnitToShortUnitMap[untransformedVoxelSize.unit],
               ),
               surfaceAreaInUnit2,
               formattedSurfaceArea: formatNumberToArea(
                 surfaceAreaInUnit2,
-                LongUnitToShortUnitMap[voxelSize.unit],
+                LongUnitToShortUnitMap[untransformedVoxelSize.unit],
               ),
               boundingBoxTopLeft: boundingBoxInMag1.topLeft,
               boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
@@ -270,7 +270,7 @@ export function SegmentStatisticsModal({
           tracingId || dataset.name,
           parentGroup,
           hasAdditionalCoords,
-          voxelSize,
+          untransformedVoxelSize,
         )
       }
       okText="Export to CSV"

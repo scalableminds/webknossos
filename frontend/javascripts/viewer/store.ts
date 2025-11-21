@@ -648,7 +648,7 @@ export const combinedReducer = reduceReducers(
   ProofreadingReducer,
   TaskReducer,
   SaveReducer,
-  FlycamReducer,
+  FlycamReducer, // needs to be executed after the settings reducer because of UPDATE_DATASET_SETTING handling in flycam reducer
   FlycamInfoCacheReducer,
   ViewModeReducer,
   AnnotationReducer,

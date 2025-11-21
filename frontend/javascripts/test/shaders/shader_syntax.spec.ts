@@ -45,9 +45,9 @@ describe("Shader syntax", () => {
       orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
       segmentationLayerNames: [],
       magnificationsCount: mags.length,
-      voxelSizeFactor: [1, 1, 1],
+      // voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
-      voxelSizeFactorInverted: [1, 1, 1],
+      // voxelSizeFactorInverted: [1, 1, 1],
       useInterpolation: false,
       tpsTransformPerLayer: {},
     });
@@ -98,10 +98,10 @@ describe("Shader syntax", () => {
       orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
       segmentationLayerNames: ["segmentationLayer"],
       magnificationsCount: mags.length,
-      voxelSizeFactor: [1, 1, 1],
+      // voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
       useInterpolation: false,
-      voxelSizeFactorInverted: [1, 1, 1],
+      // voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);
@@ -144,10 +144,10 @@ describe("Shader syntax", () => {
       orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
       segmentationLayerNames: ["segmentationLayer"],
       magnificationsCount: mags.length,
-      voxelSizeFactor: [1, 1, 1],
+      // voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
       useInterpolation: true,
-      voxelSizeFactorInverted: [1, 1, 1],
+      // voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
 
@@ -182,10 +182,10 @@ describe("Shader syntax", () => {
       orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
       segmentationLayerNames: [],
       magnificationsCount: mags.length,
-      voxelSizeFactor: [1, 1, 1],
+      // voxelSizeFactor: [1, 1, 1],
       isOrthogonal: false,
       useInterpolation: false,
-      voxelSizeFactorInverted: [1, 1, 1],
+      // voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);
@@ -228,10 +228,10 @@ describe("Shader syntax", () => {
       orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
       segmentationLayerNames: ["segmentationLayer"],
       magnificationsCount: mags.length,
-      voxelSizeFactor: [1, 1, 1],
+      // voxelSizeFactor: [1, 1, 1],
       isOrthogonal: false,
       useInterpolation: true,
-      voxelSizeFactorInverted: [1, 1, 1],
+      // voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);
@@ -265,10 +265,10 @@ describe("Shader syntax", () => {
       orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
       segmentationLayerNames: [],
       magnificationsCount: mags.length,
-      voxelSizeFactor: [1, 1, 1],
+      // voxelSizeFactor: [1, 1, 1],
       isOrthogonal: true,
       useInterpolation: false,
-      voxelSizeFactorInverted: [1, 1, 1],
+      // voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
     });
     parser.parse(code);

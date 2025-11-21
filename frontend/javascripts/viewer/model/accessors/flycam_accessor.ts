@@ -46,6 +46,7 @@ import {
 } from "../helpers/transformation_helpers";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformedVoxelSize } from "./dataset_layer_transformation_accessor";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -197,22 +198,30 @@ export function _getMaximumZoomForAllMags(
 }
 
 // Only exported for testing.
-export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
-  const scaleMatrix = getMatrixScale(scale);
+export const _getDummyFlycamMatrix = memoizeOne((voxelSize: Vector3) => {
+  const scaleMatrix = getMatrixScale(voxelSize);
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 
 export function getMoveOffset(state: WebknossosState, timeFactor: number) {
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   return (
     (state.userConfiguration.moveValue * timeFactor) /
-    getBaseVoxelInUnit(state.dataset.dataSource.scale.factor) /
+    getBaseVoxelInUnit(transformedVoxelSize.factor) /
     constants.FPS
   );
 }
 
 export function getMoveOffset3d(state: WebknossosState, timeFactor: number) {
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   const { moveValue3d } = state.userConfiguration;
-  const baseVoxel = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
+  const baseVoxel = getBaseVoxelInUnit(transformedVoxelSize.factor);
   return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
 }
 
@@ -577,7 +586,7 @@ function getArea(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  voxelSize: VoxelSize,
+  maybeTransformedVoxelSize: VoxelSize,
   planeId: OrthoView,
 ): Area {
   const [u, v] = Dimensions.getIndices(planeId);
@@ -586,7 +595,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(voxelSize);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(maybeTransformedVoxelSize);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;
@@ -607,13 +616,31 @@ function getAreas(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  voxelSize: VoxelSize,
+  transformedVoxelSize: VoxelSize,
 ): OrthoViewMap<Area> {
   // @ts-expect-error ts-migrate(2741) FIXME: Property 'TDView' is missing in type '{ PLANE_XY: ... Remove this comment to see the full error message
   return {
-    [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XY),
-    [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XZ),
-    [OrthoViews.PLANE_YZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_YZ),
+    [OrthoViews.PLANE_XY]: getArea(
+      rects,
+      position,
+      zoomStep,
+      transformedVoxelSize,
+      OrthoViews.PLANE_XY,
+    ),
+    [OrthoViews.PLANE_XZ]: getArea(
+      rects,
+      position,
+      zoomStep,
+      transformedVoxelSize,
+      OrthoViews.PLANE_XZ,
+    ),
+    [OrthoViews.PLANE_YZ]: getArea(
+      rects,
+      position,
+      zoomStep,
+      transformedVoxelSize,
+      OrthoViews.PLANE_YZ,
+    ),
   };
 }
 
@@ -621,8 +648,11 @@ export function getAreasFromState(state: WebknossosState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
   const rects = getViewportRects(state);
   const { zoomStep } = state.flycam;
-  const voxelSize = state.dataset.dataSource.scale;
-  return getAreas(rects, position, zoomStep, voxelSize);
+  const maybeTransformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  return getAreas(rects, position, zoomStep, maybeTransformedVoxelSize);
 }
 
 type UnrenderableLayersInfos = {

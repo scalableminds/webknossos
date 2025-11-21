@@ -4,6 +4,7 @@ import _ from "lodash";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getTransformsForSkeletonLayer } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -46,6 +47,10 @@ class NodeShader {
   setupUniforms(treeColorTexture: DataTexture): void {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     this.uniforms = {
       planeZoomFactor: {
         // The flycam zoom is typically decomposed into an x- and y-factor
@@ -55,7 +60,7 @@ class NodeShader {
         value: getZoomValue(state.flycam),
       },
       voxelSizeMin: {
-        value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
+        value: getBaseVoxelInUnit(transformedVoxelSize.factor),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,

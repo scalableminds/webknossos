@@ -30,6 +30,9 @@ const initialState = {
       dataLayers: [{ name: "color", type: "color", additionalCoordinates: [] }],
     },
   },
+  datasetConfiguration: {
+    nativelyRenderedLayerName: null,
+  },
   userConfiguration: {
     sphericalCapRadius: 100,
     dynamicSpaceDirection: true,

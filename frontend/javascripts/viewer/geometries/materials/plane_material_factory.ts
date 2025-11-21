@@ -22,6 +22,7 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getTransformedVoxelSize,
   getTransformsForLayer,
   getTransformsPerLayer,
   invertAndTranspose,
@@ -249,6 +250,8 @@ class PlaneMaterialFactory {
       isFlycamRotated: { value: false },
       doAllLayersHaveTransforms: { value: false },
       inverseFlycamRotationMatrix: { value: new Matrix4() },
+      voxelSizeFactor: { value: [1, 1, 1] },
+      voxelSizeFactorInverted: { value: [1, 1, 1] },
     };
 
     const activeMagIndices = getActiveMagIndicesForLayers(Store.getState());
@@ -598,6 +601,19 @@ class PlaneMaterialFactory {
             .multiply(invertRotation)
             .multiply(backToFlycamCenter);
           this.uniforms.inverseFlycamRotationMatrix.value = inverseFlycamRotationMatrix;
+        },
+      ),
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformedVoxelSize(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ).factor,
+        (transformedScale) => {
+          this.uniforms.voxelSizeFactor.value = transformedScale;
+
+          const voxelSizeFactorInverted = V3.divide3([1, 1, 1], transformedScale);
+          this.uniforms.voxelSizeFactorInverted.value = voxelSizeFactorInverted;
         },
       ),
     );
@@ -1105,9 +1121,9 @@ class PlaneMaterialFactory {
     );
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = state;
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
-    const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
+    // const { dataset } = state;
+    // const voxelSizeFactor = dataset.dataSource.scale.factor;
+    // const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const { interpolation } = state.datasetConfiguration;
     const code = getMainFragmentShader({
       globalLayerCount,
@@ -1116,8 +1132,8 @@ class PlaneMaterialFactory {
       segmentationLayerNames,
       textureLayerInfos,
       magnificationsCount: this.getTotalMagCount(),
-      voxelSizeFactor,
-      voxelSizeFactorInverted,
+      // voxelSizeFactor,
+      // voxelSizeFactorInverted,
       isOrthogonal: this.isOrthogonal,
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
@@ -1144,9 +1160,8 @@ class PlaneMaterialFactory {
       this.getLayersToRender(maximumLayerCountToRender);
 
     const textureLayerInfos = getTextureLayerInfos();
-    const { dataset } = state;
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
-    const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
+    // const voxelSizeFactor = dataset.dataSource.scale.factor;
+    // const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const { interpolation } = state.datasetConfiguration;
 
     return getMainVertexShader({
@@ -1156,8 +1171,8 @@ class PlaneMaterialFactory {
       segmentationLayerNames,
       textureLayerInfos,
       magnificationsCount: this.getTotalMagCount(),
-      voxelSizeFactor,
-      voxelSizeFactorInverted,
+      // voxelSizeFactor,
+      // voxelSizeFactorInverted,
       isOrthogonal: this.isOrthogonal,
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,

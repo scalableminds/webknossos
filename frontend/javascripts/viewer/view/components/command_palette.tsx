@@ -2,6 +2,7 @@ import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "
 import type { ItemType } from "antd/lib/menu/interface";
 import { formatHash } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -117,13 +118,21 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
     if (command.name === DynamicCommands.viewDataset) {
       const items = await getDatasetItems();
-      setCommands(items);
+      if (items.length > 0) {
+        setCommands(items);
+      } else {
+        Toast.info("No datasets available.");
+      }
       return;
     }
 
     if (command.name === DynamicCommands.viewAnnotation) {
       const items = await getAnnotationItems();
-      setCommands(items);
+      if (items.length > 0) {
+        setCommands(items);
+      } else {
+        Toast.info("No annotations available.");
+      }
       return;
     }
 
@@ -142,15 +151,11 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     }));
   }, []);
 
-  const datasetItem = useMemo(() => {
-    return {
-      name: DynamicCommands.viewDataset,
-      command: () => {
-        return new Promise(() => {});
-      },
-      color: commandEntryColor,
-    };
-  }, []);
+  const viewDatasetsItem = {
+    name: DynamicCommands.viewDataset,
+    command: () => {},
+    color: commandEntryColor,
+  };
 
   const getAnnotationItems = useCallback(async () => {
     const annotations = await getReadableAnnotations(false);
@@ -165,15 +170,11 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     }));
   }, []);
 
-  const annotationItem = useMemo(() => {
-    return {
-      name: DynamicCommands.viewAnnotation,
-      command: () => {
-        return new Promise(() => {});
-      },
-      color: commandEntryColor,
-    };
-  }, []);
+  const viewAnnotationItems = {
+    name: DynamicCommands.viewAnnotation,
+    command: () => {},
+    color: commandEntryColor,
+  };
 
   const getSuperUserItems = (): CommandWithoutId[] => {
     if (!activeUser?.isSuperUser) {
@@ -319,20 +320,17 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return tracingMenuItems;
   });
 
-  const allStaticCommands = useMemo(
-    () => [
-      ...getNavigationEntries(),
-      ...getThemeEntries(),
-      ...getToolEntries(),
-      ...getViewModeEntries(),
-      ...mapMenuActionsToCommands(menuActions()),
-      ...getTabsAndSettingsMenuItems(),
-      ...getSuperUserItems(),
-      datasetItem,
-      annotationItem,
-    ],
-    [],
-  );
+  const allStaticCommands = _.memoize(() => [
+    viewDatasetsItem,
+    viewAnnotationItems,
+    ...getNavigationEntries(),
+    ...getThemeEntries(),
+    ...getToolEntries(),
+    ...getViewModeEntries(),
+    ...mapMenuActionsToCommands(menuActions()),
+    ...getTabsAndSettingsMenuItems(),
+    ...getSuperUserItems(),
+  ]);
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
   const [paletteKey, setPaletteKey] = useState(0);

@@ -25,7 +25,6 @@ import {
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
-  getTransformedVoxelSize,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -48,6 +47,7 @@ import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracin
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import { Store } from "viewer/singletons";
 import { MarkdownModal } from "../components/markdown_modal";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 
 type StateProps = {
   annotation: StoreAnnotation;

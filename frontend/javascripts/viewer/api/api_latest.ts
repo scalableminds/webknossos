@@ -53,10 +53,12 @@ import {
   getMagInfo,
   getMappingInfo,
   getMappingInfoOrNull,
-  getTransformedVoxelSize,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  flatToNestedMatrix,
+  getTransformedVoxelSize,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,

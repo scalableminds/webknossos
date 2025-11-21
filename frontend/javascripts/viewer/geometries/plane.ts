@@ -23,7 +23,7 @@ import constants, {
 import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
-import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 
 // A subdivision of 100 means that there will be 100 segments per axis

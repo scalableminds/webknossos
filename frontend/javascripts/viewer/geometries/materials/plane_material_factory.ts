@@ -19,10 +19,10 @@ import {
   getMagInfoByLayer,
   getMappingInfoForSupportedLayer,
   getSegmentationLayerWithMappingSupport,
-  getTransformedVoxelSize,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getTransformedVoxelSize,
   getTransformsForLayer,
   getTransformsPerLayer,
   invertAndTranspose,

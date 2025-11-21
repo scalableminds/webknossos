@@ -7,10 +7,8 @@ import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
 import { OrthoBaseRotations, OrthoViewToNumber, OrthoViews } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import {
-  getEnabledColorLayers,
-  getTransformedVoxelSize,
-} from "viewer/model/accessors/dataset_accessor";
+import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
   getFlycamRotationWithAppendedRotation,

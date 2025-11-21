@@ -4,7 +4,7 @@ import _ from "lodash";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   calculateGlobalDelta,

@@ -291,37 +291,6 @@ export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   return extent;
 }
 
-function _getTransformedVoxelSize(
-  dataset: APIDataset,
-  nativelyRenderedLayerName: string | null,
-  ignoreTransformation: boolean = false,
-): VoxelSize {
-  const { scale } = dataset.dataSource;
-  if (ignoreTransformation) {
-    return scale;
-  }
-  const scaleFactor = scale.factor;
-  const transforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
-  const transformFn = transformPointUnscaled(transforms);
-
-  // Transform (0,0,0) and (scaleFactor) to compute effective scale ratio:
-  const base = transformFn([0, 0, 0]);
-  const scaled = transformFn(scaleFactor);
-
-  // Compute the resulting scale difference
-  const transformedScale: Vector3 = [
-    Math.abs(scaled[0] - base[0]),
-    Math.abs(scaled[1] - base[1]),
-    Math.abs(scaled[2] - base[2]),
-  ];
-  console.log("transformedScale", transformedScale);
-  return {
-    factor: transformedScale,
-    unit: scale.unit,
-  };
-}
-export const getTransformedVoxelSize = memoizeOne(_getTransformedVoxelSize);
-
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,
   inVoxel: boolean = true,

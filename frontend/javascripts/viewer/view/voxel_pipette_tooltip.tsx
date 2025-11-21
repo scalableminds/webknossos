@@ -9,10 +9,12 @@ import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
 import {
   getOrderedColorLayers,
-  getTransformedVoxelSize,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformedVoxelSize,
+  globalToLayerTransformedPosition,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getCurrentMagIndex,
   getPosition,

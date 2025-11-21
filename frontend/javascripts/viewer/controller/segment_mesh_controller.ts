@@ -30,7 +30,6 @@ import { computeBvhAsync } from "libs/compute_bvh_async";
 import Constants from "viewer/constants";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
-// import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable

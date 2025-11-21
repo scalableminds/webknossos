@@ -22,7 +22,7 @@ import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { Flycam, WebknossosState } from "viewer/store";
 import Dimensions from "../dimensions";
-import { getTransformedVoxelSize } from "./dataset_accessor";
+import { getTransformedVoxelSize } from "./dataset_layer_transformation_accessor";
 
 export function getTDViewportSize(state: WebknossosState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;

@@ -28,7 +28,7 @@ import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
-import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getMoveOffset,

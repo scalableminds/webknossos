@@ -11,8 +11,9 @@ import type { WebknossosState } from "viewer/store";
 import type { LoadingStrategy } from "viewer/store";
 import AsyncGetMaximumZoomForAllMags from "viewer/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
-import { getDataLayers, getMagInfo, getTransformedVoxelSize } from "../accessors/dataset_accessor";
+import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
+  getTransformedVoxelSize,
   getTransformsForLayer,
   invertAndTranspose,
 } from "../accessors/dataset_layer_transformation_accessor";

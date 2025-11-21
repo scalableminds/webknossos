@@ -16,10 +16,8 @@ import {
   OrthoViewValuesWithoutTDView,
   OrthoViews,
 } from "viewer/constants";
-import {
-  getDatasetExtentInUnit,
-  getTransformedVoxelSize,
-} from "viewer/model/accessors/dataset_accessor";
+import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,

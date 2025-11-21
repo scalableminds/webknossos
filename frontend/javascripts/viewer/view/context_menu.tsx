@@ -69,7 +69,6 @@ import {
   getMagInfo,
   getMappingInfo,
   getMaybeSegmentIndexAvailability,
-  getTransformedVoxelSize,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
@@ -155,7 +154,10 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformedVoxelSize,
+  globalToLayerTransformedPosition,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";

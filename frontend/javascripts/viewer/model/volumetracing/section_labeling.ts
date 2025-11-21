@@ -17,8 +17,10 @@ import {
 } from "viewer/model/helpers/position_converter";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
-import { getTransformedVoxelSize } from "../accessors/dataset_accessor";
-import { invertAndTranspose } from "../accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformedVoxelSize,
+  invertAndTranspose,
+} from "../accessors/dataset_layer_transformation_accessor";
 import {
   type Transform,
   invertTransform,

@@ -21,7 +21,6 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import {
   getMagInfo,
   getMappingInfo,
-  getTransformedVoxelSize,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -53,6 +52,7 @@ import { Model } from "viewer/singletons";
 import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;

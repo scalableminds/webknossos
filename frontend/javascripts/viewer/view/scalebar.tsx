@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import type { APIDataset } from "types/api_types";
 import type { OrthoView } from "viewer/constants";
 import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "viewer/constants";
-import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { getTDViewZoom, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";

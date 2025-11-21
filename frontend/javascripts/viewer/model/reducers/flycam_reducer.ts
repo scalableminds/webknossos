@@ -15,10 +15,8 @@ import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
-import {
-  getTransformedVoxelSize,
-  getUnifiedAdditionalCoordinates,
-} from "../accessors/dataset_accessor";
+import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [

@@ -50,10 +50,10 @@ import {
   getLayerByName,
   getLayerNameToIsDisabled,
   getSegmentationLayers,
-  getTransformedVoxelSize,
   getVisibleSegmentationLayers,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getTransformedVoxelSize,
   getTransformsForLayer,
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,

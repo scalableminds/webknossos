@@ -18,7 +18,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import Constants from "viewer/constants";
-import { getMappingInfo, getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type {
@@ -42,6 +42,7 @@ import type { Mapping } from "viewer/store";
 import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
+import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =

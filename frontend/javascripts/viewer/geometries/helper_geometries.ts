@@ -21,7 +21,7 @@ import {
   Vector2,
 } from "three";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
-import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";

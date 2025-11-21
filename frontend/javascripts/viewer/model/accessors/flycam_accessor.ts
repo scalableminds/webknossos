@@ -24,7 +24,6 @@ import {
   getLayerByName,
   getMagInfo,
   getMaxZoomStep,
-  getTransformedVoxelSize,
 } from "viewer/model/accessors/dataset_accessor";
 import { getViewportRects } from "viewer/model/accessors/view_mode_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
@@ -47,6 +46,7 @@ import {
 } from "../helpers/transformation_helpers";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformedVoxelSize } from "./dataset_layer_transformation_accessor";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -586,7 +586,7 @@ function getArea(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  voxelSize: VoxelSize,
+  maybeTransformedVoxelSize: VoxelSize,
   planeId: OrthoView,
 ): Area {
   const [u, v] = Dimensions.getIndices(planeId);
@@ -595,7 +595,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(voxelSize);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(maybeTransformedVoxelSize);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;

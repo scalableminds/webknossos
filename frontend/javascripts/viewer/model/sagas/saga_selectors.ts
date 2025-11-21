@@ -6,7 +6,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
-import { getTransformedVoxelSize } from "../accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 
 export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vector2> {
   const zoom = yield* select((state) => state.flycam.zoomStep);

@@ -14,6 +14,7 @@ import {
 } from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
@@ -153,7 +154,7 @@ function TaskTypeListView() {
             key="id"
             width={120}
             sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.id)}
-            className="monospace-id"
+            render={(id) => <FormattedId id={id} />}
           />
           <Column
             title="Team"

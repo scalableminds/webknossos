@@ -6,7 +6,7 @@ import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
@@ -67,7 +67,6 @@ const getLabelForPath = (key: string) =>
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   console.log("Rendering Command Palette");
-  const [mode, setMode] = useState<"static" | "dataset" | "annotation">("static");
 
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
@@ -117,26 +116,21 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     }
 
     if (command.name === DynamicCommands.viewDataset) {
-      setMode("dataset");
       const items = await getDatasetItems();
       setCommands(items);
       return;
     }
 
     if (command.name === DynamicCommands.viewAnnotation) {
-      setMode("annotation");
       const items = await getAnnotationItems();
       setCommands(items);
       return;
     }
 
-    // static commands
-    setMode("static");
-    command.command();
     closePalette();
   }, []);
 
-  const getDatasetItems = _.memoize(async () => {
+  const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
     return datasets.map((dataset) => ({
       name: `View dataset: ${dataset.name}`,
@@ -144,10 +138,11 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         window.location.href = getViewDatasetURL(dataset);
       },
       color: commandEntryColor,
+      id: dataset.id,
     }));
-  });
+  }, []);
 
-  const getDatasetItem = () => {
+  const datasetItem = useMemo(() => {
     return {
       name: DynamicCommands.viewDataset,
       command: () => {
@@ -155,9 +150,9 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       },
       color: commandEntryColor,
     };
-  };
+  }, []);
 
-  const getAnnotationItems = _.memoize(async () => {
+  const getAnnotationItems = useCallback(async () => {
     const annotations = await getReadableAnnotations(false);
     const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
     return sortedAnnotations.map((annotation) => ({
@@ -166,10 +161,11 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         window.location.href = `/annotations/${annotation.id}`;
       },
       color: commandEntryColor,
+      id: annotation.id,
     }));
-  });
+  }, []);
 
-  const getAnnotationItem = () => {
+  const annotationItem = useMemo(() => {
     return {
       name: DynamicCommands.viewAnnotation,
       command: () => {
@@ -177,7 +173,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       },
       color: commandEntryColor,
     };
-  };
+  }, []);
 
   const getSuperUserItems = (): CommandWithoutId[] => {
     if (!activeUser?.isSuperUser) {
@@ -323,8 +319,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return tracingMenuItems;
   });
 
-  const getAllStaticCommands = () =>
-    _.memoize(() => [
+  const allStaticCommands = useMemo(
+    () => [
       ...getNavigationEntries(),
       ...getThemeEntries(),
       ...getToolEntries(),
@@ -332,25 +328,28 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       ...mapMenuActionsToCommands(menuActions()),
       ...getTabsAndSettingsMenuItems(),
       ...getSuperUserItems(),
-      getDatasetItem(),
-      getAnnotationItem(),
-    ]);
+      datasetItem,
+      annotationItem,
+    ],
+    [],
+  );
 
-  const [commands, setCommands] = useState<CommandWithoutId[]>(getAllStaticCommands());
+  const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
   const [paletteKey, setPaletteKey] = useState(0);
 
   const closePalette = () => {
     setPaletteKey((prevKey) => prevKey + 1);
   };
 
+  const commandsWithIds = useMemo(() => {
+    return commands.map((command, index) => {
+      return { id: index, ...command };
+    });
+  }, [commands]);
+
   return (
     <ReactCommandPalette
-      commands={commands.map((command, index) => {
-        let offset = 0;
-        if (mode === "dataset") offset = 100000;
-        if (mode === "annotation") offset = 200000;
-        return { ...command, id: offset + index };
-      })}
+      commands={commandsWithIds}
       key={paletteKey}
       hotKeys={["ctrl+p", "command+p"]}
       trigger={label}

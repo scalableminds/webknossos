@@ -1,3 +1,4 @@
+import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -383,7 +384,7 @@ export enum BLEND_MODES {
   Cover = "Cover",
 }
 
-export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+export const Identity4x4: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 export const IdentityTransform = {
   type: "affine",
   affineMatrix: Identity4x4,

@@ -1,7 +1,7 @@
 import ThreeDMap from "libs/ThreeDMap";
-import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import _ from "lodash";
+import type { Matrix4x4 } from "mjs";
 import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import traverse from "viewer/model/bucket_data_handling/bucket_traversals";

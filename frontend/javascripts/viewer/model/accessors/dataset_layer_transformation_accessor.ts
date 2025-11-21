@@ -31,6 +31,7 @@ import {
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { getLayerByName } from "./dataset_accessor";
+import { optimizeScaleUnitInVoxelSize } from "libs/format_utils";
 
 const IDENTITY_MATRIX = [
   [1, 0, 0, 0],
@@ -404,6 +405,15 @@ function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
   );
 }
 
+export function extractScaleFromTransformation(transformation?: Transform): Vector3 {
+  if (!transformation) {
+    return [1, 1, 1];
+  }
+  const threeMatrix = new Matrix4().fromArray(transformation.affineMatrix).transpose();
+  threeMatrix.decompose(translation, quaternion, scale);
+  return [Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)];
+}
+
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
   return dataLayers.every((layer) => layer.coordinateTransformations?.length === 5);
 }
@@ -558,10 +568,13 @@ function _getTransformedVoxelSize(
     Math.abs(scaled[1] - base[1]),
     Math.abs(scaled[2] - base[2]),
   ];
-  console.log("transformedScale", transformedScale);
-  return {
+  const transformedVoxelSize = {
     factor: transformedScale,
     unit: scale.unit,
   };
+
+  const optimizedScale = optimizeScaleUnitInVoxelSize(transformedVoxelSize);
+  console.log("optimizedScale", optimizedScale);
+  return transformedVoxelSize;
 }
 export const getTransformedVoxelSize = memoizeOne(_getTransformedVoxelSize);

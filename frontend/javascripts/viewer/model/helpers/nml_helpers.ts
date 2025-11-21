@@ -272,7 +272,7 @@ function serializeParameters(
           x: voxelSize.factor[0],
           y: voxelSize.factor[1],
           z: voxelSize.factor[2],
-          unit: state.dataset.dataSource.scale.unit,
+          unit: voxelSize.unit,
         }),
         serializeTag("offset", {
           x: 0,

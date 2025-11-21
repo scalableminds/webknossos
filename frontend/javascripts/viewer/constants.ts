@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -494,6 +495,11 @@ export const LongUnitToShortUnitMap: Record<UnitLong, UnitShort> = {
   [UnitLong.mi]: UnitShort.mi,
   [UnitLong.pc]: UnitShort.pc,
 };
+
+export const ShortUnitToLongUnitMap = _.invert(LongUnitToShortUnitMap) as Record<
+  UnitShort,
+  UnitLong
+>;
 
 export const AllUnits = Object.values(UnitLong);
 

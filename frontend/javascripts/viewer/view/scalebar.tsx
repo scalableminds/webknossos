@@ -63,7 +63,7 @@ function Scalebar({
   viewportHeightInPixels,
   nativelyRenderedLayerName,
 }: Props) {
-  const voxelSizeUnit = dataset.dataSource.scale.unit;
+  const voxelSizeUnit = getTransformedVoxelSize(dataset, nativelyRenderedLayerName).unit;
   const viewportWidthInUnit = convertPixelsToUnit(
     viewportWidthInPixels,
     zoomValue,

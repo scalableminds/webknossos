@@ -275,7 +275,7 @@ export class QuickSelectGeometry {
       Dimensions.transDim([0, 0, 1], activeViewport),
     );
 
-    const centerPosition: Vector3 = V3.scale(V3.add(startPosition, endPosition), 0.5);
+    const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
     const extentXYZ = V3.abs(V3.sub(endPositionWithDepth, startPosition));
     const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
 

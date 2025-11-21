@@ -18,9 +18,8 @@ const invertedEulerMatrix = new Matrix4();
 export function eulerAngleToReducerInternalMatrix(angleInRadian: Vector3): Matrix4 {
   // Perform same operations as the flycam reducer does. First default 180° around z.
   let matrixLikeInReducer = matrix.makeRotationZ(Math.PI);
-  const scalesAngle: Vector3 = V3.scale(angleInRadian, -1);
   // Invert angle and interpret as ZYX order
-  const invertedEuler = euler.set(...scalesAngle, "ZYX");
+  const invertedEuler = euler.set(...V3.scale(angleInRadian, -1), "ZYX");
   // Apply inverted ZYX euler.
   matrixLikeInReducer = matrixLikeInReducer.multiply(
     invertedEulerMatrix.makeRotationFromEuler(invertedEuler),

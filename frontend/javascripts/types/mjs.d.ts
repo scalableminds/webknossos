@@ -1,4 +1,5 @@
 declare module "mjs" {
+type Vector3 = [number, number, number];
 export type Vector16 = [
   number,
   number,
@@ -18,7 +19,6 @@ export type Vector16 = [
   number,
 ];
 export type Matrix4x4 = Vector16;
-
 
   export default (f: ArrayConstructor) => ({
     M4x4: {

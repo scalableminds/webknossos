@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -21,7 +22,6 @@ import {
 import { hideMeasurementTooltipAction } from "viewer/model/actions/ui_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
-import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 
 function DistanceEntry({ distance }: { distance: string }) {
   return (

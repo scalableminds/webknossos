@@ -40,9 +40,9 @@ import {
 } from "viewer/model/volumetracing/section_labeling";
 import type { Mapping } from "viewer/store";
 import Store from "viewer/store";
+import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
-import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =

@@ -14,7 +14,6 @@ import type {
   APISegmentationLayer,
   AdditionalAxis,
   ElementClass,
-  VoxelSize,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "viewer/constants";
@@ -30,9 +29,7 @@ import type {
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
-import { transformPointUnscaled } from "../helpers/transformation_helpers";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsForSkeletonLayer } from "./dataset_layer_transformation_accessor";
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
   return new MagInfo(magnifications.map((magObj) => magObj.mag));

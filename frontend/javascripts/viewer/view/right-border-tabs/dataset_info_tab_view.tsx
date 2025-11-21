@@ -42,12 +42,12 @@ import messages from "messages";
 import type { EmptyObject } from "types/globals";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import { Store } from "viewer/singletons";
 import { MarkdownModal } from "../components/markdown_modal";
-import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 
 type StateProps = {
   annotation: StoreAnnotation;

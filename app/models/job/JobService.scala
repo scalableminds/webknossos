@@ -21,7 +21,6 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.math.BigDecimal.RoundingMode
 
 class JobService @Inject()(wkConf: WkConf,
                            actorSystem: ActorSystem,
@@ -42,8 +41,8 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
-  private val ONE_GIGAVOXEL = BigDecimal(math.pow(10, 9))
+  private val MINIMUM_COST_PER_JOB = 1
+  private val ONE_GIGAVOXEL = math.pow(10, 9)
   private val SHOULD_DEDUCE_CREDITS = false
 
   private lazy val Mailer =
@@ -190,7 +189,7 @@ class JobService @Inject()(wkConf: WkConf,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
-        "creditCost" -> creditTransactionBox.toOption.map(t => (t.creditDelta * -1).toString)
+        "creditCost" -> creditTransactionBox.toOption.map(t => t.milliCreditDelta * -1)
       )
     }
 
@@ -224,11 +223,11 @@ class JobService @Inject()(wkConf: WkConf,
                     user: User,
                     datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      costsInCredits <- if (SHOULD_DEDUCE_CREDITS) calculateJobCostInCredits(jobBoundingBox, command)
-      else Fox.successful(BigDecimal(0))
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
+      costsInMilliCredits <- if (SHOULD_DEDUCE_CREDITS) calculateJobCostInMilliCredits(jobBoundingBox, command)
+      else Fox.successful(0)
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInMilliCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
-                                                                   costsInCredits,
+                                                                   costsInMilliCredits,
                                                                    creditTransactionComment)
       job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
@@ -259,20 +258,19 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- Fox.fromBool(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  private def getJobCostPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
+  private def getJobCostPerGVx(jobCommand: JobCommand): Fox[Int] =
     jobCommand match {
-      case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
-      case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
-      case JobCommand.align_sections     => Fox.successful(wkConf.Features.alignmentCostPerGVx)
+      case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVxInMillis)
+      case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVxInMillis)
+      case JobCommand.align_sections     => Fox.successful(wkConf.Features.alignmentCostPerGVxInMillis)
       case _                             => Fox.failure(s"Unsupported job command $jobCommand")
     }
 
-  def calculateJobCostInCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
+  def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
     getJobCostPerGVx(jobCommand).map(costPerGVx => {
-      val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
-      val costInCredits = volumeInGVx * costPerGVx
-      if (costInCredits < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB
-      else costInCredits.setScale(3, RoundingMode.HALF_UP)
+      val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
+      val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
+      math.max(costInMilliCredits, MINIMUM_COST_PER_JOB)
     })
 
 }

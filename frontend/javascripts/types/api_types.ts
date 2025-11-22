@@ -682,7 +682,7 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
-  readonly creditBalance: string | null | undefined;
+  readonly creditBalanceInMillis: number | null | undefined;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -832,7 +832,7 @@ export type APIJob = {
   readonly createdAt: number;
   readonly voxelyticsWorkflowHash: string | null;
   readonly trainingAnnotations: Array<{ annotationId: string }>;
-  readonly creditCost: string | null | undefined;
+  readonly creditCostInMillis: number;
   readonly modelId: string | null | undefined;
 };
 

@@ -8,11 +8,7 @@ import {
   updateTreeGroupVisibility,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import {
-  withoutUpdateSegment,
-  withoutUpdateActiveItemTracing,
-  withoutUpdateTree,
-} from "test/helpers/saveHelpers";
+import { withoutUpdateSegment, withoutUpdateTree } from "test/helpers/saveHelpers";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
@@ -127,6 +123,7 @@ const createStateWithSegments = (
         segmentGroups,
         segments: new DiffableMap(segments.map((s) => [s.id, s])),
         hideUnregisteredSegments: false,
+        proofreadingMarkerPosition: undefined,
       },
     ],
   },
@@ -162,12 +159,10 @@ function testSkeletonDiffing(prevState: WebknossosState, nextState: WebknossosSt
   // are creating completely new trees, so that we don't have to go through the
   // action->reducer pipeline)
   return withoutUpdateTree(
-    withoutUpdateActiveItemTracing(
-      Array.from(
-        diffSkeletonTracing(
-          enforceSkeletonTracing(prevState.annotation),
-          enforceSkeletonTracing(nextState.annotation),
-        ),
+    Array.from(
+      diffSkeletonTracing(
+        enforceSkeletonTracing(prevState.annotation),
+        enforceSkeletonTracing(nextState.annotation),
       ),
     ),
   );
@@ -179,11 +174,7 @@ function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosStat
   // are creating completely new trees, so that we don't have to go through the
   // action->reducer pipeline)
   return withoutUpdateSegment(
-    withoutUpdateActiveItemTracing(
-      Array.from(
-        diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0]),
-      ),
-    ),
+    Array.from(diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0])),
   );
 }
 

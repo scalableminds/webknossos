@@ -1621,7 +1621,7 @@ function ContextMenuInner() {
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const dataset = useWkSelector((state) => state.dataset);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const currentMeshFile = useWkSelector((state) =>

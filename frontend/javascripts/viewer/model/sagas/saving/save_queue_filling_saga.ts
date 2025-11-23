@@ -5,11 +5,12 @@
  */
 
 import { buffers } from "redux-saga";
-import { actionChannel, call, put, race, take } from "typed-redux-saga";
+import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
   type EnsureTracingsWereDiffedToSaveQueueAction,
+  type FinishedRebaseAction,
   pushSaveQueueTransaction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -30,7 +31,13 @@ import {
   updateTdCamera,
 } from "viewer/model/sagas/volume/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
-import type { CameraData, Flycam, SkeletonTracing, VolumeTracing } from "viewer/store";
+import type {
+  CameraData,
+  Flycam,
+  SkeletonTracing,
+  VolumeTracing,
+  WebknossosState,
+} from "viewer/store";
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
@@ -51,7 +58,7 @@ export function* setupSavingForAnnotation(
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
     const flycam = yield* select((state) => state.flycam);
@@ -81,9 +88,12 @@ export function* setupSavingForTracingType(
   const tracingType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  let prevTracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
-    | VolumeTracing
-    | SkeletonTracing;
+  function* getTracing(): Generator<unknown, VolumeTracing | SkeletonTracing, WebknossosState> {
+    return (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
+      | VolumeTracing
+      | SkeletonTracing;
+  }
+  let prevTracing = yield* getTracing();
 
   yield* call(ensureWkInitialized);
 
@@ -99,11 +109,29 @@ export function* setupSavingForTracingType(
       : VolumeTracingSaveRelevantActions,
     actionBuffer,
   );
+  // During rebasing, the local users updates are replayed and thus the identity of skeleton nodes and edges in the diffable map entries change.
+  // But content wise they should be the same. Thus, after rebasing reload the tracing to avoid diffs caused by the diffable map identity mismatches.
+  yield* takeLatest("FINISHED_REBASING", function* resetPrevTracing(_action: FinishedRebaseAction) {
+    prevTracing = yield* getTracing();
+  });
 
   // See Model.ensureSavedState for an explanation of this action channel.
   const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
-    "ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE",
+    ["ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE"],
+    buffers.expanding<EnsureTracingsWereDiffedToSaveQueueAction>(1),
   );
+  let ensureAction: EnsureTracingsWereDiffedToSaveQueueAction | undefined;
+  function* resolveEnsureDiffedActions() {
+    const pendingActions: EnsureTracingsWereDiffedToSaveQueueAction[] =
+      yield* flush(ensureDiffedChannel);
+
+    // include the first action we already took from the race
+    const actionsToProcess = ensureAction ? [ensureAction, ...pendingActions] : pendingActions;
+
+    for (const action of actionsToProcess) {
+      (action as EnsureTracingsWereDiffedToSaveQueueAction).callback(tracingId);
+    }
+  }
 
   while (true) {
     // Prioritize consumption of tracingActionChannel since we don't want to
@@ -113,25 +141,32 @@ export function* setupSavingForTracingType(
       yield* take(tracingActionChannel);
     } else {
       // Wait for either a user action or the "ensureAction".
-      const { ensureAction } = yield* race({
+      const actions = yield* race({
         _tracingAction: take(tracingActionChannel),
         ensureAction: take(ensureDiffedChannel),
       });
-      if (ensureAction != null) {
-        ensureAction.callback(tracingId);
-        continue;
+      if (actions.ensureAction != null) {
+        ensureAction = actions.ensureAction;
       }
     }
 
-    // The allowUpdate setting could have changed in the meantime
+    // The allowUpdate setting could have changed in the meantime.
     const allowUpdate = yield* select(
       (state) =>
-        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
-    if (!allowUpdate) continue;
-    const tracing = (yield* select((state) => selectTracing(state, tracingType, tracingId))) as
-      | VolumeTracing
-      | SkeletonTracing;
+    // Ignore changes while rebasing as during this time actions are simply replayed on top of the server's state.
+    // Therefore, these actions were already added to the save queue and should not be added again.
+    const isRebasing = yield* select(
+      (state) => state.save.rebaseRelevantServerAnnotationState.isRebasing,
+    );
+    if (!allowUpdate || isRebasing) {
+      if (ensureAction) {
+        yield* call(resolveEnsureDiffedActions);
+      }
+      continue;
+    }
+    const tracing = yield* getTracing();
 
     const items = compactUpdateActions(
       Array.from(yield* call(performDiffTracing, prevTracing, tracing)),
@@ -144,6 +179,7 @@ export function* setupSavingForTracingType(
     }
 
     prevTracing = tracing;
+    yield* call(resolveEnsureDiffedActions);
   }
 }
 

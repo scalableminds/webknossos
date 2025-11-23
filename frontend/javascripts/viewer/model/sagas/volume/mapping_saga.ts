@@ -27,23 +27,29 @@ import {
 } from "typed-redux-saga";
 import type { APIDataLayer, APIMapping } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
   getLayerByName,
   getMappingInfo,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   type BucketRetrievalSource,
+  getActiveCellId,
+  getActiveSegmentationTracingLayer,
   getBucketRetrievalSourceFn,
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
+  getVolumeTracingByLayerName,
   isMappingActivationAllowed,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   type EnsureLayerMappingsAreLoadedAction,
   setLayerMappingsAction,
 } from "viewer/model/actions/dataset_actions";
+import { snapshotMappingDataForNextRebaseAction } from "viewer/model/actions/save_actions";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
@@ -70,7 +76,7 @@ import type {
   NumberLikeMap,
 } from "viewer/store";
 import type { Action } from "../../actions/actions";
-import { updateSegmentAction } from "../../actions/volumetracing_actions";
+import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkInitialized } from "../ready_sagas";
@@ -154,11 +160,55 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
+  yield* takeEvery("DEBUG__RELOAD_HDF5_MAPPING", reloadHdf5Mapping);
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
   for (const layer of segmentationLayers) {
     // The following saga will fork internally.
     yield* takeLatestMappingChange(oldActiveMappingByLayer, layer.name);
   }
+  // Keep RebaseRelevantAnnotationState updated.
+  yield* takeEvery("SET_MAPPING", keepMappingInfoInUpdated);
+}
+
+export function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
+  const newMapping = new Map();
+
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, false, {
+      mapping: newMapping,
+    }),
+  );
+}
+
+function* reloadHdf5Mapping() {
+  /*
+   * currently only exists for debugging purposes. can be invoked via
+   *   webknossos.DEV.store.dispatch({type: "DEBUG__RELOAD_HDF5_MAPPING"})
+   */
+  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+
+  const actionTracingId = volumeTracingLayer?.tracingId;
+  if (actionTracingId == null) {
+    return;
+  }
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
+  );
+
+  const layerName = actionTracingId;
+  const mappingInfo = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+  );
+  const dataset = yield* select((state) => state.dataset);
+  const layerInfo = getLayerByName(dataset, layerName);
+  const { mappingName } = mappingInfo;
+
+  if (mappingName == null) {
+    throw new Error("Could not apply splitAgglomerate because no active mapping was found.");
+  }
+
+  yield* call(clearActiveMapping, actionTracingId, activeMapping);
+  yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
 }
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -194,6 +244,7 @@ function* reloadData(
   if (isAgglomerate(mapping) && !needsLocalHdf5Mapping) {
     if (mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
       yield* put(finishMappingInitializationAction(layerName));
+      yield* put(snapshotMappingDataForNextRebaseAction(layerName));
       message.destroy(MAPPING_MESSAGE_KEY);
     } else if (mapping.mappingStatus === MappingStatusEnum.ENABLED) {
       // If the mapping is already enabled (happens when an annotation was loaded initially
@@ -383,6 +434,13 @@ function* handleSetMapping(
       const classes = convertMappingObjectToEquivalenceClasses(existingMapping);
       yield* call(setCustomColors, action, classes, layerName);
     }
+
+    if (process.env.IS_TESTING) {
+      // in test context, the mapping.ts code is not executed (which is usually responsible
+      // for finishing the initialization).
+      // TODO #9064: Refactor this
+      yield put(finishMappingInitializationAction(layerName));
+    }
     return;
   }
 
@@ -520,11 +578,44 @@ export function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
+  yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping }));
+
+  yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
+
   if (process.env.IS_TESTING) {
     // in test context, the mapping.ts code is not executed (which is usually responsible
     // for finishing the initialization).
     yield put(finishMappingInitializationAction(layerName));
+  }
+}
+
+function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
+  const annotation = yield* select((state) => state.annotation);
+
+  const volumeTracing = getVolumeTracingByLayerName(annotation, layerName);
+  if (!volumeTracing) {
+    return;
+  }
+
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+
+  if (activeTool !== AnnotationTool.PROOFREAD) {
+    return;
+  }
+
+  const { proofreadingMarkerPosition } = volumeTracing;
+  if (proofreadingMarkerPosition) {
+    const agglomerateId = yield* call(getSegmentIdForPositionAsync, proofreadingMarkerPosition);
+    const activeSegmentId = yield* call(getActiveCellId, volumeTracing);
+
+    if (activeSegmentId !== agglomerateId) {
+      yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));
+      yield* call(() =>
+        Toast.info(
+          `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+        ),
+      );
+    }
   }
 }
 
@@ -545,7 +636,7 @@ function* handleSetJsonMapping(
       `${exception}`,
     );
     console.error(exception);
-    yield* put(setMappingAction(layerName, null, mappingType));
+    yield* put(setMappingAction(layerName, null, mappingType, false));
     return;
   }
   const fetchedMapping = fetchedMappings[mappingName];
@@ -564,7 +655,7 @@ function* handleSetJsonMapping(
   }
 
   console.timeEnd("MappingSaga JSON");
-  yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
+  yield* put(setMappingAction(layerName, mappingName, mappingType, false, mappingProperties));
 }
 
 function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
@@ -707,9 +798,18 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
       duration: 10,
     });
     console.error(errorMessage);
-    yield* put(setMappingAction(layerName, null, mappingType));
+    yield* put(setMappingAction(layerName, null, mappingType, true, {}));
+
     return false;
   }
 
   return true;
+}
+
+// On every setMappingAction make sure in case it only updates the mapping with info already stored on the server
+// the RebaseRelevantAnnotationState is updated as well.
+function* keepMappingInfoInUpdated(setMappingAction: SetMappingAction) {
+  if (setMappingAction.isVersionStoredOnServer) {
+    yield put(snapshotMappingDataForNextRebaseAction(setMappingAction.layerName));
+  }
 }

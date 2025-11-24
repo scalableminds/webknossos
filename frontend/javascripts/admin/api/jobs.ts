@@ -16,7 +16,6 @@ function transformBackendJobToAPIJob(job: any): APIJob {
   return {
     ...job,
     args: _.mapKeys(job.args, (_value, key) => _.camelCase(key)),
-    state: job.effectiveState,
   };
 }
 

@@ -329,7 +329,7 @@ function JobListView() {
 
   function renderWorkflowLink(__: any, job: APIJob) {
     return job.voxelyticsWorkflowHash != null ? (
-      <Link to={`/workflows/${job.voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+      <Link to={`/workflows/${job.voxelyticsWorkflowHash}`}>Workflow</Link>
     ) : null;
   }
 
@@ -544,7 +544,7 @@ function JobListView() {
             defaultSortOrder="descend"
           />
           {isCurrentUserSuperUser ? (
-            <Column title="Workflow" key="workflow" width={150} render={renderWorkflowLink} />
+            <Column title="Voxelytics" key="workflow" width={150} render={renderWorkflowLink} />
           ) : null}
           <Column
             title="State"

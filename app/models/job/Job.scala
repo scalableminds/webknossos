@@ -30,8 +30,8 @@ case class Job(
     latestRunId: Option[String] = None,
     returnValue: Option[String] = None,
     retriedBySuperUser: Boolean = false,
-    started: Option[Long] = None,
-    ended: Option[Long] = None,
+    started: Option[Instant] = None,
+    ended: Option[Instant] = None,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends JobResultLinks {
@@ -46,7 +46,7 @@ case class Job(
     for {
       e <- ended
       s <- started
-    } yield (e - s).millis
+    } yield e - s
 
   protected def effectiveState: JobState = manualState.getOrElse(state)
 
@@ -72,7 +72,7 @@ case class JobCompactInfo(
     ownerLastName: String,
     ownerEmail: String,
     args: JsObject,
-    effectiveState: JobState,
+    state: JobState,
     returnValue: Option[String],
     resultLink: Option[String],
     voxelyticsWorkflowHash: Option[String],
@@ -81,10 +81,14 @@ case class JobCompactInfo(
     ended: Option[Instant],
     creditCost: Option[scala.math.BigDecimal]
 ) extends JobResultLinks {
+
+  protected def effectiveState: JobState = state
+
   def enrich: JobCompactInfo = this.copy(
     resultLink = constructResultLink(organizationId),
     args = args - "webknossos_token" - "user_auth_token"
   )
+
 }
 
 object JobCompactInfo {
@@ -118,8 +122,8 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.latestrunid,
         r.returnvalue,
         r.retriedbysuperuser,
-        r.started.map(_.getTime),
-        r.ended.map(_.getTime),
+        r.started.map(Instant.fromSql),
+        r.ended.map(Instant.fromSql),
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -198,14 +202,14 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             ownerLastName = row._5,
             ownerEmail = row._6,
             args = commandArgs,
-            effectiveState = effectiveState,
+            state = effectiveState,
             returnValue = row._9,
             resultLink = None, // To be filled by calling “enrich”
             voxelyticsWorkflowHash = row._10,
             created = row._11,
             started = row._12,
             ended = row._13,
-            creditCost = row._14
+            creditCost = row._14.map(_ * -1)
           )
       }
     } yield parsed

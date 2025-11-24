@@ -48,7 +48,7 @@ const AiTrainingDataSelector = ({
     .filter((layer) => layer.typ === "Volume")
     .map((layer) => layer.name);
 
-  const segmentationAndColorLayers: Array<string> = [
+  const segmentationAndAnnotationLayers: Array<string> = [
     ...new Set([...segmentationLayerNames, ...annotationLayerNames]),
   ];
 
@@ -173,7 +173,7 @@ const AiTrainingDataSelector = ({
             help={layerValidationError}
           >
             <Select
-              options={segmentationAndColorLayers.map((l) => ({ value: l, label: l }))}
+              options={segmentationAndAnnotationLayers.map((l) => ({ value: l, label: l }))}
               value={groundTruthLayer}
               onChange={(value) => handleSelectionChange(annotationId, { groundTruthLayer: value })}
             />

@@ -18,6 +18,7 @@ import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_ac
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import type { AiTrainingTask } from "./ai_training_model_selector";
+import { compact } from "lodash";
 
 export interface AiTrainingAnnotationSelection {
   annotation: APIAnnotation;
@@ -121,27 +122,28 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     [],
   );
 
-  const areParametersValid = useMemo(() => {
-    const areSelectionsValid = every(
-      selectedAnnotations,
-      (s) => s.imageDataLayer && s.groundTruthLayer && s.magnification,
-    );
-
-    return every([modelName, selectedJobType, areSelectionsValid, selectedAnnotations.length > 0]);
-  }, [modelName, selectedJobType, selectedAnnotations]);
+  const areSelectionsValid = selectedAnnotations.every(
+    (s) => s.imageDataLayer && s.groundTruthLayer && s.magnification,
+  );
+  const areParametersValid = every([
+    modelName,
+    selectedJobType,
+    areSelectionsValid,
+    selectedAnnotations.length > 0,
+  ]);
 
   const handleStartAnalysis = useCallback(async () => {
-    if (!areParametersValid) {
-      Toast.error("Please fill all required fields for all annotations.");
-      return;
-    }
-
-    const trainingAnnotations: AiModelTrainingAnnotationSpecification[] = selectedAnnotations.map(
-      (selection) => ({
-        annotationId: selection.annotation.id,
-        colorLayerName: selection.imageDataLayer,
-        segmentationLayerName: selection.groundTruthLayer,
-        mag: selection.magnification,
+    const trainingAnnotations: AiModelTrainingAnnotationSpecification[] = compact(
+      selectedAnnotations.map((selection) => {
+        if (!selection.imageDataLayer || !selection.groundTruthLayer || !selection.magnification)
+          return null;
+        else
+          return {
+            annotationId: selection.annotation.id,
+            colorLayerName: selection.imageDataLayer,
+            segmentationLayerName: selection.groundTruthLayer,
+            mag: selection.magnification,
+          };
       }),
     );
 
@@ -170,15 +172,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       console.error(error);
       Toast.error("Failed to start training.");
     }
-  }, [
-    areParametersValid,
-    modelName,
-    selectedJobType,
-    selectedAnnotations,
-    comments,
-    maxDistanceNm,
-    dispatch,
-  ]);
+  }, [modelName, selectedJobType, selectedAnnotations, comments, maxDistanceNm, dispatch]);
 
   const value = {
     selectedJobType,

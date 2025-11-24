@@ -58,6 +58,7 @@ import {
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -192,7 +193,7 @@ const mapStateToProps = (state: WebknossosState) => {
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
-      state.annotation.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
+      state.annotation.isUpdatingCurrentlyAllowed && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:
@@ -807,7 +808,13 @@ class SegmentsView extends React.Component<Props, State> {
       );
       return;
     }
-    this.props.setPosition(segment.somePosition);
+    const transformedPosition = layerToGlobalTransformedPosition(
+      segment.somePosition,
+      visibleSegmentationLayer.name,
+      "segmentation",
+      Store.getState(),
+    );
+    this.props.setPosition(transformedPosition);
     const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
     if (segmentAdditionalCoordinates != null) {
       this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
@@ -1089,13 +1096,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
-    const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
       icon: <i className="fas fa-undo" />,
       label: (
         <div
-          title={title}
           onClick={() => {
             if (getVisibleSegmentationLayer == null) {
               return;
@@ -1104,7 +1109,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.hideContextMenu();
           }}
         >
-          Reset Segment Color
+          Reset Segment Colors
         </div>
       ),
     };
@@ -1785,6 +1790,7 @@ class SegmentsView extends React.Component<Props, State> {
               disabled: true,
             },
             this.getSetGroupColorMenuItem(id),
+            this.getResetGroupColorMenuItem(id),
             this.getShowSegmentStatistics(id),
             this.getLoadMeshesFromFileMenuItem(id),
             this.getComputeMeshesAdHocMenuItem(id),

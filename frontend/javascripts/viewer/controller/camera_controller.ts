@@ -111,21 +111,16 @@ class CameraController extends React.PureComponent<Props> {
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
     Utils.waitForElementWithId(tdId).then(() => {
-      // Without this setTimeout, the initial camera angle/position
-      // within the 3D viewport is incorrect.
-      // Also see #5455.
-      setTimeout(() => {
-        this.props.setTargetAndFixPosition();
-        Store.dispatch(
-          setTDCameraWithoutTimeTrackingAction({
-            near: 0,
-            far,
-          }),
-        );
-        api.tracing.rotate3DViewToDiagonal(false);
-        const tdData = Store.getState().viewModeData.plane.tdCamera;
-        this.updateTDCamera(tdData);
-      }, 0);
+      this.props.setTargetAndFixPosition();
+      Store.dispatch(
+        setTDCameraWithoutTimeTrackingAction({
+          near: 0,
+          far,
+        }),
+      );
+      api.tracing.rotate3DViewToDiagonal(false);
+      const tdData = Store.getState().viewModeData.plane.tdCamera;
+      this.updateTDCamera(tdData);
     });
   }
 

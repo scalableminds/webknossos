@@ -348,16 +348,16 @@ export const getBrushOverlay: ShaderModule = {
   `,
 };
 
-export const getCrossHairOverlay: ShaderModule = {
+export const getProofreadingCrossHairOverlay: ShaderModule = {
   code: `
-    vec4 getCrossHairOverlay(vec3 worldCoordUVW) {
+    vec4 getProofreadingCrossHairOverlay(vec3 worldCoordUVW) {
       // An active segment position of -1, -1, -1 indicates that the position is not available
-      if (activeSegmentPosition == vec3(-1.0)) {
+      if (proofreadingMarkerPosition == vec3(-1.0)) {
         return vec4(0.0);
       }
 
       vec3 flooredGlobalPosUVW = transDim(floor(worldCoordUVW));
-      vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
+      vec3 activeSegmentPosUVW = transDim(proofreadingMarkerPosition);
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in
       // each viewport
@@ -395,8 +395,8 @@ export const getSegmentId: ShaderModule = {
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
-      vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
-      if (isOutsideOfBoundingBox(transformedCoordUVW)) {
+      vec3 layerCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
+      if (isOutsideOfBoundingBox(layerCoordUVW, <%= segmentationName %>_bboxMin, <%= segmentationName %>_bboxMax)) {
         // Some GPUs don't null-initialize the variables.
         segment_id[0] = vec4(0.);
         segment_id[1] = vec4(0.);
@@ -410,7 +410,7 @@ export const getSegmentId: ShaderModule = {
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].packingDegree) %>,
-          transformedCoordUVW,
+          layerCoordUVW,
           vec4(0.0, 0.0, 0.0, 0.0),
           !<%= segmentationName %>_has_transform
         );

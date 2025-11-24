@@ -44,7 +44,9 @@ function applyRotationInFlycamReducerSpace(
 
 describe("API Skeleton", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTesting(context, "skeleton", { dontDispatchWkReady: true });
+    await setupWebknossosForTesting(context, "skeleton", undefined, {
+      dontDispatchWkInitialized: true,
+    });
   });
 
   it<WebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {
@@ -253,7 +255,7 @@ describe("API Skeleton", () => {
 
   it<WebknossosTestContext>("getTreeName should get the name of a tree", ({ api }) => {
     const name = api.tracing.getTreeName(2);
-    expect(name).toBe("explorative_2017-08-09_SCM_Boy_002");
+    expect(name).toBe("explorative_2017-08-09_sample_user_002");
   });
 
   it<WebknossosTestContext>("getTreeName should get the name of the active tree if no treeId is specified", ({
@@ -261,7 +263,7 @@ describe("API Skeleton", () => {
   }) => {
     api.tracing.setActiveNode(1);
     const name = api.tracing.getTreeName();
-    expect(name).toBe("explorative_2017-08-09_SCM_Boy_001");
+    expect(name).toBe("explorative_2017-08-09_sample_user_001");
   });
 
   it<WebknossosTestContext>("getTreeName should throw an error if the supplied treeId doesn't exist", ({
@@ -297,10 +299,12 @@ describe("API Skeleton", () => {
       {
         name: "group 3",
         groupId: 3,
+        isExpanded: false,
       },
       {
         name: "group 7",
         groupId: 7,
+        isExpanded: false,
       },
     ]);
 

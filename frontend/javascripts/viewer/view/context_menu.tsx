@@ -154,6 +154,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
@@ -1055,9 +1056,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
   Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
+  const positionInLayerSpace =
+    globalPosition != null && visibleSegmentationLayer != null
+      ? globalToLayerTransformedPosition(
+          globalPosition,
+          visibleSegmentationLayer.name,
+          "segmentation",
+          Store.getState(),
+        )
+      : null;
 
   const loadPrecomputedMesh = async () => {
-    if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;
+    if (
+      !currentMeshFile ||
+      !visibleSegmentationLayer ||
+      globalPosition == null ||
+      positionInLayerSpace == null
+    )
+      return;
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
     const segmentId = await getSegmentIdForPositionAsync(globalPosition);
@@ -1070,7 +1086,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       loadPrecomputedMeshAction(
         segmentId,
-        globalPosition,
+        positionInLayerSpace,
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
@@ -1156,7 +1172,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   };
 
   const computeMeshAdHoc = () => {
-    if (!visibleSegmentationLayer || globalPosition == null) {
+    if (!visibleSegmentationLayer || globalPosition == null || positionInLayerSpace == null) {
       return;
     }
 
@@ -1167,7 +1183,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
+    Store.dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
@@ -1409,12 +1425,16 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition !== 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
+          segmentIdAtPosition !== 0 && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
                   Store.dispatch(
-                    setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
+                    setActiveCellAction(
+                      segmentIdAtPosition,
+                      positionInLayerSpace || globalPosition,
+                      additionalCoordinates,
+                    ),
                   );
                 },
                 disabled:
@@ -1601,7 +1621,7 @@ function ContextMenuInner() {
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const dataset = useWkSelector((state) => state.dataset);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const currentMeshFile = useWkSelector((state) =>

@@ -136,6 +136,9 @@ function SandboxActions({
 function SaveActions() {
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const isUpdatingCurrentlyAllowed = useWkSelector(
+    (state) => state.annotation.isUpdatingCurrentlyAllowed,
+  );
   const activeUser = useWkSelector((state) => state.activeUser);
   const hasTracing = useWkSelector(
     (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,
@@ -145,7 +148,7 @@ function SaveActions() {
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
 
-  if (!restrictions.allowUpdate) {
+  if (!isUpdatingCurrentlyAllowed) {
     return <ReadOnlyActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />;
   }
 

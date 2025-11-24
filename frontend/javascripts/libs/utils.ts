@@ -8,7 +8,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
 import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
-import type { BoundingBoxObject, NumberLike, SegmentGroup } from "viewer/store";
+import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 
@@ -1262,6 +1262,16 @@ export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, nu
   return Boolean(typeof value[0] === "number");
 }
 
+export function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
+  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
+}
+
+export function getAdaptToTypeFunctionFromList<T extends number | bigint>(list: Array<T>) {
+  return list[0] == null || Boolean(typeof list[0] === "number")
+    ? (el: NumberLike) => el
+    : (el: NumberLike) => BigInt(el);
+}
+
 export function isBigInt(x: NumberLike): x is bigint {
   return typeof x === "bigint";
 }
@@ -1408,4 +1418,14 @@ export async function retryAsyncFunction<T>(
       await sleep(exponentialDelayFactor * 2 ** currentAttempt);
     }
   }
+}
+
+/**
+ * Converts a string to a boolean value.
+ * Returns false for invalid inputs.
+ */
+export function stringToBoolean(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  return false;
 }

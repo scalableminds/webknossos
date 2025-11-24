@@ -170,8 +170,7 @@ function DatasetView({
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
         onSelectFolder={onSelectFolder}
-        isUserAdmin={Utils.isUserAdmin(user)}
-        isUserDatasetManager={Utils.isUserDatasetManager(user)}
+        isUserAdminOrDatasetManager={Utils.isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}

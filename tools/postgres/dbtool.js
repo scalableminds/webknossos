@@ -289,17 +289,16 @@ function applyEvolutions() {
 
   // apply evolutions
   if (evolutions.length > 0) {
-    console.log(`Applying evolutions: ${evolutions}`);
-    safePsqlSpawn([
-      PG_CONFIG.url,
-      "-v",
-      "ON_ERROR_STOP=ON",
-      "-q",
-      ...evolutions.flatMap((evolutionFilename) => [
+    for (const evolutionFilename of evolutions) {
+      console.log(`Applying evolution: ${evolutionFilename}`);
+      safePsqlSpawn([
+        PG_CONFIG.url,
+        "-v",
+        "ON_ERROR_STOP=ON",
         "-f",
         path.join(evolutionsPath, evolutionFilename),
-      ]),
-    ]);
+      ]);
+    }
     console.log("✨✨ Successfully applied the evolutions");
   } else {
     console.log("There are no evolutions that can be applied.");
@@ -416,6 +415,24 @@ program
     console.log(callPsql(`DELETE FROM webknossos.workers WHERE _id = '6194dc03040200b0027f28a1';`));
     console.log(
       "If existing jobs prevent the delete, use yarn refresh-schema to reset the db or remove the existing jobs manually.",
+    );
+    console.log("✨✨ Done");
+  });
+
+program
+  .command("enable-storage-scan")
+  .description("Activates dataset storage scan in WEBKNOSSOS for the default datastore.")
+  .action(() => {
+    console.log("Activating dataset storage scan in WEBKNOSSOS for the default datastore...");
+    console.log(
+      callPsql(
+        `UPDATE webknossos.datastores SET reportUsedStorageEnabled = TRUE WHERE name = 'localhost'`,
+      ),
+    );
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET lastStorageScanTime = '1970-01-01T00:00:00.000Z' WHERE _id = 'sample_organization'`,
+      ),
     );
     console.log("✨✨ Done");
   });

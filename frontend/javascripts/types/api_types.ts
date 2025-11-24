@@ -233,7 +233,7 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   owningOrganization: string;
   publication: null | undefined;
   tags: Array<string>;
-  usedStorageBytes: number | null;
+  usedStorageBytes: number;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -266,6 +266,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "lastUsedByUser"
   | "tags"
   | "isUnreported"
+  | "usedStorageBytes"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id: string;
@@ -295,6 +296,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     isUnreported: dataset.isUnreported,
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,
+    usedStorageBytes: dataset.usedStorageBytes,
   };
 }
 
@@ -330,6 +332,7 @@ export type NovelUserExperienceInfoType = {
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
+  suppressManyBucketUpdatesWarning?: boolean;
 };
 export type APIUserTheme = "auto" | "light" | "dark";
 export type APIUser = APIUserBase & {
@@ -366,10 +369,12 @@ export type APIActiveUser = {
 };
 export type APIRestrictions = {
   readonly allowAccess: boolean;
+  // To decide whether updating an annotation is allowed, the annotation.isUpdatingCurrentlyAllowed should be used.
+  // This value will never be changed and stay according to what the server returned.
   readonly allowUpdate: boolean;
   readonly allowFinish: boolean;
   readonly allowDownload: boolean;
-  // allowSave might be false even though allowUpdate is true (e.g., see sandbox annotations)
+  // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
@@ -760,6 +765,7 @@ export type APIFeatureToggles = {
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
+  readonly bucketSaveWarningThreshold: number;
   readonly defaultToLegacyBindings: boolean;
   readonly editableMappingsEnabled?: boolean;
   readonly optInTabs?: Array<string>;
@@ -951,8 +957,7 @@ export type SkeletonUserState = {
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
-  // This is done to simplify the selection for the type.
-  typ: "Skeleton";
+  typ: "Skeleton"; // This is done to simplify the selection for the type.
   activeNodeId?: number; // only use as a fallback if userStates is empty
   boundingBox?: BoundingBoxProto;
   trees: Array<ServerSkeletonTracingTree>;

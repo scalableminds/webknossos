@@ -82,9 +82,9 @@ describe("VolumeTracingSaga", () => {
   it("should create a volume layer (saga test)", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
-    saga.next();
-    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditingAction);
+    saga.next(true);
     saga.next({
       isBusy: false,
     });
@@ -125,9 +125,9 @@ describe("VolumeTracingSaga", () => {
   it("should add values to volume layer (saga test)", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
-    saga.next();
-    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditingAction);
+    saga.next(true);
     saga.next({
       isBusy: false,
     });
@@ -180,9 +180,9 @@ describe("VolumeTracingSaga", () => {
   it("should finish a volume layer (saga test)", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
-    saga.next();
-    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditingAction);
+    saga.next(true);
     saga.next({
       isBusy: false,
     });
@@ -247,11 +247,9 @@ describe("VolumeTracingSaga", () => {
   it("should finish a volume layer in delete mode (saga test)", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
-    saga.next();
-
-    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
-
+    expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditingAction);
+    saga.next(true);
     saga.next({
       isBusy: false,
     });
@@ -316,9 +314,9 @@ describe("VolumeTracingSaga", () => {
   it("should ignore brush action when busy (saga test)", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
-    saga.next();
-    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditingAction);
+    saga.next(true);
     // When isBusy is true, the saga should wait for a new START_EDITING action
     // (thus, other actions, such as finishLayer, will be ignored).
     expectValueDeepEqual(
@@ -333,9 +331,9 @@ describe("VolumeTracingSaga", () => {
   it("should lock an active mapping upon first volume annotation", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
-    saga.next();
-    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
     saga.next(startEditingAction);
+    saga.next(true);
     saga.next({
       isBusy: false,
     });

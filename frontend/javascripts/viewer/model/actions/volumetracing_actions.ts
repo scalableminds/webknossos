@@ -27,6 +27,9 @@ export type SetHideUnregisteredSegmentsAction = ReturnType<
 // of adding the clicked segment to the segment list (if one
 // exists and if it's not already there)
 export type ClickSegmentAction = ReturnType<typeof clickSegmentAction>;
+export type UpdateProofreadingMarkerPositionAction = ReturnType<
+  typeof updateProofreadingMarkerPositionAction
+>;
 export type InterpolateSegmentationLayerAction = ReturnType<
   typeof interpolateSegmentationLayerAction
 >;
@@ -87,6 +90,7 @@ export type VolumeTracingAction =
   | SetActiveCellAction
   | SetHideUnregisteredSegmentsAction
   | ClickSegmentAction
+  | UpdateProofreadingMarkerPositionAction
   | RegisterLabelPointAction
   | ResetContourAction
   | FinishAnnotationStrokeAction
@@ -205,7 +209,7 @@ export const finishEditingAction = () =>
 
 export const setActiveCellAction = (
   segmentId: number,
-  somePosition?: Vector3,
+  somePosition?: Vector3, // in layer space
   someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   activeUnmappedSegmentId?: number | null,
 ) =>
@@ -235,6 +239,16 @@ export const clickSegmentAction = (
     segmentId,
     somePosition,
     someAdditionalCoordinates,
+    layerName,
+  }) as const;
+
+export const updateProofreadingMarkerPositionAction = (
+  position: Vector3 | undefined,
+  layerName?: string,
+) =>
+  ({
+    type: "UPDATE_PROOFREADING_MARKER_POSITION",
+    position,
     layerName,
   }) as const;
 

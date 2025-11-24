@@ -84,11 +84,6 @@ trait RedisTemporaryStore extends LazyLogging {
       r.del(id)
     }
 
-  def increaseBy(id: String, value: Long): Fox[Option[Long]] =
-    withExceptionHandler {
-      r.incrby(id, value)
-    }
-
   def checkHealth(implicit ec: ExecutionContext): Fox[Unit] =
     try {
       val reply = r.ping

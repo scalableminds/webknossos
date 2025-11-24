@@ -34,6 +34,7 @@ const initialState: WebknossosState = update(defaultState, {
         $set: true,
       },
     },
+    isUpdatingCurrentlyAllowed: { $set: true },
     annotationType: { $set: "Explorational" },
   },
 });

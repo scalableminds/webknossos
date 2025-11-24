@@ -12,7 +12,6 @@ import { MappingStatusEnum, OrthoViewValues, OrthoViews, ViewModeValues } from "
 import {
   getColorLayers,
   getDataLayers,
-  getDatasetBoundingBox,
   getElementClass,
   getEnabledLayers,
   getLayerByName,
@@ -40,10 +39,10 @@ import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
-  getActiveSegmentPosition,
   getActiveSegmentationTracing,
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
+  getProofreadingMarkerPosition,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
@@ -190,7 +189,7 @@ class PlaneMaterialFactory {
       globalMousePosition: {
         value: new ThreeVector3(0, 0, 0),
       },
-      activeSegmentPosition: {
+      proofreadingMarkerPosition: {
         value: new ThreeVector3(-1, -1, -1),
       },
       brushSizeInPixel: {
@@ -216,12 +215,6 @@ class PlaneMaterialFactory {
       },
       planeID: {
         value: OrthoViewValues.indexOf(this.planeID),
-      },
-      bboxMin: {
-        value: new ThreeVector3(0, 0, 0),
-      },
-      bboxMax: {
-        value: new ThreeVector3(0, 0, 0),
       },
       renderBucketIndices: {
         value: false,
@@ -291,6 +284,13 @@ class PlaneMaterialFactory {
           getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
           Identity4x4,
         ),
+      };
+      const bbox = Utils.computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
+      this.uniforms[`${layerName}_bboxMin`] = {
+        value: bbox.min,
+      };
+      this.uniforms[`${layerName}_bboxMax`] = {
+        value: bbox.max,
       };
     }
 
@@ -571,15 +571,6 @@ class PlaneMaterialFactory {
         true,
       ),
       listenToStoreProperty(
-        (storeState) => storeState.dataset,
-        (dataset) => {
-          const { min, max } = getDatasetBoundingBox(dataset);
-          this.uniforms.bboxMin.value.set(...min);
-          this.uniforms.bboxMax.value.set(...max);
-        },
-        true,
-      ),
-      listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.blendMode,
         (blendMode) => {
           this.uniforms.blendMode.value = blendMode === BLEND_MODES.Additive ? 1.0 : 0.0;
@@ -822,12 +813,12 @@ class PlaneMaterialFactory {
         ),
 
         listenToStoreProperty(
-          (storeState) => getActiveSegmentPosition(storeState),
-          (activeSegmentPosition) => {
-            if (activeSegmentPosition != null) {
-              this.uniforms.activeSegmentPosition.value.set(...activeSegmentPosition);
+          (storeState) => getProofreadingMarkerPosition(storeState),
+          (proofreadingMarkerPosition) => {
+            if (proofreadingMarkerPosition != null) {
+              this.uniforms.proofreadingMarkerPosition.value.set(...proofreadingMarkerPosition);
             } else {
-              this.uniforms.activeSegmentPosition.value.set(-1, -1, -1);
+              this.uniforms.proofreadingMarkerPosition.value.set(-1, -1, -1);
             }
           },
           true,

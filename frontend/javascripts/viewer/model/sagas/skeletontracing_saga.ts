@@ -80,7 +80,7 @@ import {
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
@@ -91,6 +91,11 @@ import {
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
+import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "./saving/save_mutex_saga";
+import {
+  dispatchEnsureHasAnnotationMutexAsync,
+  dispatchEnsureHasNewestVersionAsync,
+} from "../actions/save_actions";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
   // In orthogonal view mode, the active planes' default rotation is added to the flycam rotation upon node creation.
@@ -276,7 +281,7 @@ export function* watchConnectomeAgglomerateLoading(): Saga<void> {
   );
 }
 
-function* getAgglomerateSkeletonTracing(
+export function* getAgglomerateSkeletonTracing(
   layerName: string,
   mappingName: string,
   agglomerateId: number,
@@ -414,22 +419,45 @@ export function* loadAgglomerateSkeletonWithId(
   );
 
   let usedTreeIds: number[] | null = null;
+  let agglomerateSkeleton: ServerSkeletonTracing;
+  const shouldGuardWithAnnotationMutex =
+    (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
   try {
-    const parsedTracing = yield* call(
-      getAgglomerateSkeletonTracing,
-      layerName,
-      mappingName,
-      agglomerateId,
-    );
+    if (shouldGuardWithAnnotationMutex) {
+      yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
+
+      // Fetch agglomerate skeleton in parallel to updating to latest version to make syncing with the server faster.
+      // We already sync here to make the save after adding the agglomerate skeleton a fast forward like update,
+      // which then only sends the whole save queue to the server.
+      const { parsedTracing } = yield* all({
+        updateToLatestVersion: call(dispatchEnsureHasNewestVersionAsync, Store.dispatch),
+        parsedTracing: call(getAgglomerateSkeletonTracing, layerName, mappingName, agglomerateId),
+      });
+      agglomerateSkeleton = parsedTracing;
+    } else {
+      agglomerateSkeleton = yield* call(
+        getAgglomerateSkeletonTracing,
+        layerName,
+        mappingName,
+        agglomerateId,
+      );
+    }
+
     yield* put(
       addTreesAndGroupsAction(
-        createMutableTreeMapFromTreeArray(parsedTracing.trees),
-        parsedTracing.treeGroups,
+        createMutableTreeMapFromTreeArray(agglomerateSkeleton.trees),
+        agglomerateSkeleton.treeGroups,
         (newTreeIds) => {
           usedTreeIds = newTreeIds;
         },
       ),
     );
+    if (shouldGuardWithAnnotationMutex) {
+      // Enforces to directly store the loaded agglomerate skeleton to the annotation on the server to enable easier syncing of update actions.
+      // The saving includes releasing the mutex acquired earlier.
+      yield* call([Model, Model.ensureSavedState]);
+    }
+
     // @ts-ignore TS infers usedTreeIds to be never, but it should be number[] if its not null
     if (usedTreeIds == null || usedTreeIds.length !== 1) {
       throw new Error(
@@ -437,6 +465,7 @@ export function* loadAgglomerateSkeletonWithId(
       );
     }
   } catch (e) {
+    // TODOM: release mutex
     // Hide the progress notification and handle the error
     hideFn();
     // @ts-ignore

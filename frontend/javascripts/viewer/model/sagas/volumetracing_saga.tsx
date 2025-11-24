@@ -155,14 +155,17 @@ function* warnAboutInvalidSegmentId(): Saga<void> {
   }
 }
 
-export function* editVolumeLayerAsync(): Saga<any> {
+export function* editVolumeLayerAsync(): Saga<never> {
   // Waiting for the initialization is important. Otherwise, allowUpdate would be
   // false and the saga would terminate.
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
 
-  while (allowUpdate) {
+  while (true) {
     const startEditingAction = yield* take("START_EDITING");
+    const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+    if (!allowUpdate) {
+      continue;
+    }
     const wroteVoxelsBox = { value: false };
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 

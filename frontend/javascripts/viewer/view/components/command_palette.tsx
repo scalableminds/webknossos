@@ -28,9 +28,14 @@ import {
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
-type CommandWithoutId = Omit<Command, "id">;
 
 const commandEntryColor = "#5660ff";
+
+// duplicate fields because otherwise, optional fields of Command yield errors
+type CommandWithoutId = Omit<Command, "id"> & {
+  shortcut?: string;
+  highlight?: string;
+};
 
 enum DynamicCommands {
   viewDataset = "> View Dataset...",
@@ -71,8 +76,6 @@ const cleanStringOfMostHTML = (dirtyString: string | undefined) =>
   dirtyString?.replace(/<(?!\/?b>)|[^<>\w\/ ]+/g, "");
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
-  console.log("Rendering Command Palette");
-
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
   const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
@@ -115,7 +118,6 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   };
 
   const handleSelect = useCallback(async (command: Record<string, unknown>) => {
-    console.log("h");
     if (typeof command === "string") {
       return;
     }

@@ -66,6 +66,10 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
+//clean most html except <b> tags (for highlighting)
+const cleanStringOfMostHTML = (dirtyString: string | undefined) =>
+  dirtyString?.replace(/<(?!\/?b>)|[^<>\w\/ ]+/g, "");
+
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   console.log("Rendering Command Palette");
 
@@ -110,7 +114,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const handleSelect = useCallback(async (command: Command | string) => {
+  const handleSelect = useCallback(async (command: Record<string, unknown>) => {
     console.log("h");
     if (typeof command === "string") {
       return;
@@ -356,16 +360,19 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       onSelect={handleSelect}
       showSpinnerOnSelect={false}
       resetInputOnOpen
+      onRequestClose={() => setCommands(allStaticCommands)}
       closeOnSelect={false}
       renderCommand={(command) => {
-        const { name, shortcut, highlight } = command;
+        const { name, shortcut, highlight: maybeDirtyString } = command;
+        const cleanString = cleanStringOfMostHTML(maybeDirtyString);
         return (
           <div
             className="item"
             style={{ display: "flex", justifyContent: "space-between", width: "100%" }}
           >
-            {highlight ? (
-              <span dangerouslySetInnerHTML={{ __html: highlight }} />
+            {cleanString ? (
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: modified from https://github.com/asabaylus/react-command-palette/blob/main/src/default-command.js
+              <span dangerouslySetInnerHTML={{ __html: cleanString }} />
             ) : (
               <span>{name}</span>
             )}

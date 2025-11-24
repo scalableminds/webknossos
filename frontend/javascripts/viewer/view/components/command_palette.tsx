@@ -32,10 +32,7 @@ import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_pal
 const commandEntryColor = "#5660ff";
 
 // duplicate fields because otherwise, optional fields of Command yield errors
-type CommandWithoutId = Omit<Command, "id"> & {
-  shortcut?: string;
-  highlight?: string;
-};
+type CommandWithoutId = Omit<Command, "id">;
 
 enum DynamicCommands {
   viewDataset = "> View Dataset...",

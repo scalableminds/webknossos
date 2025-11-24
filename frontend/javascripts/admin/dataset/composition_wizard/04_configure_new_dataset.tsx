@@ -32,7 +32,7 @@ import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_typ
 import { syncValidator } from "types/validation";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
 import type { WizardComponentProps } from "./common";
@@ -372,7 +372,7 @@ function LinkedLayerForm({
             info="This is the layer which will be linked into the new dataset."
           >
             <a
-              href={`/datasets/${getReadableURLPart({ name: datasetName, id: datasetId })}/view`}
+              href={getViewDatasetURL({ name: datasetName, id: datasetId })}
               target="_blank"
               rel="noreferrer"
             >

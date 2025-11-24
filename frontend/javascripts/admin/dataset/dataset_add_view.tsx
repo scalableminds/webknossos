@@ -306,9 +306,7 @@ const getPostUploadModal = (
               <Button
                 type="primary"
                 onClick={() =>
-                  navigate(
-                    `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
-                  )
+                  navigate(getViewDatasetURL({ name: uploadedDatasetName, id: datasetId }))
                 }
               >
                 View the Dataset

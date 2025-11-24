@@ -750,7 +750,9 @@ export function getReadableURLPart(
   return `${getURLSanitizedName(dataset)}-${dataset.id}`;
 }
 
-export function getViewDatasetURL(dataset: APIDataset | APIDatasetCompact) {
+export function getViewDatasetURL(
+  dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
+) {
   return `/datasets/${getReadableURLPart(dataset)}/view`;
 }
 

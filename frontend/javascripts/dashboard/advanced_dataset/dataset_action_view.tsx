@@ -315,7 +315,7 @@ export function getDatasetActionContextMenu({
             key: "view",
             label: "View",
             onClick: () => {
-              window.location.href = `/datasets/${getReadableURLPart(dataset)}/view`;
+              window.location.href = getViewDatasetURL(dataset);
             },
           }
         : null,

@@ -27,7 +27,7 @@ import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { type APIJob, APIJobType, type APIUserBase } from "types/api_types";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -164,7 +164,7 @@ function JobListView() {
   function getLinkToDataset(job: APIJob) {
     // prefer updated link over legacy link.
     if (job.datasetId != null)
-      return `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view`;
+      return getViewDatasetURL({ name: job.datasetName || "unknown_name", id: job.datasetId });
     if (job.organizationId != null && (job.datasetName != null || job.datasetDirectoryName != null))
       return `/datasets/${job.organizationId}/${job.datasetDirectoryName || job.datasetName}/view`;
     return null;

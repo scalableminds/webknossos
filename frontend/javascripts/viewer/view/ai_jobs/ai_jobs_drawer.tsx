@@ -53,7 +53,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
 
   return (
     <Drawer
-      title="Run an AI Job"
+      title="Run a WEBKNOSSOS AI Job"
       placement="right"
       width={1200}
       open={isOpen}

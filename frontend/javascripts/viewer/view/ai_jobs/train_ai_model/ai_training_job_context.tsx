@@ -8,9 +8,10 @@ import {
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import compact from "lodash/compact";
 import every from "lodash/every";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { type APIAnnotation, type APIDataset, APIJobType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -18,7 +19,6 @@ import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_ac
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import type { AiTrainingTask } from "./ai_training_model_selector";
-import { compact } from "lodash";
 
 export interface AiTrainingAnnotationSelection {
   annotation: APIAnnotation;

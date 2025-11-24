@@ -1,12 +1,12 @@
 import { FolderOutlined, PlusOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic } from "antd";
-import { formatVoxels } from "libs/format_utils";
+import { formatHash, formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { computeVolumeFromBoundingBox } from "libs/utils";
 import groupBy from "lodash/groupBy";
 import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
-import { getColorLayers, getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
+import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { colorLayerMustNotBeUint24Rule, getIntersectingMagList } from "../utils";
 import {
@@ -34,23 +34,10 @@ const AiTrainingDataSelector = ({
   } = selectedAnnotation;
   const annotationId = annotation.id;
 
-  // Gather layer names from dataset. Omit the layers that are also present
-  // in annotationLayers.
-  const segmentationLayerNames = getSegmentationLayers(dataset)
-    .map((layer) => layer.name)
-    .filter(
-      (name) =>
-        !annotation.annotationLayers.find((annotationLayer) => annotationLayer.name === name),
-    );
-
   // Gather layer names from the annotation
   const annotationLayerNames = annotation.annotationLayers
     .filter((layer) => layer.typ === "Volume")
     .map((layer) => layer.name);
-
-  const segmentationAndAnnotationLayers: Array<string> = [
-    ...new Set([...segmentationLayerNames, ...annotationLayerNames]),
-  ];
 
   // Remove uint24 color layers because they cannot be trained on currently
   const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
@@ -143,7 +130,20 @@ const AiTrainingDataSelector = ({
   }, [userBoundingBoxes, magnification, boundingBoxVolume]);
 
   return (
-    <Card style={{ marginBottom: "24px" }} type="inner">
+    <Card
+      style={{ marginBottom: "24px" }}
+      type="inner"
+      title={
+        <a
+          href={`/annotations/${annotation.id}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{ fontSize: "16px" }}
+        >
+          Annotation: {annotation.name || formatHash(annotation.id)}
+        </a>
+      }
+    >
       <Row gutter={24}>
         <Col span={12}>
           <Form.Item
@@ -173,7 +173,7 @@ const AiTrainingDataSelector = ({
             help={layerValidationError}
           >
             <Select
-              options={segmentationAndAnnotationLayers.map((l) => ({ value: l, label: l }))}
+              options={annotationLayerNames.map((l) => ({ value: l, label: l }))}
               value={groundTruthLayer}
               onChange={(value) => handleSelectionChange(annotationId, { groundTruthLayer: value })}
             />

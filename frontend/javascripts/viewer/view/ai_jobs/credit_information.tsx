@@ -10,7 +10,7 @@ import type React from "react";
 import { useCallback, useMemo } from "react";
 import { APIJobType, type AiModel } from "types/api_types";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type { UserBoundingBox, UserBoundingBoxWithoutId } from "viewer/store";
+import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";

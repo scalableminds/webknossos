@@ -28,6 +28,7 @@ import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getMoveOffset,
@@ -270,10 +271,13 @@ function createDelayAwareMoveHandler(
       // Nothing should happen then, anyway.
       return 0;
     }
-
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
     const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
     const voxelPerSecond =
-      state.userConfiguration.moveValue / state.dataset.dataSource.scale.factor[thirdDim];
+      state.userConfiguration.moveValue / transformedVoxelSize.factor[thirdDim];
 
     if (state.userConfiguration.dynamicSpaceDirection && useDynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction

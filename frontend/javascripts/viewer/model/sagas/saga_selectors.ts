@@ -6,12 +6,17 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
+import { getTransformedVoxelSize } from "../accessors/dataset_layer_transformation_accessor";
 
 export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vector2> {
   const zoom = yield* select((state) => state.flycam.zoomStep);
-  const baseVoxelFactors = yield* select((state) =>
-    Dimensions.transDim(getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale), activeViewport),
-  );
+  const baseVoxelFactors = yield* select((state) => {
+    const transformedVoxelSize = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    return Dimensions.transDim(getBaseVoxelFactorsInUnit(transformedVoxelSize), activeViewport);
+  });
   const viewportExtents = yield* select((state) =>
     getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
   );
@@ -28,8 +33,12 @@ export function getHalfViewportExtentsInUnitFromState(
   activeViewport: OrthoView,
 ): Vector2 {
   const zoom = state.flycam.zoomStep;
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
   const baseVoxelFactors = Dimensions.transDim(
-    getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
+    getBaseVoxelFactorsInUnit(transformedVoxelSize),
     activeViewport,
   );
   const viewportExtents = getPlaneExtentInVoxelFromStore(state, zoom, activeViewport);

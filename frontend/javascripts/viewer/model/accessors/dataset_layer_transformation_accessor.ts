@@ -10,6 +10,7 @@ import type {
   APISkeletonLayer,
   AffineTransformation,
   CoordinateTransformation,
+  VoxelSize,
 } from "types/api_types";
 import {
   Identity4x4,
@@ -30,6 +31,7 @@ import {
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { getLayerByName } from "./dataset_accessor";
+import { optimizeScaleUnitInVoxelSize } from "libs/format_utils";
 
 const IDENTITY_MATRIX = [
   [1, 0, 0, 0],
@@ -177,11 +179,8 @@ function _getOriginalTransformsForLayerOrNull(
   if (!coordinateTransformations || coordinateTransformations.length === 0) {
     return null;
   }
-
-  return combineCoordinateTransformations(
-    coordinateTransformations,
-    dataset.dataSource.scale.factor,
-  );
+  const untransformedVoxelSize = dataset.dataSource.scale;
+  return combineCoordinateTransformations(coordinateTransformations, untransformedVoxelSize.factor);
 }
 
 export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
@@ -297,11 +296,12 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
       ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
       : null;
     return toIdentityTransformMaybe(someLayersTransformsMaybe);
-  } else if (nativelyRenderedLayerName != null && allLayersSameRotation) {
+  } else if (allLayersSameRotation) {
     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
     return null;
   }
 
+  // nativelyRenderedLayerName is not null and the layers don't have a common rotation:
   // Compute the inverse of the layer that should be rendered natively.
   const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
   const transformsOfNativeLayer = getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
@@ -403,6 +403,15 @@ function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
     translation.length() === 0 &&
     _.isEqual([Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)], [1, 1, 1])
   );
+}
+
+export function extractScaleFromTransformation(transformation?: Transform): Vector3 {
+  if (!transformation) {
+    return [1, 1, 1];
+  }
+  const threeMatrix = new Matrix4().fromArray(transformation.affineMatrix).transpose();
+  threeMatrix.decompose(translation, quaternion, scale);
+  return [Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)];
 }
 
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
@@ -535,3 +544,37 @@ export function layerToGlobalTransformedPosition(
   }
   return layerPos;
 }
+
+function _getTransformedVoxelSize(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+  ignoreTransformation: boolean = false,
+): VoxelSize {
+  const { scale } = dataset.dataSource;
+  if (ignoreTransformation) {
+    return scale;
+  }
+  const scaleFactor = scale.factor;
+  const transforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  const transformFn = transformPointUnscaled(transforms);
+
+  // Transform (0,0,0) and (scaleFactor) to compute effective scale ratio:
+  const base = transformFn([0, 0, 0]);
+  const scaled = transformFn(scaleFactor);
+
+  // Compute the resulting scale difference
+  const transformedScale: Vector3 = [
+    Math.abs(scaled[0] - base[0]),
+    Math.abs(scaled[1] - base[1]),
+    Math.abs(scaled[2] - base[2]),
+  ];
+  const transformedVoxelSize = {
+    factor: transformedScale,
+    unit: scale.unit,
+  };
+
+  const optimizedScale = optimizeScaleUnitInVoxelSize(transformedVoxelSize);
+  console.log("optimizedScale", optimizedScale);
+  return transformedVoxelSize;
+}
+export const getTransformedVoxelSize = memoizeOne(_getTransformedVoxelSize);

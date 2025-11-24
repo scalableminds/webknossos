@@ -23,6 +23,7 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveSegmentationTracing,
   getMeshInfoForSegment,
@@ -483,7 +484,11 @@ function* maybeLoadMeshChunk(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(paddedPositionWithinLayer, true);
-  const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
+  const scaleFactor = yield* select(
+    (state) =>
+      getTransformedVoxelSize(state.dataset, state.datasetConfiguration.nativelyRenderedLayerName)
+        .factor,
+  );
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {

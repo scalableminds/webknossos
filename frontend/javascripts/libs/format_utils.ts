@@ -11,7 +11,13 @@ import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
+import {
+  LongUnitToShortUnitMap,
+  UnitShort,
+  type Vector3,
+  type Vector6,
+  ShortUnitToLongUnitMap,
+} from "viewer/constants";
 import { Unicode } from "viewer/constants";
 
 import type { Duration } from "dayjs/plugin/duration";
@@ -143,6 +149,23 @@ export function formatScale(scale: VoxelSize | null | undefined, roundTo: number
   if (scale == null) {
     return "";
   }
+  const optimizedScale = optimizeScaleUnitInVoxelSize(scale, roundTo);
+  const { factor, unit } = optimizedScale;
+  const scaleInNmRounded = Utils.map3((value) => Utils.roundTo(value, roundTo), factor);
+  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}³/voxel`;
+}
+
+export function optimizeScaleUnitInVoxelSize(
+  scale: VoxelSize,
+  decimalPrecision: number = 1,
+): VoxelSize {
+  /*
+   * Changes the unit in VoxelSize so that it is well suited to
+   * the values in the scale factor.
+   */
+  if (scale == null) {
+    return scale;
+  }
   const scaleFactor = scale.factor;
   const smallestScaleFactor = Math.min(...scaleFactor);
   const unitDimension = { unit: LongUnitToShortUnitMap[scale.unit], dimension: 1 };
@@ -151,13 +174,13 @@ export function formatScale(scale: VoxelSize | null | undefined, roundTo: number
     unitDimension,
     nmFactorToUnit,
     false,
-    roundTo,
+    decimalPrecision,
   );
-  const scaleInNmRounded = Utils.map3(
-    (value) => Utils.roundTo(value / conversionFactor, roundTo),
-    scaleFactor,
-  );
-  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/voxel`;
+  const adaptedScale = Utils.map3((value) => value / conversionFactor, scaleFactor);
+  return {
+    factor: adaptedScale,
+    unit: ShortUnitToLongUnitMap[newUnit],
+  };
 }
 
 function toOptionalFixed(num: number, decimalPrecision: number): string {
@@ -193,24 +216,24 @@ function formatNumberInUnit(
 }
 
 export const nmFactorToUnit = new Map([
-  [1e-15, "ym"],
-  [1e-12, "zm"],
-  [1e-9, "am"],
-  [1e-6, "fm"],
-  [1e-3, "pm"],
-  [1, "nm"],
-  [1e3, "µm"],
-  [1e6, "mm"],
-  [1e7, "cm"],
-  [1e9, "m"],
-  [1e12, "km"],
-  [1e15, "Mm"],
-  [1e18, "Gm"],
-  [1e21, "Tm"],
-  [1e24, "Pm"],
-  [1e27, "Em"],
-  [1e30, "Zm"],
-  [1e33, "Ym"],
+  [1e-15, UnitShort.ym],
+  [1e-12, UnitShort.zm],
+  [1e-9, UnitShort.am],
+  [1e-6, UnitShort.fm],
+  [1e-3, UnitShort.pm],
+  [1, UnitShort.nm],
+  [1e3, UnitShort.µm],
+  [1e6, UnitShort.mm],
+  [1e7, UnitShort.cm],
+  [1e9, UnitShort.m],
+  [1e12, UnitShort.km],
+  [1e15, UnitShort.Mm],
+  [1e18, UnitShort.Gm],
+  [1e21, UnitShort.Tm],
+  [1e24, UnitShort.Pm],
+  [1e27, UnitShort.Em],
+  [1e30, UnitShort.Zm],
+  [1e33, UnitShort.Ym],
 ]);
 
 // Accepts a length that is interpreted in the given unit and returns a string
@@ -345,7 +368,7 @@ export function formatCountToDataAmountUnit(
   );
 }
 
-const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
+const getSortedFactorsAndUnits = _.memoize(<T extends string>(unitMap: Map<number, T>) =>
   Array.from(unitMap.entries()).sort((a, b) => a[0] - b[0]),
 );
 
@@ -356,13 +379,13 @@ function adjustUnitToDimension(unit: UnitShort | ByteUnit, dimension: number): s
   return dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`;
 }
 
-function findBestUnitForFormatting(
+function findBestUnitForFormatting<T extends string>(
   number: number,
   { unit, dimension }: UnitDimension,
-  unitMap: Map<number, string>,
+  unitMap: Map<number, T>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
-): [number, string] {
+): [number, T] {
   const isLengthUnit = unit in UnitsMap;
   let factorToNextSmallestCommonUnit = 1;
   if (isLengthUnit) {

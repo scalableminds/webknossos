@@ -33,7 +33,10 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformedVoxelSize,
+  getTransformsForSkeletonLayer,
+} from "../accessors/dataset_layer_transformation_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 import { min } from "./iterator_utils";
 
@@ -248,6 +251,12 @@ function serializeParameters(
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
 
+  const transformedVoxelSize = getTransformedVoxelSize(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const voxelSize = applyTransform ? transformedVoxelSize : state.dataset.dataSource.scale;
+
   return [
     "<parameters>",
     ...indent(
@@ -260,10 +269,10 @@ function serializeParameters(
           wkUrl: `${location.protocol}//${location.host}`,
         }),
         serializeTag("scale", {
-          x: state.dataset.dataSource.scale.factor[0],
-          y: state.dataset.dataSource.scale.factor[1],
-          z: state.dataset.dataSource.scale.factor[2],
-          unit: state.dataset.dataSource.scale.unit,
+          x: voxelSize.factor[0],
+          y: voxelSize.factor[1],
+          z: voxelSize.factor[2],
+          unit: voxelSize.unit,
         }),
         serializeTag("offset", {
           x: 0,

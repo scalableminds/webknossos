@@ -55,7 +55,10 @@ import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  flatToNestedMatrix,
+  getTransformedVoxelSize,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndexForLayer,
   getAdditionalCoordinatesAsString,
@@ -1260,7 +1263,10 @@ class TracingApi {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const voxelSizeFactor = state.dataset.dataSource.scale.factor;
+    const voxelSizeFactor = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ).factor;
     // Pre-allocate vectors
     let lengthInUnitAcc = 0;
     let lengthInVxAcc = 0;
@@ -1323,7 +1329,11 @@ class TracingApi {
       throw new Error("The nodes are not within the same tree.");
     }
 
-    const voxelSizeFactor = Store.getState().dataset.dataSource.scale.factor;
+    const state = Store.getState();
+    const voxelSizeFactor = getTransformedVoxelSize(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ).factor;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
@@ -1347,7 +1357,6 @@ class TracingApi {
     });
     priorityQueue.queue([sourceNodeId, 0]);
 
-    const state = Store.getState();
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
 
     while (priorityQueue.length > 0) {

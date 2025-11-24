@@ -42,6 +42,7 @@ import messages from "messages";
 import type { EmptyObject } from "types/globals";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
+import { getTransformedVoxelSize } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
@@ -188,6 +189,11 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
 }
 
 export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
+  const nativelyRenderedLayerName = useWkSelector(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+  const transformedVoxelSize = getTransformedVoxelSize(dataset, nativelyRenderedLayerName);
+
   return (
     <FastTooltip title="Dataset voxel size" placement="left" wrapper="tr">
       <td
@@ -197,7 +203,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       >
         <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
       </td>
-      <td>{formatScale(dataset.dataSource.scale)}</td>
+      <td>{formatScale(transformedVoxelSize)}</td>
     </FastTooltip>
   );
 }

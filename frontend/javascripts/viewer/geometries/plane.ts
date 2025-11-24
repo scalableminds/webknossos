@@ -23,6 +23,11 @@ import constants, {
 import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
+import {
+  extractScaleFromTransformation,
+  getTransformedVoxelSize,
+  getTransformsForSkeletonLayer,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 
 // A subdivision of 100 means that there will be 100 segments per axis
@@ -53,12 +58,16 @@ class Plane {
   crosshair: Array<LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: Line;
+  // lastScaleFactors is set with the return value from getPlaneScalingFactor which depends on the size of the
+  // viewport and the zoom value.
   lastScaleFactors: [number, number];
   // baseRotation is the base rotation the plane has in an unrotated scene. It will be applied additional to the flycams rotation.
   // Different baseRotations for each of the planes ensures that the planes stay orthogonal to each other.
   baseRotation: Euler;
   storePropertyUnsubscribers: Array<() => void> = [];
-  datasetScaleFactor: Vector3 = [1, 1, 1];
+  originalDatasetScaleFactor: Vector3 = [1, 1, 1];
+  transformedDatasetScaleFactor: Vector3 = [1, 1, 1];
+  transformScale: Vector3 = [1, 1, 1];
 
   // Properties are only created here to avoid new creating objects for each setRotation call.
   baseRotationMatrix = new Matrix4();
@@ -163,8 +172,18 @@ class Plane {
     }
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
+
     // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
-    const scaleVector: Vector3 = V3.multiply([xFactor, yFactor, 1], this.datasetScaleFactor);
+    const scaleVector: Vector3 = V3.multiply(
+      [1 * xFactor, 1 * yFactor, 1],
+      V3.multiply(this.originalDatasetScaleFactor, this.transformScale),
+      // this.transformedDatasetScaleFactor,
+    );
+    console.log("scaleVector", scaleVector);
+
+    console.log("this.originalDatasetScaleFactor", this.originalDatasetScaleFactor);
+    console.log("this.transformedDatasetScaleFactor", this.transformedDatasetScaleFactor);
+
     this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 
@@ -189,10 +208,9 @@ class Plane {
     positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
   ): void => {
     // The world scaling by the dataset scale factor is inverted by the scene group
-
     // containing all planes to avoid sheering in anisotropic scaled datasets.
     // Thus, this scale needs to be applied manually to the position here.
-    const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
+    const scaledPosition = V3.multiply(originalPosition, this.transformedDatasetScaleFactor);
     // The offset is in world space already so no scaling is necessary.
     const offsetPosition = V3.add(scaledPosition, positionOffset);
     this.TDViewBorders.position.set(...offsetPosition);
@@ -223,8 +241,49 @@ class Plane {
   bindToEvents(): void {
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
-        (storeState) => storeState.dataset.dataSource.scale.factor,
-        (scaleFactor) => (this.datasetScaleFactor = scaleFactor),
+        (storeState) =>
+          getTransformedVoxelSize(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ).factor,
+        (scaleFactor) => {
+          // todop / workaround so that setScale uses new factor
+          this.lastScaleFactors[0] = -1;
+          this.transformedDatasetScaleFactor = scaleFactor;
+        },
+        true,
+      ),
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformedVoxelSize(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+            true,
+          ).factor,
+        (scaleFactor) => {
+          // todop / workaround so that setScale uses new factor
+          this.lastScaleFactors[0] = -1;
+          this.originalDatasetScaleFactor = scaleFactor;
+        },
+        true,
+      ),
+
+      listenToStoreProperty(
+        (storeState) => {
+          const transforms = getTransformsForSkeletonLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          );
+
+          return extractScaleFromTransformation(transforms);
+        },
+        (transformScale) => {
+          // todop / workaround so that setScale uses new factor
+          this.lastScaleFactors[0] = -1;
+          // todop
+          this.transformScale = transformScale;
+        },
+        true,
       ),
     ];
   }

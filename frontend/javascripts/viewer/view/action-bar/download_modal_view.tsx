@@ -180,8 +180,9 @@ function estimateFileSize(
 }
 
 function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
-  const magAdaptedScale = dataset.dataSource.scale.factor.map((f, i) => f * mag[i]);
-  const unit = dataset.dataSource.scale.unit;
+  const untransformedVoxelSize = dataset.dataSource.scale;
+  const magAdaptedScale = untransformedVoxelSize.factor.map((f, i) => f * mag[i]);
+  const unit = untransformedVoxelSize.unit;
   const scale = { factor: magAdaptedScale, unit } as VoxelSize;
   return formatScale(scale);
 }

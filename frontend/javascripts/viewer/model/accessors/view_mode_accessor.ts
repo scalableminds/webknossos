@@ -407,6 +407,9 @@ export function getPlaneScalingFactor(
   flycam: Flycam,
   planeID: OrthoView,
 ): [number, number] {
+  /*
+   * Returns the extent for the given plane by dividing the actual with/height of the viewport by constants.VIEWPORT_WIDTH.
+   */
   const [width, height] = getPlaneExtentInVoxelFromStore(state, flycam.zoomStep, planeID);
   return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
 }

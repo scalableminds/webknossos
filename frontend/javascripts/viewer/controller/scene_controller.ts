@@ -107,10 +107,12 @@ class SceneController {
   public lineMeasurementGeometry!: LineMeasurementGeometry;
   public areaMeasurementGeometry!: ContourGeometry;
   private planes!: OrthoViewWithoutTDMap<Plane>;
-  private rootNode!: Group;
+  private rootNodeInScaledGroup!: Group;
+  private rootNodeInUnscaledGroup!: Group;
   public renderer!: WebGLRenderer;
   public scene!: Scene;
-  public rootGroup!: Group;
+  public scaledRootGroup!: Group;
+  public unscaledRootGroup!: Group;
   public segmentMeshController: SegmentMeshController;
   private storePropertyUnsubscribers: Array<() => void>;
   private splitBoundaryMesh: Mesh | null = null;
@@ -139,13 +141,15 @@ class SceneController {
     this.bindToEvents();
     this.scene = new Scene();
     this.highlightedBBoxId = null;
-    this.rootGroup = new Group();
+    this.scaledRootGroup = new Group();
+    this.unscaledRootGroup = new Group();
     this.scene.add(
-      this.rootGroup.add(
-        this.rootNode,
+      this.scaledRootGroup.add(
+        this.rootNodeInScaledGroup,
         this.segmentMeshController.meshesLayerLODRootGroup,
         this.segmentMeshController.lightsGroup,
       ),
+      this.unscaledRootGroup.add(this.rootNodeInUnscaledGroup),
     );
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
@@ -158,7 +162,7 @@ class SceneController {
       state.dataset,
       state.datasetConfiguration.nativelyRenderedLayerName,
     );
-    this.rootGroup.scale.copy(new ThreeVector3(...transformedVoxelSize.factor));
+    this.scaledRootGroup.scale.copy(new ThreeVector3(...transformedVoxelSize.factor));
     this.setupDebuggingMethods();
   }
 
@@ -275,17 +279,18 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       this.planeGroup.add(...plane.getMeshes());
     }
+    // todop: remove comment
     // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
     // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
-    const transformedVoxelSize = getTransformedVoxelSize(
-      state.dataset,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    );
-    this.planeGroup.scale.copy(
-      new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
-    );
+    // const transformedVoxelSize = getTransformedVoxelSize(
+    //   state.dataset,
+    //   state.datasetConfiguration.nativelyRenderedLayerName,
+    // );
+    // this.planeGroup.scale.copy(
+    //   new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
+    // );
 
-    this.rootNode = new Group().add(
+    this.rootNodeInScaledGroup = new Group().add(
       this.userBoundingBoxGroup,
       this.bucketDebbugingGroup,
       this.layerBoundingBoxGroup,
@@ -296,8 +301,8 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
-      this.planeGroup,
     );
+    this.rootNodeInUnscaledGroup = new Group().add(this.planeGroup);
 
     if (state.annotation.skeleton != null) {
       this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
@@ -331,11 +336,11 @@ class SceneController {
       surfaceGroup.add(spline);
     }
 
-    this.rootGroup.add(surfaceGroup);
+    this.scaledRootGroup.add(surfaceGroup);
     this.splitBoundaryMesh = splitBoundaryMesh;
 
     return () => {
-      this.rootGroup.remove(surfaceGroup);
+      this.scaledRootGroup.remove(surfaceGroup);
       this.splitBoundaryMesh = null;
     };
   }
@@ -351,7 +356,7 @@ class SceneController {
     const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
     const skeletonGroup = skeleton.getRootGroup();
     this.skeletons[skeletonGroup.id] = skeleton;
-    this.rootNode.add(skeletonGroup);
+    this.rootNodeInScaledGroup.add(skeletonGroup);
     return skeletonGroup.id;
   }
 
@@ -360,7 +365,7 @@ class SceneController {
     const skeletonGroup = skeleton.getRootGroup();
     skeleton.destroy();
     delete this.skeletons[skeletonId];
-    this.rootNode.remove(skeletonGroup);
+    this.rootNodeInScaledGroup.remove(skeletonGroup);
   }
 
   updateTaskBoundingBoxes(
@@ -378,7 +383,7 @@ class SceneController {
     for (const [tracingId, _boundingBox] of Object.entries(this.taskCubeByTracingId)) {
       let taskCube = this.taskCubeByTracingId[tracingId];
       if (taskCube != null) {
-        taskCube.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
+        taskCube.getMeshes().forEach((mesh) => this.rootNodeInScaledGroup.remove(mesh));
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -396,7 +401,7 @@ class SceneController {
         showCrossSections: true,
         isHighlighted: false,
       });
-      taskCube.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      taskCube.getMeshes().forEach((mesh) => this.rootNodeInScaledGroup.add(mesh));
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
         taskCube?.setVisibility(false);
@@ -540,10 +545,6 @@ class SceneController {
     app.vent.emit("rerender");
   }
 
-  getRootNode(): Object3D {
-    return this.rootNode;
-  }
-
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     const newUserBoundingBoxGroup = new Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
@@ -561,9 +562,9 @@ class SceneController {
       bbCube.getMeshes().forEach((mesh) => newUserBoundingBoxGroup.add(mesh));
       return bbCube;
     });
-    this.rootNode.remove(this.userBoundingBoxGroup);
+    this.rootNodeInScaledGroup.remove(this.userBoundingBoxGroup);
     this.userBoundingBoxGroup = newUserBoundingBoxGroup;
-    this.rootNode.add(this.userBoundingBoxGroup);
+    this.rootNodeInScaledGroup.add(this.userBoundingBoxGroup);
   }
 
   private applyTransformToGroup(transform: Transform, group: Group | CustomLOD) {
@@ -671,9 +672,9 @@ class SceneController {
         return [layer.name, bbCube];
       }),
     );
-    this.rootNode.remove(this.layerBoundingBoxGroup);
+    this.rootNodeInScaledGroup.remove(this.layerBoundingBoxGroup);
     this.layerBoundingBoxGroup = newLayerBoundingBoxGroup;
-    this.rootNode.add(this.layerBoundingBoxGroup);
+    this.rootNodeInScaledGroup.add(this.layerBoundingBoxGroup);
 
     const transformedVoxelSize = getTransformedVoxelSize(
       state.dataset,
@@ -681,11 +682,11 @@ class SceneController {
     );
     const transformedScale = new ThreeVector3(...transformedVoxelSize.factor);
 
-    this.rootGroup.scale.copy(transformedScale);
+    this.scaledRootGroup.scale.copy(transformedScale);
     // todop
-    this.planeGroup.scale.copy(
-      new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
-    );
+    // this.planeGroup.scale.copy(
+    //   new ThreeVector3(1, 1, 1).divide(new ThreeVector3(...transformedVoxelSize.factor)),
+    // );
   }
 
   highlightUserBoundingBox(bboxId: number | null | undefined): void {
@@ -777,7 +778,7 @@ class SceneController {
       plane.destroy();
     }
 
-    this.rootNode = new Group();
+    this.rootNodeInScaledGroup = new Group();
   }
 
   bindToEvents(): void {

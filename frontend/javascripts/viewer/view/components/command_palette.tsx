@@ -8,6 +8,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { useCallback, useMemo, useState } from "react";
+import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -27,17 +28,6 @@ import {
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
-
-// duplicate of Command type from @types/react-command-palette because highlight and shortcut yield errors otherwise
-type Command = {
-  id: number;
-  color: string;
-  name: string;
-  shortcut?: string;
-  highlight?: string;
-  command(this: Command): void;
-};
-
 type CommandWithoutId = Omit<Command, "id">;
 
 const commandEntryColor = "#5660ff";

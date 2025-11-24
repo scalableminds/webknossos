@@ -158,7 +158,7 @@ class JobService @Inject()(wkConf: WkConf,
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(
         s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName...")
-      val commandArgs = job.commandArgs.value
+      val commandArgs = job.args.value
       for {
         datasetDirectoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
@@ -180,9 +180,10 @@ class JobService @Inject()(wkConf: WkConf,
         "id" -> job._id.id,
         "owner" -> ownerJson,
         "command" -> job.command,
-        "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
+        "commandArgs" -> (job.args - "webknossos_token" - "user_auth_token"),
         "state" -> job.state,
         "manualState" -> job.manualState,
+        "effectiveState" -> Json.toJson(job.manualState.getOrElse(job.state)),
         "latestRunId" -> job.latestRunId,
         "returnValue" -> job.returnValue,
         "resultLink" -> resultLink,
@@ -204,7 +205,7 @@ class JobService @Inject()(wkConf: WkConf,
       Json.obj(
         "job_id" -> job._id.id,
         "command" -> job.command,
-        "job_kwargs" -> (job.commandArgs ++ Json.obj("user_auth_token" -> userAuthToken.id))
+        "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken.id))
       )
     }
 

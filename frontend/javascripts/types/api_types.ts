@@ -155,7 +155,7 @@ export type APIDataStore = {
   readonly url: string;
   readonly allowsUpload: boolean;
   readonly jobsEnabled: boolean;
-  readonly jobsSupportedByAvailableWorkers: APIJobType[];
+  readonly jobsSupportedByAvailableWorkers: APIJobCommand[];
 };
 export type APITracingStore = {
   readonly name: string;
@@ -774,16 +774,10 @@ export type APIFeatureToggles = {
   readonly passkeysEnabled: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
 };
-export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
-export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIEffectiveJobState =
-  | "UNKNOWN"
-  | "SUCCESS"
-  | "PENDING"
-  | "STARTED"
-  | "FAILURE"
-  | "CANCELLED";
-export enum APIJobType {
+
+export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";
+
+export enum APIJobCommand {
   ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
   EXPORT_TIFF = "export_tiff",
@@ -808,32 +802,57 @@ export type WkLibsNdBoundingBox = BoundingBoxObject & {
   additionalAxes: Array<AdditionalAxis>;
 };
 
+// Different job types have different argument sets.
+// To simplify the frontend code, this is just the union,
+// listing all possible frontend-relevant arguments.
+export type ApiJobArgs = {
+  readonly datasetId: string | null | undefined;
+  readonly datasetName: string | null | undefined;
+  readonly mergeSegments: boolean | null | undefined;
+  readonly trainingAnnotations: Array<{ annotationId: string }>;
+  readonly datasetDirectoryName: string | null | undefined;
+  readonly annotationId: string | null | undefined;
+  readonly annotationLayerName: string | null | undefined;
+  readonly layerName: string | null | undefined;
+  readonly modelId: string | null | undefined;
+  readonly boundingBox: string | null | undefined;
+  readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
+};
+
 export type APIJob = {
+  readonly id: string;
+  readonly command: APIJobCommand;
+  readonly organizationId: string;
+  readonly ownerFirstName: string;
+  readonly ownerLastName: string;
+  readonly ownerEmail: string;
+  readonly args: ApiJobArgs;
+  readonly state: APIJobState;
+  readonly resultLink: string | null | undefined;
+  readonly returnValue: string | null | undefined;
+  readonly voxelyticsWorkflowHash: string | null | undefined;
+  readonly created: number;
+  readonly started: number | null | undefined;
+  readonly ended: number | null | undefined;
+  readonly creditCost: string | null | undefined;
+};
+
+export type APIJobOLD = {
   readonly id: string;
   readonly datasetId: string | null | undefined;
   readonly owner: APIUserBase;
   readonly datasetName: string | null | undefined;
-  readonly datasetDirectoryName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
-  readonly layerName: string | null | undefined;
-  readonly annotationLayerName: string | null | undefined;
   readonly tracingId: string | null | undefined;
-  readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;
   readonly organizationId: string | null | undefined;
-  readonly boundingBox: string | null | undefined;
-  readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
-  readonly type: APIJobType;
-  readonly state: APIEffectiveJobState;
-  readonly manualState: APIJobManualState;
+  readonly command: APIJobCommand;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
   readonly voxelyticsWorkflowHash: string | null;
-  readonly trainingAnnotations: Array<{ annotationId: string }>;
   readonly creditCost: string | null | undefined;
-  readonly modelId: string | null | undefined;
 };
 
 export type AiModel = {

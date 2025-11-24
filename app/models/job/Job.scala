@@ -6,80 +6,23 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
-import spire.std.map
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-
-trait JobResultLinks {
-  def commandArgs: JsObject
-  def command: JobCommand
-  def returnValue: Option[String]
-  protected def id: ObjectId
-
-  protected def effectiveState: JobState
-
-  def datasetName: Option[String] = argAsStringOpt("dataset_name")
-
-  def datasetId: Option[String] = argAsStringOpt("dataset_id")
-
-  protected def argAsStringOpt(key: String): Option[String] = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
-
-  protected def argAsBooleanOpt(key: String): Option[Boolean] = (commandArgs \ key).toOption.flatMap(_.asOpt[Boolean])
-
-  def constructResultLink(organizationId: String): Option[String] =
-    if (effectiveState != JobState.SUCCESS) None
-    else {
-      command match {
-        case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
-          datasetId.map { datasetId =>
-            val datasetNameMaybe = datasetName.map(name => s"$name-").getOrElse("")
-            Some(s"/datasets/$datasetNameMaybe$datasetId/view")
-          }.getOrElse(datasetName.map(name => s"datasets/$organizationId/$name/view"))
-        case JobCommand.export_tiff | JobCommand.render_animation =>
-          Some(s"/api/jobs/${this.id}/export")
-        case JobCommand.infer_neurons if this.argAsBooleanOpt("do_evaluation").getOrElse(false) =>
-          returnValue.map { resultAnnotationLink =>
-            resultAnnotationLink
-          }
-        case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
-            JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections |
-            JobCommand.infer_instances =>
-          // There exist jobs with dataset name as return value, some with directoryName, and newest with datasetId
-          // Construct links that work in either case.
-          returnValue.map { datasetIdentifier =>
-            ObjectId
-              .fromStringSync(datasetIdentifier)
-              .map { asObjectId =>
-                s"/datasets/$asObjectId/view"
-              }
-              .getOrElse(s"/datasets/$organizationId/$datasetIdentifier/view")
-          }
-        case _ => None
-      }
-    }
-
-  def resultLinkPublic(organizationId: String, webknossosPublicUrl: String): Option[String] =
-    for {
-      resultLink <- constructResultLink(organizationId)
-      resultLinkPublic = if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
-      else s"$resultLink"
-    } yield resultLinkPublic
-}
 
 case class Job(
     _id: ObjectId,
     _owner: ObjectId,
     _dataStore: String,
     command: JobCommand,
-    commandArgs: JsObject = Json.obj(),
+    args: JsObject = Json.obj(),
     state: JobState = JobState.PENDING,
     manualState: Option[JobState] = None,
     _worker: Option[ObjectId] = None,
@@ -128,8 +71,8 @@ case class JobCompactInfo(
     ownerFirstName: String,
     ownerLastName: String,
     ownerEmail: String,
-    commandArgs: JsObject,
-    state: JobState,
+    args: JsObject,
+    effectiveState: JobState,
     returnValue: Option[String],
     resultLink: Option[String],
     voxelyticsWorkflowHash: Option[String],
@@ -138,30 +81,15 @@ case class JobCompactInfo(
     ended: Option[Instant],
     creditCost: Option[scala.math.BigDecimal]
 ) extends JobResultLinks {
-  protected def effectiveState: JobState = state
-
   def enrich: JobCompactInfo = this.copy(
-    resultLink = this.constructResultLink(organizationId)
+    resultLink = constructResultLink(organizationId),
+    args = args - "webknossos_token" - "user_auth_token"
   )
 }
 
-/*
-
-"id" -> job._id.id,
-"owner" -> ownerJson,
-"command" -> job.command,
-"commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
-"state" -> job.state,
-"manualState" -> job.manualState,
-"latestRunId" -> job.latestRunId,
-"returnValue" -> job.returnValue,
-"resultLink" -> resultLink,
-"voxelyticsWorkflowHash" -> job._voxelyticsWorkflowHash,
-"created" -> job.created,
-"started" -> job.started,
-"ended" -> job.ended,
-"creditCost" -> creditTransactionBox.toOption.map(t => (t.creditDelta * -1).toString)
- */
+object JobCompactInfo {
+  implicit val jsonFormat: OFormat[JobCompactInfo] = Json.format[JobCompactInfo]
+}
 
 class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
@@ -234,13 +162,14 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQWithPrefix, q"j.")
       rows <- run(
         q"""
-          SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, j.state,
-                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.cost
+          SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
+                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
           LEFT JOIN webknossos.credit_transactions_ ct ON j._id = ct._paid_job
           WHERE $accessQuery
+          ORDER BY j.created
          """.as[(ObjectId,
                  String,
                  String,
@@ -258,7 +187,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.serialCombined(rows) { row =>
         for {
           command <- JobCommand.fromString(row._2).toFox
-          state <- JobState.fromString(row._8).toFox
+          effectiveState <- JobState.fromString(row._8).toFox
           commandArgs <- JsonHelper.parseAs[JsObject](row._7).toFox
         } yield
           JobCompactInfo(
@@ -268,8 +197,8 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             ownerFirstName = row._4,
             ownerLastName = row._5,
             ownerEmail = row._6,
-            commandArgs = commandArgs,
-            state = state,
+            args = commandArgs,
+            effectiveState = effectiveState,
             returnValue = row._9,
             resultLink = None, // To be filled by calling “enrich”
             voxelyticsWorkflowHash = row._10,
@@ -360,7 +289,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     created, isDeleted
                    )
                    VALUES(
-                    ${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, ${j.commandArgs},
+                    ${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, ${j.args},
                     ${j.state}, ${j.manualState}, ${j._worker},
                     ${j.latestRunId}, ${j.returnValue}, ${j.started}, ${j.ended},
                     ${j.created}, ${j.isDeleted})""".asUpdate)

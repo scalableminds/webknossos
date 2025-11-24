@@ -1,11 +1,9 @@
 import Request from "libs/request";
 import { location } from "libs/window";
+import _ from "lodash";
 import type {
   APIAnnotationType,
-  APIEffectiveJobState,
   APIJob,
-  APIJobManualState,
-  APIJobState,
   AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
@@ -16,59 +14,21 @@ import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
-    id: job.id,
-    datasetId: job.commandArgs.datasetId,
-    owner: job.owner,
-    type: job.command,
-    datasetName: job.commandArgs.dataset_name,
-    datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-    annotationLayerName: job.commandArgs.annotation_layer_name,
-    boundingBox: job.commandArgs.bbox,
-    ndBoundingBox: job.commandArgs.nd_bbox,
-    exportFileName: job.commandArgs.export_file_name,
-    tracingId: job.commandArgs.volume_tracing_id,
-    annotationId: job.commandArgs.annotation_id,
-    annotationType: job.commandArgs.annotation_type,
-    mergeSegments: job.commandArgs.merge_segments,
-    trainingAnnotations: job.commandArgs.training_annotations,
-    state: adaptJobState(job.state, job.manualState),
-    manualState: job.manualState,
-    result: job.returnValue,
-    resultLink: job.resultLink,
-    createdAt: job.created,
-    voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
-    creditCost: job.creditCost,
-    modelId: job.commandArgs.model_id,
+    ...job,
+    args: _.mapKeys(job.args, (_, key) => _.camelCase(key)),
+    state: job.effectiveState,
   };
 }
 
 export async function getJobs(): Promise<APIJob[]> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
-  return (
-    jobs
-      .map(transformBackendJobToAPIJob)
-      // Newest jobs should be first
-      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
-  );
+  return jobs.map(transformBackendJobToAPIJob);
 }
 
 export async function getJob(jobId: string): Promise<APIJob> {
   const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
   return transformBackendJobToAPIJob(job);
-}
-
-function adaptJobState(
-  celeryState: APIJobState,
-  manualState: APIJobManualState,
-): APIEffectiveJobState {
-  if (manualState) {
-    return manualState;
-  }
-
-  return celeryState || "UNKNOWN";
 }
 
 export async function cancelJob(jobId: string): Promise<APIJob> {

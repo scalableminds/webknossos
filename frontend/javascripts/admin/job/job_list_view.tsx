@@ -27,7 +27,7 @@ import _ from "lodash";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { type APIJob, APIJobType, type APIUserBase } from "types/api_types";
+import { type APIJob, APIJobCommand } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
@@ -168,145 +168,170 @@ function JobListView() {
 
   function getLinkToDataset(job: APIJob) {
     // prefer updated link over legacy link.
-    if (job.datasetId != null)
-      return `/datasets/${getReadableURLPart({ name: job.datasetName || "unknown_name", id: job.datasetId })}/view`;
-    if (job.organizationId != null && (job.datasetName != null || job.datasetDirectoryName != null))
-      return `/datasets/${job.organizationId}/${job.datasetDirectoryName || job.datasetName}/view`;
+    if (job.args.datasetId != null)
+      return `/datasets/${getReadableURLPart({ name: job.args.datasetName || "unknown_name", id: job.args.datasetId })}/view`;
+    if (
+      job.organizationId != null &&
+      (job.args.datasetName != null || job.args.datasetDirectoryName != null)
+    )
+      return `/datasets/${job.organizationId}/${job.args.datasetDirectoryName || job.args.datasetName}/view`;
     return null;
   }
 
   function renderDescription(__: any, job: APIJob) {
     const linkToDataset = getLinkToDataset(job);
-    if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
-      return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
-    } else if (job.type === APIJobType.EXPORT_TIFF && linkToDataset != null) {
+    if (job.command === APIJobCommand.CONVERT_TO_WKW && job.args.datasetName) {
+      return <span>{`Conversion to WKW of ${job.args.datasetName}`}</span>;
+    } else if (job.command === APIJobCommand.EXPORT_TIFF && linkToDataset != null) {
       const labelToAnnotationOrDataset =
-        job.annotationId != null ? (
-          <Link to={`/annotations/${job.annotationId}`}>
-            annotation of dataset {job.datasetName}
+        job.args.annotationId != null ? (
+          <Link to={`/annotations/${job.args.annotationId}`}>
+            annotation of dataset {job.args.datasetName}
           </Link>
         ) : (
-          <Link to={linkToDataset}>dataset {job.datasetName}</Link>
+          <Link to={linkToDataset}>dataset {job.args.datasetName}</Link>
         );
-      const layerLabel = job.annotationLayerName || job.layerName;
+      const layerLabel = job.args.annotationLayerName || job.args.layerName;
       return (
         <span>
           Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
-          {job.ndBoundingBox ? formatWkLibsNdBBox(job.ndBoundingBox) : job.boundingBox})
+          {job.args.ndBoundingBox
+            ? formatWkLibsNdBBox(job.args.ndBoundingBox)
+            : job.args.boundingBox}
+          )
         </span>
       );
-    } else if (job.type === APIJobType.RENDER_ANIMATION && linkToDataset != null) {
+    } else if (job.command === APIJobCommand.RENDER_ANIMATION && linkToDataset != null) {
       return (
         <span>
-          Animation rendering for layer {job.layerName} of dataset{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>
+          Animation rendering for layer {job.args.layerName} of dataset{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>
         </span>
       );
-    } else if (job.type === APIJobType.COMPUTE_MESH_FILE && linkToDataset != null) {
+    } else if (job.command === APIJobCommand.COMPUTE_MESH_FILE && linkToDataset != null) {
       return (
         <span>
-          Mesh file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Mesh file computation for <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE && linkToDataset != null) {
+    } else if (job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE && linkToDataset != null) {
       return (
         <span>
-          Segment index file computation for <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Segment index file computation for <Link to={linkToDataset}>
+            {job.args.datasetName}
+          </Link>{" "}
         </span>
       );
     } else if (
-      job.type === APIJobType.FIND_LARGEST_SEGMENT_ID &&
+      job.command === APIJobCommand.FIND_LARGEST_SEGMENT_ID &&
       linkToDataset != null &&
-      job.layerName
+      job.args.layerName
     ) {
       return (
         <span>
-          Largest segment id detection for layer {job.layerName} of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
-        </span>
-      );
-    } else if (job.type === APIJobType.INFER_NUCLEI && linkToDataset != null && job.layerName) {
-      return (
-        <span>
-          Nuclei inferral for layer {job.layerName} of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Largest segment id detection for layer {job.args.layerName} of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
     } else if (
-      job.type === APIJobType.INFER_NEURONS &&
+      job.command === APIJobCommand.INFER_NUCLEI &&
       linkToDataset != null &&
-      job.layerName &&
-      job.modelId == null
+      job.args.layerName
     ) {
       return (
         <span>
-          AI Neuron inferral for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Nuclei inferral for layer {job.args.layerName} of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
     } else if (
-      (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
-        job.type === APIJobType.INFER_NEURONS) &&
+      job.command === APIJobCommand.INFER_NEURONS &&
+      linkToDataset != null &&
+      job.args.layerName &&
+      job.args.modelId == null
+    ) {
+      return (
+        <span>
+          AI Neuron inferral for layer <i>{job.args.layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
+        </span>
+      );
+    } else if (
+      (job.command === APIJobCommand.DEPRECATED_INFER_WITH_MODEL ||
+        job.command === APIJobCommand.INFER_NEURONS) &&
       linkToDataset != null
     ) {
       return (
         <span>
-          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
+          Run AI segmentation with custom model on{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>
         </span>
       );
     } else if (
-      job.type === APIJobType.INFER_MITOCHONDRIA &&
+      job.command === APIJobCommand.INFER_MITOCHONDRIA &&
       linkToDataset != null &&
-      job.layerName
+      job.args.layerName
     ) {
       return (
         <span>
-          AI Mitochondria inferral for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          AI Mitochondria inferral for layer <i>{job.args.layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_INSTANCES && linkToDataset != null && job.layerName) {
+    } else if (
+      job.command === APIJobCommand.INFER_INSTANCES &&
+      linkToDataset != null &&
+      job.args.layerName
+    ) {
       return (
         <span>
-          AI instance segmentation for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          AI instance segmentation for layer <i>{job.args.layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.ALIGN_SECTIONS && linkToDataset != null && job.layerName) {
+    } else if (
+      job.command === APIJobCommand.ALIGN_SECTIONS &&
+      linkToDataset != null &&
+      job.args.layerName
+    ) {
       return (
         <span>
-          Align sections for layer <i>{job.layerName}</i> of{" "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+          Align sections for layer <i>{job.args.layerName}</i> of{" "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION && linkToDataset != null) {
+    } else if (
+      job.command === APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION &&
+      linkToDataset != null
+    ) {
       return (
         <span>
-          Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
-          <Link to={linkToDataset}>{job.datasetName}</Link>
-          {job.mergeSegments
+          Materialize annotation for {job.args.layerName ? ` layer ${job.args.layerName} of ` : " "}
+          <Link to={linkToDataset}>{job.args.datasetName}</Link>
+          {job.args.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."
             : null}
         </span>
       );
     } else if (
-      job.type === APIJobType.TRAIN_NEURON_MODEL ||
-      job.type === APIJobType.TRAIN_INSTANCE_MODEL ||
-      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+      job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+      job.command === APIJobCommand.TRAIN_INSTANCE_MODEL ||
+      job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
     ) {
-      const numberOfTrainingAnnotations = job.trainingAnnotations?.length || 0;
+      const numberOfTrainingAnnotations = job.args.trainingAnnotations?.length || 0;
       const modelName =
-        job.type === APIJobType.TRAIN_NEURON_MODEL || job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+        job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+        job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
           ? "neuron model"
           : "instance model";
       return (
         <span>
           {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
-          {getShowTrainingDataLink(job.trainingAnnotations)}
+          {getShowTrainingDataLink(job.args.trainingAnnotations)}
         </span>
       );
     } else {
-      return <span>{job.type}</span>;
+      return <span>{job.command}</span>;
     }
   }
 
@@ -359,9 +384,9 @@ function JobListView() {
         </Tooltip>
       );
     } else if (
-      job.type === APIJobType.CONVERT_TO_WKW ||
-      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE ||
-      job.type === APIJobType.ALIGN_SECTIONS
+      job.command === APIJobCommand.CONVERT_TO_WKW ||
+      job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||
+      job.command === APIJobCommand.ALIGN_SECTIONS
     ) {
       return (
         <span>
@@ -373,7 +398,7 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.EXPORT_TIFF) {
+    } else if (job.command === APIJobCommand.EXPORT_TIFF) {
       return (
         <span>
           {job.resultLink && (
@@ -384,7 +409,7 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.RENDER_ANIMATION) {
+    } else if (job.command === APIJobCommand.RENDER_ANIMATION) {
       return (
         <span>
           {job.resultLink && (
@@ -395,16 +420,16 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === "find_largest_segment_id") {
-      return <span>{job.result}</span>;
+    } else if (job.command === "find_largest_segment_id") {
+      return <span>{job.returnValue}</span>;
     } else if (
-      job.type === APIJobType.INFER_NUCLEI ||
-      job.type === APIJobType.INFER_NEURONS ||
-      job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
-      job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
-      job.type === APIJobType.INFER_MITOCHONDRIA ||
-      job.type === APIJobType.INFER_INSTANCES
+      job.command === APIJobCommand.INFER_NUCLEI ||
+      job.command === APIJobCommand.INFER_NEURONS ||
+      job.command === APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION ||
+      job.command === APIJobCommand.COMPUTE_MESH_FILE ||
+      job.command === APIJobCommand.DEPRECATED_INFER_WITH_MODEL ||
+      job.command === APIJobCommand.INFER_MITOCHONDRIA ||
+      job.command === APIJobCommand.INFER_INSTANCES
     ) {
       return (
         <span>
@@ -417,8 +442,8 @@ function JobListView() {
         </span>
       );
     } else if (
-      job.type === APIJobType.TRAIN_NEURON_MODEL ||
-      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+      job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
+      job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
     ) {
       return (
         <span>
@@ -435,7 +460,7 @@ function JobListView() {
               Result
             </a>
           )}
-          {job.result && <p>{job.result}</p>}
+          {job.returnValue && <p>{job.returnValue}</p>}
         </span>
       );
     }
@@ -481,7 +506,11 @@ function JobListView() {
       />
       <Spin spinning={isLoading} size="large">
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(jobs, ["datasetName"], searchQuery)}
+          dataSource={Utils.filterWithSearchQueryAND(
+            jobs,
+            [(job) => job.args.datasetName || ""],
+            searchQuery,
+          )}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
@@ -501,13 +530,12 @@ function JobListView() {
           <Column title="Description" key="datasetName" render={renderDescription} />
           <Column
             title="Owner"
-            dataIndex="owner"
             key="owner"
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.owner.lastName)}
-            render={(owner: APIUserBase) => (
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.ownerLastName)}
+            render={(job: APIJob) => (
               <>
-                <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
-                <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                <div>{`${job.ownerLastName}, ${job.ownerFirstName}`}</div>
+                <div>{`(${job.ownerEmail})`}</div>
               </>
             )}
           />
@@ -519,8 +547,8 @@ function JobListView() {
           <Column
             title="Date"
             key="createdAt"
-            render={(job) => <FormattedDate timestamp={job.createdAt} />}
-            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
+            render={(job) => <FormattedDate timestamp={job.created} />}
+            sorter={Utils.compareBy<APIJob>((job) => job.created)}
             defaultSortOrder="descend"
           />
           {isCurrentUserSuperUser ? (

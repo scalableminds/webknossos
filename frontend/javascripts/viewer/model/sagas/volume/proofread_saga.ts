@@ -26,9 +26,11 @@ import {
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
+  findTreeByName,
   findTreeByNodeId,
   getTreeAndNode,
   getTreeNameForAgglomerateSkeleton,
+  getTreesWithType,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -65,7 +67,9 @@ import {
   type CreateNodeAction,
   type DeleteNodeAction,
   type SetNodePositionAction,
+  addTreesAndGroupsAction,
   deleteEdgeAction,
+  deleteTreeAction,
   setTreeNameAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
@@ -92,9 +96,12 @@ import { Model, Store, api } from "viewer/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
 import { getCurrentMag } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
-import type { Tree } from "../../types/tree_types";
+import type { Tree, TreeMap } from "../../types/tree_types";
 import { ensureWkInitialized } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
+import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "../saving/save_mutex_saga";
+import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { getAgglomerateSkeletonTracing } from "../skeletontracing_saga";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -138,6 +145,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   );
   yield* takeEveryUnlessBusy(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
+    // TODO: fiddly to keep in sync with agglomerate skeletons.
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
     PROOFREADING_BUSY_REASON,
   );
@@ -1044,6 +1052,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
 
+  const isInLiveCollabMode =
+    (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
+
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -1086,6 +1097,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       annotationVersion,
     );
 
+    // TODO: based on the split mapping, skeletons should be reloaded!
+
     console.log("dispatch setMappingAction in proofreading saga");
     yield* put(
       setMappingAction(
@@ -1106,6 +1119,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
+    // In live collab mode the rebasing takes care off syncing the agglomerate skeletons.
+    if (!isInLiveCollabMode) {
+      yield* call(syncAgglomerateSkeletonsWithMergeAction, volumeTracingId, sourceInfo, targetInfo);
+    }
   }
 
   /* Reload meshes */
@@ -1167,6 +1184,107 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       nodePosition: targetInfo.position,
     },
   ]);
+}
+
+type ActionSegmentInfo = {
+  agglomerateId: number;
+  unmappedId: number;
+  position: Vector3;
+};
+
+function* removeAgglomerateTreeIfExists(
+  agglomerateId: number,
+  mappingName: string,
+  trees: TreeMap,
+): Saga<{ didTreeExist: boolean }> {
+  const agglomerateTreeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+
+  const maybeAgglomerateTree = findTreeByName(trees, agglomerateTreeName);
+  const suppressNextNodeActivation = true;
+  if (maybeAgglomerateTree) {
+    yield* put(deleteTreeAction(maybeAgglomerateTree.treeId, suppressNextNodeActivation));
+    return { didTreeExist: true };
+  }
+  return { didTreeExist: false };
+}
+
+function* loadAgglomerateSkeleton(
+  agglomerateId: number,
+  tracingId: string,
+  mappingName: string,
+): Saga<void> {
+  try {
+    const agglomerateSkeleton = yield* call(
+      getAgglomerateSkeletonTracing,
+      tracingId,
+      mappingName,
+      agglomerateId,
+    );
+    let usedTreeIds = [];
+    yield* put(
+      addTreesAndGroupsAction(
+        createMutableTreeMapFromTreeArray(agglomerateSkeleton.trees),
+        agglomerateSkeleton.treeGroups,
+        (newTreeIds) => {
+          usedTreeIds = newTreeIds;
+        },
+      ),
+    );
+    if (usedTreeIds.length !== 1) {
+      const annotationVersion = yield* select((state) => state.annotation.version);
+      throw new Error(
+        `Unexpected number of trees for agglomerate with id ${agglomerateId} in annotation version ${annotationVersion}.`,
+      );
+    }
+  } catch (error) {
+    console.warn(error);
+    Toast.warning(
+      `Failed to update agglomerate skeleton for agglomerate with id ${agglomerateId}. The skeleton might be out of sync with the mapping. Proofreading actions via this skeleton might not yield the desired results.`,
+    );
+  }
+}
+
+function* syncAgglomerateSkeletonsWithMergeAction(
+  tracingId: string,
+  sourceInfo: ActionSegmentInfo,
+  targetInfo: ActionSegmentInfo,
+): Saga<void> {
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
+  );
+  const { mappingName } = activeMapping;
+  const trees = yield* select((state) =>
+    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
+  );
+  if (mappingName == null) {
+    return;
+  }
+  const oldSourceAgglomerateId = sourceInfo.agglomerateId;
+  const oldTargetAgglomerateId = targetInfo.agglomerateId;
+  // TODO: get feedback: The current code replaces the tree instead of changing it -> This might change the active node id.
+  // As this is saga is executed in a not live collab scenario, this might be ok as the user did this action here anyway without keeping the skeleton updated.
+  const { didTreeExist: didSourceTreeExist } = yield* call(
+    removeAgglomerateTreeIfExists,
+    oldSourceAgglomerateId,
+    mappingName,
+    trees,
+  );
+  const { didTreeExist: didTargetTreeExist } = yield* call(
+    removeAgglomerateTreeIfExists,
+    oldTargetAgglomerateId,
+    mappingName,
+    trees,
+  );
+  if (!didSourceTreeExist && !didTargetTreeExist) {
+    // Do not load the merged agglomerate skeleton in case no tree existed before.
+    return;
+  }
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  const updatedSourceAgglomerateId = Number(
+    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
+      oldSourceAgglomerateId,
+  );
+  yield* call(loadAgglomerateSkeleton, updatedSourceAgglomerateId, tracingId, mappingName);
 }
 
 function* handleProofreadCutFromNeighbors(action: Action) {

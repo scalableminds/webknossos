@@ -99,7 +99,6 @@ import type { Action } from "../../actions/actions";
 import type { Tree, TreeMap } from "../../types/tree_types";
 import { ensureWkInitialized } from "../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../saga_helpers";
-import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "../saving/save_mutex_saga";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getAgglomerateSkeletonTracing } from "../skeletontracing_saga";
 
@@ -559,6 +558,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       sourceAgglomerateId,
       volumeTracingId,
       annotationVersion,
+      false,
     );
 
     console.log("dispatch setMappingAction in proofreading saga");
@@ -768,13 +768,14 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
   ]);
 
   // Now that the changes are saved, we can split the mapping locally (because it requires
-  // communication with the back-end).
+  // communication with the backend).
   const currentVersion = Store.getState().annotation.version;
   const splitMapping = yield* splitAgglomerateInMapping(
     activeMapping,
     agglomerateId,
     volumeTracingId,
     currentVersion,
+    true,
     additionalUnmappedSegmentsToReRequest,
   );
 
@@ -1052,9 +1053,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
 
-  const isInLiveCollabMode =
-    (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
-
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -1095,7 +1093,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       sourceAgglomerateId,
       volumeTracingId,
       annotationVersion,
+      true,
     );
+    // Split agglomerate id -> vielen agglomerate ids
 
     // TODO: based on the split mapping, skeletons should be reloaded!
 
@@ -1119,10 +1119,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
-    // In live collab mode the rebasing takes care off syncing the agglomerate skeletons.
-    if (!isInLiveCollabMode) {
-      yield* call(syncAgglomerateSkeletonsWithMergeAction, volumeTracingId, sourceInfo, targetInfo);
-    }
+    yield* call(syncAgglomerateSkeletonsAfterMergeAction, volumeTracingId, sourceInfo, targetInfo);
   }
 
   /* Reload meshes */
@@ -1244,7 +1241,7 @@ function* loadAgglomerateSkeleton(
   }
 }
 
-function* syncAgglomerateSkeletonsWithMergeAction(
+function* syncAgglomerateSkeletonsAfterMergeAction(
   tracingId: string,
   sourceInfo: ActionSegmentInfo,
   targetInfo: ActionSegmentInfo,
@@ -1285,6 +1282,41 @@ function* syncAgglomerateSkeletonsWithMergeAction(
       oldSourceAgglomerateId,
   );
   yield* call(loadAgglomerateSkeleton, updatedSourceAgglomerateId, tracingId, mappingName);
+}
+
+function* syncAgglomerateSkeletonsAfterSplitAction(
+  oldAgglomerateIds: number[],
+  newAgglomerateIds: number[],
+  tracingId: string,
+  mappingName: string,
+): Saga<void> {
+  const trees = yield* select((state) =>
+    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
+  );
+  if (mappingName == null) {
+    return;
+  }
+  // TODO: get feedback: The current code replaces the tree instead of changing it -> This might change the active node id.
+  // As this is saga is executed in a not live collab scenario, this might be ok as the user did this action here anyway without keeping the skeleton updated.
+  let foundAtLeastOneAgglomerateSkeleton = false;
+  for (const agglomerateId of oldAgglomerateIds) {
+    const { didTreeExist } = yield* call(
+      removeAgglomerateTreeIfExists,
+      agglomerateId,
+      mappingName,
+      trees,
+    );
+    foundAtLeastOneAgglomerateSkeleton = foundAtLeastOneAgglomerateSkeleton || didTreeExist;
+  }
+  if (!foundAtLeastOneAgglomerateSkeleton) {
+    // Do not load the splitted agglomerate skeletons in case no tree existed before.
+    return;
+  }
+  const loadAgglomerateSkeletonEffects = newAgglomerateIds.map((aggloId) =>
+    call(loadAgglomerateSkeleton, aggloId, tracingId, mappingName),
+  );
+  // Run in parallel as backend requests are involved; improves speed.
+  yield* all(loadAgglomerateSkeletonEffects);
 }
 
 function* handleProofreadCutFromNeighbors(action: Action) {
@@ -1370,11 +1402,12 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   const newAnnotationVersion = yield* select((state) => state.annotation.version);
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
-  const mappingAfterSplit = yield* splitAgglomerateInMapping(
+  const splitMapping = yield* splitAgglomerateInMapping(
     activeMapping,
     targetAgglomerateId,
     volumeTracingId,
     newAnnotationVersion,
+    true,
   );
 
   console.log("dispatch setMappingAction in proofreading saga");
@@ -1386,15 +1419,15 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       // As these split actions were already sent to the server, splitMapping is stored on the server already.
       true,
       {
-        mapping: mappingAfterSplit,
+        mapping: splitMapping,
       },
     ),
   );
 
   const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
-    call(getDataValue, targetPosition, mappingAfterSplit),
+    call(getDataValue, targetPosition, splitMapping),
     ...neighborInfo.neighbors.map((neighbor) =>
-      call(getDataValue, neighbor.position, mappingAfterSplit),
+      call(getDataValue, neighbor.position, splitMapping),
     ),
   ]);
 
@@ -1708,8 +1741,9 @@ export function* splitAgglomerateInMapping(
   sourceAgglomerateId: number,
   volumeTracingId: string,
   version: number,
+  syncAgglomerateSkeletons: boolean,
   additionalSegmentsToRequest: number[] = [],
-) {
+): Saga<Mapping | undefined> {
   const segmentIdsFromLocalMapping = getSegmentIdsThatMapToAgglomerate(
     activeMapping,
     sourceAgglomerateId,
@@ -1719,8 +1753,9 @@ export function* splitAgglomerateInMapping(
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
+  const unsplitMapping = activeMapping.mapping;
   if (splitSegmentIds.length === 0) {
-    return activeMapping.mapping ?? undefined;
+    return unsplitMapping ?? undefined;
   }
   const mappingAfterSplit = yield* call(
     getAgglomeratesForSegmentsFromTracingstore,
@@ -1730,6 +1765,20 @@ export function* splitAgglomerateInMapping(
     annotationId,
     version,
   );
+  const oldAgglomerateIds = new Set<number>([sourceAgglomerateId]);
+  if (unsplitMapping && additionalSegmentsToRequest.length > 0) {
+    // Add the additionally reloaded segments' agglomerate ids to the once maybe refreshed.
+    const adaptToType = getAdaptToTypeFunction(unsplitMapping);
+    additionalSegmentsToRequest.forEach((segmentId) =>
+      oldAgglomerateIds.add(
+        Number(
+          (unsplitMapping as NumberLikeMap | undefined)?.get(adaptToType(segmentId)) ??
+            sourceAgglomerateId,
+        ),
+      ),
+    );
+  }
+  const newAgglomerateIds = new Set<number>();
 
   // Create a new mapping which is equal to the old one with the difference that
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
@@ -1738,6 +1787,7 @@ export function* splitAgglomerateInMapping(
       // @ts-ignore get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
+        newAgglomerateIds.add(Number(mappedId));
         return [segmentId, mappedId];
       }
       return [segmentId, agglomerateId];
@@ -1748,8 +1798,18 @@ export function* splitAgglomerateInMapping(
     // @ts-ignore get() is expected to accept the type that unmappedId has.
     const mappedId = mappingAfterSplit.get(unmappedId);
     if (mappedId) {
+      newAgglomerateIds.add(Number(mappedId));
       splitMapping.set(unmappedId, mappedId);
     }
+  }
+  if (syncAgglomerateSkeletons && activeMapping.mappingName) {
+    yield* call(
+      syncAgglomerateSkeletonsAfterSplitAction,
+      Array.from(oldAgglomerateIds),
+      Array.from(newAgglomerateIds),
+      volumeTracingId,
+      activeMapping.mappingName,
+    );
   }
 
   return splitMapping as Mapping;

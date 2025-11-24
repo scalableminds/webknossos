@@ -180,6 +180,7 @@ function JobListView() {
 
   function renderDescription(__: any, job: APIJob) {
     const linkToDataset = getLinkToDataset(job);
+    const layerName = job.args.annotationLayerName || job.args.layerName;
     if (job.command === APIJobCommand.CONVERT_TO_WKW && job.args.datasetName) {
       return <span>{`Conversion to WKW of ${job.args.datasetName}`}</span>;
     } else if (job.command === APIJobCommand.EXPORT_TIFF && linkToDataset != null) {
@@ -191,10 +192,9 @@ function JobListView() {
         ) : (
           <Link to={linkToDataset}>dataset {job.args.datasetName}</Link>
         );
-      const layerLabel = job.args.annotationLayerName || job.args.layerName;
       return (
         <span>
-          Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
+          Tiff export of layer {layerName} from {labelToAnnotationOrDataset} (Bounding Box{" "}
           {job.args.ndBoundingBox
             ? formatWkLibsNdBBox(job.args.ndBoundingBox)
             : job.args.boundingBox}
@@ -204,7 +204,7 @@ function JobListView() {
     } else if (job.command === APIJobCommand.RENDER_ANIMATION && linkToDataset != null) {
       return (
         <span>
-          Animation rendering for layer {job.args.layerName} of dataset{" "}
+          Animation rendering for layer {layerName} of dataset{" "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>
         </span>
       );
@@ -225,34 +225,30 @@ function JobListView() {
     } else if (
       job.command === APIJobCommand.FIND_LARGEST_SEGMENT_ID &&
       linkToDataset != null &&
-      job.args.layerName
+      layerName
     ) {
       return (
         <span>
-          Largest segment id detection for layer {job.args.layerName} of{" "}
+          Largest segment id detection for layer {layerName} of{" "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.command === APIJobCommand.INFER_NUCLEI &&
-      linkToDataset != null &&
-      job.args.layerName
-    ) {
+    } else if (job.command === APIJobCommand.INFER_NUCLEI && linkToDataset != null && layerName) {
       return (
         <span>
-          Nuclei inferral for layer {job.args.layerName} of{" "}
+          Nuclei inferral for layer {layerName} of{" "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
     } else if (
       job.command === APIJobCommand.INFER_NEURONS &&
       linkToDataset != null &&
-      job.args.layerName &&
+      layerName &&
       job.args.modelId == null
     ) {
       return (
         <span>
-          AI Neuron inferral for layer <i>{job.args.layerName}</i> of{" "}
+          AI Neuron inferral for layer <i>{layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
@@ -270,33 +266,29 @@ function JobListView() {
     } else if (
       job.command === APIJobCommand.INFER_MITOCHONDRIA &&
       linkToDataset != null &&
-      job.args.layerName
+      layerName
     ) {
       return (
         <span>
-          AI Mitochondria inferral for layer <i>{job.args.layerName}</i> of{" "}
+          AI Mitochondria inferral for layer <i>{layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
     } else if (
       job.command === APIJobCommand.INFER_INSTANCES &&
       linkToDataset != null &&
-      job.args.layerName
+      layerName
     ) {
       return (
         <span>
-          AI instance segmentation for layer <i>{job.args.layerName}</i> of{" "}
+          AI instance segmentation for layer <i>{layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (
-      job.command === APIJobCommand.ALIGN_SECTIONS &&
-      linkToDataset != null &&
-      job.args.layerName
-    ) {
+    } else if (job.command === APIJobCommand.ALIGN_SECTIONS && linkToDataset != null && layerName) {
       return (
         <span>
-          Align sections for layer <i>{job.args.layerName}</i> of{" "}
+          Align sections for layer <i>{layerName}</i> of{" "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
@@ -306,7 +298,7 @@ function JobListView() {
     ) {
       return (
         <span>
-          Materialize annotation for {job.args.layerName ? ` layer ${job.args.layerName} of ` : " "}
+          Materialize annotation for {layerName ? ` layer ${layerName} of ` : " "}
           <Link to={linkToDataset}>{job.args.datasetName}</Link>
           {job.args.mergeSegments
             ? ". This includes merging the segments that were merged via merger mode."

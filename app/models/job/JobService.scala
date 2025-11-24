@@ -173,25 +173,31 @@ class JobService @Inject()(wkConf: WkConf,
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
       resultLink = job.constructResultLink(organization._id)
+      ownerEmail <- userService.emailFor(owner)
       ownerJson <- userService.compactWrites(owner)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
     } yield {
       Json.obj(
         "id" -> job._id.id,
-        "owner" -> ownerJson,
         "command" -> job.command,
-        "commandArgs" -> (job.args - "webknossos_token" - "user_auth_token"),
-        "state" -> job.state,
-        "manualState" -> job.manualState,
+        "organizationId" -> organization._id,
+        "ownerFirstName" -> owner.firstName,
+        "ownerLastName" -> owner.lastName,
+        "ownerEmail" -> ownerEmail,
+        "args" -> (job.args - "webknossos_token" - "user_auth_token"),
         "effectiveState" -> Json.toJson(job.manualState.getOrElse(job.state)),
-        "latestRunId" -> job.latestRunId,
         "returnValue" -> job.returnValue,
         "resultLink" -> resultLink,
         "voxelyticsWorkflowHash" -> job._voxelyticsWorkflowHash,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
-        "creditCost" -> creditTransactionBox.toOption.map(t => (t.creditDelta * -1).toString)
+        "creditCost" -> creditTransactionBox.toOption.map(t => (t.creditDelta * -1).toString),
+        // Additional properties not present in JobCompactInfo:
+        "owner" -> ownerJson,
+        "state" -> job.state,
+        "manualState" -> job.manualState,
+        "latestRunId" -> job.latestRunId,
       )
     }
 

@@ -832,26 +832,6 @@ export type APIJob = {
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;
   readonly created: number;
-  readonly started: number | null | undefined;
-  readonly ended: number | null | undefined;
-  readonly creditCost: string | null | undefined;
-};
-
-export type APIJobOLD = {
-  readonly id: string;
-  readonly datasetId: string | null | undefined;
-  readonly owner: APIUserBase;
-  readonly datasetName: string | null | undefined;
-  readonly exportFileName: string | null | undefined;
-  readonly tracingId: string | null | undefined;
-  readonly annotationType: string | null | undefined;
-  readonly organizationId: string | null | undefined;
-  readonly mergeSegments: boolean | null | undefined;
-  readonly command: APIJobCommand;
-  readonly result: string | null | undefined;
-  readonly resultLink: string | null | undefined;
-  readonly createdAt: number;
-  readonly voxelyticsWorkflowHash: string | null;
   readonly creditCost: string | null | undefined;
 };
 

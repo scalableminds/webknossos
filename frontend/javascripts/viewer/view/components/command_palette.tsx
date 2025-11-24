@@ -316,25 +316,25 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const tracingMenuItems = useTracingViewMenuItems(props, null);
 
-  const menuActions = _.memoize(() => {
+  const menuActions = useMemo(() => {
     if (!isInTracingView) return [];
     if (isViewMode) {
       return viewDatasetMenu;
     }
     return tracingMenuItems;
-  });
+  }, [isInTracingView, isViewMode, tracingMenuItems]);
 
-  const allStaticCommands = _.memoize(() => [
+  const allStaticCommands = [
     viewDatasetsItem,
     viewAnnotationItems,
     ...getNavigationEntries(),
     ...getThemeEntries(),
     ...getToolEntries(),
     ...getViewModeEntries(),
-    ...mapMenuActionsToCommands(menuActions()),
+    ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getSuperUserItems(),
-  ]);
+  ];
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
   const [paletteKey, setPaletteKey] = useState(0);

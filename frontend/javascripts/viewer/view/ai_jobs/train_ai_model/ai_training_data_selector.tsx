@@ -134,12 +134,7 @@ const AiTrainingDataSelector = ({
       style={{ marginBottom: "24px" }}
       type="inner"
       title={
-        <a
-          href={`/annotations/${annotation.id}`}
-          target="_blank"
-          rel="noreferrer"
-          style={{ fontSize: "16px" }}
-        >
+        <a href={`/annotations/${annotation.id}`} target="_blank" rel="noreferrer">
           Annotation: {annotation.name || formatHash(annotation.id)}
         </a>
       }

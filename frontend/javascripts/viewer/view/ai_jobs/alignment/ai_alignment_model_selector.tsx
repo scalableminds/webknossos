@@ -21,7 +21,7 @@ const alignmentTasks: AlignmentTask[] = [
   {
     name: "Align Sections",
     comment:
-      "Align all sections of this dataset along the Z axis using features in neighboring sections. Only supported for datasets with a single tile per sections (no stitching needed).",
+      "Aligns all sections of this dataset along the Z axis using features in neighboring sections. Only supported for datasets with a single tile per sections (no stitching needed).",
     id: "align-sections",
     jobType: APIJobType.ALIGN_SECTIONS,
     image: "/assets/images/align_example.png",

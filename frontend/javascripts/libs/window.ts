@@ -1,7 +1,7 @@
 // This module should be used to access the window object, so it can be mocked in the unit tests
 
 import type { ShaderMaterial } from "three";
-import type { ArbitraryFunction, ArbitraryObject } from "types/globals";
+import type { ArbitraryFunction, ArbitraryObject } from "types/type_utils";
 import type TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 
 const removeEventListener = (

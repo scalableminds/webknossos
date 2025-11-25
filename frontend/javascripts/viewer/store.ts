@@ -84,6 +84,7 @@ import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/ai_job_modals/constants";
+import { ensureExactKeys } from "types/type_utils";
 
 export type { BoundingBoxObject } from "types/bounding_box";
 
@@ -183,6 +184,19 @@ export type Segment = {
   readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
+
+export const SegmentProperties = ensureExactKeys<Segment>()([
+  "id",
+  "name",
+  "somePosition",
+  "someAdditionalCoordinates",
+  "creationTime",
+  "color",
+  "groupId",
+  "isVisible",
+  "metadata",
+] as const);
+
 export type SegmentMap = DiffableMap<number, Segment>;
 
 export type LabelAction = {
@@ -234,18 +248,18 @@ export type LegacyViewCommand = APIDataSourceId & {
 };
 export type TraceOrViewCommand =
   | {
-      readonly datasetId: string;
-      readonly type: typeof ControlModeEnum.VIEW;
-    }
+    readonly datasetId: string;
+    readonly type: typeof ControlModeEnum.VIEW;
+  }
   | {
-      readonly type: typeof ControlModeEnum.TRACE;
-      readonly annotationId: string;
-    }
+    readonly type: typeof ControlModeEnum.TRACE;
+    readonly annotationId: string;
+  }
   | {
-      readonly datasetId: string;
-      readonly type: typeof ControlModeEnum.SANDBOX;
-      readonly tracingType: TracingType;
-    };
+    readonly datasetId: string;
+    readonly type: typeof ControlModeEnum.SANDBOX;
+    readonly tracingType: TracingType;
+  };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;
@@ -359,10 +373,10 @@ export type UserConfiguration = {
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
-    DatasetConfiguration & {
-      zoom: number;
-      segmentationOpacity: number;
-    }
+  DatasetConfiguration & {
+    zoom: number;
+    segmentationOpacity: number;
+  }
 >;
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
@@ -453,6 +467,7 @@ export type RebaseRelevantAnnotationState = {
   readonly annotationDescription: string;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
+  readonly volumes: Array<VolumeTracing>;
   readonly isRebasing: boolean;
 };
 export type SaveState = {
@@ -553,9 +568,9 @@ type UiInformation = {
   readonly isUiReady: boolean;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
-    | "inactive"
-    | "drawing" // the user is currently drawing a bounding box
-    | "active"; // the quick select saga is currently running (calculating as well as preview mode)
+  | "inactive"
+  | "drawing" // the user is currently drawing a bounding box
+  | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };

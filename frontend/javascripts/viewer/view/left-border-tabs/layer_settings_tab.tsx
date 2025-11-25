@@ -54,7 +54,7 @@ import {
   type AnnotationLayerType,
   type EditableLayerProperties,
 } from "types/api_types";
-import type { ValueOf } from "types/globals";
+import type { ValueOf } from "types/type_utils";
 import {
   defaultDatasetViewConfiguration,
   getDefaultLayerViewConfiguration,

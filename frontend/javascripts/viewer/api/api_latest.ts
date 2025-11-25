@@ -22,7 +22,7 @@ import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,

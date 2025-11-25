@@ -82,7 +82,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import type { SegmentMap, VolumeTracing } from "viewer/store";
+import { SegmentProperties, type SegmentMap, type VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -449,7 +449,15 @@ function* uncachedDiffSegmentLists(
     const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
     const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
 
-    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
+    let changedPropertyNames = [];
+    for (const propertyName of SegmentProperties) {
+      if (
+        !_.isEqual(prevSegmentWithoutIsVisible[propertyName], segmentWithoutIsVisible[propertyName])
+      ) {
+        changedPropertyNames.push(propertyName);
+      }
+    }
+    if (changedPropertyNames.length > 0) {
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
@@ -460,6 +468,7 @@ function* uncachedDiffSegmentLists(
         segment.metadata,
         tracingId,
         segment.creationTime,
+        changedPropertyNames,
       );
     }
 

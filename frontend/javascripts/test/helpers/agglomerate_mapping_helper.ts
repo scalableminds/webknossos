@@ -197,13 +197,13 @@ export class AgglomerateMapping {
       this.versions.push(newVersionMap);
       console.log(
         `Committed v=${this.currentVersion} with mapping: `,
-        newVersionMap.entries().toArray(),
+        // newVersionMap.entries().toArray(),
       );
     } else {
       this.versions[this.currentVersion] = newVersionMap;
       console.log(
         `Appended new update to v=${this.currentVersion}; resulting mapping: `,
-        newVersionMap.entries().toArray(),
+        // newVersionMap.entries().toArray(),
       );
     }
   }

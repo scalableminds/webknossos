@@ -198,6 +198,7 @@ const defaultState: WebknossosState = {
       annotationDescription: "",
       annotationVersion: 1,
       skeleton: undefined,
+      volumes: [],
       activeMappingByLayer: {},
       isRebasing: false,
     },

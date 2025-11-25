@@ -5,7 +5,7 @@ import type TPS3D from "libs/thin_plate_spline";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
-import type { ValueOf } from "types/globals";
+import type { ValueOf } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "viewer/constants";
 import { MappingStatusEnum, OrthoViewValues, OrthoViews, ViewModeValues } from "viewer/constants";

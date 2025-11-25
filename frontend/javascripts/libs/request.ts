@@ -1,6 +1,6 @@
 import handleStatus from "libs/handle_http_status";
 import _ from "lodash";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import urljoin from "url-join";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import CompressWorker from "viewer/workers/compress.worker";

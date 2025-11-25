@@ -760,7 +760,8 @@ export function updateSegmentVolumeAction(
   groupId: number | null | undefined,
   metadata: Array<MetadataEntryProto>,
   actionTracingId: string,
-  creationTime: number | null | undefined = Date.now(),
+  creationTime: number | null | undefined,
+  changedPropertyNames: string[],
 ) {
   return {
     name: "updateSegment",
@@ -775,6 +776,7 @@ export function updateSegmentVolumeAction(
       metadata: enforceValidMetadata(metadata),
       creationTime,
     },
+    changedPropertyNames,
   } as const;
 }
 

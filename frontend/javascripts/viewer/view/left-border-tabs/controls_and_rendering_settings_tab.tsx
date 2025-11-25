@@ -11,7 +11,7 @@ import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
-import type { ArrayElement } from "types/globals";
+import type { ArrayElement } from "types/type_utils";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ViewMode } from "viewer/constants";
 import Constants, { BLEND_MODES } from "viewer/constants";

@@ -65,6 +65,11 @@ function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction
 
 function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
+    console.log("############# handleUpdateSegment in reducer", action);
+    console.log("############# handleUpdateSegment in reducer", action);
+    console.log("############# handleUpdateSegment in reducer", action);
+    console.log("############# handleUpdateSegment in reducer", action);
+    console.log("############# handleUpdateSegment in reducer", action);
     const { segmentId, segment } = action;
     if (segmentId === 0) {
       return segments;
@@ -292,7 +297,14 @@ function VolumeTracingReducer(
         }
       }
 
-      return newState;
+      return update(newState, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            // todop: strictly speaking, we should only add the new volume entry
+            volumes: { $set: newState.annotation.volumes },
+          },
+        },
+      });
     }
 
     case "INITIALIZE_EDITABLE_MAPPING": {

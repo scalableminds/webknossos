@@ -53,15 +53,14 @@ function applySingleAction(
     }
     case "createSegment":
     case "updateSegment": {
-      const { actionTracingId, ...originalSegment } = ua.value;
-      const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
+      const { actionTracingId, anchorPosition, ...segmentWithoutAnchor } = ua.value;
       const segment: Partial<Segment> = {
         somePosition: anchorPosition ?? undefined,
         ...segmentWithoutAnchor,
       };
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(originalSegment.id, segment, actionTracingId),
+        updateSegmentAction(segmentWithoutAnchor.id, segment, actionTracingId),
       );
     }
     case "deleteSegment": {

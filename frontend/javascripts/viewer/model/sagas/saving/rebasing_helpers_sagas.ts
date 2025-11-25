@@ -10,6 +10,7 @@ import type {
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
+  UpdateSegmentUpdateAction,
 } from "../volume/update_actions";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
@@ -139,13 +140,13 @@ export function* addMissingSegmentsToLoadedMappings(
 // to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
 export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   | {
-      success: false;
-      updatedSaveQueue: undefined;
-    }
+    success: false;
+    updatedSaveQueue: undefined;
+  }
   | {
-      success: true;
-      updatedSaveQueue: SaveQueueEntry[];
-    }
+    success: true;
+    updatedSaveQueue: SaveQueueEntry[];
+  }
 > {
   const saveQueue = yield* select((state) => state.save.queue);
   const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
@@ -153,6 +154,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
+  const annotationBeforeUpdate = yield* select((state) => state.annotation);
 
   let success = true;
   const updatedSaveQueue = saveQueue.map((saveQueueEntry) => ({
@@ -215,6 +217,57 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               } satisfies SplitAgglomerateUpdateAction;
             }
           }
+          case "createSegment": {
+            console.log("adapting createSegment action?", action);
+
+            const { actionTracingId } = action.value;
+
+            const tracing = annotationBeforeUpdate.volumes.find(
+              (v) => v.tracingId === actionTracingId,
+            );
+            const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+            if (!maybeExistingSegment) {
+              return action;
+            }
+
+            console.log("action.chan", action);
+
+            console.log(
+              "action.value.color ?? maybeExistingSegment.color",
+              action.value.color,
+              "??",
+              maybeExistingSegment.color,
+            );
+
+            const newAction: UpdateSegmentUpdateAction = {
+              name: "updateSegment",
+              value: {
+                actionTracingId: action.value.actionTracingId,
+                id: action.value.id ?? maybeExistingSegment.id,
+                name: action.value.name ?? maybeExistingSegment.name,
+                anchorPosition: action.value.anchorPosition ?? maybeExistingSegment.somePosition,
+                additionalCoordinates:
+                  // todop: additionalCoordinates does not exist in CreateSegment action?
+                  // action.value.additionalCoordinates ??
+                  maybeExistingSegment.someAdditionalCoordinates,
+                creationTime: action.value.creationTime ?? maybeExistingSegment.creationTime,
+                color: action.value.color ?? maybeExistingSegment.color,
+                groupId: action.value.groupId ?? maybeExistingSegment.groupId,
+                metadata: action.value.metadata ?? maybeExistingSegment.metadata,
+                // ...action.value,
+              },
+              // todop: omit?
+              changedPropertyNames: [],
+            };
+            return newAction;
+          }
+          case "updateSegment": {
+            console.log("adapting createSegment action?", action);
+
+            return action;
+          }
+
           default:
             return action;
         }

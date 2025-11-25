@@ -29,7 +29,7 @@ trait JobResultLinks {
           datasetId.map { datasetId =>
             val datasetNameMaybe = datasetName.map(name => s"$name-").getOrElse("")
             Some(s"/datasets/$datasetNameMaybe$datasetId/view")
-          }.getOrElse(datasetName.map(name => s"datasets/$organizationId/$name/view"))
+          }.getOrElse(datasetName.map(name => s"/datasets/$organizationId/$name/view"))
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this.id}/export")
         case JobCommand.infer_neurons if this.argAsBooleanOpt("do_evaluation").getOrElse(false) =>

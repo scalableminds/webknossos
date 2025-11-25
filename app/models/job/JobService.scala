@@ -191,7 +191,7 @@ class JobService @Inject()(wkConf: WkConf,
           created = job.created,
           started = job.started,
           ended = job.ended,
-          creditCost = creditTransactionBox.toOption.map(t => t.creditDelta * -1)
+          creditCost = creditTransactionBox.toOption.map(t => t.creditDelta * -1) // delta is negative, so cost should be positive.
         )
       )
 

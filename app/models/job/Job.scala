@@ -209,7 +209,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             created = row._11,
             started = row._12,
             ended = row._13,
-            creditCost = row._14.map(_ * -1)
+            creditCost = row._14.map(_ * -1) // delta is negative, so cost should be positive.
           )
       }
     } yield parsed

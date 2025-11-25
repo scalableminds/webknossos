@@ -18,7 +18,7 @@ import { describe, it, beforeAll, expect } from "vitest";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import type { SaveQueueEntry } from "viewer/store";
 import DiffableMap from "libs/diffable_map";
-import { addVersionNumbers } from "viewer/model/sagas/saving/save_queue_draining";
+import { addVersionNumbers } from "viewer/model/sagas/saving/save_queue_draining_saga";
 
 const datasetId = "59e9cfbdba632ac2ab8b23b3";
 

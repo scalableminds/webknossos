@@ -1043,7 +1043,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: WebknossosState) => ({
-  allowUpdate: state.annotation.restrictions.allowUpdate,
+  allowUpdate: state.annotation.isUpdatingCurrentlyAllowed,
   skeletonTracing: state.annotation.skeleton,
   annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,

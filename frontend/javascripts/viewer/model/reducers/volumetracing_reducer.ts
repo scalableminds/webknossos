@@ -10,26 +10,17 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
-  getRequestedOrVisibleSegmentationLayer,
   getSegmentationLayerForTracing,
   getSelectedIds,
   getVisibleSegments,
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type {
-  FinishMappingInitializationAction,
-  SetMappingAction,
-  SetMappingEnabledAction,
-  SetMappingNameAction,
-} from "viewer/model/actions/settings_actions";
-import type {
   ClickSegmentAction,
   RemoveSegmentAction,
   SetSegmentsAction,
   UpdateSegmentAction,
-  VolumeTracingAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { updateKey2 } from "viewer/model/helpers/deep_update";
 import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
@@ -37,144 +28,31 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "viewer/model/reducers/reducer_helpers";
 import {
+  type VolumeTracingReducerAction,
   addToLayerReducer,
   createCellReducer,
+  getSegmentUpdateInfo,
   hideBrushReducer,
-  removeMissingGroupsFromSegments,
   resetContourReducer,
   setActiveCellReducer,
   setContourTracingModeReducer,
   setLargestSegmentIdReducer,
   setMappingNameReducer,
+  setSegmentGroups,
+  toggleSegmentGroupReducer,
   updateDirectionReducer,
+  updateSegments,
   updateVolumeTracing,
 } from "viewer/model/reducers/volumetracing_reducer_helpers";
-import type {
-  EditableMapping,
-  Segment,
-  SegmentGroup,
-  SegmentMap,
-  VolumeTracing,
-  WebknossosState,
-} from "viewer/store";
+import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "viewer/store";
 import {
   findParentIdForGroupId,
   getGroupNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
-import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
-import type { TreeGroup } from "../types/tree_types";
+import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
-import { forEachGroups } from "./skeletontracing_reducer_helpers";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
-
-type SegmentUpdateInfo =
-  | {
-      readonly type: "UPDATE_VOLUME_TRACING";
-      readonly volumeTracing: VolumeTracing;
-      readonly segments: SegmentMap;
-      readonly segmentGroups: TreeGroup[];
-    }
-  | {
-      readonly type: "UPDATE_LOCAL_SEGMENTATION_DATA";
-      readonly layerName: string;
-      readonly segments: SegmentMap;
-      readonly segmentGroups: [];
-    }
-  | {
-      readonly type: "NOOP";
-    };
-
-function getSegmentUpdateInfo(
-  state: WebknossosState,
-  layerName: string | null | undefined,
-): SegmentUpdateInfo {
-  // Returns an object describing how to update a segment in the specified layer.
-  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
-
-  if (!layer) {
-    return {
-      type: "NOOP",
-    };
-  }
-
-  if (layer.tracingId != null) {
-    const volumeTracing = getVolumeTracingById(state.annotation, layer.tracingId);
-    return {
-      type: "UPDATE_VOLUME_TRACING",
-      volumeTracing,
-      segments: volumeTracing.segments,
-      segmentGroups: volumeTracing.segmentGroups,
-    };
-  } else {
-    return {
-      type: "UPDATE_LOCAL_SEGMENTATION_DATA",
-      layerName: layer.name,
-      segments: state.localSegmentationData[layer.name].segments,
-      segmentGroups: [],
-    };
-  }
-}
-
-function updateSegments(
-  state: WebknossosState,
-  layerName: string,
-  mapFn: (segments: SegmentMap) => SegmentMap,
-) {
-  const updateInfo = getSegmentUpdateInfo(state, layerName);
-
-  if (updateInfo.type === "NOOP") {
-    return state;
-  }
-
-  const { segments } =
-    updateInfo.type === "UPDATE_VOLUME_TRACING"
-      ? updateInfo.volumeTracing
-      : state.localSegmentationData[updateInfo.layerName];
-
-  const newSegmentMap = mapFn(segments);
-
-  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
-      segments: newSegmentMap,
-    });
-  }
-
-  // Update localSegmentationData
-  return updateKey2(state, "localSegmentationData", updateInfo.layerName, {
-    segments: newSegmentMap,
-  });
-}
-
-function setSegmentGroups(
-  state: WebknossosState,
-  layerName: string,
-  newSegmentGroups: SegmentGroup[],
-) {
-  const updateInfo = getSegmentUpdateInfo(state, layerName);
-
-  if (updateInfo.type === "NOOP") {
-    return state;
-  }
-
-  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    // In case a group is deleted which still has segments attached to it,
-    // adapt the segments so that they belong to the root group. This is
-    // done to avoid that segments get lost in nirvana if the segment groups
-    // were updated inappropriately.
-    const fixedSegments = removeMissingGroupsFromSegments(
-      updateInfo.volumeTracing,
-      newSegmentGroups,
-    );
-    return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
-      segments: fixedSegments,
-      segmentGroups: newSegmentGroups,
-    });
-  }
-
-  // Don't update groups for non-tracings
-  return state;
-}
 
 function handleSetSegments(state: WebknossosState, action: SetSegmentsAction) {
   const { segments, layerName } = action;
@@ -319,16 +197,10 @@ export function serverVolumeToClientVolumeTracing(
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
+    proofreadingMarkerPosition: undefined,
   };
   return volumeTracing;
 }
-
-export type VolumeTracingReducerAction =
-  | VolumeTracingAction
-  | SetMappingAction
-  | FinishMappingInitializationAction
-  | SetMappingEnabledAction
-  | SetMappingNameAction;
 
 function getVolumeTracingFromAction(state: WebknossosState, action: VolumeTracingReducerAction) {
   if ("tracingId" in action && action.tracingId != null) {
@@ -347,48 +219,6 @@ function getVolumeTracingFromAction(state: WebknossosState, action: VolumeTracin
     return null;
   }
   return getVolumeTracingById(state.annotation, maybeVolumeLayer.tracingId);
-}
-
-export function toggleSegmentGroupReducer(
-  state: WebknossosState,
-  layerName: string,
-  groupId: number,
-  targetVisibility?: boolean,
-): WebknossosState {
-  const updateInfo = getSegmentUpdateInfo(state, layerName);
-
-  if (updateInfo.type === "NOOP") {
-    return state;
-  }
-  const { segments, segmentGroups } = updateInfo;
-
-  let toggledGroup;
-  forEachGroups(segmentGroups, (group) => {
-    if (group.groupId === groupId) toggledGroup = group;
-  });
-  if (toggledGroup == null) return state;
-  // Assemble a list that contains the toggled groupId and the groupIds of all child groups
-  const affectedGroupIds = new Set(mapGroupsToGenerator([toggledGroup], (group) => group.groupId));
-  // Let's make all segments visible if there is one invisible segment in one of the affected groups
-  const shouldBecomeVisible =
-    targetVisibility != null
-      ? targetVisibility
-      : Array.from(segments.values()).some(
-          (segment) =>
-            typeof segment.groupId === "number" &&
-            affectedGroupIds.has(segment.groupId) &&
-            !segment.isVisible,
-        );
-
-  const newSegments = segments.clone();
-
-  Array.from(segments.values()).forEach((segment) => {
-    if (typeof segment.groupId === "number" && affectedGroupIds.has(segment.groupId)) {
-      newSegments.mutableSet(segment.id, { ...segment, isVisible: shouldBecomeVisible });
-    }
-  });
-
-  return updateSegments(state, layerName, (_oldSegments) => newSegments);
 }
 
 export function toggleAllSegmentsReducer(
@@ -493,6 +323,16 @@ function VolumeTracingReducer(
 
     case "REMOVE_SEGMENT": {
       return handleRemoveSegment(state, action);
+    }
+
+    case "UPDATE_PROOFREADING_MARKER_POSITION": {
+      const volumeTracing = getVolumeTracingFromAction(state, action);
+      if (volumeTracing) {
+        return updateVolumeTracing(state, volumeTracing.tracingId, {
+          proofreadingMarkerPosition: action.position,
+        });
+      }
+      return state;
     }
 
     case "SET_EXPANDED_SEGMENT_GROUPS": {

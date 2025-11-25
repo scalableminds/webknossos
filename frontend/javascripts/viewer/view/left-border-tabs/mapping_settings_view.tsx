@@ -100,7 +100,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       throw new Error("Invalid mapping type");
     }
 
-    this.props.setMapping(this.props.layerName, mappingName, mappingType, {
+    this.props.setMapping(this.props.layerName, mappingName, mappingType, false, {
       showLoadingIndicator: true,
     });
     // @ts-ignore
@@ -280,7 +280,7 @@ function mapStateToProps(state: WebknossosState, ownProps: OwnProps) {
     mappingType: activeMappingInfo.mappingType,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
-    allowUpdate: state.annotation.restrictions.allowUpdate,
+    allowUpdate: state.annotation.isUpdatingCurrentlyAllowed,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),

@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-# This script asserts that each migration file in conf/evolutions
+# This script asserts that each migration file in schema/evolutions
 # - is mentioned in either MIGRATIONS.released.md or in unreleased_changes/*.md (but not both)
-# - has a reversion sibling in conf/evolutions/reversions
+# - has a reversion sibling in schema/evolutions/reversions
 
 EVOLUTIONS_FOLDER="schema/evolutions"
 RELEASED_FILE="MIGRATIONS.released.md"

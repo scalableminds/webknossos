@@ -37,10 +37,6 @@ export default function AiModelListView() {
     "Could not load model list.",
   );
 
-  if (!activeUser?.isSuperUser) {
-    return <PageNotAvailableToNormalUser />;
-  }
-
   return (
     <div className="container voxelytics-view">
       {isTrainModalVisible ? (

@@ -9,11 +9,10 @@ import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
 import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
 import { Button, Col, Modal, Row, Select, Space, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
-import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
 import { useFetch, useGuardedFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
+import uniq from "lodash/uniq";
 import { useState } from "react";
 import type { Key } from "react";
 import type { Vector3 } from "viewer/constants";
@@ -24,9 +23,10 @@ import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_j
 
 import { Link } from "react-router-dom";
 import type { APIAnnotation, AiModel } from "types/api_types";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 export default function AiModelListView() {
-  const activeUser = useWkSelector((state) => state.activeUser);
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
@@ -85,7 +85,7 @@ export default function AiModelListView() {
             dataIndex: "user",
             key: "user",
             render: (user: AiModel["user"]) => formatUserName(activeUser, user),
-            filters: _.uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
+            filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
               (username) => ({
                 text: username,
                 value: username,

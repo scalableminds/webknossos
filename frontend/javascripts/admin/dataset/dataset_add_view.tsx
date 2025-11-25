@@ -9,7 +9,7 @@ import { useWkSelector } from "libs/react_hooks";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;

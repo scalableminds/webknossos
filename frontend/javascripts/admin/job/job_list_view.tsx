@@ -142,11 +142,15 @@ function JobListView() {
     fetchData();
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
-    setIsLoading(false);
   }, []);
 
   async function fetchData() {
-    setJobs(await getJobs());
+    setIsLoading(true);
+    try {
+      setJobs(await getJobs());
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   useInterval(async () => {

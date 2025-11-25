@@ -393,7 +393,6 @@ function TaskListView({ initialFieldValues }: Props) {
           {task.status.finished > 0 ? (
             <div>
               <AsyncLink
-                href="#"
                 onClick={() => {
                   const includesVolumeData = task.type.tracingType !== "skeleton";
                   return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);

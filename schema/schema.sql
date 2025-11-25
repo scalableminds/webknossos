@@ -913,7 +913,7 @@ ALTER TABLE webknossos.user_team_roles
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.invite_team_roles
-  ADD CONSTRAINT user_ref FOREIGN KEY(_invite) REFERENCES webknossos.invites(_id) ON DELETE CASCADE DEFERRABLE,
+  ADD CONSTRAINT invite_ref FOREIGN KEY(_invite) REFERENCES webknossos.invites(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.user_experiences
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;

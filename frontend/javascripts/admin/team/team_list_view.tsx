@@ -70,7 +70,9 @@ export function renderUsersForTeam(
   },
 ) {
   if (allUsers === null) return;
-  const teamMembers = allUsers.filter((user) => filterTeamMembersOf(team, user));
+  const teamMembers = allUsers
+    .filter((user) => filterTeamMembersOf(team, user))
+    .filter((user) => user.isActive);
   if (teamMembers.length === 0) return messages["team.no_members"];
 
   return (

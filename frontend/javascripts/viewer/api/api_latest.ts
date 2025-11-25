@@ -2744,24 +2744,8 @@ class DataApi {
    * );
    */
   _createTransformsFromSpecs(specs: Array<TransformSpec>) {
-    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 => [
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      x,
-      y,
-      z,
-      1,
-    ];
+    // biome-ignore format: don't format array
+    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1];
     const makeScale = (scale: Vector3, anchor: Vector3) =>
       M4x4.mul(
         M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),

@@ -261,7 +261,6 @@ function TaskTypeListView() {
                 </Link>
                 <br />
                 <AsyncLink
-                  href="#"
                   onClick={() => {
                     const includesVolumeData = taskType.tracingType !== "skeleton";
                     return downloadAnnotation(taskType.id, "CompoundTaskType", includesVolumeData);

@@ -37,7 +37,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
@@ -68,9 +68,7 @@ function TaskListView({ initialFieldValues }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [tasks, setTasks] = useState<APITask[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUserIdForAssignment, setSelectedUserIdForAssignment] = useState<string | null>(
-    null,
-  );
+  const selectedUserIdForAssignment = useRef<string | null>(null);
   const [isAnonymousTaskLinkModalOpen, setIsAnonymousTaskLinkModalOpen] = useState(
     Utils.hasUrlParam("showAnonymousLinks"),
   );
@@ -123,6 +121,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function assignTaskToUser(task: APITask) {
+    selectedUserIdForAssignment.current = null;
     modal.confirm({
       title: "Manual Task Assignment",
       icon: <UserAddOutlined />,
@@ -132,7 +131,9 @@ function TaskListView({ initialFieldValues }: Props) {
           <div>Please, select a user to manually assign this task to:</div>
           <div style={{ marginTop: 10, marginBottom: 25 }}>
             <UserSelectionComponent
-              handleSelection={(value) => setSelectedUserIdForAssignment(value)}
+              handleSelection={(value) => {
+                selectedUserIdForAssignment.current = value;
+              }}
             />
           </div>
           <Alert
@@ -142,7 +143,7 @@ function TaskListView({ initialFieldValues }: Props) {
         </>
       ),
       onOk: async () => {
-        const userId = selectedUserIdForAssignment;
+        const userId = selectedUserIdForAssignment.current;
         if (userId != null) {
           try {
             const updatedTask = await assignTaskToUserAPI(task.id, userId);
@@ -153,7 +154,7 @@ function TaskListView({ initialFieldValues }: Props) {
           } catch (error) {
             handleGenericError(error as Error);
           } finally {
-            setSelectedUserIdForAssignment(null);
+            selectedUserIdForAssignment.current = null;
           }
         }
       },
@@ -392,7 +393,6 @@ function TaskListView({ initialFieldValues }: Props) {
           {task.status.finished > 0 ? (
             <div>
               <AsyncLink
-                href="#"
                 onClick={() => {
                   const includesVolumeData = task.type.tracingType !== "skeleton";
                   return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);

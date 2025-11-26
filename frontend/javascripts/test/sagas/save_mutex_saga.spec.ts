@@ -8,7 +8,7 @@ import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import type { ServerSkeletonTracing, ServerVolumeTracing } from "types/api_types";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import {
   updateSegmentAction,
   setActiveCellAction,
@@ -85,7 +85,7 @@ function* assertMutexStoreProperties(
   hasAnnotationMutex: boolean,
   blockedByUser: any,
   isUpdatingCurrentlyAllowed: boolean,
-): Generator<any, void, any> {
+): Saga<void> {
   const hasAnnotationMutexInStore = yield select(
     (state) => state.save.mutexState.hasAnnotationMutex,
   );

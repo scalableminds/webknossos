@@ -11,7 +11,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
@@ -262,7 +262,7 @@ describe("Proofreading (Multi User)", () => {
   function* performCutFromAllNeighbours(
     context: WebknossosTestContext,
     tracingId: string,
-  ): Generator<any, void, any> {
+  ): Saga<void> {
     yield call(initializeMappingAndTool, context, tracingId);
     const mapping0 = yield select(
       (state) =>

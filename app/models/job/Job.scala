@@ -148,7 +148,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken) =
     q"""${prefix}_owner = $requestingUserId OR
-         ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
+         ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = ${prefix}_owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
        """
 
   def findAllCompact(implicit ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =

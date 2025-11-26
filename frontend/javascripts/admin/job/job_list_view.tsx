@@ -409,7 +409,7 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.command === "find_largest_segment_id") {
+    } else if (job.command === APIJobCommand.FIND_LARGEST_SEGMENT_ID) {
       return <span>{job.returnValue}</span>;
     } else if (
       job.command === APIJobCommand.INFER_NUCLEI ||

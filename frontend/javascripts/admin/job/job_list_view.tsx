@@ -71,7 +71,6 @@ export const getShowTrainingDataLink = (
 ) => {
   return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
     <a
-      href="#"
       onClick={() => {
         Modal.info({
           content: (
@@ -337,7 +336,6 @@ function JobListView() {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
-          href="#"
           onClick={async () => {
             const isDeleteConfirmed = await confirmAsync({
               title: <p>Are you sure you want to cancel job {job.id}?</p>,
@@ -358,7 +356,6 @@ function JobListView() {
       return (
         <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
           <AsyncLink
-            href="#"
             onClick={async () => {
               try {
                 await retryJob(job.id);

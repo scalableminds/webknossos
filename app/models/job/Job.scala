@@ -48,7 +48,7 @@ case class Job(
       s <- started
     } yield e - s
 
-  protected def effectiveState: JobState = manualState.getOrElse(state)
+  def effectiveState: JobState = manualState.getOrElse(state)
 
   def exportFileName: Option[String] = argAsStringOpt("export_file_name")
 
@@ -146,24 +146,14 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       )
      """
 
-  private def listAccessQ(requestingUserId: ObjectId) =
-    listAccessQWithPrefix(requestingUserId, q"")
-
-  private def listAccessQWithPrefix(requestingUserId: ObjectId, prefix: SqlToken) =
+  private def listAccessQ(requestingUserId: ObjectId, prefix: SqlToken) =
     q"""${prefix}_owner = $requestingUserId OR
          ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
        """
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
-    for {
-      accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY created".as[JobsRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
   def findAllCompact(implicit ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
     for {
-      accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQWithPrefix, q"j.")
+      accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"j.")
       rows <- run(
         q"""
           SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),

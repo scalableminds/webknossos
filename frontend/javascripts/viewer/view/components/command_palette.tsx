@@ -1,6 +1,5 @@
 import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
-import { formatHash } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
@@ -35,8 +34,8 @@ const commandEntryColor = "#5660ff";
 type CommandWithoutId = Omit<Command, "id">;
 
 enum DynamicCommands {
-  viewDataset = "> View Dataset...",
-  viewAnnotation = "> View Annotation...",
+  viewDataset = "View Dataset",
+  viewAnnotation = "View Annotation",
 }
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
@@ -70,7 +69,7 @@ const getLabelForPath = (key: string) =>
 
 //clean most html except <b> tags (for highlighting)
 const cleanStringOfMostHTML = (dirtyString: string | undefined) =>
-  dirtyString?.replace(/<(?!\/?b>)|[^<>\w\/ ]+/g, "");
+  dirtyString?.replace(/<(?!\/?b>)|[^<>\w\/ ())]+|/g, "");
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useWkSelector((state) => state.userConfiguration);
@@ -145,7 +144,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
     return datasets.map((dataset) => ({
-      name: `View dataset: ${dataset.name}`,
+      name: `View dataset ${dataset.name} (id: ${dataset.id.slice(0, 8)})`,
       command: () => {
         window.location.href = getViewDatasetURL(dataset);
       },
@@ -157,24 +156,28 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const viewDatasetsItem = {
     name: DynamicCommands.viewDataset,
     command: () => {},
+    shortcut: "Enter to show list",
     color: commandEntryColor,
   };
 
   const getAnnotationItems = useCallback(async () => {
     const annotations = await getReadableAnnotations(false);
     const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
-    return sortedAnnotations.map((annotation) => ({
-      name: `View annotation: ${annotation.name.length > 0 ? annotation.name : formatHash(annotation.id)}`,
-      command: () => {
-        window.location.href = `/annotations/${annotation.id}`;
-      },
-      color: commandEntryColor,
-      id: annotation.id,
-    }));
+    return sortedAnnotations.map((annotation) => {
+      return {
+        name: `View annotation ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
+        command: () => {
+          window.location.href = `/annotations/${annotation.id}`;
+        },
+        color: commandEntryColor,
+        id: annotation.id,
+      };
+    });
   }, []);
 
   const viewAnnotationItems = {
     name: DynamicCommands.viewAnnotation,
+    shortcut: "Enter to show list",
     command: () => {},
     color: commandEntryColor,
   };
@@ -362,7 +365,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       onRequestClose={() => setCommands(allStaticCommands)}
       closeOnSelect={false}
       renderCommand={(command) => {
-        const { name, shortcut, highlight: maybeDirtyString } = command;
+        const { shortcut, highlight: maybeDirtyString, name } = command;
         const cleanString = cleanStringOfMostHTML(maybeDirtyString);
         return (
           <div

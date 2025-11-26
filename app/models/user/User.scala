@@ -513,19 +513,27 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updateValues(userId: ObjectId,
-                   firstName: String,
-                   lastName: String,
                    isAdmin: Boolean,
                    isDatasetManager: Boolean,
                    isDeactivated: Boolean,
-                   lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
-      (row.firstname, row.lastname, row.isadmin, row.isdatasetmanager, row.isdeactivated, row.lasttasktypeid)
+                   lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(query.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
+      _ <- run(q"""UPDATE webknossos.users
+          SET isAdmin = $isAdmin,
+              isDatasetManager = $isDatasetManager,
+              isDeactivated = $isDeactivated,
+              lastTaskTypeId = $lastTaskTypeId
+              WHERE _id = $userId""".asUpdate)
     } yield ()
-  }
+
+  def updateNameByMultiUser(multiUserId: ObjectId, firstName: String, lastName: String): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.users
+              SET firstName = $firstName,
+                  lastName = $lastName
+                  WHERE _multiUserId = $multiUserId""".asUpdate)
+    } yield ()
 
   def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

@@ -90,7 +90,7 @@ export default function WorkflowListView() {
         throw err;
       }
     },
-    refetchInterval: VX_POLLING_INTERVAL ?? 0,
+    refetchInterval: VX_POLLING_INTERVAL ?? false,
   });
 
   const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {

@@ -11,6 +11,7 @@ import {
   QuestionCircleTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
@@ -18,7 +19,6 @@ import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
-import { useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -70,7 +70,6 @@ export const getShowTrainingDataLink = (
 ) => {
   return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
     <a
-      href="#"
       onClick={() => {
         Modal.info({
           content: (
@@ -133,25 +132,19 @@ export function JobState({ job }: { job: APIJob }) {
 }
 
 function JobListView() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [jobs, setJobs] = useState<APIJob[]>([]);
+  const queryClient = useQueryClient();
+  const { data: jobs, isLoading } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: getJobs,
+    refetchInterval: refreshInterval,
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   useEffect(() => {
-    fetchData();
     const { searchQuery } = persistence.load();
     setSearchQuery(searchQuery || "");
-    setIsLoading(false);
   }, []);
-
-  async function fetchData() {
-    setJobs(await getJobs());
-  }
-
-  useInterval(async () => {
-    setJobs(await getJobs());
-  }, refreshInterval);
 
   useEffect(() => {
     persistence.persist({ searchQuery });
@@ -309,7 +302,6 @@ function JobListView() {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
-          href="#"
           onClick={async () => {
             const isDeleteConfirmed = await confirmAsync({
               title: <p>Are you sure you want to cancel job {job.id}?</p>,
@@ -318,7 +310,7 @@ function JobListView() {
             });
 
             if (isDeleteConfirmed) {
-              cancelJob(job.id).then(() => fetchData());
+              cancelJob(job.id).then(() => queryClient.invalidateQueries({ queryKey: ["jobs"] }));
             }
           }}
           icon={<CloseCircleOutlined className="icon-margin-right" />}
@@ -330,11 +322,10 @@ function JobListView() {
       return (
         <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
           <AsyncLink
-            href="#"
             onClick={async () => {
               try {
                 await retryJob(job.id);
-                await fetchData();
+                await queryClient.invalidateQueries({ queryKey: ["jobs"] });
                 Toast.success("Job is being retried");
               } catch (e) {
                 console.error("Could not retry job", e);
@@ -469,7 +460,7 @@ function JobListView() {
       />
       <Spin spinning={isLoading} size="large">
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(jobs, ["datasetName"], searchQuery)}
+          dataSource={Utils.filterWithSearchQueryAND(jobs || [], ["datasetName"], searchQuery)}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,

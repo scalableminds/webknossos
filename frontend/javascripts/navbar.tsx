@@ -404,7 +404,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "credits",
       label: (
-        <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="https://home.webknossos.org/about-us" rel="noopener noreferrer">
           About & Credits
         </a>
       ),

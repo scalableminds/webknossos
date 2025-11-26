@@ -532,7 +532,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE webknossos.users
               SET firstName = $firstName,
                   lastName = $lastName
-                  WHERE _multiUserId = $multiUserId""".asUpdate)
+                  WHERE _multiUser = $multiUserId""".asUpdate)
     } yield ()
 
   def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =

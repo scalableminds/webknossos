@@ -303,7 +303,7 @@ export class WebKnossosModel {
     // That way, we can be sure that the diffing sagas have processed all user actions
     // up until the time of where waitForDifferResponses was invoked.
     async function waitForDifferResponses() {
-      console.log("waitForDifferResponses");
+      // console.log("waitForDifferResponses");
       const { annotation } = Store.getState();
       await dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
       return true;

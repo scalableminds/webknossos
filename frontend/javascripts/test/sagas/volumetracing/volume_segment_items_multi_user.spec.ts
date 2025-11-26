@@ -131,7 +131,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should handle concurrent updateSegment update actions", async (context: WebknossosTestContext) => {
+  it("should handle concurrent updateSegment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
@@ -170,21 +170,25 @@ describe("Proofreading (Multi User)", () => {
       );
       expect(mapping0).toEqual(initialMapping);
       yield put(setOthersMayEditForAnnotationAction(true));
+      yield call(() => api.tracing.save());
 
       // Create the segment and save so that it exists in the base version.
       const baseSegmentProps = { name: "Some Name", color: [128, 0, 0] as Vector3 };
       yield put(updateSegmentAction(segmentId, baseSegmentProps, tracingId));
       yield call(() => api.tracing.save());
 
+      ColoredLogger.logGreen("Set up complete.")
+
       const updateSegmentProps = { color: [129, 0, 0] as Vector3 };
       yield put(updateSegmentAction(segmentId, updateSegmentProps, tracingId));
 
+      ColoredLogger.logGreen("Trying to save color 129.")
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-      console.log(
-        "context.receivedDataPerSaveRequest",
-        _.flatten(context.receivedDataPerSaveRequest).map((g) => g.actions),
-      );
+      // console.log(
+      //   "context.receivedDataPerSaveRequest",
+      //   _.flatten(context.receivedDataPerSaveRequest).map((g) => g.actions),
+      // );
 
       const updateSegment = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
@@ -204,7 +208,7 @@ describe("Proofreading (Multi User)", () => {
             id: segmentId,
             anchorPosition: injectedSegmentProps.anchorPosition,
             color: updateSegmentProps.color,
-            name: baseSegmentProps.name,
+            name: injectedSegmentProps.name,
             groupId: injectedSegmentProps.groupId,
           },
         },
@@ -214,7 +218,7 @@ describe("Proofreading (Multi User)", () => {
       expect(finalSegment).toMatchObject({
         somePosition: injectedSegmentProps.anchorPosition,
         color: updateSegmentProps.color,
-        name: baseSegmentProps.name,
+        name: injectedSegmentProps.name,
         groupId: injectedSegmentProps.groupId,
       });
     });

@@ -231,15 +231,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               return action;
             }
 
-            console.log("action.chan", action);
-
-            console.log(
-              "action.value.color ?? maybeExistingSegment.color",
-              action.value.color,
-              "??",
-              maybeExistingSegment.color,
-            );
-
             const newAction: UpdateSegmentUpdateAction = {
               name: "updateSegment",
               value: {
@@ -263,9 +254,34 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
             return newAction;
           }
           case "updateSegment": {
-            console.log("adapting createSegment action?", action);
+            ColoredLogger.logGreen("adapting updateSegment action?", action);
 
-            return action;
+            const { actionTracingId } = action.value;
+
+            const tracing = annotationBeforeUpdate.volumes.find(
+              (v) => v.tracingId === actionTracingId,
+            );
+            const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+            if (!maybeExistingSegment) {
+              // todop: change to removeSegment
+              return action;
+            }
+            const { changedPropertyNames } = action;
+            const { somePosition, ...maybeExistingSegmentWithoutSomePosition } = maybeExistingSegment;
+
+            const newAction: UpdateSegmentUpdateAction = {
+              name: "updateSegment",
+              value: {
+                actionTracingId: action.value.actionTracingId,
+                ...maybeExistingSegmentWithoutSomePosition,
+                anchorPosition: maybeExistingSegment.somePosition,
+                ...Object.fromEntries(changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]))
+              },
+              // todop: omit?
+              changedPropertyNames: [],
+            };
+            return newAction;
           }
 
           default:

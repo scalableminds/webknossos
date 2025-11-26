@@ -139,15 +139,8 @@ function JobListView() {
   const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   useEffect(() => {
-    initialize();
+    fetchData();
   }, []);
-
-  async function initialize() {
-    await fetchData();
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    setIsLoading(false);
-  }
 
   async function fetchData() {
     setJobs(await getJobs());

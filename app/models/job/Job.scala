@@ -163,7 +163,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
           LEFT JOIN webknossos.credit_transactions_ ct ON j._id = ct._paid_job
           WHERE $accessQuery
-          ORDER BY j.created
+          ORDER BY j.created DESC -- list newest first
          """.as[(ObjectId,
                  String,
                  String,

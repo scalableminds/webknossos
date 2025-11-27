@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 const defaultItemsPerBatch = 1000;
 let idCounter = 0;
 const idSymbol = Symbol("id");
@@ -468,11 +470,15 @@ function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): Diffable
 export function diffDiffableMaps<K extends number, V>(
   mapA: DiffableMap<K, V>,
   mapB: DiffableMap<K, V>,
+  useDeepEqualityCheck: boolean = false,
 ): {
   changed: Array<K>;
   onlyA: Array<K>;
   onlyB: Array<K>;
 } {
+  const areDifferent = (valueA: V | undefined, valueB: V | undefined) =>
+    useDeepEqualityCheck ? !_.isEqual(valueA, valueB) : valueA !== valueB;
+
   // For the edge case that one of the maps is empty, we will consider them dependent, anyway
   const areDiffsDependent = mapA.getId() === mapB.getId() || mapA.size() === 0 || mapB.size() === 0;
   let idx = 0;
@@ -506,7 +512,7 @@ export function diffDiffableMaps<K extends number, V>(
 
       for (const key of setA.values()) {
         if (setB.has(key)) {
-          if (currentMapA.get(key) !== currentMapB.get(key)) {
+          if (areDifferent(currentMapA.get(key), currentMapB.get(key))) {
             changed.push(key);
           } else {
             // The key exists in both chunks, do not emit this key.
@@ -530,32 +536,32 @@ export function diffDiffableMaps<K extends number, V>(
     idx++;
   }
 
-  if (!areDiffsDependent) {
-    // Since, the DiffableMaps don't share the same structure, we might have
-    // aggregated false-positives, meaning onlyA and onlyB can include the same
-    // keys, which might or might not belong to the changed set.
-    // Construct a set for fast lookup
-    const setA = new Set(onlyA);
-    // Intersection of onlyA and onlyB:
-    const missingChangedIds = onlyB.filter((id) => setA.has(id));
-    const missingChangedIdSet = new Set(missingChangedIds);
-    const newOnlyA = onlyA.filter((id) => !missingChangedIdSet.has(id));
-    const newOnlyB = onlyB.filter((id) => !missingChangedIdSet.has(id));
-    // Ensure that these elements are not equal before adding them to "changed"
-    const newChanged = changed.concat(
-      missingChangedIds.filter((id) => mapA.getOrThrow(id) !== mapB.getOrThrow(id)),
-    );
+  if (areDiffsDependent) {
     return {
-      changed: newChanged,
-      onlyA: newOnlyA,
-      onlyB: newOnlyB,
+      changed,
+      onlyA,
+      onlyB,
     };
   }
 
+  // Since, the DiffableMaps don't share the same structure, we might have
+  // aggregated false-positives, meaning onlyA and onlyB can include the same
+  // keys, which might or might not belong to the changed set.
+  // Construct a set for fast lookup
+  const setA = new Set(onlyA);
+  // Intersection of onlyA and onlyB:
+  const missingChangedIds = onlyB.filter((id) => setA.has(id));
+  const missingChangedIdSet = new Set(missingChangedIds);
+  const newOnlyA = onlyA.filter((id) => !missingChangedIdSet.has(id));
+  const newOnlyB = onlyB.filter((id) => !missingChangedIdSet.has(id));
+  // Ensure that these elements are not equal before adding them to "changed"
+  const newChanged = changed.concat(
+    missingChangedIds.filter((id) => areDifferent(mapA.getOrThrow(id), mapB.getOrThrow(id))),
+  );
   return {
-    changed,
-    onlyA,
-    onlyB,
+    changed: newChanged,
+    onlyA: newOnlyA,
+    onlyB: newOnlyB,
   };
 }
 

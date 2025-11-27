@@ -37,7 +37,10 @@ import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
 } from "../saga_helpers";
-import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
+import {
+  splitAgglomerateInMapping,
+  updateMappingWithMerge,
+} from "../volume/proofreading/proofread_saga";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updateSaveQueueEntriesToStateAfterRebase,

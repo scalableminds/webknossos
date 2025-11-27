@@ -420,8 +420,9 @@ export function* loadAgglomerateSkeletonWithId(
 
   let usedTreeIds: number[] | null = null;
   let agglomerateSkeleton: ServerSkeletonTracing;
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const shouldGuardWithAnnotationMutex =
-    (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
+    othersMayEdit && (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
   try {
     if (shouldGuardWithAnnotationMutex) {
       yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
@@ -547,13 +548,14 @@ function* diffNodes(
   prevNodes: NodeMap,
   nodes: NodeMap,
   treeId: number,
+  useDeepEqualityCheck: boolean,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevNodes === nodes) return;
   const {
     onlyA: deletedNodeIds,
     onlyB: addedNodeIds,
     changed: changedNodeIds,
-  } = diffDiffableMaps(prevNodes, nodes);
+  } = diffDiffableMaps(prevNodes, nodes, useDeepEqualityCheck);
 
   for (const nodeId of deletedNodeIds) {
     yield deleteNode(treeId, nodeId, tracingId);
@@ -583,9 +585,14 @@ function* diffEdges(
   prevEdges: EdgeCollection,
   edges: EdgeCollection,
   treeId: number,
+  useDeepEqualityCheck: boolean,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevEdges === edges) return;
-  const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(prevEdges, edges);
+  const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(
+    prevEdges,
+    edges,
+    useDeepEqualityCheck,
+  );
 
   for (const edge of deletedEdges) {
     yield deleteEdge(treeId, edge.source, edge.target, tracingId);
@@ -617,26 +624,27 @@ export function* diffTrees(
   tracingId: string,
   prevTrees: TreeMap,
   trees: TreeMap,
+  useDeepEqualityCheck: boolean,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevTrees === trees) return;
   const {
     changed: bothTreeIds,
     onlyA: deletedTreeIds,
     onlyB: addedTreeIds,
-  } = diffDiffableMaps(prevTrees, trees);
+  } = diffDiffableMaps(prevTrees, trees, useDeepEqualityCheck);
 
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees.getOrThrow(treeId);
-    yield* diffNodes(tracingId, prevTree.nodes, new DiffableMap(), treeId);
-    yield* diffEdges(tracingId, prevTree.edges, new EdgeCollection(), treeId);
+    yield* diffNodes(tracingId, prevTree.nodes, new DiffableMap(), treeId, useDeepEqualityCheck);
+    yield* diffEdges(tracingId, prevTree.edges, new EdgeCollection(), treeId, useDeepEqualityCheck);
     yield deleteTree(treeId, tracingId);
   }
 
   for (const treeId of addedTreeIds) {
     const tree = trees.getOrThrow(treeId);
     yield createTree(tree, tracingId);
-    yield* diffNodes(tracingId, new DiffableMap(), tree.nodes, treeId);
-    yield* diffEdges(tracingId, new EdgeCollection(), tree.edges, treeId);
+    yield* diffNodes(tracingId, new DiffableMap(), tree.nodes, treeId, useDeepEqualityCheck);
+    yield* diffEdges(tracingId, new EdgeCollection(), tree.edges, treeId, useDeepEqualityCheck);
   }
 
   for (const treeId of bothTreeIds) {
@@ -644,8 +652,8 @@ export function* diffTrees(
     const prevTree: Tree = prevTrees.getOrThrow(treeId);
 
     if (tree !== prevTree) {
-      yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId);
-      yield* diffEdges(tracingId, prevTree.edges, tree.edges, treeId);
+      yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId, useDeepEqualityCheck);
+      yield* diffEdges(tracingId, prevTree.edges, tree.edges, treeId, useDeepEqualityCheck);
 
       if (updateTreePredicate(prevTree, tree)) {
         yield updateTree(tree, tracingId);
@@ -661,13 +669,15 @@ export function* diffTrees(
   }
 }
 
-export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap, trees: TreeMap) =>
-  Array.from(diffTrees(tracingId, prevTrees, trees)),
+export const cachedDiffTrees = memoizeOne(
+  (tracingId: string, prevTrees: TreeMap, trees: TreeMap, useDeepEqualityCheck: boolean) =>
+    Array.from(diffTrees(tracingId, prevTrees, trees, useDeepEqualityCheck)),
 );
 
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
+  useDeepEqualityCheck: boolean = false,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing === skeletonTracing) {
     return;
@@ -676,6 +686,7 @@ export function* diffSkeletonTracing(
     skeletonTracing.tracingId,
     prevSkeletonTracing.trees,
     skeletonTracing.trees,
+    useDeepEqualityCheck,
   );
 
   const groupDiff = diffGroups(prevSkeletonTracing.treeGroups, skeletonTracing.treeGroups);

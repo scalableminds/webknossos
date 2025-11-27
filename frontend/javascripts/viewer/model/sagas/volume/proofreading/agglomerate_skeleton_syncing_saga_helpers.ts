@@ -133,7 +133,7 @@ function deepDiffSkeletonTracings(
     ...prevSkeleton,
     trees: newSkeletonWithUpdatedIds.trees,
   };
-  diffSkeletonTracing(prevSkeleton, newSkeletonWithCorrectProps); // TODO: make deep comparison
+  return Array.from(diffSkeletonTracing(prevSkeleton, newSkeletonWithCorrectProps, true));
 }
 
 export function* syncAgglomerateSkeletonsAfterMergeAction(

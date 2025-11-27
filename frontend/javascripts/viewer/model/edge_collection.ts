@@ -168,12 +168,17 @@ export default class EdgeCollection implements NotEnumerableByObject {
 export function diffEdgeCollections(
   edgeCollectionA: EdgeCollection,
   edgeCollectionB: EdgeCollection,
+  useDeepEqualityCheck: boolean,
 ): {
   onlyA: Edge[];
   onlyB: Edge[];
 } {
   // Since inMap and outMap are symmetrical to each other, it suffices to only diff the outMaps
-  const mapDiff = diffDiffableMaps(edgeCollectionA.outMap, edgeCollectionB.outMap);
+  const mapDiff = diffDiffableMaps(
+    edgeCollectionA.outMap,
+    edgeCollectionB.outMap,
+    useDeepEqualityCheck,
+  );
 
   const getEdgesForNodes = (nodeIds: number[], diffableMap: EdgeMap) =>
     _.flatten(nodeIds.map((nodeId) => diffableMap.getOrThrow(nodeId)));

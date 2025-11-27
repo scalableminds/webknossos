@@ -6,9 +6,14 @@ import type {
 } from "types/api_types";
 
 import { Root } from "protobufjs";
-import type { TreeType } from "viewer/constants";
+import { TreeTypeEnum, type TreeType } from "viewer/constants";
 import { PROTO_FILES, PROTO_TYPES } from "viewer/model/helpers/proto_helpers";
-import type { Edge } from "viewer/model/types/tree_types";
+import type { Edge, TreeMap } from "viewer/model/types/tree_types";
+import type { WebknossosTestContext } from "test/helpers/apiHelpers";
+import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
+import { vi } from "vitest";
+import { type Saga, take, call, select } from "viewer/model/sagas/effect-generators";
+import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
 
 export function encodeServerTracing(
   tracing: ServerTracing,
@@ -140,4 +145,34 @@ export function createSkeletonTracingFromAdjacency(
   };
 
   return tracing;
+}
+
+// Little helper to load a list of agglomerate skeletons in a test.
+// Should be done before any other mapping changes. Else the assumptions of the tests are not correct.
+// The agglomerate ids must correspond to one of the agglomerate positions.
+// Should be the case initially for all proofreading tests.
+export function* loadAgglomerateSkeletons(
+  context: WebknossosTestContext,
+  agglomerateIdsToLoad: number[],
+  shouldSaveAfterLoadingTrees: boolean,
+  isInLiveCollabMode: boolean,
+): Saga<TreeMap> {
+  // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+  vi.mocked(context.mocks.parseProtoTracing).mockRestore();
+  for (let index = 0; index < agglomerateIdsToLoad.length; ++index) {
+    const agglomerateId = agglomerateIdsToLoad[index];
+    yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]);
+    // Wait until skeleton saga has loaded the skeleton.
+    if (isInLiveCollabMode) {
+      yield take("DONE_SAVING");
+    } else {
+      yield take("ADD_TREES_AND_GROUPS");
+    }
+  }
+  if (shouldSaveAfterLoadingTrees) {
+    yield call(() => context.api.tracing.save()); // Also pulls newest version from backend.
+  }
+  return yield* select((state) =>
+    getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+  );
 }

@@ -13,7 +13,6 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import { type NumberLike, startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -24,6 +23,7 @@ import {
 } from "./proofreading_fixtures";
 import {
   initializeMappingAndTool,
+  makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import type { NeighborInfo } from "admin/rest_api";
@@ -77,7 +77,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
 
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
@@ -159,7 +159,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -275,7 +275,7 @@ describe("Proofreading (Multi User)", () => {
     yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
     yield put(setActiveCellAction(2));
 
-    yield call(createEditableMapping);
+    yield makeMappingEditableHelper();
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
       (state) =>
@@ -446,7 +446,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(3, { somePosition: [3, 3, 3] }, tracingId));
       yield put(setActiveCellAction(3));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -544,7 +544,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -707,7 +707,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -798,7 +798,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
       // Execute the actual merge and wait for the finished mapping.
       yield put(

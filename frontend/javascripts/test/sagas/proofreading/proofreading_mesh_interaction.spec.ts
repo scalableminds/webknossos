@@ -20,7 +20,6 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import {
   type ActiveMappingInfo,
@@ -32,6 +31,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
 import {
   initializeMappingAndTool,
+  makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -64,7 +64,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
     yield put(setActiveCellAction(1, undefined, null, 1));
 
-    yield call(createEditableMapping);
+    yield makeMappingEditableHelper();
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
@@ -243,7 +243,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
-    yield call(createEditableMapping);
+    yield makeMappingEditableHelper();
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
@@ -475,8 +475,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
-    yield call(createEditableMapping);
-
+    yield makeMappingEditableHelper();
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
       (state) =>

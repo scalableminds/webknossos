@@ -17,7 +17,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
+import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type {
@@ -31,6 +31,7 @@ import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -348,4 +349,13 @@ export function mockInitialBucketAndAgglomerateData(
   );
 
   return backendMock;
+}
+
+export function* makeMappingEditableHelper(): Saga<void> {
+  // Usually the user creates an editable mapping via the first proofreading action.
+  // Therefore the context is busy blocked by the proofreading saga.
+  // As we do this manually here, we need to mock that wk is busy.
+  yield put(setBusyBlockingInfoAction(true, "Blocking in test for making mapping editable"));
+  yield call(createEditableMapping);
+  yield put(setBusyBlockingInfoAction(false));
 }

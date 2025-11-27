@@ -1,5 +1,6 @@
 import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
+import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
@@ -34,8 +35,8 @@ const commandEntryColor = "#5660ff";
 type CommandWithoutId = Omit<Command, "id">;
 
 enum DynamicCommands {
-  viewDataset = "View Dataset",
-  viewAnnotation = "View Annotation",
+  viewDataset = "View Dataset ",
+  viewAnnotation = "View Annotation ",
 }
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
@@ -67,9 +68,10 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
-//clean most html except <b> tags (for highlighting)
-const cleanStringOfMostHTML = (dirtyString: string | undefined) =>
-  dirtyString?.replace(/<(?!\/?b>)|[^<>\w\/ ())]+|/g, "");
+const cleanStringOfMostHTML = (dirtyString: string | undefined) => {
+  if (dirtyString == null) return null;
+  return DOMPurify.sanitize(dirtyString, { ALLOWED_TAGS: ["b"] });
+};
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useWkSelector((state) => state.userConfiguration);
@@ -119,21 +121,29 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     }
 
     if (command.name === DynamicCommands.viewDataset) {
-      const items = await getDatasetItems();
-      if (items.length > 0) {
-        setCommands(items);
-      } else {
-        Toast.info("No datasets available.");
+      try {
+        const items = await getDatasetItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No datasets available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load datasets.");
       }
       return;
     }
 
     if (command.name === DynamicCommands.viewAnnotation) {
-      const items = await getAnnotationItems();
-      if (items.length > 0) {
-        setCommands(items);
-      } else {
-        Toast.info("No annotations available.");
+      try {
+        const items = await getAnnotationItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No annotations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load annotations.");
       }
       return;
     }
@@ -144,7 +154,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
     return datasets.map((dataset) => ({
-      name: `View dataset ${dataset.name} (id: ${dataset.id.slice(0, 8)})`,
+      name: `View Dataset ${dataset.name} (id ${dataset.id})`,
       command: () => {
         window.location.href = getViewDatasetURL(dataset);
       },
@@ -165,7 +175,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
     return sortedAnnotations.map((annotation) => {
       return {
-        name: `View annotation ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
+        name: `View Annotation ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
         command: () => {
           window.location.href = `/annotations/${annotation.id}`;
         },

@@ -178,6 +178,11 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
     return;
   }
   // Remove older mesh instance if it exists already.
+  console.log(
+    "loadAdHocMeshFromAction: removing mesh",
+    action.segmentId,
+    "in case it still exists",
+  );
   yield* put(removeMeshAction(layer.name, action.segmentId));
 
   try {
@@ -249,7 +254,7 @@ function* loadAdHocMesh(
     return;
   }
 
-  yield* call([Model, Model.ensureSavedState]);
+  yield* call([Model, Model.ensureSavedState]); // TODOM: This might be undesired -> blocks ui / mutex again when doing proofreading.
 
   const meshExtraInfo = yield* call(getMeshExtraInfo, layer.name, maybeExtraInfo);
 
@@ -424,6 +429,8 @@ function* loadFullAdHocMesh(
     }
     positionsToRequest = positionsToRequest.concat(neighbors);
   }
+
+  console.log("loadFullAdHocMesh: finished loading mesh for id", segmentId);
 
   yield* put(finishedLoadingMeshAction(layer.name, segmentId));
 }

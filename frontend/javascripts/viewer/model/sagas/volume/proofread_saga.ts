@@ -279,6 +279,7 @@ function* loadCoarseMesh(
   }
 
   coarselyLoadedSegmentIds.push(segmentId);
+  console.log("coarselyLoadedSegmentIds", coarselyLoadedSegmentIds);
 }
 
 function* checkForAgglomerateSkeletonModification(
@@ -321,6 +322,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   if (!proofreadUsingMeshes()) return;
 
   /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
+  console.log("loading proofreading mesh", segmentId, "at position", position);
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
@@ -603,6 +605,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     nodePosition,
   });
 
+  console.log("handleSkeletonProofreadingAction: refreshing meshes");
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     pack(sourceAgglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetAgglomerateId, newTargetAgglomerateId, targetNodePosition),
@@ -826,6 +829,7 @@ function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction
       ? edgesToRemove[0].position1
       : edgesToRemove[0].position2;
 
+  console.log("performPartitionedMinCut: refreshing meshes");
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
       agglomerateId: agglomerateId,
@@ -1487,6 +1491,13 @@ function* refreshAffectedMeshes(
     nodePosition: Vector3;
   }>,
 ) {
+  const id = `id: ${Math.round(Math.random() * 500)}`;
+  console.log(
+    "refreshAffectedMeshes:",
+    id,
+    "updates:",
+    items.map((i) => `${i.agglomerateId} -> ${i.newAgglomerateId}`).join(","),
+  );
   // ATTENTION: This saga should usually be called with `spawn` to avoid that the user
   // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
   if (!proofreadUsingMeshes()) {
@@ -1504,10 +1515,12 @@ function* refreshAffectedMeshes(
   for (const item of items) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     if (!removedIds.has(item.agglomerateId)) {
+      console.log("refreshAffectedMeshes: removing mesh agglomerate", item.agglomerateId, id);
       yield* put(removeMeshAction(layerName, Number(item.agglomerateId)));
       removedIds.add(item.agglomerateId);
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
+      console.log("refreshAffectedMeshes: adding mesh agglomerate", item.newAgglomerateId, id);
       yield* call(
         loadCoarseMesh,
         layerName,
@@ -1518,6 +1531,9 @@ function* refreshAffectedMeshes(
       newlyLoadedIds.add(item.newAgglomerateId);
     }
   }
+  const { segmentMeshController } = getSceneController();
+  const segmentIDs = Object.keys(segmentMeshController.meshesGroupsPerSegmentId[""][layerName]);
+  console.log("After meshController has the following segment ids", segmentIDs.join(", "));
 }
 
 function getDeleteEdgeActionForEdgePositions(

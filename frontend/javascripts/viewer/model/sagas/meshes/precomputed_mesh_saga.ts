@@ -118,6 +118,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   if (layer == null) return;
 
   // Remove older mesh instance if it exists already.
+  console.log("loadPrecomputedMesh: removing mesh", action.segmentId, "in case it still exists");
   yield* put(removeMeshAction(layer.name, action.segmentId));
 
   // If a REMOVE_MESH action is dispatched and consumed
@@ -234,6 +235,7 @@ function* loadPrecomputedMeshForSegmentId(
       opacity,
     );
   }
+  console.log("loadPrecomputedMeshForSegmentId: finished loading mesh for id", segmentId);
 
   yield* put(finishedLoadingMeshAction(layerName, segmentId));
 }
@@ -461,6 +463,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
 
   // Remove the eagerly added chunks (see above).
+  console.log("loadPrecomputedMeshesInChunksForLod: removing unmerged mesh", segmentId);
   yield* call(
     {
       context: segmentMeshController,
@@ -472,6 +475,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   );
 
   // Add the final merged geometry.
+  console.log("loadPrecomputedMeshesInChunksForLod: adding merged mesh", segmentId);
   yield* call(
     {
       context: segmentMeshController,

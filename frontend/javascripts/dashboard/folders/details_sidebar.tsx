@@ -1,5 +1,6 @@
 import {
   CopyOutlined,
+  DeleteOutlined,
   EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
@@ -8,14 +9,14 @@ import {
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getOrganization } from "admin/rest_api";
-import { Result, Spin, Tag, Tooltip } from "antd";
+import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { pluralize } from "libs/utils";
+import { pluralize, sleep } from "libs/utils";
 import _ from "lodash";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import {
   DatasetExtentRow,
@@ -223,10 +224,85 @@ function DatasetsDetails({
   selectedDatasets: APIDatasetCompact[];
   datasetCount: number;
 }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [progressInPercent, setProgressInPercent] = useState(0);
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+
+  const onCancel = () => {
+    if (!isDeleting) {
+      setShowConfirmDeleteModal(false);
+    }
+  };
+
+  const okayButton = (
+    <Button
+      type="primary"
+      danger
+      onClick={async () => {
+        setIsDeleting(true);
+        for (let i = 0; i < selectedDatasets.length; i++) {
+          const dataset = selectedDatasets[i];
+          try {
+            await sleep(1000); //TODO_C remove
+            //await deleteDatasetOnDisk(dataset.id); //todo_c
+            console.log(`deleted dataset ${dataset.name}`, { sticky: true });
+            setProgressInPercent(Math.round(((i + 1) / selectedDatasets.length) * 100));
+          } catch (_e) {
+            Toast.error(`Failed to delete dataset ${dataset.name}.`);
+          }
+        }
+        setIsDeleting(false);
+        setShowConfirmDeleteModal(false);
+        setProgressInPercent(0);
+      }}
+    >
+      Delete
+    </Button>
+  );
+
+  const cancelButton = <Button onClick={onCancel}>Cancel</Button>;
+
+  // TODO delete once soft-delete is implemented
+  const cantBeUndoneMessage = (
+    <div style={{ color: "red", fontWeight: "bold" }}> This action cannot be undone.</div>
+  );
+
+  const confirmModal = (
+    <Modal
+      open={showConfirmDeleteModal}
+      title="Delete Datasets"
+      footer={isDeleting ? null : [cancelButton, okayButton]}
+      onCancel={onCancel}
+    >
+      {isDeleting ? (
+        <Progress percent={progressInPercent} />
+      ) : (
+        <>
+          Are you sure you want to delete the following {selectedDatasets.length} datasets?
+          <ul>
+            {selectedDatasets.map((dataset) => (
+              <li key={dataset.id}>{dataset.name}</li>
+            ))}
+          </ul>
+          {cantBeUndoneMessage}
+        </>
+      )}
+    </Modal>
+  );
+
   return (
     <div style={{ textAlign: "center" }}>
-      Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
-      with drag and drop.
+      <Space direction="vertical" size="large" style={{ display: "flex" }}>
+        <div>
+          Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
+          with drag and drop.
+        </div>
+        <Button onClick={() => setShowConfirmDeleteModal(true)}>
+          {" "}
+          <DeleteOutlined /> Delete {selectedDatasets.length} datasets
+        </Button>
+      </Space>
+      {confirmModal}
     </div>
   );
 }

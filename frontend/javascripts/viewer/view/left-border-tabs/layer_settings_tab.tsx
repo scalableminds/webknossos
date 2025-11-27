@@ -54,13 +54,13 @@ import {
   type AnnotationLayerType,
   type EditableLayerProperties,
 } from "types/api_types";
-import type { ValueOf } from "types/type_utils";
 import {
   defaultDatasetViewConfiguration,
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import { userSettings } from "types/schemas/user_settings.schema";
+import type { ValueOf } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "viewer/constants";
 import defaultState from "viewer/default_state";

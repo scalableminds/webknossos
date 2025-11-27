@@ -1,30 +1,22 @@
-import { call, put, take } from "redux-saga/effects";
+import { call, put } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
-import {
-  setActiveCellAction,
-  updateSegmentAction,
-} from "viewer/model/actions/volumetracing_actions";
+import { updateSegmentAction } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  expectedMappingAfterMerge,
-  expectedMappingAfterMergeRebase,
-  initialMapping,
-} from "../proofreading/proofreading_fixtures";
+import { initialMapping } from "../proofreading/proofreading_fixtures";
 import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "../proofreading/proofreading_test_utils";
 import _ from "lodash";
 import type { Vector3 } from "viewer/constants";
+import { ColoredLogger } from "libs/utils";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -170,19 +162,19 @@ describe("Proofreading (Multi User)", () => {
       );
       expect(mapping0).toEqual(initialMapping);
       yield put(setOthersMayEditForAnnotationAction(true));
-      yield call(() => api.tracing.save());
+      yield call(() => api.tracing.save()); // todop: without this shape, the mutex strategy is not switched correctly. can we improve this?
 
       // Create the segment and save so that it exists in the base version.
       const baseSegmentProps = { name: "Some Name", color: [128, 0, 0] as Vector3 };
       yield put(updateSegmentAction(segmentId, baseSegmentProps, tracingId));
       yield call(() => api.tracing.save());
 
-      ColoredLogger.logGreen("Set up complete.")
+      ColoredLogger.logGreen("Set up complete.");
 
       const updateSegmentProps = { color: [129, 0, 0] as Vector3 };
       yield put(updateSegmentAction(segmentId, updateSegmentProps, tracingId));
 
-      ColoredLogger.logGreen("Trying to save color 129.")
+      ColoredLogger.logGreen("Trying to save color 129.");
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // console.log(

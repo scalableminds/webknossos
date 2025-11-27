@@ -8,6 +8,7 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
+import { ColoredLogger } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
@@ -82,7 +83,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import { SegmentProperties, type SegmentMap, type VolumeTracing } from "viewer/store";
+import { type SegmentMap, SegmentProperties, type VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -482,6 +483,7 @@ export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
+  ColoredLogger.logRed("diffVolumeTracing");
   if (prevVolumeTracing === volumeTracing) {
     return;
   }

@@ -74,9 +74,9 @@ import {
   type VoxelyticsWorkflowReport,
   type ZarrPrivateLink,
 } from "types/api_types";
-import type { ArbitraryObject } from "types/type_utils";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { ArbitraryObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";

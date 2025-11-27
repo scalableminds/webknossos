@@ -1,5 +1,5 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { getAdaptToTypeFunction } from "libs/utils";
+import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
 import { call, put } from "typed-redux-saga";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
@@ -140,14 +140,15 @@ export function* addMissingSegmentsToLoadedMappings(
 // to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
 export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   | {
-    success: false;
-    updatedSaveQueue: undefined;
-  }
+      success: false;
+      updatedSaveQueue: undefined;
+    }
   | {
-    success: true;
-    updatedSaveQueue: SaveQueueEntry[];
-  }
+      success: true;
+      updatedSaveQueue: SaveQueueEntry[];
+    }
 > {
+  ColoredLogger.logRed("updateSaveQueueEntriesToStateAfterRebase");
   const saveQueue = yield* select((state) => state.save.queue);
   const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
   yield* call(addMissingSegmentsToLoadedMappings, idsToFetch);
@@ -268,7 +269,8 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               return action;
             }
             const { changedPropertyNames } = action;
-            const { somePosition, ...maybeExistingSegmentWithoutSomePosition } = maybeExistingSegment;
+            const { somePosition, ...maybeExistingSegmentWithoutSomePosition } =
+              maybeExistingSegment;
 
             const newAction: UpdateSegmentUpdateAction = {
               name: "updateSegment",
@@ -276,7 +278,9 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
                 actionTracingId: action.value.actionTracingId,
                 ...maybeExistingSegmentWithoutSomePosition,
                 anchorPosition: maybeExistingSegment.somePosition,
-                ...Object.fromEntries(changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]))
+                ...Object.fromEntries(
+                  changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]),
+                ),
               },
               // todop: omit?
               changedPropertyNames: [],

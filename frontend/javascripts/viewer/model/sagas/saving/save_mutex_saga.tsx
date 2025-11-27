@@ -1,6 +1,7 @@
 import { acquireAnnotationMutex, releaseAnnotationMutex } from "admin/rest_api";
 import { Button } from "antd";
 import Toast from "libs/toast";
+import { ColoredLogger } from "libs/utils";
 import messages from "messages";
 import {
   type FixedTask,
@@ -165,6 +166,7 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
 function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState: MutexLogicState,
 ): Saga<void> {
+  ColoredLogger.logRed("mutexLogicState.fetchingStrategy", mutexLogicState.fetchingStrategy);
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
     yield* call(tryAcquireMutexAdHoc, mutexLogicState);
   } else {
@@ -188,6 +190,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
     if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
       // If the annotation is currently not blocked by the active user,
       // we immediately disallow updating the annotation.
+      ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (1)");
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
     }
     try {
@@ -197,6 +200,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         acquireAnnotationMutex,
         annotationId,
       );
+      ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (2)");
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
       yield* put(setUserHoldingMutexAction(blockedByUser));
       yield* put(setIsMutexAcquiredAction(canEdit));
@@ -218,6 +222,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       // A cancelled saga does not reach the catch block but the finally block.
       console.error("Error while trying to acquire mutex.", error);
       yield* put(setUserHoldingMutexAction(undefined));
+      ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (3)");
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
       if (yield* call(getDoesHaveMutex)) {
         yield* put(setIsMutexAcquiredAction(false));
@@ -263,9 +268,9 @@ function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
         ? `${blockedByUser.firstName} ${blockedByUser.lastName}`
         : "unknown";
       Toast.warning(
-        `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds. 
-        User ${blockingUserName} is currently blocking the annotation. 
-        This might be due to using non-live collab supported features. 
+        `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds.
+        User ${blockingUserName} is currently blocking the annotation.
+        This might be due to using non-live collab supported features.
         Ensure they are sticking to tools supporting live collaboration.`,
         { sticky: true },
       );
@@ -350,6 +355,7 @@ function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<vo
       const owner = yield* select((storeState) => storeState.annotation.owner);
       const activeUser = yield* select((state) => state.activeUser);
       if (activeUser && owner?.id === activeUser?.id) {
+        ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (4)");
         yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
       }
     }
@@ -393,6 +399,7 @@ function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Sa
 
 function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
   // While the fetching strategy is ad hoc, updating should be allowed.
+  ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (5)");
   yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
   // If we still have the mutex, release it first as strategy is now ad-hoc.
   const currentlyHavingMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);

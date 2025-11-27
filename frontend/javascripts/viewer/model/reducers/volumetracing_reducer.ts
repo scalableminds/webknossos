@@ -106,6 +106,7 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     };
 
     const newSegmentMap = segments.set(segmentId, newSegment);
+    console.log("newSegmentMap", newSegmentMap.getNullable(1));
     return newSegmentMap;
   });
 }

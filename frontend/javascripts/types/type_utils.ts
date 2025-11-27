@@ -2,7 +2,6 @@
  * Typescript utility types
  */
 
-
 // https://stackoverflow.com/questions/49285864/is-there-a-valueof-similar-to-keyof-in-typescript
 export type ValueOf<T> = T[keyof T];
 export type EmptyObject = Record<string, never>;

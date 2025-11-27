@@ -8,7 +8,6 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { useCallback, useMemo, useState } from "react";
-import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -30,6 +29,15 @@ import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
 const commandEntryColor = "#5660ff";
+
+type Command = {
+  id: number;
+  color: string;
+  name: string;
+  shortcut?: string;
+  highlight?: string;
+  command: () => void;
+};
 
 // duplicate fields because otherwise, optional fields of Command yield errors
 type CommandWithoutId = Omit<Command, "id">;

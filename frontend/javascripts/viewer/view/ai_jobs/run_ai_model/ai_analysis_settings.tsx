@@ -181,23 +181,23 @@ export const AiAnalysisSettings: React.FC = () => {
           <Collapse style={{ marginBottom: "24px" }} ghost bordered={false}>
             <Collapse.Panel header="Advanced Settings" key="1">
               <Row gutter={24}>
-              {isInstanceModel && (
-                <Col span={12}>
-                  <Form.Item
-                    name="seedGeneratorDistanceThreshold"
-                    label="Seed generator distance threshold (nm)"
-                    tooltip="Controls the distance between two objects' centers used as a starting point (seed) for a growing segmentation. It should be set to a positive value in nm, typically 10–30% of the model’s `max_distance` parameter (= diameter/thickness of the object). For larger objects, such as nuclei (~1000 nm), use higher values. For small ones, such as synaptic vesicles (~10 nm), use lower values. If set too low, objects may merge; if too high, they may split or be missed."
-                    rules={[{ required: true, message: "Please enter a positive number" }]}
-                  >
-                    <InputNumber
-                      min={0.1}
-                      suffix="nm"
-                      style={{ width: "100%" }}
-                      defaultValue={1000}
-                    />
-                  </Form.Item>
-                </Col>
-              )}
+                {isInstanceModel && (
+                  <Col span={12}>
+                    <Form.Item
+                      name="seedGeneratorDistanceThreshold"
+                      label="Seed generator distance threshold (nm)"
+                      tooltip="Controls the distance between two objects' centers used as a starting point (seed) for a growing segmentation. It should be set to a positive value in nm, typically 10–30% of the model’s `max_distance` parameter (= diameter/thickness of the object). For larger objects, such as nuclei (~1000 nm), use higher values. For small ones, such as synaptic vesicles (~10 nm), use lower values. If set too low, objects may merge; if too high, they may split or be missed."
+                      rules={[{ required: true, message: "Please enter a positive number" }]}
+                    >
+                      <InputNumber
+                        min={0.1}
+                        suffix="nm"
+                        style={{ width: "100%" }}
+                        defaultValue={1000}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
               </Row>
 
               {isNeuronModel && (

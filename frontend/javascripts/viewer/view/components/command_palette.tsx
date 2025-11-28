@@ -30,6 +30,7 @@ import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_pal
 
 const commandEntryColor = "#5660ff";
 
+// todo_c maybe remove, or fix in another way
 type Command = {
   id: number;
   color: string;
@@ -39,7 +40,6 @@ type Command = {
   command: () => void;
 };
 
-// duplicate fields because otherwise, optional fields of Command yield errors
 type CommandWithoutId = Omit<Command, "id">;
 
 enum DynamicCommands {
@@ -123,8 +123,9 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
+  // type annotation due to the library
   const handleSelect = useCallback(async (command: Record<string, unknown>) => {
-    if (typeof command === "string") {
+    if (command.name == null) {
       return;
     }
 

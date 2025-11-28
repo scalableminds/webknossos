@@ -7,14 +7,14 @@ import {
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
-import { getOrganization } from "admin/rest_api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { deleteDatasetOnDisk, getOrganization } from "admin/rest_api";
 import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { pluralize, sleep } from "libs/utils";
+import { pluralize } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
@@ -224,9 +224,50 @@ function DatasetsDetails({
   selectedDatasets: APIDatasetCompact[];
   datasetCount: number;
 }) {
+  const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
   const [progressInPercent, setProgressInPercent] = useState(0);
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+
+  const invalidateQueries = () => {
+    queryClient.setQueryData(
+      ["datasetsByFolder", selectedDatasets[0].folderId],
+      (oldItems: APIDatasetCompact[] | undefined) => {
+        if (oldItems == null) {
+          return oldItems;
+        }
+        const selectedDatasetIds = selectedDatasets.map((ds) => ds.id);
+        return oldItems.filter((item) => !selectedDatasetIds.includes(item.id));
+      },
+    );
+    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+  };
+
+  const deleteDatasets = async () => {
+    setIsDeleting(true);
+    for (let i = 0; i < selectedDatasets.length; i++) {
+      const dataset = selectedDatasets[i];
+      try {
+        await deleteDatasetOnDisk(dataset.id);
+        setProgressInPercent(Math.round(((i + 1) / selectedDatasets.length) * 100));
+      } catch (_e) {
+        Toast.error(`Failed to delete dataset ${dataset.name}.`);
+      }
+    }
+
+    invalidateQueries();
+    setIsDeleting(false);
+    setShowConfirmDeleteModal(false);
+    setProgressInPercent(0);
+
+    Toast.success(`Successfully deleted ${selectedDatasets.length} datasets.`);
+  };
+
+  const okayButton = (
+    <Button type="primary" danger onClick={deleteDatasets}>
+      Delete
+    </Button>
+  );
 
   const onCancel = () => {
     if (!isDeleting) {
@@ -234,35 +275,9 @@ function DatasetsDetails({
     }
   };
 
-  const okayButton = (
-    <Button
-      type="primary"
-      danger
-      onClick={async () => {
-        setIsDeleting(true);
-        for (let i = 0; i < selectedDatasets.length; i++) {
-          const dataset = selectedDatasets[i];
-          try {
-            await sleep(1000); //TODO_C remove
-            //await deleteDatasetOnDisk(dataset.id); //todo_c
-            console.log(`deleted dataset ${dataset.name}`, { sticky: true });
-            setProgressInPercent(Math.round(((i + 1) / selectedDatasets.length) * 100));
-          } catch (_e) {
-            Toast.error(`Failed to delete dataset ${dataset.name}.`);
-          }
-        }
-        setIsDeleting(false);
-        setShowConfirmDeleteModal(false);
-        setProgressInPercent(0);
-      }}
-    >
-      Delete
-    </Button>
-  );
-
   const cancelButton = <Button onClick={onCancel}>Cancel</Button>;
 
-  // TODO delete once soft-delete is implemented
+  // TODO delete once soft-delete is implemented: https://github.com/scalableminds/webknossos/issues/9061
   const cantBeUndoneMessage = (
     <div style={{ color: "red", fontWeight: "bold" }}> This action cannot be undone.</div>
   );

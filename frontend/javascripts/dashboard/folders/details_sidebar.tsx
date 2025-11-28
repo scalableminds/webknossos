@@ -229,15 +229,14 @@ function DatasetsDetails({
   const [progressInPercent, setProgressInPercent] = useState(0);
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
 
-  const invalidateQueries = () => {
+  const invalidateQueries = (deletedIds: string[]) => {
     queryClient.setQueryData(
       ["datasetsByFolder", selectedDatasets[0].folderId],
       (oldItems: APIDatasetCompact[] | undefined) => {
         if (oldItems == null) {
           return oldItems;
         }
-        const selectedDatasetIds = selectedDatasets.map((ds) => ds.id);
-        return oldItems.filter((item) => !selectedDatasetIds.includes(item.id));
+        return oldItems.filter((item) => !deletedIds.includes(item.id));
       },
     );
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
@@ -245,22 +244,26 @@ function DatasetsDetails({
 
   const deleteDatasets = async () => {
     setIsDeleting(true);
+    let deletedIds = [];
     for (let i = 0; i < selectedDatasets.length; i++) {
       const dataset = selectedDatasets[i];
       try {
         await deleteDatasetOnDisk(dataset.id);
+        deletedIds.push(dataset.id);
         setProgressInPercent(Math.round(((i + 1) / selectedDatasets.length) * 100));
       } catch (_e) {
         Toast.error(`Failed to delete dataset ${dataset.name}.`);
       }
     }
 
-    invalidateQueries();
+    invalidateQueries(deletedIds);
     setIsDeleting(false);
     setShowConfirmDeleteModal(false);
     setProgressInPercent(0);
 
-    Toast.success(`Successfully deleted ${selectedDatasets.length} datasets.`);
+    if (deletedIds.length > 0) {
+      Toast.success(`Successfully deleted ${deletedIds.length} datasets.`);
+    }
   };
 
   const okayButton = (
@@ -305,6 +308,8 @@ function DatasetsDetails({
     </Modal>
   );
 
+  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
+
   return (
     <div style={{ textAlign: "center" }}>
       <Space direction="vertical" size="large" style={{ display: "flex" }}>
@@ -312,10 +317,12 @@ function DatasetsDetails({
           Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
           with drag and drop.
         </div>
-        <Button onClick={() => setShowConfirmDeleteModal(true)}>
-          {" "}
-          <DeleteOutlined /> Delete {selectedDatasets.length} datasets
-        </Button>
+        {deletableDatasets.length > 0 && (
+          <Button onClick={() => setShowConfirmDeleteModal(true)}>
+            {" "}
+            <DeleteOutlined /> Delete {selectedDatasets.length} datasets
+          </Button>
+        )}
       </Space>
       {confirmModal}
     </div>

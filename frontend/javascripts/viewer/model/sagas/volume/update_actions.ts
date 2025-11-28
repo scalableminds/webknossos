@@ -963,6 +963,8 @@ export function updateMappingName(
 export function splitAgglomerate(
   segmentId1: NumberLike,
   segmentId2: NumberLike,
+  segmentPosition1: Vector3 | undefined,
+  segmentPosition2: Vector3,
   agglomerateId: NumberLike,
   actionTracingId: string,
 ): {
@@ -996,6 +998,8 @@ export function splitAgglomerate(
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
       agglomerateId: Number(agglomerateId),
+      segmentPosition1,
+      segmentPosition2,
     },
   } as const;
 }
@@ -1004,6 +1008,7 @@ export function mergeAgglomerate(
   segmentId2: NumberLike,
   agglomerateId1: NumberLike,
   agglomerateId2: NumberLike,
+  segmentPosition1: Vector3,
   actionTracingId: string,
 ): {
   /*
@@ -1036,6 +1041,7 @@ export function mergeAgglomerate(
       segmentId2: Number(segmentId2),
       agglomerateId1: Number(agglomerateId1),
       agglomerateId2: Number(agglomerateId2),
+      segmentPosition1,
     },
   } as const;
 }

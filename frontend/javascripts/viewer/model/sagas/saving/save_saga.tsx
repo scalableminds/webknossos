@@ -5,12 +5,25 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
 import { type Channel, buffers } from "redux-saga";
-import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
+import {
+  actionChannel,
+  call,
+  delay,
+  flush,
+  fork,
+  put,
+  race,
+  spawn,
+  takeEvery,
+} from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { SagaIdentifier } from "viewer/constants";
+import { SagaIdentifier, type Vector3 } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
-import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
+import {
+  removeMeshAction,
+  showManyBucketUpdatesWarningAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   type EnsureHasNewestVersionAction,
   type NotifyAboutUpdatedBucketsAction,
@@ -40,6 +53,9 @@ import {
 import {
   splitAgglomerateInMapping,
   updateMappingWithMerge,
+  coarselyLoadedSegmentIds as ProofreadSaga_LoadedProofreadingMeshIds,
+  prepareSplitOrMerge,
+  refreshAffectedMeshes,
 } from "../volume/proofreading/proofread_saga";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
@@ -49,7 +65,10 @@ import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
-import { getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
+import {
+  getSegmentationLayerByName,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -378,6 +397,11 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
   }
 }
 
+// Maps from outdated id
+// outdated -> Array<[newId, positionOfNewId]>
+// Mesh reloading is only supported for meshes of current volume layer.
+type MeshInfoToReloadMap = Record<number, Vector3>;
+
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
@@ -393,6 +417,14 @@ export function* tryToIncorporateActions(
       yield* call(fn);
     }
   }
+  // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
+  // Maps from the old agglomerate id to a potentially new one.
+  // Duplicates are later ignored when refreshing the meshes.
+  const activeVolumeTracingId = (yield* select(getVisibleSegmentationLayer))?.tracingId;
+  const agglomerateIdsWithOutdatedMeshes = new Set<number>();
+  const agglomerateIdsToReloadMeshesFor: MeshInfoToReloadMap = {};
+  const positionsFromSplits = new Set<Vector3>();
+
   for (const actionBatch of newerActions) {
     const agglomerateIdsToRefresh = new Set<NumberLike>();
     let volumeTracingIdOfMapping = null;
@@ -503,7 +535,8 @@ export function* tryToIncorporateActions(
 
         // Proofreading
         case "mergeAgglomerate": {
-          const { actionTracingId, agglomerateId1, agglomerateId2 } = action.value;
+          const { actionTracingId, agglomerateId1, agglomerateId2, segmentPosition1 } =
+            action.value;
           if (agglomerateId1 == null || agglomerateId2 == null) {
             console.log(
               "Cannot apply mergeAgglomerate action due to agglomerateId1 or agglomerateId2 not being provided in the action",
@@ -523,6 +556,37 @@ export function* tryToIncorporateActions(
             agglomerateId2,
             !areUnsavedChangesOfUser,
           );
+          if (
+            (!ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId1) &&
+              !ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId2)) ||
+            activeVolumeTracingId !== actionTracingId
+          ) {
+            break;
+          }
+          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has atleast one of the meshes loaded.
+          // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
+          // Track outdated and updated agglomerateIds to refresh after applying updates.
+
+          agglomerateIdsWithOutdatedMeshes.add(agglomerateId1);
+          agglomerateIdsWithOutdatedMeshes.add(agglomerateId2);
+          // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
+          delete agglomerateIdsToReloadMeshesFor[agglomerateId2];
+          if (segmentPosition1) {
+            agglomerateIdsToReloadMeshesFor[agglomerateId1] = segmentPosition1;
+          }
+          /*const mapOfLayer = layerToMeshRefreshInfo[actionTracingId];
+          const updatedMap = Object.fromEntries(
+            Object.entries(mapOfLayer).map(([oldAggloId, newAggloIds]) =>
+              newAggloIds.includes(agglomerateId2)
+                ? [
+                    oldAggloId,
+                    newAggloIds.filter((id) => id !== agglomerateId2).concat([agglomerateId2]),
+                  ]
+                : [oldAggloId, newAggloIds],
+            ),
+          );
+          updatedMap[agglomerateId2] = [agglomerateId2];
+          layerToMeshRefreshInfo[actionTracingId] = updatedMap;*/
           break;
         }
         case "splitAgglomerate": {
@@ -536,7 +600,8 @@ export function* tryToIncorporateActions(
           }
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
-          const { agglomerateId, actionTracingId } = action.value;
+          const { agglomerateId, actionTracingId, segmentPosition1, segmentPosition2 } =
+            action.value;
           volumeTracingIdOfMapping = actionTracingId;
           if (agglomerateId) {
             // The action already contains the info about what agglomerate was split.
@@ -552,7 +617,20 @@ export function* tryToIncorporateActions(
             yield* call(finalize);
             return { success: false };
           }
-
+          // If the split agglomerate has a proofreading mesh loaded, remember the positions of the split actions to
+          // be able to reload all affected meshes.
+          if (
+            ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId) &&
+            actionTracingId === activeVolumeTracingId
+          ) {
+            agglomerateIdsWithOutdatedMeshes.add(agglomerateId);
+            if (segmentPosition1) {
+              positionsFromSplits.add(segmentPosition1);
+            }
+            if (segmentPosition2) {
+              positionsFromSplits.add(segmentPosition2);
+            }
+          }
           break;
         }
 
@@ -629,13 +707,23 @@ export function* tryToIncorporateActions(
       const activeMapping = yield* select(
         (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingIdOfMapping],
       );
-      const splitMapping = yield* splitAgglomerateInMapping(
+      const splitMappingInfo = yield* splitAgglomerateInMapping(
         activeMapping,
         //  TODO: Add 64 bit support
         Number(agglomerateIdToRefresh),
         volumeTracingIdOfMapping,
         actionBatch.version,
+        false,
       );
+
+      if (splitMappingInfo == null) {
+        const message =
+          "Failed to apply split mapping action from other user. Please refresh the page to resync and loose as less of your work as possible.";
+        console.error(message);
+        Toast.error(message);
+        return { success: false };
+      }
+      const { splitMapping } = splitMappingInfo;
 
       yield* put(
         setMappingAction(
@@ -650,9 +738,84 @@ export function* tryToIncorporateActions(
           },
         ),
       );
+
+      // Keep info about meshes needing reloading up to date
+
+      // Big problem: what are the seed positions for refreshing the agglomerates after
+      /*const outdatedLoadedHelperMeshes =
+        ProofreadSaga_LoadedProofreadingMeshIds.intersection(oldAgglomerateIds);
+      if (outdatedLoadedHelperMeshes.size > 0) {
+        for (const aggloId of outdatedLoadedHelperMeshes) {
+          delete agglomerateIdsToReloadMeshesFor[aggloId];
+        }
+
+        // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
+
+        /*const mapOfLayer = layerToMeshRefreshInfo[volumeTracingIdOfMapping];
+        const updatedMap = Object.fromEntries(
+          Object.entries(mapOfLayer).map(([oldAggloId, newAggloIds]) => [
+            oldAggloId,
+            newAggloIds.filter((id) => !oldAgglomerateIds.has(id)),
+          ]),
+        );
+        layerToMeshRefreshInfo[volumeTracingIdOfMapping] = updatedMap;
+      }*/
     }
   }
+
+  // Get agglomerate Ids to reload based on the splitted edges.
+  const prepareInfo = yield* prepareSplitOrMerge(false);
+  if (prepareInfo?.getDataValue) {
+    for (const position of positionsFromSplits) {
+      const agglomerateIdAtPosition = yield* call(prepareInfo.getDataValue, position);
+      agglomerateIdsToReloadMeshesFor[agglomerateIdAtPosition] = position;
+    }
+  }
+
+  // TODOM
+  if (activeVolumeTracingId) {
+    // Remove all outdated meshes.
+    // TODOM
+    let someAgglomerateIdToRemove;
+    for (const aggloId of agglomerateIdsWithOutdatedMeshes) {
+      yield* put(removeMeshAction(activeVolumeTracingId, Number(aggloId)));
+      if (!someAgglomerateIdToRemove) {
+        someAgglomerateIdToRemove = aggloId;
+      }
+    }
+    if (!someAgglomerateIdToRemove) {
+      someAgglomerateIdToRemove = 0;
+    }
+    // construct refreshAffectedMeshes parameters.
+    // As all outdated meshes were already removed, someAgglomerateIdToRemove can be used in every refresh list item.
+    // TODOM
+    const refreshList: Array<{
+      agglomerateId: number;
+      newAgglomerateId: number;
+      nodePosition: Vector3;
+    }> = [];
+    for (const [agglomerateId, position] of Object.entries(agglomerateIdsToReloadMeshesFor)) {
+      refreshList.push({
+        agglomerateId: someAgglomerateIdToRemove,
+        newAgglomerateId: Number.parseInt(agglomerateId),
+        nodePosition: position,
+      });
+    }
+    yield* spawn(refreshAffectedMeshes, activeVolumeTracingId, refreshList);
+  }
+  /* TODOM: maybe reformat to two separate sets again.
+  for (const layerName of Object.keys(layerToMeshRefreshInfo)) {
+    const refreshInfoItems = [];
+    // TODOM: Position for new node refresh is needed :/. TODO
+    Object.entries(layerToMeshRefreshInfo[layerName]).forEach(([oldAggloId, newAggloIds]) => {});
+    const agglomerateIdsToRemove = Object.keys(layerToMeshRefreshInfo[layerName]);
+    for (const aggloId of agglomerateIdsToRemove) {
+      yield* put(removeMeshAction(layerName, Number(aggloId)));
+    }
+    // TODO: reload. Or even better spawn refreshAffectedMeshes with appropriate params.
+  }*/
   yield* call(finalize);
   return { success: true };
 }
+
 export default [setupSavingToServer, watchForNewerAnnotationVersion];

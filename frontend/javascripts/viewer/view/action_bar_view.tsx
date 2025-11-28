@@ -1,3 +1,4 @@
+import { ExperimentOutlined } from "@ant-design/icons";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
@@ -326,7 +327,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           }}
           disabled={disabled}
         >
-          <Button disabled={disabled} icon={<i className="fas fa-magic" />} title={tooltipText}>
+          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
             AI Analysis
           </Button>
         </Dropdown>

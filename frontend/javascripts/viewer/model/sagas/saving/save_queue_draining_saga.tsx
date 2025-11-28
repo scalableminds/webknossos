@@ -1,7 +1,7 @@
-// /*
-//  * This module contains the sagas responsible for sending the contents of the save queue
-//  * to the back-end (thus, draining the queue).
-//  */
+/*
+ * This module contains the sagas responsible for sending the contents of the save queue
+ * to the back-end (thus, draining the queue).
+ */
 
 import { sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";

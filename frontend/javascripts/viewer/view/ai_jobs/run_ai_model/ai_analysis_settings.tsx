@@ -181,6 +181,7 @@ export const AiAnalysisSettings: React.FC = () => {
           <Collapse style={{ marginBottom: "24px" }} ghost bordered={false}>
             <Collapse.Panel header="Advanced Settings" key="1">
               <Row gutter={24}>
+              {isInstanceModel && (
                 <Col span={12}>
                   <Form.Item
                     name="seedGeneratorDistanceThreshold"
@@ -193,10 +194,10 @@ export const AiAnalysisSettings: React.FC = () => {
                       suffix="nm"
                       style={{ width: "100%" }}
                       defaultValue={1000}
-                      disabled={!isInstanceModel}
                     />
                   </Form.Item>
                 </Col>
+              )}
               </Row>
 
               {isNeuronModel && (

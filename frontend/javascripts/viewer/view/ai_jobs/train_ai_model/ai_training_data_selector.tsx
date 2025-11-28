@@ -1,4 +1,4 @@
-import { FolderOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic } from "antd";
 import { formatHash, formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
@@ -22,7 +22,7 @@ const AiTrainingDataSelector = ({
 }: {
   selectedAnnotation: AiTrainingAnnotationSelection;
 }) => {
-  const { handleSelectionChange } = useAiTrainingJobContext();
+  const { handleSelectionChange, setSelectedAnnotations } = useAiTrainingJobContext();
 
   const {
     annotation,
@@ -134,9 +134,18 @@ const AiTrainingDataSelector = ({
       style={{ marginBottom: "24px" }}
       type="inner"
       title={
-        <a href={`/annotations/${annotation.id}`} target="_blank" rel="noreferrer">
-          Annotation: {annotation.name || formatHash(annotation.id)}
-        </a>
+        <Space style={{ width: "100%", justifyContent: "space-between" }}>
+          <a href={`/annotations/${annotation.id}`} target="_blank" rel="noreferrer">
+            Annotation: {annotation.name || formatHash(annotation.id)}
+          </a>
+          <Button
+            type="text"
+            icon={<DeleteOutlined />}
+            onClick={() =>
+              setSelectedAnnotations((prev) => prev.filter((a) => a.annotation.id !== annotationId))
+            }
+          />
+        </Space>
       }
     >
       <Row gutter={24}>
@@ -329,6 +338,11 @@ export const AiTrainingDataSection = () => {
       }
     >
       <Form layout="vertical">
+        {selectedAnnotations.length === 0 && (
+          <div style={{ textAlign: "center", color: "#999", padding: "24px" }}>
+            Please add training annotation via the + button
+          </div>
+        )}
         {selectedAnnotations.map((selectedAnnotation) => {
           return (
             <AiTrainingDataSelector

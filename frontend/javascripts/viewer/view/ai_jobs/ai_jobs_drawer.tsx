@@ -26,14 +26,14 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
 
   const items = [
     {
-      label: "Image Segmentation",
+      label: "Run Segmentation Model",
       key: "open_ai_inference",
       children: <AiImageSegmentationJob />,
     },
     ...(isSuperUser
       ? [
           {
-            label: "Model Training",
+            label: "Train Segmentation Model",
             key: "open_ai_training",
             children: <AiModelTrainingJob />,
           },
@@ -58,6 +58,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
       width={1200}
       open={isOpen}
       onClose={handleClose}
+      destroyOnClose={true}
     >
       <Tabs activeKey={activeKey} items={items} onChange={handleChange} />
     </Drawer>

@@ -20,7 +20,7 @@ import type * as React from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIDatasetCompact } from "types/api_types";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { getNoActionsAvailableMenu } from "viewer/view/context_menu";
 
 const disabledStyle: React.CSSProperties = {
@@ -259,11 +259,7 @@ function DatasetActionView(props: Props) {
         onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
         onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
       />
-      <LinkWithDisabled
-        to={`/datasets/${getReadableURLPart(dataset)}/view`}
-        title="View Dataset"
-        disabled={isReloading}
-      >
+      <LinkWithDisabled to={getViewDatasetURL(dataset)} title="View Dataset" disabled={isReloading}>
         <EyeOutlined className="icon-margin-right" />
         View
       </LinkWithDisabled>
@@ -319,7 +315,7 @@ export function getDatasetActionContextMenu({
             key: "view",
             label: "View",
             onClick: () => {
-              window.location.href = `/datasets/${getReadableURLPart(dataset)}/view`;
+              window.location.href = getViewDatasetURL(dataset);
             },
           }
         : null,

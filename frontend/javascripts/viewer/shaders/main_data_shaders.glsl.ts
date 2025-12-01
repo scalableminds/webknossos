@@ -522,6 +522,13 @@ void main() {
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
+  vec2 viewportWidthInVoxelsUV = abs(worldCoordBottomRight.xy - worldCoordTopLeft.xy) / voxelSizeFactorUVW.xy;
+  // If the plane subdivision vertices cannot possibly cover all bucket borders, the optimization must not be used.
+  // Otherwise, rendering artifacts will occur (partially rendered planes).
+  if ((d * PLANE_SUBDIVISION).x < viewportWidthInVoxelsUV.x || (d * PLANE_SUBDIVISION).y < viewportWidthInVoxelsUV.y) {
+    return;
+  }
+
   vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 

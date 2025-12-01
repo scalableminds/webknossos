@@ -242,7 +242,9 @@ describe("Annotation API (E2E)", () => {
         ],
       },
     ];
-    const createTreesUpdateActions = Array.from(diffTrees(tracingId, new DiffableMap(), trees));
+    const createTreesUpdateActions = Array.from(
+      diffTrees(tracingId, new DiffableMap(), trees, false),
+    );
     const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups, tracingId);
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
@@ -266,7 +268,9 @@ describe("Annotation API (E2E)", () => {
     const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
     const { tracingId } = createdExplorational.annotationLayers[0];
     let trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
-    const createTreesUpdateActions = Array.from(diffTrees(tracingId, new DiffableMap(), trees));
+    const createTreesUpdateActions = Array.from(
+      diffTrees(tracingId, new DiffableMap(), trees, false),
+    );
     const metadata = [
       {
         key: "city",

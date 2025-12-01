@@ -545,6 +545,7 @@ const CommentTabViewMemo = React.memo(
         nextProps.skeletonTracing.tracingId,
         prevPops.skeletonTracing.trees,
         nextProps.skeletonTracing.trees,
+        false,
       ),
     );
     const relevantUpdateActions = updateActions.filter(

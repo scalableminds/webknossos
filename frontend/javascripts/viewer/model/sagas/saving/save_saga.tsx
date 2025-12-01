@@ -19,11 +19,17 @@ import {
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { SagaIdentifier, type Vector3 } from "viewer/constants";
+import {
+  getSegmentationLayerByName,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
+import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
   removeMeshAction,
   showManyBucketUpdatesWarningAction,
 } from "viewer/model/actions/annotation_actions";
+import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import {
   type EnsureHasNewestVersionAction,
   type NotifyAboutUpdatedBucketsAction,
@@ -51,11 +57,11 @@ import {
   takeEveryWithBatchActionSupport,
 } from "../saga_helpers";
 import {
-  splitAgglomerateInMapping,
-  updateMappingWithMerge,
   coarselyLoadedSegmentIds as ProofreadSaga_LoadedProofreadingMeshIds,
   prepareSplitOrMerge,
   refreshAffectedMeshes,
+  splitAgglomerateInMapping,
+  updateMappingWithMerge,
 } from "../volume/proofreading/proofread_saga";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
@@ -63,12 +69,6 @@ import {
 } from "./rebasing_helpers_sagas";
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
-import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
-import {
-  getSegmentationLayerByName,
-  getVisibleSegmentationLayer,
-} from "viewer/model/accessors/dataset_accessor";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.

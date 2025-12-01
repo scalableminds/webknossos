@@ -80,9 +80,13 @@ import {
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import { api, Model } from "viewer/singletons";
+import { Model, api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import {
+  dispatchEnsureHasAnnotationMutexAsync,
+  dispatchEnsureHasNewestVersionAsync,
+} from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import {
   eulerAngleToReducerInternalMatrix,
@@ -91,11 +95,7 @@ import {
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
-import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "./saving/save_mutex_saga";
-import {
-  dispatchEnsureHasAnnotationMutexAsync,
-  dispatchEnsureHasNewestVersionAsync,
-} from "../actions/save_actions";
+import { MutexFetchingStrategy, getCurrentMutexFetchingStrategy } from "./saving/save_mutex_saga";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
   // In orthogonal view mode, the active planes' default rotation is added to the flycam rotation upon node creation.

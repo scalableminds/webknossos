@@ -308,7 +308,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           </Link>
           <br />
           <AsyncLink
-            href="#"
             onClick={() => {
               const hasVolumeAnnotation = getVolumeDescriptors(annotation).length > 0;
               return downloadAnnotation(id, typ, hasVolumeAnnotation);
@@ -321,7 +320,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <>
               <br />
               <AsyncLink
-                href="#"
                 onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
                 icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
                 disabled={annotation.isLockedByOwner}
@@ -337,7 +335,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <>
               <br />
               <AsyncLink
-                href="#"
                 onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
                 icon={
                   annotation.isLockedByOwner ? (
@@ -357,7 +354,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink
-            href="#"
             onClick={() => this.finishOrReopenAnnotation("reopen", annotation)}
             icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >

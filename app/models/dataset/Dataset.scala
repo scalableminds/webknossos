@@ -924,7 +924,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
         case None            => None
       }
-      path <- Fox.runOptional(row.path)(UPath.fromString(_).toFox)
+      realPathWithFallback = row.realpath.orElse(row.path)
+      path <- Fox.runOptional(realPathWithFallback)(UPath.fromString(_).toFox)
     } yield
       MagLocator(
         mag,
@@ -1128,7 +1129,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      path <- UPath.fromString(row.path).toFox
+      realPathWithFallback = row.realpath.getOrElse(row.path)
+      path <- UPath.fromString(realPathWithFallback).toFox
     } yield LayerAttachment(row.name, path, dataFormat)
 
   private def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =

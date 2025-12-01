@@ -81,15 +81,16 @@ export default function WorkflowListView() {
     isFetching,
   } = useQuery({
     queryKey: ["voxelyticsWorkflows"],
-    queryFn: async () => {
+    queryFn: () => {
       try {
-        return (await getVoxelyticsWorkflows()).map(parseWorkflowInfo);
+        return getVoxelyticsWorkflows();
       } catch (err) {
         Toast.error("Could not load workflow list.");
         console.error(err);
         throw err;
       }
     },
+    select: (data) => data.map(parseWorkflowInfo),
     refetchInterval: VX_POLLING_INTERVAL ?? false,
   });
 

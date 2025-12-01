@@ -115,9 +115,6 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
       m: MessagesProvider): Fox[Seq[ConnectomeFileNameWithMappingName]] = {
     val connectomeFileNames = dataLayer.attachments.map(_.connectomes).getOrElse(Seq.empty).map(_.name)
 
-    if (connectomeFileNames.nonEmpty) {
-      logger.info(s"Looking up connectome files $connectomeFileNames for $dataSourceId/${dataLayer.name}...")
-    }
     Fox.fromFuture(
       Fox
         .serialSequence(connectomeFileNames) { connectomeFileName =>

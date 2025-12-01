@@ -174,6 +174,7 @@ flat in vec2 index;
 flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
 flat in float outputAddress[<%= globalLayerCount %>];
+flat in float useBucketBorderVertexOptimization;
 in vec4 worldCoord;
 in vec4 modelCoord;
 in mat4 savedModelMatrix;
@@ -438,6 +439,8 @@ flat out vec2 index;
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
+// bool varyings are not supported
+flat out float useBucketBorderVertexOptimization;
 
 uniform bool is3DViewBeingRendered;
 uniform vec3 representativeMagForVertexAlignment;
@@ -476,6 +479,8 @@ void main() {
   <% }
   }) %>
 
+  useBucketBorderVertexOptimization = 1.0;
+
   vUv = uv;
   modelCoord = vec4(position, 1.0);
   savedModelMatrix = modelMatrix;
@@ -486,6 +491,7 @@ void main() {
   // The same goes when all layers of the dataset are transformed.
   // This shouldn't really impact the performance as isFlycamRotated is a uniform.
   if(isFlycamRotated || !<%= isOrthogonal %> || doAllLayersHaveTransforms) {
+    useBucketBorderVertexOptimization = 0.0;
     return;
   }
   // Remember the original z position, since it can subtly diverge in the
@@ -526,6 +532,7 @@ void main() {
   // If the plane subdivision vertices cannot possibly cover all bucket borders, the optimization must not be used.
   // Otherwise, rendering artifacts will occur (partially rendered planes).
   if ((d * PLANE_SUBDIVISION).x < viewportWidthInVoxelsUV.x || (d * PLANE_SUBDIVISION).y < viewportWidthInVoxelsUV.y) {
+    useBucketBorderVertexOptimization = 0.0;
     return;
   }
 

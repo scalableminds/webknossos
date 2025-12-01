@@ -133,7 +133,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
         // Only return successes, we don’t want a malformed file breaking the list request.
         .map { boxes: Seq[Box[ConnectomeFileNameWithMappingName]] =>
           boxes.filter(_.isEmpty).foreach { emptyBox =>
-            logger.info(s"Failed to list a connectome file for $dataSourceId: $emptyBox")
+            logger.warn(s"Failed to list a connectome file for $dataSourceId: $emptyBox")
           }
           boxes.flatten
         }

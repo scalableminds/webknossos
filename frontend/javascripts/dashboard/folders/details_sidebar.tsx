@@ -230,15 +230,18 @@ function DatasetsDetails({
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
 
   const invalidateQueries = (deletedIds: string[]) => {
-    queryClient.setQueryData(
-      ["datasetsByFolder", selectedDatasets[0].folderId],
-      (oldItems: APIDatasetCompact[] | undefined) => {
-        if (oldItems == null) {
-          return oldItems;
-        }
-        return oldItems.filter((item) => !deletedIds.includes(item.id));
-      },
-    );
+    const uniqueFolderIds = _.uniq(selectedDatasets.map((ds) => ds.folderId));
+    uniqueFolderIds.forEach((folderId) => {
+      queryClient.setQueryData(
+        ["datasetsByFolder", folderId],
+        (oldItems: APIDatasetCompact[] | undefined) => {
+          if (oldItems == null) {
+            return oldItems;
+          }
+          return oldItems.filter((item) => !deletedIds.includes(item.id));
+        },
+      );
+    });
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
   };
 

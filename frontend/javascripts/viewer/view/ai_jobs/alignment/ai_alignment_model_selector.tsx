@@ -64,18 +64,10 @@ export const AiAlignmentModelSelector: React.FC = () => {
         dataSource={alignmentTasks}
         renderItem={(item) => (
           <List.Item
-            className="hoverable-list-item"
+            className={"hoverable-list-item " + (selectedTask?.id === item.id ? "selected" : "")}
             style={{
-              border:
-                selectedTask?.id === item.id
-                  ? "1px solid var(--color-wk-blue)"
-                  : "1px solid #d9d9d9",
-              borderRadius: "8px",
-              marginBottom: "16px",
-              padding: "16px",
               opacity: item.disabled ? 0.5 : 1,
               cursor: item.disabled ? "not-allowed" : "pointer",
-              transition: "background-color 0.2s ease-in-out",
             }}
             onClick={() => handleTaskSelection(item)}
           >

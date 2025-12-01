@@ -719,11 +719,22 @@ button.narrow {
 }
 
 .hoverable-list-item {
-  // used in AI Job Drawer
+  // used in AI Job Drawer for selecting models, tasks etc.
   transition: background-color 0.2s ease-in-out;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 8px !important;
+  margin-bottom: 16px !important;
+  padding: 16px !important;
 
-  &:hover {
+  &:hover,
+  &.selected {
+    border-color: var(--color-wk-blue) !important;
     background-color: var(--ant-color-info-text-hover);
+
+    .ant-typography,
+    .ant-list-item-meta-description {
+      color: var(--ant-color-primary-bg) !important;
+    }
   }
 }
 

@@ -150,17 +150,10 @@ export const AiModelSelector: React.FC = () => {
         renderItem={(item) => (
           <List.Item
             style={{
-              border:
-                selectedModel?.id === item.id
-                  ? "1px solid var(--color-wk-blue)"
-                  : "1px solid #d9d9d9",
-              borderRadius: 8,
-              marginBottom: 16,
-              padding: 16,
               opacity: item.disabled ? 0.5 : 1,
               cursor: item.disabled ? "not-allowed" : "pointer",
             }}
-            className="hoverable-list-item"
+            className={"hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")}
             onClick={() => !item.disabled && onSelectModel(item)}
           >
             <List.Item.Meta

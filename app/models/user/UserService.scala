@@ -157,11 +157,15 @@ class UserService @Inject()(conf: WkConf,
   def initialTeamMemberships(organizationId: String, inviteIdOpt: Option[ObjectId]): Fox[Seq[TeamMembership]] =
     for {
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      organizationTeamMembership = Seq(TeamMembership(organizationTeamId, isTeamManager = false))
       inviteTeamMemberships <- inviteIdOpt match {
         case Some(inviteId) => inviteDAO.findTeamMembershipsFor(inviteId) ?~> "failed to get invite team memberships"
         case None           => Fox.successful(Seq.empty)
       }
+      // If not already present in the invite, add the organization team.
+      organizationTeamMembership = if (inviteTeamMemberships.exists(_.teamId == organizationTeamId))
+        Seq.empty
+      else
+        Seq(TeamMembership(organizationTeamId, isTeamManager = false))
       uniqueTeamMemberships = inviteTeamMemberships ++ organizationTeamMembership
     } yield uniqueTeamMemberships
 

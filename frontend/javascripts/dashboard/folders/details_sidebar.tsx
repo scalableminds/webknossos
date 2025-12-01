@@ -288,6 +288,9 @@ function DatasetsDetails({
     <div style={{ color: "red", fontWeight: "bold" }}> This action cannot be undone.</div>
   );
 
+  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
+  const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
+
   const confirmModal = (
     <Modal
       open={showConfirmDeleteModal}
@@ -299,19 +302,24 @@ function DatasetsDetails({
         <Progress percent={progressInPercent} />
       ) : (
         <>
-          Are you sure you want to delete the following {selectedDatasets.length} datasets?
+          Are you sure you want to delete the following {deletableDatasets.length} datasets?
           <ul>
-            {selectedDatasets.map((dataset) => (
+            {deletableDatasets.map((dataset) => (
               <li key={dataset.id}>{dataset.name}</li>
             ))}
           </ul>
+          {numberOfUndeletableDatasets > 0 && (
+            <div>
+              The remaining {numberOfUndeletableDatasets} selected{" "}
+              {pluralize("dataset", numberOfUndeletableDatasets)} cannot be deleted, e.g. because
+              you do not have sufficient permissions.
+            </div>
+          )}
           {cantBeUndoneMessage}
         </>
       )}
     </Modal>
   );
-
-  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
 
   return (
     <div style={{ textAlign: "center" }}>
@@ -323,7 +331,7 @@ function DatasetsDetails({
         {deletableDatasets.length > 0 && (
           <Button onClick={() => setShowConfirmDeleteModal(true)}>
             {" "}
-            <DeleteOutlined /> Delete {selectedDatasets.length} datasets
+            <DeleteOutlined /> Delete {deletableDatasets.length} datasets
           </Button>
         )}
       </Space>

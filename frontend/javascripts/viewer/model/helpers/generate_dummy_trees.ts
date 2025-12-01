@@ -62,7 +62,7 @@ export default function generateDummyTrees(
       },
       branchPoints: [],
       comments: [],
-      name: "explorative_2017-10-09_SCM_Boy_023",
+      name: "explorative_2017-10-09_sample_user_023",
       createdTimestamp: 1507550576213,
       isVisible: true,
       metadata: [],

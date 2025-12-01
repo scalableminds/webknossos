@@ -4,8 +4,9 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { Command } = require("commander");
 
-const schemaPath = path.join(__dirname, "schema.sql");
-const evolutionsPath = path.resolve(path.join(__dirname, "..", "..", "conf", "evolutions"));
+const repoRootPath = path.resolve(path.join(__dirname, "..", ".."));
+const schemaPath = path.join(repoRootPath, "schema", "schema.sql");
+const evolutionsPath = path.join(repoRootPath, "schema", "evolutions");
 
 const PG_CONFIG = (() => {
   let rawUrl = process.env.POSTGRES_URL || "postgres://postgres:postgres@127.0.0.1:5432/webknossos";

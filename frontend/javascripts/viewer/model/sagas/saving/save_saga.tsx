@@ -559,7 +559,8 @@ export function* tryToIncorporateActions(
           if (
             (!ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId1) &&
               !ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId2)) ||
-            activeVolumeTracingId !== actionTracingId
+            activeVolumeTracingId !== actionTracingId ||
+            areUnsavedChangesOfUser
           ) {
             break;
           }
@@ -777,12 +778,17 @@ export function* tryToIncorporateActions(
     // Remove all outdated meshes.
     // TODOM
     let someAgglomerateIdToRemove;
+    console.log("Start removing outdated meshes", ...Array.from(agglomerateIdsWithOutdatedMeshes));
     for (const aggloId of agglomerateIdsWithOutdatedMeshes) {
       yield* put(removeMeshAction(activeVolumeTracingId, Number(aggloId)));
       if (!someAgglomerateIdToRemove) {
         someAgglomerateIdToRemove = aggloId;
       }
     }
+    console.log(
+      "Finished removing outdated meshes",
+      ...Array.from(agglomerateIdsWithOutdatedMeshes),
+    );
     if (!someAgglomerateIdToRemove) {
       someAgglomerateIdToRemove = 0;
     }
@@ -801,7 +807,9 @@ export function* tryToIncorporateActions(
         nodePosition: position,
       });
     }
+    console.log("Start refreshing segments", refreshList);
     yield* spawn(refreshAffectedMeshes, activeVolumeTracingId, refreshList);
+    console.log("Finished refreshing segments", refreshList);
   }
   /* TODOM: maybe reformat to two separate sets again.
   for (const layerName of Object.keys(layerToMeshRefreshInfo)) {

@@ -1,6 +1,6 @@
 import { DeleteOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic } from "antd";
-import { formatHash, formatVoxels } from "libs/format_utils";
+import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { computeVolumeFromBoundingBox } from "libs/utils";
 import groupBy from "lodash/groupBy";
@@ -136,7 +136,7 @@ const AiTrainingDataSelector = ({
       title={
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <a href={`/annotations/${annotation.id}`} target="_blank" rel="noreferrer">
-            Annotation: {annotation.name || formatHash(annotation.id)}
+            Annotation: {annotation.name || annotation.id.slice(-6)}
           </a>
           <Button
             type="text"

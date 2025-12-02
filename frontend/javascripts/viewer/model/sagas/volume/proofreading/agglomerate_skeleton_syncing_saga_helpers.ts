@@ -60,11 +60,7 @@ function* agglomerateTreesToSkeleton(trees: Tree[]): Saga<SkeletonTracing> {
   return tracingWitTreesReplaced;
 }
 
-function* getAgglomerateTreesFromActionInfo(
-  sourceInfo: ActionSegmentInfo,
-  targetInfo: ActionSegmentInfo,
-  mappingName: string,
-) {
+function* getAgglomerateTreesAsSkeleton(agglomerateIds: number[], mappingName: string) {
   const skeletonTracing = yield* select((state) => state.annotation.skeleton);
   if (!skeletonTracing) {
     return;
@@ -75,15 +71,13 @@ function* getAgglomerateTreesFromActionInfo(
   if (mappingName == null) {
     return;
   }
-  const oldSourceAgglomerateId = sourceInfo.agglomerateId;
-  const oldTargetAgglomerateId = targetInfo.agglomerateId;
-  const maybeSourceTree = getAgglomerateTreeIfExists(oldSourceAgglomerateId, mappingName, trees);
-  const maybeTargetTree = getAgglomerateTreeIfExists(oldTargetAgglomerateId, mappingName, trees);
-  if (!maybeSourceTree && !maybeTargetTree) {
+  const existingAgglomerateTrees = agglomerateIds
+    .map((aggloId) => getAgglomerateTreeIfExists(aggloId, mappingName, trees))
+    .filter((tree) => tree != null);
+  if (existingAgglomerateTrees.length === 0) {
     return;
   }
-  const oldAggloTrees = [maybeSourceTree, maybeTargetTree].filter((t) => t != null);
-  const tracingWithOldAggloTrees = yield* agglomerateTreesToSkeleton(oldAggloTrees);
+  const tracingWithOldAggloTrees = yield* agglomerateTreesToSkeleton(existingAgglomerateTrees);
   return tracingWithOldAggloTrees;
 }
 
@@ -241,9 +235,8 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
     return;
   }
   const tracingWithOldAggloTrees = yield* call(
-    getAgglomerateTreesFromActionInfo,
-    sourceInfo,
-    targetInfo,
+    getAgglomerateTreesAsSkeleton,
+    [sourceInfo.agglomerateId, targetInfo.agglomerateId],
     mappingName,
   );
   if (!tracingWithOldAggloTrees) {
@@ -325,7 +318,55 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
   tracingId: string,
   mappingName: string,
 ): Saga<void> {
-  const trees = yield* select((state) =>
+  if (mappingName == null) {
+    return;
+  }
+  const tracingWithOldAggloTrees = yield* call(
+    getAgglomerateTreesAsSkeleton,
+    oldAgglomerateIds,
+    mappingName,
+  );
+  if (!tracingWithOldAggloTrees) {
+    return;
+  }
+  const positionToIdMap = createPositionToIdMap(tracingWithOldAggloTrees.trees.values());
+
+  let newTreeId = getMaximumTreeId(tracingWithOldAggloTrees.trees) + 1;
+
+  const assignedTreeIds = newAgglomerateIds
+    .map((id) => getAgglomerateTreeIfExists(id, mappingName, tracingWithOldAggloTrees.trees))
+    .map((tree) => (tree ? tree.treeId : newTreeId++));
+
+  const updatedAgglomerateSkeleton = yield* call(
+    getAllAgglomerateTreesFromServerAndRemap,
+    newAgglomerateIds,
+    positionToIdMap,
+    assignedTreeIds,
+    tracingId,
+    mappingName,
+  );
+
+  const diffActions = deepDiffSkeletonTracings(
+    tracingWithOldAggloTrees,
+    updatedAgglomerateSkeleton,
+  );
+  const diffActionsWithMissingServerFields = diffActions
+    .filter((a) => ApplicableSkeletonUpdateActionNamesHelperNamesList.includes(a.name))
+    .map(
+      (a) =>
+        ({
+          ...a,
+          value: {
+            ...a.value,
+            actionTimestamp: 0, // ignored anyway
+            actionAuthorId: "me",
+          } as const,
+        }) as const,
+    ) as ApplicableSkeletonServerUpdateAction[];
+
+  yield* put(applySkeletonUpdateActionsFromServerAction(diffActionsWithMissingServerFields));
+
+  /*const trees = yield* select((state) =>
     getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   if (mappingName == null) {
@@ -351,5 +392,5 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
     call(loadAgglomerateSkeleton, aggloId, tracingId, mappingName),
   );
   // Run in parallel as backend requests are involved; improves speed.
-  yield* all(loadAgglomerateSkeletonEffects);
+  yield* all(loadAgglomerateSkeletonEffects);*/
 }

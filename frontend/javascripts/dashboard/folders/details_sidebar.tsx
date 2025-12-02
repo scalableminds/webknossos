@@ -7,9 +7,9 @@ import {
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteDatasetOnDisk, getOrganization } from "admin/rest_api";
-import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip } from "antd";
+import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
@@ -225,12 +225,13 @@ function DatasetsDetails({
   datasetCount: number;
 }) {
   const queryClient = useQueryClient();
-  const [isDeleting, setIsDeleting] = useState(false);
   const [progressInPercent, setProgressInPercent] = useState(0);
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
+  const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
 
   const invalidateQueries = (deletedIds: string[]) => {
-    const uniqueFolderIds = _.uniq(selectedDatasets.map((ds) => ds.folderId));
+    const uniqueFolderIds = _.uniq(deletableDatasets.map((ds) => ds.folderId));
     uniqueFolderIds.forEach((folderId) => {
       queryClient.setQueryData(
         ["datasetsByFolder", folderId],
@@ -245,28 +246,34 @@ function DatasetsDetails({
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
   };
 
-  const deleteDatasets = async () => {
-    setIsDeleting(true);
-    let deletedIds = [];
-    for (let i = 0; i < selectedDatasets.length; i++) {
-      const dataset = selectedDatasets[i];
-      try {
-        await deleteDatasetOnDisk(dataset.id);
-        deletedIds.push(dataset.id);
-        setProgressInPercent(Math.round(((i + 1) / selectedDatasets.length) * 100));
-      } catch (_e) {
-        Toast.error(`Failed to delete dataset ${dataset.name}.`);
+  const deleteDatasetsMutation = useMutation({
+    mutationFn: async (datasets: APIDatasetCompact[]) => {
+      const deletedIds: string[] = [];
+      for (let i = 0; i < datasets.length; i++) {
+        const dataset = datasets[i];
+        try {
+          await deleteDatasetOnDisk(dataset.id);
+          deletedIds.push(dataset.id);
+          setProgressInPercent(Math.round(((i + 1) / datasets.length) * 100));
+        } catch (_e) {
+          Toast.error(`Failed to delete dataset ${dataset.name}.`);
+        }
       }
-    }
+      return deletedIds;
+    },
+    onSuccess: (deletedIds) => {
+      invalidateQueries(deletedIds);
+      setShowConfirmDeleteModal(false);
+      setProgressInPercent(0);
 
-    invalidateQueries(deletedIds);
-    setIsDeleting(false);
-    setShowConfirmDeleteModal(false);
-    setProgressInPercent(0);
+      if (deletedIds.length > 0) {
+        Toast.success(`Successfully deleted ${deletedIds.length} datasets.`);
+      }
+    },
+  });
 
-    if (deletedIds.length > 0) {
-      Toast.success(`Successfully deleted ${deletedIds.length} datasets.`);
-    }
+  const deleteDatasets = () => {
+    deleteDatasetsMutation.mutate(deletableDatasets);
   };
 
   const okayButton = (
@@ -276,7 +283,7 @@ function DatasetsDetails({
   );
 
   const onCancel = () => {
-    if (!isDeleting) {
+    if (!deleteDatasetsMutation.isPending) {
       setShowConfirmDeleteModal(false);
     }
   };
@@ -285,20 +292,19 @@ function DatasetsDetails({
 
   // TODO delete once soft-delete is implemented: https://github.com/scalableminds/webknossos/issues/9061
   const cantBeUndoneMessage = (
-    <div style={{ color: "red", fontWeight: "bold" }}> This action cannot be undone.</div>
+    <Typography.Text type="warning" strong>
+      This action cannot be undone.
+    </Typography.Text>
   );
-
-  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
-  const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
 
   const confirmModal = (
     <Modal
       open={showConfirmDeleteModal}
       title="Delete Datasets"
-      footer={isDeleting ? null : [cancelButton, okayButton]}
+      footer={deleteDatasetsMutation.isPending ? null : [cancelButton, okayButton]}
       onCancel={onCancel}
     >
-      {isDeleting ? (
+      {deleteDatasetsMutation.isPending ? (
         <Progress percent={progressInPercent} />
       ) : (
         <>
@@ -329,9 +335,8 @@ function DatasetsDetails({
           with drag and drop.
         </div>
         {deletableDatasets.length > 0 && (
-          <Button onClick={() => setShowConfirmDeleteModal(true)}>
-            {" "}
-            <DeleteOutlined /> Delete {deletableDatasets.length} datasets
+          <Button onClick={() => setShowConfirmDeleteModal(true)} icon={<DeleteOutlined />}>
+            Delete {deletableDatasets.length} datasets
           </Button>
         )}
       </Space>
@@ -380,9 +385,9 @@ function FolderDetails({
     message =
       datasetCount > 0
         ? `Double-click the folder to list ${pluralize("this", datasetCount, "these")} ${pluralize(
-            "dataset",
-            datasetCount,
-          )}.`
+          "dataset",
+          datasetCount,
+        )}.`
         : "";
   }
   return (

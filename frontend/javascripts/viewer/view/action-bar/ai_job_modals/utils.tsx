@@ -2,7 +2,7 @@ import Toast from "libs/toast";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import _ from "lodash";
 import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/api_types";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import { UnitShort } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -13,10 +13,10 @@ import { MEAN_VX_SIZE, MIN_BBOX_EXTENT, type ModalJobTypes } from "./constants";
 
 export const getMinimumDSSize = (jobType: ModalJobTypes) => {
   switch (jobType) {
-    case APIJobType.INFER_NEURONS:
-    case APIJobType.INFER_NUCLEI:
+    case APIJobCommand.INFER_NEURONS:
+    case APIJobCommand.INFER_NUCLEI:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
-    case APIJobType.INFER_MITOCHONDRIA:
+    case APIJobCommand.INFER_MITOCHONDRIA:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
   }
 };
@@ -39,9 +39,12 @@ export function getBoundingBoxesForLayers(layers: APIDataLayer[]): UserBoundingB
 export const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,
   datasetScaleMag1: VoxelSize,
-  jobType: APIJobType.INFER_MITOCHONDRIA | APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
+  jobType:
+    | APIJobCommand.INFER_MITOCHONDRIA
+    | APIJobCommand.INFER_NEURONS
+    | APIJobCommand.INFER_NUCLEI,
 ) => {
-  if (jobType === APIJobType.INFER_MITOCHONDRIA) {
+  if (jobType === APIJobCommand.INFER_MITOCHONDRIA) {
     // infer_mitochondria_model always infers on the finest mag of the current dataset
     const magInfo = getMagInfo(colorLayer.mags);
     return magInfo.getFinestMag();

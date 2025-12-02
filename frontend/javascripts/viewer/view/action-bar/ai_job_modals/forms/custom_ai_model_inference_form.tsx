@@ -11,7 +11,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { ExperimentalInferenceAlert } from "../components/experimental_inference_alert";
@@ -97,7 +97,7 @@ export function CustomAiModelInferenceForm() {
   return (
     <StartJobForm
       handleClose={handleClose}
-      jobName={APIJobType.INFER_NEURONS}
+      jobName={APIJobCommand.INFER_NEURONS}
       buttonLabel="Start inference with custom AI model"
       title="AI Inference"
       suggestedDatasetSuffix="with_custom_model"

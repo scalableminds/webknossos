@@ -22,7 +22,7 @@ import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
+import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
@@ -274,8 +274,8 @@ function SimpleLayerForm({
       );
     },
     initialJobKeyExtractor: (job) =>
-      job.type === "find_largest_segment_id" && job.datasetName === dataset?.name
-        ? (job.datasetName ?? "largest_segment_id")
+      job.command === "find_largest_segment_id" && job.args.datasetName === dataset?.name
+        ? (job.args.datasetName ?? "largest_segment_id")
         : null,
   });
   const activeJob = runningJobs[0];
@@ -287,7 +287,7 @@ function SimpleLayerForm({
           Toast.info(
             "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
           );
-          return [job.datasetName ?? "largest_segment_id", job.id] as [string, string];
+          return [job.args.datasetName ?? "largest_segment_id", job.id] as [string, string];
         }
       : null;
 
@@ -515,7 +515,7 @@ function SimpleLayerForm({
                       }}
                     />
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
-                      APIJobType.FIND_LARGEST_SEGMENT_ID,
+                      APIJobCommand.FIND_LARGEST_SEGMENT_ID,
                     ) ? (
                       <Tooltip
                         title={
@@ -550,7 +550,7 @@ function SimpleLayerForm({
               </div>
               {mostRecentSuccessfulJob && (
                 <div style={{ marginTop: -6 }}>
-                  Output of most recent job: {mostRecentSuccessfulJob.result}
+                  Output of most recent job: {mostRecentSuccessfulJob.returnValue}
                 </div>
               )}
             </div>

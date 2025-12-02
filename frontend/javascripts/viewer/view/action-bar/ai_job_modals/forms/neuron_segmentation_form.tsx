@@ -7,7 +7,7 @@ import { computeArrayFromBoundingBox } from "libs/utils";
 import messages from "messages";
 import React, { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   getTaskBoundingBoxes,
@@ -60,9 +60,9 @@ export function NeuronSegmentationForm() {
       const mag = getBestFittingMagComparedToTrainingDS(
         colorLayer,
         dataset.dataSource.scale,
-        APIJobType.INFER_NEURONS,
+        APIJobCommand.INFER_NEURONS,
       );
-      if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NEURONS)) {
+      if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobCommand.INFER_NEURONS)) {
         return;
       }
       const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
@@ -120,7 +120,7 @@ export function NeuronSegmentationForm() {
   return (
     <StartJobForm
       handleClose={handleClose}
-      jobName={APIJobType.INFER_NEURONS}
+      jobName={APIJobCommand.INFER_NEURONS}
       buttonLabel="Start AI neuron segmentation"
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"

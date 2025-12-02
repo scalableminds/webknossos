@@ -148,7 +148,7 @@ const Toast = {
       icon: undefined,
       key,
       duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
-      message: toastMessage,
+      title: toastMessage,
       style: {},
       className: config.className || "",
       onClose,

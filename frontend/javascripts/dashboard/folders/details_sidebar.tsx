@@ -1,5 +1,4 @@
 import {
-  CopyOutlined,
   DeleteOutlined,
   EditOutlined,
   FileOutlined,
@@ -7,13 +6,13 @@ import {
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteDatasetOnDisk, getOrganization } from "admin/rest_api";
-import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
+import FormattedId from "components/formatted_id";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useState } from "react";
@@ -27,6 +26,7 @@ import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dat
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import MetadataTable from "./metadata_table";
+import Toast from "libs/toast";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -177,15 +177,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           <div className="sidebar-label">ID</div>
           {fullDataset && (
             <Tag>
-              {fullDataset.id.substring(0, 10)}...{" "}
-              <Tooltip title="Copy Dataset ID">
-                <CopyOutlined
-                  onClick={() => {
-                    navigator.clipboard.writeText(fullDataset.id);
-                    Toast.success("Dataset ID copied.");
-                  }}
-                />
-              </Tooltip>
+              <FormattedId id={fullDataset.id} />
             </Tag>
           )}
         </div>

@@ -535,7 +535,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
         } yield ()
       }
-      _ <- Fox.runIf(
+      _ <- Fox.runIf(conf.Features.jobsEnabled &&
         dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) {
         logger.info(s"Cancelling any pending conversion jobs for dataset ${dataset._id}...")
         jobDAO.cancelConvertToWkwJobForDataset(dataset._id)

@@ -19,6 +19,7 @@ import {
   Col,
   Dropdown,
   Input,
+  type MenuProps,
   Radio,
   Row,
   Select,
@@ -36,7 +37,6 @@ import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
-import type { MenuProps } from "rc-menu";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";

@@ -46,7 +46,6 @@ import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_
 
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import FastTooltip from "components/fast_tooltip";
-import type { MenuInfo } from "rc-menu/lib/interface";
 import { clearProofreadingByProducts } from "viewer/model/actions/proofread_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
@@ -204,7 +203,7 @@ export function VolumeInterpolationButton() {
   );
 
   const menu: MenuProps = {
-    onClick: (e: MenuInfo) => {
+    onClick: (e) => {
       dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
       onInterpolateClick(null);
     },

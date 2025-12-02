@@ -2,7 +2,7 @@ import { SettingOutlined } from "@ant-design/icons";
 import { Card, Col, Form, Input, InputNumber, Row, Space } from "antd";
 import type { FormProps } from "antd";
 import type React from "react";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 
 import { ColorWKBlue } from "theme";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
@@ -56,7 +56,7 @@ export const AiTrainingSettings: React.FC = () => {
             >
               <Input />
             </Form.Item>
-            {selectedTask?.jobType === APIJobType.TRAIN_INSTANCE_MODEL && (
+            {selectedTask?.jobType === APIJobCommand.TRAIN_INSTANCE_MODEL && (
               <Form.Item
                 name="maxDistanceNm"
                 label="Max Distance (nm)"

@@ -14,7 +14,7 @@ import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { type APIDataLayer, APIJobType, type AiModel } from "types/api_types";
+import type { APIDataLayer, AiModel } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
@@ -30,10 +30,10 @@ import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/componen
 interface RunAiModelJobContextType {
   selectedModel: AiModel | Partial<AiModel> | null;
   selectedJobType:
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_NUCLEI
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_INSTANCES
+    | APIJobCommand.INFER_NEURONS
+    | APIJobCommand.INFER_NUCLEI
+    | APIJobCommand.INFER_MITOCHONDRIA
+    | APIJobCommand.INFER_INSTANCES
     | null;
   selectedBoundingBox: UserBoundingBox | null;
   newDatasetName: string;
@@ -43,10 +43,10 @@ interface RunAiModelJobContextType {
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
   setSelectedJobType: (
     jobType:
-      | APIJobType.INFER_NEURONS
-      | APIJobType.INFER_NUCLEI
-      | APIJobType.INFER_MITOCHONDRIA
-      | APIJobType.INFER_INSTANCES,
+      | APIJobCommand.INFER_NEURONS
+      | APIJobCommand.INFER_NUCLEI
+      | APIJobCommand.INFER_MITOCHONDRIA
+      | APIJobCommand.INFER_INSTANCES,
   ) => void;
   setSelectedModel: (model: AiModel | Partial<AiModel>) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
@@ -73,10 +73,10 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 }) => {
   const [selectedModel, setSelectedModel] = useState<AiModel | Partial<AiModel> | null>(null);
   const [selectedJobType, setSelectedJobType] = useState<
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_NUCLEI
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_INSTANCES
+    | APIJobCommand.INFER_NEURONS
+    | APIJobCommand.INFER_NUCLEI
+    | APIJobCommand.INFER_MITOCHONDRIA
+    | APIJobCommand.INFER_INSTANCES
     | null
   >(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
@@ -175,12 +175,12 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         };
 
         switch (selectedJobType) {
-          case APIJobType.INFER_NEURONS:
+          case APIJobCommand.INFER_NEURONS:
             await runCustomNeuronModelInferenceJob({
               ...commonInferenceArgs,
             });
             break;
-          case APIJobType.INFER_INSTANCES:
+          case APIJobCommand.INFER_INSTANCES:
             await runCustomInstanceModelInferenceJob({
               ...commonInferenceArgs,
               seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
@@ -192,7 +192,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       } else {
         // Pre-trained models
         switch (selectedJobType) {
-          case APIJobType.INFER_NEURONS:
+          case APIJobCommand.INFER_NEURONS:
             await runPretrainedNeuronInferencelJob(
               dataset.id,
               selectedLayer!.name,
@@ -204,7 +204,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
               isEvaluationActive ? splitMergerEvaluationSettings : undefined,
             );
             break;
-          case APIJobType.INFER_MITOCHONDRIA:
+          case APIJobCommand.INFER_MITOCHONDRIA:
             await runPretrainedMitochondriaInferenceJob(
               dataset.id,
               selectedLayer!.name,
@@ -212,7 +212,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
               newDatasetName,
             );
             break;
-          case APIJobType.INFER_NUCLEI:
+          case APIJobCommand.INFER_NUCLEI:
             await runPretrainedNucleiInferenceJob(
               dataset.id,
               selectedLayer!.name,

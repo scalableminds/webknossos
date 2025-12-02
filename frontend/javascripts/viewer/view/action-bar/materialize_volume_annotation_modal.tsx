@@ -3,7 +3,8 @@ import { Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useCallback } from "react";
-import { type APIDataLayer, APIJobType } from "types/api_types";
+import type { APIDataLayer } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
@@ -127,7 +128,7 @@ export function MaterializeVolumeAnnotationModal({
       <StartJobForm
         handleClose={handleClose}
         title="Start Materializing this Volume Annotation"
-        jobName={APIJobType.MATERIALIZE_VOLUME_ANNOTATION}
+        jobName={APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION}
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
         isBoundingBoxConfigurable={includesEditableMapping}

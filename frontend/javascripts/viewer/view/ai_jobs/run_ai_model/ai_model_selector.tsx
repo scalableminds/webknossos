@@ -5,7 +5,7 @@ import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
-import { APIJobType, type AiModel } from "types/api_types";
+import { APIJobCommand, type AiModel } from "types/api_types";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
@@ -15,10 +15,10 @@ type PretrainedModel = {
   comment: string;
   id: string;
   jobType:
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_NUCLEI
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_INSTANCES;
+    | APIJobCommand.INFER_NEURONS
+    | APIJobCommand.INFER_NUCLEI
+    | APIJobCommand.INFER_MITOCHONDRIA
+    | APIJobCommand.INFER_INSTANCES;
   image: string;
   disabled?: boolean;
 };
@@ -29,14 +29,14 @@ const preTrainedModels: PretrainedModel[] = [
     comment:
       "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "neuron-segmentation",
-    jobType: APIJobType.INFER_NEURONS,
+    jobType: APIJobCommand.INFER_NEURONS,
     image: "/assets/images/neuron_inferral_example.jpg",
   },
   {
     name: "Mitochondria Detection",
     comment: "Instance segmentation model for mitochondria detection. Optimized for EM data.",
     id: "mitochondria-detection",
-    jobType: APIJobType.INFER_MITOCHONDRIA,
+    jobType: APIJobCommand.INFER_MITOCHONDRIA,
     image: "/assets/images/mito_inferral_example.jpg",
   },
   {
@@ -44,19 +44,19 @@ const preTrainedModels: PretrainedModel[] = [
     comment: "Instance segmentation model for nuclei detection. Optimized for EM data",
     id: "nuclei-detection",
     disabled: true,
-    jobType: APIJobType.INFER_NUCLEI,
+    jobType: APIJobCommand.INFER_NUCLEI,
     image: "/assets/images/nuclei_inferral_example.jpg",
   },
 ];
 
 const mapCategoryToJobType = (
   category: APIAiModelCategory,
-): APIJobType.INFER_NEURONS | APIJobType.INFER_INSTANCES => {
+): APIJobCommand.INFER_NEURONS | APIJobCommand.INFER_INSTANCES => {
   switch (category) {
     case APIAiModelCategory.EM_NEURONS:
-      return APIJobType.INFER_NEURONS;
+      return APIJobCommand.INFER_NEURONS;
     case APIAiModelCategory.EM_NUCLEI:
-      return APIJobType.INFER_INSTANCES;
+      return APIJobCommand.INFER_INSTANCES;
     default:
       throw new Error(`Unsupported category: ${category}`);
   }
@@ -80,10 +80,10 @@ export const AiModelSelector: React.FC = () => {
 
   const onSelectModel = (model: AiModel | PretrainedModel) => {
     let jobType:
-      | APIJobType.INFER_NEURONS
-      | APIJobType.INFER_NUCLEI
-      | APIJobType.INFER_MITOCHONDRIA
-      | APIJobType.INFER_INSTANCES;
+      | APIJobCommand.INFER_NEURONS
+      | APIJobCommand.INFER_NUCLEI
+      | APIJobCommand.INFER_MITOCHONDRIA
+      | APIJobCommand.INFER_INSTANCES;
     if ("category" in model) {
       jobType = mapCategoryToJobType(model.category as APIAiModelCategory);
     } else {

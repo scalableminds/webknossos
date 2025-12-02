@@ -14,7 +14,7 @@ import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.Full
 import org.apache.pekko.actor.ActorSystem
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -158,7 +158,7 @@ class JobService @Inject()(wkConf: WkConf,
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
       logger.info(
         s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName...")
-      val commandArgs = job.commandArgs.value
+      val commandArgs = job.args.value
       for {
         datasetDirectoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
@@ -168,31 +168,32 @@ class JobService @Inject()(wkConf: WkConf,
       } yield ()
     } else Fox.successful(())
 
-  def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsValue] =
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      resultLink = job.resultLink(organization._id)
-      ownerJson <- userService.compactWrites(owner)
+      ownerEmail <- userService.emailFor(owner)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
-    } yield {
-      Json.obj(
-        "id" -> job._id.id,
-        "owner" -> ownerJson,
-        "command" -> job.command,
-        "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
-        "state" -> job.state,
-        "manualState" -> job.manualState,
-        "latestRunId" -> job.latestRunId,
-        "returnValue" -> job.returnValue,
-        "resultLink" -> resultLink,
-        "voxelyticsWorkflowHash" -> job._voxelyticsWorkflowHash,
-        "created" -> job.created,
-        "started" -> job.started,
-        "ended" -> job.ended,
-        "creditCost" -> creditTransactionBox.toOption.map(t => (t.creditDelta * -1).toString)
+    } yield
+      Json.toJson(
+        JobCompactInfo(
+          id = job._id,
+          command = job.command,
+          organizationId = organization._id,
+          ownerFirstName = owner.firstName,
+          ownerLastName = owner.lastName,
+          ownerEmail = ownerEmail,
+          args = job.args - "webknossos_token" - "user_auth_token",
+          state = job.effectiveState,
+          returnValue = job.returnValue,
+          resultLink = job.constructResultLink(organization._id),
+          voxelyticsWorkflowHash = job._voxelyticsWorkflowHash,
+          created = job.created,
+          started = job.started,
+          ended = job.ended,
+          creditCost = creditTransactionBox.toOption.map(t => t.creditDelta * -1) // delta is negative, so cost should be positive.
+        )
       )
-    }
 
   // Only seen by the workers
   def parameterWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
@@ -204,7 +205,7 @@ class JobService @Inject()(wkConf: WkConf,
       Json.obj(
         "job_id" -> job._id.id,
         "command" -> job.command,
-        "job_kwargs" -> (job.commandArgs ++ Json.obj("user_auth_token" -> userAuthToken.id))
+        "job_kwargs" -> (job.args ++ Json.obj("user_auth_token" -> userAuthToken.id))
       )
     }
 
@@ -222,7 +223,7 @@ class JobService @Inject()(wkConf: WkConf,
                     jobBoundingBox: BoundingBox,
                     creditTransactionComment: String,
                     user: User,
-                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
+                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsValue] =
     for {
       costsInCredits <- if (SHOULD_DEDUCE_CREDITS) calculateJobCostInCredits(jobBoundingBox, command)
       else Fox.successful(BigDecimal(0))

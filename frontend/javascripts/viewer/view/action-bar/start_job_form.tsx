@@ -5,7 +5,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { useCallback, useMemo } from "react";
-import type { APIDataLayer, APIJob, APIJobType } from "types/api_types";
+import type { APIDataLayer, APIJob, APIJobCommand } from "types/api_types";
 import { getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { getReadableNameOfVolumeLayer } from "viewer/model/accessors/volumetracing_accessor";
@@ -25,7 +25,7 @@ export type JobApiCallArgsType = {
 };
 export type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
-  jobName: APIJobType;
+  jobName: APIJobCommand;
   description: React.ReactNode;
   isBoundingBoxConfigurable?: boolean;
   chooseSegmentationLayer?: boolean;

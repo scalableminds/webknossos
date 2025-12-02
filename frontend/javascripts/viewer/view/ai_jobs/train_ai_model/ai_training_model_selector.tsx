@@ -3,7 +3,7 @@ import { Avatar, Card, List, Space, Tag, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
 import { ColorWKBlue } from "theme";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 const { Text } = Typography;
@@ -12,7 +12,7 @@ export type AiTrainingTask = {
   name: string;
   comment: string;
   id: string;
-  jobType: APIJobType | null;
+  jobType: APIJobCommand | null;
   image: string;
   disabled?: boolean;
 };
@@ -23,7 +23,7 @@ const trainingTasks: AiTrainingTask[] = [
     comment:
       "EM neuron segmentation based on the annotations in this dataset. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "train-neuron-model",
-    jobType: APIJobType.TRAIN_NEURON_MODEL,
+    jobType: APIJobCommand.TRAIN_NEURON_MODEL,
     image: "/assets/images/neuron_inferral_example.jpg",
   },
   {
@@ -31,7 +31,7 @@ const trainingTasks: AiTrainingTask[] = [
     comment:
       "EM instance segmentation based on the annotations in this dataset. Optimized for nuclei, mitochondria and other cell types.",
     id: "train-instance-model",
-    jobType: APIJobType.TRAIN_INSTANCE_MODEL,
+    jobType: APIJobCommand.TRAIN_INSTANCE_MODEL,
     image: "/assets/images/mito_inferral_example.jpg",
   },
 ];

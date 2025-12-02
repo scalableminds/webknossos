@@ -13,7 +13,7 @@ import every from "lodash/every";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { type APIAnnotation, type APIDataset, APIJobType } from "types/api_types";
+import { type APIAnnotation, type APIDataset, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
@@ -32,8 +32,8 @@ export interface AiTrainingAnnotationSelection {
 interface AiTrainingJobContextType {
   handleStartAnalysis: () => Promise<void>;
   selectedTask: AiTrainingTask | null;
-  selectedJobType: APIJobType | null;
-  setSelectedJobType: (jobType: APIJobType) => void;
+  selectedJobType: APIJobCommand | null;
+  setSelectedJobType: (jobType: APIJobCommand) => void;
   setSelectedTask: (task: AiTrainingTask) => void;
 
   modelName: string;
@@ -61,7 +61,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   children,
 }) => {
   const [selectedTask, setSelectedTask] = useState<AiTrainingTask | null>(null);
-  const [selectedJobType, setSelectedJobType] = useState<APIJobType | null>(null);
+  const [selectedJobType, setSelectedJobType] = useState<APIJobCommand | null>(null);
 
   const [modelName, setModelName] = useState("");
   const [selectedAnnotations, setSelectedAnnotations] = useState<AiTrainingAnnotationSelection[]>(
@@ -154,7 +154,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     };
 
     try {
-      if (selectedJobType === APIJobType.TRAIN_INSTANCE_MODEL) {
+      if (selectedJobType === APIJobCommand.TRAIN_INSTANCE_MODEL) {
         await runInstanceModelTraining({
           aiModelCategory: APIAiModelCategory.EM_NUCLEI,
           maxDistanceNm: maxDistanceNm,

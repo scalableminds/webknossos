@@ -16,7 +16,7 @@ import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materia
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import { IMG_STYLE_FOR_SPACEY_ICONS, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 export function SkeletonSpecificButtons() {
@@ -60,7 +60,7 @@ export function SkeletonSpecificButtons() {
 
   const isMaterializeVolumeAnnotationEnabled =
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-      APIJobType.MATERIALIZE_VOLUME_ANNOTATION,
+      APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
     );
 
   return (

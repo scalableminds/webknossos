@@ -4,7 +4,7 @@ import Toast from "libs/toast";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import _ from "lodash";
 import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/api_types";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import { UnitShort } from "viewer/constants";
 import { getColorLayers, getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -14,13 +14,13 @@ import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
 import { MEAN_VX_SIZE, MIN_BBOX_EXTENT } from "./constants";
 
-export const getMinimumDSSize = (jobType: APIJobType) => {
+export const getMinimumDSSize = (jobType: APIJobCommand) => {
   switch (jobType) {
-    case APIJobType.INFER_NEURONS:
-    case APIJobType.INFER_NUCLEI:
-    case APIJobType.INFER_INSTANCES:
+    case APIJobCommand.INFER_NEURONS:
+    case APIJobCommand.INFER_NUCLEI:
+    case APIJobCommand.INFER_INSTANCES:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
-    case APIJobType.INFER_MITOCHONDRIA:
+    case APIJobCommand.INFER_MITOCHONDRIA:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
     default:
       throw new Error(`Unknown job type: ${jobType}`);
@@ -46,12 +46,12 @@ export const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,
   datasetScaleMag1: VoxelSize,
   jobType:
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_NUCLEI
-    | APIJobType.INFER_INSTANCES,
+    | APIJobCommand.INFER_MITOCHONDRIA
+    | APIJobCommand.INFER_NEURONS
+    | APIJobCommand.INFER_NUCLEI
+    | APIJobCommand.INFER_INSTANCES,
 ) => {
-  if (jobType === APIJobType.INFER_MITOCHONDRIA || jobType === APIJobType.INFER_INSTANCES) {
+  if (jobType === APIJobCommand.INFER_MITOCHONDRIA || jobType === APIJobCommand.INFER_INSTANCES) {
     // infer_mitochondria_model always infers on the finest mag of the current dataset
     const magInfo = getMagInfo(colorLayer.mags);
     return magInfo.getFinestMag();
@@ -89,10 +89,10 @@ export const getBestFittingMagComparedToTrainingDS = (
 export const isBBoxTooSmall = (
   bbox: Vector3,
   segmentationType:
-    | APIJobType.INFER_INSTANCES
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_NUCLEI,
+    | APIJobCommand.INFER_INSTANCES
+    | APIJobCommand.INFER_MITOCHONDRIA
+    | APIJobCommand.INFER_NEURONS
+    | APIJobCommand.INFER_NUCLEI,
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
@@ -118,10 +118,10 @@ export const isDatasetOrBoundingBoxTooSmall = (
   mag: Vector3,
   colorLayer: APIDataLayer,
   segmentationType:
-    | APIJobType.INFER_INSTANCES
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_NUCLEI,
+    | APIJobCommand.INFER_INSTANCES
+    | APIJobCommand.INFER_MITOCHONDRIA
+    | APIJobCommand.INFER_NEURONS
+    | APIJobCommand.INFER_NUCLEI,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,

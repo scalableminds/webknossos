@@ -38,7 +38,7 @@ import { useState } from "react";
 import {
   type APIDataLayer,
   type APIDataset,
-  APIJobType,
+  APIJobCommand,
   type AdditionalAxis,
   type VoxelSize,
 } from "types/api_types";
@@ -591,7 +591,7 @@ function _DownloadModalView({
         </Text>
       </Row>
       {activeTabKey === "export" &&
-      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF) ? (
+      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.EXPORT_TIFF) ? (
         workerInfo
       ) : (
         <div>

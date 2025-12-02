@@ -8,7 +8,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
-import { APIJobType, type AiModel } from "types/api_types";
+import { APIJobCommand, type AiModel } from "types/api_types";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
@@ -101,7 +101,7 @@ export const TrainingCreditInformation: React.FC = () => {
 
 interface CreditInformationProps {
   selectedModel: AiModel | Partial<AiModel> | null;
-  selectedJobType: APIJobType | null;
+  selectedJobType: APIJobCommand | null;
   selectedBoundingBox: UserBoundingBox | null;
   handleStartAnalysis: () => void;
   startButtonTitle: string;
@@ -116,15 +116,15 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   startButtonTitle,
   areParametersValid,
 }) => {
-  const jobTypeToCreditCostPerGVx: Partial<Record<APIJobType, number>> = useMemo(
+  const jobTypeToCreditCostPerGVx: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
-      [APIJobType.INFER_NUCLEI]: features().neuronInferralCostPerGVx,
-      [APIJobType.INFER_NEURONS]: features().neuronInferralCostPerGVx,
-      [APIJobType.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
-      [APIJobType.INFER_INSTANCES]: features().neuronInferralCostPerGVx,
-      [APIJobType.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
-      [APIJobType.TRAIN_INSTANCE_MODEL]: 0,
-      [APIJobType.TRAIN_NEURON_MODEL]: 0,
+      [APIJobCommand.INFER_NUCLEI]: features().neuronInferralCostPerGVx,
+      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVx,
+      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
+      [APIJobCommand.INFER_INSTANCES]: features().neuronInferralCostPerGVx,
+      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
+      [APIJobCommand.TRAIN_INSTANCE_MODEL]: 0,
+      [APIJobCommand.TRAIN_NEURON_MODEL]: 0,
     }),
     [],
   );

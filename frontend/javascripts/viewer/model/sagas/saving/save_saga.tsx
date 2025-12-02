@@ -23,7 +23,10 @@ import {
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getSegmentsForLayer,
+  getVolumeTracingById,
+} from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
   removeMeshAction,
@@ -58,7 +61,6 @@ import {
 } from "../saga_helpers";
 import {
   coarselyLoadedSegmentIds as ProofreadSaga_LoadedProofreadingMeshIds,
-  prepareSplitOrMerge,
   refreshAffectedMeshes,
   splitAgglomerateInMapping,
   updateMappingWithMerge,
@@ -397,11 +399,6 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
   }
 }
 
-// Maps from outdated id
-// outdated -> Array<[newId, positionOfNewId]>
-// Mesh reloading is only supported for meshes of current volume layer.
-type MeshInfoToReloadMap = Record<number, Vector3>;
-
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
@@ -422,8 +419,7 @@ export function* tryToIncorporateActions(
   // Duplicates are later ignored when refreshing the meshes.
   const activeVolumeTracingId = (yield* select(getVisibleSegmentationLayer))?.tracingId;
   const agglomerateIdsWithOutdatedMeshes = new Set<number>();
-  const agglomerateIdsToReloadMeshesFor: MeshInfoToReloadMap = {};
-  const positionsFromSplits = new Set<Vector3>();
+  const agglomerateIdsToReloadMeshesFor = new Set<number>();
 
   for (const actionBatch of newerActions) {
     const agglomerateIdsToRefresh = new Set<NumberLike>();
@@ -535,8 +531,7 @@ export function* tryToIncorporateActions(
 
         // Proofreading
         case "mergeAgglomerate": {
-          const { actionTracingId, agglomerateId1, agglomerateId2, segmentPosition1 } =
-            action.value;
+          const { actionTracingId, agglomerateId1, agglomerateId2 } = action.value;
           if (agglomerateId1 == null || agglomerateId2 == null) {
             console.log(
               "Cannot apply mergeAgglomerate action due to agglomerateId1 or agglomerateId2 not being provided in the action",
@@ -571,10 +566,8 @@ export function* tryToIncorporateActions(
           agglomerateIdsWithOutdatedMeshes.add(agglomerateId1);
           agglomerateIdsWithOutdatedMeshes.add(agglomerateId2);
           // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
-          delete agglomerateIdsToReloadMeshesFor[agglomerateId2];
-          if (segmentPosition1) {
-            agglomerateIdsToReloadMeshesFor[agglomerateId1] = segmentPosition1;
-          }
+          agglomerateIdsToReloadMeshesFor.delete(agglomerateId2);
+          agglomerateIdsToReloadMeshesFor.add(agglomerateId1);
           /*const mapOfLayer = layerToMeshRefreshInfo[actionTracingId];
           const updatedMap = Object.fromEntries(
             Object.entries(mapOfLayer).map(([oldAggloId, newAggloIds]) =>
@@ -601,8 +594,7 @@ export function* tryToIncorporateActions(
           }
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
-          const { agglomerateId, actionTracingId, segmentPosition1, segmentPosition2 } =
-            action.value;
+          const { agglomerateId, actionTracingId } = action.value;
           volumeTracingIdOfMapping = actionTracingId;
           if (agglomerateId) {
             // The action already contains the info about what agglomerate was split.
@@ -620,18 +612,6 @@ export function* tryToIncorporateActions(
           }
           // If the split agglomerate has a proofreading mesh loaded, remember the positions of the split actions to
           // be able to reload all affected meshes.
-          if (
-            ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId) &&
-            actionTracingId === activeVolumeTracingId
-          ) {
-            agglomerateIdsWithOutdatedMeshes.add(agglomerateId);
-            if (segmentPosition1) {
-              positionsFromSplits.add(segmentPosition1);
-            }
-            if (segmentPosition2) {
-              positionsFromSplits.add(segmentPosition2);
-            }
-          }
           break;
         }
 
@@ -724,7 +704,7 @@ export function* tryToIncorporateActions(
         Toast.error(message);
         return { success: false };
       }
-      const { splitMapping } = splitMappingInfo;
+      const { splitMapping, oldAgglomerateIds, newAgglomerateIds } = splitMappingInfo;
 
       yield* put(
         setMappingAction(
@@ -739,6 +719,13 @@ export function* tryToIncorporateActions(
           },
         ),
       );
+
+      const loadedProofreadingAuxiliaryMeshesOfSplitAction =
+        ProofreadSaga_LoadedProofreadingMeshIds.intersection(oldAgglomerateIds);
+      if (loadedProofreadingAuxiliaryMeshesOfSplitAction.size > 0) {
+        oldAgglomerateIds.forEach((aggloId) => agglomerateIdsWithOutdatedMeshes.add(aggloId));
+        newAgglomerateIds.forEach((aggloId) => agglomerateIdsToReloadMeshesFor.add(aggloId));
+      }
 
       // Keep info about meshes needing reloading up to date
 
@@ -765,13 +752,13 @@ export function* tryToIncorporateActions(
   }
 
   // Get agglomerate Ids to reload based on the splitted edges.
-  const prepareInfo = yield* prepareSplitOrMerge(false);
+  /* const prepareInfo = yield* prepareSplitOrMerge(false);
   if (prepareInfo?.getDataValue) {
     for (const position of positionsFromSplits) {
       const agglomerateIdAtPosition = yield* call(prepareInfo.getDataValue, position);
       agglomerateIdsToReloadMeshesFor[agglomerateIdAtPosition] = position;
     }
-  }
+  } */
 
   // TODOM
   if (activeVolumeTracingId) {
@@ -800,12 +787,21 @@ export function* tryToIncorporateActions(
       newAgglomerateId: number;
       nodePosition: Vector3;
     }> = [];
-    for (const [agglomerateId, position] of Object.entries(agglomerateIdsToReloadMeshesFor)) {
-      refreshList.push({
-        agglomerateId: someAgglomerateIdToRemove,
-        newAgglomerateId: Number.parseInt(agglomerateId),
-        nodePosition: position,
-      });
+    const { hasSegmentIndex } = yield* select((state) =>
+      getVolumeTracingById(state.annotation, activeVolumeTracingId),
+    );
+    const segments = yield* select((state) => getSegmentsForLayer(state, activeVolumeTracingId));
+
+    for (const agglomerateId of agglomerateIdsToReloadMeshesFor) {
+      const segmentPosition = segments.getNullable(agglomerateId)?.somePosition;
+      // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
+      if (segmentPosition || hasSegmentIndex) {
+        refreshList.push({
+          agglomerateId: someAgglomerateIdToRemove,
+          newAgglomerateId: agglomerateId,
+          nodePosition: segmentPosition ?? [0, 0, 0],
+        });
+      }
     }
     console.log("Start refreshing segments", refreshList);
     yield* spawn(refreshAffectedMeshes, activeVolumeTracingId, refreshList);

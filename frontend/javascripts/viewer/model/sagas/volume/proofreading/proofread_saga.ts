@@ -478,7 +478,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         targetInfo.unmappedId,
         sourceAgglomerateId,
         targetAgglomerateId,
-        sourceNodePosition,
         volumeTracingId,
       ),
     );
@@ -499,8 +498,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       splitAgglomerate(
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
-        sourceNodePosition,
-        targetNodePosition,
         sourceAgglomerateId,
         volumeTracingId,
       ),
@@ -693,14 +690,7 @@ function* performMinCut(
       edge.segmentId2,
     );
     items.push(
-      splitAgglomerate(
-        edge.segmentId1,
-        edge.segmentId2,
-        edge.position1,
-        edge.position2,
-        sourceAgglomerateId,
-        volumeTracingId,
-      ),
+      splitAgglomerate(edge.segmentId1, edge.segmentId2, sourceAgglomerateId, volumeTracingId),
     );
   }
 
@@ -951,16 +941,7 @@ function* performCutFromNeighbors(
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
-    items.push(
-      splitAgglomerate(
-        edge.segmentId1,
-        edge.segmentId2,
-        edge.position1 || undefined,
-        edge.position2,
-        agglomerateId,
-        volumeTracingId,
-      ),
-    );
+    items.push(splitAgglomerate(edge.segmentId1, edge.segmentId2, agglomerateId, volumeTracingId));
   }
 
   return { didCancel: false, neighborInfo };
@@ -1028,7 +1009,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         targetInfo.unmappedId,
         sourceAgglomerateId,
         targetAgglomerateId,
-        sourceInfo.position,
         volumeTracingId,
       ),
     );

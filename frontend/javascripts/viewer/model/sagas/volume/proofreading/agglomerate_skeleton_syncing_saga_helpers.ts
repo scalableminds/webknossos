@@ -1,3 +1,4 @@
+import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction } from "libs/utils";
 import { all, put } from "typed-redux-saga";
@@ -13,11 +14,13 @@ import {
   applySkeletonUpdateActionsFromServerAction,
   deleteTreeAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import EdgeCollection from "viewer/model/edge_collection";
 import {
   createMutableTreeMapFromTreeArray,
   getMaximumTreeId,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
+import type { Node } from "viewer/model/types/tree_types";
 import type { NumberLikeMap, SkeletonTracing } from "viewer/store";
 import { type Saga, call, select } from "../../effect-generators";
 import { diffSkeletonTracing, getAgglomerateSkeletonTracing } from "../../skeletontracing_saga";
@@ -26,9 +29,6 @@ import {
   ApplicableSkeletonUpdateActionNamesHelperNamesList,
   type UpdateActionWithoutIsolationRequirement,
 } from "../update_actions";
-import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "viewer/model/edge_collection";
-import type { Node } from "viewer/model/types/tree_types";
 
 type ActionSegmentInfo = {
   agglomerateId: number;

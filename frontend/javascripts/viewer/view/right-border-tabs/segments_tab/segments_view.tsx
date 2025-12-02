@@ -27,10 +27,12 @@ import {
   ConfigProvider,
   Divider,
   Empty,
+  type GetRef,
   type MenuProps,
   Modal,
   Popover,
   Select,
+  type Tree,
   type TreeProps,
 } from "antd";
 import type { ItemType } from "antd/lib/menu/interface";
@@ -43,7 +45,6 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
-import type RcTree from "rc-tree";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -419,7 +420,7 @@ class SegmentsView extends React.Component<Props, State> {
     contextMenuPosition: null,
     menu: null,
   };
-  tree: React.RefObject<RcTree>;
+  tree: React.RefObject<GetRef<typeof Tree>>;
 
   constructor(props: Props) {
     super(props);

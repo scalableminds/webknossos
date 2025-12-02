@@ -370,7 +370,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       <Row gutter={32} justify="center">
         <Col span="7">
           <Card
-            bordered={false}
+            variant="borderless"
             cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
             style={{ maxWidth: 460 }}
           >

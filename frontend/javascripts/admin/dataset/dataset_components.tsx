@@ -28,7 +28,7 @@ export function CardContainer({
           marginLeft: "auto",
           marginRight: "auto",
         }}
-        bordered={false}
+        variant="borderless"
         title={
           <>
             <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>

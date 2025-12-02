@@ -129,10 +129,10 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
       <Dropdown
         menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
+        classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        destroyPopupOnHide
+        destroyOnHidden
       >
         <div />
       </Dropdown>

@@ -1,4 +1,5 @@
 import {
+  DownOutlined,
   HourglassOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
@@ -318,14 +319,18 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
     <FastTooltip
       title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
     >
-      <Dropdown.Button
-        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
-        style={{ marginRight: 5 }}
-        onClick={() => context.fetchDatasets()}
-        disabled={context.isChecking}
-      >
-        {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
-      </Dropdown.Button>
+      <Space.Compact style={{ marginRight: 5 }}>
+        <Button onClick={() => context.fetchDatasets()} disabled={context.isChecking}>
+          {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+        </Button>
+        <Dropdown
+          menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
+        >
+          <Button disabled={context.isChecking}>
+            <DownOutlined />
+          </Button>
+        </Dropdown>
+      </Space.Compact>
     </FastTooltip>
   );
 }

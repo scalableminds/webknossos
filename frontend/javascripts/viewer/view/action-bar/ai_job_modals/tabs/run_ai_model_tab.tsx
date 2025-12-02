@@ -88,7 +88,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
                 checked={aIJobModalState === APIJobType.INFER_MITOCHONDRIA}
                 onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_MITOCHONDRIA))}
               >
-                <Card bordered={false}>
+                <Card variant="borderless">
                   <Space direction="vertical" size="small">
                     <Row className="ai-job-title">Mitochondria detection</Row>
                     <Row>
@@ -109,7 +109,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
                 checked={aIJobModalState === APIJobType.INFER_NUCLEI}
                 onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NUCLEI))}
               >
-                <Card bordered={false}>
+                <Card variant="borderless">
                   <Space direction="vertical" size="small">
                     <Row className="ai-job-title">Nuclei detection</Row>
                     <Row>

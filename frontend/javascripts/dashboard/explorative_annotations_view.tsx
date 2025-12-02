@@ -485,7 +485,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       <Row gutter={32} justify="center" style={{ padding: 50 }}>
         <Col span="6">
           <Card
-            bordered={false}
+            variant="borderless"
             cover={
               <div style={{ display: "flex", justifyContent: "center" }}>
                 <i className="drawing drawing-empty-list-annotations" />

@@ -343,10 +343,11 @@ export default function TaskListView({
     );
 
     navigator.clipboard.writeText(artifactPaths.join("\n")).then(
-      () => notification.success({ message: "All artifacts path were copied to the clipboard" }),
+      () => notification.success({ title: "All artifacts path were copied to the clipboard" }),
       () =>
         notification.error({
-          message: `Could not copy the following artifact paths to clipboard: ${artifactPaths.join(
+          title: "Could not assign task",
+          description: `Could not copy the following artifact paths to clipboard: ${artifactPaths.join(
             "\n",
           )}`,
         }),

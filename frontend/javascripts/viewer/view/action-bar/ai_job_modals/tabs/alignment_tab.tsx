@@ -12,7 +12,7 @@ export function AlignmentTab() {
       <div className="centered-items">
         <Space align="center">
           <Radio.Button className="aIJobSelection" checked={true}>
-            <Card bordered={false}>
+            <Card variant="borderless">
               <Space direction="vertical" size="small">
                 <Row className="ai-job-title">Align Sections</Row>
                 <Row>

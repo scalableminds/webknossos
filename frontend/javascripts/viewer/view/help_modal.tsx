@@ -42,7 +42,7 @@ function HelpButton() {
           padding: 8,
         }}
         type="info"
-        message="Help"
+        title="Help"
         closable
         onClose={discardButton}
         onClick={() => setModalOpen(true)}

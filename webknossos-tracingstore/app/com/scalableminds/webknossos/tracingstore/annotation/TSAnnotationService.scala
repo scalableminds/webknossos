@@ -543,15 +543,15 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         _ <- updatedWithNewVersion.flushEditableMappingUpdaterBuffers() ?~> "flushEditableMappingUpdaterBuffers.failed"
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> "flushUpdatedTracings.failed"
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> "flushAnnotationInfo.failed"
-        _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
-          for {
-            _ <- remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)
-            _ <- remoteWebknossosClient.updateCachedAnnotationLayerProperties(
-              annotationId,
-              updatedWithNewVersion.cachedAnnotationLayerProperties
-            )
-          } yield ()
-        ) ?~> "updateRemote.failed"
+        _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation) {
+          remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)
+        } ?~> "updateRemote.failed"
+        _ <- Fox.runIf(reportChangesToWk) {
+          remoteWebknossosClient.updateCachedAnnotationLayerProperties(
+            annotationId,
+            updatedWithNewVersion.cachedAnnotationLayerProperties
+          )
+        } ?~> "updateRemote.failed"
       } yield updatedWithNewVersion
     }
   }

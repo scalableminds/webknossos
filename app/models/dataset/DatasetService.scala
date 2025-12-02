@@ -26,6 +26,7 @@ import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
+import models.job.JobDAO
 import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
@@ -55,6 +56,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
+                               jobDAO: JobDAO,
                                annotationDAO: AnnotationDAO,
                                usedStorageService: UsedStorageService,
                                conf: WkConf,
@@ -532,6 +534,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             .mkString(",")}"
           _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
         } yield ()
+      }
+      _ <- Fox.runIf(
+        dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) {
+        jobDAO.cancelConvertToWkwJobForDataset(dataset._id)
       }
       _ <- deleteDatasetFromDB(dataset._id)
     } yield ()

@@ -39,9 +39,9 @@ object AnnotationUpdateReport {
   implicit val jsonFormat: OFormat[AnnotationUpdateReport] = Json.format[AnnotationUpdateReport]
 }
 
-case class CachedAnnotationLayerProperties(hasEditableMapping: Boolean,
-                                           fallbackLayerName: Option[String],
-                                           mappingName: Option[String])
+case class CachedAnnotationLayerProperties(hasEditableMapping: Boolean = false,
+                                           fallbackLayerName: Option[String] = None,
+                                           mappingName: Option[String] = None)
 
 object CachedAnnotationLayerProperties {
   implicit val jsonFormat: OFormat[CachedAnnotationLayerProperties] = Json.format[CachedAnnotationLayerProperties]

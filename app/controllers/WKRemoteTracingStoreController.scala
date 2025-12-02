@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
-import com.scalableminds.webknossos.tracingstore.AnnotationUpdateReport
+import com.scalableminds.webknossos.tracingstore.{AnnotationUpdateReport, CachedAnnotationLayerProperties}
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
@@ -69,6 +69,20 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           )
           // Layer stats are ignored here, they are sent eagerly when saving updates
           _ <- annotationDAO.updateDescription(annotationId, request.body.description)
+        } yield Ok
+      }
+    }
+
+  def updateCachedAnnotationLayerProperties(
+      name: String,
+      key: String,
+      annotationId: ObjectId): Action[Map[String, CachedAnnotationLayerProperties]] =
+    Action.async(validateJson[Map[String, CachedAnnotationLayerProperties]]) { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        for {
+          _ <- Fox.serialCombined(request.body.keys) { tracingId =>
+            annotationLayerDAO.updateCachedProperties(annotationId, tracingId, request.body(tracingId))
+          }
         } yield Ok
       }
     }

@@ -229,6 +229,13 @@ case class AnnotationWithTracings(
     this.copy(tracingsById = newTracingsById)
   }
 
-  def cachedAnnotationLayerProperties: Map[String, CachedAnnotationLayerProperties] = ???
+  def cachedAnnotationLayerProperties: Map[String, CachedAnnotationLayerProperties] =
+    tracingsById.view.mapValues {
+      case Left(_) => CachedAnnotationLayerProperties()
+      case Right(volume) =>
+        CachedAnnotationLayerProperties(hasEditableMapping = volume.getHasEditableMapping,
+                                        fallbackLayerName = volume.fallbackLayer,
+                                        mappingName = volume.mappingName)
+    }.toMap
 
 }

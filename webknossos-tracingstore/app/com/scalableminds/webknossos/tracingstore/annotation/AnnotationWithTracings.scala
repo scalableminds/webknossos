@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.Skel
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.webknossos.tracingstore.CachedAnnotationLayerProperties
 
 import scala.concurrent.ExecutionContext
 
@@ -227,5 +228,7 @@ case class AnnotationWithTracings(
     }.toMap
     this.copy(tracingsById = newTracingsById)
   }
+
+  def cachedAnnotationLayerProperties: Map[String, CachedAnnotationLayerProperties] = ???
 
 }

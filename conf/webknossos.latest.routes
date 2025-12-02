@@ -142,7 +142,7 @@ DELETE        /datastores/:name                                                 
 
 # Tracingstores
 GET           /tracingstore                                                                     controllers.TracingStoreController.listOne()
-POST          /tracingstores/:name/handleTracingUpdateReport                                    controllers.WKRemoteTracingStoreController.handleTracingUpdateReport(name: String, key: String)
+POST          /tracingstores/:name/handleAnnotationUpdateReport                                 controllers.WKRemoteTracingStoreController.handleAnnotationUpdateReport(name: String, key: String)
 POST          /tracingstores/:name/updateAnnotation                                             controllers.WKRemoteTracingStoreController.updateAnnotation(name: String, key: String, annotationId: ObjectId)
 POST          /tracingstores/:name/validateUserAccess                                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, key: String, token: Option[String])
 PUT           /tracingstores/:name                                                              controllers.TracingStoreController.update(name: String)

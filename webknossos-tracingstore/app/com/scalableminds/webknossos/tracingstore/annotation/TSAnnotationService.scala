@@ -544,8 +544,14 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> "flushUpdatedTracings.failed"
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> "flushAnnotationInfo.failed"
         _ <- Fox.runIf(reportChangesToWk && annotationWithTracings.annotation != updated.annotation)(
-          remoteWebknossosClient
-            .updateAnnotation(annotationId, updatedWithNewVersion.annotation)) ?~> "updateRemote.failed"
+          for {
+            _ <- remoteWebknossosClient.updateAnnotation(annotationId, updatedWithNewVersion.annotation)
+            _ <- remoteWebknossosClient.updateCachedAnnotationLayerProperties(
+              annotationId,
+              updatedWithNewVersion.cachedAnnotationLayerProperties
+            )
+          } yield ()
+        ) ?~> "updateRemote.failed"
       } yield updatedWithNewVersion
     }
   }

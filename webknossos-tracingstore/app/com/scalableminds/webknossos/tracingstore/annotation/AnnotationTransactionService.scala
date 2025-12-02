@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, TracingId}
 import com.scalableminds.webknossos.tracingstore.{
-  AnnotationUpdatesReport,
+  AnnotationUpdateReport,
   TSRemoteWebknossosClient,
   TracingStoreRedisStore
 }
@@ -281,7 +281,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       implicit tc: TokenContext): Fox[Unit] =
     for {
       _ <- remoteWebknossosClient.reportAnnotationUpdates(
-        AnnotationUpdatesReport(
+        AnnotationUpdateReport(
           annotationId,
           timestamps = updateGroups.map(g => Instant(g.timestamp)),
           statistics = updateGroups.flatMap(_.stats).lastOption,

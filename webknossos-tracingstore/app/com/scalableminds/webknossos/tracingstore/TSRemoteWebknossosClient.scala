@@ -29,14 +29,22 @@ import play.api.libs.ws.WSResponse
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-case class AnnotationUpdatesReport(annotationId: ObjectId,
-                                   timestamps: List[Instant],
-                                   statistics: Option[JsObject],
-                                   significantChangesCount: Int,
-                                   viewChangesCount: Int,
-                                   userToken: Option[String])
-object AnnotationUpdatesReport {
-  implicit val jsonFormat: OFormat[AnnotationUpdatesReport] = Json.format[AnnotationUpdatesReport]
+case class AnnotationUpdateReport(annotationId: ObjectId,
+                                  timestamps: List[Instant],
+                                  statistics: Option[JsObject],
+                                  significantChangesCount: Int,
+                                  viewChangesCount: Int,
+                                  userToken: Option[String])
+object AnnotationUpdateReport {
+  implicit val jsonFormat: OFormat[AnnotationUpdateReport] = Json.format[AnnotationUpdateReport]
+}
+
+case class CachedAnnotationLayerProperties(hasEditableMapping: Boolean,
+                                           fallbackLayerName: Option[String],
+                                           mappingName: Option[String])
+
+object CachedAnnotationLayerProperties {
+  implicit val jsonFormat: OFormat[CachedAnnotationLayerProperties] = Json.format[CachedAnnotationLayerProperties]
 }
 
 class TSRemoteWebknossosClient @Inject()(
@@ -57,8 +65,8 @@ class TSRemoteWebknossosClient @Inject()(
     AlfuCache(maxCapacity = 10000, timeToLive = 5 minutes)
   private lazy val voxelSizeCache: AlfuCache[ObjectId, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
 
-  def reportAnnotationUpdates(tracingUpdatesReport: AnnotationUpdatesReport): Fox[WSResponse] =
-    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
+  def reportAnnotationUpdates(tracingUpdatesReport: AnnotationUpdateReport): Fox[WSResponse] =
+    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/handleAnnotationUpdateReport")
       .addQueryParam("key", tracingStoreKey)
       .silent
       .postJson(Json.toJson(tracingUpdatesReport))
@@ -105,6 +113,15 @@ class TSRemoteWebknossosClient @Inject()(
       .addQueryParam("key", tracingStoreKey)
       .silent
       .postProto(annotationProto)
+
+  def updateCachedAnnotationLayerProperties(
+      annotationId: ObjectId,
+      cachedAnnotationLayerProperties: Map[String, CachedAnnotationLayerProperties]): Fox[_] =
+    rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateCachedAnnotationLayerProperties")
+      .addQueryParam("annotationId", annotationId)
+      .addQueryParam("key", tracingStoreKey)
+      .silent
+      .postJson(cachedAnnotationLayerProperties)
 
   def createTracingFor(annotationId: ObjectId,
                        layerParameters: AnnotationLayerParameters,

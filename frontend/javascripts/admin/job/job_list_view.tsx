@@ -503,7 +503,7 @@ function JobListView() {
             title="Job Id"
             dataIndex="id"
             key="id"
-            width: 120,
+            width={120}
             render={(id) => <FormattedId id={id} />}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
           />

@@ -25,7 +25,7 @@ import {
   type EnsureSegmentIndexIsLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "../actions/dataset_actions";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -51,7 +51,7 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
     }
   }
 
-  yield* takeEvery(["WK_READY", "UPDATE_LAYER_SETTING", "UPDATE_DATASET_SETTING"], warnMaybe);
+  yield* takeEvery(["WK_INITIALIZED", "UPDATE_LAYER_SETTING", "UPDATE_DATASET_SETTING"], warnMaybe);
 }
 
 let userClosedWarning = false;
@@ -114,7 +114,7 @@ export function* watchZ1Downsampling(): Saga<void> {
         // is no appropriate mag for that layer.
         break;
       }
-      const magInfo = getMagInfo(dataLayer.resolutions);
+      const magInfo = getMagInfo(dataLayer.mags);
       const bestExistingIndex = magInfo.getFinestMagIndex();
       const currentIndex = magInfo.getIndexByMag(currentRes);
       if (currentIndex <= bestExistingIndex) {
@@ -152,8 +152,8 @@ export function* watchZ1Downsampling(): Saga<void> {
     }
   }
 
-  yield* call(ensureWkReady);
-  // Once WK is ready, a correct maximumZoomForAllMags attribute is computed
+  yield* call(ensureWkInitialized);
+  // Once WK is initialized, a correct maximumZoomForAllMags attribute is computed
   // asynchronously. During that time, we don't want to show any warning.
   // Therefore, we sleep a little bit here.
   yield* call(sleep, 1000);

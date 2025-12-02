@@ -202,7 +202,7 @@ function _getMagInfoOfActiveSegmentationTracingLayer(state: WebknossosState): Ma
   }
 
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
-  return getMagInfo(segmentationLayer.resolutions);
+  return getMagInfo(segmentationLayer.mags);
 }
 
 const getMagInfoOfActiveSegmentationTracingLayer = memoizeOne(
@@ -499,18 +499,14 @@ function _getSelectedIds(state: WebknossosState): [
 
 export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
-export function getActiveSegmentPosition(state: WebknossosState): Vector3 | null | undefined {
+export function getProofreadingMarkerPosition(state: WebknossosState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
   if (layer == null) return null;
 
   const volumeTracing = getVolumeTracingByLayerName(state.annotation, layer.name);
   if (volumeTracing == null) return null;
 
-  const activeCellId = getActiveCellId(volumeTracing);
-  if (activeCellId == null) return null;
-
-  const segments = getSegmentsForLayer(state, layer.name);
-  return segments.getNullable(activeCellId)?.somePosition;
+  return volumeTracing.proofreadingMarkerPosition;
 }
 
 /*
@@ -536,7 +532,7 @@ function _getRenderableMagForSegmentationTracing(
 
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const { renderMissingDataBlack } = state.datasetConfiguration;
-  const magInfo = getMagInfo(segmentationLayer.resolutions);
+  const magInfo = getMagInfo(segmentationLayer.mags);
   // Check whether the segmentation layer is enabled
   const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
 
@@ -946,4 +942,15 @@ export function getReadableNameOfVolumeLayer(
   return "tracingId" in layer && layer.tracingId != null
     ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
     : null;
+}
+
+export function getCurrentMappingName(state: WebknossosState) {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const volumeTracing = getActiveSegmentationTracing(state);
+  if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
+  const mappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    visibleSegmentationLayer?.name,
+  );
+  return mappingInfo.mappingName;
 }

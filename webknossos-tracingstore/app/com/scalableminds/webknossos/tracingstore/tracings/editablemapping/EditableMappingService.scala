@@ -59,14 +59,15 @@ case class MinCutParameters(
     partition1: List[Long],
     partition2: List[Long],
     mag: Vec3Int,
-    agglomerateId: Long
+    agglomerateId: Long,
+    version: Long,
 )
 
 object MinCutParameters {
   implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
 }
 
-case class NeighborsParameters(segmentId: Long, mag: Vec3Int, agglomerateId: Long)
+case class NeighborsParameters(segmentId: Long, mag: Vec3Int, agglomerateId: Long, version: Long)
 
 object NeighborsParameters {
   implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
@@ -188,17 +189,18 @@ class EditableMappingService @Inject()(
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
                                       segmentIdOpt: Option[Long],
-                                      mag: Vec3Int)(implicit tc: TokenContext): Fox[Long] =
+                                      magOpt: Option[Vec3Int])(implicit tc: TokenContext): Fox[Long] =
     segmentIdOpt match {
       case Some(segmentId) => Fox.successful(segmentId)
-      case None            => findSegmentIdAtPosition(remoteFallbackLayer, positionOpt, mag)
+      case None            => findSegmentIdAtPosition(remoteFallbackLayer, positionOpt, magOpt)
     }
 
   private def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
-                                      mag: Vec3Int)(implicit tc: TokenContext): Fox[Long] =
+                                      magOpt: Option[Vec3Int])(implicit tc: TokenContext): Fox[Long] =
     for {
       pos <- positionOpt.toFox ?~> "segment id or position is required in editable mapping action"
+      mag <- magOpt.toFox ?~> "segment id or mag is required in editable mapping action"
       voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(remoteFallbackLayer, pos, mag)
       voxelAsLongArray: Array[Long] <- bytesToLongs(voxelAsBytes, remoteFallbackLayer.elementClass)
       _ <- Fox.fromBool(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
@@ -401,7 +403,7 @@ class EditableMappingService @Inject()(
     val adHocMeshRequest = AdHocMeshRequest(
       dataSourceId = None,
       dataLayer = editableMappingLayer,
-      cuboid = request.cuboid(editableMappingLayer),
+      cuboid = request.cuboid,
       segmentId = request.segmentId,
       voxelSizeFactor = request.voxelSizeFactorInUnit,
       tokenContext = tc,

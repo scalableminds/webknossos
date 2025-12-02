@@ -20,7 +20,7 @@ import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import type { Action } from "../actions/actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 const asyncGetMaximumZoomForAllMags = createWorker(AsyncGetMaximumZoomForAllMags);
 
@@ -63,7 +63,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
   // would still complete its computation and the result value
   // can still be useful because the next computation
   // might be able to use the memoization result).
-  const channel = yield actionChannel(
+  const channel = yield* actionChannel(
     [
       // These actions *might* affect the values of the parameters
       // that are given to getZoomLevelsFn. If they don't affect the
@@ -79,7 +79,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
     buffers.sliding<Action>(1),
   );
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   while (true) {
     yield* take(channel);
     const state: WebknossosState = yield* select((state) => state);
@@ -107,7 +107,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         viewMode,
         state.datasetConfiguration.loadingStrategy,
         state.dataset.dataSource.scale.factor,
-        getMagInfo(layer.resolutions).getDenseMags(),
+        getMagInfo(layer.mags).getDenseMags(),
         getViewportRects(state),
         Math.min(
           state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,

@@ -32,7 +32,7 @@ export function BoundingBoxSelectionFormItem({
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
   const colorLayer = getColorLayers(dataset)[0];
-  const mag1 = colorLayer.resolutions[0];
+  const mag1 = colorLayer.mags[0].mag;
   const howToCreateBoundingBoxText = isInDatasetViewMode
     ? "To process only a part of the dataset, please create an annotation and create a bounding box in it using the bounding box tool in the toolbar at the top."
     : "You can create a new bounding box for the desired volume with the bounding box tool in the toolbar at the top. The created bounding boxes will be listed below.";

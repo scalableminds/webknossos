@@ -31,12 +31,12 @@ case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResou
 object UserAccessRequest {
   implicit val jsonFormat: OFormat[UserAccessRequest] = Json.format[UserAccessRequest]
 
-  def deleteDataSource(dataSourceId: DataSourceId): UserAccessRequest =
-    UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.delete)
   def administrateDataSources: UserAccessRequest =
     UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
+
   def administrateDataSources(organizationId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId("", organizationId), AccessResourceType.datasource, AccessMode.administrate)
+
   def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
 
@@ -48,9 +48,6 @@ object UserAccessRequest {
 
   def deleteDataset(datasetId: ObjectId): UserAccessRequest =
     UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.delete)
-
-  def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
-    UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 
   def writeDataset(datasetId: ObjectId): UserAccessRequest =
     UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.write)
@@ -98,12 +95,6 @@ trait AccessTokenService {
                                                               tc: TokenContext): Fox[UserAccessAnswer] =
     accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),
                                  _ => remoteWebknossosClient.requestUserAccess(accessRequest))
-
-  def assertUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
-    for {
-      userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
-      _ <- Fox.fromBool(userAccessAnswer.granted) ?~> userAccessAnswer.msg.getOrElse("Access forbidden.")
-    } yield ()
 
   private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
                                            block: => Future[Result]): Future[Result] =

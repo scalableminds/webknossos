@@ -15,8 +15,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   ProtoGeometryImplicits,
   SegmentIndexData
 }
-import com.scalableminds.webknossos.datastore.models.datasource.DataSource
-import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.tracingstore.tracings.RemoteFallbackLayer
@@ -37,7 +36,6 @@ class TSRemoteDatastoreClient @Inject()(
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[ObjectId, String] = AlfuCache()
-  private lazy val voxelSizeCache: AlfuCache[ObjectId, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
 
@@ -63,13 +61,13 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/data").withTokenFromContext
-        .addQueryString("x" -> pos.x.toString)
-        .addQueryString("y" -> pos.y.toString)
-        .addQueryString("z" -> pos.z.toString)
-        .addQueryString("width" -> "1")
-        .addQueryString("height" -> "1")
-        .addQueryString("depth" -> "1")
-        .addQueryString("mag" -> mag.toMagLiteral())
+        .addQueryParam("x", pos.x)
+        .addQueryParam("y", pos.y)
+        .addQueryParam("z", pos.z)
+        .addQueryParam("width", 1)
+        .addQueryParam("height", 1)
+        .addQueryParam("depth", 1)
+        .addQueryParam("mag", mag.toMagLiteral(allowScalar = false))
         .silent
         .getWithBytesResponse
     } yield result
@@ -101,7 +99,7 @@ class TSRemoteDatastoreClient @Inject()(
         for {
           remoteLayerUri <- getRemoteLayerUri(k._1)
           result <- rpc(s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId")
-            .addQueryStringOptional("token", k._3)
+            .addQueryParam("token", k._3)
             .silent
             .getWithJsonResponse[Long]
         } yield result
@@ -139,18 +137,6 @@ class TSRemoteDatastoreClient @Inject()(
       result <- rpc(s"$remoteLayerUri/meshes/fullMesh.stl").withTokenFromContext
         .postJsonWithBytesResponse(fullMeshRequest)
     } yield result
-
-  def voxelSizeForAnnotationWithCache(annotationId: ObjectId)(implicit tc: TokenContext): Fox[VoxelSize] =
-    voxelSizeCache.getOrLoad(annotationId, aId => voxelSizeForAnnotation(aId))
-
-  private def voxelSizeForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[VoxelSize] =
-    for {
-      datasetId <- remoteWebknossosClient.getDatasetIdForAnnotation(annotationId)
-      dataStoreUri <- dataStoreUriWithCache(datasetId)
-      result <- rpc(s"$dataStoreUri/data/datasets/$datasetId/readInboxDataSource").withTokenFromContext
-        .getWithJsonResponse[DataSource]
-      scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"
-    } yield scale
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {

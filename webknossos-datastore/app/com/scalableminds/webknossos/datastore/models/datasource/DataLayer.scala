@@ -12,7 +12,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json._
 
 trait DataLayer {
@@ -22,7 +22,7 @@ trait DataLayer {
   def resolutions: List[Vec3Int]
   def elementClass: ElementClass.Value
 
-  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
@@ -70,10 +70,10 @@ trait StaticLayer extends DataLayer {
 
   def dataFormat: DataFormat.Value
 
-  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+  def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
+    new DatasetArrayBucketProvider(this, dataSourceId, dataVaultServiceOpt, sharedChunkContentsCache)
 
   def bucketProviderCacheKey: String = this.name
 
@@ -106,6 +106,7 @@ trait StaticLayer extends DataLayer {
       defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
       newMags: Option[List[MagLocator]] = None, // Note: If this is defined, the magMapping has no impact
       magMapping: MagLocator => MagLocator = m => m,
+      attachmentMapping: DataLayerAttachments => DataLayerAttachments = a => a,
       name: String = this.name,
       coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
     this match {
@@ -115,7 +116,8 @@ trait StaticLayer extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
       case l: StaticSegmentationLayer =>
         l.copy(
@@ -123,7 +125,8 @@ trait StaticLayer extends DataLayer {
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
           mags = newMags.getOrElse(l.mags.map(magMapping)),
           name = name,
-          coordinateTransformations = coordinateTransformations
+          coordinateTransformations = coordinateTransformations,
+          attachments = l.attachments.map(attachmentMapping)
         )
     }
 

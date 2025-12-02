@@ -4,7 +4,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, CredentializedUPath}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -114,8 +114,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 }
 
 object GoogleCloudDataVault {
-  def create(remoteSourceDescriptor: RemoteSourceDescriptor): GoogleCloudDataVault = {
-    val credential = remoteSourceDescriptor.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential])
-    new GoogleCloudDataVault(remoteSourceDescriptor.toUriUnsafe, credential)
+  def create(credentializedUpath: CredentializedUPath): GoogleCloudDataVault = {
+    val credential = credentializedUpath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential])
+    new GoogleCloudDataVault(credentializedUpath.upath.toRemoteUriUnsafe, credential)
   }
 }

@@ -26,7 +26,7 @@ import { select } from "viewer/model/sagas/effect-generators";
 import Store, { type RecommendedConfiguration } from "viewer/store";
 import NewTaskDescriptionModal from "viewer/view/new_task_description_modal";
 import RecommendedConfigurationModal from "viewer/view/recommended_configuration_modal";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can acquire new tasks directly in the tracing view. Occasionally,
@@ -131,10 +131,10 @@ function* maybeActivateMergerMode(taskType: APITaskType): Saga<void> {
 }
 
 export default function* watchTasksAsync(): Saga<void> {
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   const task = yield* select((state) => state.task);
   const activeUser = yield* select((state) => state.activeUser);
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (task == null || activeUser == null || !allowUpdate) return;
   yield* call(maybeActivateMergerMode, task.type);
   const { lastTaskTypeId } = activeUser;
@@ -149,7 +149,7 @@ export default function* watchTasksAsync(): Saga<void> {
 }
 export function* warnAboutMagRestriction(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const { allowUpdate } = yield* select((state) => state.annotation.restrictions);
+    const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
 
     if (!allowUpdate) {
       // If updates are not allowed in general, we return here, since we don't
@@ -202,7 +202,7 @@ export function* warnAboutMagRestriction(): Saga<void> {
     }
   }
 
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
   yield* delay(5000);
   yield* warnMaybe();

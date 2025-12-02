@@ -312,7 +312,7 @@ describe("wkstore_adapter", () => {
 
     // @ts-ignore pushTransaction is a private method
     return pushQueue.pushTransaction(batch).then(() => {
-      expect(Store.dispatch).toHaveBeenCalledTimes(1);
+      expect(Store.dispatch).toHaveBeenCalledTimes(2);
       expect(Store.dispatch).toHaveBeenCalledWith(expectedSaveQueueItems);
     });
   });

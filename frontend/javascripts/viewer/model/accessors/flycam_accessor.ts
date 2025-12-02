@@ -1,8 +1,8 @@
-import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import type { Matrix4x4 } from "mjs";
 import { type Euler, MathUtils, Matrix4, Object3D } from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
@@ -400,14 +400,14 @@ export const getActiveMagIndicesForLayers = reuseInstanceOnEquality(_getActiveMa
 
 /*
   Note that the return value indicates which mag can be rendered theoretically for the given layer
-   (ignoring which mags actually exist). This means the return mag index might not exist for the given layer.
+   (ignoring which mags actually exist). This means the returned mag index might not exist for the given layer.
  */
 export function getActiveMagIndexForLayer(state: WebknossosState, layerName: string): number {
   return getActiveMagIndicesForLayers(state)[layerName];
 }
 
 /*
-  Returns the mag that is supposed to be rendered for the given layer. The return mag
+  Returns the mag that is supposed to be rendered for the given layer. The returned mag
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */
@@ -415,13 +415,31 @@ export function getCurrentMag(
   state: WebknossosState,
   layerName: string,
 ): Vector3 | null | undefined {
-  const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).resolutions);
+  const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).mags);
   const magIndex = getActiveMagIndexForLayer(state, layerName);
   const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(magIndex);
   if (existingMagIndex == null) {
     return null;
   }
   return magInfo.getMagByIndex(existingMagIndex);
+}
+
+/*
+  Returns the mag index that is supposed to be rendered for the given layer. The returned mag
+  is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
+  because no appropriate mag exists.
+ */
+export function getCurrentMagIndex(
+  state: WebknossosState,
+  layerName: string,
+): number | null | undefined {
+  const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).mags);
+  const magIndex = getActiveMagIndexForLayer(state, layerName);
+  const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(magIndex);
+  if (existingMagIndex == null) {
+    return null;
+  }
+  return existingMagIndex;
 }
 
 function _getValidZoomRangeForUser(state: WebknossosState): [number, number] {
@@ -628,7 +646,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
     .map((layer: DataLayerType) => ({
       layer,
       activeMagIdx: activeMagIndices[layer.name],
-      magInfo: getMagInfo(layer.resolutions),
+      magInfo: getMagInfo(layer.mags),
     }))
     .filter(({ activeMagIdx, magInfo: magInfo }) => {
       const isPresent = magInfo.hasIndex(activeMagIdx);
@@ -674,10 +692,7 @@ function _getActiveMagInfo(state: WebknossosState) {
     enabledLayers.map((l) => [l.name, activeMagIndices[l.name]]),
   );
   const activeMagOfEnabledLayers = Object.fromEntries(
-    enabledLayers.map((l) => [
-      l.name,
-      getMagInfo(l.resolutions).getMagByIndex(activeMagIndices[l.name]),
-    ]),
+    enabledLayers.map((l) => [l.name, getMagInfo(l.mags).getMagByIndex(activeMagIndices[l.name])]),
   );
 
   const isActiveMagGlobal =

@@ -4,6 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import { document, location } from "libs/window";
+import window from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
@@ -20,6 +21,7 @@ import MergerModeController from "viewer/controller/merger_mode_controller";
 import { destroySceneController } from "viewer/controller/scene_controller_provider";
 import UrlManager from "viewer/controller/url_manager";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction } from "viewer/model/actions/actions";
 import { resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -51,6 +53,7 @@ import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skel
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
 import TabTitle from "../components/tab_title_component";
+import VoxelValueTooltip from "../voxel_pipette_tooltip";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
@@ -128,6 +131,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       // For super users, we don't enforce a page reload.
       // They'll act as a guinea pig for this performance
       // improvement for now.
+      window.measuredTimeToFirstRender = false;
       return;
     }
 
@@ -314,7 +318,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isUpdateTracingAllowed, distanceMeasurementTooltipPosition } = this.props;
+    const { isUpdateTracingAllowed } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -336,10 +340,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
         {status === "loaded" && <WkContextMenu />}
-
-        {status === "loaded" && distanceMeasurementTooltipPosition != null && (
-          <DistanceMeasurementTooltip />
-        )}
 
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
@@ -397,6 +397,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   height: "100%",
                 }}
               >
+                {status === "loaded" && this.props.activeTool === AnnotationTool.VOXEL_PIPETTE && (
+                  <VoxelValueTooltip />
+                )}
+                {status === "loaded" && MeasurementTools.includes(this.props.activeTool) && (
+                  <DistanceMeasurementTooltip />
+                )}
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
                   <React.Fragment>
@@ -432,18 +438,16 @@ function mapStateToProps(state: WebknossosState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
-    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
+    isUpdateTracingAllowed: state.annotation.isUpdatingCurrentlyAllowed,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
     displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
-    distanceMeasurementTooltipPosition:
-      state.uiInformation.measurementToolInfo.lastMeasuredPosition,
+    activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
-    isWkReady: state.uiInformation.isWkReady,
   };
 }
 

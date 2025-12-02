@@ -42,7 +42,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
         val blockSize: Int = get[Int]("datastore.cache.agglomerateFile.blockSize")
         val cumsumMaxReaderRange: Long = get[Long]("datastore.cache.agglomerateFile.cumsumMaxReaderRange")
       }
-      val children = List(Mapping, AgglomerateFile)
+      val children = List(Mapping, ImageArrayChunks, AgglomerateFile)
     }
     object AdHocMesh {
       val timeout: FiniteDuration = get[FiniteDuration]("datastore.adHocMesh.timeout")
@@ -55,13 +55,15 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
     }
-    object ReportUsedStorage {
-      val enabled: Boolean = get[Boolean]("datastore.reportUsedStorage.enabled")
-    }
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
-    val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton)
+    object S3Upload {
+      val enabled: Boolean = get[Boolean]("datastore.s3Upload.enabled")
+      val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
+      val credentialName: String = get[String]("datastore.s3Upload.credentialName")
+    }
+    val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton, DataVaults, S3Upload)
   }
 
   object SlackNotifications {

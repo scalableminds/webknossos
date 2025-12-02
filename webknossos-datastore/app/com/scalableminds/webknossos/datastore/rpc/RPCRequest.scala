@@ -2,9 +2,10 @@ package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Failure, Full, Empty}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
@@ -14,6 +15,7 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import java.io.File
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
     extends LazyLogging
@@ -25,16 +27,54 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   private var logOnFailure: Boolean = true
   private var slowRequestLoggingThreshold = 2 minutes
 
-  def addQueryString(parameters: (String, String)*): RPCRequest = {
-    request = request.addQueryStringParameters(parameters: _*)
+  def addQueryParam(key: String, value: Int): RPCRequest =
+    addQueryParam(key, value.toString)
+
+  def addQueryParam(key: String, value: Long): RPCRequest =
+    addQueryParam(key, value.toString)
+
+  def addQueryParam(key: String, value: Double): RPCRequest =
+    addQueryParam(key, value.toString)
+
+  def addQueryParam(key: String, value: ObjectId): RPCRequest =
+    addQueryParam(key, value.toString)
+
+  def addQueryParam(key: String, value: Boolean): RPCRequest =
+    addQueryParam(key, value.toString)
+
+  def addQueryParam(key: String, valueOptional: Option[String]): RPCRequest =
+    valueOptional.map(addQueryParam(key, _)).getOrElse(this)
+
+  // ClassTags added to work around type erasure (otherwise, all Option[x] variants would be indistinguishable)
+  // Compare https://stackoverflow.com/a/3309490
+  def addQueryParam[A: ClassTag](key: String, value: Option[Int]): RPCRequest =
+    addQueryParam(key, value.map(_.toString))
+
+  def addQueryParam[A: ClassTag, B: ClassTag](key: String, value: Option[Long]): RPCRequest =
+    addQueryParam(key, value.map(_.toString))
+
+  def addQueryParam[A: ClassTag, B: ClassTag, C: ClassTag](key: String, value: Option[ObjectId]): RPCRequest =
+    addQueryParam(key, value.map(_.toString))
+
+  def addQueryParam[A: ClassTag, B: ClassTag, C: ClassTag, D: ClassTag](key: String,
+                                                                        value: Option[Double]): RPCRequest =
+    addQueryParam(key, value.map(_.toString))
+
+  def addQueryParam[A: ClassTag, B: ClassTag, C: ClassTag, D: ClassTag, E: ClassTag](
+      key: String,
+      value: Option[Boolean]): RPCRequest =
+    addQueryParam(key, value.map(_.toString))
+
+  def addQueryParam(key: String, value: String): RPCRequest = {
+    request = request.addQueryStringParameters(key -> value)
     this
   }
 
   def withTokenFromContext(implicit tc: TokenContext): RPCRequest =
-    addQueryStringOptional("token", tc.userTokenOpt)
+    addQueryParam("token", tc.userTokenOpt)
 
-  def addHttpHeaders(hdrs: (String, String)*): RPCRequest = {
-    request = request.addHttpHeaders(hdrs: _*)
+  def addHttpHeader(headerName: String, headerValue: String): RPCRequest = {
+    request = request.addHttpHeaders(headerName -> headerValue)
     this
   }
 
@@ -75,14 +115,6 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def silentIf(condition: Boolean): RPCRequest = {
     if (condition) {
       verbose = false
-    }
-    this
-  }
-
-  def addQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
-    valueOptional match {
-      case Some(value: String) => request = request.addQueryStringParameters((key, value))
-      case _                   =>
     }
     this
   }
@@ -130,6 +162,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def postFile(file: File): Fox[WSResponse] = {
     request = request.withBody(file).withMethod("POST")
     performRequest
+  }
+
+  def postFileWithJsonResponse[T: Reads](file: File): Fox[T] = {
+    request = request.withBody(file).withMethod("POST")
+    parseJsonResponse(performRequest)
   }
 
   def postFormWithJsonResponse[T: Reads](parameters: Map[String, String]): Fox[T] = {
@@ -195,6 +232,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
   def patchJson[T: Writes](body: T): Fox[WSResponse] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PATCH")
+    performRequest
+  }
+
+  def deleteJson[T: Writes](body: T): Fox[WSResponse] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("DELETE")
     performRequest
   }
 

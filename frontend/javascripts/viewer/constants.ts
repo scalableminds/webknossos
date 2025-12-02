@@ -1,3 +1,4 @@
+import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -348,7 +349,7 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
-};
+} as const;
 export default Constants;
 
 export type TypedArray =
@@ -383,7 +384,7 @@ export enum BLEND_MODES {
   Cover = "Cover",
 }
 
-export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+export const Identity4x4: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 export const IdentityTransform = {
   type: "affine",
   affineMatrix: Identity4x4,
@@ -507,4 +508,13 @@ export enum AnnotationStateFilterEnum {
   ALL = "All",
   ACTIVE = "Active",
   FINISHED_OR_ARCHIVED = "Finished",
+}
+
+export enum PerformanceMarkEnum {
+  TRACING_VIEW_LOAD = "tracing_view_load_start",
+  SHADER_COMPILE = "shader_compile_start",
+}
+
+export enum SagaIdentifier {
+  SAVE_SAGA = "save_saga",
 }

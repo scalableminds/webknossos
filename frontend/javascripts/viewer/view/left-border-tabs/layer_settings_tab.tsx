@@ -295,7 +295,7 @@ function LayerInfoIconWithTooltip({
 }: { layer: APIDataLayer; dataset: APIDataset }) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
-    const magInfo = getMagInfo(layer.resolutions);
+    const magInfo = getMagInfo(layer.mags);
     const mags = magInfo.getMagList();
     return (
       <div>
@@ -1122,23 +1122,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
     const { fallbackLayerInfo } = segmentationLayer;
-    const volumeTargetMag =
+    const volumeTargetMags =
       fallbackLayerInfo != null
-        ? fallbackLayerInfo.resolutions
+        ? fallbackLayerInfo.mags.map(({ mag }) => mag)
         : // This is only a heuristic. At some point, user configuration
           // might make sense here.
           getWidestMags(this.props.dataset);
 
     const getMaxDim = (mag: Vector3) => Math.max(...mag);
 
-    const volumeTracingMags = segmentationLayer.mags;
+    const volumeTracingMags = segmentationLayer.mags.map((magObj) => magObj.mag);
 
     const sourceMag = _.minBy(volumeTracingMags, getMaxDim);
     if (sourceMag === undefined) {
       return [];
     }
 
-    const possibleMags = volumeTargetMag.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
+    const possibleMags = volumeTargetMags.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
 
     const magsToDownsample = _.differenceWith(possibleMags, volumeTracingMags, _.isEqual);
 
@@ -1518,7 +1518,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 
-        {this.props.annotation.restrictions.allowUpdate &&
+        {this.props.annotation.isUpdatingCurrentlyAllowed &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
@@ -1531,7 +1531,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.annotation.restrictions.allowUpdate && canBeMadeHybrid ? (
+        {this.props.annotation.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.addSkeletonAnnotationLayer}

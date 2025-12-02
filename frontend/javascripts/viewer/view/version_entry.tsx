@@ -50,6 +50,7 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
+  UpdateActiveTreeUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -167,7 +168,7 @@ const descriptionFns: Record<
         ? `at position ${action.value.segmentPosition1}`
         : (action.value.segmentId1 ?? "unknown");
     const segment2Description =
-      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+      action.value.segmentPosition2 ?? action.value.segmentId2 ?? "unknown";
     const description = `Split agglomerate ${action.value.agglomerateId} by separating the segments ${segment1Description} and ${segment2Description}.`;
     return {
       description,
@@ -180,7 +181,7 @@ const descriptionFns: Record<
         ? `at position ${action.value.segmentPosition1}`
         : (action.value.segmentId1 ?? "unknown");
     const segment2Description =
-      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+      action.value.segmentPosition2 ?? action.value.segmentId2 ?? "unknown";
     const description = `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments  ${segment1Description} and ${segment2Description}.`;
     return {
       description,
@@ -431,6 +432,13 @@ const descriptionFns: Record<
     return {
       description: `Updated the active node id to ${action.value.activeNode}`,
       icon: <EditOutlined />,
+    };
+  },
+  // Should never be sent to the backend as the backend does not understand this action. Is filtered out before sending to backend.
+  updateActiveTree: (_action: AsServerAction<UpdateActiveTreeUpdateAction>): Description => {
+    return {
+      description: "",
+      icon: <div />,
     };
   },
   updateCamera: (_action: AsServerAction<UpdateCameraAnnotationAction>): Description => {

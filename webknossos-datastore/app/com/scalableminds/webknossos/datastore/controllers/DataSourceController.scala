@@ -18,23 +18,31 @@ import com.scalableminds.webknossos.datastore.helpers.{
   PathSchemes,
   SegmentIndexData,
   SegmentStatisticsParameters,
+  SegmentStatisticsParametersMeshBased,
   UPath
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
-import com.scalableminds.webknossos.datastore.services.mesh.{MeshFileService, MeshMappingHelper}
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  DSFullMeshService,
+  FullMeshRequest,
+  MeshFileService,
+  MeshMappingHelper
+}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
 import com.scalableminds.webknossos.datastore.services.uploading._
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
   SynapticPartnerDirection
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
+import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -63,11 +71,13 @@ class DataSourceController @Inject()(
     segmentIndexFileService: SegmentIndexFileService,
     agglomerateService: AgglomerateService,
     storageUsageService: DSUsedStorageService,
+    slackNotificationService: DSSlackNotificationService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
+    fullMeshService: DSFullMeshService,
     uploadService: UploadService,
     meshFileService: MeshFileService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
+    dataVaultService: DataVaultService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
@@ -76,6 +86,12 @@ class DataSourceController @Inject()(
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
+
+  def baseDirAbsolute: Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+      Fox.successful(Ok(Json.toJson(dataSourceService.dataBaseDir.toAbsolutePath.toString)))
+    }
+  }
 
   def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
@@ -95,9 +111,10 @@ class DataSourceController @Inject()(
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed")
-              .flatMap(reserveUploadAdditionalInfo =>
-                uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo))
+            for {
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed"
+              _ <- uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo)
+            } yield ()
           } else Fox.successful(())
         } yield Ok
       }
@@ -131,49 +148,50 @@ class DataSourceController @Inject()(
    */
   def uploadChunk(): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
-      val uploadForm = Form(
-        tuple(
-          "resumableChunkNumber" -> number,
-          "resumableChunkSize" -> number,
-          "resumableCurrentChunkSize" -> number,
-          "resumableTotalChunks" -> longNumber,
-          "resumableIdentifier" -> nonEmptyText
-        )).fill((-1, -1, -1, -1, ""))
+      log(Some(slackNotificationService.noticeFailedUploadRequest)) {
+        val uploadForm = Form(
+          tuple(
+            "resumableChunkNumber" -> number,
+            "resumableChunkSize" -> number,
+            "resumableCurrentChunkSize" -> number,
+            "resumableTotalChunks" -> longNumber,
+            "resumableIdentifier" -> nonEmptyText
+          )).fill((-1, -1, -1, -1, ""))
 
-      uploadForm
-        .bindFromRequest(request.body.dataParts)
-        .fold(
-          hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-          success = {
-            case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
-              for {
-                dataSourceId <- uploadService.getDataSourceIdByUploadId(
-                  uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                result <- accessTokenService.validateAccessFromTokenContext(
-                  UserAccessRequest.writeDataSource(dataSourceId)) {
-                  for {
-                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                    _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                    chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
-                    _ <- uploadService.handleUploadChunk(uploadFileId,
-                                                         chunkSize,
-                                                         currentChunkSize,
-                                                         totalChunkCount,
-                                                         chunkNumber,
-                                                         new File(chunkFile.ref.path.toString))
-                  } yield Ok
-                }
-              } yield result
-          }
-        )
+        uploadForm
+          .bindFromRequest(request.body.dataParts)
+          .fold(
+            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+            success = {
+              case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+                for {
+                  datasetId <- uploadService
+                    .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
+                  result <- accessTokenService
+                    .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+                      for {
+                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
+                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                        _ <- uploadService.handleUploadChunk(uploadFileId,
+                                                             chunkSize,
+                                                             currentChunkSize,
+                                                             totalChunkCount,
+                                                             chunkNumber,
+                                                             new File(chunkFile.ref.path.toString))
+                      } yield Ok
+                    }
+                } yield result
+            }
+          )
+      }
     }
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        dataSourceId <- uploadService.getDataSourceIdByUploadId(
-          uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
-        result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataSource(dataSourceId)) {
+        datasetId <- uploadService.getDatasetIdByUploadId(uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
+        result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
           for {
             isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
             _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
@@ -184,36 +202,32 @@ class DataSourceController @Inject()(
     }
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
-    log() {
-      for {
-        dataSourceId <- uploadService
-          .getDataSourceIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
-        response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataSource(dataSourceId)) {
-          for {
-            (dataSourceId, datasetSizeBytes) <- uploadService
-              .finishUpload(request.body) ?~> "dataset.upload.finishFailed"
-            uploadedDatasetIdJson <- dsRemoteWebknossosClient.reportUpload(
-              dataSourceId,
-              datasetSizeBytes,
-              request.body.needsConversion.getOrElse(false),
-              viaAddRoute = false
-            ) ?~> "reportUpload.failed"
-          } yield Ok(Json.obj("newDatasetId" -> uploadedDatasetIdJson))
-        }
-      } yield response
+    log(Some(slackNotificationService.noticeFailedUploadRequest)) {
+      logTime(slackNotificationService.noticeSlowRequest) {
+        for {
+          datasetId <- uploadService
+            .getDatasetIdByUploadId(request.body.uploadId) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"
+          response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+            for {
+              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Messages("dataset.upload.finishFailed",
+                                                                                    datasetId)
+            } yield Ok(Json.obj("newDatasetId" -> datasetId))
+          }
+        } yield response
+      }
     }
   }
 
   def cancelUpload(): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
-      val dataSourceIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
+      val datasetIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
         case false => Fox.failure("dataset.upload.validation.failed")
-        case true  => uploadService.getDataSourceIdByUploadId(request.body.uploadId)
+        case true  => uploadService.getDatasetIdByUploadId(request.body.uploadId)
       }
-      dataSourceIdFox.flatMap { dataSourceId =>
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataSource(dataSourceId)) {
+      datasetIdFox.flatMap { datasetId =>
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
           for {
-            _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
+            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
         }
@@ -398,24 +412,24 @@ class DataSourceController @Inject()(
 
   def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          dataSource <- datasetCache.getById(datasetId) ~> NOT_FOUND
+          dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
-          _ <- if (dataSourceService.existsOnDisk(dataSourceId)) {
-            for {
-              _ <- dataSourceService.deleteOnDisk(
-                dataSourceId.organizationId,
-                dataSourceId.directoryName,
-                Some(datasetId),
-                reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
-              _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
-            } yield ()
-          } else
-            for {
-              _ <- dsRemoteWebknossosClient.deleteDataSource(dataSourceId)
-              _ = logger.warn(s"Tried to delete dataset ${dataSource.id} that is not on disk.")
-            } yield ()
+          _ <- dataSourceService.deleteOnDisk(
+            datasetId,
+            dataSourceId.organizationId,
+            dataSourceId.directoryName,
+            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
+        } yield Ok
+      }
+    }
+
+  def deletePaths(): Action[Seq[UPath]] =
+    Action.async(validateJson[Seq[UPath]]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- dataSourceService.deletePathsFromDiskOrManagedS3(request.body)
         } yield Ok
       }
     }
@@ -610,6 +624,36 @@ class DataSourceController @Inject()(
       }
     }
 
+  def getSegmentSurfaceArea(datasetId: ObjectId, dataLayerName: String): Action[SegmentStatisticsParametersMeshBased] =
+    Action.async(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+        for {
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
+          meshFileKeyOpt <- Fox.runOptional(request.body.meshFileName)(
+            meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, _))
+          mappingNameForMeshFile <- Fox.runOptional(meshFileKeyOpt)(meshFileService.mappingNameForMeshFile)
+          surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            val fullMeshRequest = FullMeshRequest(
+              meshFileName =
+                if (mappingNameForMeshFile.contains(request.body.meshFileName)) request.body.meshFileName else None,
+              lod = None,
+              segmentId = segmentId,
+              mappingName = request.body.mappingName,
+              mappingType = request.body.mappingName.map(_ => "HDF5"),
+              editableMappingTracingId = None,
+              mag = Some(request.body.mag),
+              seedPosition = None,
+              additionalCoordinates = request.body.additionalCoordinates,
+            )
+            for {
+              data: Array[Byte] <- fullMeshService.loadFor(dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+              surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
+            } yield surfaceArea
+          }
+        } yield Ok(Json.toJson(surfaceAreas))
+      }
+    }
+
   // Called directly by wk side
   def exploreRemoteDataset(): Action[ExploreRemoteDatasetRequest] =
     Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
@@ -647,7 +691,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
           _ <- Fox.successful(())
-          pathsAllowed = request.body.map(remoteSourceDescriptorService.pathIsAllowedToAddDirectly)
+          pathsAllowed = request.body.map(dataVaultService.pathIsAllowedToAddDirectly)
           result = request.body.zip(pathsAllowed).map {
             case (path, isAllowed) => PathValidationResult(path, isAllowed)
           }
@@ -670,7 +714,9 @@ class DataSourceController @Inject()(
         Some(
           dataSourceService.dataSourceFromDir(
             dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
-            dataSourceId.organizationId))
+            dataSourceId.organizationId,
+            resolveMagPaths = true
+          ))
       } else None
       _ <- Fox.runOptional(dataSourceFromDirOpt)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
       _ = datasetCache.invalidateCache(datasetId)

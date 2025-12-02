@@ -8,7 +8,7 @@ class UPathTestSuite extends PlaySpec {
   "UPath" should {
     "Be constructable from well-formed string" in {
       assert(UPath.fromString("relative/elsewhere").exists(_.toString == "./relative/elsewhere"))
-      assert(UPath.fromString("./relative/elsewehere").exists(_.toString == "./relative/elsewehere"))
+      assert(UPath.fromString("./relative/elsewhere").exists(_.toString == "./relative/elsewhere"))
       assert(UPath.fromString("/absolute/somewhere").exists(_.toString == "/absolute/somewhere"))
       assert(UPath.fromString("/absolute/some$where").exists(_.toString == "/absolute/some$where"))
       assert(UPath.fromString("/absolute/with²Unicode").exists(_.toString == "/absolute/with²Unicode"))
@@ -129,12 +129,19 @@ class UPathTestSuite extends PlaySpec {
     "correctly answer startsWith" in {
       assert(UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("relative")))
       assert(!UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("elsewhere")))
+      // startsWith compares actual parents, not string prefix!
+      assert(!UPath.fromStringUnsafe("relativeElsewhere").startsWith(UPath.fromStringUnsafe("relative")))
       assert(UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/absolute")))
       assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/elsewhere")))
       assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("https://example.com")))
       assert(
         UPath
           .fromStringUnsafe("https://example.com/path/somewhere")
+          .startsWith(UPath.fromStringUnsafe("https://example.com/path")))
+      // startsWith compares actual parents, not string prefix!
+      assert(
+        !UPath
+          .fromStringUnsafe("https://example.com/pathSomewhereElse")
           .startsWith(UPath.fromStringUnsafe("https://example.com/path")))
     }
   }

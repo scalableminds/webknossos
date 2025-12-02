@@ -63,8 +63,7 @@ export default function determineBucketsForFlight(
   };
 
   const transformAndApplyMatrix = (vec: Vector3): Vector3 =>
-    // @ts-ignore
-    M4x4.transformPointsAffine(queryMatrix, transformToSphereCap(vec));
+    M4x4.transformPointsAffine(queryMatrix, transformToSphereCap(vec)) as Vector3;
 
   let traversedBucketsWithPriorities: Array<[Vector4, number]> = [];
   const maybeAddBucket = createDistinctBucketAdder(traversedBucketsWithPriorities);

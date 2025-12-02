@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UsableDataSource
 }
+import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
@@ -25,6 +26,7 @@ import models.dataset.explore.{
 }
 import models.folder.FolderService
 import models.organization.OrganizationDAO
+import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -33,6 +35,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.{AccessibleBySwitchingService, URLSharing, WkEnv}
+import telemetry.SlackNotificationService
 import utils.{MetadataAssertions, WkConf}
 
 import javax.inject.Inject
@@ -52,12 +55,6 @@ case class DatasetUpdateParameters(
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
-}
-
-case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
-
-object LinkedLayerIdentifier {
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
 case class ReserveDatasetUploadToPathsRequest(
@@ -121,7 +118,7 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[String], dataStoreName: String)
+case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[ObjectId], dataStoreName: String)
 
 object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
@@ -142,7 +139,9 @@ class DatasetController @Inject()(userService: UserService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
+                                  usedStorageService: UsedStorageService,
                                   conf: WkConf,
+                                  slackNotificationService: SlackNotificationService,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
@@ -208,12 +207,13 @@ class DatasetController @Inject()(userService: UserService,
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
         _ <- datasetService.assertValidDatasetName(request.body.datasetName)
         _ <- Fox.serialCombined(dataSource.dataLayers)(layer => datasetService.assertValidLayerNameLax(layer.name))
-        newDataset <- datasetService.createVirtualDataset(
+        newDataset <- datasetService.createAndSetUpDataset(
           request.body.datasetName,
           dataStore,
           dataSource,
-          folderIdOpt.map(_.toString),
-          request.identity
+          folderIdOpt,
+          request.identity,
+          isVirtual = true
         ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -229,13 +229,19 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
         _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
-        dataset <- datasetService.createVirtualDataset(
+        dataset <- datasetService.createAndSetUpDataset(
           name,
           dataStore,
           request.body.dataSource,
           request.body.folderId,
-          user
+          user,
+          isVirtual = true
         )
+        _ = datasetService.trackNewDataset(dataset,
+                                           user,
+                                           needsConversion = false,
+                                           datasetSizeBytes = 0,
+                                           addVariantLabel = "via explore+add")
       } yield Ok(Json.obj("newDatasetId" -> dataset._id))
     }
 
@@ -279,7 +285,8 @@ class DatasetController @Inject()(userService: UserService,
             searchQuery,
             request.identity.map(_._id),
             recursive.getOrElse(false),
-            limitOpt = limit
+            limitOpt = limit,
+            requestingUserOrga = request.identity.map(_._organization)
           )
         } yield Json.toJson(datasetInfos)
       } else {
@@ -577,15 +584,23 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
-  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
+  def delete(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      for {
-        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ~> FORBIDDEN
-        _ <- datasetService.deleteVirtualOrDiskDataset(dataset)
-      } yield Ok
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          for {
+            dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+            _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
+            before = Instant.now
+            _ = logger.info(
+              s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")
+            _ <- datasetService.deleteDataset(dataset)
+            _ = Instant.logSince(before, s"Deleting dataset $datasetId")
+          } yield Ok
+        }
+      }
     }
 
   def compose(): Action[ComposeRequest] =
@@ -654,6 +669,9 @@ class DatasetController @Inject()(userService: UserService,
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
+        _ = logger.info(
+          s"Successfully finished uploadToPaths/publish of dataset $datasetId for user ${request.identity._id}")
       } yield Ok
     }
 

@@ -6,7 +6,7 @@ import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accesso
 import type { CoordinateTransformation } from "types/api_types";
 
 const zoomSensitiveVolumeTools = VolumeTools.filter(
-  (name) => name !== AnnotationTool.PICK_CELL,
+  (name) => name !== AnnotationTool.VOXEL_PIPETTE,
 ) as AnnotationTool[];
 
 const zoomedInInitialState = update(initialState, {
@@ -21,29 +21,29 @@ const zoomedOutState = update(initialState, {
     dataSource: {
       dataLayers: {
         [0]: {
-          // More resolutions are needed to reach the state where all tools are disabled.
-          resolutions: {
+          // More mags are needed to reach the state where all tools are disabled.
+          mags: {
             $set: [
-              [1, 1, 1],
-              [2, 2, 2],
-              [4, 4, 4],
-              [8, 8, 8],
-              [16, 16, 16],
-              [32, 32, 32],
-              [64, 64, 64],
+              { mag: [1, 1, 1] },
+              { mag: [2, 2, 2] },
+              { mag: [4, 4, 4] },
+              { mag: [8, 8, 8] },
+              { mag: [16, 16, 16] },
+              { mag: [32, 32, 32] },
+              { mag: [64, 64, 64] },
             ],
           },
         },
         [1]: {
-          resolutions: {
+          mags: {
             $set: [
-              [1, 1, 1],
-              [2, 2, 2],
-              [4, 4, 4],
-              [8, 8, 8],
-              [16, 16, 16],
-              [32, 32, 32],
-              [64, 64, 64],
+              { mag: [1, 1, 1] },
+              { mag: [2, 2, 2] },
+              { mag: [4, 4, 4] },
+              { mag: [8, 8, 8] },
+              { mag: [16, 16, 16] },
+              { mag: [32, 32, 32] },
+              { mag: [64, 64, 64] },
             ],
           },
         },
@@ -152,6 +152,7 @@ describe("Annotation Tool Disabled Info", () => {
       AnnotationTool.MOVE,
       AnnotationTool.LINE_MEASUREMENT,
       AnnotationTool.AREA_MEASUREMENT,
+      AnnotationTool.VOXEL_PIPETTE,
     ] as AnnotationTool[];
     const disabledInfo = getDisabledInfoForTools(rotatedState);
     for (const tool of Object.values(AnnotationTool)) {

@@ -81,6 +81,10 @@ import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/const
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
+  type LayerSourceInfo,
+  getDataOrTracingStoreUrl,
+} from "viewer/model/bucket_data_handling/wkstore_helper";
+import {
   parseProtoAnnotation,
   parseProtoListOfLong,
   parseProtoTracing,
@@ -150,8 +154,8 @@ export async function loginUser(formValues: {
   return [activeUser, organization];
 }
 
-export async function logoutUser(): Promise<void> {
-  await Request.receiveJSON("/api/auth/logout", { method: "POST" });
+export async function logoutUser(): Promise<string> {
+  return await Request.receiveJSON("/api/auth/logout", { method: "POST" });
 }
 
 export async function logoutUserEverywhere(): Promise<void> {
@@ -733,6 +737,12 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser };
 }
 
+export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationId}/mutex`, {
+    method: "DELETE",
+  });
+}
+
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
@@ -855,13 +865,18 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
+export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+  args.join("::"),
+);
+
 export function getSegmentVolumes(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<number[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },
@@ -870,13 +885,49 @@ export function getSegmentVolumes(
   );
 }
 
+type SegmentStatisticsParametersMeshBased = {
+  mag: Vector3;
+  segmentIds: number[];
+  mappingName?: string | null;
+  additionalCoordinates?: AdditionalCoordinate[] | null;
+  meshFileName?: string | null;
+};
+
+export function getSegmentSurfaceArea(
+  layerSourceInfo: LayerSourceInfo,
+  mag: Vector3,
+  meshFileName: string | undefined | null,
+  segmentIds: Array<number>,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  mappingName: string | null | undefined,
+): Promise<number[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
+  return doWithToken((token) => {
+    const data: SegmentStatisticsParametersMeshBased = {
+      mag,
+      segmentIds,
+      mappingName,
+      additionalCoordinates,
+      meshFileName,
+    };
+    return Request.sendJSONReceiveJSON(
+      `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
+      {
+        data,
+        method: "POST",
+      },
+    );
+  });
+}
+
 export function getSegmentBoundingBoxes(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   mag: Vector3,
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
       data: { additionalCoordinates, mag, segmentIds, mappingName },
@@ -1334,7 +1385,7 @@ export async function triggerDatasetClearCache(
 }
 
 export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
-  await Request.triggerRequest(`/api/datasets/${datasetId}/deleteOnDisk`, {
+  await Request.triggerRequest(`/api/datasets/${datasetId}`, {
     method: "DELETE",
   });
 }
@@ -1877,12 +1928,13 @@ type MeshRequest = {
 };
 
 export function computeAdHocMesh(
-  requestUrl: string,
+  layerSourceInfo: LayerSourceInfo,
   meshRequest: MeshRequest,
 ): Promise<{
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   const {
     positionWithPadding,
     additionalCoordinates,
@@ -1924,23 +1976,25 @@ export function computeAdHocMesh(
 }
 
 export function getBucketPositionsForAdHocMesh(
-  tracingStoreUrl: string,
-  tracingId: string,
+  layerSourceInfo: LayerSourceInfo,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  mappingName: string | null | undefined,
 ): Promise<Vector3[]> {
+  const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
     params.set("token", token);
     const positions = await Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
+      `${requestUrl}/segmentIndex/${segmentId}?${params}`,
       {
         data: {
           cubeSize,
           mag,
           additionalCoordinates,
+          mappingName,
         },
         method: "POST",
       },
@@ -1996,9 +2050,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
     );
   });
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: NumberLike) => BigInt(el)
-    : (el: NumberLike) => el;
+  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
   const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
   return new Map(keyValues);
@@ -2009,7 +2061,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   tracingId: string,
   segmentIds: Array<T>,
   annotationId: string,
-  version?: number | null | undefined,
+  version: number,
 ): Promise<Mapping> {
   if (segmentIds.length === 0) {
     return new Map();
@@ -2040,9 +2092,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   });
 
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: NumberLike) => BigInt(el)
-    : (el: NumberLike) => el;
+  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
 
   const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
@@ -2053,18 +2103,20 @@ export function getEditableAgglomerateSkeleton(
   tracingStoreUrl: string,
   tracingId: string,
   agglomerateId: number,
+  version: number,
 ): Promise<ArrayBuffer> {
-  return doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams({ token, version: version.toString() });
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,
       },
-    ),
-  );
+    );
+  });
 }
 
 export async function getMeshfilesForDatasetLayer(
@@ -2208,6 +2260,7 @@ export type MinCutTargetEdge = {
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
+  version: number,
   segmentsInfo: {
     partition1: NumberLike[];
     partition2: NumberLike[];
@@ -2227,6 +2280,7 @@ export async function getEdgesForAgglomerateMinCut(
             partition1: segmentsInfo.partition1.map(Number),
             partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),
+            version,
           },
         },
       ),
@@ -2242,6 +2296,7 @@ export type NeighborInfo = {
 export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
+  version: number,
   segmentInfo: {
     segmentId: NumberLike;
     mag: Vector3;
@@ -2255,6 +2310,7 @@ export async function getNeighborsForAgglomerateNode(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
         {
           data: {
+            version,
             ...segmentInfo,
             // TODO: Proper 64 bit support (#6921)
             segmentId: Number(segmentInfo.segmentId),

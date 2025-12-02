@@ -18,8 +18,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         activeOrganization: state.activeOrganization,
         uiInformation: {
           ...defaultState.uiInformation,
+          theme: state.uiInformation.theme,
           storedLayouts: state.uiInformation.storedLayouts,
           navbarHeight: state.uiInformation.navbarHeight,
+          isWkInitialized: false,
+          isUiReady: false,
         },
       };
     }
@@ -140,15 +143,48 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       }
 
       return updateKey(state, "uiInformation", {
-        busyBlockingInfo: action.value,
+        busyBlockingInfo: {
+          ...action.value,
+          allowedSagas: [],
+        },
+      });
+    }
+    case "ALLOW_SAGA_WHILE_BUSY_ACTION": {
+      if (!state.uiInformation.busyBlockingInfo.isBusy) {
+        throw new Error(
+          "Busy-mutex violated. Trying to white list a saga but the mutex isn't busy.",
+        );
+      }
+
+      return updateKey2(state, "uiInformation", "busyBlockingInfo", {
+        allowedSagas: state.uiInformation.busyBlockingInfo.allowedSagas.concat(
+          action.value.allowedSaga,
+        ),
       });
     }
 
-    case "SET_IS_WK_READY": {
-      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
+    case "DISALLOW_SAGA_WHILE_BUSY_ACTION": {
+      if (!state.uiInformation.busyBlockingInfo.isBusy) {
+        throw new Error(
+          "Busy-mutex violated. Trying to remove saga from white list but the mutex isn't busy.",
+        );
+      }
+
+      return updateKey2(state, "uiInformation", "busyBlockingInfo", {
+        allowedSagas: state.uiInformation.busyBlockingInfo.allowedSagas.filter(
+          (s) => s !== action.value.allowedSaga,
+        ),
+      });
     }
-    case "WK_READY": {
-      return updateKey(state, "uiInformation", { isWkReady: true });
+
+    case "SET_IS_WK_INITIALIZED": {
+      return updateKey(state, "uiInformation", { isWkInitialized: action.isInitialized });
+    }
+    case "WK_INITIALIZED": {
+      return updateKey(state, "uiInformation", { isWkInitialized: true });
+    }
+    case "UI_READY": {
+      return updateKey(state, "uiInformation", { isUiReady: true });
     }
 
     case "SET_QUICK_SELECT_STATE": {
@@ -172,6 +208,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
     case "SET_LAST_MEASURED_POSITION": {
       return updateKey2(state, "uiInformation", "measurementToolInfo", {
         lastMeasuredPosition: action.position,
+      });
+    }
+    case "SET_VOXEL_PIPETTE_TOOLTIP_PINNED_POSITION": {
+      return updateKey2(state, "uiInformation", "voxelPipetteToolInfo", {
+        pinnedPosition: action.position,
       });
     }
     case "SET_IS_MEASURING": {

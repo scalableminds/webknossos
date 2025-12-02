@@ -18,7 +18,7 @@ import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
   convertCellIdToRGB,
   getBrushOverlay,
-  getCrossHairOverlay,
+  getProofreadingCrossHairOverlay,
   getSegmentId,
   getSegmentationAlphaIncrement,
 } from "./segmentation.glsl";
@@ -91,6 +91,8 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float <%= name %>_unrenderable;
   uniform mat4 <%= name %>_transform;
   uniform bool <%= name %>_has_transform;
+  uniform vec3 <%= name %>_bboxMin;
+  uniform vec3 <%= name %>_bboxMax;
 <% }) %>
 
 <% _.each(colorLayerNames, function(name) { %>
@@ -135,10 +137,9 @@ uniform bool selectiveVisibilityInProofreading;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
-uniform vec3 bboxMin;
-uniform vec3 bboxMax;
+uniform vec3 globalPosition;
 uniform vec3 positionOffset;
-uniform vec3 activeSegmentPosition;
+uniform vec3 proofreadingMarkerPosition;
 uniform float zoomValue;
 uniform float blendMode;
 uniform vec3 globalMousePosition;
@@ -198,7 +199,7 @@ ${compileShader(
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentId : null,
-  hasSegmentation ? getCrossHairOverlay : null,
+  hasSegmentation ? getProofreadingCrossHairOverlay : null,
   hasSegmentation ? getSegmentationAlphaIncrement : null,
   almostEq,
   scaleToFloat,
@@ -265,18 +266,18 @@ void main() {
       // Get grayscale value for <%= textureLayerInfos[name].unsanitizedName %>
 
       <% if (tpsTransformPerLayer[name] != null) { %>
-        vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
+        vec3 layerCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
       <% } else { %>
-        vec3 transformedCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
+        vec3 layerCoordUVW = transDim((<%= name %>_transform * vec4(transDim(worldCoordUVW), 1.0)).xyz);
       <% } %>
 
-      if (!isOutsideOfBoundingBox(transformedCoordUVW)) {
+      if (!isOutsideOfBoundingBox(layerCoordUVW, <%= name %>_bboxMin, <%= name %>_bboxMax)) {
         MaybeFilteredColor maybe_filtered_color =
           getMaybeFilteredColorOrFallback(
             <%= formatNumberAsGLSLFloat(color_layer_index) %>,
             <%= name %>_data_texture_width,
             <%= formatNumberAsGLSLFloat(textureLayerInfos[name].packingDegree) %>,
-            transformedCoordUVW,
+            layerCoordUVW,
             fallbackGray,
             !<%= name %>_has_transform
           );
@@ -393,7 +394,7 @@ void main() {
   <% }) %>
 
   // This will only have an effect in proofreading mode
-  vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
+  vec4 crossHairOverlayColor = getProofreadingCrossHairOverlay(worldCoordUVW);
   gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
   gl_FragColor.a = 1.0;
 

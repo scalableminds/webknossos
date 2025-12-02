@@ -3,7 +3,6 @@ import _ from "lodash";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultSkeletonState } from "test/fixtures/skeletontracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
-import { withoutUpdateActiveItemTracing } from "test/helpers/saveHelpers";
 import { transformStateAsReadOnly } from "test/helpers/utils";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -22,6 +21,7 @@ import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import type {
+  ApplicableSkeletonServerUpdateAction,
   ApplicableSkeletonUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
@@ -39,6 +39,7 @@ const initialState: WebknossosState = update(defaultSkeletonState, {
         $set: true,
       },
     },
+    isUpdatingCurrentlyAllowed: { $set: true },
     annotationType: { $set: "Explorational" },
   },
   dataset: {
@@ -54,6 +55,18 @@ const position = [10, 10, 10] as Vector3;
 const rotation = [0.5, 0.5, 0.5] as Vector3;
 const viewport = 0;
 const mag = 0;
+
+const addMissingTimestampProp = (
+  actions: UpdateActionWithoutIsolationRequirement[],
+): ApplicableSkeletonServerUpdateAction[] => {
+  return actions.map(
+    (a) =>
+      ({
+        ...a,
+        value: { ...a.value, actionTimestamp: 0 },
+      }) as ApplicableSkeletonServerUpdateAction,
+  );
+};
 
 const applyActions = chainReduce(combinedReducer);
 
@@ -78,6 +91,10 @@ const actionNamesHelper: Record<ApplicableSkeletonUpdateAction["name"], true> = 
   updateUserBoundingBoxInSkeletonTracing: true,
   updateUserBoundingBoxVisibilityInSkeletonTracing: true,
   deleteUserBoundingBoxInSkeletonTracing: true,
+  updateActiveNode: true,
+  updateTreeVisibility: true,
+  updateTreeGroupVisibility: true,
+  updateActiveTree: true,
 };
 const actionNamesList = Object.keys(actionNamesHelper);
 
@@ -117,6 +134,7 @@ describe("Update Action Application for SkeletonTracing", () => {
     SkeletonTracingActions.setActiveNodeAction(1),
     createNode(), // nodeId=11, tree components {11,1,2,9,10} {4,5,6,7,8}
     SkeletonTracingActions.deleteEdgeAction(1, 2), // tree components {11,1} {2,9,10} {4,5,6,7,8}
+    SkeletonTracingActions.setTreeVisibilityAction(1, false),
     SkeletonTracingActions.createTreeAction(),
     createNode(), // nodeId=12
     createNode(), // nodeId=13
@@ -135,6 +153,12 @@ describe("Update Action Application for SkeletonTracing", () => {
       makeBasicGroupObject(3, "group 3"),
       makeBasicGroupObject(7, "group 7"),
     ]),
+    SkeletonTracingActions.setActiveNodeAction(11),
+    SkeletonTracingActions.setTreeGroupAction(3, 1),
+    SkeletonTracingActions.setTreeGroupAction(3, 2),
+    // Toggle on and off to ensure compaction compacts actions to an updateTreeGroupVisibility action.
+    SkeletonTracingActions.toggleTreeGroupAction(3),
+    SkeletonTracingActions.toggleTreeGroupAction(3),
     SkeletonTracingActions.setTreeGroupAction(7, 2),
     SkeletonTracingActions.setTreeEdgeVisibilityAction(2, false),
   ];
@@ -169,22 +193,20 @@ describe("Update Action Application for SkeletonTracing", () => {
             userActions.slice(0, beforeVersionIndex),
           );
 
-          const state2WithoutActiveState = applyActions(state2WithActiveTree, [
-            SkeletonTracingActions.setActiveNodeAction(null),
+          const state2WithoutActiveBoundingBox = applyActions(state2WithActiveTree, [
             setActiveUserBoundingBoxId(null),
           ]);
 
           const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
           const state3 = applyActions(
             state2WithActiveTree,
-            actionsToApply.concat([
-              SkeletonTracingActions.setActiveNodeAction(null),
-              setActiveUserBoundingBoxId(null),
-            ]),
+            actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
           );
-          expect(state2WithoutActiveState !== state3).toBeTruthy();
+          expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
 
-          const skeletonTracing2 = enforceSkeletonTracing(state2WithoutActiveState.annotation);
+          const skeletonTracing2 = enforceSkeletonTracing(
+            state2WithoutActiveBoundingBox.annotation,
+          );
           const skeletonTracing3 = enforceSkeletonTracing(state3.annotation);
 
           const updateActionsBeforeCompaction = Array.from(
@@ -193,22 +215,22 @@ describe("Update Action Application for SkeletonTracing", () => {
           const maybeCompact = withCompaction
             ? compactUpdateActions
             : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
-          const updateActions = maybeCompact(
-            updateActionsBeforeCompaction,
-            skeletonTracing2,
-            skeletonTracing3,
-          ) as ApplicableSkeletonUpdateAction[];
+
+          const updateActions = addMissingTimestampProp(
+            maybeCompact(updateActionsBeforeCompaction, skeletonTracing2, skeletonTracing3),
+          );
 
           for (const action of updateActions) {
             seenActionTypes.add(action.name);
           }
 
-          const reappliedNewState = transformStateAsReadOnly(state2WithoutActiveState, (state) =>
-            applyActions(state, [
-              SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
-              SkeletonTracingActions.setActiveNodeAction(null),
-              setActiveUserBoundingBoxId(null),
-            ]),
+          const reappliedNewState = transformStateAsReadOnly(
+            state2WithoutActiveBoundingBox,
+            (state) =>
+              applyActions(state, [
+                SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
+                setActiveUserBoundingBoxId(null),
+              ]),
           );
 
           expect(reappliedNewState).toEqual(state3);
@@ -234,20 +256,37 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     const newState2 = applyActions(newState, [SkeletonTracingActions.deleteNodeAction(2)]);
 
-    const updateActions = withoutUpdateActiveItemTracing(
+    const updateActions = addMissingTimestampProp(
       Array.from(
         diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
       ),
-    ) as ApplicableSkeletonUpdateAction[];
-
+    );
+    const updateActionsWithoutUpdatingActiveNode = updateActions.filter(
+      (a) => a.name !== "updateActiveNode",
+    );
     const newState3 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [
-        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
+        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(
+          updateActionsWithoutUpdatingActiveNode,
+        ),
       ]),
     );
 
-    const { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
-    expect(activeNodeId).toBeNull();
+    let { activeNodeId } = enforceSkeletonTracing(newState3.annotation);
+    expect(activeNodeId).toBe(null);
+
+    const updateActiveNodeAction = updateActions.find((a) => a.name === "updateActiveNode");
+    if (!updateActiveNodeAction) {
+      throw new Error("Expected update actions to include an updateActiveNode action.");
+    }
+    const newState4 = transformStateAsReadOnly(newState, (state) =>
+      applyActions(state, [
+        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction([updateActiveNodeAction]),
+      ]),
+    );
+
+    activeNodeId = enforceSkeletonTracing(newState4.annotation).activeNodeId;
+    expect(activeNodeId).toBe(1);
   });
 
   it("should clear the active node and active tree if the active tree was deleted", () => {
@@ -262,16 +301,17 @@ describe("Update Action Application for SkeletonTracing", () => {
       createNode, // nodeId=1
       createNode, // nodeId=2
       SkeletonTracingActions.setActiveTreeAction(2),
-    ]);
+    ]); // active tree: 2, active node: null
     expect(getActiveTree(enforceSkeletonTracing(newState.annotation))?.treeId).toBe(2);
 
+    // newState2 has active tree: 2, active node: null
     const newState2 = applyActions(newState, [SkeletonTracingActions.deleteTreeAction(2)]);
 
-    const updateActions = withoutUpdateActiveItemTracing(
+    const updateActions = addMissingTimestampProp(
       Array.from(
         diffSkeletonTracing(newState.annotation.skeleton!, newState2.annotation.skeleton!),
       ),
-    ) as ApplicableSkeletonUpdateAction[];
+    );
 
     const newState3 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [
@@ -281,8 +321,8 @@ describe("Update Action Application for SkeletonTracing", () => {
 
     const { activeTreeId, activeNodeId } = enforceSkeletonTracing(newState3.annotation);
 
-    expect(activeNodeId).toBeNull();
-    expect(activeTreeId).toBeNull();
+    expect(activeNodeId).toBe(1);
+    expect(activeTreeId).toBe(1);
   });
 
   afterAll(() => {

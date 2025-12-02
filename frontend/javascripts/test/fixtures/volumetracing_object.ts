@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import Constants from "viewer/constants";
+import Constants, { ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
 import { combinedReducer } from "viewer/store";
@@ -32,20 +32,20 @@ const stateWithoutDatasetInitialization = update(defaultState, {
     restrictions: {
       $set: {
         branchPointsAllowed: true,
-        initialAllowUpdate: true,
         allowUpdate: true,
+        allowSave: true,
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
-        allowedModes: [],
         somaClickingAllowed: true,
-        volumeInterpolationAllowed: true,
         mergerMode: false,
-        magRestrictions: {
-          min: undefined,
-          max: undefined,
-        },
+        volumeInterpolationAllowed: true,
+        allowedModes: ViewModeValues,
+        magRestrictions: {},
       },
+    },
+    isUpdatingCurrentlyAllowed: {
+      $set: true,
     },
     volumes: {
       $set: [volumeTracing],
@@ -59,11 +59,7 @@ const stateWithoutDatasetInitialization = update(defaultState, {
           {
             // We need to have some mags. Otherwise,
             // getRequestLogZoomStep will always return 0
-            resolutions: [
-              [1, 1, 1],
-              [2, 2, 2],
-              [4, 4, 4],
-            ],
+            mags: [{ mag: [1, 1, 1] }, { mag: [2, 2, 2] }, { mag: [4, 4, 4] }],
             category: "segmentation",
             largestSegmentId: volumeTracing.largestSegmentId ?? 0,
             elementClass: "uint32",

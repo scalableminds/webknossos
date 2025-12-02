@@ -1,6 +1,7 @@
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
+  hasSegmentIndexInDataStoreCached,
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import ThreeDMap from "libs/ThreeDMap";
@@ -41,15 +42,16 @@ import {
   type LoadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "viewer/model/actions/segmentation_actions";
+import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_helper";
 import type DataLayer from "viewer/model/data_layer";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
-import Store from "viewer/store";
+import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
-import { ensureSceneControllerReady, ensureWkReady } from "../ready_sagas";
+import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -293,6 +295,25 @@ function removeMeshWithoutVoxels(
   }
 }
 
+function* getUsePositionsFromSegmentIndex(
+  volumeTracing: VolumeTracing | null | undefined,
+  dataset: StoreDataset,
+  layerName: string,
+  maybeTracingId?: string | null,
+): Saga<boolean> {
+  if (volumeTracing == null) {
+    return yield* call(
+      hasSegmentIndexInDataStoreCached,
+      dataset.dataStore.url,
+      dataset.id,
+      layerName,
+    );
+  }
+  return (
+    volumeTracing?.hasSegmentIndex && !volumeTracing.hasEditableMapping && maybeTracingId != null
+  );
+}
+
 function* loadFullAdHocMesh(
   layer: DataLayer,
   segmentId: number,
@@ -320,36 +341,54 @@ function* loadFullAdHocMesh(
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
   const cubeSize = marchingCubeSizeInTargetMag();
-  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
+  const dataset = yield* select((state) => state.dataset);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  const annotation = yield* select((state) => state.annotation);
   const visibleSegmentationLayer = yield* select((state) => getVisibleSegmentationLayer(state));
+  if (visibleSegmentationLayer == null) {
+    throw new Error(
+      "Loading the ad-hoc mesh failed because the visible segmentation layer must not be null.",
+    );
+  }
   // Fetch from datastore if no volumetracing ...
-  let useDataStore = volumeTracing == null || visibleSegmentationLayer?.tracingId == null;
+  let forceUsingDataStore = volumeTracing == null || visibleSegmentationLayer.tracingId == null;
   if (meshExtraInfo.useDataStore != null) {
     // ... except if the caller specified whether to use the data store ...
-    useDataStore = meshExtraInfo.useDataStore;
+    forceUsingDataStore = meshExtraInfo.useDataStore;
   } else if (volumeTracing?.hasEditableMapping) {
     // ... or if an editable mapping is active.
-    useDataStore = false;
+    forceUsingDataStore = false;
   }
 
-  // Segment stats can only be used for volume tracings that have a segment index
+  // Segment stats can only be used for segmentation layers that have a segment index
   // and that don't have editable mappings.
-  const usePositionsFromSegmentIndex =
-    volumeTracing?.hasSegmentIndex &&
-    !volumeTracing.hasEditableMapping &&
-    visibleSegmentationLayer?.tracingId != null;
+  const usePositionsFromSegmentIndex = yield* call(
+    getUsePositionsFromSegmentIndex,
+    volumeTracing,
+    dataset,
+    layer.name,
+    visibleSegmentationLayer.tracingId,
+  );
+
+  const layerSourceInfo: LayerSourceInfo = {
+    dataset,
+    annotation,
+    tracingId: visibleSegmentationLayer.tracingId,
+    segmentationLayerName: visibleSegmentationLayer.fallbackLayer ?? visibleSegmentationLayer.name,
+    useDataStore: forceUsingDataStore,
+  };
+
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
-        tracingStoreHost,
-        layer,
+        layerSourceInfo,
         segmentId,
         cubeSize,
         mag,
         clippedPosition,
         additionalCoordinates,
+        mappingName,
       )
     : [clippedPosition];
 
@@ -373,7 +412,7 @@ function* loadFullAdHocMesh(
       magInfo,
       isInitialRequest,
       removeExistingMesh && isInitialRequest,
-      useDataStore,
+      layerSourceInfo,
       !usePositionsFromSegmentIndex,
     );
     isInitialRequest = false;
@@ -390,22 +429,22 @@ function* loadFullAdHocMesh(
 }
 
 function* getChunkPositionsFromSegmentIndex(
-  tracingStoreHost: string,
-  layer: DataLayer,
+  layerSourceInfo: LayerSourceInfo,
   segmentId: number,
   cubeSize: Vector3,
   mag: Vector3,
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  mappingName: string | null | undefined,
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
-    tracingStoreHost,
-    layer.name,
+    layerSourceInfo,
     segmentId,
     cubeSize,
     mag,
     additionalCoordinates,
+    mappingName,
   );
   const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
@@ -424,7 +463,7 @@ function* maybeLoadMeshChunk(
   magInfo: MagInfo,
   isInitialRequest: boolean,
   removeExistingMesh: boolean,
-  useDataStore: boolean,
+  layerSourceInfo: LayerSourceInfo,
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -445,17 +484,10 @@ function* maybeLoadMeshChunk(
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(paddedPositionWithinLayer, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
-  const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
-  const datasetId = yield* select((state) => state.dataset.id);
-  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${datasetId}/layers/${
-    layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-  }`;
-  const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {
-      mode: useDataStore ? "view" : "annotation",
+      mode: layerSourceInfo.useDataStore ? "view" : "annotation",
     });
   }
 
@@ -472,7 +504,7 @@ function* maybeLoadMeshChunk(
           context: null,
           fn: computeAdHocMesh,
         },
-        useDataStore ? dataStoreUrl : tracingStoreUrl,
+        layerSourceInfo,
         {
           positionWithPadding: paddedPositionWithinLayer,
           additionalCoordinates: additionalCoordinates || undefined,
@@ -666,11 +698,11 @@ function* refreshMeshWithMap(
 }
 
 export default function* adHocMeshSaga(): Saga<void> {
-  // Buffer actions since they might be dispatched before WK_READY
+  // Buffer actions since they might be dispatched before WK_INITIALIZED
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
 
-  yield* call(ensureSceneControllerReady);
-  yield* call(ensureWkReady);
+  yield* call(ensureSceneControllerInitialized);
+  yield* call(ensureWkInitialized);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocMeshFromAction);
   yield* takeEvery("REMOVE_MESH", removeMesh);
   yield* takeEvery("REFRESH_MESHES", refreshMeshes);

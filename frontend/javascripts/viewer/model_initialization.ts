@@ -118,7 +118,10 @@ import type {
 import Store from "viewer/store";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
-import { setVersionNumberAction } from "./model/actions/save_actions";
+import {
+  setVersionNumberAction,
+  snapshotMappingDataForNextRebaseAction,
+} from "./model/actions/save_actions";
 import {
   convertBoundingBoxProtoToObject,
   convertServerAdditionalAxesToFrontEnd,
@@ -623,9 +626,9 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     // since they were created before WK started to maintain multiple magnifications
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
     // that case.
-    const tracingMags: Vector3[] = tracingHasMagList
-      ? mags.map(({ x, y, z }) => [x, y, z])
-      : [[1, 1, 1]];
+    const tracingMags: { mag: Vector3 }[] = tracingHasMagList
+      ? mags.map(({ x, y, z }) => ({ mag: [x, y, z] }))
+      : [{ mag: [1, 1, 1] }];
     const tracingLayer: APISegmentationLayer = {
       name: tracing.id,
       tracingId: tracing.id,
@@ -633,7 +636,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
       boundingBox: convertBoundingBoxProtoToObject(tracing.boundingBox),
-      resolutions: tracingMags,
+      mags: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
       // Remember the name of the original layer (e.g., used to request mappings)
@@ -887,11 +890,13 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
     if (layerState.mappingInfo != null) {
       const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
       Store.dispatch(
-        setMappingAction(effectiveLayerName, mappingName, mappingType, {
+        setMappingAction(effectiveLayerName, mappingName, mappingType, true, {
           showLoadingIndicator: true,
         }),
       );
       Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
+      // Store initial changes of setMappingAction and setMappingEnabledAction in RebaseRelevantAnnotationState.
+      Store.dispatch(snapshotMappingDataForNextRebaseAction(layerName));
 
       if (agglomerateIdsToImport != null) {
         const { annotation } = Store.getState();

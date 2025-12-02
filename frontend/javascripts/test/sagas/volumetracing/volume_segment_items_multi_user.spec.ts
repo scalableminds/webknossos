@@ -114,7 +114,7 @@ describe("Proofreading (Multi User)", () => {
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
 
       expect(finalSegment).toMatchObject({
-        somePosition: injectedSegmentProps.anchorPosition,
+        anchorPosition: injectedSegmentProps.anchorPosition,
         name: updateSegmentProps.name,
         color: updateSegmentProps.color,
       });
@@ -208,7 +208,7 @@ describe("Proofreading (Multi User)", () => {
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
 
       expect(finalSegment).toMatchObject({
-        somePosition: injectedSegmentProps.anchorPosition,
+        anchorPosition: injectedSegmentProps.anchorPosition,
         color: updateSegmentProps.color,
         name: injectedSegmentProps.name,
         groupId: injectedSegmentProps.groupId,

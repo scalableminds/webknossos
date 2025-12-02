@@ -5,7 +5,7 @@ import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { Mapping, NumberLikeMap, SaveQueueEntry } from "viewer/store";
+import type { Mapping, NumberLikeMap, SaveQueueEntry, Segment } from "viewer/store";
 import type {
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
@@ -140,13 +140,13 @@ export function* addMissingSegmentsToLoadedMappings(
 // to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
 export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   | {
-      success: false;
-      updatedSaveQueue: undefined;
-    }
+    success: false;
+    updatedSaveQueue: undefined;
+  }
   | {
-      success: true;
-      updatedSaveQueue: SaveQueueEntry[];
-    }
+    success: true;
+    updatedSaveQueue: SaveQueueEntry[];
+  }
 > {
   ColoredLogger.logRed("updateSaveQueueEntriesToStateAfterRebase");
   const saveQueue = yield* select((state) => state.save.queue);
@@ -238,7 +238,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
                 actionTracingId: action.value.actionTracingId,
                 id: action.value.id ?? maybeExistingSegment.id,
                 name: action.value.name ?? maybeExistingSegment.name,
-                anchorPosition: action.value.anchorPosition ?? maybeExistingSegment.somePosition,
+                anchorPosition: action.value.anchorPosition ?? maybeExistingSegment.anchorPosition,
                 additionalCoordinates:
                   // todop: additionalCoordinates does not exist in CreateSegment action?
                   // action.value.additionalCoordinates ??
@@ -269,15 +269,12 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               return action;
             }
             const { changedPropertyNames } = action;
-            const { somePosition, ...maybeExistingSegmentWithoutSomePosition } =
-              maybeExistingSegment;
 
             const newAction: UpdateSegmentUpdateAction = {
               name: "updateSegment",
               value: {
                 actionTracingId: action.value.actionTracingId,
-                ...maybeExistingSegmentWithoutSomePosition,
-                anchorPosition: maybeExistingSegment.somePosition,
+                ...maybeExistingSegment,
                 ...Object.fromEntries(
                   changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]),
                 ),

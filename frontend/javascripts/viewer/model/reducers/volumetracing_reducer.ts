@@ -72,13 +72,13 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     }
     const oldSegment = segments.getNullable(segmentId);
 
-    let somePosition;
+    let anchorPosition;
     let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
-    if (segment.somePosition) {
-      somePosition = Utils.floor3(segment.somePosition);
+    if (segment.anchorPosition) {
+      anchorPosition = Utils.floor3(segment.anchorPosition);
       someAdditionalCoordinates = segment.someAdditionalCoordinates;
     } else if (oldSegment != null) {
-      somePosition = oldSegment.somePosition;
+      anchorPosition = oldSegment.anchorPosition;
       someAdditionalCoordinates = oldSegment.someAdditionalCoordinates;
     } else {
       // UPDATE_SEGMENT was called for a non-existing segment without providing
@@ -101,7 +101,7 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
       ...oldSegment,
       ...segment,
       metadata,
-      somePosition,
+      anchorPosition,
       id: segmentId,
     };
 
@@ -172,7 +172,7 @@ export function serverVolumeToClientVolumeTracing(
         const clientSegment: Segment = {
           ...segment,
           id: segment.segmentId,
-          somePosition: segment.anchorPosition
+          anchorPosition: segment.anchorPosition
             ? Utils.point3ToVector3(segment.anchorPosition)
             : undefined,
           someAdditionalCoordinates: segment.additionalCoordinates,

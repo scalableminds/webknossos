@@ -74,7 +74,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);
@@ -156,7 +156,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);
@@ -272,7 +272,7 @@ describe("Proofreading (Multi User)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+    yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
     yield put(setActiveCellAction(2));
 
     yield call(createEditableMapping);
@@ -443,7 +443,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(3, { somePosition: [3, 3, 3] }, tracingId));
+      yield put(updateSegmentAction(3, { anchorPosition: [3, 3, 3] }, tracingId));
       yield put(setActiveCellAction(3));
 
       yield call(createEditableMapping);
@@ -541,7 +541,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
       yield call(createEditableMapping);
@@ -704,7 +704,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
       yield call(createEditableMapping);
@@ -795,7 +795,7 @@ describe("Proofreading (Multi User)", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);

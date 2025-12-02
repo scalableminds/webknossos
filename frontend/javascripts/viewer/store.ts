@@ -176,7 +176,7 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly somePosition: Vector3 | undefined;
+  readonly anchorPosition: Vector3 | undefined | null;
   readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
@@ -188,7 +188,7 @@ export type Segment = {
 export const SegmentProperties = ensureExactKeys<Segment>()([
   "id",
   "name",
-  "somePosition",
+  "anchorPosition",
   "someAdditionalCoordinates",
   "creationTime",
   "color",
@@ -248,18 +248,18 @@ export type LegacyViewCommand = APIDataSourceId & {
 };
 export type TraceOrViewCommand =
   | {
-      readonly datasetId: string;
-      readonly type: typeof ControlModeEnum.VIEW;
-    }
+    readonly datasetId: string;
+    readonly type: typeof ControlModeEnum.VIEW;
+  }
   | {
-      readonly type: typeof ControlModeEnum.TRACE;
-      readonly annotationId: string;
-    }
+    readonly type: typeof ControlModeEnum.TRACE;
+    readonly annotationId: string;
+  }
   | {
-      readonly datasetId: string;
-      readonly type: typeof ControlModeEnum.SANDBOX;
-      readonly tracingType: TracingType;
-    };
+    readonly datasetId: string;
+    readonly type: typeof ControlModeEnum.SANDBOX;
+    readonly tracingType: TracingType;
+  };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;
@@ -373,10 +373,10 @@ export type UserConfiguration = {
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
-    DatasetConfiguration & {
-      zoom: number;
-      segmentationOpacity: number;
-    }
+  DatasetConfiguration & {
+    zoom: number;
+    segmentationOpacity: number;
+  }
 >;
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
@@ -568,9 +568,9 @@ type UiInformation = {
   readonly isUiReady: boolean;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
-    | "inactive"
-    | "drawing" // the user is currently drawing a bounding box
-    | "active"; // the quick select saga is currently running (calculating as well as preview mode)
+  | "inactive"
+  | "drawing" // the user is currently drawing a bounding box
+  | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };

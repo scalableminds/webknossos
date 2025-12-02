@@ -44,7 +44,7 @@ function* performMergeTreesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield call(createEditableMapping);
@@ -103,7 +103,7 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield call(createEditableMapping);
@@ -153,7 +153,7 @@ function* performMinCutWithNodesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield call(createEditableMapping);

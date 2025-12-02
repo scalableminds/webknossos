@@ -306,7 +306,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     updateSegmentAction(
       volumeTracing.activeCellId,
       {
-        somePosition: seedPosition,
+        anchorPosition: seedPosition,
         someAdditionalCoordinates: additionalCoordinates || undefined,
       },
       volumeTracing.tracingId,

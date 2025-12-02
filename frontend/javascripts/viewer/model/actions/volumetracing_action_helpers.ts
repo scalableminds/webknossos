@@ -11,7 +11,7 @@ import { updateSegmentAction } from "./volumetracing_actions";
 export const getUpdateSegmentActionToToggleVisibility = (
   storeState: WebknossosState,
   segmentId: number,
-  somePosition?: Vector3,
+  anchorPosition?: Vector3,
   someAdditionalCoordinates?: AdditionalCoordinate[],
 ) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(storeState);
@@ -27,7 +27,7 @@ export const getUpdateSegmentActionToToggleVisibility = (
     segmentId,
     {
       isVisible: !(oldSegment?.isVisible ?? !hideUnregisteredSegments),
-      somePosition: oldSegment?.somePosition ?? somePosition,
+      anchorPosition: oldSegment?.anchorPosition ?? anchorPosition,
       someAdditionalCoordinates: oldSegment?.someAdditionalCoordinates ?? someAdditionalCoordinates,
     },
     visibleSegmentationLayer.name,

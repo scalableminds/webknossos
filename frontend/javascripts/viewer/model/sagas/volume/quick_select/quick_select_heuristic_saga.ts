@@ -549,7 +549,7 @@ export function* finalizeQuickSelectForSlice(
     updateSegmentAction(
       volumeTracing.activeCellId,
       {
-        somePosition: boundingBoxMag1.getCenter(),
+        anchorPosition: boundingBoxMag1.getCenter(),
       },
       volumeTracing.tracingId,
     ),

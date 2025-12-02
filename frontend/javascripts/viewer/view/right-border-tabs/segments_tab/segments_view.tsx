@@ -255,10 +255,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   setActiveCell(
     segmentId: number,
-    somePosition?: Vector3,
+    anchorPosition?: Vector3 | null,
     someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
-    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, anchorPosition, someAdditionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {
@@ -800,7 +800,7 @@ class SegmentsView extends React.Component<Props, State> {
       setSelectedSegmentsOrGroupAction([segment.id], null, visibleSegmentationLayer.name),
     );
 
-    if (!segment.somePosition) {
+    if (!segment.anchorPosition) {
       Toast.info(
         <React.Fragment>
           Cannot go to this segment, because its position is unknown.
@@ -809,7 +809,7 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     const transformedPosition = layerToGlobalTransformedPosition(
-      segment.somePosition,
+      segment.anchorPosition,
       visibleSegmentationLayer.name,
       "segmentation",
       Store.getState(),
@@ -1408,8 +1408,8 @@ class SegmentsView extends React.Component<Props, State> {
     const { flycam } = Store.getState();
 
     this.handlePerSegment(groupId, (segment) => {
-      if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition, flycam.additionalCoordinates);
+      if (segment.anchorPosition == null) return;
+      this.props.loadAdHocMesh(segment.id, segment.anchorPosition, flycam.additionalCoordinates);
     });
   };
 
@@ -1418,7 +1418,7 @@ class SegmentsView extends React.Component<Props, State> {
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
     const segmentsWithoutPosition = relevantSegments
-      .filter((segment) => segment.somePosition == null)
+      .filter((segment) => segment.anchorPosition == null)
       .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();
   };
@@ -1470,10 +1470,10 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleLoadMeshesFromFile = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment: Segment) => {
-      if (segment.somePosition == null || this.props.currentMeshFile == null) return;
+      if (segment.anchorPosition == null || this.props.currentMeshFile == null) return;
       this.props.loadPrecomputedMesh(
         segment.id,
-        segment.somePosition,
+        segment.anchorPosition,
         segment.someAdditionalCoordinates,
         this.props.currentMeshFile.name,
       );

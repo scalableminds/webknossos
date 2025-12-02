@@ -6,6 +6,7 @@ export function withoutServerSpecificFields<T extends { value: Record<string, an
   const {
     actionTracingId: _actionTracingId,
     actionTimestamp: _actionTimestamp,
+    actionAuthorId: _actionAuthorId,
     ...rest
   } = ua.value;
   return {

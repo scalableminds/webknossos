@@ -576,7 +576,7 @@ function* diffNodes(
   }
 }
 
-function updateNodePredicate(prevNode: Node, node: Node): boolean {
+export function updateNodePredicate(prevNode: Node, node: Node): boolean {
   return !_.isEqual(prevNode, node);
 }
 
@@ -603,21 +603,28 @@ function* diffEdges(
   }
 }
 
-function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
-  return (
-    // branchPoints and comments are arrays and therefore checked for
-    // equality. This avoids unnecessary updates in certain cases (e.g.,
-    // when two trees are merged, the comments are concatenated, even
-    // if one of them is empty; thus, resulting in new instances).
-    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
-    !_.isEqual(prevTree.comments, tree.comments) ||
-    prevTree.color !== tree.color ||
-    prevTree.name !== tree.name ||
-    prevTree.timestamp !== tree.timestamp ||
-    prevTree.groupId !== tree.groupId ||
-    prevTree.type !== tree.type ||
-    prevTree.metadata !== tree.metadata
-  );
+function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: boolean): boolean {
+  return useDeepEqualityCheck
+    ? // branchPoints and comments are arrays and therefore checked for
+      // equality. This avoids unnecessary updates in certain cases (e.g.,
+      // when two trees are merged, the comments are concatenated, even
+      // if one of them is empty; thus, resulting in new instances).
+      !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
+        !_.isEqual(prevTree.comments, tree.comments) ||
+        !_.isEqual(prevTree.color, tree.color) ||
+        prevTree.name !== tree.name ||
+        prevTree.timestamp !== tree.timestamp ||
+        prevTree.groupId !== tree.groupId ||
+        prevTree.type !== tree.type ||
+        !_.isEqual(prevTree.metadata, tree.metadata)
+    : !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
+        !_.isEqual(prevTree.comments, tree.comments) ||
+        prevTree.color !== tree.color ||
+        prevTree.name !== tree.name ||
+        prevTree.timestamp !== tree.timestamp ||
+        prevTree.groupId !== tree.groupId ||
+        prevTree.type !== tree.type ||
+        prevTree.metadata !== tree.metadata;
 }
 
 export function* diffTrees(
@@ -655,7 +662,7 @@ export function* diffTrees(
       yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId, useDeepEqualityCheck);
       yield* diffEdges(tracingId, prevTree.edges, tree.edges, treeId, useDeepEqualityCheck);
 
-      if (updateTreePredicate(prevTree, tree)) {
+      if (updateTreePredicate(prevTree, tree, useDeepEqualityCheck)) {
         yield updateTree(tree, tracingId);
       }
 

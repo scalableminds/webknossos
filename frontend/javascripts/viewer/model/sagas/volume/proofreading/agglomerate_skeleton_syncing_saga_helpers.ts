@@ -26,6 +26,9 @@ import {
   ApplicableSkeletonUpdateActionNamesHelperNamesList,
   type UpdateActionWithoutIsolationRequirement,
 } from "../update_actions";
+import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "viewer/model/edge_collection";
+import type { Node } from "viewer/model/types/tree_types";
 
 type ActionSegmentInfo = {
   agglomerateId: number;
@@ -186,29 +189,26 @@ function remapNodeIdsWithPositionMap(
   let newNodeId = skeletonTracing.cachedMaxNodeId;
   const getNextFreeNodeId = () => ++newNodeId;
   return trees.map((tree) => {
-    let updatedNodes = tree.nodes;
-    let updatedEdges = tree.edges;
+    let updatedNodes = new DiffableMap<number, Node>();
+    let updatedEdges = new EdgeCollection();
+    const remappedIds: Record<number, number> = {};
     for (const node of tree.nodes.values()) {
-      const idFromMap =
-        positionToIdMap[node.untransformedPosition.toString()] ?? getNextFreeNodeId();
-      if (node.id !== idFromMap) {
-        const updatedNode = {
-          ...node,
-          id: idFromMap,
-        };
-        updatedNodes = updatedNodes.set(idFromMap, updatedNode);
-        updatedNodes = updatedNodes.delete(node.id);
-        const involvedEdges = updatedEdges.getOutgoingEdgesForNode(node.id);
-        for (const edge of involvedEdges) {
-          updatedEdges = updatedEdges.removeEdge(edge);
-        }
-        const edgesWithUpdatedId = involvedEdges.map((edge) => ({
-          source: idFromMap,
-          target: edge.target,
-        }));
-        updatedEdges = updatedEdges.addEdges(edgesWithUpdatedId);
-      }
+      const newId = positionToIdMap[node.untransformedPosition.toString()] ?? getNextFreeNodeId();
+      const updatedNode = {
+        ...node,
+        id: newId,
+      } as Node;
+      updatedNodes = updatedNodes.set(newId, updatedNode);
+      remappedIds[node.id] = newId;
     }
+    for (const edge of tree.edges.values()) {
+      const edgeWithUpdatedIds = {
+        source: remappedIds[edge.source],
+        target: remappedIds[edge.target],
+      };
+      updatedEdges = updatedEdges.addEdge(edgeWithUpdatedIds);
+    }
+
     return {
       ...tree,
       nodes: updatedNodes,

@@ -292,6 +292,7 @@ class BackendMock {
   ): Promise<ArrayBuffer> => {
     const version = this.agglomerateMapping.currentVersion;
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
+    // TODO
     // TODOM: createSkeletonTracingFromAdjacency expects an unmapped id and not an agglomerateId
     const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
       mapping,

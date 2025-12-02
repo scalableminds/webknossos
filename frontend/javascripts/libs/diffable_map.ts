@@ -419,9 +419,11 @@ class DiffableMap<K extends number, V> implements NotEnumerableByObject {
               ? "null"
               : v === undefined
                 ? "undefined"
-                : typeof v === "object"
-                  ? JSON.stringify(v)
-                  : String(v);
+                : v instanceof DiffableMap
+                  ? v.toString()
+                  : typeof v === "object"
+                    ? JSON.stringify(v)
+                    : String(v);
           return `${k} => ${vStr}`;
         })
         .join(", ");

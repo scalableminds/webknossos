@@ -3,7 +3,7 @@ import {
   runCustomInstanceModelInferenceJob,
   runCustomNeuronModelInferenceJob,
   runPretrainedMitochondriaInferenceJob,
-  runPretrainedNeuronInferencelJob,
+  runPretrainedNeuronInferenceJob,
   runPretrainedNucleiInferenceJob,
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
@@ -14,7 +14,7 @@ import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import type { APIDataLayer, AiModel } from "types/api_types";
+import { type APIDataLayer, APIJobCommand, type AiModel } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";
@@ -193,7 +193,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         // Pre-trained models
         switch (selectedJobType) {
           case APIJobCommand.INFER_NEURONS:
-            await runPretrainedNeuronInferencelJob(
+            await runPretrainedNeuronInferenceJob(
               dataset.id,
               selectedLayer!.name,
               boundingBox,

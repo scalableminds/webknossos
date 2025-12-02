@@ -163,7 +163,7 @@ export function runPretrainedNucleiInferenceJob(
   });
 }
 
-export function runPretrainedNeuronInferencelJob(
+export function runPretrainedNeuronInferenceJob(
   datasetId: string,
   layerName: string,
   bbox: Vector6,

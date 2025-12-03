@@ -63,7 +63,7 @@ class JobService @Inject()(wkConf: WkConf,
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
-      msg = s"Job ${jobBeforeChange._id} failed${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$workflowLink"
+      msg = s"Job `${jobBeforeChange._id}` failed${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$workflowLink"
       _ = logger.warn(msg)
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
@@ -88,7 +88,7 @@ class JobService @Inject()(wkConf: WkConf,
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      msg = s"Job ${jobBeforeChange._id} succeeded${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$resultLinkSlack$workflowLink"
+      msg = s"Job `${jobBeforeChange._id}` succeeded${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$resultLinkSlack$workflowLink"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",

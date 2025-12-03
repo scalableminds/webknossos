@@ -203,7 +203,7 @@ class DataSourceController @Inject()(
 
   def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
     log(Some(slackNotificationService.noticeFailedUploadRequest)) {
-      logTime(slackNotificationService.noticeSlowRequest) {
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 millis) {
         for {
           datasetId <- uploadService
             .getDatasetIdByUploadId(request.body.uploadId) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"

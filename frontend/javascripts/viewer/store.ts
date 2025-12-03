@@ -373,10 +373,10 @@ export type UserConfiguration = {
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
-  DatasetConfiguration & {
-    zoom: number;
-    segmentationOpacity: number;
-  }
+    DatasetConfiguration & {
+      zoom: number;
+      segmentationOpacity: number;
+    }
 >;
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
@@ -568,9 +568,9 @@ type UiInformation = {
   readonly isUiReady: boolean;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
-  | "inactive"
-  | "drawing" // the user is currently drawing a bounding box
-  | "active"; // the quick select saga is currently running (calculating as well as preview mode)
+    | "inactive"
+    | "drawing" // the user is currently drawing a bounding box
+    | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly voxelPipetteToolInfo: { pinnedPosition: Vector3 | null };

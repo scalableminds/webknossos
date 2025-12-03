@@ -1,10 +1,3 @@
-/*
- * This module contains the sagas responsible for populating the save queue
- * with update actions that need to be saved to the server. Note that for proofreading,
- * the proofreading saga is directly responsible for filling the queue.
- */
-
-import { ColoredLogger } from "libs/utils";
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";

@@ -652,9 +652,7 @@ class TracingApi {
     additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
   /**

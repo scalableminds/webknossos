@@ -1,7 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
-import type { APIUserBase, AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
+import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,

@@ -1,24 +1,22 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import memoizeOne from "memoize-one";
-import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
-import getSceneController from "viewer/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-
-import { ColoredLogger } from "libs/utils";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { AnnotationLayerEnum } from "types/api_types";
+import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
+import getSceneController from "viewer/controller/scene_controller_provider";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   isBrushTool,
   isTraceTool,

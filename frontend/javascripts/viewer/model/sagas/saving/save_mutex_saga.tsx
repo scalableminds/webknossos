@@ -1,7 +1,6 @@
 import { acquireAnnotationMutex, releaseAnnotationMutex } from "admin/rest_api";
 import { Button } from "antd";
 import Toast from "libs/toast";
-import { ColoredLogger } from "libs/utils";
 import messages from "messages";
 import {
   type FixedTask,

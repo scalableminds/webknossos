@@ -8,7 +8,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Segment, WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   type VolumeTracingReducerAction,

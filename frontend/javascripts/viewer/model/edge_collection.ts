@@ -164,7 +164,8 @@ export default class EdgeCollection implements NotEnumerableByObject {
 } // Given two EdgeCollections, this function returns an object holding:
 // onlyA: An array of edges, which only exists in A
 // onlyB: An array of edges, which only exists in B
-
+// If useDeepEqualityCheck is set to true, the diff might include edges which are not instance equal to on of the passed maps!
+// See more details below in the if-useDeepEqualityCheck block.
 export function diffEdgeCollections(
   edgeCollectionA: EdgeCollection,
   edgeCollectionB: EdgeCollection,
@@ -188,13 +189,31 @@ export function diffEdgeCollections(
     onlyB: getEdgesForNodes(mapDiff.onlyB, edgeCollectionB.outMap),
   };
 
+  // TODOM: consider tracking time needed for the whole diffing. In case it takes too long, maybe log to airbrake or so?
   for (const changedNodeIndex of mapDiff.changed) {
     // For each changedNodeIndex there is at least one outgoing edge which was added or removed.
     // So, check for each outgoing edge whether it only exists in A or B
-    const outgoingEdgesDiff = Utils.diffArrays(
-      edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
-      edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
-    );
+    let outgoingEdgesDiff;
+    if (useDeepEqualityCheck) {
+      // In case of a deep equality check, diff by outgoing edges as source will always be changedNodeIndex.
+      // A normal implementation diff for deep edge comparison would be slow.
+      // The edges are then recreated based on the returned diff.
+      // If in some later time instance equality is needed, thi should be fairly easy to implement here.
+      const targetDiff = Utils.diffNumberArrays(
+        edgeCollectionA.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
+        edgeCollectionB.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
+      );
+      outgoingEdgesDiff = {
+        changed: [], // unused thus ignored.
+        onlyA: targetDiff.onlyA.map((target) => ({ source: changedNodeIndex, target })),
+        onlyB: targetDiff.onlyB.map((target) => ({ source: changedNodeIndex, target })),
+      };
+    } else {
+      outgoingEdgesDiff = Utils.diffArrays(
+        edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
+        edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
+      );
+    }
     edgeDiff.onlyA = edgeDiff.onlyA.concat(outgoingEdgesDiff.onlyA);
     edgeDiff.onlyB = edgeDiff.onlyB.concat(outgoingEdgesDiff.onlyB);
   }

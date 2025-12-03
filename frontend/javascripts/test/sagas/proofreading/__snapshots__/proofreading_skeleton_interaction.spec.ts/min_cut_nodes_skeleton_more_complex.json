@@ -3,6 +3,37 @@
     {
       "actions": [
         {
+          "name": "deleteEdge",
+          "value": {
+            "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+            "source": 5,
+            "target": 6,
+            "treeId": 3,
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","MIN_CUT_AGGLOMERATE_WITH_NODE_IDS","SET_BUSY_BLOCKING_INFO_ACTION","DELETE_EDGE"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 3,
+          "nodeCount": 6,
+          "treeCount": 3,
+        },
+        "volumeTracingId": {
+          "segmentCount": 1,
+        },
+      },
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 9,
+    },
+    {
+      "actions": [
+        {
           "name": "createTree",
           "value": {
             "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
@@ -21,7 +52,7 @@
             "name": "explorative_2017-05-13_First_Name_Last_Name_004",
             "timestamp": 1494695001688,
             "type": "AGGLOMERATE",
-            "updatedId": undefined,
+            "updatedId": 4,
           },
         },
         {
@@ -39,8 +70,8 @@
           "name": "deleteEdge",
           "value": {
             "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-            "source": 6,
-            "target": 4,
+            "source": 4,
+            "target": 6,
             "treeId": 3,
           },
         },
@@ -62,7 +93,7 @@
       "transactionGroupCount": 1,
       "transactionGroupIndex": 0,
       "transactionId": "dummyRequestId",
-      "version": 9,
+      "version": 10,
     },
     {
       "actions": [
@@ -102,7 +133,7 @@
       "transactionGroupCount": 1,
       "transactionGroupIndex": 0,
       "transactionId": "dummyRequestId",
-      "version": 10,
+      "version": 11,
     },
   ],
   [
@@ -133,7 +164,7 @@
       "transactionGroupCount": 1,
       "transactionGroupIndex": 0,
       "transactionId": "dummyRequestId",
-      "version": 11,
+      "version": 12,
     },
   ],
 ]

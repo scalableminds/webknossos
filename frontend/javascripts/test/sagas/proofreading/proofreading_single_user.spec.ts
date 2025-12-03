@@ -309,10 +309,9 @@ describe("Proofreading (Single User)", () => {
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
       );
-      expect(updatedAgglomerateTrees.size()).toBe(3);
+      expect(updatedAgglomerateTrees.size()).toBe(2);
       expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1); // TODO fix-> Id is not present
       expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
-      expect(updatedAgglomerateTrees.getOrThrow(5).nodes.size()).toBe(2);
 
       const agglomerateSkletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(agglomerateSkletonReloadingUpdates).toMatchFileSnapshot(

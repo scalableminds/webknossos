@@ -24,17 +24,8 @@
         "name": "createEdge",
         "value": {
           "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 7,
-          "target": 4,
-          "treeId": 3,
-        },
-      },
-      {
-        "name": "createEdge",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 8,
-          "target": 4,
+          "source": 4,
+          "target": 7,
           "treeId": 3,
         },
       },

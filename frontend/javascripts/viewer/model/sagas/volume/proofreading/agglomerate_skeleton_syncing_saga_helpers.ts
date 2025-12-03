@@ -1,5 +1,4 @@
 import DiffableMap from "libs/diffable_map";
-import Toast from "libs/toast";
 import { getAdaptToTypeFunction } from "libs/utils";
 import { all, put } from "typed-redux-saga";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
@@ -9,11 +8,7 @@ import {
   getTreeNameForAgglomerateSkeleton,
   getTreesWithType,
 } from "viewer/model/accessors/skeletontracing_accessor";
-import {
-  addTreesAndGroupsAction,
-  applySkeletonUpdateActionsFromServerAction,
-  deleteTreeAction,
-} from "viewer/model/actions/skeletontracing_actions";
+import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
 import {
   createMutableTreeMapFromTreeArray,
@@ -105,58 +100,6 @@ function* getAllAgglomerateTreesFromServerAndRemap(
   }, [] as Tree[]);
   const tracingWithNewAggloTreesFromServer = yield* agglomerateTreesToSkeleton(aggloTrees);
   return tracingWithNewAggloTreesFromServer;
-}
-
-function* removeAgglomerateTreeIfExists(
-  agglomerateId: number,
-  mappingName: string,
-  trees: TreeMap,
-): Saga<{ didTreeExist: boolean }> {
-  const agglomerateTreeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-
-  const maybeAgglomerateTree = findTreeByName(trees, agglomerateTreeName);
-  const suppressNextNodeActivation = true;
-  if (maybeAgglomerateTree) {
-    yield* put(deleteTreeAction(maybeAgglomerateTree.treeId, suppressNextNodeActivation));
-    return { didTreeExist: true };
-  }
-  return { didTreeExist: false };
-}
-
-function* loadAgglomerateSkeleton(
-  agglomerateId: number,
-  tracingId: string,
-  mappingName: string,
-): Saga<void> {
-  try {
-    const agglomerateSkeleton = yield* call(
-      getAgglomerateSkeletonTracing,
-      tracingId,
-      mappingName,
-      agglomerateId,
-    );
-    let usedTreeIds = [];
-    yield* put(
-      addTreesAndGroupsAction(
-        createMutableTreeMapFromTreeArray(agglomerateSkeleton.trees),
-        agglomerateSkeleton.treeGroups,
-        (newTreeIds) => {
-          usedTreeIds = newTreeIds;
-        },
-      ),
-    );
-    if (usedTreeIds.length !== 1) {
-      const annotationVersion = yield* select((state) => state.annotation.version);
-      throw new Error(
-        `Unexpected number of trees for agglomerate with id ${agglomerateId} in annotation version ${annotationVersion}.`,
-      );
-    }
-  } catch (error) {
-    console.warn(error);
-    Toast.warning(
-      `Failed to update agglomerate skeleton for agglomerate with id ${agglomerateId}. The skeleton might be out of sync with the mapping. Proofreading actions via this skeleton might not yield the desired results.`,
-    );
-  }
 }
 
 // This function creates an object mapping from a position (stringified) to a node id.
@@ -286,30 +229,6 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
     ) as ApplicableSkeletonServerUpdateAction[];
 
   yield* put(applySkeletonUpdateActionsFromServerAction(diffActionsWithMissingServerFields));
-
-  // TODOM generate skeleton with up to date agglo trees and position maps. Then generate the diff and apply it locally.
-  // -> should lead to necessary updates.
-  // locally reapplying should help with tree and node id deduplication :thinking:. As this might become a problem
-
-  // TODO: get feedback: The current code replaces the tree instead of changing it -> This might change the active node id.
-  // As this is saga is executed in a not live collab scenario, this might be ok as the user did this action here anyway without keeping the skeleton updated.
-  /*const { didTreeExist: didSourceTreeExist } = yield* call(
-    removeAgglomerateTreeIfExists,
-    oldSourceAgglomerateId,
-    mappingName,
-    trees,
-  );
-  const { didTreeExist: didTargetTreeExist } = yield* call(
-    removeAgglomerateTreeIfExists,
-    oldTargetAgglomerateId,
-    mappingName,
-    trees,
-  );
-  if (!didSourceTreeExist && !didTargetTreeExist) {
-    // Do not load the merged agglomerate skeleton in case no tree existed before.
-    return;
-  }*/
-  // yield* call(loadAgglomerateSkeleton, updatedSourceAgglomerateId, tracingId, mappingName);
 }
 
 export function* syncAgglomerateSkeletonsAfterSplitAction(
@@ -365,32 +284,4 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
     ) as ApplicableSkeletonServerUpdateAction[];
 
   yield* put(applySkeletonUpdateActionsFromServerAction(diffActionsWithMissingServerFields));
-
-  /*const trees = yield* select((state) =>
-    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
-  );
-  if (mappingName == null) {
-    return;
-  }
-  // TODO: get feedback: The current code replaces the tree instead of changing it -> This might change the active node id.
-  // As this is saga is executed in a not live collab scenario, this might be ok as the user did this action here anyway without keeping the skeleton updated.
-  let foundAtLeastOneAgglomerateSkeleton = false;
-  for (const agglomerateId of oldAgglomerateIds) {
-    const { didTreeExist } = yield* call(
-      removeAgglomerateTreeIfExists,
-      agglomerateId,
-      mappingName,
-      trees,
-    );
-    foundAtLeastOneAgglomerateSkeleton = foundAtLeastOneAgglomerateSkeleton || didTreeExist;
-  }
-  if (!foundAtLeastOneAgglomerateSkeleton) {
-    // Do not load the splitted agglomerate skeletons in case no tree existed before.
-    return;
-  }
-  const loadAgglomerateSkeletonEffects = newAgglomerateIds.map((aggloId) =>
-    call(loadAgglomerateSkeleton, aggloId, tracingId, mappingName),
-  );
-  // Run in parallel as backend requests are involved; improves speed.
-  yield* all(loadAgglomerateSkeletonEffects);*/
 }

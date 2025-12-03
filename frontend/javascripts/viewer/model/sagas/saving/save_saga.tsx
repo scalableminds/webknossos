@@ -559,7 +559,7 @@ export function* tryToIncorporateActions(
           ) {
             break;
           }
-          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has atleast one of the meshes loaded.
+          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least one of the meshes loaded.
           // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
           // Track outdated and updated agglomerateIds to refresh after applying updates.
 
@@ -568,19 +568,6 @@ export function* tryToIncorporateActions(
           // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
           agglomerateIdsToReloadMeshesFor.delete(agglomerateId2);
           agglomerateIdsToReloadMeshesFor.add(agglomerateId1);
-          /*const mapOfLayer = layerToMeshRefreshInfo[actionTracingId];
-          const updatedMap = Object.fromEntries(
-            Object.entries(mapOfLayer).map(([oldAggloId, newAggloIds]) =>
-              newAggloIds.includes(agglomerateId2)
-                ? [
-                    oldAggloId,
-                    newAggloIds.filter((id) => id !== agglomerateId2).concat([agglomerateId2]),
-                  ]
-                : [oldAggloId, newAggloIds],
-            ),
-          );
-          updatedMap[agglomerateId2] = [agglomerateId2];
-          layerToMeshRefreshInfo[actionTracingId] = updatedMap;*/
           break;
         }
         case "splitAgglomerate": {
@@ -610,8 +597,6 @@ export function* tryToIncorporateActions(
             yield* call(finalize);
             return { success: false };
           }
-          // If the split agglomerate has a proofreading mesh loaded, remember the positions of the split actions to
-          // be able to reload all affected meshes.
           break;
         }
 
@@ -726,44 +711,11 @@ export function* tryToIncorporateActions(
         oldAgglomerateIds.forEach((aggloId) => agglomerateIdsWithOutdatedMeshes.add(aggloId));
         newAgglomerateIds.forEach((aggloId) => agglomerateIdsToReloadMeshesFor.add(aggloId));
       }
-
-      // Keep info about meshes needing reloading up to date
-
-      // Big problem: what are the seed positions for refreshing the agglomerates after
-      /*const outdatedLoadedHelperMeshes =
-        ProofreadSaga_LoadedProofreadingMeshIds.intersection(oldAgglomerateIds);
-      if (outdatedLoadedHelperMeshes.size > 0) {
-        for (const aggloId of outdatedLoadedHelperMeshes) {
-          delete agglomerateIdsToReloadMeshesFor[aggloId];
-        }
-
-        // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
-
-        /*const mapOfLayer = layerToMeshRefreshInfo[volumeTracingIdOfMapping];
-        const updatedMap = Object.fromEntries(
-          Object.entries(mapOfLayer).map(([oldAggloId, newAggloIds]) => [
-            oldAggloId,
-            newAggloIds.filter((id) => !oldAgglomerateIds.has(id)),
-          ]),
-        );
-        layerToMeshRefreshInfo[volumeTracingIdOfMapping] = updatedMap;
-      }*/
     }
   }
 
-  // Get agglomerate Ids to reload based on the splitted edges.
-  /* const prepareInfo = yield* prepareSplitOrMerge(false);
-  if (prepareInfo?.getDataValue) {
-    for (const position of positionsFromSplits) {
-      const agglomerateIdAtPosition = yield* call(prepareInfo.getDataValue, position);
-      agglomerateIdsToReloadMeshesFor[agglomerateIdAtPosition] = position;
-    }
-  } */
-
-  // TODOM
   if (activeVolumeTracingId) {
     // Remove all outdated meshes.
-    // TODOM
     let someAgglomerateIdToRemove;
     console.log("Start removing outdated meshes", ...Array.from(agglomerateIdsWithOutdatedMeshes));
     for (const aggloId of agglomerateIdsWithOutdatedMeshes) {
@@ -807,17 +759,6 @@ export function* tryToIncorporateActions(
     yield* spawn(refreshAffectedMeshes, activeVolumeTracingId, refreshList);
     console.log("Finished refreshing segments", refreshList);
   }
-  /* TODOM: maybe reformat to two separate sets again.
-  for (const layerName of Object.keys(layerToMeshRefreshInfo)) {
-    const refreshInfoItems = [];
-    // TODOM: Position for new node refresh is needed :/. TODO
-    Object.entries(layerToMeshRefreshInfo[layerName]).forEach(([oldAggloId, newAggloIds]) => {});
-    const agglomerateIdsToRemove = Object.keys(layerToMeshRefreshInfo[layerName]);
-    for (const aggloId of agglomerateIdsToRemove) {
-      yield* put(removeMeshAction(layerName, Number(aggloId)));
-    }
-    // TODO: reload. Or even better spawn refreshAffectedMeshes with appropriate params.
-  }*/
   yield* call(finalize);
   return { success: true };
 }

@@ -189,11 +189,8 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
   if (model.trainingJob == null) {
     return organizationSharingButton;
   }
-  const {
-    voxelyticsWorkflowHash,
-    trainingAnnotations,
-    state: trainingJobState,
-  } = model.trainingJob;
+  const { voxelyticsWorkflowHash, state: trainingJobState } = model.trainingJob;
+  const trainingAnnotations = model.trainingJob.args.trainingAnnotations;
 
   return (
     <Col>

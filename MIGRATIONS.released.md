@@ -6,6 +6,14 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
+[Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)
+
+- The datastore config option `reportUsedStorage.enabled` was removed. To enable storage scan for a datastore, set reportUsedStorageEnabled to TRUE directly in the postgres table `webknossos.dataStores`.
+
+### Postgres Evolutions
+- [145-attachment-realpaths.sql](schema/evolutions/145-attachment-realpaths.sql)
+
 ## [25.11.0](https://github.com/scalableminds/webknossos/releases/tag/25.11.0) - 2025-10-27
 [Commits](https://github.com/scalableminds/webknossos/compare/25.10.0...25.11.0)
 

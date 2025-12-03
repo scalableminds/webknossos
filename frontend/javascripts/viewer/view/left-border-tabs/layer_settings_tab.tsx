@@ -48,7 +48,7 @@ import {
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
-  APIJobType,
+  APIJobCommand,
   type APISkeletonLayer,
   AnnotationLayerEnum,
   type AnnotationLayerType,
@@ -709,7 +709,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : null,
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
+        APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
       )
         ? {
             label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),

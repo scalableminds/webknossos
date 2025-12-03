@@ -7,6 +7,50 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
+[Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)
+
+### Highlights
+- Generalized the old "Segment Picker" tool to be a "Voxel Pipette" tool which can show the data values for all visible layers in a tooltip. When old behavior for activating a segment id can still be achieved by pressing shift. [#8989](https://github.com/scalableminds/webknossos/pull/8989)
+
+### Added
+- Added first step of enabling possibility to do live proofreading update with multiple users in shared editable annotations. However, this is disabled until feature is complete. [#8723](https://github.com/scalableminds/webknossos/pull/8723)
+- Datasets stored on managed S3 can now also be deleted there. [#8924](https://github.com/scalableminds/webknossos/pull/8924)
+- Show a warning when many chunks of data in an annotation are updated in a short period of time. The warning suggests creating an annotation (or an annotation layer) that excludes the finest magnification(s) to reduce server load. [#8961](https://github.com/scalableminds/webknossos/pull/8961)
+- Added an optional `meshOpacity` parameter to `api.data.setSegmentColor`, allowing callers to set a segment's mesh opacity. [#9011](https://github.com/scalableminds/webknossos/pull/9011)
+- Added registering attachment realpaths next to mag realpaths. [#9019](https://github.com/scalableminds/webknossos/pull/9019)
+- Display used storage for each owned dataset in the dashboard's dataset table. [#9025](https://github.com/scalableminds/webknossos/pull/9025)
+- Unified display of ids, allowing single-click copy. [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- Added link to workflow report to job list (superusers only for now). [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- Speed up loading of job list. [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- It is now possible to reset all segment colors in a group via the context menu in the segment list. [#9072](https://github.com/scalableminds/webknossos/pull/9072)
+
+### Changed
+- Deleting datasets on disk whose layers are still referenced by symlinks of other datasets is now blocked. [#8924](https://github.com/scalableminds/webknossos/pull/8924)
+- Generalized the old "Segment Picker" tool to be a "Voxel Pipette" tool which can show the data values for all visible layers in a tooltip. When old behavior for activating a segment id can still be achieved by pressing shift. [#8989](https://github.com/scalableminds/webknossos/pull/8989)
+- The datastore config option `reportUsedStorage.enabled` was removed. To enable storage scan, set it in postgres directly. [#9024](https://github.com/scalableminds/webknossos/pull/9024)
+- To improve performance, the use of Float32Arrays was omitted in favor of plain Arrays in our self-adjusted mjs module. [#9059](https://github.com/scalableminds/webknossos/pull/9059)
+- Automatically disable the interpolation setting in case of WebGL context losses, to try again with a more simple shader. [#9070](https://github.com/scalableminds/webknossos/pull/9070)
+- Compile shader code asynchronously to avoid some lag during page load. [#9070](https://github.com/scalableminds/webknossos/pull/9070)
+- Changed the wording in the DatasetUploadView to favor Zarr over WKW. [#9077](https://github.com/scalableminds/webknossos/pull/9077)
+- When clients with disk access request the data paths from webknossos, it now yields resolved realpaths where possible. [#9097](https://github.com/scalableminds/webknossos/pull/9097)
+
+### Fixed
+- Double-clicking a registered segment now stores its position in the segment's layer coordinate system, preserving correct behaviour when layer transforms are in use. [#9017](https://github.com/scalableminds/webknossos/pull/9017)
+- Fixed that scanning realpaths of dataset mags would stop if a single mag didn’t exist. [#9019](https://github.com/scalableminds/webknossos/pull/9019)
+- Fixed that a new dataset would not properly get storage-scanned immediately after its upload. [#9022](https://github.com/scalableminds/webknossos/pull/9022)
+- Fixed dataset deletion for data stored on managed s3 buckets different from the one currently selected for dataset upload. [#9047](https://github.com/scalableminds/webknossos/pull/9047)
+- Fixed that "black data" outside of a layer's bounding box could hide other layer's data when the blend mode "cover" was used. [#9054](https://github.com/scalableminds/webknossos/pull/9054)
+- Fixed broken link in docs. [#9066](https://github.com/scalableminds/webknossos/pull/9066)
+- Fixed loading indicators for job and workflow lists. [#9068](https://github.com/scalableminds/webknossos/pull/9068)
+- Fixed that the UI freezes shortly when applying newest updates of a shared annotation. Introduced in [#8723](https://github.com/scalableminds/webknossos/pull/8723) [#9084](https://github.com/scalableminds/webknossos/pull/9084)
+- Fixed a regression that caused volume annotation to not work when the annotation was configured with "Others may edit". [#9088](https://github.com/scalableminds/webknossos/pull/9088)
+- Fixed inactive users being listed in Team list view. [#9094](https://github.com/scalableminds/webknossos/pull/9094)
+- Fixed loading state spinner for Jobs and VX Workflow list views [#9095](https://github.com/scalableminds/webknossos/pull/9095)
+- Fixed unnecessary page movements for some Download/Action buttons in various admin list views. [#9098](https://github.com/scalableminds/webknossos/pull/9098)
+- Fixed manual task assignment to users in task list view. [#9099](https://github.com/scalableminds/webknossos/pull/9099)
+- Fixed a caching issue with the VX workflow overview page. [#9109](https://github.com/scalableminds/webknossos/pull/9109)
+
 ## [25.11.0](https://github.com/scalableminds/webknossos/releases/tag/25.11.0) - 2025-10-27
 [Commits](https://github.com/scalableminds/webknossos/compare/25.10.0...25.11.0)
 

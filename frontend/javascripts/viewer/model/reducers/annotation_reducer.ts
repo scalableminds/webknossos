@@ -166,7 +166,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
 
     case "SET_ANNOTATION_ALLOW_UPDATE": {
       const { currentlyAllowUpdate } = action;
-      Utils.ColoredLogger.logYellow("SET_ANNOTATION_ALLOW_UPDATE set to", currentlyAllowUpdate);
       return updateKey(state, "annotation", {
         isUpdatingCurrentlyAllowed: currentlyAllowUpdate,
       });

@@ -765,6 +765,7 @@ export function updateSegmentVolumeAction(
   // todop: or should we store it too?
   changedPropertyNames?: string[],
 ) {
+  const opt = changedPropertyNames != null ? { changedPropertyNames } : {};
   return {
     name: "updateSegment",
     value: {
@@ -778,7 +779,11 @@ export function updateSegmentVolumeAction(
       metadata: enforceValidMetadata(metadata),
       creationTime,
     },
-    changedPropertyNames,
+    // The following line is mostly equivalent to:
+    // changedPropertyNames
+    // but ensures that the return type of this function marks
+    // changedPropertyNames as optional
+    ...opt,
   } as const;
 }
 

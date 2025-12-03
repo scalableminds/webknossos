@@ -3,7 +3,10 @@ import { setupWebknossosForTesting, type WebknossosTestContext } from "test/help
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { updateSegmentAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  removeSegmentAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
@@ -47,7 +50,7 @@ describe("Collaborative editing of segment items", () => {
     const injectedSegmentProps = {
       actionTracingId: tracingId,
       id: segmentId,
-      anchorPosition: [1, 2, 3],
+      anchorPosition: [1, 2, 3] as Vector3,
       name: "Some Name",
       color: null,
       groupId: null,
@@ -58,7 +61,6 @@ describe("Collaborative editing of segment items", () => {
     backendMock.planVersionInjection(4, [
       {
         name: "createSegment",
-        _injected: true, // todop: only for debugging purposes. remove again
         value: injectedSegmentProps,
       },
     ]);
@@ -139,7 +141,7 @@ describe("Collaborative editing of segment items", () => {
     const injectedSegmentProps = {
       actionTracingId: tracingId,
       id: segmentId,
-      anchorPosition: [1, 2, 3],
+      anchorPosition: [1, 2, 3] as Vector3,
       name: "Some Name by another user",
       color: null,
       groupId: 4,
@@ -150,7 +152,6 @@ describe("Collaborative editing of segment items", () => {
     backendMock.planVersionInjection(5, [
       {
         name: "updateSegment",
-        _injected: true, // todop: only for debugging purposes. remove again
         value: injectedSegmentProps,
       },
     ]);
@@ -235,7 +236,7 @@ describe("Collaborative editing of segment items", () => {
     const injectedBaseSegmentProps = {
       actionTracingId: tracingId,
       id: segmentId,
-      anchorPosition: [1, 2, 3],
+      anchorPosition: [1, 2, 3] as Vector3,
       name: "Some Name",
       color: null,
       groupId: null,
@@ -246,19 +247,16 @@ describe("Collaborative editing of segment items", () => {
     backendMock.planVersionInjection(4, [
       {
         name: "createSegment",
-        _injected: true, // todop: only for debugging purposes. remove again
         value: injectedBaseSegmentProps,
       },
       {
         name: "updateSegment",
-        _injected: true, // todop: only for debugging purposes. remove again
         value: { ...injectedBaseSegmentProps, name: "Some Name 2" },
       },
     ]);
     backendMock.planVersionInjection(5, [
       {
         name: "updateSegment",
-        _injected: true, // todop: only for debugging purposes. remove again
         value: { ...injectedBaseSegmentProps, name: "Some Name 3", groupId: 2 },
       },
     ]);
@@ -283,20 +281,10 @@ describe("Collaborative editing of segment items", () => {
 
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-      console.log("SendRequestWithToken received the following actions:");
-      console.dir(_.flatten(context.receivedDataPerSaveRequest).map((g) => g.actions));
-
       const updateSegmentSaveAction = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
-      // for (const batch of context.receivedDataPerSaveRequest.at(-1)!) {
-      //   console.log("batch", batch);
-      //   for (const action of batch.actions) {
-      //     console.log("action", action);
-      //   }
-      // }
-
       // todop: check that changedPropertyNames is not in updateSegmentSaveAction
-      // todop: reactive
+      // todop: reactivate
       // expect(updateSegmentSaveAction).toMatchObject([
       //   {
       //     name: "updateSegment",
@@ -323,6 +311,72 @@ describe("Collaborative editing of segment items", () => {
     await task.toPromise();
   }, 8000);
 
-  // todop: maybe test that another user did create and update a segment, and the local user
-  // did the same?
+  it("should handle concurrent update and delete segment update actions", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const segmentId = 1;
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    // On the backend, a segment with the following properties is created.
+    // Note that the anchorPosition, in particular, will survive the rebase.
+    // The local user will create the same segment with another name and a color
+    // (which should then also be present in the final segment).
+    const injectedBaseSegmentProps = {
+      actionTracingId: tracingId,
+      id: segmentId,
+      anchorPosition: [1, 2, 3] as Vector3,
+      additionalCoordinates: null,
+      name: "Some Name",
+      color: null,
+      groupId: null,
+      creationTime: Date.now(),
+      metadata: [],
+    };
+
+    backendMock.planVersionInjection(5, [
+      {
+        name: "updateSegment",
+        value: injectedBaseSegmentProps,
+      },
+    ]);
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      // Create the segment (creation also uses the updateSegmentAction redux action)
+      const updateSegmentProps1 = { name: "Some Other Name", color: [128, 0, 0] as Vector3 };
+      yield put(updateSegmentAction(segmentId, updateSegmentProps1, tracingId));
+
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      yield put(removeSegmentAction(segmentId, tracingId));
+
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      const removeSegmentSaveAction = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      expect(removeSegmentSaveAction).toMatchObject([
+        {
+          name: "deleteSegment",
+          value: {
+            actionTracingId: tracingId,
+            id: segmentId,
+          },
+        },
+      ]);
+      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
+      expect(finalSegment).toBeUndefined();
+    });
+
+    await task.toPromise();
+  }, 8000);
 });

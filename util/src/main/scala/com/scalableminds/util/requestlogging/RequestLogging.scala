@@ -17,7 +17,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
                           requesterId: Option[String] = None): Unit =
     if (!Status.isSuccessful(result.header.status)) {
       val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
-      val resultMsg = s": ${resultBody(result)}"
+      val resultMsg = s": `${resultBody(result)}`"
       val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
       logger.warn(msg)
       notifier.foreach(_(msg))

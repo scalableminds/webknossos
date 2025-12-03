@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.bloscjava.Blosc
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO.GZIPOutputStream
+import com.scalableminds.webknossos.datastore.compresso.NativeCompressoCompressor
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
   CompressedSegmentation32,
@@ -322,8 +323,7 @@ class CompressoCompressor extends Compressor {
 
   @throws[IOException]
   override def decompress(input: Array[Byte]): Array[Byte] =
-    // TODO
-    input
+    new NativeCompressoCompressor().decompress(input)
 
 }
 

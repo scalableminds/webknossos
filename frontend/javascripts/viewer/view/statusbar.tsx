@@ -577,7 +577,7 @@ function SegmentAndMousePosition() {
     <>
       {isPlaneMode ? <SegmentInfo /> : null}
       {isPlaneMode ? (
-        <span className="info-element">
+        <span className="info-element" title="in vx">
           Pos [
           {globalMousePositionRounded
             ? getPosString(globalMousePositionRounded, additionalCoordinates)

@@ -1270,9 +1270,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             <NumberSliderSetting
               label={
-                userConfiguration.overrideNodeRadius
+                (userConfiguration.overrideNodeRadius
                   ? settings.particleSize
-                  : `Min. ${settings.particleSize}` + ` (${unit})`
+                  : `Min. ${settings.particleSize}`) + ` (${unit})`
               }
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}

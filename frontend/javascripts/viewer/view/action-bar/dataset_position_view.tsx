@@ -113,6 +113,7 @@ function DatasetPositionView() {
           autoSize
           style={positionInputStyle}
           allowDecimals
+          title="in vx"
         />
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
         <ShareButton dataset={dataset} style={iconColoringStyle} />

@@ -233,7 +233,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         activeCellId,
         {
           anchorPosition: startEditingAction.position,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -341,7 +341,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         activeCellId,
         {
           anchorPosition: lastPosition,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -462,7 +462,7 @@ function* uncachedDiffSegmentLists(
       yield updateSegmentVolumeAction(
         segment.id,
         segment.anchorPosition,
-        segment.someAdditionalCoordinates,
+        segment.additionalCoordinates,
         segment.name,
         segment.color,
         segment.groupId,
@@ -483,7 +483,6 @@ export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  ColoredLogger.logRed("diffVolumeTracing");
   if (prevVolumeTracing === volumeTracing) {
     return;
   }
@@ -578,7 +577,7 @@ function* ensureSegmentExists(
         segmentId,
         {
           anchorPosition: seedPosition,
-          someAdditionalCoordinates: seedAdditionalCoordinates,
+          additionalCoordinates: seedAdditionalCoordinates,
         },
         layerName,
       ),
@@ -588,7 +587,7 @@ function* ensureSegmentExists(
     // This way the most up-to-date position of a cell is used to jump to when a
     // segment is selected in the segment list. Also, the position of the active
     // cell is used in the proofreading mode.
-    const { anchorPosition, someAdditionalCoordinates } = action;
+    const { anchorPosition, additionalCoordinates } = action;
 
     if (anchorPosition == null) {
       // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
@@ -605,7 +604,7 @@ function* ensureSegmentExists(
         segmentId,
         {
           anchorPosition,
-          someAdditionalCoordinates: someAdditionalCoordinates,
+          additionalCoordinates: additionalCoordinates,
         },
         layerName,
         undefined,

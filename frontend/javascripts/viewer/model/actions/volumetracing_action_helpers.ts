@@ -12,7 +12,7 @@ export const getUpdateSegmentActionToToggleVisibility = (
   storeState: WebknossosState,
   segmentId: number,
   anchorPosition?: Vector3,
-  someAdditionalCoordinates?: AdditionalCoordinate[],
+  additionalCoordinates?: AdditionalCoordinate[],
 ) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(storeState);
   if (visibleSegmentationLayer == null) {
@@ -28,7 +28,7 @@ export const getUpdateSegmentActionToToggleVisibility = (
     {
       isVisible: !(oldSegment?.isVisible ?? !hideUnregisteredSegments),
       anchorPosition: oldSegment?.anchorPosition ?? anchorPosition,
-      someAdditionalCoordinates: oldSegment?.someAdditionalCoordinates ?? someAdditionalCoordinates,
+      additionalCoordinates: oldSegment?.additionalCoordinates ?? additionalCoordinates,
     },
     visibleSegmentationLayer.name,
     undefined,

@@ -105,7 +105,7 @@ const getLoadPrecomputedMeshMenuItem = (
           loadPrecomputedMesh(
             segment.id,
             segment.anchorPosition,
-            segment.someAdditionalCoordinates,
+            segment.additionalCoordinates,
             currentMeshFile?.name,
           ),
         );
@@ -165,7 +165,7 @@ const getMakeSegmentActiveMenuItem = (
   setActiveCell: (
     arg0: number,
     anchorPosition?: Vector3 | null,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void,
   activeCellId: number | null | undefined,
   isEditingDisabled: boolean,
@@ -179,7 +179,7 @@ const getMakeSegmentActiveMenuItem = (
     key: "setActiveCell",
     onClick: () =>
       hideContextMenu(
-        setActiveCell(segment.id, segment.anchorPosition, segment.someAdditionalCoordinates),
+        setActiveCell(segment.id, segment.anchorPosition, segment.additionalCoordinates),
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
@@ -211,7 +211,7 @@ type Props = {
   loadAdHocMesh: (
     segmentId: number,
     anchorPosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+    additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
   loadPrecomputedMesh: (
     segmentId: number,
@@ -222,7 +222,7 @@ type Props = {
   setActiveCell: (
     arg0: number,
     anchorPosition?: Vector3 | null,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void;
   mesh: MeshInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;

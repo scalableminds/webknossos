@@ -242,7 +242,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
                 additionalCoordinates:
                   // todop: additionalCoordinates does not exist in CreateSegment action?
                   // action.value.additionalCoordinates ??
-                  maybeExistingSegment.someAdditionalCoordinates,
+                  maybeExistingSegment.additionalCoordinates,
                 creationTime: action.value.creationTime ?? maybeExistingSegment.creationTime,
                 color: action.value.color ?? maybeExistingSegment.color,
                 groupId: action.value.groupId ?? maybeExistingSegment.groupId,
@@ -268,7 +268,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               // todop: change to removeSegment
               return action;
             }
-            const { changedPropertyNames } = action;
+            const changedPropertyNames = action.changedPropertyNames ?? [];
 
             const newAction: UpdateSegmentUpdateAction = {
               name: "updateSegment",

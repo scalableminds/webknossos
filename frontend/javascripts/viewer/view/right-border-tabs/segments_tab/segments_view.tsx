@@ -256,9 +256,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setActiveCell(
     segmentId: number,
     anchorPosition?: Vector3 | null,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
-    dispatch(setActiveCellAction(segmentId, anchorPosition, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, anchorPosition, additionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {
@@ -815,7 +815,7 @@ class SegmentsView extends React.Component<Props, State> {
       Store.getState(),
     );
     this.props.setPosition(transformedPosition);
-    const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
+    const segmentAdditionalCoordinates = segment.additionalCoordinates;
     if (segmentAdditionalCoordinates != null) {
       this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
     }
@@ -1474,7 +1474,7 @@ class SegmentsView extends React.Component<Props, State> {
       this.props.loadPrecomputedMesh(
         segment.id,
         segment.anchorPosition,
-        segment.someAdditionalCoordinates,
+        segment.additionalCoordinates,
         this.props.currentMeshFile.name,
       );
     });

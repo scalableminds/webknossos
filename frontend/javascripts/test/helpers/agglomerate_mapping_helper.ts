@@ -190,21 +190,21 @@ export class AgglomerateMapping {
 
   private commit(newVersionMap: Map<number, number>, bumpVersion: boolean): void {
     /*
-     * Mush mapping snapshot and advance the global version counter
+     * Push mapping snapshot and advance the global version counter
      */
     if (bumpVersion) {
       this.currentVersion++;
       this.versions.push(newVersionMap);
-      console.log(
-        `Committed v=${this.currentVersion} with mapping: `,
-        // newVersionMap.entries().toArray(),
-      );
+      // console.log(
+      //   `Committed v=${this.currentVersion} with mapping: `,
+      //   // newVersionMap.entries().toArray(),
+      // );
     } else {
       this.versions[this.currentVersion] = newVersionMap;
-      console.log(
-        `Appended new update to v=${this.currentVersion}; resulting mapping: `,
-        // newVersionMap.entries().toArray(),
-      );
+      // console.log(
+      //   `Appended new update to v=${this.currentVersion}; resulting mapping: `,
+      //   // newVersionMap.entries().toArray(),
+      // );
     }
   }
 }

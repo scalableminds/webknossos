@@ -210,14 +210,14 @@ export const finishEditingAction = () =>
 export const setActiveCellAction = (
   segmentId: number,
   anchorPosition?: Vector3 | null, // in layer space
-  someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+  additionalCoordinates?: AdditionalCoordinate[] | null,
   activeUnmappedSegmentId?: number | null,
 ) =>
   ({
     type: "SET_ACTIVE_CELL",
     segmentId,
     anchorPosition,
-    someAdditionalCoordinates,
+    additionalCoordinates,
     activeUnmappedSegmentId,
   }) as const;
 
@@ -231,14 +231,14 @@ export const setHideUnregisteredSegmentsAction = (value: boolean, layerName?: st
 export const clickSegmentAction = (
   segmentId: number,
   anchorPosition: Vector3,
-  someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   layerName?: string,
 ) =>
   ({
     type: "CLICK_SEGMENT",
     segmentId,
     anchorPosition,
-    someAdditionalCoordinates,
+    additionalCoordinates,
     layerName,
   }) as const;
 

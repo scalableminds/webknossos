@@ -166,7 +166,6 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
 function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState: MutexLogicState,
 ): Saga<void> {
-  ColoredLogger.logRed("mutexLogicState.fetchingStrategy", mutexLogicState.fetchingStrategy);
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
     yield* call(tryAcquireMutexAdHoc, mutexLogicState);
   } else {
@@ -190,7 +189,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
     if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
       // If the annotation is currently not blocked by the active user,
       // we immediately disallow updating the annotation.
-      ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (1)");
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
     }
     try {
@@ -200,7 +198,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         acquireAnnotationMutex,
         annotationId,
       );
-      ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (2)");
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
       yield* put(setUserHoldingMutexAction(blockedByUser));
       yield* put(setIsMutexAcquiredAction(canEdit));
@@ -222,7 +219,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       // A cancelled saga does not reach the catch block but the finally block.
       console.error("Error while trying to acquire mutex.", error);
       yield* put(setUserHoldingMutexAction(undefined));
-      ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (3)");
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
       if (yield* call(getDoesHaveMutex)) {
         yield* put(setIsMutexAcquiredAction(false));
@@ -355,7 +351,6 @@ function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<vo
       const owner = yield* select((storeState) => storeState.annotation.owner);
       const activeUser = yield* select((state) => state.activeUser);
       if (activeUser && owner?.id === activeUser?.id) {
-        ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (4)");
         yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
       }
     }
@@ -399,7 +394,6 @@ function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Sa
 
 function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
   // While the fetching strategy is ad hoc, updating should be allowed.
-  ColoredLogger.logRed("Dispatching setIsUpdatingAnnotationCurrentlyAllowedAction (5)");
   yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
   // If we still have the mutex, release it first as strategy is now ad-hoc.
   const currentlyHavingMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);

@@ -307,7 +307,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
       volumeTracing.activeCellId,
       {
         anchorPosition: seedPosition,
-        someAdditionalCoordinates: additionalCoordinates || undefined,
+        additionalCoordinates: additionalCoordinates || undefined,
       },
       volumeTracing.tracingId,
     ),

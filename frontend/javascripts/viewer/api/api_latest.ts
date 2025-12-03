@@ -649,11 +649,11 @@ class TracingApi {
   registerSegment(
     segmentId: number,
     anchorPosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+    additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
     Store.dispatch(
-      clickSegmentAction(segmentId, anchorPosition, someAdditionalCoordinates, layerName),
+      clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName),
     );
   }
 
@@ -800,7 +800,7 @@ class TracingApi {
    *   {
    *     name: "A name",
    *     anchorPosition: [1, 2, 3],
-   *     someAdditionalCoordinates: [],
+   *     additionalCoordinates: [],
    *     color: [1, 2, 3],
    *     groupId: 1,
    *   },
@@ -2345,7 +2345,7 @@ class DataApi {
         segmentId,
         {
           anchorPosition: globalPositionsMag1[0],
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),

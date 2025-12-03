@@ -151,18 +151,8 @@ export function* setupSavingForTracingType(
       }
     }
 
-    ColoredLogger.logBlue("potentially diffing");
-
     // The allowUpdate setting could have changed in the meantime.
     const allowUpdate = yield* select((state) => {
-      console.log(
-        "state.annotation.isUpdatingCurrentlyAllowed",
-        state.annotation.isUpdatingCurrentlyAllowed,
-      );
-      console.log(
-        "state.annotation.restrictions.allowSave",
-        state.annotation.restrictions.allowSave,
-      );
       return state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave;
     });
     // Ignore changes while rebasing as during this time actions are simply replayed on top of the server's state.
@@ -170,9 +160,6 @@ export function* setupSavingForTracingType(
     const isRebasing = yield* select(
       (state) => state.save.rebaseRelevantServerAnnotationState.isRebasing,
     );
-    ColoredLogger.logBlue("allowUpdate", allowUpdate); // false
-    ColoredLogger.logBlue("isRebasing", isRebasing); // false
-    ColoredLogger.logBlue("ensureAction", ensureAction); // truthy
     if (!allowUpdate || isRebasing) {
       if (ensureAction) {
         yield* call(resolveEnsureDiffedActions);

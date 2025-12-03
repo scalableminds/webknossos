@@ -108,7 +108,7 @@ describe("VolumeTracingSaga", () => {
           ACTIVE_CELL_ID,
           {
             anchorPosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),
@@ -150,7 +150,7 @@ describe("VolumeTracingSaga", () => {
           ACTIVE_CELL_ID,
           {
             anchorPosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),
@@ -205,7 +205,7 @@ describe("VolumeTracingSaga", () => {
           ACTIVE_CELL_ID,
           {
             anchorPosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),
@@ -272,7 +272,7 @@ describe("VolumeTracingSaga", () => {
           ACTIVE_CELL_ID,
           {
             anchorPosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),

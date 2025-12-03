@@ -176,8 +176,8 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly anchorPosition: Vector3 | undefined | null;
-  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
+  readonly anchorPosition?: Vector3 | null;
+  readonly additionalCoordinates?: AdditionalCoordinate[] | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -189,7 +189,7 @@ export const SegmentProperties = ensureExactKeys<Segment>()([
   "id",
   "name",
   "anchorPosition",
-  "someAdditionalCoordinates",
+  "additionalCoordinates",
   "creationTime",
   "color",
   "groupId",

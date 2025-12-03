@@ -175,7 +175,7 @@ export function serverVolumeToClientVolumeTracing(
           anchorPosition: segment.anchorPosition
             ? Utils.point3ToVector3(segment.anchorPosition)
             : undefined,
-          someAdditionalCoordinates: segment.additionalCoordinates,
+          additionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
           isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
         };

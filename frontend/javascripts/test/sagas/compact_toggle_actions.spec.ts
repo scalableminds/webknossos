@@ -39,7 +39,7 @@ const createSegment = (id: number, groupId: number | null, isVisible: boolean): 
   creationTime: 12345678,
   anchorPosition: [0, 0, 0],
   isVisible,
-  someAdditionalCoordinates: [],
+  additionalCoordinates: [],
   groupId,
   metadata: [],
 });

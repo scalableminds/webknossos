@@ -248,18 +248,18 @@ export type LegacyViewCommand = APIDataSourceId & {
 };
 export type TraceOrViewCommand =
   | {
-    readonly datasetId: string;
-    readonly type: typeof ControlModeEnum.VIEW;
-  }
+      readonly datasetId: string;
+      readonly type: typeof ControlModeEnum.VIEW;
+    }
   | {
-    readonly type: typeof ControlModeEnum.TRACE;
-    readonly annotationId: string;
-  }
+      readonly type: typeof ControlModeEnum.TRACE;
+      readonly annotationId: string;
+    }
   | {
-    readonly datasetId: string;
-    readonly type: typeof ControlModeEnum.SANDBOX;
-    readonly tracingType: TracingType;
-  };
+      readonly datasetId: string;
+      readonly type: typeof ControlModeEnum.SANDBOX;
+      readonly tracingType: TracingType;
+    };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;

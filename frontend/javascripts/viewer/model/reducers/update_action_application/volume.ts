@@ -51,12 +51,23 @@ function applySingleAction(
       const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
       return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
     }
-    case "createSegment":
+    case "createSegment": {
+      const { actionTracingId, ...segment } = ua.value;
+      return VolumeTracingReducer(state, updateSegmentAction(segment.id, segment, actionTracingId));
+    }
     case "updateSegment": {
+      const { changedPropertyNames } = ua;
       const { actionTracingId, ...segment } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(segment.id, segment, actionTracingId),
+        updateSegmentAction(
+          segment.id,
+          segment,
+          actionTracingId,
+          Date.now(),
+          false,
+          changedPropertyNames,
+        ),
       );
     }
     case "deleteSegment": {

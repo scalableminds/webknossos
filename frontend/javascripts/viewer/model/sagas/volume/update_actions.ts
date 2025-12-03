@@ -761,7 +761,9 @@ export function updateSegmentVolumeAction(
   metadata: Array<MetadataEntryProto>,
   actionTracingId: string,
   creationTime: number | null | undefined,
-  changedPropertyNames: string[],
+  // This property is only maintained in the front-end. It is used to enable fine granular rebasing.
+  // todop: or should we store it too?
+  changedPropertyNames?: string[],
 ) {
   return {
     name: "updateSegment",

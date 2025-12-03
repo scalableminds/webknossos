@@ -140,13 +140,13 @@ export function* addMissingSegmentsToLoadedMappings(
 // to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
 export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   | {
-    success: false;
-    updatedSaveQueue: undefined;
-  }
+      success: false;
+      updatedSaveQueue: undefined;
+    }
   | {
-    success: true;
-    updatedSaveQueue: SaveQueueEntry[];
-  }
+      success: true;
+      updatedSaveQueue: SaveQueueEntry[];
+    }
 > {
   ColoredLogger.logRed("updateSaveQueueEntriesToStateAfterRebase");
   const saveQueue = yield* select((state) => state.save.queue);
@@ -279,8 +279,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
                   changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]),
                 ),
               },
-              // todop: omit?
-              changedPropertyNames: [],
+              changedPropertyNames,
             };
             return newAction;
           }

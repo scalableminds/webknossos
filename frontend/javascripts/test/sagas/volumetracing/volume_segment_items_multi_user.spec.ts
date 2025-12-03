@@ -18,7 +18,7 @@ import _ from "lodash";
 import type { Vector3 } from "viewer/constants";
 import { ColoredLogger } from "libs/utils";
 
-describe("Proofreading (Multi User)", () => {
+describe("Collaborative editing of segment items", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
     WkDevFlags.liveCollab = true;
@@ -75,6 +75,7 @@ describe("Proofreading (Multi User)", () => {
 
       const updateSegmentProps = { name: "Some Other Name", color: [128, 0, 0] as Vector3 };
 
+      // Create the segment (creation also uses the updateSegmentAction redux action)
       yield put(updateSegmentAction(segmentId, updateSegmentProps, tracingId));
 
       const segmentBeforeSaving =
@@ -164,7 +165,8 @@ describe("Proofreading (Multi User)", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
       yield call(() => api.tracing.save()); // todop: without this shape, the mutex strategy is not switched correctly. can we improve this?
 
-      // Create the segment and save so that it exists in the base version.
+      // Create the segment (creation also uses the updateSegmentAction redux action)
+      // and save so that it exists in the base version.
       const baseSegmentProps = { name: "Some Name", color: [128, 0, 0] as Vector3 };
       yield put(updateSegmentAction(segmentId, baseSegmentProps, tracingId));
       yield call(() => api.tracing.save());
@@ -212,6 +214,109 @@ describe("Proofreading (Multi User)", () => {
         color: updateSegmentProps.color,
         name: injectedSegmentProps.name,
         groupId: injectedSegmentProps.groupId,
+      });
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should handle concurrent two 'create and update segment' update actions", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const segmentId = 1;
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    // On the backend, a segment with the following properties is created.
+    // Note that the anchorPosition, in particular, will survive the rebase.
+    // The local user will create the same segment with another name and a color
+    // (which should then also be present in the final segment).
+    const injectedBaseSegmentProps = {
+      actionTracingId: tracingId,
+      id: segmentId,
+      anchorPosition: [1, 2, 3],
+      name: "Some Name",
+      color: null,
+      groupId: null,
+      creationTime: Date.now(),
+      metadata: [],
+    };
+
+    backendMock.planVersionInjection(4, [
+      {
+        name: "createSegment",
+        _injected: true, // todop: only for debugging purposes. remove again
+        value: injectedBaseSegmentProps,
+      },
+      {
+        name: "updateSegment",
+        _injected: true, // todop: only for debugging purposes. remove again
+        value: { ...injectedBaseSegmentProps, name: "Some Name 2" },
+      },
+    ]);
+    backendMock.planVersionInjection(5, [
+      {
+        name: "updateSegment",
+        _injected: true, // todop: only for debugging purposes. remove again
+        value: { ...injectedBaseSegmentProps, name: "Some Name 3", groupId: 2 },
+      },
+    ]);
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      // Create the segment (creation also uses the updateSegmentAction redux action)
+      const updateSegmentProps1 = { name: "Some Other Name", color: [128, 0, 0] as Vector3 };
+      yield put(updateSegmentAction(segmentId, updateSegmentProps1, tracingId));
+
+      // Update the segment
+      const updateSegmentProps2 = { name: "Some Other Name 1", groupId: 1 };
+      yield put(updateSegmentAction(segmentId, updateSegmentProps2, tracingId));
+
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      console.log("SendRequestWithToken received the following actions:");
+      console.dir(_.flatten(context.receivedDataPerSaveRequest).map((g) => g.actions));
+
+      const updateSegmentSaveAction = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+
+      // for (const batch of context.receivedDataPerSaveRequest.at(-1)!) {
+      //   console.log("batch", batch);
+      //   for (const action of batch.actions) {
+      //     console.log("action", action);
+      //   }
+      // }
+
+      // todop: check that changedPropertyNames is not in updateSegmentSaveAction
+      // todop: reactive
+      // expect(updateSegmentSaveAction).toMatchObject([
+      //   {
+      //     name: "updateSegment",
+      //     value: {
+      //       actionTracingId: tracingId,
+      //       id: segmentId,
+      //       anchorPosition: injectedBaseSegmentProps.anchorPosition,
+      //       color: updateSegmentProps1.color,
+      //       name: updateSegmentProps2.name,
+      //       groupId: updateSegmentProps2.groupId,
+      //     },
+      //   },
+      // ]);
+      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
+
+      expect(finalSegment).toMatchObject({
+        anchorPosition: injectedBaseSegmentProps.anchorPosition,
+        color: updateSegmentProps1.color,
+        name: updateSegmentProps2.name,
+        groupId: updateSegmentProps2.groupId,
       });
     });
 

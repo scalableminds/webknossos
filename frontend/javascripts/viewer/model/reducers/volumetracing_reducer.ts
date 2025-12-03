@@ -63,6 +63,8 @@ function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction
   return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
 }
 
+type Writable<T> = T extends object ? { -readonly [K in keyof T]: Writable<T[K]> } : T;
+
 function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
     console.log("############# handleUpdateSegment in reducer", action);
@@ -72,24 +74,8 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     }
     const oldSegment = segments.getNullable(segmentId);
 
-    let anchorPosition;
-    let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
-    if (segment.anchorPosition) {
-      anchorPosition = Utils.floor3(segment.anchorPosition);
-      someAdditionalCoordinates = segment.someAdditionalCoordinates;
-    } else if (oldSegment != null) {
-      anchorPosition = oldSegment.anchorPosition;
-      someAdditionalCoordinates = oldSegment.someAdditionalCoordinates;
-    } else {
-      // UPDATE_SEGMENT was called for a non-existing segment without providing
-      // a position. This is necessary to define custom colors for segments
-      // which are listed in a JSON mapping. The action will store the segment
-      // without a position.
-    }
-
-    const metadata = sanitizeMetadata(segment.metadata || oldSegment?.metadata || []);
-
-    const newSegment: Segment = {
+    const newSegment: Writable<Segment> = {
+      id: segmentId,
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
       creationTime: action.timestamp,
@@ -97,13 +83,25 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
       color: null,
       isVisible: true,
       groupId: getSelectedIds(state)[0].group,
-      someAdditionalCoordinates: someAdditionalCoordinates,
+      metadata: [],
       ...oldSegment,
-      ...segment,
-      metadata,
-      anchorPosition,
-      id: segmentId,
+      ...Object.fromEntries(
+        Object.entries(segment).filter(
+          ([key, _value]) =>
+            action.changedPropertyNames.length === 0 || action.changedPropertyNames.includes(key),
+        ),
+      ),
     };
+
+    if (newSegment.anchorPosition) {
+      newSegment.anchorPosition = Utils.floor3(newSegment.anchorPosition);
+    } else {
+      // UPDATE_SEGMENT was called for a non-existing segment without providing
+      // a position. This is necessary to define custom colors for segments
+      // which are listed in a JSON mapping. The action will store the segment
+      // without a position.
+    }
+    newSegment.metadata = sanitizeMetadata(newSegment.metadata);
 
     const newSegmentMap = segments.set(segmentId, newSegment);
     console.log("newSegmentMap", newSegmentMap.getNullable(1));

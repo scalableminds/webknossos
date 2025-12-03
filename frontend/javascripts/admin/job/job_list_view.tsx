@@ -14,6 +14,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
+import { Flex } from "antd/lib";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -451,7 +452,26 @@ function JobListView() {
 
   return (
     <div className="container">
-      <div className="pull-right">
+      <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
+        <div>
+          <h3>Jobs</h3>
+          <Typography.Paragraph type="secondary">
+            Some actions such as dataset conversions or export as Tiff files require some time for
+            processing in the background.
+            <a
+              href="https://docs.webknossos.org/webknossos/automation/jobs.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Tooltip title="Read more in the documentation">
+                <InfoCircleOutlined className="icon-margin-left" />
+              </Tooltip>
+            </a>
+            <br />
+            WEBKNOSSOS will notify you via email when a job has finished or reload this page to
+            track progress.
+          </Typography.Paragraph>
+        </div>
         <Search
           style={{
             width: 200,
@@ -459,30 +479,7 @@ function JobListView() {
           onChange={handleSearch}
           value={searchQuery}
         />
-      </div>
-      <h3>Jobs</h3>
-      <Typography.Paragraph type="secondary">
-        Some actions such as dataset conversions or export as Tiff files require some time for
-        processing in the background.
-        <a
-          href="https://docs.webknossos.org/webknossos/automation/jobs.html"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Tooltip title="Read more in the documentation">
-            <InfoCircleOutlined style={{ marginLeft: 10 }} />
-          </Tooltip>
-        </a>
-        <br />
-        WEBKNOSSOS will notify you via email when a job has finished or reload this page to track
-        progress.
-      </Typography.Paragraph>
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
+      </Flex>
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={Utils.filterWithSearchQueryAND(

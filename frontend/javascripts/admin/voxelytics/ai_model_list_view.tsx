@@ -1,15 +1,17 @@
 import {
   EyeOutlined,
   FileTextOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
   SyncOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
 import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
-import { Button, Col, Modal, Row, Select, Space, Table, Typography } from "antd";
+import { Button, Col, Flex, Modal, Row, Select, Space, Table, Tooltip, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
-import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import uniq from "lodash/uniq";
@@ -27,15 +29,26 @@ import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 export default function AiModelListView() {
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
   const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
-  const [aiModels, isLoading] = useGuardedFetch(
-    getAiModels,
-    [],
-    [refreshCounter],
-    "Could not load model list.",
-  );
+
+  const {
+    data: aiModels = [],
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: ["aiModels"],
+    queryFn: async () => {
+      try {
+        return await getAiModels();
+      } catch (err) {
+        Toast.error("Could not load model list.");
+        console.error(err);
+        throw err;
+      }
+    },
+  });
 
   return (
     <div className="container voxelytics-view">
@@ -47,22 +60,41 @@ export default function AiModelListView() {
           model={currentlyEditedModel}
           onClose={() => {
             setCurrentlyEditedModel(null);
-            setRefreshCounter((val) => val + 1);
+            refetch();
           }}
           owningOrganization={activeUser.organization}
         />
       ) : null}
-      <div className="pull-right">
+      <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
+        <div>
+          <h3>AI Models</h3>
+          <Typography.Paragraph type="secondary">
+            This list shows all AI models available in your organization. You can use these models
+            to run AI segmentation jobs on your datasets.
+            <a
+              href="https://docs.webknossos.org/webknossos/automation/ai_segmentation.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Tooltip title="Read more in the documentation">
+                <InfoCircleOutlined className="icon-margin-left" />
+              </Tooltip>
+            </a>
+            <br />
+            Model training functionality is coming soon.
+          </Typography.Paragraph>
+        </div>
         <Space>
-          <Button onClick={() => setIsTrainModalVisible(true)}>
-            <PlusOutlined /> Train new Model
-          </Button>
-          <Button onClick={() => setRefreshCounter((val) => val + 1)}>
-            <SyncOutlined spin={isLoading} /> Refresh
+          {isSuperUser && (
+            <Button onClick={() => setIsTrainModalVisible(true)}>
+              <PlusOutlined /> Train new Model
+            </Button>
+          )}
+          <Button onClick={() => refetch()}>
+            <SyncOutlined spin={isFetching} /> Refresh
           </Button>
         </Space>
-      </div>
-      <h3>AI Models</h3>
+      </Flex>
       <Table
         bordered
         rowKey={(run: AiModel) => `${run.id}`}

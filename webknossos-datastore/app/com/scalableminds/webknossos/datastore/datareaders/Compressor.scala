@@ -312,6 +312,21 @@ class JpegCompressor() extends Compressor {
   }
 }
 
+class CompressoCompressor extends Compressor {
+  override def getId = "compresso"
+
+  override def toString: String = getId
+
+  @throws[IOException]
+  override def compress(input: Array[Byte]): Array[Byte] = ???
+
+  @throws[IOException]
+  override def decompress(input: Array[Byte]): Array[Byte] =
+    // TODO
+    input
+
+}
+
 class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Array[Int], blockSize: Vec3Int)
     extends Compressor {
   override def getId: String = "compressedsegmentation"

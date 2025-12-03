@@ -307,7 +307,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
              SET state = ${JobState.PENDING},
                  manualState = NULL,
                  retriedBySuperUser = true,
-                 lastRetry = ${Instant.now},
+                 lastRetry = ${Instant.now}
              WHERE _id = $id
              AND (
                state IN (${JobState.FAILURE}, ${JobState.CANCELLED})

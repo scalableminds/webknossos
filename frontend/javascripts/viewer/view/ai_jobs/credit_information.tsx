@@ -119,9 +119,9 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   const jobTypeToCreditCostPerGVx: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
       [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVx,
-      [APIJobCommand.INFER_NUCLEI]: features().mitochondriaInferralCostPerGVx,
+      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostPerGVx,
       [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
-      [APIJobCommand.INFER_INSTANCES]: features().mitochondriaInferralCostPerGVx,
+      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostPerGVx,
       [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
       [APIJobCommand.TRAIN_INSTANCE_MODEL]: 0,
       [APIJobCommand.TRAIN_NEURON_MODEL]: 0,

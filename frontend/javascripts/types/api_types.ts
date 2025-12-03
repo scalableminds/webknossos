@@ -759,6 +759,8 @@ export type APIFeatureToggles = {
   readonly voxelyticsEnabled: boolean;
   readonly neuronInferralCostPerGVx: number;
   readonly mitochondriaInferralCostPerGVx: number;
+  readonly nucleiInferralCostPerGVx: number;
+  readonly instancesInferralCostPerGVx: number;
   readonly alignmentCostPerGVx: number;
   readonly costPerCreditInEuro: number;
   readonly costPerCreditInDollar: number;

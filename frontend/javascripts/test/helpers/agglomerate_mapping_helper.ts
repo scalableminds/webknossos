@@ -153,6 +153,12 @@ export class AgglomerateMapping {
     return this.versions[version];
   }
 
+  // Returns a copy of the current adjacency list. It is a deep clone to avoid direct manipulation from outside.
+  // AdjacencyList is currently unversioned.
+  getAdjacencyList(): Map<number, Set<number>> {
+    return _.cloneDeep(this.adjacencyList);
+  }
+
   private resetVersionCounter(initialVersion: number) {
     /*
      * Reset the most recent version to be stored as version `initialVersion`.

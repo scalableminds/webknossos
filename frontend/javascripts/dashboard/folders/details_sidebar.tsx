@@ -6,15 +6,13 @@ import {
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteDatasetOnDisk, getOrganization } from "admin/rest_api";
-import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
-import features from "features";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useState } from "react";
@@ -28,6 +26,7 @@ import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dat
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import MetadataTable from "./metadata_table";
+import Toast from "libs/toast";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -220,11 +219,11 @@ function DatasetsDetails({
   const queryClient = useQueryClient();
   const [progressInPercent, setProgressInPercent] = useState(0);
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
-  const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin);
-  const mayDeleteDatasets = features().allowDeleteDatasets;
+  const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
+  const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
 
   const invalidateQueries = (deletedIds: string[]) => {
-    const uniqueFolderIds = _.uniq(selectedDatasets.map((ds) => ds.folderId));
+    const uniqueFolderIds = _.uniq(deletableDatasets.map((ds) => ds.folderId));
     uniqueFolderIds.forEach((folderId) => {
       queryClient.setQueryData(
         ["datasetsByFolder", folderId],
@@ -266,7 +265,7 @@ function DatasetsDetails({
   });
 
   const deleteDatasets = () => {
-    deleteDatasetsMutation.mutate(selectedDatasets);
+    deleteDatasetsMutation.mutate(deletableDatasets);
   };
 
   const okayButton = (
@@ -301,19 +300,24 @@ function DatasetsDetails({
         <Progress percent={progressInPercent} />
       ) : (
         <>
-          Are you sure you want to delete the following {selectedDatasets.length} datasets?
+          Are you sure you want to delete the following {deletableDatasets.length} datasets?
           <ul>
-            {selectedDatasets.map((dataset) => (
+            {deletableDatasets.map((dataset) => (
               <li key={dataset.id}>{dataset.name}</li>
             ))}
           </ul>
+          {numberOfUndeletableDatasets > 0 && (
+            <div>
+              The remaining {numberOfUndeletableDatasets} selected{" "}
+              {pluralize("dataset", numberOfUndeletableDatasets)} cannot be deleted, e.g. because
+              you do not have sufficient permissions.
+            </div>
+          )}
           {cantBeUndoneMessage}
         </>
       )}
     </Modal>
   );
-
-  const showDeleteDatasetsButton = isUserAdmin && mayDeleteDatasets && selectedDatasets.length > 0;
 
   return (
     <div style={{ textAlign: "center" }}>
@@ -322,9 +326,9 @@ function DatasetsDetails({
           Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
           with drag and drop.
         </div>
-        {showDeleteDatasetsButton && (
+        {deletableDatasets.length > 0 && (
           <Button onClick={() => setShowConfirmDeleteModal(true)} icon={<DeleteOutlined />}>
-            Delete {selectedDatasets.length} datasets
+            Delete {deletableDatasets.length} datasets
           </Button>
         )}
       </Space>
@@ -373,9 +377,9 @@ function FolderDetails({
     message =
       datasetCount > 0
         ? `Double-click the folder to list ${pluralize("this", datasetCount, "these")} ${pluralize(
-            "dataset",
-            datasetCount,
-          )}.`
+          "dataset",
+          datasetCount,
+        )}.`
         : "";
   }
   return (

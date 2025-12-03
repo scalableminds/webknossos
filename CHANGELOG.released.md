@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)
 
 ### Highlights
-- Generalized the old "Segment Picker" tool to be a "Voxel Pipette" tool which can show the data values for all visible layers in a tooltip. When old behavior for activating a segment id can still be achieved by pressing shift. [#8989](https://github.com/scalableminds/webknossos/pull/8989)
+- Generalized the old "Segment Picker" tool to be a "Voxel Pipette" tool which can show the data values for all visible layers in a tooltip. The old behavior for activating a segment id can still be achieved by pressing shift. [#8989](https://github.com/scalableminds/webknossos/pull/8989)
 
 ### Added
 - Added first step of enabling possibility to do live proofreading update with multiple users in shared editable annotations. However, this is disabled until feature is complete. [#8723](https://github.com/scalableminds/webknossos/pull/8723)

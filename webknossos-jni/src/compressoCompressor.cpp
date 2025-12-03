@@ -29,7 +29,7 @@ size_t readOutputLengthFromHeader(unsigned char* inputBytesCharArray) {
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_compresso_NativeCompressoCompressor_decompress
     (JNIEnv *env, jobject instance, jbyteArray inputJavaArray) {
 
-    const jsize inputLengthBytes = env->GetArrayLength(inputJavaArray);
+    const size_t inputLengthBytes = static_cast<size_t>(env->GetArrayLength(inputJavaArray));
     jbyte *inputBytes = env->GetByteArrayElements(inputJavaArray, nullptr);
 
     unsigned char* inputBytesCharArray = reinterpret_cast<unsigned char*>(inputBytes);
@@ -37,6 +37,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_compres
     size_t outputLength = readOutputLengthFromHeader(inputBytesCharArray);
 
     std::cout << "outputLength: " << std::to_string(outputLength) << std::endl;
+
+    size_t input_checksum = 0;
+    for (size_t i = 0; i < inputLengthBytes; ++i) {
+        input_checksum += inputBytesCharArray[i];
+    }
+    std::cout << "inputChecksum: " << std::to_string(input_checksum) << std::endl;
 
     unsigned char* outputBuffer = static_cast<unsigned char*>(malloc(outputLength));
 
@@ -52,12 +58,20 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_compres
         return nullptr;
     }
 
+
+    size_t output_checksum = 0;
+    for (size_t i = 0; i < outputLength; ++i) {
+        output_checksum += outputBuffer[i];
+    }
+    std::cout << "outputChecksum: " << std::to_string(output_checksum) << std::endl;
+
     jbyteArray target = env->NewByteArray(outputLength);
     jbyte *targetElements = env->GetByteArrayElements(target, nullptr);
 
     for (size_t i = 0; i < outputLength; ++i) {
         targetElements[i] = static_cast<jbyte>(outputBuffer[i]);
     }
+    free(outputBuffer);
     env->ReleaseByteArrayElements(target, targetElements, JNI_COMMIT);
 
     env->ReleaseByteArrayElements(inputJavaArray, inputBytes, 0);

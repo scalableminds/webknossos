@@ -6,13 +6,14 @@ import {
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteDatasetOnDisk, getOrganization } from "admin/rest_api";
+import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useState } from "react";
@@ -26,7 +27,6 @@ import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dat
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import MetadataTable from "./metadata_table";
-import Toast from "libs/toast";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -289,6 +289,8 @@ function DatasetsDetails({
     </Typography.Text>
   );
 
+  const deletableDatasetString = `${deletableDatasets.length} ${pluralize("dataset", deletableDatasets.length)}`;
+
   const confirmModal = (
     <Modal
       open={showConfirmDeleteModal}
@@ -300,7 +302,7 @@ function DatasetsDetails({
         <Progress percent={progressInPercent} />
       ) : (
         <>
-          Are you sure you want to delete the following {deletableDatasets.length} datasets?
+          Are you sure you want to delete the following {deletableDatasetString}?
           <ul>
             {deletableDatasets.map((dataset) => (
               <li key={dataset.id}>{dataset.name}</li>
@@ -328,7 +330,7 @@ function DatasetsDetails({
         </div>
         {deletableDatasets.length > 0 && (
           <Button onClick={() => setShowConfirmDeleteModal(true)} icon={<DeleteOutlined />}>
-            Delete {deletableDatasets.length} datasets
+            Delete {deletableDatasetString}
           </Button>
         )}
       </Space>
@@ -377,9 +379,9 @@ function FolderDetails({
     message =
       datasetCount > 0
         ? `Double-click the folder to list ${pluralize("this", datasetCount, "these")} ${pluralize(
-          "dataset",
-          datasetCount,
-        )}.`
+            "dataset",
+            datasetCount,
+          )}.`
         : "";
   }
   return (

@@ -127,7 +127,7 @@ template <typename OUT = uint32_t>
 OUT* relabel(
     OUT* out_labels, const int64_t voxels,
     const int64_t num_labels, DisjointSet<uint32_t> &equivalences,
-    size_t &N, OUT start_label = 1
+    size_t &N, OUT start_label
   ) {
 
   OUT label;
@@ -161,10 +161,8 @@ template <typename OUT = uint32_t>
 OUT* connected_components2d_4(
     bool* in_labels,
     const int64_t sx, const int64_t sy, const int64_t sz,
-    size_t max_labels,
-    size_t &N,
-    OUT *out_labels = NULL,
-    OUT start_label = 1
+    size_t max_labels, OUT *out_labels,
+    size_t &N, OUT start_label
   ) {
 
   const int64_t sxy = sx * sy;
@@ -237,8 +235,7 @@ OUT* connected_components3d_6(
     bool* in_labels,
     const int64_t sx, const int64_t sy, const int64_t sz,
     size_t max_labels,
-    size_t &N,
-    OUT *out_labels = NULL
+    OUT *out_labels, size_t &N
   ) {
 
   const int64_t sxy = sx * sy;
@@ -360,10 +357,8 @@ std::unique_ptr<OUT[]> connected_components(
       size_t tmp_N = 0;
       connected_components2d_4<OUT>(
         (in_labels + sxy * z), sx, sy, 1,
-        max_labels,
-        tmp_N,
-        (out_labels.get() + sxy * z),
-        N + 1
+        max_labels, (out_labels.get() + sxy * z),
+        tmp_N, N + 1
       );
       N += tmp_N;
     }
@@ -372,7 +367,7 @@ std::unique_ptr<OUT[]> connected_components(
     max_labels =  static_cast<size_t>(((sx + 1) * (sy + 1) * (sz + 1)) / 2);
     connected_components3d_6<OUT>(
       in_labels, sx, sy, sz,
-      max_labels, N, out_labels.get()
+      max_labels, out_labels.get(), N
     );
   }
   // removing these lines drops several kB from the WASM

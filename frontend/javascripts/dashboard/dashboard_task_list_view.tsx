@@ -567,7 +567,7 @@ function TopBar({
   const renderingTab = React.useContext(RenderingTabContext);
 
   const content = (
-    <div className="pull-right">
+    <Space>
       <AsyncButton
         type="primary"
         icon={<UserAddOutlined />}
@@ -576,15 +576,8 @@ function TopBar({
       >
         Get a New Task
       </AsyncButton>
-      <Button
-        onClick={toggleShowFinished}
-        style={{
-          marginLeft: 20,
-        }}
-      >
-        Show {getFinishVerb()} Tasks Only
-      </Button>
-    </div>
+      <Button onClick={toggleShowFinished}>Show {getFinishVerb()} Tasks Only</Button>
+    </Space>
   );
 
   return (

@@ -831,14 +831,10 @@ function TopBar({
   const activeTab = React.useContext(ActiveTabContext);
   const renderingTab = React.useContext(RenderingTabContext);
 
-  const marginRight = {
-    marginRight: 8,
-  };
   const search = (
     <Search
       style={{
         width: 200,
-        float: "right",
       }}
       onSearch={handleOnSearch}
       onChange={handleSearchChanged}
@@ -849,24 +845,19 @@ function TopBar({
   const content = isAdminView ? (
     search
   ) : (
-    <div className="pull-right">
+    <Space>
       <Button
         icon={<UploadOutlined />}
-        style={marginRight}
         onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
       >
         Upload Annotation(s)
       </Button>
-      <Button onClick={toggleShowArchived} style={marginRight}>
+      <Button onClick={toggleShowArchived}>
         Show {shouldShowArchivedAnnotations ? "Open" : "Archived"} Annotations
       </Button>
-      {!shouldShowArchivedAnnotations ? (
-        <Button onClick={archiveAll} style={marginRight}>
-          Archive All
-        </Button>
-      ) : null}
+      {!shouldShowArchivedAnnotations ? <Button onClick={archiveAll}>Archive All</Button> : null}
       {search}
-    </div>
+    </Space>
   );
 
   return (

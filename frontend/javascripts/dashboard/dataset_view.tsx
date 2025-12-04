@@ -238,12 +238,7 @@ function DatasetView({
   );
 
   const adminHeader = (
-    <div
-      className="pull-right"
-      style={{
-        display: "flex",
-      }}
-    >
+    <Space>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <Fragment>
           <DatasetRefreshButton context={context} />
@@ -251,7 +246,6 @@ function DatasetView({
           {context.activeFolderId != null && (
             <PricingEnforcedButton
               disabled={folder != null && !folder.isEditable}
-              style={{ marginRight: 5 }}
               icon={<PlusOutlined />}
               onClick={() =>
                 context.activeFolderId != null &&
@@ -267,7 +261,7 @@ function DatasetView({
       ) : (
         search
       )}
-    </div>
+    </Space>
   );
 
   const datasets = context.datasets;
@@ -319,7 +313,7 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
     <FastTooltip
       title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
     >
-      <Space.Compact style={{ marginRight: 5 }}>
+      <Space.Compact>
         <Button onClick={() => context.fetchDatasets()} disabled={context.isChecking}>
           {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
         </Button>
@@ -345,7 +339,6 @@ export function DatasetAddButton({ context }: { context: DatasetCollectionContex
           ? `/datasets/upload?to=${context.activeFolderId}`
           : "/datasets/upload"
       }
-      style={{ marginRight: 5 }}
     >
       <Button type="primary" icon={<PlusOutlined />}>
         Add Dataset

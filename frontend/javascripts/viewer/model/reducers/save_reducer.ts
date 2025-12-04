@@ -152,10 +152,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
 
     case "REPLACE_SAVE_QUEUE": {
       // Only used during rebasing to update save queue entries in case their data was outdated and needed syncing with the newest backend version.
-      if (state.save.queue.length !== action.newSaveQueue.length) {
-        // This should never occur but is a save guard to not miss an update. Better crash instead of sending incomplete updates.
-        throw new Error("Tried to replace save queue with incomplete entries!");
-      }
       return update(state, {
         save: {
           queue: {

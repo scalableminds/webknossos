@@ -333,7 +333,7 @@ export const getBrushOverlay: ShaderModule = {
 
       // Compute the anisotropy of the dataset so that the brush looks the same in
       // each viewport
-      float baseVoxelSize = 1..; // min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      float baseVoxelSize = 1.; // min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
       vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
       float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);

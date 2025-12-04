@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
+import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
@@ -62,7 +63,8 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
                                 zarrMeshFileService: ZarrMeshFileService,
                                 neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
                                 config: DataStoreConfig)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
   private val meshFileKeyCache
     : AlfuCache[(DataSourceId, String, String), MeshFileKey] = AlfuCache() // dataSourceId, layerName, meshFileName → MeshFileKey
@@ -85,7 +87,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       MeshFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment.copy(path = attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
+        attachment.copy(path = resolvedPath)
       )
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,
@@ -106,7 +108,13 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
           } yield MeshFileInfo(meshFileName, mappingName, formatVersion)
         }
         // Only return successes, we don’t want a malformed file breaking the list request.
-        .map(_.flatten))
+        .map { boxes: Seq[Box[MeshFileInfo]] =>
+          boxes.filter(_.isEmpty).foreach { emptyBox =>
+            logger.warn(s"Failed to list a mesh file for $dataSourceId: $emptyBox")
+          }
+          boxes.flatten
+        }
+    )
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None

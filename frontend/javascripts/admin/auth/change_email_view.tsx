@@ -153,7 +153,7 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
       </FormItem>
       <Alert
         type="info"
-        message="You will be logged out after successfully changing your email address."
+        title="You will be logged out after successfully changing your email address."
         showIcon
         style={{
           marginBottom: 24,

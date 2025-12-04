@@ -236,7 +236,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         Finished
       </div>
     ) : (
-      <Space direction="vertical" size={1}>
+      <Space orientation="vertical" size={1}>
         <Link to={`/annotations/${annotation.id}`}>{label}</Link>
         {isAdmin || this.props.isAdminView ? (
           <LinkButton onClick={() => this.openTransferModal(annotation.id)} icon={<TeamOutlined />}>
@@ -370,7 +370,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       <Row gutter={32} justify="center">
         <Col span="7">
           <Card
-            bordered={false}
+            variant="borderless"
             cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
             style={{ maxWidth: 460 }}
           >
@@ -567,7 +567,7 @@ function TopBar({
   const renderingTab = React.useContext(RenderingTabContext);
 
   const content = (
-    <div className="pull-right">
+    <Space>
       <AsyncButton
         type="primary"
         icon={<UserAddOutlined />}
@@ -576,15 +576,8 @@ function TopBar({
       >
         Get a New Task
       </AsyncButton>
-      <Button
-        onClick={toggleShowFinished}
-        style={{
-          marginLeft: 20,
-        }}
-      >
-        Show {getFinishVerb()} Tasks Only
-      </Button>
-    </div>
+      <Button onClick={toggleShowFinished}>Show {getFinishVerb()} Tasks Only</Button>
+    </Space>
   );
 
   return (

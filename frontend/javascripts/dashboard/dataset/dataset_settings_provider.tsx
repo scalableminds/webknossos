@@ -318,7 +318,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   }, [form, submitForm, handleValidationFailed]);
 
   const onValuesChange = useCallback(
-    (_changedValues: DatasetSettingsFormData, _allValues: DatasetSettingsFormData) => {
+    (_changedValues: Partial<DatasetSettingsFormData>, _allValues: DatasetSettingsFormData) => {
       setHasUnsavedChanges(true);
     },
     [],

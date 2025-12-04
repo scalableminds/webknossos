@@ -265,7 +265,6 @@ function EditModelSharedOrganizationsModal({
       open
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
-      onClose={onClose}
       maskClosable={false}
       width={800}
     >

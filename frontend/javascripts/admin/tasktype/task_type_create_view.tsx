@@ -223,9 +223,8 @@ function TaskTypeCreateView() {
           >
             <Select
               allowClear
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Select a Team"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}
@@ -310,13 +309,13 @@ function TaskTypeCreateView() {
           <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
             <Select
               allowClear
-              optionFilterProp="label"
+              showSearch={{ optionFilterProp: "label" }}
               style={{
                 width: "100%",
               }}
               options={[
                 {
-                  value: null,
+                  value: "",
                   label: "Any",
                 },
                 {

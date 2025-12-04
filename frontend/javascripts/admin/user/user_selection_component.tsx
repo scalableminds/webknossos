@@ -42,18 +42,18 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
     </div>
   ) : (
     <Select
-      showSearch
+      showSearch={{
+        optionFilterProp: "label",
+        filterOption: (input, option) =>
+          // @ts-expect-error ts-migrate (2532) FIXME: Object is possibly 'undefined'.
+          option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0,
+      }}
       placeholder="Select a New User"
       value={currentUserIdValue}
       onChange={handleSelectChange}
-      optionFilterProp="label"
       style={{
         width: "100%",
       }}
-      filterOption={(input, option) =>
-        // @ts-expect-error ts-migrate (2532) FIXME: Object is possibly 'undefined'.
-        option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
-      }
       options={users.map((user) => ({
         value: user.id,
         label: `${user.lastName}, ${user.firstName} (${user.email})`,

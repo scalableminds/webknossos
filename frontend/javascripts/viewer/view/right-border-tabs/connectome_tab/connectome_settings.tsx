@@ -143,7 +143,7 @@ class ConnectomeFilters extends React.Component<Props> {
                     </Option>
                   ))
                 ) : (
-                  <Option value={null} disabled>
+                  <Option value="" disabled>
                     No files available
                   </Option>
                 )}

@@ -61,7 +61,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const iframeWarning = getIsInIframe() ? (
     <Alert
       type="warning"
-      message={
+      title={
         <span>
           Authentication within an iFrame probably does not work due to third-party cookies being
           forbidden in most browsers. Please

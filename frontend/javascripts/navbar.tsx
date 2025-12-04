@@ -36,6 +36,7 @@ import {
   switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
+import type { MenuProps } from "antd";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -46,7 +47,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -313,7 +313,7 @@ function getHelpSubMenu(
   isAuthenticated: boolean,
   isAdminOrManager: boolean,
   collapse: boolean,
-  openHelpModal: MenuClickEventHandler,
+  openHelpModal: MenuProps["onClick"],
 ) {
   const polledVersionString =
     polledVersion != null && polledVersion !== version

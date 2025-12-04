@@ -118,7 +118,7 @@ function DatasetFolderViewInner(props: Props) {
     const uploadPlaceholderCard = (
       <Col span={7}>
         <Card
-          bordered={false}
+          variant="borderless"
           cover={
             <div style={{ display: "flex", justifyContent: "center" }}>
               <i className="drawing drawing-empty-list-dataset-upload" />

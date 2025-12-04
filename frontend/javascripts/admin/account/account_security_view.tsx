@@ -134,7 +134,7 @@ function AccountSecurityView() {
         </FormItem>
         <Alert
           type="info"
-          message={messages["auth.reset_logout"]}
+          title={messages["auth.reset_logout"]}
           showIcon
           style={{
             marginBottom: 24,

@@ -35,14 +35,14 @@ export function AlignSectionsForm() {
       jobApiCall={jobApiCall}
       jobCreditCostPerGVx={alignmentCostPerGVx}
       description={
-        <Space direction="vertical" size="middle">
+        <Space orientation="vertical" size="middle">
           <Row>
             This job will automatically align all the sections of the dataset. If you want to align
             a dataset with multiple tiles per section, please contact us.
           </Row>
           <Row style={{ display: "grid", marginBottom: 16 }}>
             <Alert
-              message="Please note that this feature is still experimental. Contact us if you have any problems or need alignment errors to be fixed."
+              title="Please note that this feature is still experimental. Contact us if you have any problems or need alignment errors to be fixed."
               type="warning"
               showIcon
             />

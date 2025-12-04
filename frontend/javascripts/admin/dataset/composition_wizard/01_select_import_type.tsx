@@ -27,7 +27,7 @@ export default function SelectImportType({
         different ways to accomplish this:
         <div style={{ margin: 12 }}>
           <Radio.Group onChange={onChange} value={composeMode}>
-            <Space direction="vertical">
+            <Space orientation="vertical">
               <Radio value={"WITHOUT_TRANSFORMS"}>Combine datasets without any transforms</Radio>
               <Radio value={"WK_ANNOTATIONS"}>
                 Combine datasets by using skeleton annotations (NML)

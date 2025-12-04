@@ -12,8 +12,8 @@ export function AlignmentTab() {
       <div className="centered-items">
         <Space align="center">
           <Radio.Button className="aIJobSelection" checked={true}>
-            <Card bordered={false}>
-              <Space direction="vertical" size="small">
+            <Card variant="borderless">
+              <Space orientation="vertical" size="small">
                 <Row className="ai-job-title">Align Sections</Row>
                 <Row>
                   <img

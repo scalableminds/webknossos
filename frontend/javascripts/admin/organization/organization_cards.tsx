@@ -153,7 +153,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
     <Alert
       showIcon
       type="error"
-      message={message}
+      title={message}
       action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
       style={{ marginBottom: 20 }}
     />
@@ -181,7 +181,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
       <Alert
         showIcon
         type="warning"
-        message="Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
+        title="Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
         action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
         style={{ marginBottom: 20 }}
       />

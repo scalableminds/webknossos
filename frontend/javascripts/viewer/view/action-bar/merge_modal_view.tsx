@@ -204,7 +204,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
             style={{
               marginBottom: 12,
             }}
-            message="If you would like to import NML files, please drag and drop them into the annotation view."
+            title="If you would like to import NML files, please drag and drop them into the annotation view."
           />
 
           <Form

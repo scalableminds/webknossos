@@ -2310,6 +2310,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rwh/keystrokes@npm:^1.5.6":
+  version: 1.5.6
+  resolution: "@rwh/keystrokes@npm:1.5.6"
+  checksum: 10c0/2ed1a9a8210a20701414df9e962ff809cc2f363b5026744dbe4884a0530c123abbd74230486a33f4bd742805534262eb67e79a9c279ed4603839d0ab843679eb
+  languageName: node
+  linkType: hard
+
+"@rwh/react-keystrokes@npm:^1.5.6":
+  version: 1.5.6
+  resolution: "@rwh/react-keystrokes@npm:1.5.6"
+  peerDependencies:
+    "@rwh/keystrokes": 1.5.6
+    react: ">=17"
+  checksum: 10c0/4bd5c2acc3b40e7b747d7738f93a193150b79786d2b6ada0b12467192f0dba884feb8856c4966fc82f131db7b15b07e2d1639c875add393eb93aa574ab5a1f9c
+  languageName: node
+  linkType: hard
+
 "@scalableminds/prop-types@npm:^15.8.1":
   version: 15.8.1
   resolution: "@scalableminds/prop-types@npm:15.8.1"
@@ -14786,6 +14803,8 @@ __metadata:
     "@github/webauthn-json": "npm:^2.1.1"
     "@redux-saga/testing-utils": "npm:^1.1.5"
     "@rehooks/document-title": "npm:^1.0.2"
+    "@rwh/keystrokes": "npm:^1.5.6"
+    "@rwh/react-keystrokes": "npm:^1.5.6"
     "@scalableminds/prop-types": "npm:^15.8.1"
     "@shaderfrog/glsl-parser": "npm:^0.3.0"
     "@tanstack/query-async-storage-persister": "npm:^5.83.0"

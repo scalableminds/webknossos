@@ -21,20 +21,21 @@ import constants from "viewer/constants";
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
-type KeyboardKey = string;
+export type KeyboardKeyOrCombo = string;
 type MouseButton = string;
-type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
+export type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
-type KeyboardLoopHandler = {
+export type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
   delayed?: boolean;
   lastTime?: number | null | undefined;
   customAdditionalDelayFn?: () => number;
 };
-type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
-type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
-type KeyBindingMap = Record<KeyboardKey, KeyboardHandler>;
-type KeyBindingLoopMap = Record<KeyboardKey, KeyboardLoopHandler>;
+type KeyboardBindingPress = [KeyboardKeyOrCombo, KeyboardHandler, KeyboardHandler];
+type KeyboardBindingDownUp = [KeyboardKeyOrCombo, KeyboardHandler, KeyboardHandler];
+export type KeyBindingMap = Record<KeyboardKeyOrCombo, KeyboardHandler>;
+export type KeyBindingLoopMap = Record<KeyboardKeyOrCombo, KeyboardLoopHandler>;
+
 export type MouseBindingMap = Record<MouseButton, MouseHandler>;
 type MouseButtonWhich = 1 | 2 | 3;
 type MouseButtonString = "left" | "middle" | "right";
@@ -51,7 +52,7 @@ type HammerJsEvent = {
 
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
-function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
+function shouldIgnore(event: KeyboardEvent, key: KeyboardKeyOrCombo) {
   const bindingHasCtrl = key.toLowerCase().indexOf("ctrl") !== -1;
   const bindingHasShift = key.toLowerCase().indexOf("shift") !== -1;
   const bindingHasSuper = key.toLowerCase().indexOf("super") !== -1;
@@ -144,7 +145,7 @@ export class InputKeyboardNoLoop {
   }
 
   attach(
-    key: KeyboardKey,
+    key: KeyboardKeyOrCombo,
     keyDownCallback: KeyboardHandler,
     keyUpCallback: KeyboardHandler = _.noop,
     isExtendedCommand: boolean = false,
@@ -233,7 +234,7 @@ export class InputKeyboard {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardLoopHandler) {
+  attach(key: KeyboardKeyOrCombo, callback: KeyboardLoopHandler) {
     let delayTimeoutId: ReturnType<typeof setTimeout> | null = null;
     const binding: KeyboardBindingDownUp = [
       key,

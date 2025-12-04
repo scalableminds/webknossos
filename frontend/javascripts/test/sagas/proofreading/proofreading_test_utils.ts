@@ -32,6 +32,7 @@ import {
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { delay } from "typed-redux-saga";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -368,4 +369,12 @@ export function* makeMappingEditableHelper(): Saga<void> {
   yield put(setBusyBlockingInfoAction(true, "Blocking in test for making mapping editable"));
   yield call(createEditableMapping);
   yield put(setBusyBlockingInfoAction(false));
+  // Delay is needed to avoid the auto mapping data reloading of mapping saga to interfere with tests.
+  // Some tests check whether the missing agglomerate ids not present in the partial mapping in the frontend
+  // are actually loaded during rebasing. Such a scenario might happen when doing proofreading via meshes.
+  // But without the delay the mapping saga will directly replace the mapping (including the new mapping info form the rebasing)
+  // directly after the rebasing with a version where the additionally loaded segments are not present as they are "off screen".
+  // The delay gives the mapping saga time to do the update now instead of the tests directly starting the proofreading interaction and thus rebasing.
+  // This would delay the reloading of the partial mapping of the mapping saga, thus we wait here shortly manually.
+  yield delay(10);
 }

@@ -148,10 +148,9 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
         <Col span={12}>
           <FormItem name="taskTypeId" {...formItemLayout} label="Task Type">
             <Select
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               allowClear
               placeholder="Select a Task Type"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}
@@ -169,9 +168,8 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
           <FormItem name="projectId" {...formItemLayout} label="Project">
             <Select
               allowClear
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Select a Project"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}
@@ -187,9 +185,8 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
           <FormItem name="userId" {...formItemLayout} label="User">
             <Select
               allowClear
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Select a User"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}

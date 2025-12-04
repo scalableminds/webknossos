@@ -133,9 +133,8 @@ export function DatastoreFormItem({
       initialValue={datastores.length ? datastores[0].url : null}
     >
       <Select
-        showSearch
+        showSearch={{ optionFilterProp: "label" }}
         placeholder="Select a Datastore"
-        optionFilterProp="label"
         disabled={disabled}
         style={{
           width: "100%",

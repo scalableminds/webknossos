@@ -21,7 +21,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Space, Spin, Table, Tag, Tooltip } from "antd";
+import { Button, Card, Col, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";

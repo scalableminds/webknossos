@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(145);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(146);
 COMMIT TRANSACTION;
 
 
@@ -951,6 +951,8 @@ ALTER TABLE webknossos.organization_usedStorage_mags
   ADD CONSTRAINT mags_ref FOREIGN KEY (_dataset, layerName, mag) REFERENCES webknossos.dataset_mags(_dataset, dataLayerName, mag) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_plan_updates
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_additionalAxes

@@ -66,5 +66,5 @@ To share a dataset publicly, follow these steps:
 It is recommended to add a description before sharing a dataset publicly.
 ///
 
-!!!info
+!!! info 
     We recommend giving your datasets a meaningful name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.

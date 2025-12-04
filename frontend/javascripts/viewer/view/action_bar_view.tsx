@@ -1,6 +1,7 @@
+import { ExperimentOutlined } from "@ant-design/icons";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { createExplorational } from "admin/rest_api";
-import { Alert, Modal, Popover, Space } from "antd";
+import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import { useWkSelector } from "libs/react_hooks";
@@ -23,7 +24,7 @@ import {
   is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
@@ -42,10 +43,8 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import type { StartAIJobModalState } from "./action-bar/ai_job_modals/constants";
-import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
+// import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
-import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
@@ -64,7 +63,6 @@ type StateProps = {
   showVersionRestore: boolean;
   is2d: boolean;
   viewMode: ViewMode;
-  aiJobModalState: StartAIJobModalState;
 };
 type OwnProps = {
   layoutProps: LayoutProps;
@@ -219,9 +217,6 @@ function CreateAnnotationButton() {
       <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="You have to register or login to create an annotation."
-        style={{
-          marginLeft: 12,
-        }}
         type="primary"
         onClick={onClick}
       >
@@ -300,17 +295,43 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
+    const isSuperUser = this.props.activeUser?.isSuperUser === true;
+    const menuItems = [
+      {
+        key: "open_ai_inference_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
+        label: "Run AI model",
+      },
+      ...(isSuperUser
+        ? [
+            {
+              key: "open_ai_training_button",
+              onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
+              label: "Train new AI model",
+            },
+          ]
+        : []),
+      {
+        key: "open_ai_alignment_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment")),
+        label: "Run AI Alignment",
+      },
+    ];
+
     return (
-      <ButtonComponent
-        key="ai-job-button"
-        onClick={() => Store.dispatch(setAIJobModalStateAction(APIJobCommand.INFER_NEURONS))}
-        style={{ marginLeft: 12, pointerEvents: "auto" }}
-        disabled={disabled}
-        title={tooltipText}
-        icon={<i className="fas fa-magic" />}
-      >
-        AI Analysis
-      </ButtonComponent>
+      <div>
+        <Dropdown
+          key="ai-job-dropdown"
+          menu={{
+            items: menuItems,
+          }}
+          disabled={disabled}
+        >
+          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
+            AI Analysis
+          </Button>
+        </Dropdown>
+      </div>
     );
   }
 
@@ -387,7 +408,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
       </React.Fragment>
     );
   }
@@ -400,7 +420,6 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   showVersionRestore: state.uiInformation.showVersionRestore,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
-  aiJobModalState: state.uiInformation.aIJobModalState,
 });
 
 const connector = connect(mapStateToProps);

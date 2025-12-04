@@ -381,7 +381,7 @@ describe("Proofreading (with mesh actions)", () => {
           },
         },
       ]);
-      yield delay(400);
+
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,

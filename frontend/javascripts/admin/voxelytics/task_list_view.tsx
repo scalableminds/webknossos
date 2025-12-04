@@ -687,7 +687,17 @@ export default function TaskListView({
                       : addUrlParam(location, "runId", value),
                   )
                 }
-                style={{ maxWidth: "130px" }}
+                popupMatchSelectWidth={false}
+                styles={{
+                  root: {
+                    maxWidth: 200,
+                  },
+                  popup: {
+                    root: {
+                      maxWidth: "90vw",
+                    },
+                  },
+                }}
               >
                 <Select.Option value="">Consolidated</Select.Option>
                 {report.runs.map((run) => (

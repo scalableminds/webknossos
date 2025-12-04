@@ -84,7 +84,7 @@ class UserService @Inject()(conf: WkConf,
     assertIsSuperUser(user._multiUser)
 
   def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    Fox.assertTrue(multiUserDAO.findOne(multiUserId).map(_.isSuperUser))
+    Fox.assertTrue(multiUserDAO.findOne(multiUserId).map(_.isSuperUser)) ?~> "user.superUserOnly"
 
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))

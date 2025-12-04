@@ -45,6 +45,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_compres
     int errorCode = compresso::decompress<void,void>(inputBytes, inputLength, outputBytes);
 
     if (errorCode != 0) {
+        free(outputBytes);
         env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
         throwRuntimeException(env, "Error while decoding with compresso: " + std::to_string(errorCode));
         return nullptr;

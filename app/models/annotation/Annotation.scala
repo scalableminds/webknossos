@@ -16,6 +16,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.tracingstore.CachedAnnotationLayerProperties
 import slick.dbio.DBIO
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
@@ -175,6 +176,18 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       _ <- run(DBIO.sequence(insertQueries ++ updateQueries).transactionally)
     } yield ()
   }
+
+  def updateCachedProperties(annotationId: ObjectId,
+                             tracingId: String,
+                             cachedProperties: CachedAnnotationLayerProperties): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.annotation_layers
+                   SET hasEditableMapping = ${cachedProperties.hasEditableMapping},
+                       fallbackLayerName = ${cachedProperties.fallbackLayerName},
+                       mappingName = ${cachedProperties.mappingName}
+                   WHERE _annotation = $annotationId AND tracingId = $tracingId
+         """.asUpdate)
+    } yield ()
 
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
     q"DELETE FROM webknossos.annotation_layers WHERE _annotation = $annotationId".asUpdate

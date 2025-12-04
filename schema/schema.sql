@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(145);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(146);
 COMMIT TRANSACTION;
 
 
@@ -59,6 +59,9 @@ CREATE TABLE webknossos.annotation_layers(
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
   name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.\$]+$'),
   statistics JSONB NOT NULL,
+  hasEditableMapping BOOLEAN DEFAULT NULL, -- only applies to volume layers
+  fallbackLayerName TEXT DEFAULT NULL, -- only applies to volume layers
+  mappingName TEXT DEFAULT NULL, -- only applies to volume layers
   UNIQUE (name, _annotation) DEFERRABLE INITIALLY DEFERRED,
   PRIMARY KEY (_annotation, tracingId),
   CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')

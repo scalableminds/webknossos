@@ -444,10 +444,6 @@ export function formatDurationToSeconds(durationInMillisecons: number) {
   return duration.format("s");
 }
 
-export function formatHash(id: string): string {
-  return id.slice(-6);
-}
-
 export function formatDateMedium(date: Date | number): string {
   return dayjs(date).format("lll");
 }

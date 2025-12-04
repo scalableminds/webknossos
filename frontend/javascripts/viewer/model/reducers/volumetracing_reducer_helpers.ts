@@ -128,7 +128,7 @@ export function updateDirectionReducer(
       .slice(0, MAXIMUM_LABEL_ACTIONS_COUNT),
   });
 }
-export function addToLayerReducer(
+export function addToContourListReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
   position: Vector3,

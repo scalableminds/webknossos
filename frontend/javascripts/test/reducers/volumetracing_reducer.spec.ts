@@ -250,7 +250,7 @@ describe("VolumeTracing", () => {
       [1, 2, 3],
       [9, 3, 2],
     ] as Vector3[];
-    const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
+    const addToContourListActionFn = VolumeTracingActions.addToContourListAction;
     const alteredState = update(initialState, {
       annotation: {
         isUpdatingCurrentlyAllowed: {
@@ -260,9 +260,9 @@ describe("VolumeTracing", () => {
     });
 
     // Try to add positions to the contourList
-    let newState = VolumeTracingReducer(alteredState, addToLayerActionFn(contourList[0]));
-    newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[1]));
-    newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[2]));
+    let newState = VolumeTracingReducer(alteredState, addToContourListActionFn(contourList[0]));
+    newState = VolumeTracingReducer(newState, addToContourListActionFn(contourList[1]));
+    newState = VolumeTracingReducer(newState, addToContourListActionFn(contourList[2]));
     expect(newState).toBe(alteredState);
   });
 
@@ -272,13 +272,13 @@ describe("VolumeTracing", () => {
       [1, 2, 3],
       [9, 3, 2],
     ] as Vector3[];
-    const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
+    const addToContourListActionFn = VolumeTracingActions.addToContourListAction;
     const resetContourAction = VolumeTracingActions.resetContourAction();
 
     // Add positions to the contourList
-    let newState = VolumeTracingReducer(initialState, addToLayerActionFn(contourList[0]));
-    newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[1]));
-    newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[2]));
+    let newState = VolumeTracingReducer(initialState, addToContourListActionFn(contourList[0]));
+    newState = VolumeTracingReducer(newState, addToContourListActionFn(contourList[1]));
+    newState = VolumeTracingReducer(newState, addToContourListActionFn(contourList[2]));
 
     // And reset the list
     newState = VolumeTracingReducer(newState, resetContourAction);
@@ -294,11 +294,11 @@ const prepareContourListTest = (state: WebknossosState) => {
     [1, 2, 3],
     [9, 3, 2],
   ] as Vector3[];
-  const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
+  const addToContourListActionFn = VolumeTracingActions.addToContourListAction;
 
-  let newState = VolumeTracingReducer(state, addToLayerActionFn(contourList[0]));
-  newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[1]));
-  newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[2]));
+  let newState = VolumeTracingReducer(state, addToContourListActionFn(contourList[0]));
+  newState = VolumeTracingReducer(newState, addToContourListActionFn(contourList[1]));
+  newState = VolumeTracingReducer(newState, addToContourListActionFn(contourList[2]));
 
   return {
     newState,

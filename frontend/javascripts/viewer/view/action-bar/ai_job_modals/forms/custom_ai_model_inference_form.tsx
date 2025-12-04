@@ -106,7 +106,7 @@ export function CustomAiModelInferenceForm() {
       jobApiCall={jobApiCallback}
       description={
         <>
-          <Space direction="vertical" size="middle">
+          <Space orientation="vertical" size="middle">
             <Row style={{ display: "grid", marginBottom: 16 }}>
               <ExperimentalInferenceAlert />
             </Row>

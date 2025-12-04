@@ -395,7 +395,7 @@ function CreateAnimationModal(props: Props) {
               onChange={(ev) => setCameraPosition(ev.target.value)}
               optionType="default"
             >
-              <Space direction="vertical">
+              <Space orientation="vertical">
                 <Radio.Button value={CAMERA_POSITIONS.MOVING}>
                   Camera circling around the dataset
                 </Radio.Button>
@@ -422,7 +422,7 @@ function CreateAnimationModal(props: Props) {
               onChange={(ev) => setMovieResolution(ev.target.value)}
               optionType="default"
             >
-              <Space direction="vertical">
+              <Space orientation="vertical">
                 <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
                   Standard Definition (640 × 360)
                 </Radio.Button>
@@ -437,7 +437,7 @@ function CreateAnimationModal(props: Props) {
 
           <Col span={8}>Options</Col>
           <Col span={16}>
-            <Space direction="vertical">
+            <Space orientation="vertical">
               <Checkbox
                 checked={areMeshesEnabled}
                 onChange={(ev) => setMeshesEnabled(ev.target.checked)}

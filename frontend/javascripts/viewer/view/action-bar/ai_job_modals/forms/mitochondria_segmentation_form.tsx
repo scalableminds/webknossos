@@ -55,7 +55,7 @@ export function MitochondriaSegmentationForm() {
       jobApiCall={jobApiCall}
       description={
         <>
-          <Space direction="vertical" size="middle">
+          <Space orientation="vertical" size="middle">
             <Row>
               This pre-trained AI model will automatically detect and segment all mitochondria in
               this dataset. It is optimized for analyzing EM tissue, e.g. from FIB-SEM, MSEM,

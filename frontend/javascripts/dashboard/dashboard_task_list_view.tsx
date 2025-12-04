@@ -236,7 +236,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         Finished
       </div>
     ) : (
-      <Space direction="vertical" size={1}>
+      <Space orientation="vertical" size={1}>
         <Link to={`/annotations/${annotation.id}`}>{label}</Link>
         {isAdmin || this.props.isAdminView ? (
           <LinkButton onClick={() => this.openTransferModal(annotation.id)} icon={<TeamOutlined />}>

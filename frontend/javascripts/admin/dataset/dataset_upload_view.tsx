@@ -189,7 +189,7 @@ type UploadFormFieldTypes = {
 };
 
 export const dataPrivacyInfo = (
-  <Space direction="horizontal" size={4}>
+  <Space orientation="horizontal" size={4}>
     Per default, imported data is private and only visible within your organization.
     <a
       style={{ color: "var(--ant-color-primary)" }}

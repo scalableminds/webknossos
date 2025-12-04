@@ -22,7 +22,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
   const dispatch = useDispatch();
 
   return (
-    <Space direction="vertical" size="middle">
+    <Space orientation="vertical" size="middle">
       <Row>
         <div
           style={{
@@ -69,7 +69,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
               onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
             >
               <Card bordered={false}>
-                <Space direction="vertical" size="small">
+                <Space orientation="vertical" size="small">
                   <Row className="ai-job-title">Neuron segmentation</Row>
                   <Row>
                     <img
@@ -89,7 +89,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
                 onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_MITOCHONDRIA))}
               >
                 <Card variant="borderless">
-                  <Space direction="vertical" size="small">
+                  <Space orientation="vertical" size="small">
                     <Row className="ai-job-title">Mitochondria detection</Row>
                     <Row>
                       <img
@@ -110,7 +110,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
                 onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NUCLEI))}
               >
                 <Card variant="borderless">
-                  <Space direction="vertical" size="small">
+                  <Space orientation="vertical" size="small">
                     <Row className="ai-job-title">Nuclei detection</Row>
                     <Row>
                       <img

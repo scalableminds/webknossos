@@ -13,7 +13,7 @@ export function AlignmentTab() {
         <Space align="center">
           <Radio.Button className="aIJobSelection" checked={true}>
             <Card variant="borderless">
-              <Space direction="vertical" size="small">
+              <Space orientation="vertical" size="small">
                 <Row className="ai-job-title">Align Sections</Row>
                 <Row>
                   <img

@@ -7,6 +7,7 @@ import {
 } from "@ant-design/icons";
 import {
   Badge,
+  Button,
   Dropdown,
   type MenuProps,
   Popconfirm,
@@ -15,7 +16,8 @@ import {
   type RadioChangeEvent,
   Space,
 } from "antd";
-import React, { useCallback, useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 
 import { usePrevious } from "libs/react_hooks";
@@ -221,31 +223,23 @@ export function VolumeInterpolationButton() {
     ],
   };
 
-  const buttonsRender = useCallback(
-    ([leftButton, rightButton]: React.ReactNode[]) => [
-      <FastTooltip title={tooltipTitle} key="leftButton">
-        {React.cloneElement(leftButton as React.ReactElement<any, string>, {
-          disabled: isDisabled,
-        })}
-      </FastTooltip>,
-      rightButton,
-    ],
-    [tooltipTitle, isDisabled],
-  );
-
   return (
     // Without the outer div, the Dropdown can eat up all the remaining horizontal space,
     // moving sibling elements to the far right.
     <div>
-      <Dropdown.Button
-        icon={<DownOutlined />}
-        menu={menu}
-        onClick={onInterpolateClick}
-        style={{ padding: "0 5px 0 6px" }}
-        buttonsRender={buttonsRender}
-      >
-        {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
-      </Dropdown.Button>
+      <Space.Compact>
+        <FastTooltip title={tooltipTitle}>
+          <Button
+            icon={INTERPOLATION_ICON[interpolationMode]}
+            onClick={onInterpolateClick}
+            disabled={isDisabled}
+            style={{ padding: "0 5px 0 6px" }}
+          />
+        </FastTooltip>
+        <Dropdown menu={menu}>
+          <Button icon={<DownOutlined />} disabled={isDisabled} />
+        </Dropdown>
+      </Space.Compact>
     </div>
   );
 }

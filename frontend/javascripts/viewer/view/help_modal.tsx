@@ -43,8 +43,9 @@ function HelpButton() {
         }}
         type="info"
         title="Help"
-        closable
-        onClose={discardButton}
+        closable={{
+          onClose: discardButton,
+        }}
         onClick={() => setModalOpen(true)}
       />
       <HelpModal

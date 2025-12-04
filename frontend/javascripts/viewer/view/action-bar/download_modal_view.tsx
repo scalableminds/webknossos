@@ -715,7 +715,7 @@ function _DownloadModalView({
       />
       {moreInfoHint}
       <Checkbox
-        style={{ position: "absolute", bottom: -62 }}
+        style={{ position: "absolute", bottom: -38 }}
         checked={keepWindowOpen}
         onChange={handleKeepWindowOpenChecked}
         disabled={activeTabKey === "export" && !features().jobsEnabled}

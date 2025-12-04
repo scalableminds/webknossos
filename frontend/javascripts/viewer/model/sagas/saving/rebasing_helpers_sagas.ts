@@ -285,6 +285,19 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               };
               return newAction;
             }
+            case "deleteSegment": {
+              const { actionTracingId } = action.value;
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                // Another user removed the segment. The update action of the current user gets lost now.
+                return null;
+              }
+              return action;
+            }
 
             default:
               return action;

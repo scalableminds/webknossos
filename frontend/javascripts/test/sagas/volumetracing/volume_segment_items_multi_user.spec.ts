@@ -434,7 +434,7 @@ describe("Collaborative editing of segment items", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should handle multiple pending update segment update actions", async (context: WebknossosTestContext) => {
+  it("should handle multiple pending update segment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
@@ -503,6 +503,60 @@ describe("Collaborative editing of segment items", () => {
       // ]);
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
       expect(finalSegment).toMatchObject(expectedShape);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it.only("should handle concurrent delete segment update actions", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const segmentId = 1;
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    // On the backend, the segment is deleted.
+    backendMock.planVersionInjection(5, [
+      {
+        name: "deleteSegment",
+        value: {
+          actionTracingId: tracingId,
+          id: segmentId,
+        },
+        _injected: true,
+      },
+    ]);
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      // Create the segment (creation also uses the updateSegmentAction redux action)
+      const updateSegmentProps1 = { name: "Some Name", color: [128, 0, 0] as Vector3 };
+      yield put(updateSegmentAction(segmentId, updateSegmentProps1, tracingId));
+
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      yield put(removeSegmentAction(segmentId, tracingId));
+      // The following save should NOT send another deleteSegment to the backend as it would
+      // be superfluous
+      yield call(() => api.tracing.save());
+
+      const latestSaveRequest = context.receivedDataPerSaveRequest.at(-1);
+      expect(latestSaveRequest).toMatchObject([
+        {
+          version: 5,
+        },
+      ]);
+      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
+      expect(finalSegment).toBeUndefined();
     });
 
     await task.toPromise();

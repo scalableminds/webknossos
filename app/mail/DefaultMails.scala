@@ -99,9 +99,8 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "Help requested // Feedback provided",
       bodyHtml = html.mail.help(user.name, organizationName, message, currentUrl, additionalFooter).body,
-      recipients = List(supportEmail),
-      ccRecipients = List(userEmail),
-      replyTo = List(supportEmail, userEmail)
+      recipients = List(supportEmail, userEmail),
+      replyTo = List(userEmail, supportEmail)
     )
 
   def extendPricingPlanMail(user: User, userEmail: String, organizationName: String): Mail =
@@ -109,8 +108,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "WEBKNOSSOS Plan Extension",
       bodyHtml = html.mail.extendPricingPlan(user.name, additionalFooter, organizationName).body,
-      recipients = List(userEmail),
-      ccRecipients = List(supportEmail),
+      recipients = List(supportEmail, userEmail),
       replyTo = List(userEmail, supportEmail)
     )
 
@@ -119,8 +117,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "WEBKNOSSOS Upgrade: Team Plan",
       bodyHtml = html.mail.upgradePricingPlanToTeam(user.name, additionalFooter, organizationName).body,
-      recipients = List(userEmail),
-      ccRecipients = List(supportEmail),
+      recipients = List(supportEmail, userEmail),
       replyTo = List(userEmail, supportEmail)
     )
 
@@ -129,8 +126,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "WEBKNOSSOS Upgrade: Power Plan",
       bodyHtml = html.mail.upgradePricingPlanToPower(user.name, additionalFooter, organizationName).body,
-      recipients = List(userEmail),
-      ccRecipients = List(supportEmail),
+      recipients = List(supportEmail, userEmail),
       replyTo = List(userEmail, supportEmail)
     )
 
@@ -139,8 +135,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "WEBKNOSSOS Upgrade: Additional Users",
       bodyHtml = html.mail.upgradePricingPlanUsers(user.name, requestedUsers, additionalFooter, organizationName).body,
-      recipients = List(userEmail),
-      ccRecipients = List(supportEmail),
+      recipients = List(supportEmail, userEmail),
       replyTo = List(userEmail, supportEmail)
     )
 
@@ -153,8 +148,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       subject = "WEBKNOSSOS Upgrade: Additional Storage",
       bodyHtml =
         html.mail.upgradePricingPlanStorage(user.name, requestedStorage, additionalFooter, organizationName).body,
-      recipients = List(userEmail),
-      ccRecipients = List(supportEmail),
+      recipients = List(supportEmail, userEmail),
       replyTo = List(userEmail, supportEmail)
     )
 
@@ -172,7 +166,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       subject = "Request to buy WEBKNOSSOS credits",
       bodyHtml =
         html.mail.orderCreditsRequest(user.name, userEmail, organizationName, messageBody, additionalFooter).body,
-      recipients = List("hello@webknossos.org")
+      recipients = List(supportEmail)
     )
 
   def jobSuccessfulGenericMail(user: User,

@@ -10,11 +10,11 @@ uint16_t combineUint16LittleEndian(uint8_t lower, uint8_t higher) {
     return combined;
 }
 
-size_t readOutputLengthFromHeader(unsigned char* inputBytesCharArray) {
-    unsigned char dataWidth = inputBytesCharArray[5];
-    uint16_t sizeX = combineUint16LittleEndian(inputBytesCharArray[6], inputBytesCharArray[7]);
-    uint16_t sizeY = combineUint16LittleEndian(inputBytesCharArray[8], inputBytesCharArray[9]);
-    uint16_t sizeZ = combineUint16LittleEndian(inputBytesCharArray[10], inputBytesCharArray[11]);
+size_t readOutputLengthFromHeader(unsigned char* inputBytes) {
+    unsigned char dataWidth = inputBytes[5];
+    uint16_t sizeX = combineUint16LittleEndian(inputBytes[6], inputBytes[7]);
+    uint16_t sizeY = combineUint16LittleEndian(inputBytes[8], inputBytes[9]);
+    uint16_t sizeZ = combineUint16LittleEndian(inputBytes[10], inputBytes[11]);
 
     return static_cast<size_t>(dataWidth) * static_cast<size_t>(sizeX) * static_cast<size_t>(sizeY) * static_cast<size_t>(sizeZ);
 }
@@ -22,32 +22,43 @@ size_t readOutputLengthFromHeader(unsigned char* inputBytesCharArray) {
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_compresso_NativeCompressoCompressor_decompress
     (JNIEnv *env, jobject instance, jbyteArray inputJavaArray) {
 
-    const size_t inputLengthBytes = static_cast<size_t>(env->GetArrayLength(inputJavaArray));
-    jbyte *inputBytes = env->GetByteArrayElements(inputJavaArray, nullptr);
+    const size_t inputLength = static_cast<size_t>(env->GetArrayLength(inputJavaArray));
+    jbyte *inputJBytes = env->GetByteArrayElements(inputJavaArray, nullptr);
+    unsigned char* inputBytes = reinterpret_cast<unsigned char*>(inputJBytes);
 
-    unsigned char* inputBytesCharArray = reinterpret_cast<unsigned char*>(inputBytes);
+    if (inputLength < 36) {
+        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
+        throwRuntimeException(env, "Error while decoding with compresso: Expected at least 36 bytes of input for the compresso header, got " + std::to_string(inputLength));
+        return nullptr;
+    }
 
-    size_t outputLength = readOutputLengthFromHeader(inputBytesCharArray);
+    size_t outputLength = readOutputLengthFromHeader(inputBytes);
 
-    unsigned char* outputBuffer = static_cast<unsigned char*>(malloc(outputLength));
+    if (outputLength <= 0) {
+        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
+        throwRuntimeException(env, "Error while decoding with compresso: output length as read from header must be >0, got " + std::to_string(outputLength));
+        return nullptr;
+    }
 
-    int errorCode = compresso::decompress<void,void>(inputBytesCharArray, inputLengthBytes, outputBuffer);
+    unsigned char* outputBytes = static_cast<unsigned char*>(malloc(outputLength));
+
+    int errorCode = compresso::decompress<void,void>(inputBytes, inputLength, outputBytes);
 
     if (errorCode != 0) {
-        env->ReleaseByteArrayElements(inputJavaArray, inputBytes, 0);
+        env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
         throwRuntimeException(env, "Error while decoding with compresso: " + std::to_string(errorCode));
         return nullptr;
     }
 
-    jbyteArray target = env->NewByteArray(outputLength);
-    jbyte *targetElements = env->GetByteArrayElements(target, nullptr);
-
+    jbyteArray outputJavaArray = env->NewByteArray(outputLength);
+    jbyte *outputJBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
     for (size_t i = 0; i < outputLength; ++i) {
-        targetElements[i] = static_cast<jbyte>(outputBuffer[i]);
+        outputJBytes[i] = static_cast<jbyte>(outputBytes[i]);
     }
-    free(outputBuffer);
-    env->ReleaseByteArrayElements(target, targetElements, JNI_COMMIT);
-    env->ReleaseByteArrayElements(inputJavaArray, inputBytes, 0);
 
-    return target;
+    free(outputBytes);
+    env->ReleaseByteArrayElements(inputJavaArray, inputJBytes, 0);
+    env->ReleaseByteArrayElements(outputJavaArray, outputJBytes, JNI_COMMIT);
+
+    return outputJavaArray;
 }

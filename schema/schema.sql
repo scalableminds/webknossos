@@ -367,7 +367,7 @@ CREATE TABLE webknossos.organization_plan_updates(
   includedStorage BIGINT DEFAULT NULL,
   includedStorageChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
+  CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
 CREATE TABLE webknossos.organization_usedStorage_mags (

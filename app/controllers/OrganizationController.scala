@@ -5,7 +5,6 @@ import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TristateOptionJsonHelper}
-import controllers.DatasetUpdateParameters.tristateOptionParsing
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
@@ -33,10 +32,12 @@ case class OrganizationPlanUpdate(
     includedStorageBytes: Option[Option[Long]] = Some(None), // None means unchanged, Some(None) means set to None
     created: Instant = Instant.now
 ) {
-  lazy val pricingPlanChanged: Boolean = pricingPlan.isDefined
   lazy val paidUntilChanged: Boolean = paidUntil.isDefined
   lazy val includedUsersChanged: Boolean = includedUsers.isDefined
   lazy val includedStorageChanged: Boolean = includedStorageBytes.isDefined
+  lazy val paidUntilFlat: Option[Instant] = paidUntil.flatten
+  lazy val includedUsersFlat: Option[Int] = includedUsers.flatten
+  lazy val includedStorageFlat: Option[Long] = includedStorageBytes.flatten
 }
 
 object OrganizationPlanUpdate extends TristateOptionJsonHelper {
@@ -315,13 +316,25 @@ class OrganizationController @Inject()(
           ))
     }
 
-  def updatePlan(organizationId: String): Action[OrganizationPlanUpdate] =
+  def updatePlan(): Action[OrganizationPlanUpdate] =
     sil.SecuredAction.async(validateJson[OrganizationPlanUpdate]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
+        organization <- organizationDAO.findOne(request.body.organizationId) ?~> Messages(
+          "organization.notFound",
+          request.body.organizationId) ~> NOT_FOUND
         _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
         _ <- organizationDAO.updatePlan(organization._id, request.body)
       } yield Ok
     }
+
+  def listPlanUpdates: Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        isSuperUser <- userService.isSuperUser(request.identity._multiUser)
+        _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listPlanUpdates.onlyAdmin"
+        planUpdates <- organizationDAO.findPlanUpdates(request.identity._organization)
+      } yield Ok(Json.toJson(planUpdates))
+    }
+
 }

@@ -246,7 +246,6 @@ GET           /organizations/default                                            
 GET           /organizationsIsEmpty                                                             controllers.OrganizationController.organizationsIsEmpty()
 GET           /organizations/:organizationId                                                    controllers.OrganizationController.get(organizationId: String)
 PATCH         /organizations/:organizationId                                                    controllers.OrganizationController.update(organizationId: String)
-POST          /organizations/:organizationId/updatePlan                                         controllers.OrganizationController.updatePlan(organizationId: String)
 DELETE        /organizations/:organizationId                                                    controllers.OrganizationController.delete(organizationId: String)
 POST          /organizations/:organizationId/addUser                                            controllers.OrganizationController.addUser(organizationId: String)
 GET           /operatorData                                                                     controllers.OrganizationController.getOperatorData()
@@ -256,6 +255,8 @@ POST          /pricing/requestUsers                                             
 POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
 POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
+POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan
+GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService()
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()

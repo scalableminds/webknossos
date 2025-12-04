@@ -11,46 +11,29 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
+import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
-import { Alert, App, Button, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
+import { Alert, App, Button, Col, Input, Row, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import Persistence from "libs/persistence";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
-import messages from "messages";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import React, { type Key, useEffect, useState } from "react";
-import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
 import { Link } from "react-router-dom";
-import type {
-  APIOrganization,
-  APITeamMembership,
-  APIUser,
-  ExperienceMap,
-} from "types/api_flow_types";
-import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
-import Store from "../../oxalis/store";
+import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 const { Column } = Table;
 const { Search } = Input;
-
-type StateProps = {
-  activeUser: APIUser;
-  activeOrganization: APIOrganization;
-};
-type Props = RouteComponentProps & StateProps;
 
 type ActivationFilterType = Array<"activated" | "deactivated" | "verified" | "unverified">;
 
@@ -65,8 +48,13 @@ const persistence = new Persistence<{
   "userList",
 );
 
-function UserListView({ activeUser, activeOrganization }: Props) {
+function UserListView() {
   const { modal } = App.useApp();
+
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
+  const activeOrganization = useWkSelector((state) =>
+    enforceActiveOrganization(state.activeOrganization),
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<APIUser[]>([]);
@@ -127,28 +115,6 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     activateUser(user, false);
   }
 
-  async function changeEmail(selectedUser: APIUser, newEmail: string) {
-    const newUserPromises = users.map((user) => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, {
-          email: newEmail,
-        });
-        return updateUser(newUser);
-      }
-
-      return Promise.resolve(user);
-    });
-    Promise.all(newUserPromises).then(
-      (newUsers) => {
-        setUsers(newUsers);
-        setSelectedUserIds([selectedUser.id]);
-        Toast.success(messages["users.change_email_confirmation"]);
-        if (activeUser.email === selectedUser.email) Store.dispatch(logoutUserAction());
-      },
-      () => {}, // Do nothing, change did not succeed
-    );
-  }
-
   function handleUsersChange(updatedUsers: Array<APIUser>): void {
     setUsers(updatedUsers);
     setIsExperienceModalOpen(false);
@@ -194,8 +160,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
           <Row key={user.id} gutter={16}>
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
-              <LinkButton onClick={() => activateUser(user)}>
-                <UserAddOutlined className="icon-margin-right" />
+              <LinkButton onClick={() => activateUser(user)} icon={<UserAddOutlined />}>
                 Activate User
               </LinkButton>
             </Col>
@@ -224,7 +189,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     const noUsersMessage = (
       <React.Fragment>
         <a onClick={inviteUsersCallback}>Invite colleagues and collaboration partners</a>
-        {" to join your organization. Share datasets and collaboratively work on annotiatons."}
+        {" to join your organization. Share datasets and collaboratively work on annotations."}
       </React.Fragment>
     );
     return isLoading ? null : (
@@ -249,9 +214,16 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     return (
       <Alert
         message="You reached the maximum number of users"
-        description={`You organization reached the maximum number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
-          users,
-        )} active users of ${activeOrganization.includedUsers} allowed by your plan.`}
+        description={
+          <>
+            Your organization has reached the maximum number of users allowed in your current plan.
+            Email invites are only permitted for existing users of paid organizations, who will join
+            as non-billed guests. <br />
+            Consider upgrading your WEBKNOSSOS plan to accommodate more new users or deactivate
+            existing user accounts. Your organization currently has {getActiveUserCount(users)}{" "}
+            active users out of {activeOrganization.includedUsers} allowed by your plan.
+          </>
+        }
         type="warning"
         showIcon
         style={{
@@ -305,7 +277,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     marginRight: 20,
   };
   const noOtherUsers = users.length < 2;
-  const isUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
+  const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
 
   return (
     <div className="container test-UserListView">
@@ -339,11 +311,10 @@ function UserListView({ activeUser, activeOrganization }: Props) {
         </Button>
         <Button
           icon={<UserAddOutlined />}
-          disabled={isUserInvitesDisabled}
           style={marginRight}
           onClick={() => setIsInviteModalOpen(true)}
         >
-          Invite Users
+          Invite {isNewUserInvitesDisabled ? "Guests" : "Users"}
         </Button>
         <InviteUsersModal
           currentUserCount={getActiveUserCount(users)}
@@ -372,8 +343,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
         <div className="clearfix" />
       </div>
 
-      {isUserInvitesDisabled ? renderUpgradePlanAlert() : null}
-      {noOtherUsers && !isUserInvitesDisabled ? renderInviteUsersAlert() : null}
+      {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
+      {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
       {renderNewUsersAlert()}
 
       <Spin size="large" spinning={isLoading}>
@@ -423,33 +394,6 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             key="email"
             width={320}
             sorter={Utils.localeCompareBy<APIUser>((user) => user.email)}
-            render={(__, user: APIUser) =>
-              activeUser.isAdmin ? (
-                <EditableTextLabel
-                  value={user.email}
-                  label="Email"
-                  rules={[
-                    {
-                      message: messages["auth.registration_email_invalid"],
-                      type: "email",
-                    },
-                  ]}
-                  onChange={(newEmail) => {
-                    if (newEmail !== user.email) {
-                      Modal.confirm({
-                        title: messages["users.change_email_title"],
-                        content: messages["users.change_email"]({
-                          newEmail,
-                        }),
-                        onOk: () => changeEmail(user, newEmail),
-                      });
-                    }
-                  }}
-                />
-              ) : (
-                user.email
-              )
-            }
           />
           <Column
             title="Experiences"
@@ -594,8 +538,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             render={(__, user: APIUser) => (
               <span>
                 <Link to={`/users/${user.id}/details`}>
-                  <UserOutlined className="icon-margin-right" />
-                  Show Annotations
+                  <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
                 <br />
                 {user.isActive ? (
@@ -605,8 +548,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                         event.stopPropagation();
                         deactivateUser(user);
                       }}
+                      icon={<UserDeleteOutlined />}
                     >
-                      <UserDeleteOutlined className="icon-margin-right" />
                       Deactivate User
                     </LinkButton>
                   ) : null
@@ -616,8 +559,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                       event.stopPropagation();
                       activateUser(user);
                     }}
+                    icon={<UserAddOutlined />}
                   >
-                    <UserAddOutlined className="icon-margin-right" />
                     Activate User
                   </LinkButton>
                 )}
@@ -651,10 +594,4 @@ function UserListView({ activeUser, activeOrganization }: Props) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-  activeOrganization: enforceActiveOrganization(state.activeOrganization),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(UserListView);
+export default UserListView;

@@ -1,6 +1,6 @@
 import { V2 } from "libs/mjs";
 import type { NdArray } from "ndarray";
-import type { Vector2 } from "oxalis/constants";
+import type { Vector2 } from "viewer/constants";
 
 /* This module provides a function to find a 2D axis-aligned bounding box
  * around data within a binary mask (NdArray).

@@ -1,5 +1,5 @@
 import { SyncOutlined } from "@ant-design/icons";
-import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
+import { getVoxelyticsChunkStatistics } from "admin/rest_api";
 import { Button, Tooltip } from "antd";
 import dayjs from "dayjs";
 import {
@@ -12,7 +12,7 @@ import {
 import { usePolling } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import { useState } from "react";
-import type { VoxelyticsChunkStatistics } from "types/api_flow_types";
+import type { VoxelyticsChunkStatistics } from "types/api_types";
 import type { Result } from "./utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;

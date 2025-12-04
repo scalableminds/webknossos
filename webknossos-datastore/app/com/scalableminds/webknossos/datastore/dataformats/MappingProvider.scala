@@ -5,15 +5,15 @@ import java.nio.file.Path
 import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
 import com.scalableminds.webknossos.datastore.models.requests.MappingReadInstruction
 import com.scalableminds.util.io.{FileIO, PathUtils}
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.Box
 import org.apache.commons.io.FilenameUtils
 
 class MappingProvider(layer: SegmentationLayer) {
 
   def load(readInstruction: MappingReadInstruction): Box[Array[Byte]] = {
     val mappingFile = readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.organizationId)
-      .resolve(readInstruction.dataSource.id.directoryName)
+      .resolve(readInstruction.dataSourceId.organizationId)
+      .resolve(readInstruction.dataSourceId.directoryName)
       .resolve(layer.name)
       .resolve(MappingProvider.mappingsDir)
       .resolve(s"${readInstruction.mapping}.${MappingProvider.mappingFileExtension}")

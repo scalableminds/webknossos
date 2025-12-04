@@ -1,3 +1,4 @@
+import com.scalableminds.util.mvc.{ApiVersioning, ExtendedController}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import play.api.OptionalDevContext
@@ -34,20 +35,25 @@ class DsRequestHandler @Inject()(webCommands: WebCommands,
                                       configuration,
                                       filters)
     with InjectedController
+    with ExtendedController
     with AdditionalHeaders
-    with LazyLogging {
+    with LazyLogging
+    with ApiVersioning {
+
   override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.method == "OPTIONS") {
       Some(Action { options(request) })
+    } else if (request.path == "/" || request.path == "/index.html") {
+      Some(Action {
+        Ok(
+          views.html
+            .datastoreFrontpage("Datastore", conf.Datastore.name, conf.Datastore.WebKnossos.uri, "/data/health"))
+      })
+    } else if (isInvalidApiVersion(request)) {
+      Some(Action {
+        JsonNotFound(invalidApiVersionMessage(request))
+      })
     } else {
-      if (request.path == "/" || request.path == "/index.html") {
-        Some(Action {
-          Ok(
-            views.html
-              .datastoreFrontpage("Datastore", conf.Datastore.name, conf.Datastore.WebKnossos.uri, "/data/health"))
-        })
-      } else {
-        super.routeRequest(request)
-      }
+      super.routeRequest(request)
     }
 }

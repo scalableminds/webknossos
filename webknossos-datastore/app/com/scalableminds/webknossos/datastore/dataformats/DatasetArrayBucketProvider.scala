@@ -12,20 +12,19 @@ import com.scalableminds.webknossos.datastore.datareaders.wkw.WKWArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataLayer, DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataSourceId, ElementClass, StaticLayer}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Empty
 
 import scala.concurrent.duration._
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-class DatasetArrayBucketProvider(dataLayer: DataLayer,
+class DatasetArrayBucketProvider(dataLayer: StaticLayer,
                                  dataSourceId: DataSourceId,
-                                 remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                                 dataVaultServiceOpt: Option[DataVaultService],
                                  sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with FoxImplicits
@@ -39,10 +38,10 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
       datasetArray <- datasetArrayCache.getOrLoad(readInstruction.bucket.mag,
                                                   _ => openDatasetArrayWithTimeLogging(readInstruction))
       bucket = readInstruction.bucket
-      shape = Vec3Int.full(bucket.bucketLength)
       offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
-      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(shape,
-                                                                    offset,
+      shape = Vec3Int.full(bucket.bucketLength)
+      bucketData <- datasetArray.readBytesWithAdditionalCoordinates(offset,
+                                                                    shape,
                                                                     bucket.additionalCoordinates,
                                                                     dataLayer.elementClass == ElementClass.uint24)
     } yield bucketData
@@ -50,15 +49,16 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
   private def openDatasetArrayWithTimeLogging(
       readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val before = Instant.now
-    for {
-      result <- openDatasetArray(readInstruction).futureBox
-      duration = Instant.since(before)
-      _ = if (duration > (1 second)) {
+    val result = openDatasetArray(readInstruction)
+    result.onComplete { _ =>
+      val duration = Instant.since(before)
+      if (duration > (1 second)) {
         logger.warn(
           s"Opening ${dataLayer.dataFormat} DatasetArray for ${readInstruction.layerSummary} was slow ($duration)"
         )
       }
-    } yield result
+    }
+    result
   }
 
   private def openDatasetArray(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
@@ -69,13 +69,12 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
     magLocatorOpt match {
       case None => Fox.empty
       case Some(magLocator) =>
-        remoteSourceDescriptorServiceOpt match {
-          case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
+        dataVaultServiceOpt match {
+          case Some(dataVaultServiceOpt: DataVaultService) =>
             for {
-              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
-                                                                               readInstruction.dataSource.id,
-                                                                               readInstruction.dataLayer.name,
-                                                                               magLocator)
+              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(magLocator,
+                                                                     readInstruction.dataSourceId,
+                                                                     readInstruction.dataLayer.name)
               chunkContentsCache <- sharedChunkContentsCacheOpt.toFox
               datasetArray <- dataLayer.dataFormat match {
                 case DataFormat.zarr =>
@@ -115,7 +114,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
                 case _ => Fox.failure(s"Cannot open ${dataLayer.dataFormat} layer “${dataLayer.name}” as DatasetArray")
               }
             } yield datasetArray
-          case None => Empty
+          case None => Fox.empty
         }
     }
   }

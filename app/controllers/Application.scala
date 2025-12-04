@@ -11,22 +11,20 @@ import play.api.mvc.{Action, AnyContent, Result}
 import play.silhouette.api.Silhouette
 import security.{CertificateValidationService, WkEnv}
 import utils.sql.{SimpleSQLDAO, SqlClient}
-import utils.{ApiVersioning, StoreModules, WkConf}
+import utils.{BuildInfoService, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class Application @Inject()(actorSystem: ActorSystem,
                             userService: UserService,
-                            releaseInformationDAO: ReleaseInformationDAO,
+                            buildInfoService: BuildInfoService,
                             organizationDAO: OrganizationDAO,
                             conf: WkConf,
                             defaultMails: DefaultMails,
-                            storeModules: StoreModules,
                             sil: Silhouette[WkEnv],
                             certificateValidationService: CertificateValidationService)(implicit ec: ExecutionContext)
-    extends Controller
-    with ApiVersioning {
+    extends Controller {
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -34,23 +32,8 @@ class Application @Inject()(actorSystem: ActorSystem,
   // Note: This route is used by external applications, keep stable
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {
     for {
-      schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
-    } yield {
-      addRemoteOriginHeaders(
-        Ok(
-          Json.obj(
-            "webknossos" -> Json.toJson(
-              webknossos.BuildInfo.toMap.view.mapValues(_.toString).filterKeys(_ != "certificatePublicKey").toMap),
-            "schemaVersion" -> schemaVersion.toOption,
-            "httpApiVersioning" -> Json.obj(
-              "currentApiVersion" -> CURRENT_API_VERSION,
-              "oldestSupportedApiVersion" -> OLDEST_SUPPORTED_API_VERSION
-            ),
-            "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
-            "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
-          ))
-      )
-    }
+      buildInfoJson <- buildInfoService.buildInfoJson
+    } yield addRemoteOriginHeaders(Ok(buildInfoJson))
   }
 
   // This only changes on server restart, so we can cache the full result.

@@ -1,10 +1,9 @@
 package controllers
 
-import collections.SequenceUtils
-
 import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -16,13 +15,13 @@ import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.{Box, Full}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
-import models.dataset.DatasetDAO
+import models.dataset.{DatasetDAO, DatasetService}
 
 import scala.concurrent.ExecutionContext
 
@@ -32,6 +31,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                taskTypeDAO: TaskTypeDAO,
                                userService: UserService,
                                taskDAO: TaskDAO,
+                               datasetService: DatasetService,
                                datasetDAO: DatasetDAO,
                                taskService: TaskService,
                                nmlService: AnnotationUploadService,
@@ -50,17 +50,24 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] =
     sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
-        _ <- bool2Box(request.body.nonEmpty) ?~> "task.create.noTasks"
-        taskTypeId <- SequenceUtils.findUniqueElement(request.body.map(_.taskTypeId)) ?~> "task.create.notOnSameTaskType"
+        _ <- Fox.fromBool(request.body.nonEmpty) ?~> "task.create.noTasks"
+        taskTypeId <- SequenceUtils
+          .findUniqueElement(request.body.map(_.taskTypeId))
+          .toFox ?~> "task.create.notOnSameTaskType"
         taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
-        datasetId <- SequenceUtils.findUniqueElement(request.body.map(_.datasetId)) ?~> "task.create.notOnSameDataset"
+        datasetId <- SequenceUtils
+          .findUniqueElement(request.body.map(_.datasetId))
+          .toFox ?~> "task.create.notOnSameDataset"
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-        _ <- bool2Fox(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
+        usableDataSource <- datasetService.usableDataSourceFor(dataset)
+        _ <- Fox.fromBool(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
         _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
         taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
                                                                                     taskType,
-                                                                                    dataset)
+                                                                                    dataset,
+                                                                                    usableDataSource,
+                                                                                    request.identity._id)
         skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
           taskParametersFull)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
@@ -87,12 +94,12 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
    */
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
+      body <- request.body.asMultipartFormData.toFox ?~> "binary.payload.invalid"
       inputFiles = body.files.filter(file =>
         file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
-      _ <- bool2Fox(inputFiles.nonEmpty) ?~> "nml.file.notFound"
-      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
-      params <- JsonHelper.parseAndValidateJson[NmlTaskParameters](jsonString) ?~> "task.create.failed"
+      _ <- Fox.fromBool(inputFiles.nonEmpty) ?~> "nml.file.notFound"
+      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> "format.json.missing"
+      params <- JsonHelper.parseAs[NmlTaskParameters](jsonString).toFox ?~> "task.create.failed"
       userOrganizationId = request.identity._organization
       taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
@@ -177,7 +184,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
         (taskId, initializingAnnotationId) <- taskDAO
           .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> "task.unavailable"
-        insertedAnnotationBox <- annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).futureBox
+        insertedAnnotationBox <- annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
         annotationJSON <- annotationService.publicWrites(annotation, Some(user))
@@ -195,7 +202,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> "notAllowed"
         (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> "task.unavailable"
-        insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).futureBox
+        insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox
         taskUpdated <- taskDAO.findOne(id)

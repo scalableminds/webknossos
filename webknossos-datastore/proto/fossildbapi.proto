@@ -2,164 +2,248 @@ syntax = "proto2";
 
 package com.scalableminds.fossildb.proto;
 
+message VersionedKeyValuePairProto {
+  required string key = 1;
+  required uint64 version = 2;
+  required bytes value = 3;
+}
+
+message KeyVersionsValuesPairProto {
+  required string key = 1;
+  repeated VersionValuePairProto versionValuePairs = 2;
+}
+
+message VersionValuePairProto {
+  required uint64 actualVersion = 1;
+  required bytes value = 2;
+}
+
+message VersionValueBoxProto {
+  optional VersionValuePairProto versionValuePair = 1;
+  optional string errorMessage = 2;
+}
+
 message HealthRequest {}
 message HealthReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
+  required bool success = 1;
+  optional string errorMessage = 2;
 }
 
 message GetRequest {
-    required string collection = 1;
-    required string key = 2;
-    optional uint64 version = 3;
-    optional bool mayBeEmpty = 4;
+  required string collection = 1;
+  required string key = 2;
+  optional uint64 version = 3;
+  optional bool mayBeEmpty = 4;
 }
 
 message GetReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
-    required bytes value = 3;
-    required uint64 actualVersion = 4;
+  required bool success = 1;
+  optional string errorMessage = 2;
+  required bytes value = 3;
+  required uint64 actualVersion = 4;
 }
 
 message PutRequest {
-    required string collection = 1;
-    required string key = 2;
-    optional uint64 version = 3;
-    required bytes value = 4;
+  required string collection = 1;
+  required string key = 2;
+  optional uint64 version = 3;
+  required bytes value = 4;
 }
 
 message PutReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
+  required bool success = 1;
+  optional string errorMessage = 2;
+}
+
+message PutMultipleVersionsRequest {
+  required string collection = 1;
+  required string key = 2;
+  repeated uint64 versions = 3;
+  repeated bytes values = 4;
+}
+
+message PutMultipleVersionsReply {
+  required bool success = 1;
+  optional string errorMessage = 2;
+}
+
+message PutMultipleKeysWithMultipleVersionsRequest {
+  required string collection = 1;
+  repeated VersionedKeyValuePairProto versionedKeyValuePairs = 2;
+}
+
+message PutMultipleKeysWithMultipleVersionsReply {
+  required bool success = 1;
+  optional string errorMessage = 2;
 }
 
 message DeleteRequest {
-    required string collection = 1;
-    required string key = 2;
-    required uint64 version = 3;
+  required string collection = 1;
+  required string key = 2;
+  required uint64 version = 3;
 }
 
 message DeleteReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
+  required bool success = 1;
+  optional string errorMessage = 2;
+}
+
+message DeleteAllByPrefixRequest {
+  required string collection = 1;
+  required string prefix = 2;
+}
+
+message DeleteAllByPrefixReply {
+  required bool success = 1;
+  optional string errorMessage = 2;
 }
 
 message GetMultipleVersionsRequest {
-    required string collection = 1;
-    required string key = 2;
-    optional uint64 newestVersion = 4;
-    optional uint64 oldestVersion = 3;
+  required string collection = 1;
+  required string key = 2;
+  optional uint64 newestVersion = 4;
+  optional uint64 oldestVersion = 3;
 }
 
 message GetMultipleVersionsReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
-    repeated bytes values = 3;
-    repeated uint64 versions = 4;
+  required bool success = 1;
+  optional string errorMessage = 2;
+  repeated bytes values = 3;
+  repeated uint64 versions = 4;
 }
 
 message GetMultipleKeysRequest {
-    required string collection = 1;
-    optional string startAfterKey = 2;
-    optional string prefix = 3;
-    optional uint64 version = 4;
-    optional uint32 limit = 5;
+  required string collection = 1;
+  optional string startAfterKey = 2;
+  optional string prefix = 3;
+  optional uint64 version = 4;
+  optional uint32 limit = 5;
 }
 
 message GetMultipleKeysReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
-    repeated string keys = 3;
-    repeated bytes values = 4;
-    repeated uint64 actualVersions = 5;
+  required bool success = 1;
+  optional string errorMessage = 2;
+  repeated string keys = 3;
+  repeated bytes values = 4;
+  repeated uint64 actualVersions = 5;
+}
+
+message GetMultipleKeysByListRequest {
+  required string collection = 1;
+  repeated string keys = 2;
+  optional uint64 version = 3; // Applied to all requested keys
+}
+
+message GetMultipleKeysByListReply {
+  required bool success = 1;
+  optional string errorMessage = 2;
+  repeated VersionValueBoxProto versionValueBoxes = 3;
+}
+
+message GetMultipleKeysByListWithMultipleVersionsRequest {
+  required string collection = 1;
+  repeated string keys = 2;
+  optional uint64 newestVersion = 3; // Applied to all requested keys
+  optional uint64 oldestVersion = 4; // Applied to all requested keys
+}
+
+message GetMultipleKeysByListWithMultipleVersionsReply {
+  required bool success = 1;
+  optional string errorMessage = 2;
+  repeated KeyVersionsValuesPairProto keyVersionsValuesPairs = 3;
 }
 
 message DeleteMultipleVersionsRequest {
-    required string collection = 1;
-    required string key = 2;
-    optional uint64 newestVersion = 4;
-    optional uint64 oldestVersion = 3;
+  required string collection = 1;
+  required string key = 2;
+  optional uint64 newestVersion = 4;
+  optional uint64 oldestVersion = 3;
 }
 
 message DeleteMultipleVersionsReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
+  required bool success = 1;
+  optional string errorMessage = 2;
 }
 
 message ListKeysRequest {
-    required string collection = 1;
-    optional uint32 limit = 2;
-    optional string startAfterKey = 3;
+  required string collection = 1;
+  optional uint32 limit = 2;
+  optional string startAfterKey = 3;
+  optional string prefix = 4;
 }
 
 message ListKeysReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
-    repeated string keys = 3;
+  required bool success = 1;
+  optional string errorMessage = 2;
+  repeated string keys = 3;
 }
 
 message ListVersionsRequest {
-    required string collection = 1;
-    required string key = 2;
-    optional uint32 limit = 3;
-    optional uint32 offset = 4;
+  required string collection = 1;
+  required string key = 2;
+  optional uint32 limit = 3;
+  optional uint32 offset = 4;
 }
 
 message ListVersionsReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
-    repeated uint64 versions = 3;
+  required bool success = 1;
+  optional string errorMessage = 2;
+  repeated uint64 versions = 3;
 }
 
 
 message BackupRequest {}
 
 message BackupReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
-    required uint32 id = 3;
-    required uint64 timestamp = 4;
-    required uint64 size = 5;
+  required bool success = 1;
+  optional string errorMessage = 2;
+  required uint32 id = 3;
+  required uint64 timestamp = 4;
+  required uint64 size = 5;
 }
 
 message RestoreFromBackupRequest {}
 
 message RestoreFromBackupReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
+  required bool success = 1;
+  optional string errorMessage = 2;
 }
 
 message CompactAllDataRequest {}
 
 message CompactAllDataReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
+  required bool success = 1;
+  optional string errorMessage = 2;
 }
 
 message ExportDBRequest {
-    required string newDataDir = 1;
-    optional string optionsFile = 2;
+  required string newDataDir = 1;
+  optional string optionsFile = 2;
 }
 
 message ExportDBReply {
-    required bool success = 1;
-    optional string errorMessage = 2;
+  required bool success = 1;
+  optional string errorMessage = 2;
 }
 
 
 service FossilDB {
-    rpc Health (HealthRequest) returns (HealthReply) {}
-    rpc Get (GetRequest) returns (GetReply) {}
-    rpc GetMultipleVersions (GetMultipleVersionsRequest) returns (GetMultipleVersionsReply) {}
-    rpc GetMultipleKeys (GetMultipleKeysRequest) returns (GetMultipleKeysReply) {}
-    rpc Put (PutRequest) returns (PutReply) {}
-    rpc Delete (DeleteRequest) returns (DeleteReply) {}
-    rpc DeleteMultipleVersions (DeleteMultipleVersionsRequest) returns (DeleteMultipleVersionsReply) {}
-    rpc ListKeys (ListKeysRequest) returns (ListKeysReply) {}
-    rpc ListVersions (ListVersionsRequest) returns (ListVersionsReply) {}
-    rpc Backup (BackupRequest) returns (BackupReply) {}
-    rpc RestoreFromBackup (RestoreFromBackupRequest) returns (RestoreFromBackupReply) {}
-    rpc CompactAllData (CompactAllDataRequest) returns (CompactAllDataReply) {}
-    rpc ExportDB (ExportDBRequest) returns (ExportDBReply) {}
+  rpc Health (HealthRequest) returns (HealthReply) {}
+  rpc Get (GetRequest) returns (GetReply) {}
+  rpc GetMultipleVersions (GetMultipleVersionsRequest) returns (GetMultipleVersionsReply) {}
+  rpc GetMultipleKeys (GetMultipleKeysRequest) returns (GetMultipleKeysReply) {}
+  rpc GetMultipleKeysByList (GetMultipleKeysByListRequest) returns (GetMultipleKeysByListReply) {}
+  rpc GetMultipleKeysByListWithMultipleVersions (GetMultipleKeysByListWithMultipleVersionsRequest) returns (GetMultipleKeysByListWithMultipleVersionsReply) {}
+  rpc Put (PutRequest) returns (PutReply) {}
+  rpc PutMultipleVersions (PutMultipleVersionsRequest) returns (PutMultipleVersionsReply) {}
+  rpc PutMultipleKeysWithMultipleVersions (PutMultipleKeysWithMultipleVersionsRequest) returns (PutMultipleKeysWithMultipleVersionsReply) {}
+  rpc Delete (DeleteRequest) returns (DeleteReply) {}
+  rpc DeleteMultipleVersions (DeleteMultipleVersionsRequest) returns (DeleteMultipleVersionsReply) {}
+  rpc DeleteAllByPrefix (DeleteAllByPrefixRequest) returns (DeleteAllByPrefixReply) {}
+  rpc ListKeys (ListKeysRequest) returns (ListKeysReply) {}
+  rpc ListVersions (ListVersionsRequest) returns (ListVersionsReply) {}
+  rpc Backup (BackupRequest) returns (BackupReply) {}
+  rpc RestoreFromBackup (RestoreFromBackupRequest) returns (RestoreFromBackupReply) {}
+  rpc CompactAllData (CompactAllDataRequest) returns (CompactAllDataReply) {}
+  rpc ExportDB (ExportDBRequest) returns (ExportDBReply) {}
 }

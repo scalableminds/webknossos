@@ -2,24 +2,34 @@ import play.sbt.PlayImport.{filters, _}
 import sbt._
 
 object Dependencies {
-  private val silhouetteVersion = "10.0.1"
-  private val brotliVersion = "1.16.0"
+
+  val dependencyResolvers: Seq[MavenRepository] =
+    Seq(
+      Resolver.typesafeRepo("releases"),
+      "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/",
+      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
+      "Atlassian Releases" at "https://packages.atlassian.com/maven-public/",
+      "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
+    )
+
+  private val silhouetteVersion = "10.0.3"
+  private val brotliVersion = "1.20.0"
+  private val slickVersion = "3.5.2"
+  private val awsVersion = "2.35.5"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.5",
+    "org.playframework" %% "play" % "3.0.9",
     // Play’s JSON serialization. import play.api.libs.json
-    "com.typesafe.play" %% "play-json" % "2.10.5",
+    "org.playframework" %% "play-json" % "3.0.6",
     // Sending emails. import org.apache.commons.mail
-    "org.apache.commons" % "commons-email" % "1.5",
+    "org.apache.commons" % "commons-email" % "1.6.0",
     // File utils. import org.apache.commons.io
-    "commons-io" % "commons-io" % "2.16.1",
+    "commons-io" % "commons-io" % "2.20.0",
     // HashCodeBuilder. import org.apache.commons.lang3
-    "org.apache.commons" % "commons-lang3" % "3.15.0",
-    // Box/Tryo. import net.liftweb
-    "net.liftweb" %% "lift-common" % "3.5.0",
+    "org.apache.commons" % "commons-lang3" % "3.18.0",
     // ObjectIds. import reactivemongo.api.bson
     "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10",
     // Protocol buffers. import scalapb
@@ -42,7 +52,7 @@ object Dependencies {
     // Protocol buffer GRPC health check for FossilDB. import io.grpc
     "io.grpc" % "grpc-services" % grpcVersion,
     // Streaming JSON parsing. import com.google.gson
-    "com.google.code.gson" % "gson" % "2.10.1",
+    "com.google.code.gson" % "gson" % "2.13.2",
     // Play WS Http client, used for RPC calls. import play.api.libs.ws
     ws,
     // Dependency Injection. import javax.inject.Inject
@@ -56,15 +66,17 @@ object Dependencies {
     // MultiArray (ndarray) handles. import ucar
     "edu.ucar" % "cdm-core" % "5.4.2",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
-    "software.amazon.awssdk" % "s3" % "2.26.21",
+    "software.amazon.awssdk" % "s3" % awsVersion,
+    // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3
+    "software.amazon.awssdk" % "s3-transfer-manager" % awsVersion,
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.40.1",
-    // Blosc compression. import org.blosc
-    "org.lasersonlab" % "jblosc" % "1.0.1",
+    "com.google.cloud" % "google-cloud-storage" % "2.58.1",
+    // Blosc compression. import dev.zarr.bloscjava
+    "com.scalableminds" % "blosc-java" % "0.1-1.21.4",
     // Zstd compression. import org.apache.commons.compress
-    "org.apache.commons" % "commons-compress" % "1.26.1",
+    "org.apache.commons" % "commons-compress" % "1.28.0",
     // Zstd compression native bindings. not imported
-    "com.github.luben" % "zstd-jni" % "1.5.5-5",
+    "com.github.luben" % "zstd-jni" % "1.5.7-5",
     // Brotli compression. import com.aayushatharva.brotli4j
     "com.aayushatharva.brotli4j" % "brotli4j" % brotliVersion,
     // Brotli compression native bindings. not imported
@@ -82,9 +94,9 @@ object Dependencies {
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
-    "commons-codec" % "commons-codec" % "1.17.0",
+    "commons-codec" % "commons-codec" % "1.19.0",
     // End-to-end tests, backend unit tests. import org.scalatestplus.play
-    "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
+    "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % "test",
     // Authenticated requests. import play.silhouette
     "org.playframework.silhouette" %% "play-silhouette" % silhouetteVersion,
     // Signing Cookies. import play.silhouette.crypto
@@ -92,24 +104,26 @@ object Dependencies {
     // End-to-end test specs
     specs2 % Test,
     // Writing XML. import com.sun.xml.txw2
-    "org.glassfish.jaxb" % "txw2" % "4.0.5",
+    "org.glassfish.jaxb" % "txw2" % "4.0.6",
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
-    "org.codehaus.woodstox" % "wstx-asl" % "4.0.6",
+    "com.fasterxml.woodstox" % "woodstox-core" % "7.1.1",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
-    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.1",
+    "com.github.jwt-scala" %% "jwt-play-json" % "11.0.3",
     // SQL Queries. import slick
-    "com.typesafe.slick" %% "slick" % "3.5.0",
+    "com.typesafe.slick" %% "slick" % slickVersion,
     // SQL Queries connection pool. not imported.
-    "com.typesafe.slick" %% "slick-hikaricp" % "3.5.1",
+    "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
-    "com.typesafe.slick" %% "slick-codegen" % "3.5.1",
+    "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.3"
+    "org.postgresql" % "postgresql" % "42.7.8",
+    /// WebAuthn for passkey authentication. import com.webauthn4j
+    "com.webauthn4j" % "webauthn4j-core" % "0.29.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(
-    // liftweb-commons (used by us for Box/tryo) depends on older scala-xml, but we do not use its xml-related features
-    "org.scala-lang.modules" % "scala-xml_2.13" % "2.2.0"
+    // Play framework relies on an older version of jackson-databind than webauthn4j. Because of that, we set the
+    // version to newest version supported by Play.
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.3"
   )
-
 }

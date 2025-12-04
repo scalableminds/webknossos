@@ -1,5 +1,4 @@
 import {
-  CopyOutlined,
   EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
@@ -7,22 +6,21 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { getOrganization } from "admin/admin_rest_api";
+import { getOrganization } from "admin/rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
+import FormattedId from "components/formatted_id";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
-import Toast from "libs/toast";
+import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
-import type { OxalisState } from "oxalis/store";
+import { useEffect } from "react";
+import type { APIDatasetCompact, Folder } from "types/api_types";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
-} from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import { useEffect } from "react";
-import { useSelector } from "react-redux";
-import type { APIDatasetCompact, Folder } from "types/api_flow_types";
+} from "viewer/view/right-border-tabs/dataset_info_tab_view";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
@@ -93,14 +91,12 @@ function getMaybeSelectMessage(datasetCount: number) {
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const { data: owningOrganization } = useQuery(
-    ["organizations", selectedDataset.owningOrganization],
-    () => getOrganization(selectedDataset.owningOrganization),
-    {
-      refetchOnWindowFocus: false,
-    },
-  );
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const { data: owningOrganization } = useQuery({
+    queryKey: ["organizations", selectedDataset.owningOrganization],
+    queryFn: () => getOrganization(selectedDataset.owningOrganization),
+    refetchOnWindowFocus: false,
+  });
   const owningOrganizationName = owningOrganization?.name;
 
   const renderOrganization = () => {
@@ -179,15 +175,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           <div className="sidebar-label">ID</div>
           {fullDataset && (
             <Tag>
-              {fullDataset.id.substring(0, 10)}...{" "}
-              <Tooltip title="Copy Dataset ID">
-                <CopyOutlined
-                  onClick={() => {
-                    navigator.clipboard.writeText(fullDataset.id);
-                    Toast.success("Dataset ID copied.");
-                  }}
-                />
-              </Tooltip>
+              <FormattedId id={fullDataset.id} />
             </Tag>
           )}
         </div>
@@ -204,11 +192,13 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
         )}
       </Spin>
-
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Used Storage</div>
-          <Tooltip title="Note that linked and remote layers aren’t measured." placement="left">
+          <Tooltip
+            title={`${Intl.NumberFormat().format(fullDataset.usedStorageBytes)} bytes`}
+            placement="left"
+          >
             <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
           </Tooltip>
         </div>

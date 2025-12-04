@@ -5,10 +5,10 @@ import { App, Button, Card, Divider, Form, Input, Progress, Spin, Upload } from 
 import Toast from "libs/toast";
 import _ from "lodash";
 import Messages from "messages";
-import type { Vector3 } from "oxalis/constants";
-import type { BoundingBoxObject } from "oxalis/store";
 import { useState } from "react";
-import type { APITask } from "types/api_flow_types";
+import type { APITask } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
+import type { BoundingBoxObject } from "viewer/store";
 
 const FormItem = Form.Item;
 const { TextArea } = Input;

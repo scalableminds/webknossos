@@ -1,4 +1,5 @@
 syntax = "proto2";
+import "geometry.proto";
 
 package com.scalableminds.webknossos.datastore;
 
@@ -14,10 +15,19 @@ message AnnotationProto {
   required int64 earliestAccessibleVersion = 4;
   optional bool skeletonMayHavePendingUpdates = 5; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   optional bool editableMappingsMayHavePendingUpdates = 6; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
+  repeated AnnotationUserStateProto userStates = 7;
 }
 
 message AnnotationLayerProto {
   required string tracingId = 1;
   required string name = 2;
   required AnnotationLayerTypeProto typ = 3;
+}
+
+message AnnotationUserStateProto {
+  required string userId = 1;
+  required Vec3IntProto editPosition = 2;
+  required Vec3DoubleProto editRotation = 3;
+  required double zoomLevel = 4;
+  repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 5;
 }

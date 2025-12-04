@@ -1,8 +1,20 @@
-import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
-import type { DatasetUpdater } from "admin/admin_rest_api";
-import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
-import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+import type { DatasetUpdater } from "admin/rest_api";
+import { Dropdown, type MenuProps, Space, Tag, Tooltip } from "antd";
+import type {
+  ColumnType,
+  FilterValue,
+  SorterResult,
+  TablePaginationConfig,
+} from "antd/lib/table/interface";
 import classNames from "classnames";
+import FastTooltip from "components/fast_tooltip";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
@@ -17,31 +29,26 @@ import {
   useDatasetDrop,
 } from "dashboard/folders/folder_tree";
 import { diceCoefficient as dice } from "dice-coefficient";
-import { stringToColor } from "libs/format_utils";
+import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { Unicode } from "oxalis/constants";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState } from "oxalis/store";
-import CategorizationLabel from "oxalis/view/components/categorization_label";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
+import * as React from "react";
+import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { Link } from "react-router-dom";
+import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
+import type { EmptyObject } from "types/globals";
+import { Unicode } from "viewer/constants";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import CategorizationLabel from "viewer/view/components/categorization_label";
+import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
-} from "oxalis/view/context_menu";
-import * as React from "react";
-import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import type {
-  APIDatasetCompact,
-  APIMaybeUnimportedDataset,
-  FolderItem,
-} from "types/api_flow_types";
-import type { EmptyObject } from "types/globals";
+} from "viewer/view/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
 export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -57,8 +64,7 @@ type Props = {
   subfolders: FolderItem[];
   searchQuery: string;
   searchTags: Array<string>;
-  isUserAdmin: boolean;
-  isUserDatasetManager: boolean;
+  isUserAdminOrDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
   reloadDataset: (datasetId: string) => Promise<void>;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
@@ -236,7 +242,7 @@ const DraggableDatasetRow = ({
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const theme = useWkSelector((state) => state.uiInformation.theme);
   // @ts-ignore
 
   const datasetId = restProps["data-row-key"];
@@ -287,16 +293,44 @@ class DatasetRenderer {
     return DatasetRenderer.getRowKey(this.data);
   }
 
-  renderTypeColumn() {
+  renderStorageColumn(): React.ReactNode {
+    if (this.data.usedStorageBytes == null) return null;
+    const formattedBytes = formatCountToDataAmountUnit(this.data.usedStorageBytes, true);
+    return this.data.usedStorageBytes > 0 ? (
+      <FastTooltip title={`${new Intl.NumberFormat().format(this.data.usedStorageBytes)} bytes`}>
+        {formattedBytes}
+      </FastTooltip>
+    ) : (
+      <Tooltip
+        title={
+          <>
+            The storage may be zero because:
+            <ul>
+              <li>The storage hasn't been scanned yet</li>
+              <li>The data is streamed from external sources</li>
+              <li>The data layers are already counted in other (linked) datasets</li>
+              <li>The dataset belongs to another organization</li>
+              <li>The dataset is empty</li>
+            </ul>
+          </>
+        }
+      >
+        {formattedBytes}
+      </Tooltip>
+    );
+  }
+  renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
-  renderNameColumn() {
-    const selectedLayerName: string | null =
-      this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0];
+  renderNameColumn(): React.ReactNode {
+    const selectedLayerName: string | null = this.data.isActive
+      ? this.data.colorLayerNames[0] || this.data.segmentationLayerNames[0]
+      : null;
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
       : "/assets/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
+
     return (
       <>
         <Link to={`/datasets/${getReadableURLPart(this.data)}/view`} title="View Dataset">
@@ -327,7 +361,7 @@ class DatasetRenderer {
       </>
     );
   }
-  renderTags() {
+  renderTags(): React.ReactNode {
     return this.data.isActive ? (
       <DatasetTags
         dataset={this.data}
@@ -344,10 +378,10 @@ class DatasetRenderer {
       </Tooltip>
     );
   }
-  renderCreationDateColumn() {
+  renderCreationDateColumn(): React.ReactNode {
     return <FormattedDate timestamp={this.data.created} />;
   }
-  renderActionsColumn() {
+  renderActionsColumn(): React.ReactNode {
     return (
       <DatasetActionView
         dataset={this.data}
@@ -371,7 +405,7 @@ class FolderRenderer {
   getRowKey() {
     return FolderRenderer.getRowKey(this.data);
   }
-  renderNameColumn() {
+  renderNameColumn(): React.ReactNode {
     return (
       <>
         <img
@@ -386,10 +420,13 @@ class FolderRenderer {
       </>
     );
   }
-  renderCreationDateColumn() {
+  renderStorageColumn(): React.ReactNode {
     return null;
   }
-  renderActionsColumn() {
+  renderCreationDateColumn(): React.ReactNode {
+    return null;
+  }
+  renderActionsColumn(): React.ReactNode {
     return this.datasetTable.getFolderSettingsActions(this.data);
   }
 }
@@ -461,14 +498,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
       });
 
     const filterByHasLayers = (datasets: APIDatasetCompact[]) =>
-      this.props.isUserAdmin || this.props.isUserDatasetManager
+      this.props.isUserAdminOrDatasetManager
         ? datasets
         : datasets.filter((dataset) => dataset.isActive);
 
     return filteredByTags(filterByMode(filterByHasLayers(this.props.datasets)));
   }
 
-  renderEmptyText() {
+  renderEmptyText(): React.ReactNode {
     const maybeWarning =
       this.props.datasetFilteringMode !== "showAllDatasets" ? (
         <p>
@@ -506,7 +543,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     setFolderIdForEditModal(folder.key);
   }
 
-  getFolderSettingsActions(folder: FolderItemWithName) {
+  getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
     const { context } = this.props;
     const folderTreeContextMenuItems = generateSettingsForFolder(
       folder,
@@ -582,14 +619,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
       selectedRowKeys = [FolderRenderer.getRowKey(context.selectedFolder as FolderItemWithName)];
     }
 
-    const columns: TableProps["columns"] = [
+    const columns: ColumnType<RowRenderer>[] = [
       {
         title: "Name",
         dataIndex: "name",
         key: "name",
         sorter: Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
         sortOrder: sortedInfo.columnKey === "name" ? sortedInfo.order : undefined,
-        render: (_name: string, rowRenderer: RowRenderer) => rowRenderer.renderNameColumn(),
+        render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
       {
         width: 180,
@@ -602,7 +639,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
         sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
         render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
       },
-
       {
         width: 200,
         title: "Actions",
@@ -611,6 +647,34 @@ class DatasetTable extends React.PureComponent<Props, State> {
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
       },
     ];
+    if (
+      this.props.isUserAdminOrDatasetManager &&
+      context.usedStorageInOrga != null &&
+      context.usedStorageInOrga > 0
+    ) {
+      const datasetStorageSizeColumn = {
+        title: (
+          <Space>
+            Used Storage{" "}
+            <Tooltip title={"Storage used by this dataset within your organization."}>
+              <InfoCircleOutlined />
+            </Tooltip>{" "}
+          </Space>
+        ),
+        key: "storage",
+        width: 200,
+        render: (_: any, rowRenderer: RowRenderer) => {
+          return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
+        },
+        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+          isRecordADataset(rowRenderer.data) && rowRenderer.data.usedStorageBytes
+            ? rowRenderer.data.usedStorageBytes
+            : 0,
+        ),
+        sortOrder: sortedInfo.columnKey === "storage" ? sortedInfo.order : undefined,
+      };
+      columns.splice(2, 0, datasetStorageSizeColumn);
+    }
 
     return (
       <DndProvider backend={HTML5Backend}>
@@ -661,7 +725,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               },
               onClick: (event) => {
                 // @ts-expect-error
-                if (event.target?.tagName !== "TD") {
+                if (event.target?.tagName !== "TD" && event.target?.tagName !== "DIV") {
                   // Don't (de)select when another element within the row was clicked
                   // (e.g., a link). Otherwise, clicking such elements would cause two actions
                   // (e.g., the link action and a (de)selection).
@@ -851,7 +915,7 @@ export function TeamTags({
   const teams = dataset.allowedTeamsCumulative;
   const permittedTeams = [...teams];
   if (dataset.isPublic) {
-    permittedTeams.push({ name: "public", id: "", organization: "" });
+    permittedTeams.push({ name: "public", id: "", organization: "", isOrganizationTeam: false });
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {

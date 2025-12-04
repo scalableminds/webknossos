@@ -1,7 +1,7 @@
 import type UpdatableTexture from "libs/UpdatableTexture";
-import { getRenderer } from "oxalis/controller/renderer";
-import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
-import * as THREE from "three";
+import { type PixelFormat, type PixelFormatGPU, RGBAIntegerFormat, UnsignedIntType } from "three";
+import { getRenderer } from "viewer/controller/renderer";
+import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 
 const DEFAULT_LOAD_FACTOR = 0.9;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
@@ -13,7 +13,8 @@ let cachedNullTexture: UpdatableTexture | undefined;
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   entryCapacity: number;
-  protected table!: Uint32Array;
+  entryCount: number = 0;
+  protected table!: Uint32Array<ArrayBuffer>;
   protected seeds!: number[];
   protected seedSubscribers: Array<SeedSubscriberFn> = [];
   _texture: UpdatableTexture;
@@ -29,14 +30,14 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   static getTextureType() {
-    return THREE.UnsignedIntType;
+    return UnsignedIntType;
   }
 
-  static getTextureFormat() {
-    return THREE.RGBAIntegerFormat;
+  static getTextureFormat(): PixelFormat {
+    return RGBAIntegerFormat;
   }
 
-  static getInternalFormat(): THREE.PixelFormatGPU {
+  static getInternalFormat(): PixelFormatGPU {
     return "RGBA32UI";
   }
 
@@ -50,23 +51,21 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture = createUpdatableTexture(
       textureWidth,
       textureWidth,
-      this.getClass().getTextureChannelCount(),
       this.getClass().getTextureType(),
       getRenderer(),
       this.getClass().getTextureFormat(),
+      this.getClass().getInternalFormat(),
     );
-
-    // The internal format has to be set manually, since ThreeJS does not
-    // derive this value by itself.
-    // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
-    // for a reference of the internal formats.
-    this._texture.internalFormat = this.getClass().getInternalFormat();
 
     this.entryCapacity = Math.floor(
       (textureWidth ** 2 * this.getClass().getTextureChannelCount()) /
         this.getClass().getElementsPerEntry(),
     );
 
+    this.clear();
+  }
+
+  clear() {
     this.initializeTableArray();
     // Initialize the texture once to avoid undefined behavior
     this.flushTableToTexture();
@@ -96,7 +95,6 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       // Use 1x1 texture to avoid WebGL warnings.
       1,
       1,
-      this.getTextureChannelCount(),
       this.getTextureType(),
       getRenderer(),
       this.getTextureFormat(),
@@ -107,6 +105,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   private initializeTableArray() {
+    this.entryCount = 0;
     this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
       EMPTY_KEY_VALUE,
     );
@@ -211,6 +210,10 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       return null;
     }
 
+    // The key does not exist yet, therefore already increment the entry count (if the
+    // internalSet does not succeed, a rehash will happen that resets entryCount to 0).
+    this.entryCount++;
+
     let seedIndex = Math.floor(Math.random() * this.seeds.length);
     while (iterationCounter++ < this.entryCapacity) {
       const seed = this.seeds[seedIndex];
@@ -250,6 +253,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
           hashedAddress,
           !this.autoTextureUpdate,
         );
+        this.entryCount--;
         return;
       }
     }

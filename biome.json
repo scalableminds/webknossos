@@ -1,10 +1,11 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "organizeImports": { 
-    "enabled": true,  
+  "organizeImports": {
+    "enabled": true,
     "ignore": [
       "frontend/javascripts/test/*",
-      "frontend/javascripts/oxalis/model/helpers/shader_editor.ts"
+      "frontend/javascripts/viewer/model/helpers/shader_editor.ts",
+      "**/__snapshots__/**"
     ]
   },
   "linter": {
@@ -19,7 +20,8 @@
       "libs/parse_stl_buffer.ts",
       "libs/trackball_controls.ts",
       "*.d.ts",
-      "frontend/javascripts/test/snapshots/*"
+      "frontend/javascripts/test/snapshots/*",
+      "**/__snapshots__/**"
     ],
     "rules": {
       "recommended": true,
@@ -95,7 +97,8 @@
       "libs/BufferGeometryUtils.ts",
       "libs/parse_stl_buffer.ts",
       "libs/trackball_controls.ts",
-      "*.d.ts"
+      "*.d.ts",
+      "**/__snapshots__/**"
     ]
   },
   "overrides": [

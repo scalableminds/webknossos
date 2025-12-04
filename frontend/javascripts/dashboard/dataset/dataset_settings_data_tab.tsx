@@ -1,7 +1,9 @@
-import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
-import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
+import { CopyOutlined, DeleteOutlined, ExportOutlined } from "@ant-design/icons";
+import { SettingsCard } from "admin/account/helpers/settings_card";
+import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
   Col,
@@ -9,151 +11,35 @@ import {
   type FormInstance,
   Input,
   InputNumber,
-  List,
   Row,
   Select,
   Space,
-  Switch,
   Tooltip,
 } from "antd";
-import {
-  FormItemWithInfo,
-  Hideable,
-  RetryingErrorBoundary,
-  jsonEditStyle,
-} from "dashboard/dataset/helper_components";
+import { FormItemWithInfo } from "dashboard/dataset/helper_components";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
-import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
-import type { BoundingBoxObject, OxalisState } from "oxalis/store";
-import * as React from "react";
-import { useSelector } from "react-redux";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
-import type { ArbitraryObject } from "types/globals";
+import type React from "react";
+import { cloneElement, useEffect } from "react";
+import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
+import { syncValidator } from "types/validation";
+import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
+import { useDatasetSettingsContext } from "./dataset_settings_context";
 
-const FormItem = Form.Item;
-
-export const syncDataSourceFields = (
-  form: FormInstance,
-  syncTargetTabKey: "simple" | "advanced",
-  // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
-  // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
-  syncDatasetName = false,
-): void => {
-  if (!form) {
-    return;
-  }
-
-  if (syncTargetTabKey === "advanced") {
-    // Copy from simple to advanced: update json
-    const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
-    if (syncDatasetName && dataSourceFromSimpleTab) {
-      dataSourceFromSimpleTab.id ??= {};
-      dataSourceFromSimpleTab.id.name = form.getFieldValue(["dataset", "name"]);
-    }
-    form.setFieldsValue({
-      dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
-    });
-  } else {
-    const dataSourceFromAdvancedTab = parseMaybe(
-      form.getFieldValue("dataSourceJson"),
-    ) as ArbitraryObject | null;
-    // Copy from advanced to simple: update form values
-    if (syncDatasetName && dataSourceFromAdvancedTab?.id?.name) {
-      form.setFieldsValue({
-        dataset: {
-          name: dataSourceFromAdvancedTab.id.name,
-        },
-      });
-    }
-    form.setFieldsValue({
-      dataSource: dataSourceFromAdvancedTab,
-    });
-  }
-};
-
-export default function DatasetSettingsDataTab({
-  form,
-  activeDataSourceEditMode,
-  onChange,
-  dataset,
-}: {
-  form: FormInstance;
-  activeDataSourceEditMode: "simple" | "advanced";
-  onChange: (arg0: "simple" | "advanced") => void;
-  dataset?: APIDataset | null | undefined;
-}) {
-  // Using the return value of useWatch for the `dataSource` var
-  // yields outdated values. Therefore, the hook only exists for listening.
-  Form.useWatch("dataSource", form);
-  // Then, the newest value can be retrieved with getFieldValue
-  const dataSource = form.getFieldValue("dataSource");
-  const dataSourceJson = Form.useWatch("dataSourceJson", form);
-  const datasetStoredLocationInfo = dataset
-    ? ` (as stored on datastore ${dataset?.dataStore.name} at ${dataset?.owningOrganization}/${dataset?.directoryName})`
-    : "";
-
-  const isJSONValid = isValidJSON(dataSourceJson);
+export default function DatasetSettingsDataTab() {
+  const { dataset, form } = useDatasetSettingsContext();
+  const dataSource = Form.useWatch("dataSource", { form, preserve: true });
 
   return (
     <div>
-      <div
-        style={{
-          textAlign: "right",
-        }}
-      >
-        <Tooltip
-          title={
-            isJSONValid
-              ? "Switch between simple and advanced mode"
-              : "Please ensure that the supplied config JSON is valid."
-          }
-        >
-          <Switch
-            checkedChildren="Advanced"
-            unCheckedChildren="Simple"
-            checked={activeDataSourceEditMode === "advanced"}
-            disabled={!isJSONValid}
-            style={{
-              marginBottom: 6,
-            }}
-            onChange={(bool) => {
-              const key = bool ? "advanced" : "simple";
-              onChange(key);
-            }}
-          />
-        </Tooltip>
-      </div>
+      <SettingsTitle title="Data Source" description="Configure the data source" />
 
-      <Hideable hidden={activeDataSourceEditMode !== "simple"}>
-        <RetryingErrorBoundary>
-          <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
-        </RetryingErrorBoundary>
-      </Hideable>
-
-      <Hideable hidden={activeDataSourceEditMode !== "advanced"}>
-        <FormItem
-          name="dataSourceJson"
-          label={"Dataset Configuration" + datasetStoredLocationInfo}
-          hasFeedback
-          rules={[
-            {
-              required: true,
-              message: "Please provide a dataset configuration.",
-            },
-            {
-              validator: validateDatasourceJSON,
-            },
-          ]}
-        >
-          <Input.TextArea rows={20} style={jsonEditStyle} />
-        </FormItem>
-      </Hideable>
+      <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
     </div>
   );
 }
@@ -178,7 +64,7 @@ function SimpleDatasetForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
     const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
     const newLayers = oldLayers.filter(
@@ -189,160 +75,158 @@ function SimpleDatasetForm({
         dataLayers: newLayers,
       },
     });
-    syncDataSourceFields(form, "advanced");
   };
+  const marginBottom: React.CSSProperties = {
+    marginBottom: 24,
+  };
+
   return (
     <div>
-      <List
-        header={
-          <div
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            Dataset
-          </div>
-        }
-      >
-        <List.Item>
-          <div
-            style={{
-              width: "100%",
-            }}
-          >
-            <Row gutter={48}>
-              <Col span={24} xl={12}>
-                <FormItemWithInfo
-                  // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
-                  // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
-                  name={["dataset", "name"]}
-                  label="Name"
-                  info="The name of the dataset"
-                  validateFirst
-                  rules={getDatasetNameRules(activeUser)}
-                >
+      <SettingsCard
+        title="General Dataset Settings"
+        style={marginBottom}
+        content={
+          <Row gutter={[24, 24]}>
+            <Col span={24} xl={12}>
+              <FormItemWithInfo
+                // The dataset name is not synced with the datasource.id.name, because datasource.id represents a DataSourceId
+                // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
+                name={["dataset", "name"]}
+                label="Name"
+                info="The name of the dataset"
+                validateFirst
+                rules={getDatasetNameRules(activeUser)}
+              >
+                <Input
+                  style={{
+                    width: LEFT_COLUMN_ITEMS_WIDTH,
+                  }}
+                />
+              </FormItemWithInfo>
+              <Space size="large" />
+              <FormItemWithInfo
+                name={["dataset", "id"]}
+                label="Dataset ID"
+                info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
+              >
+                <Space.Compact>
                   <Input
+                    value={dataset?.id}
                     style={{
-                      width: LEFT_COLUMN_ITEMS_WIDTH,
+                      width:
+                        activeUser?.isSuperUser && dataset
+                          ? LEFT_COLUMN_ITEMS_WIDTH - 2 * COPY_ICON_BUTTON_WIDTH
+                          : LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
                     }}
+                    readOnly
+                    disabled
                   />
-                </FormItemWithInfo>
-                <Space size="large" />
-                <FormItemWithInfo
-                  name={["dataset", "id"]}
-                  label="Dataset ID"
-                  info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
-                >
-                  <Space.Compact>
-                    <Input
-                      value={dataset?.id}
-                      style={{
-                        width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
-                      }}
-                      readOnly
-                      disabled
-                    />
-                    <Tooltip title="Copy dataset ID">
-                      <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
+                  {activeUser?.isSuperUser && dataset ? (
+                    <Tooltip title="Inspect the full data source JSON response from the server. This is shown to super users only.">
+                      <Button
+                        href={`/api/datasets/${dataset?.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        icon={<ExportOutlined />}
+                      />
                     </Tooltip>
-                  </Space.Compact>
-                </FormItemWithInfo>
-              </Col>
-              <Col span={24} xl={12}>
-                <FormItemWithInfo
-                  name={["dataSource", "scale", "factor"]}
-                  label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a voxel size for the dataset.",
-                    },
-                    {
-                      validator: syncValidator(
-                        (value: Vector3) => value?.every((el) => el > 0),
-                        "Each component of the voxel size must be greater than 0",
-                      ),
-                    },
-                  ]}
-                >
-                  <Vector3Input
-                    style={{
-                      width: 400,
-                    }}
-                    allowDecimals
-                  />
-                </FormItemWithInfo>
-                <Space size="large" />
-                <FormItemWithInfo
-                  name={["dataSource", "scale", "unit"]}
-                  label="Unit"
-                  info="The unit in which the voxel size is defined."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a unit for the voxel scale of the dataset.",
-                    },
-                  ]}
-                >
-                  <Select
-                    style={{ width: 120 }}
-                    options={AllUnits.map((unit) => ({
-                      value: unit,
-                      label: (
-                        <span>
-                          <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
-                        </span>
-                      ),
-                    }))}
-                  />
-                </FormItemWithInfo>
-              </Col>
-            </Row>
-            <Row gutter={48}>
-              <Col span={24} xl={12} />
-              <Col span={24} xl={6}>
-                <AxisRotationSettingForDataset form={form} />
-              </Col>
-            </Row>
-          </div>
-        </List.Item>
-      </List>
-
-      <List
-        locale={{ emptyText: "No Layers" }}
-        header={
-          <div
-            style={{
-              fontWeight: "bold",
-            }}
-          >
-            Layers
-          </div>
+                  ) : null}
+                  <Tooltip title="Copy dataset ID">
+                    <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
+                  </Tooltip>
+                </Space.Compact>
+              </FormItemWithInfo>
+            </Col>
+            <Col span={24} xl={12}>
+              <FormItemWithInfo
+                name={["dataSource", "scale", "factor"]}
+                label="Voxel Size"
+                info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a voxel size for the dataset.",
+                  },
+                  {
+                    validator: syncValidator(
+                      (value: Vector3) => value?.every((el) => el > 0),
+                      "Each component of the voxel size must be greater than 0",
+                    ),
+                  },
+                ]}
+              >
+                <Vector3Input
+                  style={{
+                    width: 400,
+                  }}
+                  allowDecimals
+                />
+              </FormItemWithInfo>
+              <FormItemWithInfo
+                name={["dataSource", "scale", "unit"]}
+                label="Unit"
+                info="The unit in which the voxel size is defined."
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a unit for the voxel scale of the dataset.",
+                  },
+                ]}
+              >
+                <Select
+                  style={{ width: 120 }}
+                  options={AllUnits.map((unit) => ({
+                    value: unit,
+                    label: (
+                      <span>
+                        <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
+                      </span>
+                    ),
+                  }))}
+                />
+              </FormItemWithInfo>
+            </Col>
+          </Row>
         }
-      >
-        {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
-          // the layer name may change in this view, the order does not, so idx is the right key choice here
-          <List.Item key={`layer-${idx}`}>
-            <SimpleLayerForm
-              dataset={dataset}
-              layer={layer}
-              index={idx}
-              onRemoveLayer={onRemoveLayer}
-              form={form}
+      />
+
+      <SettingsCard
+        title="Axis Rotation"
+        style={marginBottom}
+        content={
+          <Row gutter={[24, 24]}>
+            <Col span={24}>
+              <AxisRotationSettingForDataset form={form} />
+            </Col>
+          </Row>
+        }
+      />
+
+      {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
+        // the layer name may change in this view, the order does not, so idx is the right key choice here
+        <Row gutter={[24, 24]} key={`layer-${idx}`}>
+          <Col span={24}>
+            <SettingsCard
+              title={`Layer: ${layer.name}`}
+              style={marginBottom}
+              content={
+                <SimpleLayerForm
+                  dataset={dataset}
+                  layer={layer}
+                  index={idx}
+                  onRemoveLayer={onRemoveLayer}
+                  form={form}
+                />
+              }
             />
-          </List.Item>
-        ))}
-      </List>
+          </Col>
+        </Row>
+      ))}
     </div>
   );
 }
 
 function getMags(layer: DataLayer) {
-  if ("wkwResolutions" in layer) {
-    return layer.wkwResolutions.map((res) => res.resolution);
-  }
-
   return layer.mags.map((res) => res.mag);
 }
 
@@ -359,15 +243,18 @@ function SimpleLayerForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
-  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
+  const dataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"], form);
+
+  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
+  const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const isSegmentation = category === "segmentation";
-  const bitDepth = getBitDepth(layer);
+  const valueRange = getSupportedValueRangeForElementClass(layer.elementClass);
 
   const mayLayerBeRemoved = dataLayers?.length > 1;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Always revalidate in case the user changes the data layers in the form.
-  React.useEffect(() => {
+  useEffect(() => {
     // Always validate all fields so that in the case of duplicate layer
     // names all relevant fields are properly validated.
     // This is a workaround, since shouldUpdate=true on a
@@ -387,8 +274,8 @@ function SimpleLayerForm({
       );
     },
     initialJobKeyExtractor: (job) =>
-      job.type === "find_largest_segment_id" && job.datasetName === dataset?.name
-        ? (job.datasetName ?? "largest_segment_id")
+      job.command === "find_largest_segment_id" && job.args.datasetName === dataset?.name
+        ? (job.args.datasetName ?? "largest_segment_id")
         : null,
   });
   const activeJob = runningJobs[0];
@@ -400,7 +287,7 @@ function SimpleLayerForm({
           Toast.info(
             "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
           );
-          return [job.datasetName ?? "largest_segment_id", job.id] as [string, string];
+          return [job.args.datasetName ?? "largest_segment_id", job.id] as [string, string];
         }
       : null;
 
@@ -445,9 +332,7 @@ function SimpleLayerForm({
             ]}
           >
             <Input
-              // the name of a layer depends on the folder name in wkw. Therefore, don't allow
-              // editing the layer name for wkw.
-              disabled={layer.dataFormat === "wkw"}
+              disabled
               style={{
                 width: LEFT_COLUMN_ITEMS_WIDTH,
               }}
@@ -467,11 +352,11 @@ function SimpleLayerForm({
               </Select>
             </FormItemWithInfo>
             <FormItemWithInfo
-              label="Element Class"
+              label="Data Type"
               style={{
                 marginBottom: 24,
               }}
-              info="The element class (data type) of the layer."
+              info="The data type (sometimes called dtype) of the layer."
             >
               <Select disabled value={layer.elementClass} style={{ width: 120 }}>
                 <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
@@ -585,21 +470,23 @@ function SimpleLayerForm({
                   rules={[
                     {
                       validator: (_rule, value) =>
-                        value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
+                        value == null ||
+                        value === "" ||
+                        (value >= valueRange[0] && value <= valueRange[1] && value !== 0)
                           ? Promise.resolve()
                           : Promise.reject(
                               new Error(
-                                `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+                                `The largest segmentation ID must be between ${valueRange[0]} and ${valueRange[1]} and not 0. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                               ),
                             ),
                     },
                     {
                       warningOnly: true,
                       validator: (_rule, value) =>
-                        value != null && value === 2 ** bitDepth - 1
+                        value != null && value === valueRange[1]
                           ? Promise.reject(
                               new Error(
-                                `The largest segmentation ID has already reached the maximum possible value of 2^${bitDepth}-1. Annotations of this dataset cannot create new segments.`,
+                                `The largest segmentation ID has already reached the maximum possible value of ${valueRange[1]}. Annotations of this dataset cannot create new segments.`,
                               ),
                             )
                           : Promise.resolve(),
@@ -628,24 +515,33 @@ function SimpleLayerForm({
                       }}
                     />
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
-                      APIJobType.FIND_LARGEST_SEGMENT_ID,
+                      APIJobCommand.FIND_LARGEST_SEGMENT_ID,
                     ) ? (
-                      <Button
-                        type={mostRecentSuccessfulJob == null ? "primary" : "default"}
-                        title={`${
-                          activeJob != null ? "Scanning" : "Scan"
-                        } the data to derive the value automatically`}
-                        style={{ marginLeft: 8 }}
-                        loading={activeJob != null}
-                        disabled={activeJob != null || startJob == null}
-                        onClick={
-                          startJob != null && startJobFn != null
-                            ? () => startJob(startJobFn)
-                            : () => Promise.resolve()
+                      <Tooltip
+                        title={
+                          !isStoredAsSegmentationLayer
+                            ? "Before being able to detect the largest segment id you must save your changes."
+                            : `${
+                                activeJob != null ? "Scanning" : "Scan"
+                              } the data to derive the value automatically`
                         }
                       >
-                        Detect
-                      </Button>
+                        <Button
+                          type={mostRecentSuccessfulJob == null ? "primary" : "default"}
+                          style={{ marginLeft: 8 }}
+                          loading={activeJob != null}
+                          disabled={
+                            !isStoredAsSegmentationLayer || activeJob != null || startJob == null
+                          }
+                          onClick={
+                            startJob != null && startJobFn != null
+                              ? () => startJob(startJobFn)
+                              : () => Promise.resolve()
+                          }
+                        >
+                          Detect
+                        </Button>
+                      </Tooltip>
                     ) : (
                       <></>
                     )}
@@ -654,7 +550,7 @@ function SimpleLayerForm({
               </div>
               {mostRecentSuccessfulJob && (
                 <div style={{ marginTop: -6 }}>
-                  Output of most recent job: {mostRecentSuccessfulJob.result}
+                  Output of most recent job: {mostRecentSuccessfulJob.returnValue}
                 </div>
               )}
             </div>
@@ -670,7 +566,7 @@ function DelegatePropsToFirstChild({ children, ...props }: { children: React.Rea
   // even though antd only demands one. We do this for better layouting.
   return (
     <>
-      {React.cloneElement(children[0], props)}
+      {cloneElement(children[0], props)}
       {children[1]}
     </>
   );

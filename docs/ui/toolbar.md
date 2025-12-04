@@ -2,7 +2,10 @@
 
 The toolbar is your primary interface for switching between different tools and modes within WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
 
-![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](../images/ui_toolbar_menu.png)
+![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving and Undo/Redo](../images/ui_toolbar_menu.png)
+/// caption
+The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving and Undo/Redo
+///
 
 ## Basic Operations
 
@@ -58,6 +61,32 @@ WEBKNOSSOS offers multiple ways to share your work:
 
 - **Layout**: Modify the layout of the WEBKNOSSOS user interface and resize, reorder and adjust viewports and panels to your preferences. Customize the number of columns, show or hide specific tabs, and adjust the size of the sidebar. Save and restore your preferred configurations. 
 
+## Modes and Toolkits
+
+### View Mode
+
+Datasets can be viewed in different view modes.
+Read more about these [here](../skeleton_annotation/modes.md)
+
+### Toolkits
+
+WEBKNOSSOS offers several tools that you can use to interact with your datasets.
+By default, all tools are available, but it is also possible to only show a subset of tools.
+These tool subsets are called "toolkits".
+Some of these also fine-tune the behavior of the tools so that they are tailored towards a specific use case.
+
+Currently, there are four toolkits available:
+
+- All Tools: This toolkit contains all available tools and is the default.
+- Read Only: Only tools that cannot mutate the annotation are available (i.e., move and measuring tools).
+- Volume: Only volume tools are listed here.
+- Split Segments: This toolkit allows splitting a labeled segment into two parts. Tools in this toolkit behave a bit differently to streamline this workflow. Read more about this toolkit [here](../proofreading/split_segments_toolkit.md).
+
+![Toolkit Selection](../images/toolkit_dropdown.jpg)
+/// caption
+The toolkit dropdown allows selecting a subset of tools tailored for a specific use case.
+///
+
 ## Annotation Tools
 
 ### Navigation
@@ -96,6 +125,9 @@ And many other tools. For detailed information, see the [volume annotation guide
 ![Measurement Tool](./images/measure-tool.jpg){align=left width="60"}
 **Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements. See also [statistics for volume annotations](../volume_annotation/segments_statistics.md). 
 
+![Voxel Pipette Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
+**Voxel Pipette**: Hover over your data to see the exact values at a specific voxel. A tooltip will be shown that shows the intensity values for color layers and the segment id for the visible segmentation layer. The tooltip can be pinned by clicking so that the values can be copied. Pressing shift while clicking will activate the hovered segment id. This is alternative to selecting the segment ID from the [Segments list](../volume_annotation/segments_list.md) sidebar or context menu.
+
 ![AI Analysis Tools](./images/ai-analysis-tools.jpg){align=left width="60"}
 **AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).
 
@@ -103,4 +135,6 @@ And many other tools. For detailed information, see the [volume annotation guide
 ![Bounding Box Tool](./images/boundingbox-tool.jpg){align=left width="60"}
 **Bounding Box Tool**: Create a bounding box to define a region of interest for analysis, subdivide a dataset into smaller regions for the builtin automated workflows, or quickly export a region of interest.
 
-For detailed information, see the [Advanced Analysis Tools](../automation/ai_segmentation.md).
+To create a bounding box, select the tool and then click and drag with the mouse on one of the 2D viewports. You can resize the bounding box by dragging its corners or edges.
+
+All created bounding boxes are listed in the **BBoxes** tab in the right-hand sidebar. From there, you can manage your bounding boxes, for example, by renaming, deleting, or jumping to them. Read more about the sidebar tabs in the [Object Info and Lists](./object_info.md) documentation.

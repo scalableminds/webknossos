@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.VersionedKeyValuePair
@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingSe
 
 import scala.concurrent.ExecutionContext
 
-trait AnnotationReversion {
+trait AnnotationReversion extends FoxImplicits {
 
   def volumeTracingService: VolumeTracingService
 
@@ -21,14 +21,14 @@ trait AnnotationReversion {
                                           version: Option[Long]): Fox[VersionedKeyValuePair[EditableMappingInfo]]
 
   protected def editableMappingUpdaterFor(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       volumeTracing: VolumeTracing,
       editableMappingInfo: EditableMappingInfo,
       currentMaterializedVersion: Long,
       targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater]
 
-  def revertDistributedElements(annotationId: String,
+  def revertDistributedElements(annotationId: ObjectId,
                                 currentAnnotationWithTracings: AnnotationWithTracings,
                                 sourceAnnotationWithTracings: AnnotationWithTracings,
                                 sourceVersion: Long,
@@ -61,7 +61,7 @@ trait AnnotationReversion {
     } yield ()
 
   private def revertEditableMappingFields(
-      annotationId: String,
+      annotationId: ObjectId,
       currentAnnotationWithTracings: AnnotationWithTracings,
       tracingBeforeRevert: VolumeTracing,
       sourceVersion: Long,
@@ -76,7 +76,7 @@ trait AnnotationReversion {
     } yield ()
 
   // If source annotation doesn’t have this editable mapping, use the last existing one as a “before point” for the reversion
-  private def editableMappingReversionUpdater(annotationId: String,
+  private def editableMappingReversionUpdater(annotationId: ObjectId,
                                               tracingId: String,
                                               tracingBeforeRevert: VolumeTracing,
                                               targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) =

@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw.util
 
-import net.liftweb.common.Box
-import net.liftweb.common.{Failure => BoxFailure}
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.{Failure => BoxFailure}
+import com.scalableminds.util.tools.Box.tryo
 
 import scala.util.Using.Releasable
 import scala.util.{Success, Using, Failure => TryFailure}

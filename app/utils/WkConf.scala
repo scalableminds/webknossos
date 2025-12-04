@@ -112,7 +112,13 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     }
 
     val operatorData: String = get[String]("webKnossos.operatorData")
-    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
+
+    object Datasets {
+      val uploadToPathsPrefixes: Option[Seq[String]] =
+        getOptional[Seq[String]]("webKnossos.datasets.uploadToPathsPrefixes")
+      val uploadToPathsInfix: Option[String] = getOptional[String]("webKnossos.datasets.uploadToPathsInfix")
+    }
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
   }
 
   object SingleSignOn {
@@ -122,6 +128,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val clientSecret: String = get[String]("singleSignOn.openIdConnect.clientSecret")
       val scope: String = get[String]("singleSignOn.openIdConnect.scope")
       val verboseLoggingEnabled: Boolean = get[Boolean]("singleSignOn.openIdConnect.verboseLoggingEnabled")
+      val logoutRedirectUrl = getOptional[String]("singleSignOn.openIdConnect.logoutRedirectUrl")
     }
   }
 
@@ -129,6 +136,12 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
+    val neuronInferralCostPerGVx: BigDecimal = get[BigDecimal]("features.neuronInferralCostPerGVx")
+    val mitochondriaInferralCostPerGVx: BigDecimal =
+      get[BigDecimal]("features.mitochondriaInferralCostPerGVx")
+    val alignmentCostPerGVx: BigDecimal = get[BigDecimal]("features.alignmentCostPerGVx")
+    val costPerCreditInEuro: BigDecimal = get[BigDecimal]("features.costPerCreditInEuro")
+    val costPerCreditInDollar: BigDecimal = get[BigDecimal]("features.costPerCreditInDollar")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
@@ -137,12 +150,15 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
     val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
+    val passkeysEnabled: Boolean = get[Boolean]("features.passkeysEnabled")
+    val registerToDefaultOrgaEnabled: Boolean = get[Boolean]("features.registerToDefaultOrgaEnabled")
   }
 
   object Datastore {
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
+    val baseDirectory: Option[String] = getOptional[String]("datastore.baseDirectory")
   }
 
   object Tracingstore {
@@ -196,6 +212,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val cookiePath: String = get[String]("silhouette.cookieAuthenticator.cookiePath")
       val secureCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
       val httpOnlyCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
+      val sameSite: String = get[String]("silhouette.cookieAuthenticator.sameSite")
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
       val authenticatorExpiry: FiniteDuration =
         get[FiniteDuration]("silhouette.cookieAuthenticator.authenticatorExpiry")
@@ -208,6 +225,8 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
 
   object Jobs {
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
+    val workerLivenessReReportInterval: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessReReportInterval")
+    val monthlyFreeCredits: Int = get[Int]("jobs.monthlyFreeCredits")
   }
 
   object Airbrake {

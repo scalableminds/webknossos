@@ -11,7 +11,7 @@ export default function renderIndependently(
 ): Promise<void> {
   return new Promise((resolve) => {
     // Avoid circular imports
-    import("oxalis/throttled_store").then((_Store) => {
+    import("viewer/throttled_store").then((_Store) => {
       const Store = _Store.default;
       const div = document.createElement("div");
       const react_root = createRoot(div);

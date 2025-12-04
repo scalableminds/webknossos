@@ -3,9 +3,9 @@ package com.scalableminds.webknossos.datastore.services
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
+import com.scalableminds.webknossos.datastore.models.datasource.StaticSegmentationLayer
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -40,11 +40,11 @@ class DSRemoteTracingstoreClient @Inject()(
   def getVolumeLayerAsZarrLayer(tracingId: String,
                                 tracingName: Option[String],
                                 tracingStoreUri: String,
-                                zarrVersion: Int)(implicit tc: TokenContext): Fox[ZarrSegmentationLayer] = {
+                                zarrVersion: Int)(implicit tc: TokenContext): Fox[StaticSegmentationLayer] = {
     val zarrVersionDependantSubPath = getZarrVersionDependantSubPath(zarrVersion)
     rpc(s"$tracingStoreUri/tracings/volume/$zarrVersionDependantSubPath/$tracingId/zarrSource").withTokenFromContext
-      .addQueryStringOptional("tracingName", tracingName)
-      .getWithJsonResponse[ZarrSegmentationLayer]
+      .addQueryParam("tracingName", tracingName)
+      .getWithJsonResponse[StaticSegmentationLayer]
   }
 
   def getOmeNgffHeader(tracingId: String, tracingStoreUri: String)(implicit tc: TokenContext): Fox[NgffMetadata] =
@@ -52,13 +52,13 @@ class DSRemoteTracingstoreClient @Inject()(
       .getWithJsonResponse[NgffMetadata]
 
   def getZarrJsonGroupHeaderWithNgff(tracingId: String, tracingStoreUri: String)(
-      implicit tc: TokenContext): Fox[Zarr3GroupHeader] =
+      implicit tc: TokenContext): Fox[NgffZarr3GroupHeader] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/zarr.json").withTokenFromContext
-      .getWithJsonResponse[Zarr3GroupHeader]
+      .getWithJsonResponse[NgffZarr3GroupHeader]
 
   def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String)(
       implicit tc: TokenContext): Fox[Array[Byte]] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silent.withTokenFromContext.getWithBytesResponse
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silentEvenOnFailure.withTokenFromContext.getWithBytesResponse
 
   def getDataLayerMagDirectoryContents(tracingId: String, mag: String, tracingStoreUri: String, zarrVersion: Int)(
       implicit tc: TokenContext): Fox[List[String]] =
@@ -76,7 +76,7 @@ class DSRemoteTracingstoreClient @Inject()(
   def getEditableMappingSegmentIdsForAgglomerate(tracingStoreUri: String, tracingId: String, agglomerateId: Long)(
       implicit tc: TokenContext): Fox[EditableMappingSegmentListResult] =
     rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
-      .addQueryString("agglomerateId" -> agglomerateId.toString)
+      .addQueryParam("agglomerateId", agglomerateId)
       .withTokenFromContext
       .silent
       .getWithJsonResponse[EditableMappingSegmentListResult]

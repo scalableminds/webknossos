@@ -11,9 +11,10 @@ import {
   deleteTaskType as deleteTaskTypeAPI,
   downloadAnnotation,
   getTaskTypes,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
@@ -23,15 +24,11 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import type { APITaskType } from "types/api_flow_types";
+import { Link, useLocation } from "react-router-dom";
+import type { APITaskType } from "types/api_types";
 
 const { Column } = Table;
 const { Search } = Input;
-
-type Props = {
-  initialSearchValue?: string;
-};
 
 const persistence = new Persistence<{ searchQuery: string }>(
   {
@@ -40,7 +37,10 @@ const persistence = new Persistence<{ searchQuery: string }>(
   "taskTypeList",
 );
 
-function TaskTypeListView({ initialSearchValue }: Props) {
+function TaskTypeListView() {
+  const location = useLocation();
+  const initialSearchValue = location.hash.slice(1);
+
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
@@ -154,7 +154,7 @@ function TaskTypeListView({ initialSearchValue }: Props) {
             key="id"
             width={120}
             sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.id)}
-            className="monospace-id"
+            render={(id) => <FormattedId id={id} />}
           />
           <Column
             title="Team"
@@ -238,12 +238,15 @@ function TaskTypeListView({ initialSearchValue }: Props) {
             fixed="right"
             render={(__, taskType: APITaskType) => (
               <span>
-                <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
+                <Link
+                  to={`/annotations/CompoundTaskType/${taskType.id}`}
+                  title="Show Compound Annotation of All Finished Annotations"
+                >
                   <EyeOutlined className="icon-margin-right" />
-                  View
+                  View Merged
                 </Link>
                 <br />
-                <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
+                <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit Task Type">
                   <EditOutlined className="icon-margin-right" />
                   Edit
                 </Link>
@@ -259,19 +262,17 @@ function TaskTypeListView({ initialSearchValue }: Props) {
                 </Link>
                 <br />
                 <AsyncLink
-                  href="#"
                   onClick={() => {
                     const includesVolumeData = taskType.tracingType !== "skeleton";
                     return downloadAnnotation(taskType.id, "CompoundTaskType", includesVolumeData);
                   }}
-                  title="Download all Finished Annotations"
+                  title="Download All Finished Annotations"
                   icon={<DownloadOutlined className="icon-margin-right" />}
                 >
                   Download
                 </AsyncLink>
                 <br />
-                <LinkButton onClick={_.partial(deleteTaskType, taskType)}>
-                  <DeleteOutlined className="icon-margin-right" />
+                <LinkButton onClick={_.partial(deleteTaskType, taskType)} icon={<DeleteOutlined />}>
                   Delete
                 </LinkButton>
               </span>

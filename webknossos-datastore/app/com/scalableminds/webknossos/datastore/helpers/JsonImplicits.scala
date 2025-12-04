@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Format, JsNumber, JsResult, JsValue, Json}
 
 trait JsonImplicits {
@@ -17,7 +17,7 @@ trait JsonImplicits {
     override def writes(number: Number): JsValue =
       tryo(number.longValue())
         .map(JsNumber(_))
-        .orElse(tryo(number.floatValue()).map(JsNumber(_)))
+        .or(tryo(number.floatValue()).map(JsNumber(_)))
         .getOrElse(JsNumber(number.doubleValue()))
   }
 

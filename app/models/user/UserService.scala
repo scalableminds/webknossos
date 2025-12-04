@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
@@ -13,8 +13,8 @@ import mail.{DefaultMails, Send}
 import models.dataset.DatasetDAO
 import models.organization.OrganizationDAO
 import models.team._
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
@@ -65,8 +65,8 @@ class UserService @Inject()(conf: WkConf,
     multiUser._lastLoggedInIdentity match {
       case Some(userId) =>
         for {
-          maybeLastLoggedInIdentity <- userDAO.findOne(userId).futureBox
-          identity <- maybeLastLoggedInIdentity match {
+          lastLoggedInIdentityBox <- userDAO.findOne(userId).shiftBox
+          identity <- lastLoggedInIdentityBox match {
             case Full(user) if !user.isDeactivated => Fox.successful(user)
             case _                                 => userDAO.findFirstByMultiUser(multiUser._id)
           }
@@ -76,15 +76,15 @@ class UserService @Inject()(conf: WkConf,
 
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
-      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox
-      _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
+      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).shiftBox
+      _ <- Fox.fromBool(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
   def assertIsSuperUser(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     assertIsSuperUser(user._multiUser)
 
   def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    Fox.assertTrue(multiUserDAO.findOne(multiUserId).map(_.isSuperUser))
+    Fox.assertTrue(multiUserDAO.findOne(multiUserId).map(_.isSuperUser)) ?~> "user.superUserOnly"
 
   def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
@@ -140,7 +140,7 @@ class UserService @Inject()(conf: WkConf,
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
       existingIdentity: Box[User] <- userDAO
         .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
-        .futureBox
+        .shiftBox
       _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
         joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true, isUnlisted = true)
       } else Fox.successful(())
@@ -198,7 +198,10 @@ class UserService @Inject()(conf: WkConf,
     }
     for {
       oldEmail <- emailFor(user)
-      _ <- Fox.runIf(oldEmail != email)(multiUserDAO.updateEmail(user._multiUser, email))
+      _ <- Fox.runIf(oldEmail != email)(for {
+        _ <- multiUserDAO.updateEmail(user._multiUser, email)
+        _ = logger.info(s"Email of MultiUser ${user._multiUser} changed from $oldEmail to $email")
+      } yield ())
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,
@@ -214,7 +217,7 @@ class UserService @Inject()(conf: WkConf,
     } yield updated
   }
 
-  private def removeUserFromCache(userId: ObjectId): Unit =
+  def removeUserFromCache(userId: ObjectId): Unit =
     userCache.clear(idAndAccessContextString => idAndAccessContextString._1 == userId)
 
   def getPasswordInfo(passwordOpt: Option[String]): PasswordInfo =
@@ -336,6 +339,7 @@ class UserService @Inject()(conf: WkConf,
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       novelUserExperienceInfos = multiUser.novelUserExperienceInfos
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
+      isGuest <- userDAO.isUserAGuest(user._id)
       experiences <- experiencesFor(user._id)
     } yield {
       Json.obj(
@@ -359,6 +363,8 @@ class UserService @Inject()(conf: WkConf,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
         "isSuperUser" -> multiUser.isSuperUser,
         "isEmailVerified" -> (multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated),
+        "isUnlisted" -> user.isUnlisted,
+        "isGuest" -> isGuest
       )
     }
   }
@@ -379,7 +385,7 @@ class UserService @Inject()(conf: WkConf,
           .map(valueAndIndex =>
             (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
              Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
-      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
+      novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](userCompactInfo.novelUserExperienceInfos).toFox
     } yield {
       Json.obj(
         "id" -> userCompactInfo._id,
@@ -402,6 +408,8 @@ class UserService @Inject()(conf: WkConf,
         "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
         "isSuperUser" -> userCompactInfo.isSuperUser,
         "isEmailVerified" -> userCompactInfo.isEmailVerified,
+        "isGuest" -> userCompactInfo.isGuest,
+        "isUnlisted" -> userCompactInfo.isUnlisted
       )
     }
 

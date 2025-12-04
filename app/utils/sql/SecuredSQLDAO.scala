@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import models.user.User
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import security.{SharingTokenContainer, UserSharingTokenContainer}
 
 import javax.inject.Inject
@@ -24,7 +24,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
-        userIdBox <- userIdFromCtx.futureBox
+        userIdBox <- userIdFromCtx.shiftBox
       } yield {
         userIdBox match {
           case Full(userId) => readAccessFromUserOrToken(userId, sharingTokenFromCtx)(ctx)
@@ -70,7 +70,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
-        userIdBox <- userIdFromCtx.futureBox
+        userIdBox <- userIdFromCtx.shiftBox
       } yield {
         userIdBox match {
           case Full(userId) => q"(${accessQ(userId, prefix)})"
@@ -83,7 +83,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
-        userIdBox <- userIdFromCtx.futureBox
+        userIdBox <- userIdFromCtx.shiftBox
       } yield {
         userIdBox match {
           case Full(userId) => q"(${accessQ(userId)})"

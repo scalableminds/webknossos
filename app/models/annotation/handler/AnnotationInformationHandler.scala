@@ -1,12 +1,15 @@
 package models.annotation.handler
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation._
 import models.user.User
 import com.scalableminds.util.objectid.ObjectId
+import models.dataset.{DatasetDAO, DatasetService}
+import play.api.i18n.MessagesProvider
 
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
@@ -24,11 +27,16 @@ class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: 
 
 trait AnnotationInformationHandler extends FoxImplicits {
 
+  def datasetDAO: DatasetDAO
+  def datasetService: DatasetService
+  def annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
+
   implicit val ec: ExecutionContext
 
-  def cache: Boolean = true
+  def useCache: Boolean = true
 
-  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
+  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext,
+                                                                  mp: MessagesProvider): Fox[Annotation]
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
@@ -43,6 +51,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
         case List()       => true
         case head :: tail => head._dataset == datasetId && allOnSameDatasetIter(tail, datasetId)
       }
+
     annotations match {
       case List() => Fox.successful(true)
       case head :: _ =>
@@ -56,4 +65,12 @@ trait AnnotationInformationHandler extends FoxImplicits {
   def assertNonEmpty[T](seq: List[T]): Fox[Unit] =
     if (seq.isEmpty) Fox.failure("no annotations")
     else Fox.successful(())
+
+  protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId)(
+      implicit mp: MessagesProvider): Fox[Unit] =
+    for {
+      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
+      dataSource <- datasetService.usableDataSourceFor(dataset)
+      _ = annotationDataSourceTemporaryStore.store(temporaryAnnotationId, dataSource, datasetId)
+    } yield ()
 }

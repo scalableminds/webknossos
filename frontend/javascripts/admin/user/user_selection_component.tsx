@@ -1,4 +1,4 @@
-import { getUsers } from "admin/admin_rest_api";
+import { getUsers } from "admin/rest_api";
 import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";

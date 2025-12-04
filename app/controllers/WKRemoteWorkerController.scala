@@ -9,8 +9,9 @@ import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
 import models.job._
+import models.organization.CreditTransactionService
 import models.voxelytics.VoxelyticsDAO
-import net.liftweb.common.{Empty, Failure, Full}
+import com.scalableminds.util.tools.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
@@ -20,6 +21,7 @@ import scala.concurrent.ExecutionContext
 class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
                                          jobService: JobService,
                                          workerDAO: WorkerDAO,
+                                         creditTransactionService: CreditTransactionService,
                                          voxelyticsDAO: VoxelyticsDAO,
                                          aiInferenceDAO: AiInferenceDAO,
                                          datasetDAO: DatasetDAO,
@@ -77,10 +79,19 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
       for {
         _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
         jobBeforeChange <- jobDAO.findOne(id)(GlobalAccessContext)
-        _ <- jobDAO.updateStatus(id, request.body)
+        _ <- jobDAO.updateStatus(id, request.body) ?~> "job.updateStatus.failed"
         jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> "job.notFound"
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
         _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> "job.cleanup.failed"
+        _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
+          creditTransactionService
+            .completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.failed"
+        }
+        _ <- Fox.runIf(
+          jobAfterChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {
+          creditTransactionService
+            .refundTransactionForJob(jobAfterChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+        }
       } yield Ok
   }
 
@@ -88,10 +99,10 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
-        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
         workflowHash = request.body
-        existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).futureBox
+        existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).shiftBox
         _ <- existingWorkflowBox match {
           case Full(_)    => Fox.successful(())
           case Empty      => voxelyticsDAO.upsertWorkflow(workflowHash, "initializing worker workflow", organizationId)

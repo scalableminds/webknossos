@@ -11,21 +11,23 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { downloadAnnotation as downloadAnnotationAPI } from "admin/admin_rest_api";
 import {
   assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
   getTasks,
 } from "admin/api/tasks";
+import { downloadAnnotation as downloadAnnotationAPI } from "admin/rest_api";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Card, Input, Modal, Spin, type TableProps, Tag } from "antd";
+import { Alert, App, Button, Card, Input, Modal, Spin, Tag } from "antd";
+import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
@@ -36,9 +38,9 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import type { APITask, APITaskType, TaskStatus } from "types/api_flow_types";
+import { useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
 const { Search, TextArea } = Input;
 
@@ -55,13 +57,19 @@ const persistence = new Persistence<{ searchQuery: string }>(
 
 function TaskListView({ initialFieldValues }: Props) {
   const { modal } = App.useApp();
+  const { taskId, projectId, taskTypeId } = useParams();
+
+  initialFieldValues = {
+    ...initialFieldValues,
+    taskId,
+    projectId,
+    taskTypeId,
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [tasks, setTasks] = useState<APITask[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUserIdForAssignment, setSelectedUserIdForAssignment] = useState<string | null>(
-    null,
-  );
+  const selectedUserIdForAssignment = useRef<string | null>(null);
   const [isAnonymousTaskLinkModalOpen, setIsAnonymousTaskLinkModalOpen] = useState(
     Utils.hasUrlParam("showAnonymousLinks"),
   );
@@ -114,6 +122,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function assignTaskToUser(task: APITask) {
+    selectedUserIdForAssignment.current = null;
     modal.confirm({
       title: "Manual Task Assignment",
       icon: <UserAddOutlined />,
@@ -123,7 +132,9 @@ function TaskListView({ initialFieldValues }: Props) {
           <div>Please, select a user to manually assign this task to:</div>
           <div style={{ marginTop: 10, marginBottom: 25 }}>
             <UserSelectionComponent
-              handleSelection={(value) => setSelectedUserIdForAssignment(value)}
+              handleSelection={(value) => {
+                selectedUserIdForAssignment.current = value;
+              }}
             />
           </div>
           <Alert
@@ -133,7 +144,7 @@ function TaskListView({ initialFieldValues }: Props) {
         </>
       ),
       onOk: async () => {
-        const userId = selectedUserIdForAssignment;
+        const userId = selectedUserIdForAssignment.current;
         if (userId != null) {
           try {
             const updatedTask = await assignTaskToUserAPI(task.id, userId);
@@ -144,7 +155,7 @@ function TaskListView({ initialFieldValues }: Props) {
           } catch (error) {
             handleGenericError(error as Error);
           } finally {
-            setSelectedUserIdForAssignment(null);
+            selectedUserIdForAssignment.current = null;
           }
         }
       },
@@ -238,14 +249,14 @@ function TaskListView({ initialFieldValues }: Props) {
     marginRight: 20,
   };
 
-  const columns: TableProps["columns"] = [
+  const columns: ColumnType<APITask>[] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
       sorter: Utils.localeCompareBy<APITask>((task) => task.id),
-      className: "monospace-id",
-      width: 100,
+      render: (id: string) => <FormattedId id={id} />,
+      width: 120,
     },
     {
       title: "Project",
@@ -359,10 +370,10 @@ function TaskListView({ initialFieldValues }: Props) {
             <div>
               <a
                 href={`/annotations/CompoundTask/${task.id}`}
-                title="View all Finished Annotations"
+                title="Show Compound Annotation of All Finished Annotations"
               >
                 <EyeOutlined className="icon-margin-right" />
-                View
+                View Merged
               </a>
             </div>
           ) : null}
@@ -375,8 +386,7 @@ function TaskListView({ initialFieldValues }: Props) {
           </div>
           {task.status.pending > 0 ? (
             <div>
-              <LinkButton onClick={_.partial(assignTaskToUser, task)}>
-                <UserAddOutlined className="icon-margin-right" />
+              <LinkButton onClick={_.partial(assignTaskToUser, task)} icon={<UserAddOutlined />}>
                 Manually Assign to User
               </LinkButton>
             </div>
@@ -384,12 +394,11 @@ function TaskListView({ initialFieldValues }: Props) {
           {task.status.finished > 0 ? (
             <div>
               <AsyncLink
-                href="#"
                 onClick={() => {
                   const includesVolumeData = task.type.tracingType !== "skeleton";
                   return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);
                 }}
-                title="Download all Finished Annotations"
+                title="Download All Finished Annotations"
                 icon={<DownloadOutlined className="icon-margin-right" />}
               >
                 Download
@@ -397,8 +406,7 @@ function TaskListView({ initialFieldValues }: Props) {
             </div>
           ) : null}
           <div>
-            <LinkButton onClick={_.partial(deleteTask, task)}>
-              <DeleteOutlined className="icon-margin-right" />
+            <LinkButton onClick={_.partial(deleteTask, task)} icon={<DeleteOutlined />}>
               Delete
             </LinkButton>
           </div>

@@ -1,14 +1,10 @@
-import { createNanoEvents } from "nanoevents";
-import type { ExecutionContext } from "ava";
+import { type Mock, vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
-import { ControlModeEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
-import mockRequire from "mock-require";
-import sinon from "sinon";
-import window from "libs/window";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
-import { setSceneController } from "oxalis/controller/scene_controller_provider";
+import { setSceneController } from "viewer/controller/scene_controller_provider";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -24,24 +20,330 @@ import {
   annotation as VOLUME_ANNOTATION,
   annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
-import DATASET from "../fixtures/dataset_server_object";
-import type { ApiInterface } from "oxalis/api/api_latest";
+import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
+import type { ApiInterface } from "viewer/api/api_latest";
+import type { ModelType } from "viewer/model";
 
-const Request = {
-  receiveJSON: sinon.stub(),
-  sendJSONReceiveJSON: sinon.stub(),
-  receiveArraybuffer: sinon.stub(),
-  sendJSONReceiveArraybuffer: sinon.stub(),
-  sendJSONReceiveArraybufferWithHeaders: sinon.stub(),
-  always: () => Promise.resolve(),
+import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
+import Model from "viewer/model";
+import UrlManager from "viewer/controller/url_manager";
+
+import WebknossosApi from "viewer/api/api_loader";
+import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
+import rootSaga from "viewer/model/sagas/root_saga";
+import { setStore, setModel } from "viewer/singletons";
+import { setupApi } from "viewer/api/internal_api";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import Request, { type RequestOptions } from "libs/request";
+import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
+import app from "app";
+import {
+  acquireAnnotationMutex,
+  releaseAnnotationMutex,
+  getDataset,
+  getEdgesForAgglomerateMinCut,
+  getEditableAgglomerateSkeleton,
+  getNeighborsForAgglomerateNode,
+  getPositionForSegmentInAgglomerate,
+  getUpdateActionLog,
+  sendSaveRequestWithToken,
+  type MinCutTargetEdge,
+} from "admin/rest_api";
+import {
+  resetStoreAction,
+  restartSagaAction,
+  wkInitializedAction,
+} from "viewer/model/actions/actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import {
+  tracings as HYBRID_TRACINGS,
+  annotation as HYBRID_ANNOTATION,
+  annotationProto as HYBRID_ANNOTATION_PROTO,
+} from "test/fixtures/hybridtracing_server_objects";
+import {
+  tracings as MULTI_VOLUME_TRACINGS,
+  annotation as MULTI_VOLUME_ANNOTATION,
+  annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
+} from "test/fixtures/multivolume_server_objects";
+import type {
+  APIAnnotation,
+  APIDataset,
+  APITracingStoreAnnotation,
+  ServerSkeletonTracing,
+  ServerTracing,
+  ServerVolumeTracing,
+  ElementClass,
+} from "types/api_types";
+import type { ArbitraryObject } from "types/globals";
+import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import { __setFeatures } from "features";
+
+const TOKEN = "secure-token";
+const ANNOTATION_TYPE = "annotationTypeValue";
+const ANNOTATION_ID = "annotationIdValue";
+
+// Define extended test context
+export interface WebknossosTestContext extends BaseTestContext {
+  model: ModelType;
+  mocks: {
+    Request: typeof Request;
+    getCurrentMappingEntriesFromServer: typeof getCurrentMappingEntriesFromServer;
+    getEdgesForAgglomerateMinCut: typeof getEdgesForAgglomerateMinCut;
+    acquireAnnotationMutex: Mock<typeof acquireAnnotationMutex>;
+    releaseAnnotationMutex: Mock<typeof releaseAnnotationMutex>;
+    getNeighborsForAgglomerateNode: Mock<typeof getNeighborsForAgglomerateNode>;
+    getUpdateActionLog: Mock<typeof getUpdateActionLog>;
+    sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
+    getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
+    getEditableAgglomerateSkeleton: Mock<typeof getEditableAgglomerateSkeleton>;
+    parseProtoTracing: Mock<typeof parseProtoTracing>;
+  };
+  setSlowCompression: (enabled: boolean) => void;
+  api: ApiInterface;
+  tearDownPullQueues: () => void;
+  receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
+}
+
+// Create mock objects
+vi.mock("libs/request", () => ({
+  default: {
+    receiveJSON: vi.fn().mockReturnValue(Promise.resolve()),
+    sendJSONReceiveJSON: vi.fn().mockImplementation(sendJSONReceiveJSONMockImplementation),
+    receiveArraybuffer: vi.fn().mockReturnValue(Promise.resolve()),
+    sendJSONReceiveArraybuffer: vi.fn().mockReturnValue(Promise.resolve()),
+    sendJSONReceiveArraybufferWithHeaders: vi
+      .fn()
+      .mockImplementation(
+        createBucketResponseFunction({ color: "uint8", segmentation: "uint16" }, 0),
+      ),
+    always: vi.fn().mockReturnValue(Promise.resolve()),
+  },
+}));
+
+const getCurrentMappingEntriesFromServer = vi.fn(
+  (_version?: number | null | undefined): Array<[number, number]> => {
+    return [];
+  },
+);
+
+vi.mock("admin/rest_api.ts", async () => {
+  const actual = await vi.importActual<typeof import("admin/rest_api.ts")>("admin/rest_api.ts");
+
+  const receivedDataPerSaveRequest: Array<SaveQueueEntry[]> = [];
+  const mockedSendRequestWithToken = vi.fn((_, payload) => {
+    receivedDataPerSaveRequest.push(payload.data);
+    return Promise.resolve();
+  });
+  (mockedSendRequestWithToken as any).receivedDataPerSaveRequest = receivedDataPerSaveRequest;
+
+  const getAgglomeratesForSegmentsImpl = async (
+    segmentIds: Array<NumberLike>,
+    version?: number | null | undefined,
+  ) => {
+    const segmentIdSet = new Set(segmentIds);
+    const entries = getCurrentMappingEntriesFromServer(version).filter(([id]) =>
+      segmentIdSet.has(id),
+    ) as Vector2[];
+    if (entries.length < segmentIdSet.size) {
+      throw new Error(
+        "Incorrect mock implementation of getAgglomeratesForSegmentsImpl detected. The requested segment ids were not properly served.",
+      );
+    }
+    return new Map(entries);
+  };
+  const getAgglomeratesForSegmentsFromDatastoreMock = vi.fn(
+    (
+      _dataStoreUrl: string,
+      _dataSourceId: unknown,
+      _layerName: string,
+      _mappingId: string,
+      segmentIds: Array<NumberLike>,
+    ) => {
+      return getAgglomeratesForSegmentsImpl(segmentIds);
+    },
+  );
+
+  const getAgglomeratesForSegmentsFromTracingstoreMock = vi.fn(
+    (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      segmentIds: Array<NumberLike>,
+      _annotationId: string,
+      version?: number | null | undefined,
+    ) => {
+      return getAgglomeratesForSegmentsImpl(segmentIds, version);
+    },
+  );
+
+  return {
+    ...actual,
+    getDataset: vi.fn(),
+    sendSaveRequestWithToken: mockedSendRequestWithToken,
+    getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
+    getMappingsForDatasetLayer: vi.fn(() => []),
+    getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
+    getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
+    getEdgesForAgglomerateMinCut: vi.fn(
+      (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        _segmentsInfo: unknown,
+      ): Promise<Array<MinCutTargetEdge>> => {
+        // This simply serves as a preparation so that specs can mock the function
+        // when needed. Without this stub, it's harder to mock this specific function
+        // later.
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
+    acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    releaseAnnotationMutex: vi.fn(() => {}),
+    getNeighborsForAgglomerateNode: vi.fn(
+      (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
+    getUpdateActionLog: vi.fn(() => Promise.resolve([])),
+    getPositionForSegmentInAgglomerate: vi.fn(
+      (
+        _datastoreUrl: string,
+        _datasetId: string,
+        _layerName: string,
+        _mappingName: string,
+        _segmentId: number,
+      ) => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
+    getEditableAgglomerateSkeleton: vi.fn(
+      (
+        _tracingStoreUrl: string,
+        _tracingId: string,
+        _agglomerateId: number,
+      ): Promise<ArrayBuffer> => {
+        throw new Error("No test has mocked the return value yet here.");
+      },
+    ),
+  };
+});
+
+vi.mock("libs/compute_bvh_async", () => ({
+  computeBvhAsync: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
+  const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
+  return {
+    PROTO_FILES: originalProtoHelperModule.PROTO_FILES,
+    PROTO_TYPES: originalProtoHelperModule.PROTO_TYPES,
+    parseProtoTracing: vi.fn(originalProtoHelperModule.parseProtoTracing),
+    parseProtoAnnotation: vi.fn(),
+    serializeProtoListOfLong: vi.fn(),
+    parseProtoListOfLong: vi.fn(),
+  };
+});
+
+function receiveJSONMockImplementation(
+  url: string,
+  options: RequestOptions = {},
+  annotationFixture: typeof SKELETON_ANNOTATION | typeof VOLUME_ANNOTATION | typeof TASK_ANNOTATION,
+) {
+  if (
+    url.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
+    url.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)
+  ) {
+    return Promise.resolve(_.cloneDeep(annotationFixture));
+  }
+  if (url.startsWith("http://localhost:9000/tracings/mapping/volumeTracingId/info")) {
+    return Promise.resolve({
+      tracingId: "volumeTracingId",
+      baseMappingName: "mocked-mapping",
+      largestAgglomerateId: 42,
+      createdTimestamp: 1753360021075,
+    });
+  }
+
+  if (
+    url ===
+    `http://localhost:9000/data/datasets/66f3c82966010034942e9740/layers/color/mappings?token=${TOKEN}`
+  ) {
+    return Promise.resolve({});
+  }
+
+  if (url === "/api/userToken/generate" && options && options.method === "POST") {
+    return Promise.resolve({
+      token: TOKEN,
+    });
+  }
+  return Promise.resolve({});
+}
+
+function sendJSONReceiveJSONMockImplementation(url: string, _options?: RequestOptions) {
+  if (url === `/api/users/${dummyUser.id}/taskTypeId`) {
+    return Promise.resolve(dummyUser);
+  }
+  return Promise.resolve({});
+}
+
+vi.mock("viewer/model/bucket_data_handling/data_rendering_logic", async (importOriginal) => {
+  const orginalDataRenderingLogicModule = await importOriginal();
+
+  return {
+    ...(orginalDataRenderingLogicModule as object),
+    getSupportedTextureSpecs: vi.fn().mockReturnValue({
+      supportedTextureSize: 4096,
+      maxTextureCount: 8,
+    }),
+  };
+});
+
+export type BucketOverride = {
+  position: [number, number, number]; // [x, y, z]
+  value: number;
 };
-export function createBucketResponseFunction(TypedArrayClass: any, fillValue: number, delay = 0) {
+
+export function createBucketResponseFunction(
+  dataTypePerLayer: Record<string, ElementClass>,
+  fillValue: number,
+  delay = 0,
+  overrides: BucketOverride[] = [],
+) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
-    const bucketCount = payload.data.length;
     await sleep(delay);
+    const requestedURL = new URL(_url);
+    // Removing first empty part as the pathname always starts with a /.
+    const urlPathParts = requestedURL.pathname.split("/").slice(1);
+    const requestedLayerName = urlPathParts[0] === "data" ? urlPathParts[4] : urlPathParts[2];
+    const layerType = dataTypePerLayer[requestedLayerName];
+    if (!layerType) {
+      throw new Error(
+        `Layer Type for layer with name ${requestedLayerName} was not provided. URL requested: ${_url}, parts: ${urlPathParts.join(", ")}`,
+      );
+    }
+    const [TypedArrayConstructor, channelCount] = getConstructorForElementClass(layerType);
+    const bucketCount = payload.data.length;
+    const typedArray = new TypedArrayConstructor(
+      bucketCount * channelCount * Constants.BUCKET_SIZE,
+    );
+    if (typedArray instanceof BigInt64Array || typedArray instanceof BigUint64Array) {
+      typedArray.fill(BigInt(fillValue));
+    } else {
+      (typedArray as Exclude<typeof typedArray, BigInt64Array | BigUint64Array>).fill(fillValue);
+    }
+
+    for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {
+      for (const { position, value } of overrides) {
+        const [x, y, z] = position;
+        const indexInBucket =
+          bucketIdx * Constants.BUCKET_WIDTH ** 3 +
+          z * Constants.BUCKET_WIDTH ** 2 +
+          y * Constants.BUCKET_WIDTH +
+          x;
+        typedArray[indexInBucket] = value;
+      }
+    }
+
     return {
-      buffer: new Uint8Array(new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue).buffer)
-        .buffer,
+      buffer: new Uint8Array(typedArray.buffer).buffer,
       headers: {
         "missing-buckets": "[]",
       },
@@ -49,207 +351,180 @@ export function createBucketResponseFunction(TypedArrayClass: any, fillValue: nu
   };
 }
 
-// @ts-ignore
-Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(Uint8Array, 0);
-const ErrorHandling = {
-  assertExtendContext: _.noop,
-  assertExists: _.noop,
-  assert: _.noop,
-  notify: _.noop,
-};
-const app = {
-  vent: createNanoEvents(),
-};
-const protoHelpers = {
-  parseProtoTracing: sinon.stub(),
-  parseProtoAnnotation: sinon.stub(),
-};
-export const TIMESTAMP = 1494695001688;
-const DateMock = {
-  now: () => TIMESTAMP,
-};
-mockRequire("libs/date", DateMock);
-export const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
-  withContext: (_arg0: string, arg1: () => void) => arg1(),
-};
-mockRequire("libs/keyboard", KeyboardJS);
-mockRequire("libs/toast", {
-  error: _.noop,
-  warning: _.noop,
-  close: _.noop,
-  success: _.noop,
-});
-mockRequire(
-  "libs/window",
-  Object.assign({}, window, {
-    open: sinon.spy(),
-    document: {
-      createElement: () => ({}),
-      getElementById: () => null,
-    },
-  }),
-);
-mockRequire("libs/user_local_storage", {
-  getItem: _.noop,
-  setItem: _.noop,
-  removeItem: _.noop,
-  clear: _.noop,
-});
-mockRequire("libs/request", Request);
-mockRequire("libs/error_handling", ErrorHandling);
-mockRequire("app", app);
-mockRequire("oxalis/model/helpers/proto_helpers", protoHelpers);
-// Replace byte_array_lz4_compression.worker with a mock which supports
-// intentional slowness.
-mockRequire(
-  "oxalis/workers/byte_array_lz4_compression.worker",
-  "oxalis/workers/slow_byte_array_lz4_compression.worker",
-);
-const { setSlowCompression } = mockRequire.reRequire(
-  "oxalis/workers/byte_array_lz4_compression.worker",
-);
-// Avoid node caching and make sure all mockRequires are applied
-const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
-let wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
+vi.mock("libs/keyboard", () => ({
+  default: {
+    bind: vi.fn(),
+    unbind: vi.fn(),
+    withContext: (_arg0: string, arg1: () => void) => arg1(),
+  },
+}));
 
-wkstoreAdapter = {
-  ...wkstoreAdapter,
-  requestFromStore: () => new Uint8Array(),
-};
-
-mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
-
-// Do not reRequire the model here as this would create a separate instance
-const Model = require("oxalis/model").default;
-
-const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
-const TOKEN = "secure-token";
 const modelData = {
   skeleton: {
-    tracing: SKELETON_TRACING,
+    dataset: DATASET,
+    tracings: [SKELETON_TRACING],
     annotation: SKELETON_ANNOTATION,
     annotationProto: SKELETON_ANNOTATION_PROTO,
   },
   volume: {
-    tracing: VOLUME_TRACING,
+    dataset: DATASET,
+    tracings: [VOLUME_TRACING],
     annotation: VOLUME_ANNOTATION,
     annotationProto: VOLUME_ANNOTATION_PROTO,
   },
+  hybrid: {
+    dataset: DATASET,
+    tracings: HYBRID_TRACINGS,
+    annotation: HYBRID_ANNOTATION,
+    annotationProto: HYBRID_ANNOTATION_PROTO,
+  },
+  multiVolume: {
+    dataset: DATASET,
+    tracings: MULTI_VOLUME_TRACINGS,
+    annotation: MULTI_VOLUME_ANNOTATION,
+    annotationProto: MULTI_VOLUME_ANNOTATION_PROTO,
+  },
   task: {
-    tracing: TASK_TRACING,
+    dataset: DATASET,
+    tracings: [TASK_TRACING],
     annotation: TASK_ANNOTATION,
     annotationProto: TASK_ANNOTATION_PROTO,
   },
 };
 
-const { default: Store, startSagas } = require("oxalis/store");
-const rootSaga = require("oxalis/model/sagas/root_saga").default;
-const { setStore, setModel } = require("oxalis/singletons");
-const { setupApi } = require("oxalis/api/internal_api");
-const { setActiveOrganizationAction } = mockRequire.reRequire(
-  "oxalis/model/actions/organization_actions",
-);
-
 setModel(Model);
 setStore(Store);
 setupApi();
-startSagas(rootSaga);
+startSaga(rootSaga);
+type ModelDataForTests = {
+  tracings: (ServerSkeletonTracing | ServerVolumeTracing)[];
+  annotationProto: APITracingStoreAnnotation;
+  dataset: APIDataset;
+  annotation: APIAnnotation;
+};
+type ModelModifyingFun = (data: ModelDataForTests) => ModelDataForTests;
 
-const ANNOTATION_TYPE = "annotationTypeValue";
-const ANNOTATION_ID = "annotationIdValue";
-let counter = 0;
-// This function should always be imported at the very top since it setups
-// important mocks. The leading underscores are there to make the import
-// appear at the top when sorting the imports with importjs.
-
-export function __setupOxalis(
-  t: ExecutionContext<any>,
+export async function setupWebknossosForTesting(
+  testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
-  apiVersion?: number,
-) {
+  applyChangesToModelData?: ModelModifyingFun,
+  options?: { dontDispatchWkInitialized?: boolean },
+): Promise<void> {
+  /*
+   * This will execute model.fetch(...) and initialize the store with the tracing, etc.
+   */
+  Store.dispatch(restartSagaAction());
+  Store.dispatch(resetStoreAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
+
   Store.dispatch(setActiveOrganizationAction(dummyOrga));
   UrlManager.initialState = {
     position: [1, 2, 3],
   };
-  t.context.model = Model;
-  t.context.mocks = {
-    Request,
+
+  testContext.model = Model;
+  testContext.mocks = {
+    Request: vi.mocked(Request),
+    getCurrentMappingEntriesFromServer,
+    getEdgesForAgglomerateMinCut: vi.mocked(getEdgesForAgglomerateMinCut),
+    acquireAnnotationMutex: vi.mocked(acquireAnnotationMutex),
+    releaseAnnotationMutex: vi.mocked(releaseAnnotationMutex),
+    getNeighborsForAgglomerateNode: vi.mocked(getNeighborsForAgglomerateNode),
+    getUpdateActionLog: vi.mocked(getUpdateActionLog),
+    sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
+    getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
+    getEditableAgglomerateSkeleton: vi.mocked(getEditableAgglomerateSkeleton),
+    parseProtoTracing: vi.mocked(parseProtoTracing),
   };
-  t.context.setSlowCompression = setSlowCompression;
-  const webknossos = new OxalisApi(Model);
-  const ANNOTATION = modelData[mode].annotation;
-  Request.receiveJSON
-    .withArgs(
-      sinon.match(
-        (
-          arg, // Match against the URL while ignoring further GET parameters (such as timestamps)
-        ) =>
-          typeof arg === "string" &&
-          (arg.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
-            arg.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)),
-      ),
-    )
-    .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
+  testContext.setSlowCompression = setSlowCompression;
+  testContext.tearDownPullQueues = () =>
+    Model.getAllLayers().map((layer) => {
+      layer.pullQueue.destroy();
+    });
+  testContext.receivedDataPerSaveRequest = (
+    sendSaveRequestWithToken as any
+  ).receivedDataPerSaveRequest;
+  testContext.receivedDataPerSaveRequest.length = 0; // Clear array in-place.
 
-  const datasetClone = _.cloneDeep(DATASET);
+  const webknossos = new WebknossosApi(Model);
+  let modelDataForTest: ModelDataForTests = modelData[mode];
+  if (applyChangesToModelData != null) {
+    modelDataForTest = applyChangesToModelData(modelDataForTest);
+  }
+  const { tracings, annotationProto, dataset, annotation } = modelDataForTest;
 
-  Request.receiveJSON
-    .withArgs(
-      `http://localhost:9000/data/datasets/Connectomics department/ROI2017_wkw/layers/color/mappings?token=${TOKEN}`,
-    )
-    .returns(Promise.resolve({}));
-  Request.receiveJSON
-    .withArgs(`/api/datasets/${ANNOTATION.datasetId}`) // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
-    // volume layer. Since this mutation should be isolated between different tests, we have to make
-    // sure that each receiveJSON call returns its own clone. Without the following "onCall" line,
-    // each __setupOxalis call would overwrite the current stub to receiveJSON.
-    .onCall(counter++)
-    .returns(Promise.resolve(datasetClone));
+  vi.mocked(Request).receiveJSON.mockImplementation((url, options) =>
+    receiveJSONMockImplementation(url, options, annotation),
+  );
 
-  protoHelpers.parseProtoAnnotation.returns(_.cloneDeep(modelData[mode].annotationProto));
-  protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
-  Request.receiveJSON
-    .withArgs("/api/userToken/generate", {
-      method: "POST",
-    })
-    .returns(
-      Promise.resolve({
-        token: TOKEN,
-      }),
-    );
-  Request.receiveJSON.returns(Promise.resolve({}));
-  Request.sendJSONReceiveJSON.returns(Promise.resolve({}));
+  vi.mocked(getDataset).mockImplementation(
+    async (
+      _datasetId: string,
+      _sharingToken?: string | null | undefined,
+      _options: RequestOptions = {},
+    ) => {
+      return _.cloneDeep(dataset);
+    },
+  );
 
-  // Make calls to updateLastTaskTypeIdOfUser() pass.
-  Request.sendJSONReceiveJSON
-    .withArgs(sinon.match((arg) => arg === `/api/users/${dummyUser.id}/taskTypeId`))
-    .returns(Promise.resolve(dummyUser));
+  testContext.mocks.parseProtoTracing.mockImplementation(
+    // Wrapping function to track already returned volume tracings in case of multiVolume test mode type.
+    // Needed to return both tracings and not one of them twice.
+    (function wrapperTrackingRepliedVolumeTracings() {
+      const volumeTracings = tracings.filter((tracing) => tracing.typ.toLowerCase() === "volume");
+      const skeletonTracing = tracings.find((tracing) => tracing.typ.toLowerCase() === "skeleton");
+
+      return (_buffer: ArrayBuffer, annotationType: "skeleton" | "volume"): ServerTracing => {
+        const tracing = annotationType === "volume" ? volumeTracings.shift() : skeletonTracing;
+        if (tracing == null) {
+          throw new Error(`Could not find tracing for ${annotationType}.`);
+        }
+        return tracing;
+      };
+    })(),
+  );
+  vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(annotationProto));
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-ignore
-    segmentMeshController: { meshesGroupsPerSegmentId: {} },
+    segmentMeshController: {
+      meshesGroupsPerSegmentId: {},
+      updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
+    },
   });
 
-  return Model.fetch(
-    null, // no compound annotation
-    {
-      annotationId: ANNOTATION_ID,
-      type: ControlModeEnum.TRACE,
-    },
-    true,
-  )
-    .then(() => {
-      // Trigger the event ourselves, as the OxalisController is not instantiated
-      app.vent.emit("webknossos:ready");
-      webknossos.apiReady(apiVersion).then((apiObject: ApiInterface) => {
-        t.context.api = apiObject;
-      });
-    })
-    .catch((error: { message: string }) => {
-      console.error("model.fetch() failed", error);
-      t.fail(error.message);
-    });
+  __setFeatures({});
+
+  try {
+    await Model.fetch(
+      null, // no compound annotation
+      {
+        annotationId: ANNOTATION_ID,
+        type: ControlModeEnum.TRACE,
+      },
+      true,
+    );
+    // Trigger the event ourselves, as the webKnossosController is not instantiated
+    app.vent.emit("webknossos:initialized");
+
+    const api = await webknossos.apiReady();
+    testContext.api = api;
+
+    // Ensure the slow compression is disabled by default. Tests may change
+    // this individually.
+    testContext.setSlowCompression(false);
+    if (!options?.dontDispatchWkInitialized) {
+      // Dispatch the wkInitializedAction, so the sagas are started
+      Store.dispatch(wkInitializedAction());
+    }
+  } catch (error) {
+    console.error("model.fetch() failed", error);
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      // @ts-ignore
+      throw new Error(error.message);
+    }
+  }
 }

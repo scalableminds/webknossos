@@ -37,8 +37,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getRedirectUrl(callbackUrl: String): Fox[String] =
     for {
-      _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
-      _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
+      _ <- Fox.fromBool(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
       redirectUrl <- discover.map { serverInfos =>
         def queryParams: Map[String, String] = Map(
           "client_id" -> oidcConfig.clientId,
@@ -58,8 +58,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getAndValidateTokens(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
     for {
-      _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
-      _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
+      _ <- Fox.fromBool(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
       serverInfos <- discover
       tokenResponse <- rpc(serverInfos.token_endpoint)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
@@ -86,7 +86,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       response: WSResponse <- rpc(oidcConfig.discoveryUrl)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .get
-      serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
+      serverInfo <- JsonHelper.as[OpenIdConnectProviderInfo](response.json).toFox
     } yield serverInfo
 
   private def validateOpenIdConnectTokenResponse(
@@ -104,12 +104,13 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       response: WSResponse <- rpc(serverInfos.jwks_uri)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .get
-      jsonWebKeySet: JsonWebKeySet <- JsonHelper.validateJsValue[JsonWebKeySet](response.json).toFox
-      firstRsaKey: JsonWebKey <- Fox.option2Fox(jsonWebKeySet.keys.find(key =>
-        key.kty == keyTypeRsa && key.use == "sig")) ?~> "No server RSA Public Key found in server key set"
-      modulusString <- firstRsaKey.n
+      jsonWebKeySet: JsonWebKeySet <- JsonHelper.as[JsonWebKeySet](response.json).toFox
+      firstRsaKey: JsonWebKey <- jsonWebKeySet.keys
+        .find(key => key.kty == keyTypeRsa && key.use == "sig")
+        .toFox ?~> "No server RSA Public Key found in server key set"
+      modulusString <- firstRsaKey.n.toFox
       modulus = new BigInteger(1, Base64.getUrlDecoder.decode(modulusString.getBytes))
-      exponentString <- firstRsaKey.e
+      exponentString <- firstRsaKey.e.toFox
       exponent = new BigInteger(1, Base64.getUrlDecoder.decode(exponentString.getBytes))
       publicKeySpec = new RSAPublicKeySpec(modulus, exponent)
       publicKey = KeyFactory.getInstance(keyTypeRsa).generatePublic(publicKeySpec)

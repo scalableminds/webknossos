@@ -2,8 +2,8 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import ArrayDataType.ArrayDataType
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
@@ -19,6 +19,7 @@ object MultiArrayUtils extends LazyLogging {
       case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](length)
       case ArrayDataType.f4                    => new Array[Float](length)
       case ArrayDataType.f8                    => new Array[Double](length)
+      case ArrayDataType.bool                  => new Array[Boolean](length)
     }
   }
 
@@ -28,22 +29,52 @@ object MultiArrayUtils extends LazyLogging {
     MultiArray.factory(MADataType.getType(aClass.getComponentType, false), shape, storage)
   }
 
-  def createFilledArray(dataType: MADataType, shape: Array[Int], fill: Number): Box[MultiArray] = {
+  def createFilledArray(dataType: MADataType,
+                        shape: Array[Int],
+                        fillNum: Number,
+                        fillBool: Boolean): Box[MultiArray] = {
     val array = MultiArray.factory(dataType, shape)
     val iter = array.getIndexIterator
     tryo {
-      if (fill != null) {
-        if (MADataType.DOUBLE == dataType) while ({ iter.hasNext }) iter.setDoubleNext(fill.doubleValue)
-        else if (MADataType.FLOAT == dataType) while ({ iter.hasNext }) iter.setFloatNext(fill.floatValue)
-        else if (MADataType.LONG == dataType) while ({ iter.hasNext }) iter.setLongNext(fill.longValue)
-        else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fill.intValue)
-        else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fill.shortValue)
-        else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fill.byteValue)
+      if (fillNum != null) {
+        if (MADataType.DOUBLE == dataType) while ({ iter.hasNext }) iter.setDoubleNext(fillNum.doubleValue)
+        else if (MADataType.FLOAT == dataType) while ({ iter.hasNext }) iter.setFloatNext(fillNum.floatValue)
+        else if (MADataType.LONG == dataType) while ({ iter.hasNext }) iter.setLongNext(fillNum.longValue)
+        else if (MADataType.INT == dataType) while ({ iter.hasNext }) iter.setIntNext(fillNum.intValue)
+        else if (MADataType.SHORT == dataType) while ({ iter.hasNext }) iter.setShortNext(fillNum.shortValue)
+        else if (MADataType.BYTE == dataType) while ({ iter.hasNext }) iter.setByteNext(fillNum.byteValue)
+        else if (MADataType.BOOLEAN == dataType) while ({ iter.hasNext }) iter.setBooleanNext(fillBool)
         else throw new IllegalStateException
       }
       array
     }
   }
+
+  def createEmpty(dataType: ArrayDataType, rank: Int): MultiArray = {
+    val datyTypeMA = dataType match {
+      case ArrayDataType.i1 | ArrayDataType.u1 => MADataType.BYTE
+      case ArrayDataType.i2 | ArrayDataType.u2 => MADataType.SHORT
+      case ArrayDataType.i4 | ArrayDataType.u4 => MADataType.INT
+      case ArrayDataType.i8 | ArrayDataType.u8 => MADataType.LONG
+      case ArrayDataType.f4                    => MADataType.FLOAT
+      case ArrayDataType.f8                    => MADataType.DOUBLE
+    }
+    MultiArray.factory(datyTypeMA, Array.fill(rank)(0))
+  }
+
+  def toLongArray(multiArray: MultiArray): Box[Array[Long]] =
+    multiArray.getDataType match {
+      case MADataType.LONG | MADataType.ULONG =>
+        Full(multiArray.getStorage.asInstanceOf[Array[Long]])
+      case MADataType.INT =>
+        Full(multiArray.getStorage.asInstanceOf[Array[Int]].map(_.toLong))
+      case MADataType.UINT =>
+        Full(multiArray.getStorage.asInstanceOf[Array[Int]].map { signed =>
+          if (signed >= 0) signed.toLong else signed.toLong + Int.MaxValue.toLong + Int.MaxValue.toLong + 2L
+        })
+      case _ =>
+        Failure("Cannot convert MultiArray to LongArray: unsupported data type.")
+    }
 
   /**
     * Offset describes the displacement between source and target array.<br/>

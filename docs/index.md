@@ -19,14 +19,14 @@ WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) 
 - User and task management for high-throughput collaboration in the lab or crowdsourcing
 - Easy Sharing. Share your [datasets](./sharing/dataset_sharing.md) and [annotations](./sharing/annotation_sharing.md) securely with others using web links
 - [Fine-grained access permission](./users/access_rights.md) and and user roles for secure collaboration
-- [AI Quick Select tool](./volume_annotation/tools.md#ai-quick-select) to speed up segmentation
+- [AI Quick Select tool](./volume_annotation/tools.md#quick-select-tool) to speed up segmentation
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 - [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data/index.md) (some formats will be converted on upload)
 - [Supported image formats](./data/index.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
 - Supports Time Series datasets
 - [3D Mesh Visualization](./meshes/index.md)
 - [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)
-- [Python library with documentation for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)
+- [Python library with documentation for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/)
 - [Frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html)
 - Developed as an open-source project with [automated testing](https://circleci.com/gh/scalableminds/webknossos)
 - [Deployable with Docker for production and development](https://hub.docker.com/r/scalableminds/webknossos/)

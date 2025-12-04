@@ -2,7 +2,7 @@
 // Types which were used for creating the datasource.schema.js
 // The `flow2schema` node module has been used for conversion.
 
-import type { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_types";
 
 // Please note that some manual changes to the schema are required.
 type Vector2 = [number, number];
@@ -14,13 +14,8 @@ type BoundingBox = {
   height: number;
   depth: number;
 };
-type DataLayerWKWPartial = {
+type DataLayerWKWPartial = BaseRemoteLayer & {
   dataFormat: "wkw";
-  boundingBox: BoundingBox;
-  wkwResolutions: Array<{
-    resolution: number | Vector3;
-    cubeLength: number;
-  }>;
 };
 
 type AxisKey = "x" | "y" | "z" | "c";

@@ -2,7 +2,6 @@ package security
 
 import play.silhouette.api.LoginInfo
 import play.silhouette.impl.authenticators.BearerTokenAuthenticator
-import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -116,20 +115,11 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                           ${t.tokenType}, ${t.created}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
-  def updateValues(id: ObjectId,
-                   value: String,
-                   lastUsedDateTime: Instant,
-                   expirationDateTime: Instant,
-                   idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastUsedDateTime(value: String, lastUsedDateTime: Instant): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.tokens
-                   SET
-                     value = $value,
-                     lastUsedDateTime = $lastUsedDateTime,
-                     expirationDateTime = $expirationDateTime,
-                     idleTimeout = ${idleTimeout.map(_.toMillis)}
-                   WHERE _id = $id""".asUpdate)
+                   SET lastUsedDateTime = $lastUsedDateTime
+                   WHERE value = $value""".asUpdate)
     } yield ()
 
   def deleteOneByValue(value: String): Fox[Unit] = {
@@ -143,6 +133,18 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield isDeletedColumn(row)
     for { _ <- run(query.update(true)) } yield ()
   }
+
+  def deleteDataStoreTokensForMultiUser(multiUserId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.tokens
+                   SET isDeleted = ${true}
+                   WHERE tokenType = ${TokenType.DataStore}
+                   AND loginInfo_providerKey IN (
+                     SELECT _id
+                     FROM webknossos.users_
+                     WHERE _multiUser = $multiUserId
+                   )""".asUpdate)
+    } yield ()
 
   def updateEmail(oldEmail: String, newEmail: String): Fox[Unit] =
     for {

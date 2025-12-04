@@ -1,11 +1,11 @@
-import { getPublications } from "admin/admin_rest_api";
+import { getPublications } from "admin/rest_api";
 import { Input, List, Spin } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import type React from "react";
 import { memo, useEffect, useState } from "react";
-import type { APIPublication } from "types/api_flow_types";
+import type { APIPublication } from "types/api_types";
 const { Search } = Input;
 export function PublicationViewWithHeader() {
   const [isLoading, setIsLoading] = useState(false);

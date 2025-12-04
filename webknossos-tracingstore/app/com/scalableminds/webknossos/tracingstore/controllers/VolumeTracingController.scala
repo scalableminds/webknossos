@@ -1,20 +1,22 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import collections.SequenceUtils
 import com.google.inject.Inject
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
   ProtoGeometryImplicits,
-  SegmentStatisticsParameters
+  SegmentStatisticsParameters,
+  SegmentStatisticsParametersMeshBased
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
   LengthUnit,
   VoxelSize,
@@ -22,7 +24,8 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosDataRequest
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{FullMeshRequest, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -34,7 +37,6 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
@@ -79,14 +81,14 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              _ <- volumeTracingService.saveVolume(request.body, newTracingId, 0)
+              _ <- volumeTracingService.saveVolume(newTracingId, version = 0, request.body)
             } yield Ok
           }
         }
       }
   }
 
-  def get(tracingId: String, annotationId: String, version: Option[Long]): Action[AnyContent] =
+  def get(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -110,7 +112,7 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def initialData(annotationId: String,
+  def initialData(annotationId: ObjectId,
                   tracingId: String,
                   minMag: Option[Int],
                   maxMag: Option[Int]): Action[AnyContent] =
@@ -119,13 +121,15 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
               magRestrictions = MagRestrictions(minMag, maxMag)
-              mags <- volumeTracingService
-                .initializeWithData(annotationId, tracingId, tracing.value, initialData, magRestrictions)
-                .toFox
+              mags <- volumeTracingService.initializeWithData(annotationId,
+                                                              tracingId,
+                                                              tracing.value,
+                                                              initialData,
+                                                              magRestrictions)
               _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }
@@ -141,28 +145,33 @@ class VolumeTracingController @Inject()(
           val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracingsFlat)
           for {
             mergedTracingRaw <- volumeTracingService
-              .merge(tracingsFlat, MergedVolumeStats.empty(shouldCreateSegmentIndex), Empty, newVersion = 0L)
+              .merge(tracingsFlat,
+                     MergedVolumeStats.empty(shouldCreateSegmentIndex),
+                     None,
+                     newVersion = 0L,
+                     additionalBoundingBoxes = Seq.empty)
               .toFox
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
             mergedTracing = mergedTracingRaw.copy(segments = List.empty)
-            _ <- volumeTracingService.saveVolume(mergedTracing, newTracingId, mergedTracing.version)
+            _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
           } yield Ok
         }
       }
     }
 
-  def initialDataMultiple(annotationId: String, tracingId: String): Action[AnyContent] =
+  def initialDataMultiple(annotationId: ObjectId, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
-              mags <- volumeTracingService
-                .initializeWithDataMultiple(annotationId, tracingId, tracing.value, initialData)
-                .toFox
+              mags <- volumeTracingService.initializeWithDataMultiple(annotationId,
+                                                                      tracingId,
+                                                                      tracing.value,
+                                                                      initialData)
               _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }
@@ -171,7 +180,7 @@ class VolumeTracingController @Inject()(
     }
 
   def allDataZip(tracingId: String,
-                 annotationId: Option[String],
+                 annotationId: Option[ObjectId],
                  version: Option[Long],
                  volumeDataZipFormat: String,
                  voxelSizeFactor: Option[String],
@@ -181,14 +190,14 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(
           annotationId.map(UserAccessRequest.readAnnotation).getOrElse(UserAccessRequest.readTracing(tracingId))) {
           for {
-            _ <- bool2Fox(if (version.isDefined) annotationId.isDefined else true) ?~> "Volume data request with version needs passed annotationId"
+            _ <- Fox.fromBool(if (version.isDefined) annotationId.isDefined else true) ?~> "Volume data request with version needs passed annotationId"
             annotationIdFilled <- Fox.fillOption(annotationId)(
               remoteWebknossosClient.getAnnotationIdForTracing(tracingId))
             tracing <- annotationService.findVolume(annotationIdFilled, tracingId, version) ?~> Messages(
               "tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
-            voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(Vec3Double.fromUriLiteral)
-            voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(LengthUnit.fromString)
+            voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(f => Vec3Double.fromUriLiteral(f).toFox)
+            voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(u => LengthUnit.fromString(u).toFox)
             voxelSize = voxelSizeFactorParsedOpt.map(voxelSizeParsed =>
               VoxelSize.fromFactorAndUnitWithDefault(voxelSizeParsed, voxelSizeUnitParsedOpt))
             data <- volumeTracingService.allDataZip(
@@ -198,12 +207,12 @@ class VolumeTracingController @Inject()(
               volumeDataZipFormatParsed,
               voxelSize
             )
-          } yield Ok.sendFile(data)
+          } yield Ok.sendPath(data)
         }
       }
     }
 
-  def data(tracingId: String, annotationId: String): Action[List[WebknossosDataRequest]] =
+  def data(tracingId: String, annotationId: ObjectId): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
@@ -278,7 +287,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body) ?~> "mesh.file.loadChunk.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body) ?~> "mesh.loadFull.failed"
         } yield Ok(data)
       }
     }
@@ -339,6 +348,34 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def getSegmentSurfaceArea(tracingId: String): Action[SegmentStatisticsParametersMeshBased] =
+    Action.async(validateJson[SegmentStatisticsParametersMeshBased]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId)
+          baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
+          surfaceAreas <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            val fullMeshRequest = FullMeshRequest(
+              meshFileName = None, // Cannot use static meshfiles for dynamic volume layers
+              lod = None,
+              segmentId = segmentId,
+              mappingName = baseMappingName,
+              mappingType = baseMappingName.map(_ => "HDF5"),
+              editableMappingTracingId = None,
+              mag = Some(request.body.mag),
+              seedPosition = None,
+              additionalCoordinates = request.body.additionalCoordinates,
+            )
+            for {
+              data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, fullMeshRequest) ?~> "mesh.loadFull.failed"
+              surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
+            } yield surfaceArea
+          }
+        } yield Ok(Json.toJson(surfaceAreas))
+      }
+    }
+
   def getSegmentIndex(tracingId: String, segmentId: Long): Action[GetSegmentIndexParameters] =
     Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -347,19 +384,18 @@ class VolumeTracingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId)
           fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-          _ <- bool2Fox(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
-          bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-              fallbackLayer,
-              tracingId,
-              segmentId,
-              request.body.mag,
-              additionalCoordinates = request.body.additionalCoordinates,
-              additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-              mappingName = mappingName,
-              editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
-            )
-          bucketPositionsForCubeSize = bucketPositionsRaw.values
+          _ <- Fox.fromBool(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
+          bucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+            tracing,
+            fallbackLayer,
+            tracingId,
+            segmentId,
+            request.body.mag,
+            additionalCoordinates = request.body.additionalCoordinates,
+            mappingName = mappingName,
+            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
+          )
+          bucketPositionsForCubeSize = bucketPositions.toSeq
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
             .map(_ / request.body.cubeSize)
@@ -371,8 +407,10 @@ class VolumeTracingController @Inject()(
 
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
   def duplicate(tracingId: String,
-                newAnnotationId: String,
+                newAnnotationId: ObjectId,
                 newTracingId: String,
+                ownerId: ObjectId,
+                requestingUserId: ObjectId,
                 minMag: Option[Int],
                 maxMag: Option[Int],
                 editPosition: Option[String],
@@ -384,9 +422,9 @@ class VolumeTracingController @Inject()(
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
             for {
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
-              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
-              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              editPositionParsed <- Fox.runOptional(editPosition)(p => Vec3Int.fromUriLiteral(p).toFox)
+              editRotationParsed <- Fox.runOptional(editRotation)(r => Vec3Double.fromUriLiteral(r).toFox)
+              boundingBoxParsed <- Fox.runOptional(boundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               magRestrictions = MagRestrictions(minMag, maxMag)
               newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
               _ <- annotationService.duplicateVolumeTracing(
@@ -396,6 +434,8 @@ class VolumeTracingController @Inject()(
                 newAnnotationId = newAnnotationId,
                 newTracingId = newTracingId,
                 newVersion = 0,
+                ownerId = ownerId,
+                requestingUserId = requestingUserId,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,
                 boundingBox = boundingBoxParsed,

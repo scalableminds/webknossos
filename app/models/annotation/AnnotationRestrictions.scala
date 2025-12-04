@@ -55,12 +55,12 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
         if (annotation.visibility == AnnotationVisibility.Public) Fox.successful(true)
         else if (annotation.visibility == AnnotationVisibility.Internal) {
           (for {
-            user <- option2Fox(userOption)
+            user <- userOption.toFox
             owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
           } yield owner._organization == user._organization).orElse(Fox.successful(false))
         } else {
           (for {
-            user <- option2Fox(userOption)
+            user <- userOption.toFox
             isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
           } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
         }
@@ -70,7 +70,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
           accessAllowed <- allowAccess(user)
           annotationOwnerBox <- userService
             .findOneCached(annotation._user)(GlobalAccessContext)
-            .futureBox // sandbox annotations have no owner
+            .shiftBox // sandbox annotations have no owner
         } yield
           user.exists { user =>
             (annotation._user == user._id || (accessAllowed && annotation.othersMayEdit)) &&
@@ -81,7 +81,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
 
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =
         (for {
-          user <- option2Fox(userOption)
+          user <- userOption.toFox
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished) && !annotation.isLockedByOwner
@@ -90,7 +90,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
       /* used in backend only to allow repeatable finish calls */
       override def allowFinishSoft(userOption: Option[User]): Fox[Boolean] =
         (for {
-          user <- option2Fox(userOption)
+          user <- userOption.toFox
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !annotation.isLockedByOwner

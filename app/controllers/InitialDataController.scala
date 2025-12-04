@@ -2,6 +2,7 @@ package controllers
 
 import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -14,7 +15,18 @@ import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
+  DataSourceId,
+  ElementClass,
+  StaticColorLayer,
+  StaticSegmentationLayer,
+  UsableDataSource
+}
 import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
@@ -39,6 +51,8 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
 
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
+                                   datasetDAO: DatasetDAO,
+                                   datasetLayerDAO: DatasetLayerDAO,
                                    multiUserDAO: MultiUserDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    taskTypeDAO: TaskTypeDAO,
@@ -147,6 +161,7 @@ Samplecountry
   private val defaultAiModel = AiModel(
     ObjectId("66544a56d20000af0e42ba0f"),
     defaultOrganization._id,
+    List(),
     defaultDataStore.name,
     defaultUser._id,
     None,
@@ -154,6 +169,95 @@ Samplecountry
     "sample_ai_model",
     Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
     Some(AiModelCategory.em_neurons)
+  )
+  private val defaultDataSource = UsableDataSource(
+    id = DataSourceId("l4_sample_remote", defaultOrganization._id),
+    dataLayers = List(
+      StaticColorLayer(
+        name = "color",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = BoundingBox(Vec3Int(3072, 3072, 512), 1024, 1024, 1024),
+        elementClass = ElementClass.uint8,
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(2, 2, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/2-2-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(4, 4, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/4-4-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(8, 8, 2),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/8-8-2"))
+          ),
+          MagLocator(
+            mag = Vec3Int(16, 16, 4),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/color/16-16-4"))
+          )
+        )
+      ),
+      StaticSegmentationLayer(
+        name = "segmentation",
+        dataFormat = DataFormat.zarr3,
+        boundingBox = BoundingBox(Vec3Int(3072, 3072, 512), 1024, 1024, 1024),
+        elementClass = ElementClass.uint32,
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            path = Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(2, 2, 1),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/2-2-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(4, 4, 1),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/4-4-1"))
+          ),
+          MagLocator(
+            mag = Vec3Int(8, 8, 2),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/8-8-2"))
+          ),
+          MagLocator(
+            mag = Vec3Int(16, 16, 4),
+            path =
+              Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/16-16-4"))
+          )
+        ),
+        largestSegmentId = Some(2504697),
+      )
+    ),
+    scale = VoxelSize(Vec3Double(11.239999771118164, 11.239999771118164, 28), LengthUnit.nanometer)
+  )
+
+  private val defaultDataset = Dataset(
+    _id = ObjectId("68b80290d4000090f8f4aa62"),
+    _dataStore = defaultDataStore.name,
+    _organization = defaultOrganization._id,
+    _publication = Some(defaultPublication._id),
+    _uploader = Some(defaultUser._id),
+    _folder = defaultOrganization._rootFolder,
+    inboxSourceHash = Some(defaultDataSource.hashCode()),
+    defaultViewConfiguration = None,
+    adminViewConfiguration = None,
+    description = None,
+    directoryName = defaultDataSource.id.directoryName,
+    isPublic = false,
+    isUsable = true,
+    isVirtual = true,
+    name = "l4_sample_remote",
+    voxelSize = Some(defaultDataSource.scale),
+    sharingToken = None,
+    status = "",
+    logoUrl = None,
   )
 
   def insert: Fox[Unit] =
@@ -174,16 +278,17 @@ Samplecountry
       _ <- insertTaskType()
       _ <- insertProject()
       _ <- insertPublication()
+      _ <- insertDataset()
       _ <- insertAiModel()
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =
     for {
-      _ <- bool2Fox(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
-    folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
+    folderDAO.findOne(defaultOrganization._rootFolder).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
@@ -193,26 +298,22 @@ Samplecountry
                                 multiUser: MultiUser,
                                 user: User,
                                 isTeamManager: Boolean): Fox[Unit] =
-    userService
-      .userFromMultiUserEmail(userEmail)
-      .futureBox
-      .flatMap {
-        case Full(_) => Fox.successful(())
-        case _ =>
-          for {
-            _ <- multiUserDAO.insertOne(multiUser)
-            _ <- userDAO.insertOne(user)
-            _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-            _ <- userDAO.insertTeamMembership(user._id,
-                                              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
-            _ = logger.info("Inserted default user")
-          } yield ()
-      }
-      .toFox
+    userService.userFromMultiUserEmail(userEmail).shiftBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _ =>
+        for {
+          _ <- multiUserDAO.insertOne(multiUser)
+          _ <- userDAO.insertOne(user)
+          _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
+          _ <- userDAO.insertTeamMembership(user._id,
+                                            TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
+          _ = logger.info("Inserted default user")
+        } yield ()
+    }
 
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
-    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox.flatMap {
+    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         val newToken = Token(
@@ -229,15 +330,11 @@ Samplecountry
   }
 
   private def insertOrganization(): Fox[Unit] =
-    organizationDAO
-      .findOne(defaultOrganization._id)
-      .futureBox
-      .flatMap {
-        case Full(_) => Fox.successful(())
-        case _ =>
-          organizationDAO.insertOne(defaultOrganization)
-      }
-      .toFox
+    organizationDAO.findOne(defaultOrganization._id).shiftBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _ =>
+        organizationDAO.insertOne(defaultOrganization)
+    }
 
   private def insertTeams(): Fox[Unit] =
     teamDAO.findAll.flatMap { teams =>
@@ -245,7 +342,7 @@ Samplecountry
         teamDAO.insertOne(organizationTeam)
       else
         Fox.successful(())
-    }.toFox
+    }
 
   private def insertTaskType(): Fox[Unit] =
     taskTypeDAO.findAll.flatMap { types =>
@@ -258,7 +355,7 @@ Samplecountry
         )
         for { _ <- taskTypeDAO.insertOne(taskType, defaultOrganization._id) } yield ()
       } else Fox.successful(())
-    }.toFox
+    }
 
   private def insertProject(): Fox[Unit] =
     projectDAO.findAll.flatMap { projects =>
@@ -275,11 +372,20 @@ Samplecountry
           for { _ <- projectDAO.insertOne(project, defaultOrganization._id) } yield ()
         }
       } else Fox.successful(())
-    }.toFox
+    }
 
   private def insertPublication(): Fox[Unit] = publicationDAO.findAll.flatMap { publications =>
     if (publications.isEmpty) {
       publicationDAO.insertOne(defaultPublication)
+    } else Fox.successful(())
+  }
+
+  private def insertDataset(): Fox[Unit] = datasetDAO.findOne(defaultDataset._id).shiftBox.flatMap { maybeDataset =>
+    if (maybeDataset.isEmpty) {
+      for {
+        _ <- datasetDAO.insertOne(defaultDataset)
+        _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
+      } yield ()
     } else Fox.successful(())
   }
 
@@ -291,7 +397,7 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
+      dataStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local datastore")
           dataStoreDAO.insertOne(defaultDataStore)
@@ -301,7 +407,7 @@ Samplecountry
 
   private def insertLocalTracingStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
+      tracingStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
@@ -315,29 +421,25 @@ Samplecountry
 
   private def updateLocalDataStorePublicUri(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { storeOpt: Box[DataStore] =>
-        storeOpt match {
-          case Full(store) =>
-            val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)
-            if (store.publicUrl == newPublicUri) {
-              Fox.successful(())
-            } else dataStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
-          case _ => Fox.successful(())
-        }
+      dataStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap {
+        case Full(store) =>
+          val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)
+          if (store.publicUrl == newPublicUri) {
+            Fox.successful(())
+          } else dataStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
+        case _ => Fox.successful(())
       }
     } else Fox.successful(())
 
   private def updateLocalTracingStorePublicUri(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { storeOpt: Box[TracingStore] =>
-        storeOpt match {
-          case Full(store) =>
-            val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
-            if (store.publicUrl == newPublicUri) {
-              Fox.successful(())
-            } else tracingStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
-          case _ => Fox.successful(())
-        }
+      tracingStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap {
+        case Full(store) =>
+          val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
+          if (store.publicUrl == newPublicUri) {
+            Fox.successful(())
+          } else tracingStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
+        case _ => Fox.successful(())
       }
     } else Fox.successful(())
 

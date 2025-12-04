@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike}
+import com.scalableminds.webknossos.datastore.models.datasource.{StaticLayer, UsableDataSource}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{Vec3IntProto => ProtoPoint3D}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -9,7 +9,7 @@ import play.api.libs.json.{Format, Json}
 
 object VolumeTracingMags extends ProtoGeometryImplicits {
 
-  def magsForVolumeTracing(dataSource: DataSourceLike, fallbackLayer: Option[DataLayerLike]): List[Vec3Int] = {
+  def magsForVolumeTracing(dataSource: UsableDataSource, fallbackLayer: Option[StaticLayer]): List[Vec3Int] = {
     val fallbackLayerMags = fallbackLayer.map(_.resolutions)
     fallbackLayerMags.getOrElse {
       val unionOfAllLayers = dataSource.dataLayers.flatMap(_.resolutions).distinct
@@ -51,7 +51,4 @@ case class MagRestrictions(
     min.getOrElse(0) <= mag.maxDim && max.getOrElse(Int.MaxValue) >= mag.maxDim
 
   def isForbidden(mag: Vec3Int): Boolean = !isAllowed(mag)
-
-  def minStr: Option[String] = min.map(_.toString)
-  def maxStr: Option[String] = max.map(_.toString)
 }

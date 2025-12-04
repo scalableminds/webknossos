@@ -16,7 +16,7 @@ object N5BlockHeader {
 }
 
 case class N5Header(
-    dimensions: Array[Int], // shape of the entire array
+    dimensions: Array[Long], // shape of the entire array
     blockSize: Array[Int], // shape of each chunk
     compression: Option[Map[String, CompressionSetting]] = None, // specifies compressor to use, with parameters
     dataType: String,
@@ -25,7 +25,7 @@ case class N5Header(
   val fill_value: Either[String, Number] = Right(0)
   val order: ArrayOrder = ArrayOrder.F
 
-  override lazy val datasetShape: Option[Array[Int]] = Some(dimensions)
+  override lazy val datasetShape: Option[Array[Long]] = Some(dimensions)
 
   lazy val chunkShape: Array[Int] = blockSize
 

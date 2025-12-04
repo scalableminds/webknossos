@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.{Box, Failure, Full}
 
 // Lists the encodings supported by VaultPath.readBytes
 object Encoding extends ExtendedEnumeration {

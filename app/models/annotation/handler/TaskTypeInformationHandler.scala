@@ -2,44 +2,53 @@ package models.annotation.handler
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation._
 import models.task.{TaskDAO, TaskTypeDAO}
 import models.user.{User, UserService}
 import models.annotation.AnnotationState._
 import com.scalableminds.util.objectid.ObjectId
+import models.dataset.{DatasetDAO, DatasetService}
+import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 
-class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
-                                           taskDAO: TaskDAO,
-                                           userService: UserService,
-                                           annotationDAO: AnnotationDAO,
-                                           annotationMerger: AnnotationMerger)(implicit val ec: ExecutionContext)
+class TaskTypeInformationHandler @Inject()(
+    taskTypeDAO: TaskTypeDAO,
+    taskDAO: TaskDAO,
+    userService: UserService,
+    annotationDAO: AnnotationDAO,
+    annotationMerger: AnnotationMerger,
+    val datasetService: DatasetService,
+    val datasetDAO: DatasetDAO,
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
     with FoxImplicits {
 
-  override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+  override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext,
+                                                                              mp: MessagesProvider): Fox[Annotation] =
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
       tasks <- taskDAO.findAllByTaskType(taskType._id)
       annotations <- Fox
         .serialCombined(tasks)(task => annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task))
         .map(_.flatten)
-        .toFox
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
-      user <- userOpt ?~> "user.notAuthorised"
+      user <- userOpt.toFox ?~> "user.notAuthorised"
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
+      _ <- registerDataSourceInTemporaryStore(taskTypeId, datasetId)
+      taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
       mergedAnnotation <- annotationMerger.mergeN(taskTypeId,
                                                   toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
                                                   taskType._team,
                                                   AnnotationType.CompoundTaskType,
-                                                  finishedAnnotations) ?~> "annotation.merge.failed.compound"
+                                                  finishedAnnotations,
+                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   override def restrictionsFor(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

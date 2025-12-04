@@ -6,11 +6,119 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
+[Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)
+
+- The datastore config option `reportUsedStorage.enabled` was removed. To enable storage scan for a datastore, set reportUsedStorageEnabled to TRUE directly in the postgres table `webknossos.dataStores`.
+
+### Postgres Evolutions
+- [145-attachment-realpaths.sql](schema/evolutions/145-attachment-realpaths.sql)
+
+## [25.11.0](https://github.com/scalableminds/webknossos/releases/tag/25.11.0) - 2025-10-27
+[Commits](https://github.com/scalableminds/webknossos/compare/25.10.0...25.11.0)
+
+- New keys have been added to the application.conf of the datastore.
+
+### Postgres Evolutions
+- [141-allows-upload-to-paths.sql](schema/evolutions/141-allows-upload-to-paths.sql)
+- [142-personal-plan.sql](schema/evolutions/142-personal-plan.sql)
+- [143-remote-storage-analysis.sql](schema/evolutions/143-remote-storage-analysis.sql)
+- [144-improve-storage-scan.sql](schema/evolutions/144-improve-storage-scan.sql)
+
+## [25.10.0](https://github.com/scalableminds/webknossos/releases/tag/25.10.0) - 2025-09-22
+[Commits](https://github.com/scalableminds/webknossos/compare/25.09.0...25.10.0)
+
+### Postgres Evolutions
+- [139-logout-everywhere.sql](schema/evolutions/139-logout-everywhere.sql)
+- [140-annotation-layer-name-check-deferrable.sql](schema/evolutions/140-annotation-layer-name-check-deferrable.sql)
+
+## [25.09.0](https://github.com/scalableminds/webknossos/releases/tag/25.09.0) - 2025-08-26
+[Commits](https://github.com/scalableminds/webknossos/compare/25.07.1...25.09.0)
+
+### Postgres Evolutions
+- [136-extra-column-for-email-changed.sql](schema/evolutions/136-extra-column-for-email-changed.sql)
+- [137-virtual-datasets.sql](schema/evolutions/137-virtual-datasets.sql)
+- [138-add-webauthn-credentials.sql](schema/evolutions/138-add-webauthn-credentials.sql)
+
+## [25.07.1](https://github.com/scalableminds/webknossos/releases/tag/25.07.1) - 2025-07-11
+[Commits](https://github.com/scalableminds/webknossos/compare/25.07.0...25.07.1)
+
+### Postgres Evolutions
+None.
+
+## [25.07.0](https://github.com/scalableminds/webknossos/releases/tag/25.07.0) - 2025-07-01
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.2...25.07.0)
+
+- The default thread pool size was increased from 5 to 10 times the number of available CPUs (capped at 1000). Note that wk may need slightly more memory because of this.
+
+### Postgres Evolutions
+- [134-dataset-layer-attachments.sql](schema/evolutions/134-dataset-layer-attachments.sql)
+- [135-neuroglancer-attachment.sql](schema/evolutions/135-neuroglancer-attachment.sql)
+
+## [25.06.2](https://github.com/scalableminds/webknossos/releases/tag/25.06.2) - 2025-06-17
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.1...25.06.2)
+
+### Postgres Evolutions:
+None.
+
+## [25.06.1](https://github.com/scalableminds/webknossos/releases/tag/25.06.1) - 2025-06-03
+[Commits](https://github.com/scalableminds/webknossos/compare/25.06.0...25.06.1)
+
+### Postgres Evolutions:
+None.
+
+## [25.06.0](https://github.com/scalableminds/webknossos/releases/tag/25.06.0) - 2025-05-26
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.1...25.06.0)
+
+### Postgres Evolutions:
+
+- [131-more-indices-on-users.sql](schema/evolutions/131-more-indices-on-users.sql)
+- [132-remove-stored-meshes.sql](schema/evolutions/132-remove-stored-meshes.sql)
+- [133-datasource-properties-in-db.sql](schema/evolutions/133-datasource-properties-in-db.sql)
+
+## [25.05.1](https://github.com/scalableminds/webknossos/releases/tag/25.05.1) - 2025-05-19
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...25.05.1)
+
+### Postgres Evolutions:
+None.
+
+## [25.05.0](https://github.com/scalableminds/webknossos/releases/tag/25.05.0) - 2025-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...25.05.0)
+
+### Postgres Evolutions:
+None.
+
+## [25.04.0](https://github.com/scalableminds/webknossos/releases/tag/25.04.0) - 2025-04-22
+[Commits](https://github.com/scalableminds/webknossos/compare/25.03.1...25.04.0)
+- New FossilDB version `0.1.37` (`master__525:` on dockerhub) is required. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- NodeJs version `22+` is required. [#8479](https://github.com/scalableminds/webknossos/pull/8479)
+
+### Postgres Evolutions:
+None.
+
+## [25.03.1](https://github.com/scalableminds/webknossos/releases/tag/25.03.1) - 2025-04-10
+[Commits](https://github.com/scalableminds/webknossos/compare/25.03.0...25.03.1)
+
+### Postgres Evolutions:
+None.
+
+## [25.03.0](https://github.com/scalableminds/webknossos/releases/tag/25.03.0) - 2025-04-01
+[Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...25.03.0)
+
+- FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
+
+### Postgres Evolutions:
+- [126-mag-real-paths.sql](schema/evolutions/126-mag-real-paths.sql)
+- [127-job-retried-by-super-user.sql](schema/evolutions/127-job-retried-by-super-user.sql)
+- [128-allow-ai-model-sharing.sql](schema/evolutions/128-allow-ai-model-sharing.sql)
+- [129-credit-transactions.sql](schema/evolutions/129-credit-transactions.sql)
+- [130-replace-text-types.sql](schema/evolutions/130-replace-text-types.sql)
+
 ## [25.02.1](https://github.com/scalableminds/webknossos/releases/tag/25.02.1) - 2025-02-26
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.0...25.02.1)
 
 ### Postgres Evolutions:
-
+None.
 
 ## [25.02.0](https://github.com/scalableminds/webknossos/releases/tag/25.02.0) - 2025-02-17
 [Commits](https://github.com/scalableminds/webknossos/compare/25.01.0...25.02.0)
@@ -25,7 +133,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
     - Example command for the migration: `PG_PASSWORD=myPassword python main.py --src localhost:7500 --dst localhost:7155 --num_threads 20 --postgres webknossos@localhost:5430/webknossos`
 
 ### Postgres Evolutions:
-
+None.
 
 ## [25.01.0](https://github.com/scalableminds/webknossos/releases/tag/25.01.0) - 2025-01-22
 [Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...25.01.0)
@@ -34,8 +142,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - Datastore config options `datastore.baseFolder` and `datastore.localFolderWhitelist` have been renamed to `datastore.baseDirectory` and `datastore.localDirectoryWhitelist` respectively, to avoid confusion with the dashboard folders. [#8292](https://github.com/scalableminds/webknossos/pull/8292)
 
 ### Postgres Evolutions:
-- [124-decouple-dataset-directory-from-name.sql](conf/evolutions/124-decouple-dataset-directory-from-name.sql)
-- [125-allow-dollar-in-layer-names.sql](conf/evolutions/125-allow-dollar-in-layer-names.sql)
+- [124-decouple-dataset-directory-from-name.sql](schema/evolutions/124-decouple-dataset-directory-from-name.sql)
+- [125-allow-dollar-in-layer-names.sql](schema/evolutions/125-allow-dollar-in-layer-names.sql)
 
 
 ## [24.12.0](https://github.com/scalableminds/webknossos/releases/tag/24.12.0) - 2024-12-05
@@ -48,9 +156,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 
-- [121-worker-name.sql](conf/evolutions/121-worker-name.sql)
-- [122-resolution-to-mag.sql](conf/evolutions/122-resolution-to-mag.sql)
-- [123-more-model-categories.sql](conf/evolutions/123-more-model-categories.sql)
+- [121-worker-name.sql](schema/evolutions/121-worker-name.sql)
+- [122-resolution-to-mag.sql](schema/evolutions/122-resolution-to-mag.sql)
+- [123-more-model-categories.sql](schema/evolutions/123-more-model-categories.sql)
 
 
 ## [24.10.0](https://github.com/scalableminds/webknossos/releases/tag/24.10.0) - 2024-09-24
@@ -59,7 +167,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - For self-hosted versions of WEBKNOSSOS, you can choose whether switching to webknossos.org will be recommended to you, e.g. when uploading a dataset. To configure this, change `recommendWkorgInstance` in your `application.conf`.
 
 ### Postgres Evolutions:
-
+None.
 
 ## [24.08.1](https://github.com/scalableminds/webknossos/releases/tag/24.08.1) - 2024-09-03
 [Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...24.08.1)
@@ -73,9 +181,9 @@ None.
 - If Segment Anything was already configured, it needs to be pointed to an endpoint that works with SAM 2. [#7965](https://github.com/scalableminds/webknossos/pull/7965)
 
 ### Postgres Evolutions:
-- [118-voxelytics-artifacts-index.sql](conf/evolutions/118-voxelytics-artifacts-index.sql)
-- [119-add-metadata-to-folders-and-datasets.sql](conf/evolutions/119-add-metadata-to-folders-and-datasets.sql)
-- [120-remove-old-organization-id.sql](conf/evolutions/120-remove-old-organization-id.sql)
+- [118-voxelytics-artifacts-index.sql](schema/evolutions/118-voxelytics-artifacts-index.sql)
+- [119-add-metadata-to-folders-and-datasets.sql](schema/evolutions/119-add-metadata-to-folders-and-datasets.sql)
+- [120-remove-old-organization-id.sql](schema/evolutions/120-remove-old-organization-id.sql)
 
 ## [24.07.0](https://github.com/scalableminds/webknossos/releases/tag/24.07.0) - 2024-07-05
 [Commits](https://github.com/scalableminds/webknossos/compare/24.06.0...24.07.0)
@@ -86,10 +194,10 @@ None.
 
 ### Postgres Evolutions:
 
-- [114-ai-models.sql](conf/evolutions/114-ai-models.sql)
-- [115-annotation-locked-by-user.sql](conf/evolutions/115-annotation-locked-by-user.sql)
-- [116-drop-overtimemailinglist.sql](conf/evolutions/116-drop-overtimemailinglist.sql)
-- [117-voxel-size-unit.sql](conf/evolutions/117-voxel-size-unit.sql)
+- [114-ai-models.sql](schema/evolutions/114-ai-models.sql)
+- [115-annotation-locked-by-user.sql](schema/evolutions/115-annotation-locked-by-user.sql)
+- [116-drop-overtimemailinglist.sql](schema/evolutions/116-drop-overtimemailinglist.sql)
+- [117-voxel-size-unit.sql](schema/evolutions/117-voxel-size-unit.sql)
 
 
 ## [24.06.0](https://github.com/scalableminds/webknossos/releases/tag/24.06.0) - 2024-05-27
@@ -127,7 +235,7 @@ UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DIST
 
 ### Postgres Evolutions:
 
-- [113-analytics-events.sql](conf/evolutions/113-analytics-events.sql)
+- [113-analytics-events.sql](schema/evolutions/113-analytics-events.sql)
 
 
 ## [24.02.3](https://github.com/scalableminds/webknossos/releases/tag/24.02.3) - 2024-02-22
@@ -153,9 +261,9 @@ UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DIST
 
 ### Postgres Evolutions:
 
-- [110-worker-config.sql](conf/evolutions/110-worker-config.sql)
-- [111-stats-per-annotation-layer.sql](conf/evolutions/111-stats-per-annotation-layer.sql)
-- [112-reuse-deleted.sql](conf/evolutions/112-reuse-deleted.sql)
+- [110-worker-config.sql](schema/evolutions/110-worker-config.sql)
+- [111-stats-per-annotation-layer.sql](schema/evolutions/111-stats-per-annotation-layer.sql)
+- [112-reuse-deleted.sql](schema/evolutions/112-reuse-deleted.sql)
 
 
 ## [23.12.0](https://github.com/scalableminds/webknossos/releases/tag/23.12.0) - 2023-11-27
@@ -180,8 +288,8 @@ UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DIST
 [Commits](https://github.com/scalableminds/webknossos/compare/23.09.0...23.10.0)
 
 ### Postgres Evolutions:
-- [108-additional-coordinates](conf/evolutions/108-additional-coordinates.sql)
-- [109-scheduled-maintenances.sql](conf/evolutions/109-scheduled-maintenances.sql)
+- [108-additional-coordinates](schema/evolutions/108-additional-coordinates.sql)
+- [109-scheduled-maintenances.sql](schema/evolutions/109-scheduled-maintenances.sql)
 
 
 ## [23.09.0](https://github.com/scalableminds/webknossos/releases/tag/23.09.0) - 2023-08-29
@@ -198,17 +306,17 @@ UPDATE webknossos.multiUsers SET isEmailVerified = false;
  - If you have OIDC authentication set up, you can now remove the config keys `singleSignOn.openIdConnect.publicKey` and `singleSignOn.openIdConnect.publicKeyAlgorithm`, as the server’s public key is now automatically fetched. [#7267](https://github.com/scalableminds/webknossos/pull/7267)
 
 ### Postgres Evolutions:
-- [105-verify-email.sql](conf/evolutions/105-verify-email.sql)
-- [106-folder-no-slashes.sql](conf/evolutions/106-folder-no-slashes.sql)
-- [107-task-terminology.sql](conf/evolutions/107-task-terminology.sql)
+- [105-verify-email.sql](schema/evolutions/105-verify-email.sql)
+- [106-folder-no-slashes.sql](schema/evolutions/106-folder-no-slashes.sql)
+- [107-task-terminology.sql](schema/evolutions/107-task-terminology.sql)
 
 
 ## [23.08.0](https://github.com/scalableminds/webknossos/releases/tag/23.08.0) - 2023-07-24
 [Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...23.08.0)
 
 ### Postgres Evolutions:
-- [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)
-- [104-thumbnails.sql](conf/evolutions/104-thumbnails.sql)
+- [103-thin-plane-splines.sql](schema/evolutions/103-thin-plane-splines.sql)
+- [104-thumbnails.sql](schema/evolutions/104-thumbnails.sql)
 
 
 ## [23.07.0](https://github.com/scalableminds/webknossos/releases/tag/23.07.0) - 2023-06-20
@@ -216,7 +324,7 @@ UPDATE webknossos.multiUsers SET isEmailVerified = false;
 - FossilDB needs to be opened with new additional column family volumeSegmentIndex.
 
 ### Postgres Evolutions:
-- [102-no-more-wkconnect.sql](conf/evolutions/102-no-more-wkconnect.sql)
+- [102-no-more-wkconnect.sql](schema/evolutions/102-no-more-wkconnect.sql)
 
 ## [23.06.0](https://github.com/scalableminds/webknossos/releases/tag/23.06.0) - 2023-05-30
 [Commits](https://github.com/scalableminds/webknossos/compare/23.05.2...23.06.0)
@@ -263,7 +371,7 @@ None.
 [Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...23.04.0)
 
 ### Postgres Evolutions:
-- [101-coordinate-transformations.sql](conf/evolutions/101-coordinate-transformations.sql)
+- [101-coordinate-transformations.sql](schema/evolutions/101-coordinate-transformations.sql)
 
 ## [23.03.1](https://github.com/scalableminds/webknossos/releases/tag/23.03.1) - 2023-03-14
 [Commits](https://github.com/scalableminds/webknossos/compare/23.03.0...23.03.1)
@@ -280,8 +388,8 @@ None.
 
 ### Postgres Evolutions:
 
-- [099-rename-credential-types.sql](conf/evolutions/099-rename-credential-types.sql)
-- [100-annotation-mutexes.sql](conf/evolutions/100-annotation-mutexes.sql)
+- [099-rename-credential-types.sql](schema/evolutions/099-rename-credential-types.sql)
+- [100-annotation-mutexes.sql](schema/evolutions/100-annotation-mutexes.sql)
 
 
 ## [23.02.1](https://github.com/scalableminds/webknossos/releases/tag/23.02.1) - 2023-02-07
@@ -297,11 +405,11 @@ None.
 
 ### Postgres Evolutions:
 
-- [094-pricing-plans.sql](conf/evolutions/094-pricing-plans.sql)
-- [095-constraint-naming.sql](conf/evolutions/095-constraint-naming.sql)
-- [096-storage.sql](conf/evolutions/096-storage.sql)
-- [097-credentials.sql](conf/evolutions/097-credentials.sql)
-- [098-voxelytics-states.sql](conf/evolutions/098-voxelytics-states.sql)
+- [094-pricing-plans.sql](schema/evolutions/094-pricing-plans.sql)
+- [095-constraint-naming.sql](schema/evolutions/095-constraint-naming.sql)
+- [096-storage.sql](schema/evolutions/096-storage.sql)
+- [097-credentials.sql](schema/evolutions/097-credentials.sql)
+- [098-voxelytics-states.sql](schema/evolutions/098-voxelytics-states.sql)
 
 
 ## [23.01.0](https://github.com/scalableminds/webknossos/releases/tag/23.01.0) - 2023-01-03
@@ -311,9 +419,9 @@ None.
 
 ### Postgres Evolutions:
 
-- [091-folders.sql](conf/evolutions/091-folders.sql)
-- [092-oidc.sql](conf/evolutions/092-oidc.sql)
-- [093-terms-of-service.sql](conf/evolutions/093-terms-of-service.sql)
+- [091-folders.sql](schema/evolutions/091-folders.sql)
+- [092-oidc.sql](schema/evolutions/092-oidc.sql)
+- [093-terms-of-service.sql](schema/evolutions/093-terms-of-service.sql)
 
 
 ## [22.12.0](https://github.com/scalableminds/webknossos/releases/tag/22.12.0) - 2022-11-24
@@ -349,9 +457,9 @@ None.
 - To use the Voxelytics reporting features in webKnossos, the config field `features.voxelyticsEnabled` needs to be set to true. When also using the logging features, an Elasticsearch instance needs to be running and configured in the config field `voxelytics.elasticsearch.uri`.
 
 ### Postgres Evolutions:
-- [088-shortlinks.sql](conf/evolutions/088-shortlinks.sql)
-- [089-voxelytics.sql](conf/evolutions/089-voxelytics.sql)
-- [090-cleanup.sql](conf/evolutions/090-cleanup.sql)
+- [088-shortlinks.sql](schema/evolutions/088-shortlinks.sql)
+- [089-voxelytics.sql](schema/evolutions/089-voxelytics.sql)
+- [090-cleanup.sql](schema/evolutions/090-cleanup.sql)
 
 
 ## [22.09.0](https://github.com/scalableminds/webknossos/releases/tag/22.09.0) - 2022-08-25
@@ -361,10 +469,10 @@ None.
 - Removed the foreign datastore feature. If you have any foreign datastores registered in your webKnossos, running this upgrade may result in undefined behavior. [#6392](https://github.com/scalableminds/webknossos/pull/6392)
 
 ### Postgres Evolutions:
-- [084-annotation-contributors.sql](conf/evolutions/084-annotation-contributors.sql)
-- [085-annotation-publication.sql](conf/evolutions/085-annotation-publication.sql)
-- [086-drop-foreign-datastores.sql](conf/evolutions/086-drop-foreign-datastores.sql)
-- [087-zarr-private-links.sql](conf/evolutions/087-zarr-private-links.sql)
+- [084-annotation-contributors.sql](schema/evolutions/084-annotation-contributors.sql)
+- [085-annotation-publication.sql](schema/evolutions/085-annotation-publication.sql)
+- [086-drop-foreign-datastores.sql](schema/evolutions/086-drop-foreign-datastores.sql)
+- [087-zarr-private-links.sql](schema/evolutions/087-zarr-private-links.sql)
 
 
 ## [22.08.0](https://github.com/scalableminds/webknossos/releases/tag/22.08.0) - 2022-07-20
@@ -391,7 +499,7 @@ None.
 
 ### Postgres Evolutions:
 
-- [083-unique-layer-names.sql](conf/evolutions/083-unique-layer-names.sql) Note: Note that this evolution introduces constraints which may not be met by existing data. See above for manual steps
+- [083-unique-layer-names.sql](schema/evolutions/083-unique-layer-names.sql) Note: Note that this evolution introduces constraints which may not be met by existing data. See above for manual steps
 
 
 ## [22.07.0](https://github.com/scalableminds/webknossos/releases/tag/22.07.0) - 2022-06-28
@@ -414,7 +522,7 @@ None.
  - Note that the datastore API version has changed to 2.0. If you use webknossos-connect alongside your webKnossos instance, you will need to upgrade that one as well, compare [webknossos-connect#129](https://github.com/scalableminds/webknossos-connect/pull/129). [#6159](https://github.com/scalableminds/webknossos/pull/6159)
 
 ### Postgres Evolutions:
-- [082-annotationsettings-volumeInterpolationAllowed.sql](conf/evolutions/082-annotationsettings-volumeInterpolationAllowed.sql)
+- [082-annotationsettings-volumeInterpolationAllowed.sql](schema/evolutions/082-annotationsettings-volumeInterpolationAllowed.sql)
 
 
 ## [22.05.1](https://github.com/scalableminds/webknossos/releases/tag/22.05.1) - 2022-04-29
@@ -437,21 +545,21 @@ None.
 - The config field `googleAnalytics.trackingId` needs to be changed to [GA4 measurement id](https://support.google.com/analytics/answer/10089681), if used.
 
 ### Postgres Evolutions:
-- [081-annotation-viewconfiguration.sql](conf/evolutions/081-annotation-viewconfiguration.sql)
+- [081-annotation-viewconfiguration.sql](schema/evolutions/081-annotation-viewconfiguration.sql)
 
 ## [22.02.0](https://github.com/scalableminds/webknossos/releases/tag/22.02.0) - 2022-01-24
 [Commits](https://github.com/scalableminds/webknossos/compare/22.01.0...22.02.0)
 
 ### Postgres Evolutions:
-- [080-job-add-cancelled.sql](conf/evolutions/080-job-add-cancelled.sql)
+- [080-job-add-cancelled.sql](schema/evolutions/080-job-add-cancelled.sql)
 
 ## [22.01.0](https://github.com/scalableminds/webknossos/releases/tag/22.01.0) - 2022-01-04
 [Commits](https://github.com/scalableminds/webknossos/compare/21.11.0...22.01.0)
 - The datastore now also needs access to a Redis database. New config fields `datastore.redis.address` and `datastore.redis.port` are required. Note that this Redis instance may be the same one the tracingstore uses, but does not have to be.
 
 ### Postgres Evolutions:
-- [078-annotation-layers.sql](conf/evolutions/078-annotation-layers.sql)
-- [079-add-dataset-tags.sql](conf/evolutions/079-add-dataset-tags.sql)
+- [078-annotation-layers.sql](schema/evolutions/078-annotation-layers.sql)
+- [079-add-dataset-tags.sql](schema/evolutions/079-add-dataset-tags.sql)
 
 ## [21.11.0](https://github.com/scalableminds/webknossos/releases/tag/21.11.0) - 2021-11-30
 - The docker files now place the webKnossos installation under `/webknossos` instead of `/srv/webknossos`. All mounts, most importantly `/srv/webknossos/binaryData`, need to be changed accordingly.
@@ -460,18 +568,18 @@ None.
 - If your setup includes a webknossos-worker, it needs to be updated to the latest version (PR https://github.com/scalableminds/webknossos-worker/pull/70)
 
 ### Postgres Evolutions:
-- [077-workers.sql](conf/evolutions/077-workers.sql)
+- [077-workers.sql](schema/evolutions/077-workers.sql)
 
 ## [21.10.0](https://github.com/scalableminds/webknossos/releases/tag/21.10.0) - 2021-11-08
 
 ### Postgres Evolutions:
-- [076-jobs-enabled-per-datastore.sql](conf/evolutions/076-jobs-enabled-per-datastore.sql)
+- [076-jobs-enabled-per-datastore.sql](schema/evolutions/076-jobs-enabled-per-datastore.sql)
 
 ## [21.09.0](https://github.com/scalableminds/webknossos/releases/tag/21.09.0) - 2021-10-01
 - For webknossos.org: Change `publicDemoDatasetUrl` in the `features`-block within `application.conf` to be an actionable URL. For example, append `/createExplorative/hybrid?fallbackLayerName=segmentation` to the URL so that a new annotation is created if a user clicks on `Open a Demo Dataset` in the dashboard.
 
 ### Postgres Evolutions:
-- [075-tasktype-remove-hovered-cell-id.sql](conf/evolutions/075-tasktype-remove-hovered-cell-id.sql)
+- [075-tasktype-remove-hovered-cell-id.sql](schema/evolutions/075-tasktype-remove-hovered-cell-id.sql)
 
 ## [21.08.0](https://github.com/scalableminds/webknossos/releases/tag/21.08.0) - 2021-08-26
 [Commits](https://github.com/scalableminds/webknossos/compare/21.07.0...21.08.0)
@@ -500,15 +608,15 @@ SET recommendedconfiguration = jsonb_set(
 - Run as sql: `UPDATE webknossos.tasktypes SET recommendedconfiguration = recommendedconfiguration - 'highlightHoveredCellId';` to avoid invalid recommended configurations in existing task types. This was added later as evolution 75, but should be run already here (note that it is idempotent).
 
 ### Postgres Evolutions:
-- [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)
-- [073-modern-controls-user-conf.sql](conf/evolutions/073-modern-controls-user-conf.sql)
-- [074-jobs-owner-foreign-key.sql](conf/evolutions/074-jobs-owner-foreign-key.sql)
+- [072-jobs-manually-repaired.sql](schema/evolutions/072-jobs-manually-repaired.sql)
+- [073-modern-controls-user-conf.sql](schema/evolutions/073-modern-controls-user-conf.sql)
+- [074-jobs-owner-foreign-key.sql](schema/evolutions/074-jobs-owner-foreign-key.sql)
 
 
 ## [21.06.0](https://github.com/scalableminds/webknossos/releases/tag/21.06.0) - 2021-06-01
 
 ### Postgres Evolutions:
-- [071-adapt-td-view-display-planes.sql](conf/evolutions/071-adapt-td-view-display-planes.sql)
+- [071-adapt-td-view-display-planes.sql](schema/evolutions/071-adapt-td-view-display-planes.sql)
 
 
 ## [21.05.1](https://github.com/scalableminds/webknossos/releases/tag/21.05.1) - 2021-05-05
@@ -565,39 +673,39 @@ old key | new key | notes
 `operatorData` | `webKnossos.operatorData`
 
 ### Postgres Evolutions:
-- [070-dark-theme.sql](conf/evolutions/070-dark-theme.sql)
+- [070-dark-theme.sql](schema/evolutions/070-dark-theme.sql)
 
 
 ## [21.05.0](https://github.com/scalableminds/webknossos/releases/tag/21.05.0) - 2021-04-22
 - Instances with long-running jobs only: the `tiff_cubing` job was renamed to `convert_to_wkw`. For old jobs to be listed properly, execute sql `update webknossos.jobs set command = 'convert_to_wkw' where command = 'tiff_cubing';`
 
 ### Postgres Evolutions:
-- [068-pricing-plan.sql](conf/evolutions/068-pricing-plan.sql)
-- [069-tasktype-project-unique-per-orga.sql](conf/evolutions/069-tasktype-project-unique-per-orga.sql)
+- [068-pricing-plan.sql](schema/evolutions/068-pricing-plan.sql)
+- [069-tasktype-project-unique-per-orga.sql](schema/evolutions/069-tasktype-project-unique-per-orga.sql)
 
 ## [21.04.0](https://github.com/scalableminds/webknossos/releases/tag/21.04.0) - 2021-03-22
 
 ### Postgres Evolutions:
-- [066-publications-foreign-key.sql](conf/evolutions/066-publications-foreign-key.sql)
-- [067-drop-analytics.sql](conf/evolutions/067-drop-analytics.sql)
+- [066-publications-foreign-key.sql](schema/evolutions/066-publications-foreign-key.sql)
+- [067-drop-analytics.sql](schema/evolutions/067-drop-analytics.sql)
 
 ## [21.03.0](https://github.com/scalableminds/webknossos/releases/tag/21.03.0) - 2021-02-24
 - Support for KNOSSOS cubes data format was removed. Use the [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber) tool to convert existing datasets saved as KNOSSOS cubes.
 - Multi-organization instances only: user experience domains are now separated per organization. After postgres evolution 64 (see below), make sure to move existing experience domains to the correct organization in the database. (The evolution just selects any one from the database).
 
 ### Postgres Evolutions:
-- [061-userinfos-view.sql](conf/evolutions/061-userinfos-view.sql)
-- [062-dataset-uploader.sql](conf/evolutions/062-dataset-uploader.sql)
-- [063-novelUserExperienceinfos.sql](conf/evolutions/063-novelUserExperienceinfos.sql)
-- [064-experienceDomains-per-orga.sql](conf/evolutions/064-experienceDomains-per-orga.sql)
-- [065-unlisted-superusers.sql](conf/evolutions/065-unlisted-superusers.sql)
+- [061-userinfos-view.sql](schema/evolutions/061-userinfos-view.sql)
+- [062-dataset-uploader.sql](schema/evolutions/062-dataset-uploader.sql)
+- [063-novelUserExperienceinfos.sql](schema/evolutions/063-novelUserExperienceinfos.sql)
+- [064-experienceDomains-per-orga.sql](schema/evolutions/064-experienceDomains-per-orga.sql)
+- [065-unlisted-superusers.sql](schema/evolutions/065-unlisted-superusers.sql)
 
 ## [21.02.1](https://github.com/scalableminds/webknossos/releases/tag/21.02.1) - 2021-02-03
 [Commits](https://github.com/scalableminds/webknossos/compare/21.02.0...21.02.1)
 No migrations necessary.
 
 ## [21.02.0](https://github.com/scalableminds/webknossos/releases/tag/21.02.0) - 2021-01-20
-- [060-multiusers.sql](conf/evolutions/060-multiusers.sql) (Note that its reversion can only be performed if there are no multiple users per multiuser yet)
+- [060-multiusers.sql](schema/evolutions/060-multiusers.sql) (Note that its reversion can only be performed if there are no multiple users per multiuser yet)
 
 ## [21.01.0](https://github.com/scalableminds/webknossos/releases/tag/21.01.0) - 2020-12-21
 No migrations necessary.
@@ -612,13 +720,13 @@ and (settings_allowedmagnifications is null or settings_allowedmagnifications::j
 ```
 
 ### Postgres Evolutions:
-- [057-add-layer-specific-view-configs.sql](conf/evolutions/057-add-layer-specific-view-configs.sql)
-- [058-add-onlyAllowedOrganization.sql](conf/evolutions/058-add-onlyAllowedOrganization.sql)
-- [059-resolution-restrictions.sql](conf/evolutions/059-resolution-restrictions.sql)
+- [057-add-layer-specific-view-configs.sql](schema/evolutions/057-add-layer-specific-view-configs.sql)
+- [058-add-onlyAllowedOrganization.sql](schema/evolutions/058-add-onlyAllowedOrganization.sql)
+- [059-resolution-restrictions.sql](schema/evolutions/059-resolution-restrictions.sql)
 
 
 ## [20.11.0](https://github.com/scalableminds/webknossos/releases/tag/20.11.0) - 2020-10-26
-- [056-add-jobs.sql](conf/evolutions/056-add-jobs.sql)
+- [056-add-jobs.sql](schema/evolutions/056-add-jobs.sql)
 
 ## [20.10.0](https://github.com/scalableminds/webknossos/releases/tag/20.10.0) - 2020-09-21
 No migrations necessary.
@@ -628,15 +736,15 @@ No migrations necessary.
 
 ## [20.08.0](https://github.com/scalableminds/webknossos/releases/tag/20.08.0) - 2020-07-20
 ### Postgres Evolutions:
-- [054-add-isDatasetManager.sql](conf/evolutions/054-add-isDatasetManager.sql)
-- [055-make-organization-name-unique.sql](conf/evolutions/055-make-organization-name-unique.sql)
+- [054-add-isDatasetManager.sql](schema/evolutions/054-add-isDatasetManager.sql)
+- [055-make-organization-name-unique.sql](schema/evolutions/055-make-organization-name-unique.sql)
 
 ## [20.07.0](https://github.com/scalableminds/webknossos/releases/tag/20.07.0) - 2020-06-29
 No migrations necessary.
 
 ## [20.06.0](https://github.com/scalableminds/webknossos/releases/tag/20.06.0) - 2020-05-25
 ### Postgres Evolutions:
-- [053-add-allowsUpload.sql](conf/evolutions/053-add-allowsUpload.sql)
+- [053-add-allowsUpload.sql](schema/evolutions/053-add-allowsUpload.sql)
 
 ## [20.05.0](https://github.com/scalableminds/webknossos/releases/tag/20.05.0) - 2020-05-05
 - The optional `defaultOrganization` attribute from the `features` block in `application.conf` is not used anymore and can be removed. [#4559](https://github.com/scalableminds/webknossos/pull/4559)
@@ -645,15 +753,15 @@ No migrations necessary.
 - Default interval for detecting new/deleted datasets on disk (`braingames.binary.changeHandler.tickerInterval` in the config) has been reduced from 10 to 1 minute. If you relied on the value being 10 minutes, you have to set it explicitly now.
 
 ### Postgres Evolutions:
-- [051-add-source-view-configuration.sql](conf/evolutions/051-add-source-view-configuration.sql)
-- [052-replace-segmentation-opacity.sql](conf/evolutions/052-replace-segmentation-opacity.sql)
+- [051-add-source-view-configuration.sql](schema/evolutions/051-add-source-view-configuration.sql)
+- [052-replace-segmentation-opacity.sql](schema/evolutions/052-replace-segmentation-opacity.sql)
 
 ## [20.03.0](https://github.com/scalableminds/webknossos/releases/tag/20.03.0) - 2020-02-27
 No migrations necessary.
 
 ## [20.2.0](https://github.com/scalableminds/webknossos/releases/tag/20.2.0) - 2020-01-27
 ### Postgres Evolutions:
-- [050-add-annotation-visibility-enum.sql](conf/evolutions/050-add-annotation-visibility-enum.sql)
+- [050-add-annotation-visibility-enum.sql](schema/evolutions/050-add-annotation-visibility-enum.sql)
 
 ## [20.1.0](https://github.com/scalableminds/webknossos/releases/tag/20.1.0) - 2020-01-08
 - The initial organization was renamed to `sample_organization`. Make sure to move the data over or to put a symlink in place.
@@ -661,7 +769,7 @@ No migrations necessary.
 - The config `uri` has been refactored. Pairs of `uri` and `secured` have been replaced with just `uri` which now requires a `http://` or `https://` prefix.
 
 ### Postgres Evolutions:
-- [049-annotation-listed-teams.sql](conf/evolutions/049-annotation-listed-teams.sql)
+- [049-annotation-listed-teams.sql](schema/evolutions/049-annotation-listed-teams.sql)
 
 
 ## [19.12.0](https://github.com/scalableminds/webknossos/releases/tag/19.12.0) - 2019-11-25
@@ -669,13 +777,13 @@ No migrations necessary.
 
 ## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
 ### Postgres Evolutions:
-- [046-fix-missing-voxel-type.sql](conf/evolutions/046-fix-missing-voxel-type.sql)
-- [047-add-datastore-publicUrl.sql](conf/evolutions/047-add-datastore-publicUrl.sql)
-- [048-add-tracingstore-publicUrl.sql](conf/evolutions/048-add-tracingstore-publicUrl.sql)
+- [046-fix-missing-voxel-type.sql](schema/evolutions/046-fix-missing-voxel-type.sql)
+- [047-add-datastore-publicUrl.sql](schema/evolutions/047-add-datastore-publicUrl.sql)
+- [048-add-tracingstore-publicUrl.sql](schema/evolutions/048-add-tracingstore-publicUrl.sql)
 
 ## [19.10.0](https://github.com/scalableminds/webknossos/releases/tag/19.10.0) - 2019-09-30
 ### Postgres Evolutions:
-- [045-annotationsettings-mergerMode.sql](conf/evolutions/045-annotationsettings-mergerMode.sql)
+- [045-annotationsettings-mergerMode.sql](schema/evolutions/045-annotationsettings-mergerMode.sql)
 
 ## [19.09.0](https://github.com/scalableminds/webknossos/releases/tag/19.09.0) - 2019-08-28
 No migrations necessary.
@@ -686,8 +794,8 @@ No migrations necessary.
 
 ## [19.07.0](https://github.com/scalableminds/webknossos/releases/tag/19.07.0) - 2019-07-01
 ### Postgres Evolutions:
-- [043-annotationsettings-allowedMagnifications.sql](conf/evolutions/043-annotationsettings-allowedMagnifications.sql)
-- [044-datasource-hash.sql](conf/evolutions/044-datasource-hash.sql)
+- [043-annotationsettings-allowedMagnifications.sql](schema/evolutions/043-annotationsettings-allowedMagnifications.sql)
+- [044-datasource-hash.sql](schema/evolutions/044-datasource-hash.sql)
 
 
 ## [19.06.0](https://github.com/scalableminds/webknossos/releases/tag/19.06.0) - 2019-05-27
@@ -696,7 +804,7 @@ No migrations necessary.
 
 ## [19.05.0](https://github.com/scalableminds/webknossos/releases/tag/19.05.0) - 2019-04-29
 ### Postgres Evolutions:
-- [042-add-json-object-constraints.sql](conf/evolutions/042-add-json-object-constraints.sql)
+- [042-add-json-object-constraints.sql](schema/evolutions/042-add-json-object-constraints.sql)
 
 
 ## [19.04.0](https://github.com/scalableminds/webknossos/releases/tag/19.04.0) - 2019-04-01
@@ -706,16 +814,16 @@ No migrations necessary.
 - The assets URLs now include `assets/` again, if you link to assets directly, please update the paths (e.g. in postgres `organizations.logoUrl`)
 
 ### Postgres Evolutions:
-- [041-add-datastore-isconnector.sql](conf/evolutions/041-add-datastore-isconnector.sql)
+- [041-add-datastore-isconnector.sql](schema/evolutions/041-add-datastore-isconnector.sql)
 
 
 ## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04
 - The config parameters `application.authentication.enableDevAutoVerify` and `application.authentication.enableDevAutoAdmin` have been removed. To enable automatic verification for user signup, set the organization’s new `enableAutoVerify` field to `true` in the database.
 
 ### Postgres Evolutions:
-- [038-more-voxel-types.sql](conf/evolutions/038-more-voxel-types.sql)
-- [039-add-tasktype-tracingtype.sql](conf/evolutions/039-add-tasktype-tracingtype.sql)
-- [040-add-auto-activate-per-orga.sql](conf/evolutions/040-add-auto-activate-per-orga.sql)
+- [038-more-voxel-types.sql](schema/evolutions/038-more-voxel-types.sql)
+- [039-add-tasktype-tracingtype.sql](schema/evolutions/039-add-tasktype-tracingtype.sql)
+- [040-add-auto-activate-per-orga.sql](schema/evolutions/040-add-auto-activate-per-orga.sql)
 
 
 ## [19.02.0](https://github.com/scalableminds/webknossos/releases/tag/19.02.0) - 2019-02-04
@@ -728,21 +836,21 @@ No migrations necessary.
   ```
 
 ### Postgres Evolutions:
-- [037-add-publications.sql](conf/evolutions/037-add-publications.sql)
+- [037-add-publications.sql](schema/evolutions/037-add-publications.sql)
 
 
 ## [19.01.0](https://github.com/scalableminds/webknossos/releases/tag/19.01.0) - 2019-01-14
 ### Postgres Evolutions:
-- [036-add-lastTaskTypeId-to-user.sql](conf/evolutions/036-add-lastTaskTypeId-to-user.sql)
+- [036-add-lastTaskTypeId-to-user.sql](schema/evolutions/036-add-lastTaskTypeId-to-user.sql)
 
 
 ## [18.12.0](https://github.com/scalableminds/webknossos/releases/tag/18.12.0) - 2018-11-26
 - If additional dataset directories were watched using the config key `additionalFolders`, those symlinks are no longer updated. Consider setting up additional datastores for these directories respectively.
 
 ### Postgres Evolutions:
-- [033-tasktype-recommendedConfiguration.sql](conf/evolutions/033-tasktype-recommendedConfiguration.sql)
-- [034-meshes.sql](conf/evolutions/034-meshes.sql)
-- [035-add-annotation-dataset-foreign-key.sql](conf/evolutions/035-add-annotation-dataset-foreign-key.sql)
+- [033-tasktype-recommendedConfiguration.sql](schema/evolutions/033-tasktype-recommendedConfiguration.sql)
+- [034-meshes.sql](schema/evolutions/034-meshes.sql)
+- [035-add-annotation-dataset-foreign-key.sql](schema/evolutions/035-add-annotation-dataset-foreign-key.sql)
 
 
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29
@@ -753,21 +861,21 @@ No migrations necessary.
 - If your setup overwrites the config key `play.http.router` to disable the local datastore, change it to `"noDS.Routes"` (or `"noDS.noTS.Routes"` to also disable the local tracingstore).
 
 #### Postgres Evolutions:
-- [027-drop-dataset-name-unique-constraint.sql](conf/evolutions/027-drop-dataset-name-unique-constraint.sql)
-- [028-add-isBlacklistedFromReport.sql](conf/evolutions/028-add-isBlacklistedFromReport.sql)
-- [029-foreign-keys-deferrable.sql](conf/evolutions/029-foreign-keys-deferrable.sql)
-- [030-tracingstore.sql](conf/evolutions/030-tracingstore.sql)
-- [031-maintenance.sql](conf/evolutions/031-maintenance.sql)
-- [032-scratch-datastores.sql](conf/evolutions/032-scratch-datastores.sql)
+- [027-drop-dataset-name-unique-constraint.sql](schema/evolutions/027-drop-dataset-name-unique-constraint.sql)
+- [028-add-isBlacklistedFromReport.sql](schema/evolutions/028-add-isBlacklistedFromReport.sql)
+- [029-foreign-keys-deferrable.sql](schema/evolutions/029-foreign-keys-deferrable.sql)
+- [030-tracingstore.sql](schema/evolutions/030-tracingstore.sql)
+- [031-maintenance.sql](schema/evolutions/031-maintenance.sql)
+- [032-scratch-datastores.sql](schema/evolutions/032-scratch-datastores.sql)
 
 
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22
 ### Postgres Evolutions:
-- [022-add-foreign-datastore.sql](conf/evolutions/022-add-foreign-datastore.sql)
-- [023-drop-datastore-type.sql](conf/evolutions/023-drop-datastore-type.sql)
-- [024-drop-md5hash.sql](conf/evolutions/024-drop-md5hash.sql)
-- [025-add-dataset-sortingKey.sql](conf/evolutions/025-add-dataset-sortingKey.sql)
-- [026-decrease-total-instance.sql](conf/evolutions/026-decrease-total-instance.sql)
+- [022-add-foreign-datastore.sql](schema/evolutions/022-add-foreign-datastore.sql)
+- [023-drop-datastore-type.sql](schema/evolutions/023-drop-datastore-type.sql)
+- [024-drop-md5hash.sql](schema/evolutions/024-drop-md5hash.sql)
+- [025-add-dataset-sortingKey.sql](schema/evolutions/025-add-dataset-sortingKey.sql)
+- [026-decrease-total-instance.sql](schema/evolutions/026-decrease-total-instance.sql)
 
 ### Configuration Changes:
 - some keys in `application.conf` have changed, if you overwrite them in your setup, please adapt: `application.secret` is now `play.http.secret.key`, `postgres.*` is now `slick.db.*`
@@ -779,19 +887,19 @@ No migrations necessary.
 
 ## [18.09.0](https://github.com/scalableminds/webknossos/releases/tag/18.09.0) - 2018-08-20
 ### Postgres Evolutions:
-- [018-hybrid-annotations.sql](conf/evolutions/018-hybrid-annotations.sql)
-- [019-dataset-lastusedtime.sql](conf/evolutions/019-dataset-lastusedtime.sql)
-- [021-list-experiences.sql](conf/evolutions/021-list-experiences.sql)
+- [018-hybrid-annotations.sql](schema/evolutions/018-hybrid-annotations.sql)
+- [019-dataset-lastusedtime.sql](schema/evolutions/019-dataset-lastusedtime.sql)
+- [021-list-experiences.sql](schema/evolutions/021-list-experiences.sql)
 
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 ### Postgres Evolutions:
-- [013-add-logoUrl.sql](conf/evolutions/013-add-logoUrl.sql)
-- [014-equalize-schema-and-evolutions.sql](conf/evolutions/014-equalize-schema-and-evolutions.sql)
-- [015-add-organization-displayname.sql](conf/evolutions/015-add-organization-displayname.sql)
+- [013-add-logoUrl.sql](schema/evolutions/013-add-logoUrl.sql)
+- [014-equalize-schema-and-evolutions.sql](schema/evolutions/014-equalize-schema-and-evolutions.sql)
+- [015-add-organization-displayname.sql](schema/evolutions/015-add-organization-displayname.sql)
 - To clean up half-deleted tasks as caused by [this bug](https://github.com/scalableminds/webknossos/issues/2873), run `update webknossos.annotations set isDeleted = true where _id in (select a._id from webknossos.annotations_ a join webknossos.tasks t on a._task = t._id where t.isDeleted and a.typ == 'Task')`
-- [016-add-schema-version.sql](conf/evolutions/016-add-schema-version.sql)
-- [017-add-organization-email.sql](conf/evolutions/017-add-organization-email.sql)
+- [016-add-schema-version.sql](schema/evolutions/016-add-schema-version.sql)
+- [017-add-organization-email.sql](schema/evolutions/017-add-organization-email.sql)
 - Add email addresses for notifications about new users and about task overtime to the `webknossos.organizations` entries in the Postgres database (previously in `application.conf` > `braintracing.newuserlist` and `braintracing.overTimeList`)
 
 
@@ -799,14 +907,14 @@ No migrations necessary.
 First release
 
 ### Postgres Evolutions:
-- [001-add-organizations.sql](conf/evolutions/001-add-organizations.sql)
-- [002-add-dataset-urlsharing-token.sql](conf/evolutions/002-add-dataset-urlsharing-token.sql)
-- [003-add-dataset-displayname.sql](conf/evolutions/003-add-dataset-displayname.sql)
-- [004-add-initializing-annotation-state.sql](conf/evolutions/004-add-initializing-annotation-state.sql)
-- [005-add-openinstances-trigger.sql](conf/evolutions/005-add-openinstances-trigger.sql)
-- [007-unify-type-datalayer-name.sql](conf/evolutions/007-unify-type-datalayer-name.sql)
-- [008-task-instances-triggers.sql](conf/evolutions/008-task-instances-triggers.sql)
-- [009-remove-team-assignment-from-task.sql](conf/evolutions/009-remove-team-assignment-from-task.sql)
-- [010-add-organization-data.sql](conf/evolutions/010-add-organization-data.sql)
-- [011-add-isOrganizationTeam.sql](conf/evolutions/011-add-isOrganizationTeam.sql)
-- [012-add-foreign-keys.sql](conf/evolutions/012-add-foreign-keys.sql)
+- [001-add-organizations.sql](schema/evolutions/001-add-organizations.sql)
+- [002-add-dataset-urlsharing-token.sql](schema/evolutions/002-add-dataset-urlsharing-token.sql)
+- [003-add-dataset-displayname.sql](schema/evolutions/003-add-dataset-displayname.sql)
+- [004-add-initializing-annotation-state.sql](schema/evolutions/004-add-initializing-annotation-state.sql)
+- [005-add-openinstances-trigger.sql](schema/evolutions/005-add-openinstances-trigger.sql)
+- [007-unify-type-datalayer-name.sql](schema/evolutions/007-unify-type-datalayer-name.sql)
+- [008-task-instances-triggers.sql](schema/evolutions/008-task-instances-triggers.sql)
+- [009-remove-team-assignment-from-task.sql](schema/evolutions/009-remove-team-assignment-from-task.sql)
+- [010-add-organization-data.sql](schema/evolutions/010-add-organization-data.sql)
+- [011-add-isOrganizationTeam.sql](schema/evolutions/011-add-isOrganizationTeam.sql)
+- [012-add-foreign-keys.sql](schema/evolutions/012-add-foreign-keys.sql)

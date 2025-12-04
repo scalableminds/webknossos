@@ -1,20 +1,20 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
-import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+import java.nio.file.{Files, Path, StandardOpenOption}
 import java.util.stream.Collectors
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.jdk.CollectionConverters._
 
-class FileSystemDataVault extends DataVault {
+class FileSystemDataVault extends DataVault with FoxImplicits {
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
@@ -74,35 +74,43 @@ class FileSystemDataVault extends DataVault {
         if (channel != null && channel.isOpen) channel.close()
     }
 
-    promise.future
+    for {
+      box <- Fox.fromFuture(promise.future)
+      result <- box.toFox
+    } yield result
   }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
-    vaultPathToLocalPath(path).map(
-      localPath =>
-        if (Files.isDirectory(localPath))
-          Files
-            .list(localPath)
-            .filter(file => Files.isDirectory(file))
-            .collect(Collectors.toList())
-            .asScala
-            .toList
-            .map(dir => new VaultPath(dir.toUri, this))
-            .take(maxItems)
-        else List.empty)
-
-  private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
-    val uri = path.toUri
     for {
-      _ <- bool2Fox(uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
-      _ <- bool2Fox(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
-      localPath = Paths.get(uri.getPath)
-      _ <- bool2Fox(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
-    } yield localPath
-  }
+      localPath <- vaultPathToLocalPath(path)
+      listing = if (Files.isDirectory(localPath)) {
+        Files
+          .list(localPath)
+          .filter(file => Files.isDirectory(file))
+          .collect(Collectors.toList())
+          .asScala
+          .toList
+          .map(dir => new VaultPath(UPath.fromLocalPath(dir), this))
+          .take(maxItems)
+      } else List.empty
+    } yield listing
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(19, 31).toHashCode
+  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    for {
+      localPath <- vaultPathToLocalPath(path)
+      usedStorageBytes <- tryo(FileUtils.sizeOfAsBigInteger(localPath.toFile).longValue).toFox ?~> "Failed to get used storage bytes"
+    } yield usedStorageBytes
+
+  private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] =
+    for {
+      localPath <- path.toUPath.toLocalPath.toFox ?~> s"trying to read from FileSystemDataVault, but path $path is not local."
+      _ <- Fox.fromBool(localPath.isAbsolute) ?~> s"trying to read from FileSystemDataVault, but path $path is not absolute."
+    } yield localPath
+
+  // There is only one instance of this DataVault, so the hashCode does not depend on any values.
+  private lazy val hashCodeCached = new HashCodeBuilder(19, 31).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
 
   override def equals(obj: Any): Boolean = obj match {
     case _: FileSystemDataVault => true

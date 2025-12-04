@@ -4,20 +4,19 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import play.api.libs.json.Reads
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
-import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
+class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with FoxImplicits {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] =
@@ -25,6 +24,9 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
       bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range)) ?=> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
+
+  def getUsedStorageBytes(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+    dataVault.getUsedStorageBytes(this)
 
   def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
@@ -36,8 +38,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
     bytesAndEncoding match {
       case (bytes, encoding) =>
         encoding match {
-          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes))
-          case Encoding.brotli     => tryo(decodeBrotli(bytes))
+          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes)).toFox
+          case Encoding.brotli     => tryo(decodeBrotli(bytes)).toFox
           case Encoding.`identity` => Fox.successful(bytes)
         }
     }
@@ -62,43 +64,37 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
   }
 
   def basename: String =
-    uri.toString.split("/").last
+    upath.basename
 
-  def parent: VaultPath = {
-    val newUri =
-      if (uri.getPath.endsWith("/")) uri.resolve("..")
-      else uri.resolve(".")
-    new VaultPath(newUri, dataVault)
-  }
+  def parent: VaultPath =
+    new VaultPath(upath.parent, dataVault)
 
   def /(key: String): VaultPath =
-    if (uri.toString.endsWith("/")) {
-      new VaultPath(uri.resolve(key), dataVault)
-    } else {
-      new VaultPath(new URI(s"${uri.toString}/").resolve(key), dataVault)
-    }
+    new VaultPath(upath / key, dataVault)
 
-  def toUri: URI =
-    uri
+  def toRemoteUriUnsafe: URI =
+    upath.toRemoteUriUnsafe
 
-  override def toString: String = uri.toString
+  def toUPath: UPath = upath
+
+  override def toString: String = upath.toString
 
   def summary: String = s"VaultPath: ${this.toString} for ${dataVault.getClass.getSimpleName}"
 
   private def getDataVault: DataVault = dataVault
 
   override def equals(obj: Any): Boolean = obj match {
-    case other: VaultPath => other.toUri == toUri && other.getDataVault == dataVault
+    case other: VaultPath => other.toUPath == toUPath && other.getDataVault == dataVault
     case _                => false
   }
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(uri.toString).append(dataVault).toHashCode
+  private lazy val hashCodeCached = new HashCodeBuilder(17, 31).append(upath).append(dataVault).toHashCode
+
+  override def hashCode(): Int = hashCodeCached
 
   def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
     for {
-      fileBytes <- this.readBytes().toFox
-      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox
-      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
+      fileBytes <- this.readBytes()
+      parsed <- JsonHelper.parseAs[T](fileBytes).toFox
     } yield parsed
 }

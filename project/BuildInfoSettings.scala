@@ -1,4 +1,5 @@
 import sbt.Keys.{name, sbtVersion, scalaVersion}
+import sbtbuildinfo.BuildInfoOption
 import sbtbuildinfo.BuildInfoPlugin.autoImport.*
 
 import scala.language.postfixOps
@@ -14,8 +15,8 @@ object BuildInfoSettings {
       case _: Throwable => failureMsg
     }
 
-  val ciBuild: String = Properties.envOrElse("CIRCLE_BUILD_NUM", "")
-  val ciTag: String = Properties.envOrElse("CIRCLE_TAG", "")
+  val ciBuild: String = Properties.envOrElse("CI_BUILD_NUM", "")
+  val ciTag: String = Properties.envOrElse("CI_TAG", "")
 
   def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
   def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")
@@ -34,7 +35,6 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "version" -> webknossosVersion,
-      "datastoreApiVersion" -> "2.0",
       "certificatePublicKey" -> certificatePublicKey
     ),
     buildInfoPackage := "webknossos",
@@ -51,7 +51,6 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "version" -> webknossosVersion,
-      "datastoreApiVersion" -> "2.0"
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

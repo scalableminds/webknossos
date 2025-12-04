@@ -2,12 +2,12 @@
 <img align="right" src="https://raw.githubusercontent.com/scalableminds/webknossos/master/public/images/logo-icon-only.svg" alt="WEBKNOSSOS Logo" width="150" />
 WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image datasets.
 
-* Fly through your data for fast skeletonization and proof-reading
+* Fly through your data for fast skeletonization and proofreading
 * Create 3D training data for automated segmentations efficiently
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
+[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/open_source/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
 
 [![](https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -25,7 +25,7 @@ WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image da
 * Optimized performance for large annotations
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
-* Proof-Reading tools for working with large (over)-segmentations
+* Proofreading tools for working with large (over)-segmentations
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 * Supported dataset formats: [WKW](https://github.com/scalableminds/webknossos-wrap), [Neuroglancer Precomputed](https://github.com/google/neuroglancer/tree/master/src/datasource/precomputed), [Zarr](https://zarr.dev), [N5](https://github.com/saalfeldlab/n5)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
@@ -73,7 +73,6 @@ WEBKNOSSOS was inspired by [KNOSSOS](https://knossos.app).
 ### Thanks
 * [Browser Stack](https://www.browserstack.com/) for letting us test WEBKNOSSOS on a variety of different devices
   <a href="https://www.browserstack.com/"><img src="https://avatars.githubusercontent.com/u/1119453?s=200&v=4" width=100 alt="Browserstack Logo" align="right"></a>
-* [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 
 # License
 AGPLv3

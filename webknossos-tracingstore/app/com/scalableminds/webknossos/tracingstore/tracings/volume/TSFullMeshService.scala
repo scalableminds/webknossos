@@ -2,20 +2,20 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
   BucketPosition,
   VoxelPosition,
   VoxelSize,
   WebknossosAdHocMeshRequest
 }
-import com.scalableminds.webknossos.datastore.services.{FullMeshHelper, FullMeshRequest}
+import com.scalableminds.webknossos.datastore.services.mesh.{FullMeshHelper, FullMeshRequest}
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -34,25 +34,26 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     extends FallbackDataHelper
     with ProtoGeometryImplicits
     with FullMeshHelper
+    with FoxImplicits
     with LazyLogging {
 
-  def loadFor(annotationId: String, tracingId: String, fullMeshRequest: FullMeshRequest)(
+  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
-        loadFullMeshFromMeshfile(annotationId, tracingId, tracing, fullMeshRequest)
+        loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
     } yield data
 
-  private def loadFullMeshFromMeshfile(
-      annotationId: String,
+  private def loadFullMeshFromMeshFile(
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, annotationId)
+      remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(tracing, annotationId)
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
         fullMeshRequest.copy(mappingName = baseMappingName,
@@ -63,15 +64,15 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield array
 
   private def loadFullMeshFromAdHoc(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      _ <- bool2Fox(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
+      _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
       before = Instant.now
-      voxelSize <- remoteDatastoreClient.voxelSizeForAnnotationWithCache(annotationId) ?~> "voxelSize.failedToFetch"
+      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(annotationId) ?~> "voxelSize.failedToFetch"
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else
@@ -91,7 +92,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield array
 
   private def getAllAdHocChunksWithSegmentIndex(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       mag: Vec3Int,
@@ -100,19 +101,17 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-      bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-          fallbackLayer,
-          tracingId,
-          fullMeshRequest.segmentId,
-          mag,
-          version = None,
-          mappingName = mappingName,
-          editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
-          fullMeshRequest.additionalCoordinates,
-          AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
-        )
-      bucketPositions = bucketPositionsRaw.values
+      bucketPositionsRaw: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+        tracing,
+        fallbackLayer,
+        tracingId,
+        fullMeshRequest.segmentId,
+        mag,
+        mappingName,
+        volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        fullMeshRequest.additionalCoordinates
+      )
+      bucketPositions = bucketPositionsRaw.toSeq
         .map(vec3IntFromProto)
         .map(_ * mag * DataLayer.bucketLength)
         .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))
@@ -135,7 +134,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices
 
-  private def getAllAdHocChunksWithNeighborLogic(annotationId: String,
+  private def getAllAdHocChunksWithNeighborLogic(annotationId: ObjectId,
                                                  tracingId: String,
                                                  tracing: VolumeTracing,
                                                  mag: Vec3Int,
@@ -178,7 +177,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     } yield allVertices
 
   private def loadMeshChunkFromAdHoc(
-      annotationId: String,
+      annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
       adHocMeshRequest: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =

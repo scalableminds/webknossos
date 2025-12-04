@@ -2,28 +2,22 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
-import com.scalableminds.util.tools.ByteUtils
+import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  BloscCompressor,
-  IntCompressionSetting,
-  StringCompressionSetting
-}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
-  DataLayer,
+  DataFormat,
   DataSourceId,
-  GenericDataSource
+  StaticSegmentationLayer,
+  UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
-import play.api.libs.json.Json
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
@@ -41,7 +35,9 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
 
-    val header = Zarr3ArrayHeader.fromDataLayer(layer, mags.headOption.getOrElse(Vec3Int.ones))
+    val header = Zarr3ArrayHeader.fromDataLayer(layer,
+                                                mags.headOption.getOrElse(Vec3Int.ones),
+                                                additionalCodecs = Seq(BloscCodecConfiguration.defaultForWKZarrOutput))
     bucketStream.flatMap {
       case (bucket, data) =>
         val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
@@ -53,29 +49,34 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
           Some(
             NamedFunctionStream(
               filePath,
-              os => Future.successful(os.write(compressor.compress(data)))
+              os => Fox.successful(os.write(compressor.compress(data)))
             )
           )
         }
       case _ => None
     } ++ mags.map { mag =>
-      NamedFunctionStream.fromString(zarrHeaderFilePath(defaultLayerName, mag), Json.prettyPrint(Json.toJson(header)))
+      NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
     } ++ Seq(
-      NamedFunctionStream.fromString(
-        GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
-        Json.prettyPrint(Json.toJson(createVolumeDataSource(voxelSize)))
+      NamedFunctionStream.fromJsonSerializable(
+        UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
+        createVolumeDataSource(voxelSize)
       ))
   }
 
-  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): GenericDataSource[DataLayer] = {
+  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource = {
     val magLocators = layer.tracing.mags.map { mag =>
-      MagLocator(mag = vec3IntToProto(mag), axisOrder = Some(AxisOrder.cAdditionalxyz(rank)))
+      MagLocator(
+        mag = vec3IntToProto(mag),
+        axisOrder = Some(AxisOrder.cAdditionalxyz(rank)),
+        path = Some(UPath.fromStringUnsafe(s"./$defaultLayerName/${mag.toMagLiteral(allowScalar = true)}"))
+      )
     }
-    GenericDataSource(
+    UsableDataSource(
       id = DataSourceId("", ""),
       dataLayers = List(
-        Zarr3SegmentationLayer(
+        StaticSegmentationLayer(
           defaultLayerName,
+          DataFormat.zarr3,
           layer.boundingBox,
           layer.elementClass,
           magLocators.toList,
@@ -98,7 +99,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
     val additionalCoordinatesPart =
       additionalCoordinatesFilePath(bucketPosition.additionalCoordinates, additionalAxesSorted)
     val channelPart = 0
-    s"$layerName/${bucketPosition.mag.toMagLiteral(allowScalar = true)}/c$dimensionSeparator$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
+    s"$layerName/${bucketPosition.mag.toMagLiteral(allowScalar = true)}/$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
   private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
@@ -114,14 +115,6 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private def zarrHeaderFilePath(layerName: String, mag: Vec3Int): String =
     s"$layerName/${mag.toMagLiteral(allowScalar = true)}/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
 
-  private lazy val compressor =
-    new BloscCompressor(
-      Map(
-        BloscCompressor.keyCname -> StringCompressionSetting(BloscCompressor.defaultCname),
-        BloscCompressor.keyClevel -> IntCompressionSetting(BloscCompressor.defaultCLevel),
-        BloscCompressor.keyShuffle -> IntCompressionSetting(BloscCompressor.defaultShuffle),
-        BloscCompressor.keyBlocksize -> IntCompressionSetting(BloscCompressor.defaultBlocksize),
-        BloscCompressor.keyTypesize -> IntCompressionSetting(BloscCompressor.defaultTypesize)
-      ))
+  private lazy val compressor = BloscCodec.fromConfiguration(BloscCodecConfiguration.defaultForWKZarrOutput).compressor
 
 }

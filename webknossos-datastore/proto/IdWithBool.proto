@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package com.scalableminds.webknossos.datastore;
+
+message Id32WithBool {
+  required int32 id = 1;
+  required bool value = 2;
+}
+
+message Id64WithBool {
+  required int64 id = 1;
+  required bool value = 2;
+}

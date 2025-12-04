@@ -1,9 +1,8 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import java.nio.file.{Files, Path, Paths}
-
+import java.nio.file.{Files, Path}
 import com.google.inject.Inject
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
@@ -31,16 +30,14 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
     extends Controller
     with FoxImplicits {
 
-  private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
-
   override def allowRemoteOrigin: Boolean = true
 
   def download(jobId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.downloadJobExport(jobId)) {
       for {
         exportProperties <- webknossosClient.getJobExportProperties(jobId)
-        fullPath = exportProperties.fullPathIn(dataBaseDir)
-        _ <- bool2Fox(Files.exists(fullPath)) ?~> "job.export.fileNotFound"
+        fullPath = exportProperties.fullPathIn(config.Datastore.baseDirectory)
+        _ <- Fox.fromBool(Files.exists(fullPath)) ?~> "job.export.fileNotFound"
       } yield Ok.sendPath(fullPath, inline = false)
     }
 

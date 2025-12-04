@@ -10,38 +10,34 @@ import {
   RollbackOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   deleteAnnotation as deleteAnnotationAPI,
   downloadAnnotation as downloadAnnotationAPI,
   finishAnnotation as finishAnnotationAPI,
   reOpenAnnotation as reOpenAnnotationAPI,
   resetAnnotation as resetAnnotationAPI,
-} from "admin/admin_rest_api";
-import { getAnnotationsForTask } from "admin/api/tasks";
+} from "admin/rest_api";
 import { App, Dropdown, type MenuProps, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import { formatSeconds } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
-import { connect } from "react-redux";
-import type { APIAnnotation, APITask, APIUser } from "types/api_flow_types";
+import type { APIAnnotation, APITask } from "types/api_types";
+import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 
-type OwnProps = {
+type Props = {
   task: APITask;
 };
-type StateProps = {
-  activeUser: APIUser | null | undefined;
-};
-type Props = OwnProps & StateProps;
 
-function TaskAnnotationView({ task, activeUser }: Props) {
+function TaskAnnotationView({ task }: Props) {
   const { modal } = App.useApp();
 
+  const activeUser = useWkSelector((state) => state.activeUser);
   const [currentAnnotation, setCurrentAnnotation] = useState<APIAnnotation | undefined>(undefined);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [annotations, setAnnotations] = useState<APIAnnotation[]>([]);
@@ -128,7 +124,6 @@ function TaskAnnotationView({ task, activeUser }: Props) {
           icon: <DownloadOutlined />,
           label: (
             <AsyncLink
-              href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotationAPI(annotation.id, "Task", isVolumeIncluded);
@@ -231,9 +226,4 @@ function TaskAnnotationView({ task, activeUser }: Props) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-const connector = connect(mapStateToProps);
-export default connector(TaskAnnotationView);
+export default TaskAnnotationView;

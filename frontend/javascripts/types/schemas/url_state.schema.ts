@@ -1,3 +1,6 @@
+import _ from "lodash";
+import { layerViewConfiguration } from "./dataset_view_configuration.schema";
+
 export default {
   $schema: "http://json-schema.org/draft-06/schema#",
   definitions: {
@@ -28,7 +31,9 @@ export default {
       enum: ["orthogonal", "oblique", "flight", "volume"],
     },
     "types::MappingType": {
-      enum: ["JSON", "HDF5", null],
+      type: ["string", "null"],
+      default: "HDF5",
+      description: "If value is 'JSON', it is kept. Any other string is treated as 'HDF5'.",
     },
     "types::Mesh": {
       type: "object",
@@ -113,7 +118,7 @@ export default {
               },
             },
             additionalProperties: false,
-            required: ["mappingName", "mappingType"],
+            required: ["mappingName"],
           },
           meshInfo: {
             type: "object",
@@ -156,9 +161,13 @@ export default {
             additionalProperties: false,
             required: ["connectomeName"],
           },
-          isDisabled: {
-            type: "boolean",
-          },
+          ..._.pick(layerViewConfiguration, [
+            "isDisabled",
+            "intensityRange",
+            "color",
+            "isInverted",
+            "gammaCorrectionValue",
+          ]),
         },
         additionalProperties: false,
       },
@@ -186,6 +195,9 @@ export default {
         },
         stateByLayer: {
           $ref: "#/definitions/types::UrlStateByLayer",
+        },
+        nativelyRenderedLayerName: {
+          type: ["string", "null"],
         },
       },
       additionalProperties: false,

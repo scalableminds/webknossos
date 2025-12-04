@@ -1,11 +1,11 @@
-import { switchToOrganization } from "admin/admin_rest_api";
 import LoginForm from "admin/auth/login_form";
+import { switchToOrganization } from "admin/rest_api";
 import { Button, Card, Col, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import messages from "messages";
 import type * as React from "react";
 import { Link } from "react-router-dom";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 
 type Props = {
   message?: React.ReactNode;
@@ -75,7 +75,7 @@ export function BrainSpinnerWithError({
     <BrainSpinner
       message={
         <>
-          <div style={{ textAlign: "center" }}>
+          <div className="initialization-error-message" style={{ textAlign: "center" }}>
             {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
           </div>
           <div className="flex-center-child" style={{ gap: 8 }}>

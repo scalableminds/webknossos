@@ -4,12 +4,12 @@ import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{UserDAO, UserService}
-import net.liftweb.common.Full
+import com.scalableminds.util.tools.Full
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import utils.WkConf
@@ -30,6 +30,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
                                        userService: UserService,
                                        annotationMutexDAO: AnnotationMutexDAO)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
+    with FoxImplicits
     with LazyLogging {
 
   override protected def tickerInterval: FiniteDuration = 1 hour
@@ -44,7 +45,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
     this.synchronized {
       for {
-        mutexBox <- annotationMutexDAO.findOne(annotationId).futureBox
+        mutexBox <- annotationMutexDAO.findOne(annotationId).shiftBox
         result <- mutexBox match {
           case Full(mutex) =>
             if (mutex.userId == userId)
@@ -66,6 +67,9 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     for {
       _ <- annotationMutexDAO.upsertOne(mutex.copy(expiry = Instant.in(defaultExpiryTime)))
     } yield MutexResult(canEdit = true, None)
+
+  def release(annotationId: ObjectId, userId: ObjectId): Fox[Unit] =
+    annotationMutexDAO.deleteForUser(annotationId, userId)
 
   def publicWrites(mutexResult: MutexResult): Fox[JsObject] =
     for {
@@ -95,7 +99,7 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
             FROM webknossos.annotation_mutexes
             WHERE _annotation = $annotationId
             AND expiry > NOW()""".as[AnnotationMutexesRow])
-      first <- rows.headOption
+      first <- rows.headOption.toFox
       parsed = parse(first)
     } yield parsed
 
@@ -112,5 +116,11 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
 
   def deleteExpired(): Fox[Int] =
     run(q"DELETE FROM webknossos.annotation_mutexes WHERE expiry < NOW()".asUpdate)
+
+  def deleteForUser(annotationId: ObjectId, userId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(
+        q"DELETE FROM webknossos.annotation_mutexes WHERE _annotation = $annotationId AND _user = $userId".asUpdate)
+    } yield ()
 
 }

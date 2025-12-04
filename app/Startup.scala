@@ -1,14 +1,14 @@
 import org.apache.pekko.actor.{ActorSystem, Props}
-import cleanup.CleanUpService
 import com.scalableminds.util.time.Instant
+import com.scalableminds.webknossos.tracingstore.cleanup.CleanUpService
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
-import files.TempFileService
+import files.WkTempFileService
 import mail.{Mailer, MailerConfig}
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
 import models.user.InviteService
-import net.liftweb.common.{Failure, Full}
+import com.scalableminds.util.tools.{Failure, Full}
 import org.apache.http.client.utils.URIBuilder
 import play.api.inject.ApplicationLifecycle
 import security.WkSilhouetteEnvironment
@@ -29,7 +29,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         annotationDAO: AnnotationDAO,
                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                         lifecycle: ApplicationLifecycle,
-                        tempFileService: TempFileService,
+                        tempFileService: WkTempFileService,
                         inviteService: InviteService,
                         thumbnailCachingService: ThumbnailCachingService,
                         sqlClient: SqlClient,
@@ -98,7 +98,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresSchema(): Unit = {
-    logger.info("Checking database schema…")
+    logger.info("Checking database schema...")
 
     val errorMessageBuilder = mutable.ListBuffer[String]()
     val capturingProcessLogger =
@@ -115,7 +115,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   private def ensurePostgresDatabase(): Unit = {
-    logger.info(s"Ensuring Postgres database…")
+    logger.info(s"Ensuring Postgres database...")
     val processLogger =
       ProcessLogger((o: String) => logger.info(s"dbtool: $o"), (e: String) => logger.error(s"dbtool: $e"))
 

@@ -1,4 +1,4 @@
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "viewer/constants";
 type RangeItem = [number, number, number, boolean | null, boolean, boolean];
 // This is a class with static methods and constants dealing with drawing
 // lines and filling polygons

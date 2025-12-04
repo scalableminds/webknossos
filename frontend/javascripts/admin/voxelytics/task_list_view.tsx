@@ -28,7 +28,7 @@ import {
 import MiniSearch from "minisearch";
 import React, { useEffect, useState, useMemo } from "react";
 
-import { deleteWorkflow, getVoxelyticsLogs } from "admin/admin_rest_api";
+import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
 import dayjs from "dayjs";
 import {
   formatDateMedium,
@@ -36,12 +36,9 @@ import {
   formatTimeInterval,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
+import { useSearchParams, useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
-import { LOG_LEVELS } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
-import { useSelector } from "react-redux";
-import { Link, useHistory, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfig,
@@ -49,8 +46,9 @@ import {
   type VoxelyticsTaskConfigWithName,
   type VoxelyticsTaskInfo,
   type VoxelyticsWorkflowReport,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { ArrayElement } from "types/globals";
+import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";
 import { formatLog } from "./log_tab";
@@ -266,7 +264,7 @@ export default function TaskListView({
   const { modal } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const { runId } = useSearchParams();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   // expandedTask = state of the collapsible list
   const [expandedTasks, setExpandedTasks] = useState<Array<string>>([]);
@@ -274,7 +272,7 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
-  const isCurrentUserSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser);
+  const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
@@ -435,7 +433,7 @@ export default function TaskListView({
       onOk: async () => {
         try {
           await deleteWorkflow(report.workflow.hash);
-          history.push("/workflows");
+          navigate("/workflows");
           message.success("Workflow report deleted.");
         } catch (error) {
           console.error(error);
@@ -680,10 +678,10 @@ export default function TaskListView({
           <Select
             value={runId ?? ""}
             onChange={(value) =>
-              history.replace(
+              navigate(
                 value === ""
-                  ? removeUrlParam(history.location, "runId")
-                  : addUrlParam(history.location, "runId", value),
+                  ? removeUrlParam(location, "runId")
+                  : addUrlParam(location, "runId", value),
               )
             }
             style={{ maxWidth: "70%" }}

@@ -8,9 +8,9 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getJobs } from "admin/admin_rest_api";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { getJobs } from "admin/rest_api";
 import {
   Alert,
   Badge,
@@ -26,20 +26,24 @@ import {
   Tooltip,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
+import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
-import { Unicode } from "oxalis/constants";
-import { CategorizationSearch } from "oxalis/view/components/categorization_label";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import type { MenuProps } from "rc-menu";
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_flow_types";
+import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_types";
+import { Unicode } from "viewer/constants";
+import { CategorizationSearch } from "viewer/view/components/categorization_label";
+import { RenderToPortal } from "viewer/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
@@ -89,9 +93,14 @@ const refreshMenuItems: ItemType[] = [
   },
 ];
 
-function DatasetView(props: Props) {
-  const { user } = props;
-  const context = props.context;
+function DatasetView({
+  user,
+  context,
+  onSelectDataset,
+  selectedDatasets,
+  onSelectFolder,
+  setFolderIdForEditModal,
+}: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
@@ -99,6 +108,9 @@ function DatasetView(props: Props) {
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const { data: folder } = useFolderQuery(context.activeFolderId);
+
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   useEffect(() => {
     const state = persistence.load() as PersistenceState;
@@ -150,21 +162,20 @@ function DatasetView(props: Props) {
   function renderTable(filteredDatasets: APIDatasetCompact[], subfolders: FolderItem[]) {
     return (
       <DatasetTable
-        context={props.context}
+        context={context}
         datasets={filteredDatasets}
         subfolders={subfolders}
-        onSelectDataset={props.onSelectDataset}
-        selectedDatasets={props.selectedDatasets}
+        onSelectDataset={onSelectDataset}
+        selectedDatasets={selectedDatasets}
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
-        onSelectFolder={props.onSelectFolder}
-        isUserAdmin={Utils.isUserAdmin(user)}
-        isUserDatasetManager={Utils.isUserDatasetManager(user)}
+        onSelectFolder={onSelectFolder}
+        isUserAdminOrDatasetManager={Utils.isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
-        setFolderIdForEditModal={props.setFolderIdForEditModal}
+        setFolderIdForEditModal={setFolderIdForEditModal}
       />
     );
   }
@@ -233,7 +244,7 @@ function DatasetView(props: Props) {
       }}
     >
       {isUserAdminOrDatasetManagerOrTeamManager ? (
-        <React.Fragment>
+        <Fragment>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
           {context.activeFolderId != null && (
@@ -251,7 +262,7 @@ function DatasetView(props: Props) {
             </PricingEnforcedButton>
           )}
           {search}
-        </React.Fragment>
+        </Fragment>
       ) : (
         search
       )}
@@ -273,8 +284,9 @@ function DatasetView(props: Props) {
 
   return (
     <div>
-      <RenderToPortal portalId="dashboard-TabBarExtraContent">{adminHeader}</RenderToPortal>
-
+      <RenderToPortal portalId="dashboard-TabBarExtraContent">
+        {activeTab === renderingTab ? adminHeader : null}
+      </RenderToPortal>
       {searchQuery && (
         <GlobalSearchHeader
           searchQuery={searchQuery}
@@ -300,20 +312,21 @@ function DatasetView(props: Props) {
 
 export function DatasetRefreshButton({ context }: { context: DatasetCollectionContextValue }) {
   const showLoadingIndicator = context.isLoading || context.isChecking;
+  const organizationId = useWkSelector((state) => state.activeOrganization?.id);
 
   return (
-    <Tooltip
+    <FastTooltip
       title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
     >
       <Dropdown.Button
-        menu={{ onClick: context.checkDatasets, items: refreshMenuItems }}
+        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
         style={{ marginRight: 5 }}
         onClick={() => context.fetchDatasets()}
         disabled={context.isChecking}
       >
         {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
       </Dropdown.Button>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 
@@ -417,17 +430,17 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   const newJobs = jobs
     .filter(
       (job) =>
-        job.type === "convert_to_wkw" &&
-        dayjs.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
+        job.command === "convert_to_wkw" &&
+        dayjs.duration(now.diff(job.created)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
     )
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .sort((a, b) => b.created - a.created);
 
   if (newJobs.length === 0) {
     return null;
   }
 
   const newJobsHeader = (
-    <React.Fragment>
+    <Fragment>
       Recent Dataset Conversions{" "}
       <Tooltip
         title="The conversion of the displayed datasets were started in the last 3 days."
@@ -435,7 +448,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
       >
         <InfoCircleOutlined />
       </Tooltip>
-    </React.Fragment>
+    </Fragment>
   );
   const newJobsList = (
     <div
@@ -447,15 +460,15 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
         const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
         return (
           <Row key={job.id} gutter={16}>
-            <Col span={10}>
+            <Col>
               <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
               {job.state === "SUCCESS" && job.resultLink ? (
-                <Link to={job.resultLink}>{job.datasetName}</Link>
+                <Link to={job.resultLink}>{job.args.datasetName}</Link>
               ) : (
-                job.datasetName || "UNKNOWN"
+                job.args.datasetName || "UNKNOWN"
               )}
               {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
-              <FormattedDate timestamp={job.createdAt} />
+              <FormattedDate timestamp={job.created} />
               <span>)</span>
             </Col>
           </Row>
@@ -467,7 +480,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
           marginTop: 12,
         }}
       >
-        <Col span={10}>
+        <Col>
           <Link to="/jobs" title="Jobs Overview">
             See complete list
           </Link>

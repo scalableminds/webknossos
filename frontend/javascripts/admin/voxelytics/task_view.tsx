@@ -8,7 +8,7 @@ import {
   type VoxelyticsTaskConfig,
   type VoxelyticsTaskInfo,
   type VoxelyticsWorkflowDagEdge,
-} from "types/api_flow_types";
+} from "types/api_types";
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";

@@ -1,7 +1,7 @@
 package models.voxelytics
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.user.User
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
@@ -213,7 +213,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_workflows
         WHERE hash = $workflowHash AND _organization = $organizationId
         """.as[(String, String)])
-      (name, hash) <- r.headOption
+      (name, hash) <- r.headOption.toFox
     } yield WorkflowEntry(name, hash, organizationId)
 
   def findWorkflowByHash(workflowHash: String): Fox[WorkflowEntry] =
@@ -223,7 +223,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_workflows
         WHERE hash = $workflowHash
         """.as[(String, String, String)])
-      (name, hash, organizationId) <- r.headOption // Could have multiple entries; picking the first.
+      (name, hash, organizationId) <- r.headOption.toFox // Could have multiple entries; picking the first.
     } yield WorkflowEntry(name, hash, organizationId)
 
   def findTaskRuns(runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[TaskRunEntry]] =
@@ -387,6 +387,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           row =>
             for {
               state <- VoxelyticsRunState.fromString(row._9).toFox
+              workflowConfig <- JsonHelper.parseAs[JsObject](row._8).toFox
             } yield
               RunEntry(
                 id = ObjectId(row._1),
@@ -396,7 +397,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 voxelyticsVersion = row._5,
                 workflowHash = row._6,
                 workflowYamlContent = row._7,
-                workflowConfig = Json.parse(row._8).as[JsObject],
+                workflowConfig = workflowConfig,
                 state = state,
                 beginTime = row._10,
                 endTime = row._11
@@ -579,7 +580,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           _organization = ${currentUser._organization} AND
           $readAccessQ
         """.as[String])
-      objectId <- objectIdList.headOption
+      objectId <- objectIdList.headOption.toFox
     } yield ObjectId(objectId)
   }
 
@@ -590,7 +591,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_runs
         WHERE _id = $runId AND _organization = $organizationId
         """.as[String])
-      name <- nameList.headOption
+      name <- nameList.headOption.toFox
     } yield name
 
   def getUserIdForRun(runId: ObjectId): Fox[ObjectId] =
@@ -600,7 +601,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_runs
         WHERE _id = $runId
         """.as[String])
-      userId <- userIdList.headOption
+      userId <- userIdList.headOption.toFox
     } yield ObjectId(userId)
 
   def getUserIdForRunOpt(runName: String, organizationId: String): Fox[Option[ObjectId]] =
@@ -1041,7 +1042,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_runs
         WHERE _organization = $organizationId AND name = $name
         """.as[String])
-      objectId <- objectIdList.headOption
+      objectId <- objectIdList.headOption.toFox
     } yield ObjectId(objectId)
 
   def upsertTask(runId: ObjectId, name: String, task: String, config: JsValue): Fox[ObjectId] =
@@ -1059,7 +1060,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_tasks
         WHERE _run = $runId AND name = $name
         """.as[String])
-      objectId <- objectIdList.headOption
+      objectId <- objectIdList.headOption.toFox
     } yield ObjectId(objectId)
 
   def upsertArtifact(taskId: ObjectId,
@@ -1093,7 +1094,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_artifacts
         WHERE _task = $taskId AND name = $name
         """.as[String])
-      objectId <- objectIdList.headOption
+      objectId <- objectIdList.headOption.toFox
     } yield ObjectId(objectId)
 
   def upsertArtifacts(runId: ObjectId, artifacts: List[(String, String, WorkflowDescriptionArtifact)]): Fox[Unit] =

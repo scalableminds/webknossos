@@ -1,13 +1,14 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
+import { doWebAuthnLogin } from "admin/api/webauthn";
+import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import Store from "oxalis/store";
 import { Link } from "react-router-dom";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import Store from "viewer/store";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -42,7 +43,20 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       onLoggedIn();
     }
   };
-  const { openIdConnectEnabled } = features();
+  const { openIdConnectEnabled, passkeysEnabled = false } = features();
+
+  const webauthnLogin = async () => {
+    try {
+      const [user, organization] = await doWebAuthnLogin();
+      Store.dispatch(setActiveUserAction(user));
+      Store.dispatch(setActiveOrganizationAction(organization));
+      if (onLoggedIn) {
+        onLoggedIn();
+      }
+    } catch (error) {
+      console.error("webauthn login:", error);
+    }
+  };
 
   const iframeWarning = getIsInIframe() ? (
     <Alert
@@ -139,6 +153,15 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             </FormItem>
           )}
         </div>
+        {passkeysEnabled && (
+          <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
+            <FormItem style={{ flexGrow: 1 }}>
+              <Button style={{ width: "100%" }} onClick={webauthnLogin}>
+                Log in with Passkey
+              </Button>
+            </FormItem>
+          </div>
+        )}
         {hideFooter ? null : (
           <FormItem
             style={{
@@ -150,12 +173,14 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
                 display: "flex",
               }}
             >
-              <Link
-                to="/auth/signup"
-                style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
-              >
-                Register Now
-              </Link>
+              {features().registerToDefaultOrgaEnabled && (
+                <Link
+                  to="/auth/signup"
+                  style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
+                >
+                  Register Now
+                </Link>
+              )}
               <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
                 Forgot Password
               </Link>

@@ -3,12 +3,14 @@ import {
   type APIAnnotation,
   AnnotationLayerEnum,
   type APITracingStoreAnnotation,
-} from "types/api_flow_types";
+} from "types/api_types";
+import { ViewModeValues } from "viewer/constants";
 
-const TRACING_ID = "47e37793-d0be-4240-a371-87ce68561a13";
+const TRACING_ID = "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13";
+
 export const tracing: ServerSkeletonTracing = {
   typ: AnnotationLayerEnum.Skeleton,
-  id: "47e37793-d0be-4240-a371-87ce68561a13",
+  id: TRACING_ID,
   trees: [
     {
       treeId: 2,
@@ -54,7 +56,7 @@ export const tracing: ServerSkeletonTracing = {
           content: "Test",
         },
       ],
-      name: "explorative_2017-08-09_SCM_Boy_002",
+      name: "explorative_2017-08-09_sample_user_002",
       isVisible: true,
       metadata: [],
     },
@@ -123,7 +125,7 @@ export const tracing: ServerSkeletonTracing = {
       ],
       comments: [],
       isVisible: true,
-      name: "explorative_2017-08-09_SCM_Boy_001",
+      name: "explorative_2017-08-09_sample_user_001",
       metadata: [],
     },
   ],
@@ -155,13 +157,15 @@ export const tracing: ServerSkeletonTracing = {
   },
   editPositionAdditionalCoordinates: null,
   editRotation: {
-    x: 79.99999570976581,
-    y: 73.99999869555745,
-    z: 4.908922051072295e-7,
+    x: 0,
+    y: 0,
+    z: 0,
   },
-  additionalAxes: [],
   zoomLevel: 2,
+  additionalAxes: [],
+  userStates: [],
 };
+
 export const annotation: APIAnnotation = {
   description: "",
   datasetId: "66f3c82966010034942e9740",
@@ -202,7 +206,7 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
   },
   settings: {
-    allowedModes: ["orthogonal", "oblique", "flight"],
+    allowedModes: ViewModeValues,
     branchPointsAllowed: true,
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
@@ -227,4 +231,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Skeleton,
     },
   ],
+  userStates: [],
 };

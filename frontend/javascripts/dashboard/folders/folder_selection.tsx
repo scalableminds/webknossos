@@ -3,7 +3,7 @@ import _ from "lodash";
 import { useEffect, useState } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
-import type { FolderItem } from "types/api_flow_types";
+import type { FolderItem } from "types/api_types";
 
 function addDisabledProperty(tree: FolderItem[]) {
   const newTree = _.cloneDeep(tree);

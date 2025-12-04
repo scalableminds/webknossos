@@ -1,5 +1,5 @@
-import type { NumberLike } from "oxalis/store";
-import * as THREE from "three";
+import { type PixelFormatGPU, RGIntegerFormat } from "three";
+import type { NumberLike } from "viewer/store";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
 const EMPTY_KEY = EMPTY_KEY_VALUE;
@@ -18,9 +18,9 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
     return 2;
   }
   static getTextureFormat() {
-    return THREE.RGIntegerFormat;
+    return RGIntegerFormat;
   }
-  static getInternalFormat(): THREE.PixelFormatGPU {
+  static getInternalFormat(): PixelFormatGPU {
     return "RG32UI";
   }
   static fromCapacity(requestedCapacity: number): CuckooTableUint32 {

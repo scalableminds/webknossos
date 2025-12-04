@@ -46,4 +46,4 @@ Typically, many segments make up a segmentation. Segments can be painted manuall
 
 ## Agglomerates
 An agglomerate is the combination of several (smaller) segments to reconstruct a larger biological structure. Typically an agglomerate combines the fragments of an over-segmentation created by some automated method, e.g. a machine learning system. 
-Sometimes this is also referred to as a super-voxel graph.
+Sometimes this is also referred to as a supervoxel graph.

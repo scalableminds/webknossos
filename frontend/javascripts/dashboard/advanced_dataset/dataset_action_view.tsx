@@ -9,19 +9,19 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
+import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { type MenuProps, Modal, Typography } from "antd";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { getNoActionsAvailableMenu } from "oxalis/view/context_menu";
 import type * as React from "react";
 import { useState } from "react";
-import { Link, type LinkProps } from "react-router-dom";
-import type { APIDataset, APIDatasetCompact } from "types/api_flow_types";
+import { Link } from "react-router-dom";
+import type { APIDataset, APIDatasetCompact } from "types/api_types";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getNoActionsAvailableMenu } from "viewer/view/context_menu";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
@@ -100,7 +100,8 @@ function LinkWithDisabled({
   style?: React.CSSProperties;
   to: string;
   children: React.ReactNode;
-} & LinkProps) {
+  title?: string;
+}) {
   const maybeDisabledStyle = disabled ? disabledStyle : null;
   const adaptedStyle =
     rest.style != null ? { ...rest.style, ...maybeDisabledStyle } : maybeDisabledStyle;
@@ -113,7 +114,7 @@ function LinkWithDisabled({
     <Link
       {...rest}
       style={adaptedStyle || undefined}
-      onClick={(e) => (disabled ? e.preventDefault() : onClick)}
+      onClick={(e) => (disabled ? e.preventDefault() : onClick?.())}
     />
   );
 }
@@ -162,7 +163,7 @@ function DatasetActionView(props: Props) {
       return;
     }
 
-    await deleteDatasetOnDisk(dataset.dataStore.url, dataset);
+    await deleteDatasetOnDisk(dataset.id);
 
     Toast.success(
       messages["dataset.delete_success"]({

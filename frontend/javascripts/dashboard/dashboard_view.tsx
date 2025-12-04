@@ -1,9 +1,9 @@
+import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import {
   cachedGetPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
-} from "admin/admin_rest_api";
-import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
+} from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
@@ -12,20 +12,19 @@ import { PublicationViewWithHeader } from "dashboard/publication_view";
 import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
-import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import type { WebknossosState } from "viewer/store";
+import { PortalTarget } from "viewer/view/layouting/portal_utils";
+import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
 
@@ -42,9 +41,7 @@ type DispatchProps = {
   updateActiveUser: (arg0: APIUser) => void;
 };
 type Props = OwnProps & StateProps & DispatchProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+type PropsWithRouter = Props & RouteComponentProps;
 type State = {
   activeTabKey: string;
   user: APIUser | null | undefined;
@@ -138,7 +135,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         createGroupForEachFile,
       },
     });
-    this.props.history.push(`/annotations/${response.annotation.id}`);
+    this.props.navigate(`/annotations/${response.annotation.id}`);
   };
 
   getValidTabKeys() {
@@ -244,7 +241,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         UserLocalStorage.setItem("lastUsedDashboardTab", activeTabKey);
 
         if (!this.props.isAdminView) {
-          this.props.history.push(`/dashboard/${url}`);
+          this.props.navigate(`/dashboard/${url}`);
         }
       }
 
@@ -299,7 +296,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
   activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });
@@ -311,4 +308,4 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DashboardView));
+export default connector(withRouter(DashboardView));

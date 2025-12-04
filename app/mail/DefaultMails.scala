@@ -5,7 +5,7 @@ import models.user.User
 import utils.WkConf
 import views._
 
-import java.net.URL
+import java.net.URI
 import javax.inject.Inject
 import scala.util.Try
 
@@ -84,7 +84,7 @@ class DefaultMails @Inject()(conf: WkConf) {
                  autoVerify: Boolean,
                  organizationName: String,
                  senderName: String): Mail = {
-    val host = Try { new URL(uri) }.toOption.getOrElse(uri)
+    val host = Try { new URI(uri) }.toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
@@ -156,6 +156,23 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail),
       ccRecipients = List(supportEmail),
       replyTo = List(userEmail, supportEmail)
+    )
+
+  def orderCreditsMail(user: User, userEmail: String, requestedCredits: Int): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to buy WEBKNOSSOS credits",
+      bodyHtml = html.mail.orderCredits(user.name, requestedCredits, additionalFooter).body,
+      recipients = List(userEmail)
+    )
+
+  def orderCreditsRequestMail(user: User, userEmail: String, organizationName: String, messageBody: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to buy WEBKNOSSOS credits",
+      bodyHtml =
+        html.mail.orderCreditsRequest(user.name, userEmail, organizationName, messageBody, additionalFooter).body,
+      recipients = List("hello@webknossos.org")
     )
 
   def jobSuccessfulGenericMail(user: User,

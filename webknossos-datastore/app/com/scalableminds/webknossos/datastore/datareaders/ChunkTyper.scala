@@ -1,10 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 
 import java.io.ByteArrayInputStream
 import javax.imageio.stream.MemoryCacheImageInputStream
@@ -21,10 +20,11 @@ object ChunkTyper {
     case ArrayDataType.i8 | ArrayDataType.u8 => new LongChunkTyper(header)
     case ArrayDataType.f4                    => new FloatChunkTyper(header)
     case ArrayDataType.f8                    => new DoubleChunkTyper(header)
+    case ArrayDataType.bool                  => new BoolChunkTyper(header)
   }
 }
 
-abstract class ChunkTyper {
+abstract class ChunkTyper extends FoxImplicits {
   val header: DatasetHeader
 
   def ma2DataType: MADataType
@@ -38,7 +38,10 @@ abstract class ChunkTyper {
     fillValueChunkCache.getOrLoad(chunkShape.mkString(","), _ => createFromFillValue(chunkShape).toFox)
 
   protected def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] =
-    MultiArrayUtils.createFilledArray(ma2DataType, chunkShapeOrdered(chunkShape), header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(ma2DataType,
+                                      chunkShapeOrdered(chunkShape),
+                                      header.fillValueNumber,
+                                      header.fillValueBoolean)
 
   // Chunk shape in header is in C-Order (XYZ), but data may be in F-Order (ZYX), so the chunk shape
   // associated with the array needs to be adjusted.
@@ -129,6 +132,20 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
     }.get)
 }
 
+class BoolChunkTyper(val header: DatasetHeader) extends ChunkTyper {
+
+  val ma2DataType: MADataType = MADataType.BOOLEAN
+
+  def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] = tryo {
+    val typedStorage = new Array[Boolean](chunkShape.product)
+    bytes.zipWithIndex.foreach {
+      case (b, i) =>
+        typedStorage(i) = b != 0
+    }
+    MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
+  }
+}
+
 // In no-partial-copy shortcut, the MultiArray shape is never used, so it is just set to flat.
 // type is always BYTE
 class ShortcutChunkTyper(val header: DatasetHeader) extends ChunkTyper {
@@ -141,6 +158,6 @@ class ShortcutChunkTyper(val header: DatasetHeader) extends ChunkTyper {
 
   override protected def createFromFillValue(chunkShape: Array[Int]): Box[MultiArray] = {
     val flatShape = Array(chunkShape.product * header.bytesPerElement)
-    MultiArrayUtils.createFilledArray(ma2DataType, flatShape, header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(ma2DataType, flatShape, header.fillValueNumber, header.fillValueBoolean)
   }
 }

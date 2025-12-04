@@ -1,29 +1,22 @@
 import { GiftTwoTone } from "@ant-design/icons";
-import {
-  getOrganizationByInvite,
-  joinOrganization,
-  switchToOrganization,
-} from "admin/admin_rest_api";
 import AuthenticationModal from "admin/auth/authentication_modal";
+import { getOrganizationByInvite, joinOrganization, switchToOrganization } from "admin/rest_api";
 import { Button, Layout, Result, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import { useState } from "react";
-import { useHistory } from "react-router-dom";
-import type { APIUser } from "types/api_flow_types";
+import { useNavigate, useParams } from "react-router-dom";
 
 const { Content } = Layout;
 
-export default function AcceptInviteView({
-  token,
-  activeUser,
-}: {
-  token: string;
-  activeUser: APIUser | null | undefined;
-}) {
-  const history = useHistory();
+export default function AcceptInviteView() {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const { token = "" } = useParams();
+  const navigate = useNavigate();
+
   const [isAuthenticationModalOpen, setIsAuthenticationModalOpen] = useState(false);
   const [targetOrganization, exception] = useFetch(
     async () => {
@@ -50,7 +43,7 @@ export default function AcceptInviteView({
     targetOrganization != null ? targetOrganization.name || targetOrganization.id : "unknown";
 
   const onSuccessfulJoin = (userJustRegistered: boolean = false) => {
-    history.push("/dashboard");
+    navigate("/dashboard");
 
     if (userJustRegistered) {
       // Since the user just registered, the organization is already active.

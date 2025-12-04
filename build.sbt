@@ -1,8 +1,8 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.13.14"
-ThisBuild / scapegoatVersion := "2.1.6"
+ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scapegoatVersion := "3.1.9"
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-release:11",
@@ -12,6 +12,7 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:postfixOps",
   "-Xlint:unused",
   "-Xlint:deprecation",
+  "-Xmaxerrs:500",
   s"-Wconf:src=target/.*:s",
   s"-Wconf:src=webknossos-datastore/target/.*:s",
   s"-Wconf:src=webknossos-tracingstore/target/.*:s"
@@ -20,7 +21,6 @@ ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
   "-Xlint:deprecation"
 )
-ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 // Keep asset timestamps when assembling jar
 ThisBuild / packageOptions += Package.FixedTimestamp(Package.keepTimestamps)
@@ -33,13 +33,10 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
-// Allow path binding for ObjectId
-routesImport += "com.scalableminds.util.objectid.ObjectId"
-
 lazy val commonSettings = Seq(
-  resolvers ++= DependencyResolvers.dependencyResolvers,
+  resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
-  Compile / packageDoc / publishArtifact := false
+  Compile / packageDoc / publishArtifact := false,
 )
 
 lazy val protocolBufferSettings = Seq(
@@ -53,7 +50,8 @@ lazy val copyMessagesFilesSetting = {
   lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
   copyMessages := {
     val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
-    java.nio.file.Files.copy(messagesFile.toPath, (baseDirectory.value / "conf" / "messages").toPath)
+    val targetPath = (baseDirectory.value / "conf" / "messages").toPath
+    java.nio.file.Files.copy(messagesFile.toPath, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
   }
 }
 
@@ -90,6 +88,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
+    routesImport += "com.scalableminds.util.objectid.ObjectId",
     copyMessagesFilesSetting
   )
 
@@ -100,11 +99,12 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
   .settings(
     name := "webknossos-tracingstore",
     commonSettings,
+    routesImport += "com.scalableminds.util.objectid.ObjectId",
     generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
     dependencyOverrides ++= Dependencies.dependencyOverrides,
-    copyMessagesFilesSetting
+    copyMessagesFilesSetting,
   )
 
 lazy val webknossos = (project in file("."))
@@ -114,6 +114,7 @@ lazy val webknossos = (project in file("."))
   .settings(
     name := "webknossos",
     commonSettings,
+    routesImport += "com.scalableminds.util.objectid.ObjectId",
     generateReverseRouter := false,
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,

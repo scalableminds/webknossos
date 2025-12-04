@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import ArrayDataType.{ArrayDataType, bytesPerElementFor}
+import ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
 import java.nio.ByteOrder
@@ -11,7 +11,7 @@ import java.nio.ByteOrder
 trait DatasetHeader {
 
   // Note that in DatasetArray, datasetShape and chunkShape are adapted for 2d datasets
-  def datasetShape: Option[Array[Int]] // shape of the entire array
+  def datasetShape: Option[Array[Long]] // shape of the entire array
   def chunkShape: Array[Int] // shape of each chunk,
 
   def dimension_separator: DimensionSeparator
@@ -28,7 +28,7 @@ trait DatasetHeader {
 
   lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 
-  lazy val bytesPerElement: Int = bytesPerElementFor(resolvedDataType)
+  lazy val bytesPerElement: Int = ArrayDataType.bytesPerElement(resolvedDataType)
 
   lazy val bytesPerChunk: Int = chunkShape.toList.product * bytesPerElement
 
@@ -38,15 +38,25 @@ trait DatasetHeader {
       case Left(s)  => parseFillValueFromString(s)
     }
 
+  lazy val fillValueBoolean: Boolean =
+    fill_value match {
+      case Left("true") => true
+      case _            => false
+    }
+
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
     datasetShape.flatMap { shape =>
       if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
         None
       else {
         if (axisOrder.hasZAxis) {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.zWithFallback)))
+          Some(
+            BoundingBox(Vec3Int.zeros,
+                        shape(axisOrder.x).toInt,
+                        shape(axisOrder.y).toInt,
+                        shape(axisOrder.zWithFallback).toInt))
         } else {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), 1))
+          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x).toInt, shape(axisOrder.y).toInt, 1))
         }
       }
     }

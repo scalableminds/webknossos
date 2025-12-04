@@ -2,41 +2,48 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{Zarr3DataLayer, Zarr3Layer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffDataset, NgffMultiscalesItem}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerWithMagLocators}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
+  StaticColorLayer,
+  StaticLayer,
+  StaticSegmentationLayer
+}
 
 import scala.concurrent.ExecutionContext
 
-class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with NgffExplorationUtils {
+class NgffV0_5Explorer(implicit val ec: ExecutionContext)
+    extends RemoteLayerExplorer
+    with NgffExplorationUtils
+    with FoxImplicits {
 
   override def name: String = "OME NGFF Zarr v0.5"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       zarrJsonPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
-      groupHeader <- zarrJsonPath.parseAsJson[Zarr3GroupHeader] ?~> s"Failed to read OME NGFF header at $zarrJsonPath"
-      ngffMetadata <- groupHeader.ngffMetadata.toFox
+      groupHeader <- zarrJsonPath
+        .parseAsJson[NgffZarr3GroupHeader] ?~> s"Failed to read OME NGFF header at $zarrJsonPath"
       labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
-        Fox.successful(List[(Zarr3Layer, VoxelSize)]()))
+        Fox.successful(List[(StaticLayer, VoxelSize)]()))
 
-      layerLists: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffMetadata.multiscales)(
+      layerLists: List[List[(StaticLayer, VoxelSize)]] <- Fox.serialCombined(groupHeader.ngffMetadata.multiscales)(
         multiscale => {
           for {
             channelCount <- getNgffMultiscaleChannelCount(multiscale, remotePath)
-            channelAttributes = getChannelAttributes(ngffMetadata.omero)
+            channelAttributes = getChannelAttributes(groupHeader.ngffMetadata.omero)
             layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount, channelAttributes)
           } yield layers
         })
-      layers: List[(DataLayerWithMagLocators, VoxelSize)] = layerLists.flatten
+      layers: List[(StaticLayer, VoxelSize)] = layerLists.flatten
     } yield layers ++ labelLayers
 
   protected def createLayer(remotePath: VaultPath,
@@ -47,11 +54,11 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[DataLayerWithMagLocators] =
+                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[StaticLayer] =
     for {
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentialId, Some(channelIndex)))
-      _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+      _ <- Fox.fromBool(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClassRaw <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       elementClass = if (isSegmentation) ensureElementClassForSegmentationLayer(elementClassRaw)
       else elementClassRaw
@@ -63,9 +70,10 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       additionalAxes <- getAdditionalAxes(multiscale, remotePath)
       translationOpt = getTranslation(multiscale)
-      layer: Zarr3Layer = if (looksLikeSegmentationLayer(datasetName, elementClass) || isSegmentation) {
-        Zarr3SegmentationLayer(
+      layer: StaticLayer = if (looksLikeSegmentationLayer(datasetName, elementClass) || isSegmentation) {
+        StaticSegmentationLayer(
           channelName,
+          DataFormat.zarr3,
           boundingBox,
           elementClass,
           magsWithAttributes.map(_.mag),
@@ -75,9 +83,9 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
           coordinateTransformations = translationOpt,
         )
       } else
-        Zarr3DataLayer(
+        StaticColorLayer(
           channelName,
-          Category.color,
+          DataFormat.zarr3,
           boundingBox,
           elementClass,
           magsWithAttributes.map(_.mag),
@@ -108,29 +116,29 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       magPath = layerPath / ngffDataset.path
       zarrJsonPath = magPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
       zarrHeader <- getZarrHeader(ngffDataset, layerPath)
-      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrJsonPath"
-      boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrJsonPath"
+      elementClass <- zarrHeader.elementClass.toFox ?~> s"failed to read element class from zarr header at $zarrJsonPath"
+      boundingBox <- zarrHeader
+        .boundingBox(axisOrder)
+        .toFox ?~> s"failed to read bounding box from zarr header at $zarrJsonPath"
     } yield
-      MagWithAttributes(
-        MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), channelIndex, credentialId),
-        magPath,
-        elementClass,
-        boundingBox)
+      MagWithAttributes(MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), channelIndex, credentialId),
+                        magPath,
+                        elementClass,
+                        boundingBox)
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Int]] =
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]] =
     for {
       zarrHeader <- getZarrHeader(dataset, path)
       shape = zarrHeader.shape
     } yield shape
 
   protected def layersForLabel(remotePath: VaultPath, labelPath: String, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zarrJsonPath = fullLabelPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
-      groupHeader <- zarrJsonPath.parseAsJson[Zarr3GroupHeader]
-      ngffMetadata <- groupHeader.ngffMetadata.toFox
-      layers: List[List[(DataLayerWithMagLocators, VoxelSize)]] <- Fox.serialCombined(ngffMetadata.multiscales)(
+      groupHeader <- zarrJsonPath.parseAsJson[NgffZarr3GroupHeader]
+      layers: List[List[(StaticLayer, VoxelSize)]] <- Fox.serialCombined(groupHeader.ngffMetadata.multiscales)(
         multiscale =>
           layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
                                    fullLabelPath,

@@ -2,7 +2,7 @@
 
 WEBKNOSSOS works great with [OME-Zarr datasets](https://ngff.openmicroscopy.org/latest/index.html), sometimes called next-generation file format (NGFF).
 
-We strongly believe in this community-driven, cloud-native data format for n-dimensional datasets. Zarr is a first-class citizen in WEBKNOSSOS and will likely replace [WKW](./wkw.md) long term.
+We strongly believe in this community-driven, cloud-native data format for n-dimensional datasets. Therefore, Zarr is the new default data format in WEBKNOSSOS and replaced the previous [WKW](./wkw.md) format.
 
 Zarr datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./upload_ui.md) or [streamed from a remote server or the cloud](./streaming.md). When streaming and using several layers, import the first Zarr group and then use the UI to add more URIs/groups.
 
@@ -110,7 +110,7 @@ For OME-Zarr (v0.5) datasets, the structure is slightly different (See [OME-Zarr
 
 ## Conversion to Zarr
 
-You can easily convert image stacks manually with the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
+You can easily convert image stacks manually with the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/).
 The CLI tool expects a single file or all image files in a single folder with numbered file names.
 After installing, you can convert image stacks to Zarr datasets with the following command:
 
@@ -121,7 +121,6 @@ webknossos convert \
   --layer-name em \
   --voxel-size 11.24,11.24,25 \
   --chunk-shape 64,64,64 \
-  --data-format zarr \
   --jobs 4 \
   input.tif output.zarr
 
@@ -129,20 +128,20 @@ webknossos compress --jobs 4 output.zarr
 webknossos downsample --jobs 4 output.zarr
 ```
 
-This example will create an unsharded Zarr v2 dataset with a voxel size of (4,4,4) nm<sup>3</sup> and a chunk size of (64,64,64) voxel. 
+This example will create a sharded Zarr v3 dataset with a voxel size of (11.24, 11.24, 25) nm<sup>3</sup> and a chunk size of (64,64,64) voxel. 
 A maximum of 4 parallel jobs will be used to parallelize the conversion, compression and downsampling.
-Using the `--data-format zarr3` argument will produce sharded Zarr v3 datasets.
+Using the `--data-format zarr` argument will produce unsharded Zarr v2 datasets.
 
-Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli).
+Read the full documentation at [WEBKNOSSOS CLI](https://docs.webknossos.org/cli/).
 
 ### Conversion with Python
 
-You can use the free [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py) to convert image stacks to Zarr or integrate the conversion as part of an existing workflow. 
+You can use the free [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/) to convert image stacks to Zarr3 or integrate the conversion as part of an existing workflow. 
 
 ```python
 import webknossos as wk
 
-def main() -> None:
+def main() -> None: 
     """Convert a folder of image files to a WEBKNOSSOS dataset."""
     dataset = wk.Dataset.from_images(
         input_path=INPUT_DIR,
@@ -150,7 +149,6 @@ def main() -> None:
         voxel_size=(11, 11, 11),
         layer_category=wk.COLOR_CATEGORY,
         compress=True,
-        data_format=wk.Dataformat.Zarr
     )
 
     print(f"Saved {dataset.name} at {dataset.path}.")
@@ -176,4 +174,3 @@ To get the best streaming performance for Zarr datasets consider the following s
 - Use chunk sizes of 32 - 128 voxels^3
 - Enable sharding (only available in Zarr 3+)
 - Use 3D downsampling
-

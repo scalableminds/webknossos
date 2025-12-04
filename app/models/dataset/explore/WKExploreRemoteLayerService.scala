@@ -1,7 +1,7 @@
 package models.dataset.explore
 
-import collections.SequenceUtils
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
@@ -9,14 +9,13 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.{DataStore, DataStoreDAO, DatasetService, WKRemoteDataStoreClient}
+import models.dataset.{DataStore, DataStoreDAO, WKRemoteDataStoreClient}
 import models.dataset.credential.CredentialService
 import models.organization.OrganizationDAO
 import models.user.User
-import net.liftweb.common.Box.tryo
+import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
 import com.scalableminds.util.objectid.ObjectId
@@ -48,7 +47,6 @@ object ExploreAndAddRemoteDatasetParameters {
 class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                             organizationDAO: OrganizationDAO,
                                             dataStoreDAO: DataStoreDAO,
-                                            datasetService: DatasetService,
                                             wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                             rpc: RPC)
     extends FoxImplicits
@@ -81,7 +79,9 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
 
   private def selectDataStore(dataStoreNames: List[Option[String]])(implicit ec: ExecutionContext): Fox[DataStore] =
     for {
-      dataStoreNameOpt <- SequenceUtils.findUniqueElement(dataStoreNames) ?~> "explore.dataStore.mustBeEqualForAll"
+      dataStoreNameOpt <- SequenceUtils
+        .findUniqueElement(dataStoreNames)
+        .toFox ?~> "explore.dataStore.mustBeEqualForAll"
       dataStore <- dataStoreNameOpt match {
         case Some(dataStoreName) => dataStoreDAO.findOneByName(dataStoreName)(GlobalAccessContext)
         case None                => dataStoreDAO.findOneWithUploadsAllowed(GlobalAccessContext)
@@ -93,27 +93,14 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
                                credentialSecret: Option[String],
                                requestingUser: User)(implicit ec: ExecutionContext): Fox[Option[ObjectId]] =
     for {
-      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))).toFox ?~> s"Received invalid URI: $layerUri"
       credentialOpt = credentialService.createCredentialOpt(uri,
                                                             credentialIdentifier,
                                                             credentialSecret,
-                                                            requestingUser._id,
-                                                            requestingUser._organization)
-      _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
+                                                            Some(requestingUser._id),
+                                                            Some(requestingUser._organization))
+      _ <- Fox.fromBool(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
     } yield credentialId
-
-  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
-                          datasetName: String,
-                          user: User,
-                          folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      organization <- organizationDAO.findOne(user._organization)
-      dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      _ <- datasetService.assertValidDatasetName(datasetName)
-      client = new WKRemoteDataStoreClient(dataStore, rpc)
-      userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
-      _ <- client.addDataSource(organization._id, datasetName, dataSource, folderId, userToken)
-    } yield ()
 
 }

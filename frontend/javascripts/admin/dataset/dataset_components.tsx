@@ -1,10 +1,9 @@
 import { Card, Form, type FormInstance, Input, Select } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import features from "features";
 import messages from "messages";
 import type * as React from "react";
-import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APITeam, APIUser } from "types/api_types";
 import { syncValidator } from "types/validation";
 
 const FormItem = Form.Item;
@@ -194,17 +193,10 @@ export function AllowedTeamsFormItem({
           if (afterFetchedTeams) {
             afterFetchedTeams(fetchedTeams);
           }
-          if (!features().isWkorgInstance) {
-            return;
-          }
 
-          const teamOfOrganization = fetchedTeams.find((team) => team.name === team.organization);
+          const teamOfOrganization = fetchedTeams.find((team) => team.isOrganizationTeam);
 
-          if (teamOfOrganization == null) {
-            return;
-          }
-
-          if (formRef.current == null) return;
+          if (teamOfOrganization == null || formRef.current == null) return;
           formRef.current.setFieldsValue({
             initialTeams: [teamOfOrganization],
           });

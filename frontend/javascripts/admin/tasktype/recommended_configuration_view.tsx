@@ -5,9 +5,9 @@ import features from "features";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import { type RecommendedConfiguration, settings } from "messages";
-import { TDViewDisplayModeEnum } from "oxalis/constants";
 import * as React from "react";
 import { validateUserSettingsJSON } from "types/validation";
+import { TDViewDisplayModeEnum } from "viewer/constants";
 const FormItem = Form.Item;
 
 function getRecommendedConfigByCategory() {

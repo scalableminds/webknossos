@@ -3,7 +3,6 @@ package security
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
 import models.annotation.AnnotationState.Cancelled
 import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
 import models.dataset.DatasetDAO
@@ -31,7 +30,7 @@ class AccessibleBySwitchingService @Inject()(
 
   def getOrganizationToSwitchTo(user: User,
                                 datasetId: Option[ObjectId],
-                                annotationId: Option[String],
+                                annotationId: Option[ObjectId],
                                 workflowHash: Option[String])(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       isSuperUser <- multiUserDAO.findOne(user._multiUser).map(_.isSuperUser)
@@ -39,11 +38,11 @@ class AccessibleBySwitchingService @Inject()(
         accessibleBySwitchingForSuperUser(datasetId, annotationId, workflowHash)
       else
         accessibleBySwitchingForMultiUser(user._multiUser, datasetId, annotationId, workflowHash)
-      _ <- bool2Fox(selectedOrganization._id != user._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
+      _ <- Fox.fromBool(selectedOrganization._id != user._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
     } yield selectedOrganization
 
   private def accessibleBySwitchingForSuperUser(datasetIdOpt: Option[ObjectId],
-                                                annotationIdOpt: Option[String],
+                                                annotationIdOpt: Option[ObjectId],
                                                 workflowHashOpt: Option[String]): Fox[Organization] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
@@ -54,8 +53,7 @@ class AccessibleBySwitchingService @Inject()(
         } yield organization
       case (None, Some(annotationId), None) =>
         for {
-          annotationObjectId <- ObjectId.fromString(annotationId)
-          annotation <- annotationDAO.findOne(annotationObjectId) // Note: this does not work for compound annotations.
+          annotation <- annotationDAO.findOne(annotationId) // Note: this does not work for compound annotations.
           user <- userDAO.findOne(annotation._user)
           organization <- organizationDAO.findOne(user._organization)
         } yield organization
@@ -70,7 +68,7 @@ class AccessibleBySwitchingService @Inject()(
 
   private def accessibleBySwitchingForMultiUser(multiUserId: ObjectId,
                                                 datasetIdOpt: Option[ObjectId],
-                                                annotationIdOpt: Option[String],
+                                                annotationIdOpt: Option[ObjectId],
                                                 workflowHashOpt: Option[String]): Fox[Organization] =
     for {
       identities <- userDAO.findAllByMultiUser(multiUserId)
@@ -81,7 +79,7 @@ class AccessibleBySwitchingService @Inject()(
 
   private def canAccessDatasetOrAnnotationOrWorkflow(user: User,
                                                      datasetIdOpt: Option[ObjectId],
-                                                     annotationIdOpt: Option[String],
+                                                     annotationIdOpt: Option[ObjectId],
                                                      workflowHashOpt: Option[String]): Fox[Boolean] = {
     val ctx = AuthorizedAccessContext(user)
     (datasetIdOpt, annotationIdOpt, workflowHashOpt) match {
@@ -97,25 +95,24 @@ class AccessibleBySwitchingService @Inject()(
 
   private def canAccessDataset(ctx: DBAccessContext, datasetId: ObjectId): Fox[Boolean] = {
     val foundFox = datasetDAO.findOne(datasetId)(ctx)
-    foundFox.futureBox.map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
-  private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: String): Fox[Boolean] = {
+  private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: ObjectId): Fox[Boolean] = {
     val foundFox = for {
-      annotationIdParsed <- ObjectId.fromString(annotationId)
-      annotation <- annotationDAO.findOne(annotationIdParsed)(GlobalAccessContext)
-      _ <- bool2Fox(annotation.state != Cancelled)
-      restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationIdParsed))(ctx)
+      annotation <- annotationDAO.findOne(annotationId)(GlobalAccessContext)
+      _ <- Fox.fromBool(annotation.state != Cancelled)
+      restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationId))(ctx)
       _ <- restrictions.allowAccess(user)
     } yield ()
-    foundFox.futureBox.map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
   private def canAccessWorkflow(user: User, workflowHash: String): Fox[Boolean] = {
     val foundFox = for {
       _ <- voxelyticsDAO.findWorkflowByHashAndOrganization(user._organization, workflowHash)
     } yield ()
-    foundFox.futureBox.map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
 }

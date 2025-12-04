@@ -1,9 +1,10 @@
 import { isUserAdminOrManager } from "libs/utils";
-import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useSelector, useStore } from "react-redux";
+import { useStore } from "react-redux";
 import type { ArbitraryFunction } from "types/globals";
+import type { WebknossosState } from "viewer/store";
+import { useWkSelector } from "./react_hooks";
 import Toast from "./toast";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
@@ -96,9 +97,9 @@ export function useGuardedFetch<T>(
   Only use this if your component doesn't need high frequency
   updates.
  */
-export function usePolledState(callback: (arg0: OxalisState) => void, interval: number = 1000) {
-  const store = useStore<OxalisState>();
-  const oldState = useRef<OxalisState | null>(null);
+export function usePolledState(callback: (arg0: WebknossosState) => void, interval: number = 1000) {
+  const store = useStore<WebknossosState>();
+  const oldState = useRef<WebknossosState | null>(null);
   useInterval(() => {
     const state = store.getState();
 
@@ -130,7 +131,7 @@ export function makeComponentLazy<T extends { isOpen: boolean }>(
 }
 
 export function useIsActiveUserAdminOrManager() {
-  const user = useSelector((state: OxalisState) => state.activeUser);
+  const user = useWkSelector((state) => state.activeUser);
   return user != null && isUserAdminOrManager(user);
 }
 

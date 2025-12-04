@@ -1,0 +1,10 @@
+@(name: String, requestedCredits: Int, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name}</p>
+<p>Thank you for requesting WEBKNOSSOS credits. Our sales team will be in contact with you shortly.</p>
+
+<p>Requested additional credits: @{requestedCredits}</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

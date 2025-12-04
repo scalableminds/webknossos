@@ -1,4 +1,4 @@
-import { getDatasets } from "admin/admin_rest_api";
+import { getDatasets } from "admin/rest_api";
 import AsyncSelect from "components/async_select";
 
 // Usage of AsyncSelect

@@ -1,5 +1,5 @@
-import { getUsers } from "admin/admin_rest_api";
 import { getUsersWithActiveTasks, transferActiveTasksOfProject } from "admin/api/tasks";
+import { getUsers } from "admin/rest_api";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import { Modal, Spin, Table } from "antd";
 import { handleGenericError } from "libs/error_handling";
@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
 import { useState } from "react";
-import type { APIActiveUser, APIProject, APIUser } from "types/api_flow_types";
+import type { APIActiveUser, APIProject, APIUser } from "types/api_types";
 
 type Props = {
   project: APIProject | null | undefined;

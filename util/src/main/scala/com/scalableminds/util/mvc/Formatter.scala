@@ -2,7 +2,7 @@ package com.scalableminds.util.mvc
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
-import net.liftweb.common.{Box, Failure, Full, ParamFailure}
+import com.scalableminds.util.tools.{Box, Failure, Full, ParamFailure}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.text.SimpleDateFormat
@@ -88,8 +88,12 @@ trait Formatter {
 
     def formatStackTrace(failure: Failure) =
       failure.exception match {
-        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
-        case _                                     => ""
+        case Full(exception) =>
+          if (includeStackTraces)
+            s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
+          else
+            s" ${exception.toString}"
+        case _ => ""
       }
 
     def formatNextChain(chainBox: Box[Failure]): String = chainBox match {

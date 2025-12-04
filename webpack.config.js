@@ -2,7 +2,7 @@ module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   const webpack = require("webpack");
   const { EsbuildPlugin } = require("esbuild-loader");
-  const path = require("path");
+  const path = require("node:path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const browserslistToEsbuild = require("browserslist-to-esbuild");
   const CopyPlugin = require("copy-webpack-plugin");
@@ -141,6 +141,7 @@ module.exports = function (env = {}) {
       modules: [srcPath, nodePath, protoPath],
       alias: {
         react: path.resolve("./node_modules/react"),
+        three: path.resolve(__dirname, "node_modules/three/src/Three.js"), // build three js from source instead of using their prebuilt "binaries" to allow for a smaller bundle size
       },
       extensions: [".ts", ".tsx", ".js", ".json"],
       fallback: {
@@ -202,7 +203,11 @@ module.exports = function (env = {}) {
     stats: {
       preset: "minimal",
     },
-    // Ignore the lengthy warning considering STLExporter which is added to the exports dynamically
-    ignoreWarnings: [/export 'STLExporter'/],
+    // Ignore the lengthy warnings which are added to the exports dynamically
+    ignoreWarnings: [
+      /export 'STLExporter'/,
+      /export 'SRGBColorSpace'/,
+      /export 'LinearSRGBColorSpace'/,
+    ],
   };
 };

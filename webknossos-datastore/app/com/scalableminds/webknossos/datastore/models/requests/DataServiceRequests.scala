@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, SegmentationLayer}
 
 import java.nio.file.Path
 
@@ -15,30 +16,41 @@ object DataServiceRequestSettings {
 }
 
 case class DataServiceDataRequest(
-    dataSource: DataSource, // null in VolumeTracings
+    dataSourceId: Option[DataSourceId], // None in case of volume tracings
     dataLayer: DataLayer,
     cuboid: Cuboid,
     settings: DataServiceRequestSettings
-)
+) {
+  def isSingleBucket: Boolean = cuboid.isSingleBucket(DataLayer.bucketLength)
+  def mag: Vec3Int = cuboid.mag
+
+  // dataSource is None and unused for volume tracings. Insert dummy DataSourceId
+  // (also unused in that case, except for logging and bucket provider cache key)
+  def dataSourceIdOrVolumeDummy: DataSourceId = dataSourceId.getOrElse(DataSourceId("VolumeTracing", dataLayer.name))
+}
 
 case class DataReadInstruction(
     baseDir: Path,
-    dataSource: DataSource,
+    dataSourceId: DataSourceId, // Dummy value in case of volume tracings
     dataLayer: DataLayer,
     bucket: BucketPosition,
     version: Option[Long] = None
 ) {
-  def layerSummary: String = f"${dataSource.id.organizationId}/${dataSource.id.directoryName}/${dataLayer.name}"
+  def layerSummary: String = f"$dataSourceId/${dataLayer.name}"
 }
 
 case class DataServiceMappingRequest(
-    dataSource: DataSource,
+    dataSourceId: Option[DataSourceId], // None in case of volume tracings
     dataLayer: SegmentationLayer,
     mapping: String
-)
+) {
+  // dataSource is None and unused for volume tracings. Insert dummy DataSourceId
+  // (also unused in that case, except for logging and bucket provider cache key)
+  def dataSourceIdOrVolumeDummy: DataSourceId = dataSourceId.getOrElse(DataSourceId("VolumeTracing", dataLayer.name))
+}
 
 case class MappingReadInstruction(
     baseDir: Path,
-    dataSource: DataSource,
+    dataSourceId: DataSourceId, // Dummy value in case of volume tracings
     mapping: String
 )

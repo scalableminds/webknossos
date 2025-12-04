@@ -1,4 +1,17 @@
-import * as THREE from "three";
+import {
+  LinearFilter,
+  LinearMipMapLinearFilter,
+  type MagnificationTextureFilter,
+  type Mapping,
+  type MinificationTextureFilter,
+  type PixelFormat,
+  Texture,
+  type TextureDataType,
+  type WebGLRenderer,
+  WebGLUtils,
+  type Wrapping,
+} from "three";
+import type { TypedArray } from "viewer/constants";
 
 /* The UpdatableTexture class exposes a way to partially update a texture.
  * Since we use this class for data which is usually only available in chunks,
@@ -16,26 +29,25 @@ import * as THREE from "three";
  */
 let originalTexSubImage2D: WebGL2RenderingContext["texSubImage2D"] | null = null;
 
-class UpdatableTexture extends THREE.Texture {
+class UpdatableTexture extends Texture {
   isUpdatableTexture: boolean = true;
-  renderer!: THREE.WebGLRenderer;
+  renderer!: WebGLRenderer;
   gl!: WebGL2RenderingContext;
-  utils!: THREE.WebGLUtils;
+  utils!: WebGLUtils;
   width: number | undefined;
   height: number | undefined;
 
   constructor(
     width: number,
     height: number,
-    format?: THREE.PixelFormat,
-    type?: THREE.TextureDataType,
-    mapping?: THREE.Mapping,
-    wrapS?: THREE.Wrapping,
-    wrapT?: THREE.Wrapping,
-    magFilter?: THREE.TextureFilter,
-    minFilter?: THREE.TextureFilter,
+    format?: PixelFormat,
+    type?: TextureDataType,
+    mapping?: Mapping,
+    wrapS?: Wrapping,
+    wrapT?: Wrapping,
+    magFilter?: MagnificationTextureFilter,
+    minFilter?: MinificationTextureFilter,
     anisotropy?: number,
-    encoding?: THREE.TextureEncoding,
   ) {
     const imageData = { width, height, data: new Uint32Array(0) };
 
@@ -50,38 +62,27 @@ class UpdatableTexture extends THREE.Texture {
       format,
       type,
       anisotropy,
-      encoding,
     );
 
-    this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
-    this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
+    this.magFilter = magFilter !== undefined ? magFilter : LinearFilter;
+    this.minFilter = minFilter !== undefined ? minFilter : LinearMipMapLinearFilter;
     this.generateMipmaps = false;
     this.flipY = false;
     this.unpackAlignment = 1;
     this.needsUpdate = true;
   }
 
-  setRenderer(renderer: THREE.WebGLRenderer) {
+  setRenderer(renderer: WebGLRenderer) {
     this.renderer = renderer;
     this.gl = this.renderer.getContext() as WebGL2RenderingContext;
-    this.utils = new THREE.WebGLUtils(
-      this.gl,
-      this.renderer.extensions,
-      this.renderer.capabilities,
-    );
+    this.utils = new WebGLUtils(this.gl, this.renderer.extensions);
   }
 
   isInitialized() {
-    return this.renderer.properties.get(this).__webglTexture != null;
+    return (this.renderer.properties.get(this) as any).__webglTexture != null;
   }
 
-  update(
-    src: Float32Array | Uint8Array | Uint32Array,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ) {
+  update(src: TypedArray, x: number, y: number, width: number, height: number) {
     if (originalTexSubImage2D == null) {
       // See explanation at declaration of originalTexSubImage2D.
       originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
@@ -99,7 +100,7 @@ class UpdatableTexture extends THREE.Texture {
       this.renderer.initTexture(this);
     }
     const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
-    const textureProperties = this.renderer.properties.get(this);
+    const textureProperties = this.renderer.properties.get(this) as any;
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
 
     originalTexSubImage2D(
@@ -116,4 +117,9 @@ class UpdatableTexture extends THREE.Texture {
     this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
   }
 }
+
+export function notifyAboutDisposedRenderer() {
+  originalTexSubImage2D = null;
+}
+
 export default UpdatableTexture;

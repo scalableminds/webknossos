@@ -1,3 +1,4 @@
+import com.scalableminds.util.mvc.{ApiVersioning, ExtendedController}
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import play.api.OptionalDevContext
@@ -22,22 +23,26 @@ class TsRequestHandler @Inject()(webCommands: WebCommands,
                                       configuration,
                                       filters)
     with InjectedController
+    with ExtendedController
     with AdditionalHeaders
-    with LazyLogging {
+    with LazyLogging
+    with ApiVersioning {
   override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.method == "OPTIONS") {
       Some(Action { options(request) })
+    } else if (request.path == "/" || request.path == "/index.html") {
+      Some(Action {
+        Ok(
+          views.html.datastoreFrontpage("Tracingstore",
+                                        conf.Tracingstore.name,
+                                        conf.Tracingstore.WebKnossos.uri,
+                                        "/tracings/health"))
+      })
+    } else if (isInvalidApiVersion(request)) {
+      Some(Action {
+        JsonNotFound(invalidApiVersionMessage(request))
+      })
     } else {
-      if (request.path == "/" || request.path == "/index.html") {
-        Some(Action {
-          Ok(
-            views.html.datastoreFrontpage("Tracingstore",
-                                          conf.Tracingstore.name,
-                                          conf.Tracingstore.WebKnossos.uri,
-                                          "/tracings/health"))
-        })
-      } else {
-        super.routeRequest(request)
-      }
+      super.routeRequest(request)
     }
 }

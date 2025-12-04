@@ -1,5 +1,5 @@
 import { TagOutlined } from "@ant-design/icons";
-import { createTeam } from "admin/admin_rest_api";
+import { createTeam } from "admin/rest_api";
 import { Form, Input, Modal } from "antd";
 import Shortcut from "libs/shortcut_component";
 const FormItem = Form.Item;
@@ -9,7 +9,7 @@ type Props = {
   isOpen: boolean;
 };
 
-function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isOpen }: Props) {
+function CreateTeamModalForm({ onOk: onOkCallback, onCancel: onCancelCallback, isOpen }: Props) {
   const [form] = Form.useForm();
 
   const onOk = async () => {
@@ -26,8 +26,14 @@ function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isOpen }: Props) {
         ],
       };
       const team = await createTeam(newTeam);
+      form.resetFields();
       onOkCallback(team);
     });
+  };
+
+  const onCancel = () => {
+    form.resetFields();
+    onCancelCallback();
   };
 
   return (

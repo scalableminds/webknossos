@@ -1,5 +1,3 @@
-// @noflow
-/* eslint-disable import/no-extraneous-dependencies */
 const { Client } = require("pg");
 const moment = require("moment");
 
@@ -52,7 +50,7 @@ async function connect() {
   console.log("");
 
   for (const entry of res.rows) {
-    const duration = moment.duration(parseInt(entry.tracingtime, 10));
+    const duration = moment.duration(Number.parseInt(entry.tracingtime, 10));
     const tracingTimeSeconds = Math.floor(duration.seconds());
     const tracingTimeInMinutes = Math.floor(duration.asMinutes());
     const nodesPerHour = Math.round(entry.nodecount / duration.asHours());

@@ -1,5 +1,5 @@
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
-import { getProjectProgressReport } from "admin/admin_rest_api";
+import { getProjectProgressReport } from "admin/rest_api";
 import { Badge, Card, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
@@ -9,7 +9,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import * as React from "react";
 import { useState } from "react";
-import type { APIProjectProgressReport, APITeam } from "types/api_flow_types";
+import type { APIProjectProgressReport, APITeam } from "types/api_types";
 import TeamSelectionForm from "./team_selection_form";
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min

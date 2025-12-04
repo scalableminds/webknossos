@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:      com_scalableminds_webknossos_datastore_draco_NativeDracoToStlConverter
  * Method:     dracoToStl
- * Signature:  ([BFFFDDD)[B
+ * Signature:  ([BFFFDDDI)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_draco_NativeDracoToStlConverter_dracoToStl
-  (JNIEnv *, jobject, jbyteArray, jfloat, jfloat, jfloat, jdouble, jdouble, jdouble);
+  (JNIEnv *, jobject, jbyteArray, jfloat, jfloat, jfloat, jdouble, jdouble, jdouble, jint);
 
 #ifdef __cplusplus
 }

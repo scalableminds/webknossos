@@ -4,11 +4,10 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
-import com.scalableminds.util.tools.JsonHelper.bool2Box
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
   AdditionalAxisProto,
@@ -19,15 +18,14 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
 import models.dataset.DatasetDAO
-import net.liftweb.common.Box._
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.util.tools.Box._
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream
@@ -36,7 +34,11 @@ import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext
 import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
-class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
+class NmlParser @Inject()(datasetDAO: DatasetDAO)
+    extends LazyLogging
+    with ProtoGeometryImplicits
+    with ColorGenerator
+    with FoxImplicits {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0
@@ -75,7 +77,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             datasetName = dataset.name,
             editPosition = nmlParams.editPosition,
             editRotation = nmlParams.editRotation,
-            elementClass = ElementClass.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+            elementClass = ElementClassProto.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             fallbackLayer = v.fallbackLayerName,
             largestSegmentId = v.largestSegmentId,
             version = 0,
@@ -89,36 +91,34 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             segmentGroups = v.segmentGroups,
             hasSegmentIndex = None, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             editPositionAdditionalCoordinates = nmlParams.editPositionAdditionalCoordinates,
-            additionalAxes = nmlParams.additionalAxisProtos
+            additionalAxes = nmlParams.additionalAxisProtos,
+            hasEditableMapping = if (v.editedMappingEdgesLocation.isDefined) Some(true) else None
           ),
           basePath.getOrElse("") + v.dataZipPath,
           v.name,
+          v.editedMappingEdgesLocation.map(location => basePath.getOrElse("") + location),
+          v.editedMappingBaseMappingName
         )
       }
-      skeletonTracingOpt: Option[SkeletonTracing] = if (nmlParams.treesSplit.isEmpty && nmlParams.userBoundingBoxes.isEmpty)
-        None
-      else
-        Some(
-          SkeletonTracing(
-            dataset.name,
-            nmlParams.treesSplit,
-            nmlParams.timestamp,
-            nmlParams.taskBoundingBox,
-            nmlParams.activeNodeId,
-            nmlParams.editPosition,
-            nmlParams.editRotation,
-            nmlParams.zoomLevel,
-            version = 0,
-            None,
-            nmlParams.treeGroupsAfterSplit,
-            nmlParams.userBoundingBoxes,
-            Some(dataset._organization),
-            nmlParams.editPositionAdditionalCoordinates,
-            additionalAxes = nmlParams.additionalAxisProtos
-          )
-        )
+      skeletonTracing: SkeletonTracing = SkeletonTracing(
+        dataset.name,
+        nmlParams.treesSplit,
+        nmlParams.timestamp,
+        nmlParams.taskBoundingBox,
+        nmlParams.activeNodeId,
+        nmlParams.editPosition,
+        nmlParams.editRotation,
+        nmlParams.zoomLevel,
+        version = 0,
+        None,
+        nmlParams.treeGroupsAfterSplit,
+        nmlParams.userBoundingBoxes,
+        Some(dataset._organization),
+        nmlParams.editPositionAdditionalCoordinates,
+        additionalAxes = nmlParams.additionalAxisProtos
+      )
     } yield
-      NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
+      NmlParseSuccessWithoutFile(skeletonTracing, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
 
   private def getParametersFromNML(
       nmlInputStream: InputStream,
@@ -127,14 +127,14 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
     try {
       val nmlData = XML.load(nmlInputStream)
       for {
-        parameters <- (nmlData \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
+        parameters <- Box((nmlData \ "parameters").headOption) ?~ Messages("nml.parameters.notFound")
         timestamp = parseTime(parameters \ "time")
         comments <- parseComments(nmlData \ "comments")
         branchPoints <- parseBranchPoints(nmlData \ "branchpoints", timestamp)
         trees <- parseTrees(nmlData \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
         treeGroups <- extractTreeGroups(nmlData \ "groups")
         volumes = extractVolumes(nmlData \ "volume")
-        _ <- bool2Box(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
+        _ <- Box.fromBool(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
           "nml.duplicateVolumeLayerNames")
         treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
         treesSplit = treesAndGroupsAfterSplitting._1
@@ -205,7 +205,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
   private def parseTreeGroup(node: XMLNode)(implicit m: MessagesProvider): Box[TreeGroup] = {
     val idText = getSingleAttribute(node, "id")
     for {
-      id <- idText.toIntOpt ?~ Messages("nml.treegroup.id.invalid", idText)
+      id <- Box(idText.toIntOpt) ?~ Messages("nml.treegroup.id.invalid", idText)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
       isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(true)
@@ -223,7 +223,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
           getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
-          extractSegmentGroups(node \ "groups").getOrElse(List())
+          extractSegmentGroups(node \ "groups").getOrElse(List()),
+          getSingleAttributeOpt(node, "editedMappingEdgesLocation"),
+          getSingleAttributeOpt(node, "editedMappingBaseMappingName")
         )
       }
     )
@@ -237,7 +239,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
   private def parseSegmentGroup(node: XMLNode)(implicit m: MessagesProvider): Box[SegmentGroup] = {
     val idText = getSingleAttribute(node, "id")
     for {
-      id <- idText.toIntOpt ?~ Messages("nml.segmentGroup.id.invalid", idText)
+      id <- Box(idText.toIntOpt) ?~ Messages("nml.segmentGroup.id.invalid", idText)
       children <- (node \ "group").map(parseSegmentGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
     } yield SegmentGroup(name, id, children)
@@ -254,6 +256,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
       }
       val anchorPositionAdditionalCoordinates = parseAdditionalCoordinateValues(node)
       val metadata = parseMetadata(node \ "metadata" \ "metadataEntry")
+      val color = parseColorOpt(node)
+      val isVisible = parseVisibility(node, color)
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
@@ -262,7 +266,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
         color = parseColorOpt(node),
         groupId = getSingleAttribute(node, "groupId").toIntOpt,
         anchorPositionAdditionalCoordinates = anchorPositionAdditionalCoordinates,
-        metadata = metadata
+        metadata = metadata,
+        isVisible = isVisible
       )
     })
 
@@ -309,11 +314,11 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
       boundingBoxNodes.flatMap(node => {
         val idText = getSingleAttribute(node, "id")
         for {
-          id <- idText.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", idText)
+          id <- Box(idText.toIntOpt) ?~ Messages("nml.boundingbox.id.invalid", idText)
           name = getSingleAttribute(node, "name")
           isVisible = getSingleAttribute(node, "isVisible").toBooleanOpt
           color = parseColorOpt(node)
-          boundingBox <- parseBoundingBox(node)
+          boundingBox <- Box(parseBoundingBox(node))
           nameOpt = if (name.isEmpty) None else Some(name)
         } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)
       })
@@ -406,7 +411,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
       implicit m: MessagesProvider): Box[List[BranchPoint]] =
     (branchPoints \ "branchpoint").zipWithIndex.map {
       case (branchPoint, index) =>
-        getSingleAttribute(branchPoint, "id").toIntOpt.map { nodeId =>
+        Box(getSingleAttribute(branchPoint, "id").toIntOpt).map { nodeId =>
           val parsedTimestamp = getSingleAttribute(branchPoint, "time").toLongOpt
           val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
           BranchPoint(nodeId, timestamp)
@@ -471,7 +476,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
       implicit m: MessagesProvider): Box[Tree] = {
     val treeIdText = getSingleAttribute(tree, "id")
     for {
-      id <- treeIdText.toIntOpt ?~ Messages("nml.tree.id.invalid", treeIdText)
+      id <- Box(treeIdText.toIntOpt) ?~ Messages("nml.tree.id.invalid", treeIdText)
       color = parseColorOpt(tree)
       name = parseName(tree)
       treeType = parseType(tree)
@@ -511,8 +516,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
       commentNode <- comments \ "comment"
     } yield {
       for {
-        nodeId <- getSingleAttribute(commentNode, "node").toIntOpt ?~ Messages("nml.comment.node.invalid",
-                                                                               getSingleAttribute(commentNode, "node"))
+        nodeId <- Box(getSingleAttribute(commentNode, "node").toIntOpt) ?~ Messages("nml.comment.node.invalid",
+                                                                                    getSingleAttribute(commentNode,
+                                                                                                       "node"))
       } yield {
         val content = getSingleAttribute(commentNode, "content")
         Comment(nodeId, content)
@@ -553,8 +559,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
     val sourceStr = getSingleAttribute(edge, "source")
     val targetStr = getSingleAttribute(edge, "target")
     for {
-      source <- sourceStr.toIntOpt ?~ Messages("nml.edge.invalid", sourceStr)
-      target <- targetStr.toIntOpt ?~ Messages("nml.edge.invalid", targetStr)
+      source <- Box(sourceStr.toIntOpt) ?~ Messages("nml.edge.invalid", sourceStr)
+      target <- Box(targetStr.toIntOpt) ?~ Messages("nml.edge.invalid", targetStr)
     } yield {
       Edge(source, target)
     }
@@ -578,10 +584,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
   private def parseNode(node: XMLNode)(implicit m: MessagesProvider): Box[Node] = {
     val nodeIdText = getSingleAttribute(node, "id")
     for {
-      id <- nodeIdText.toIntOpt ?~ Messages("nml.node.id.invalid", "", nodeIdText)
+      id <- Box(nodeIdText.toIntOpt) ?~ Messages("nml.node.id.invalid", "", nodeIdText)
       radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
       additionalCoordinates = parseAdditionalCoordinateValues(node)
-      position <- parseVec3Int(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
+      position <- Box(parseVec3Int(node)) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)
       val mag = parseMag(node)

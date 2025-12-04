@@ -1,12 +1,12 @@
 import { DownOutlined, DownloadOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
+import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
 import { Button, Col, Dropdown, Form, Input, Row, Select } from "antd";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import _ from "lodash";
 import { useEffect, useState } from "react";
-import type { APIProject, APITaskType, APIUser } from "types/api_flow_types";
+import type { APIProject, APITaskType, APIUser } from "types/api_types";
 const FormItem = Form.Item;
 
 export type QueryObject = {

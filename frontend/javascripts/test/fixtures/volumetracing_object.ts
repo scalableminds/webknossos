@@ -1,30 +1,28 @@
 import update from "immutability-helper";
-import Constants, { AnnotationToolEnum } from "oxalis/constants";
-import mockRequire from "mock-require";
-import defaultState from "oxalis/default_state";
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
-const volumeTracing = {
-  type: "volume",
-  activeCellId: 0,
-  activeTool: AnnotationToolEnum.MOVE,
-  largestSegmentId: 0,
-  contourList: [],
-  lastLabelActions: [],
-  tracingId: "tracingId",
-};
+import Constants, { ViewModeValues } from "viewer/constants";
+import defaultState from "viewer/default_state";
+import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
+import { combinedReducer } from "viewer/store";
+import { setDatasetAction } from "viewer/model/actions/dataset_actions";
+import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
+import { apiDatasetForVolumeTracing } from "./dataset_server_object";
+import { tracing as serverVolumeTracing } from "./volumetracing_server_objects";
+import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
+import { preprocessDataset } from "viewer/model_initialization";
+
+export const VOLUME_TRACING_ID = "volumeTracingId";
+
+const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
+
 const notEmptyViewportRect = {
   top: 0,
   left: 0,
   width: Constants.VIEWPORT_WIDTH,
   height: Constants.VIEWPORT_WIDTH,
 };
-export const initialState = update(defaultState, {
-  tracing: {
+
+const stateWithoutDatasetInitialization = update(defaultState, {
+  annotation: {
     annotationType: {
       $set: "Explorational",
     },
@@ -35,21 +33,24 @@ export const initialState = update(defaultState, {
       $set: {
         branchPointsAllowed: true,
         allowUpdate: true,
+        allowSave: true,
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
-        magRestrictions: {
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
-          min: null,
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
-          max: null,
-        },
+        somaClickingAllowed: true,
+        mergerMode: false,
+        volumeInterpolationAllowed: true,
+        allowedModes: ViewModeValues,
+        magRestrictions: {},
       },
     },
+    isUpdatingCurrentlyAllowed: {
+      $set: true,
+    },
     volumes: {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ type: string; activeCellId: number; active... Remove this comment to see the full error message
       $set: [volumeTracing],
     },
+    readOnly: { $set: null },
   },
   dataset: {
     dataSource: {
@@ -58,17 +59,14 @@ export const initialState = update(defaultState, {
           {
             // We need to have some mags. Otherwise,
             // getRequestLogZoomStep will always return 0
-            resolutions: [
-              [1, 1, 1],
-              [2, 2, 2],
-              [4, 4, 4],
-            ],
+            mags: [{ mag: [1, 1, 1] }, { mag: [2, 2, 2] }, { mag: [4, 4, 4] }],
             category: "segmentation",
-            name: "tracingId",
-            tracingId: "tracingId",
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resolutions: [number, number, number][]; c... Remove this comment to see the full error message
-            isDisabled: false,
-            alpha: 100,
+            largestSegmentId: volumeTracing.largestSegmentId ?? 0,
+            elementClass: "uint32",
+            name: volumeTracing.tracingId,
+            tracingId: volumeTracing.tracingId,
+            additionalAxes: [],
+            boundingBox: convertFrontendBoundingBoxToServer(volumeTracing.boundingBox!),
           },
         ],
       },
@@ -76,7 +74,7 @@ export const initialState = update(defaultState, {
   },
   datasetConfiguration: {
     layers: {
-      tracingId: {
+      [volumeTracing.tracingId]: {
         $set: {
           color: [0, 0, 0],
           alpha: 100,
@@ -109,4 +107,16 @@ export const initialState = update(defaultState, {
       },
     },
   },
+  flycam: {
+    currentMatrix: {
+      // Apply the default 180 z axis rotation to get correct result in ortho related tests.
+      // This ensures the calculated flycam rotation is [0, 0, 0]. Otherwise it would be  [0, 0, 180].
+      $set: FlycamMatrixWithDefaultRotation,
+    },
+  },
 });
+
+export const initialState = combinedReducer(
+  stateWithoutDatasetInitialization,
+  setDatasetAction(preprocessDataset(apiDatasetForVolumeTracing, [serverVolumeTracing])),
+);

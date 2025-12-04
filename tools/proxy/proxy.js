@@ -1,17 +1,22 @@
 const express = require("express");
+const fs = require("fs");
 const httpProxy = require("http-proxy");
-const { spawn, exec } = require("child_process");
-const path = require("path");
+const { spawn, exec } = require("node:child_process");
+const path = require("node:path");
 const prefixLines = require("prefix-stream-lines");
+const https = require("https");
+
+const time5min = 5 * 60 * 1000;
 
 const proxy = httpProxy.createProxyServer({
-  proxyTimeout: 5 * 60 * 1000, // 5 min
-  timeout: 5 * 60 * 1000, // 5 min
+  proxyTimeout: time5min,
+  timeout: time5min,
 });
+
 const app = express();
 
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));
-const PORT = parseInt(process.env.PORT || 9000, 10);
+const PORT = Number.parseInt(process.env.PORT || 9000, 10);
 const HOST = `http://127.0.0.1:${PORT}`;
 const loggingPrefix = "Proxy:";
 
@@ -24,6 +29,13 @@ function makeEnv(port, host) {
   return env;
 }
 
+const webpack_tls_args = [
+  "--server-type", "https",
+  "--server-options-key", "./target/dev.key.pem",
+  "--server-options-cert", "./target/dev.cert.pem"
+];
+const webpack_args = process.argv.includes("--tls") ? webpack_tls_args : [];
+
 const processes = {
   backend: spawnIfNotSpecified(
     "noBackend",
@@ -35,7 +47,7 @@ const processes = {
       shell: true,
     },
   ),
-  webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", [], {
+  webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", webpack_args, {
     cwd: ROOT,
     env: makeEnv(PORT + 2, HOST),
     shell: true,
@@ -90,13 +102,13 @@ process.on("SIGINT", shutdown);
 
 proxy.on("error", (err, req, res) => {
   console.error(loggingPrefix, "Sending Bad gateway due to the following error: ", err);
-  res.writeHead(503, { 'Content-Type': 'text/html' });
+  res.writeHead(503, { "Content-Type": "text/html" });
   res.end(`
     <html>
       <head>
         <title>503 Service Unavailable</title>
         <script type="text/javascript">
-          let countdown = 5;
+          let countdown = 3;
           function updateCountdown() {
             document.getElementById('countdown').textContent = countdown;
             countdown--;
@@ -114,7 +126,7 @@ proxy.on("error", (err, req, res) => {
       <body>
         <h1>Bad gateway</h1>
         <p>The server might still be starting up, please try again in a few seconds or check console output.</p>
-        <p>Reloading in <span id="countdown">5</span> seconds...</p>
+        <p>Reloading in <span id="countdown">3</span> seconds...</p>
       </body>
     </html>
   `);
@@ -125,11 +137,26 @@ function toBackend(req, res) {
 }
 
 function toWebpackDev(req, res) {
-  proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
+  if (process.argv.includes("--tls")) {
+    proxy.web(req, res, {
+      headers: {
+        host: "localhost",
+      },
+      secure: false,
+      target: `https://127.0.0.1:${PORT + 2}`
+    });
+  } else {
+    proxy.web(req, res, {
+      headers: {
+        host: "localhost",
+      },
+      target: `http://127.0.0.1:${PORT + 2}`
+    });
+  }
 }
 
 function toSam(req, res) {
-  proxy.web(req, res, { target: `http://127.0.0.1:8080` });
+  proxy.web(req, res, { target: "http://127.0.0.1:8080" });
 }
 
 proxy.on("proxyReq", (proxyReq, req) => {
@@ -144,5 +171,19 @@ app.all("/dist/*", toSam);
 app.all("/assets/bundle/*", toWebpackDev);
 app.all("/*", toBackend);
 
-app.listen(PORT);
+if (process.argv.includes("--tls")) {
+  console.log(loggingPrefix, "Using TLS")
+  try {
+    https.createServer({
+      key: fs.readFileSync("target/dev.key.pem"),
+      cert: fs.readFileSync("target/dev.cert.pem"),
+    }, app).listen(PORT)
+  } catch (error) {
+    console.error(loggingPrefix, "Failed to start HTTPS server:", error.message);
+    console.error(loggingPrefix, "Make sure you've generated SSL certificates using the ./tools/proxy/gen-ssl-dev-certs.sh script");
+    process.exit(1);
+  }
+} else {
+  app.listen(PORT);
+}
 console.log(loggingPrefix, "Listening on port", PORT);

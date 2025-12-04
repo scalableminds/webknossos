@@ -1,0 +1,24 @@
+name: "Shell Retry"
+description: "Runs a small shell script with retries"
+inputs:
+  run:
+    description: "Command to execute."
+    required: true
+  retries:
+    description: "Maximum number of retries until failed"
+    required: true
+  retry_delay_seconds:
+    description: "Amount of time to sleep between each retry"
+    default: 0
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      run: |
+        for i in {1..${{ inputs.retries }}}; do
+          bash -c "$INPUT_COMMAND" && exit 0
+          sleep "${{ inputs.retry_delay_seconds }}"
+        done
+        exit 1
+      env:
+        INPUT_COMMAND: ${{ inputs.run }}

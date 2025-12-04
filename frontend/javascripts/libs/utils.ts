@@ -1,23 +1,17 @@
-import Maybe from "data.maybe";
+import { Chalk } from "chalk";
 import dayjs from "dayjs";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import _ from "lodash";
-import type {
-  BoundingBoxType,
-  ColorObject,
-  Point3,
-  TypedArray,
-  Vector3,
-  Vector4,
-  Vector6,
-} from "oxalis/constants";
-import type { BoundingBoxObject, NumberLike } from "oxalis/store";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser, MapEntries } from "types/api_types";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
+import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
+import type { TreeGroup } from "viewer/model/types/tree_types";
+import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
+
 // Fix JS modulo bug
 // http://javascript.about.com/od/problemsolving/a/modulobug.htm
 export function mod(x: number, n: number) {
@@ -138,10 +132,6 @@ export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) 
 
     return fn(nullableA);
   };
-}
-
-export function maybe<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => Maybe<B> {
-  return (nullableA: A | null | undefined) => Maybe.fromNullable(nullableA).map(fn);
 }
 
 export function parseMaybe(str: string | null | undefined): unknown | null {
@@ -280,7 +270,7 @@ export function getRandomColor(): Vector3 {
   return randomColor as any as Vector3;
 }
 
-export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
+export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxMinMaxType {
   const [x, y, z, width, height, depth] = bb;
   return {
     min: [x, y, z],
@@ -288,11 +278,15 @@ export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   };
 }
 
-export function computeBoundingBoxFromBoundingBoxObject(bb: BoundingBoxObject): BoundingBoxType {
+export function computeBoundingBoxFromBoundingBoxObject(
+  bb: BoundingBoxObject,
+): BoundingBoxMinMaxType {
   return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
 }
 
-export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): BoundingBoxObject {
+export function computeBoundingBoxObjectFromBoundingBox(
+  bb: BoundingBoxMinMaxType,
+): BoundingBoxObject {
   const boundingBoxArray = computeArrayFromBoundingBox(bb);
   return {
     topLeft: [boundingBoxArray[0], boundingBoxArray[1], boundingBoxArray[2]],
@@ -302,7 +296,7 @@ export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): Bo
   };
 }
 
-export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
+export function computeArrayFromBoundingBox(bb: BoundingBoxMinMaxType): Vector6 {
   return [
     bb.min[0],
     bb.min[1],
@@ -313,11 +307,13 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
   ];
 }
 
-export function computeShapeFromBoundingBox(bb: BoundingBoxType): Vector3 {
+export function computeShapeFromBoundingBox(bb: BoundingBoxMinMaxType): Vector3 {
   return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
 }
 
-export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+export function aggregateBoundingBox(
+  boundingBoxes: Array<BoundingBoxObject>,
+): BoundingBoxMinMaxType {
   if (boundingBoxes.length === 0) {
     return {
       min: [0, 0, 0],
@@ -348,8 +344,8 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
 }
 
 export function areBoundingBoxesOverlappingOrTouching(
-  firstBB: BoundingBoxType,
-  secondBB: BoundingBoxType,
+  firstBB: BoundingBoxMinMaxType,
+  secondBB: BoundingBoxMinMaxType,
 ) {
   let areOverlapping = true;
 
@@ -429,10 +425,6 @@ export function stringToNumberArray(s: string): Array<number> {
   return result;
 }
 
-export function concatVector3(a: Vector3, b: Vector3): Vector6 {
-  return [a[0], a[1], a[2], b[0], b[1], b[2]];
-}
-
 export function numberArrayToVector3(array: Array<number>): Vector3 {
   const output: Vector3 = [0, 0, 0];
 
@@ -463,14 +455,6 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
     y,
     z,
   };
-}
-
-export function transformToCSVRow(dataRow: any[]) {
-  return dataRow
-    .map(String) // convert every value to String
-    .map((v) => v.replaceAll('"', '""')) // escape double quotes
-    .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
-    .join(","); // comma-separated
 }
 
 export function isUserTeamManager(user: APIUser): boolean {
@@ -667,12 +651,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
 
   const auxSet = new Set(elements);
   return arr.filter((x) => !auxSet.has(x));
-}
-
-// Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
-// you can't do getOrElse(null) without flow complaining
-export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {
-  return _maybe.isJust ? _maybe.get() : null;
 }
 
 export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
@@ -881,9 +859,11 @@ export function waitForElementWithId(elementId: string): Promise<any> {
 }
 
 export function convertDecToBase256(num: number): Vector4 {
+  const sign = Math.sign(num);
+
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
-  let tmp = num;
+  let tmp = Math.abs(num);
 
   let r: number, g: number, b: number, a: number;
   [tmp, r] = divMod(tmp);
@@ -895,11 +875,13 @@ export function convertDecToBase256(num: number): Vector4 {
   [tmp, a] = divMod(tmp);
 
   // Little endian
-  return [r, g, b, a];
+  return map4((el) => sign * el, [r, g, b, a]);
 }
 
 export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
-  return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
+  return data instanceof BigUint64Array || data instanceof BigInt64Array
+    ? BigInt(uncastNumber)
+    : uncastNumber;
 }
 
 export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
@@ -915,12 +897,20 @@ export function convertNumberTo64BitTuple(num: number | bigint | null): [number,
   if (num == null || Number.isNaN(num)) {
     return [0, 0];
   }
+
+  let sign: number | null;
+  if (typeof num === "bigint") {
+    sign = num < 0n ? -1 : 1;
+  } else {
+    sign = Math.sign(num);
+  }
+
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
-  const bigNum = BigInt(num);
+  const bigNum = BigInt(sign) * BigInt(num);
 
-  const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
-  const bigNumHigh = Number(bigNum >> 32n);
+  const bigNumLow = sign * Number((2n ** 32n - 1n) & bigNum);
+  const bigNumHigh = sign * Number(bigNum >> 32n);
 
   return [bigNumHigh, bigNumLow];
 }
@@ -1083,32 +1073,53 @@ export function getWindowBounds(): [number, number] {
   return [width, height];
 }
 
-/**
- * Deep diff between two object, using lodash
- * @param  {Object} object Object compared
- * @param  {Object} base   Object to compare with
- * @return {Object}        Return a new object who represent the diff
- *
- * Source: https://gist.github.com/Yimiprod/7ee176597fef230d1451#gistcomment-2699388
- */
-export function diffObjects(
-  object: Record<string, any>,
-  base: Record<string, any>,
-): Record<string, any> {
-  function changes(_object: Record<string, any>, _base: Record<string, any>) {
-    let arrayIndexCounter = 0;
-    return _.transform(_object, (result, value, key) => {
-      if (!_.isEqual(value, _base[key])) {
-        const resultKey = _.isArray(_base) ? arrayIndexCounter++ : key;
-        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-        result[resultKey] =
-          _.isObject(value) && _.isObject(_base[key]) ? changes(value, _base[key]) : value;
-      }
-    });
+export function diffObjects<K extends string | number | symbol, V, Dict extends Record<K, V>>(
+  a: Dict,
+  b: Dict,
+): Partial<Dict> {
+  /**
+   * Returns the difference between two objects as a partial object.
+   *
+   * Compares two objects `a` and `b` and returns a new object containing the key-value
+   * pairs that are present in `b` but not in `a`, using deep equality comparison.
+   * Note that keys that are not present in b but in a are *not* returned.
+   *
+   * @param {Dict} a - The "original" object to compare to as a base.
+   * @param {Dict} b - The "newer" object that will be used for the returned values.
+   * @returns {Partial<Dict>} - A partial object containing the key-value pairs that differ.
+   *
+   * @example
+   * const a = { x: 1, y: 2, z: 3 };
+   * const b = { x: 1, y: 3, q: 4 }; // y is different, z is missing, q was added
+   * diffObjects(a, b); // returns { y: 3, q: 4 }
+   */
+  return _.fromPairs(_.differenceWith(_.toPairs(b), _.toPairs(a), _.isEqual)) as Partial<Dict>;
+}
+
+export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  const intersection = new Set<T>();
+
+  for (const item of setA) {
+    if (setB.has(item)) {
+      intersection.add(item);
+    } else {
+      aWithoutB.add(item);
+    }
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'Record<s... Remove this comment to see the full error message
-  return changes(object, base);
+  for (const item of setB) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
 }
 
 export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
@@ -1239,7 +1250,21 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
 
 export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
   const { value } = x.entries().next();
-  return Boolean(value && typeof value[0] === "number");
+  if (value === undefined) {
+    // Let's assume a number map when the map is empty.
+    return true;
+  }
+  return Boolean(typeof value[0] === "number");
+}
+
+export function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
+  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
+}
+
+export function getAdaptToTypeFunctionFromList<T extends number | bigint>(list: Array<T>) {
+  return list[0] == null || Boolean(typeof list[0] === "number")
+    ? (el: NumberLike) => el
+    : (el: NumberLike) => BigInt(el);
 }
 
 export function isBigInt(x: NumberLike): x is bigint {
@@ -1306,4 +1331,96 @@ export function getPhraseFromCamelCaseString(stringInCamelCase: string): string 
     .split(/(?=[A-Z])/)
     .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
     .join(" ");
+}
+
+export function mapGroupsDeep<Group extends TreeGroup | SegmentGroup, R>(
+  groups: Group[],
+  mapFn: (group: Group, mappedChildren: R[]) => R,
+): R[] {
+  return groups.map((group: Group) => {
+    const mappedChildren = mapGroupsDeep(group.children as Group[], mapFn);
+    return mapFn(group, mappedChildren);
+  });
+}
+
+export function safeZipObject<K extends string | number | symbol, V>(
+  keys: K[],
+  values: V[],
+): Record<K, V> {
+  if (keys.length !== values.length) {
+    throw new Error("Cannot construct objects because keys and values don't match in length.");
+  }
+  return _.zipObject(keys, values) as Record<K, V>;
+}
+
+export function mapEntriesToMap<K extends string | number | symbol, V>(
+  entries: MapEntries<K, V>,
+): Record<K, V> {
+  const dict = {} as Record<K, V>;
+  for (const entry of entries) {
+    dict[entry.id] = entry.value;
+  }
+  return dict;
+}
+
+export function areSetsEqual<T>(setA: Set<T>, setB: Set<T>) {
+  if (setA.size !== setB.size) return false;
+  for (const val of setA) {
+    if (!setB.has(val)) return false;
+  }
+  return true;
+}
+
+// ColoredLogger can be used to make certain log outputs easier to find (especially useful
+// when automatic logging of redux actions is enabled which makes the overall logging
+// very verbose).
+const chalk = new Chalk({ level: 3 });
+export const ColoredLogger = {
+  log: (...args: unknown[]) => {
+    // Simple wrapper to allow easy switching from colored to non-colored logs
+    console.log(...args);
+  },
+  logRed: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgRed(str), ...args);
+  },
+  logGreen: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgGreen(str), ...args);
+  },
+  logYellow: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgYellow(str), ...args);
+  },
+  logBlue: (str: string, ...args: unknown[]) => {
+    console.log(chalk.bgBlue(str), ...args);
+  },
+};
+
+export async function retryAsyncFunction<T>(
+  fn: () => Promise<T>,
+  retryCount: number = 3, // 0 retries would only do 1 attempt
+  exponentialDelayFactor: number = 1000,
+): Promise<T> {
+  let currentAttempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (exception) {
+      if (currentAttempt === retryCount) {
+        throw exception;
+      } else {
+        console.warn("Failed to run async function due to", exception, ". Will retry now.");
+      }
+      currentAttempt++;
+      await sleep(exponentialDelayFactor * 2 ** currentAttempt);
+    }
+  }
+}
+
+/**
+ * Converts a string to a boolean value.
+ * Returns false for invalid inputs.
+ */
+export function stringToBoolean(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  return false;
 }

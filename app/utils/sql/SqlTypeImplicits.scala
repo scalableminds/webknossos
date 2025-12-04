@@ -5,6 +5,7 @@ import com.scalableminds.util.time.Instant
 import play.api.libs.json.JsValue
 import slick.jdbc.{GetResult, PositionedResult}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.helpers.UPath
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -14,6 +15,10 @@ trait SqlTypeImplicits {
 
   implicit protected object GetObjectId extends GetResult[ObjectId] {
     override def apply(v1: PositionedResult): ObjectId = ObjectId(v1.<<)
+  }
+
+  implicit protected object GetObjectIdOpt extends GetResult[Option[ObjectId]] {
+    override def apply(v1: PositionedResult): Option[ObjectId] = v1.nextStringOption().map(ObjectId(_))
   }
 
   implicit protected object GetInstant extends GetResult[Instant] {
@@ -64,6 +69,8 @@ trait SqlTypeImplicits {
 
   implicit def boundingBoxToSqlValue(v: BoundingBox): SqlValue = BoundingBoxValue(v)
 
+  implicit def upathToSqlValue(v: UPath): SqlValue = UPathValue(v)
+
   implicit def vec3IntToSqlValue(v: Vec3Int): SqlValue = Vector3Value(v.toVec3Double)
 
   implicit def vec3DoubleToSqlValue(v: Vec3Double): SqlValue = Vector3Value(v)
@@ -99,6 +106,8 @@ trait SqlTypeImplicits {
   implicit def byteArrayToSqlToken(v: Array[Byte]): SqlToken = byteArrayToSqlValue(v).toSqlToken
 
   implicit def boundingBoxToSqlToken(v: BoundingBox): SqlToken = boundingBoxToSqlValue(v).toSqlToken
+
+  implicit def upathToSqlToken(v: UPath): SqlToken = upathToSqlValue(v).toSqlToken
 
   implicit def vec3IntToSqlToken(v: Vec3Int): SqlToken = vec3IntToSqlValue(v).toSqlToken
 

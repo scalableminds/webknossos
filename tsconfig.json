@@ -9,24 +9,11 @@
     "outDir": "build",
     "jsx": "react-jsx",
     "strict": true,
-    "target": "es2021",
-    "types": [], //reconsider this later
+    "target": "esnext",
     "skipLibCheck": true, //reconsider this later
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./frontend/javascripts",
-    "lib": [
-      "ES2021",
-      "dom",
-    ],
     "paths": {
-      "oxalis/*": ["./oxalis/*"],
-      "libs/*": ["./libs/*"],
-      "dashboard/*": ["./dashboard/*"],
-      "components/*": ["./components/*"],
-      "admin/*": ["./admin/*"],
-      "types/*": ["./types/*"],
-      "test/*": ["./test/*"],
-      "features": ["./features.ts"]
+      "*": ["./frontend/javascripts/*"]
     }
   },
   "include": [

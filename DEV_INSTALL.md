@@ -1,35 +1,17 @@
 # Development installation
 
-## Docker
-
-This is only recommended for local testing (not for development). Docker 19.03.0+ and Docker Compose 2.+ are required.
-
-```bash
-git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
-cd webknossos
-docker compose pull webknossos
-./start-docker.sh
-```
-
-Open your local WEBKNOSSOS instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
-Now, you are ready to use your local WEBKNOSSOS instance.
-
-See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
-
-For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/webknossos/installation.html).
 
 ## Dependencies
 
-* [Oracle JDK 21](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
-* [sbt](http://www.scala-sbt.org/)
+* [Oracle JDK 21](https://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
+* [sbt](https://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
-* [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
 * [Draco](https://github.com/google/draco)
-* [node.js 18](http://nodejs.org/download/)
+* [node.js 22+](https://nodejs.org/)
 * [yarn package manager](https://yarnpkg.com/)
-* [git](http://git-scm.com/downloads)
+* [git](https://git-scm.com/downloads)
 * [cmake](https://cmake.org/download/)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
@@ -37,24 +19,20 @@ For non-localhost deployments, check out the [installation guide in the document
 ## MacOS
 
 ```bash
-# WEBKNOSSOS needs to be run from x86_64 environment (only applicable for arm64-based Macs)
-arch -x86_64 /bin/zsh
 
 # Install Homebrew package manager
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed, draco
-brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis c-blosc brotli wget
+brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
-echo 'if [ $(arch) = "i386" ]; then' >> ~/.zshrc
-echo '  export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
-echo '  export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
-echo '  export PATH="/usr/local/opt/openssl/bin:$PATH"' >> ~/.zshrc
-echo '  export LDFLAGS="-L/usr/local/opt/openssl/lib"' >> ~/.zshrc
-echo '  export CPPFLAGS="-I/usr/local/opt/openssl/include"' >> ~/.zshrc
-echo 'fi' >> ~/.zshrc
+echo 'export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
+echo 'export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="/opt/homebrew/opt/openssl/bin:$PATH"' >> ~/.zshrc
+echo 'export LDFLAGS="-L/opt/homebrew/opt/openssl/lib"' >> ~/.zshrc
+echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl/include"' >> ~/.zshrc
 
 # Start postgres and redis
 brew services start postgresql
@@ -80,13 +58,13 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 
 ```bash
 sudo apt update
-sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
+sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libbrotli1 libdraco-dev cmake
 
-# Install nvm, node 18
+# Install nvm, node 22
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
-nvm install 18
-nvm use 18
+nvm install 22
+nvm use 22
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
@@ -121,7 +99,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ### sbt
 
-* See: [http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html)
+* See: [https://www.scala-sbt.org/release/docs/Getting-Started/Setup.html](https://www.scala-sbt.org/release/docs/Getting-Started/Setup.html)
 
 ### PostgreSQL
 
@@ -134,8 +112,8 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ### node.js & yarn
 
-* Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **18 is required**
+* Install node from [https://nodejs.org/](https://nodejs.org/)
+* node version **22+ is required**
 * Use `corepack` to install `yarn`
 * `corepack enable`&& `yarn install`
 
@@ -170,11 +148,8 @@ Note: If the postgres schema changed, you may see compilation errors in the form
 ## Tests and Tools
 
 ```bash
-# Frontend linting
-yarn run lint
-
-# Format frontend code
-yarn format-frontend
+# Frontend linting & Formatting
+yarn fix-frontend
 
 # Format backend code
 yarn format-backend
@@ -183,7 +158,7 @@ yarn format-backend
 yarn tsc
 
 # Frontend tests
-yarn test-verbose
+yarn test
 
 # End-to-end tests
 docker compose run e2e-tests

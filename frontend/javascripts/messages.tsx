@@ -1,10 +1,10 @@
 import _ from "lodash";
-import type { Vector4 } from "oxalis/constants";
+import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
   UserConfiguration,
-} from "oxalis/store";
+} from "viewer/store";
 
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -22,6 +22,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   centerNewNode: "Auto-center Nodes",
+  applyNodeRotationOnActivation: "Auto-rotate to Nodes",
   highlightCommentedNodes: "Highlight Commented Nodes",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
@@ -50,6 +51,8 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
+  segmentationPatternOpacity:
+    "The opacity of the pattern overlaid on any segmentation layer for improved contrast.",
   loadingStrategy: `You can choose between loading the best quality first
       (will take longer until you see data) or alternatively,
       improving the quality progressively (data will be loaded faster,
@@ -82,6 +85,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   colorLayerOrder:
     "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
 };
+
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
   alpha: "Layer opacity",
@@ -159,7 +163,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The current position is outside of the dataset's bounding box. No data will be shown here.",
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard",
-  "tracing.copy_rotation": "Copy rotation to clipboard",
   "tracing.copy_sharing_link": "Copy sharing link to clipboard",
   "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
     `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
@@ -177,9 +180,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
-  "tracing.segment_id_out_of_bounds": _.template(
-    "Cannot create a segment id larger than the segment layers maximum value of <%- maxSegmentId %>.",
-  ),
+  "tracing.segment_id_out_of_bounds": (
+    requestedId: number,
+    validRange: readonly [number, number],
+  ) =>
+    `Cannot create a segment with id=${requestedId} because it is not between ${validRange[0]} and ${validRange[1]}.`,
+
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
@@ -305,6 +311,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The annotation was successfully unlocked. Reloading this annotation ...",
   "annotation.lock.success":
     "The annotation was successfully locked. Reloading this annotation ...",
+  "proofreading.multi_cut.different_agglomerate_selected": `The selected segment belongs to a different agglomerate than the one that is currently partitioned via selections. If you want to split this other agglomerate please clear your current selection with "ESC" first.`,
+  "proofreading.multi_cut.empty_partition":
+    "Not every partition has at least one selected segment. Select at least one segment for each partition before performing a cut action.",
+  "proofreading.multi_cut.no_valid_agglomerate":
+    "No agglomerate for the selected segments could be found. Please retry with a new selection.",
+  "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -330,7 +342,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.leave_during_upload":
     "WARNING: The upload is still in progress and will be aborted when hitting OK. Please click cancel and wait until the upload is finished before leaving the page.",
   "dataset.leave_with_unsaved_changes":
-    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
+    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Ok”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.add_zarr_different_scale_warning":
@@ -348,7 +360,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.name.already_taken":
     "This name is already being used by a different dataset. Please choose a different name.",
   "dataset.no_data": "No data available! Something seems to be wrong with the dataset.",
-  "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
   "dataset.import.required.name": "Please provide a name for the dataset.",
@@ -365,8 +376,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":
     "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
-  "dataset.unsupported_segmentation_class_int64":
-    "The segmentation layer was defined as int64. This format is not supported for segmentations. Please convert the layer to the unsigned uint64 format.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.z1_downsampling_hint":
@@ -414,7 +423,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Unfortunately, we cannot provide the service without your consent to the processing of your data.",
   "auth.tos_check_required":
     "Unfortunately, we cannot provide the service without your consent to our terms of service.",
-  "auth.reset_logout": "You will be logged out, after successfully changing your password.",
+  "auth.reset_logout": "You will be logged out after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",
   "auth.reset_new_password2": "Please repeat your new password!",
@@ -474,7 +483,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
   ),
   "users.set_admin": _.template(
-    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capbilities for all users, projects, and tasks.",
+    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capabilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(
@@ -493,6 +502,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
   "organization.plan.upgrage_request_sent":
     "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
+  "organization.credit_request_sent":
+    "An email with your credit request has been sent to the WEBKNOSSOS sales team.",
   "organization.plan.feature_not_available": (
     requiredPlan: string,
     organizationOwnerName: string,
@@ -500,4 +511,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
   "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
     `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
+  "jobs.wrongNumberOfBoundingBoxes":
+    "To use the split/merger evaluation, make sure to have exactly one bounding box, either user-defined or from a task.",
 };

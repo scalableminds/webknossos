@@ -10,7 +10,6 @@ class CustomDRACOLoader extends DRACOLoader {
       if (_dracoLoader == null) {
         throw new Error("DracoLoader not instantiated.");
       }
-      // @ts-ignore
       _dracoLoader.parse(buffer, resolve, reject);
     });
 }

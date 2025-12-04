@@ -20,7 +20,6 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
     val lengthOfC = if (c.isDefined) 1 else 0
     lengthOfC + 2 + lengthOfZ
   }
-
 }
 
 object AxisOrder {
@@ -95,6 +94,9 @@ case class FullAxisOrder(axes: Seq[Axis]) {
     wkToArrayPermutation.map(indices(_))
 
   def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
+    arrayToWkPermutation.map(indices(_))
+
+  def permuteIndicesArrayToWkLong(indices: Array[Long]): Array[Long] =
     arrayToWkPermutation.map(indices(_))
 
   def toWkLibsJson: JsValue =

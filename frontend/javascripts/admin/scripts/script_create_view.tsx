@@ -1,34 +1,22 @@
-import {
-  createScript,
-  getScript,
-  getTeamManagerOrAdminUsers,
-  updateScript,
-} from "admin/admin_rest_api";
+import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Card, Form, Input, Select } from "antd";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
-import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import type { APIUser } from "types/api_flow_types";
+import { useNavigate, useParams } from "react-router-dom";
+import type { APIUser } from "types/api_types";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 const FormItem = Form.Item;
-type OwnProps = {
-  scriptId?: string | null | undefined;
-};
-type StateProps = {
-  activeUser: APIUser;
-};
-type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
 
-function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
+function ScriptCreateView() {
+  const { scriptId } = useParams();
+
+  const navigate = useNavigate();
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
+
   useEffect(() => {
     fetchData();
     applyDefaults();
@@ -59,7 +47,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
       await createScript(formValues);
     }
 
-    history.push("/scripts");
+    navigate("/scripts");
   };
 
   const titlePrefix = scriptId ? "Update" : "Create";
@@ -135,9 +123,4 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-});
-
-const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(ScriptCreateView));
+export default ScriptCreateView;

@@ -1,6 +1,6 @@
 import { CardContainer } from "admin/dataset/dataset_components";
 import { useState } from "react";
-import type { APIDataStore } from "types/api_flow_types";
+import type { APIDataStore } from "types/api_types";
 import SelectImportType from "./composition_wizard/01_select_import_type";
 import UploadFiles from "./composition_wizard/02_upload_files";
 import SelectDatasets from "./composition_wizard/03_select_datasets";

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-const { spawnSync } = require("child_process");
-const path = require("path");
-const fs = require("fs");
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
+const fs = require("node:fs");
 const { Command } = require("commander");
 
-const schemaPath = path.join(__dirname, "schema.sql");
-const evolutionsPath = path.resolve(path.join(__dirname, "..", "..", "conf", "evolutions"));
+const repoRootPath = path.resolve(path.join(__dirname, "..", ".."));
+const schemaPath = path.join(repoRootPath, "schema", "schema.sql");
+const evolutionsPath = path.join(repoRootPath, "schema", "evolutions");
 
 const PG_CONFIG = (() => {
   let rawUrl = process.env.POSTGRES_URL || "postgres://postgres:postgres@127.0.0.1:5432/webknossos";
@@ -15,10 +16,10 @@ const PG_CONFIG = (() => {
   const url = new URL(rawUrl);
   url.username = url.username
     ? url.username
-    : process.env.POSTGRES_USER ?? process.env.PGUSER ?? "postgres";
+    : (process.env.POSTGRES_USER ?? process.env.PGUSER ?? "postgres");
   url.password = url.password
     ? url.password
-    : process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres";
+    : (process.env.POSTGRES_PASSWORD ?? process.env.PGPASSWORD ?? "postgres");
   url.port = url.port ? url.port : 5432;
 
   const urlWithDefaultDatabase = new URL(url);
@@ -235,7 +236,7 @@ function findEvolutionFiles() {
     .readdirSync(evolutionsPath)
     .filter((filename) => filename.endsWith(".sql"))
     .map((filename) => {
-      const num = parseInt(filename.split("-")[0], 10);
+      const num = Number.parseInt(filename.split("-")[0], 10);
       return [num, filename];
     })
     .sort((a, b) => a[0] - b[0]);
@@ -272,7 +273,7 @@ function checkEvolutionsSchema() {
 }
 
 function applyEvolutions() {
-  const schemaVersion = parseInt(
+  const schemaVersion = Number.parseInt(
     callPsql("SELECT schemaVersion FROM webknossos.releaseInformation;").trim(),
     10,
   );
@@ -289,17 +290,16 @@ function applyEvolutions() {
 
   // apply evolutions
   if (evolutions.length > 0) {
-    console.log(`Applying evolutions: ${evolutions}`);
-    safePsqlSpawn([
-      PG_CONFIG.url,
-      "-v",
-      "ON_ERROR_STOP=ON",
-      "-q",
-      ...evolutions.flatMap((evolutionFilename) => [
+    for (const evolutionFilename of evolutions) {
+      console.log(`Applying evolution: ${evolutionFilename}`);
+      safePsqlSpawn([
+        PG_CONFIG.url,
+        "-v",
+        "ON_ERROR_STOP=ON",
         "-f",
         path.join(evolutionsPath, evolutionFilename),
-      ]),
-    ]);
+      ]);
+    }
     console.log("✨✨ Successfully applied the evolutions");
   } else {
     console.log("There are no evolutions that can be applied.");
@@ -309,7 +309,7 @@ function applyEvolutions() {
 function assertUniqueEvolutionNumbers() {
   const groupedEvolutions = new Map();
   for (const filename of fs.readdirSync(evolutionsPath)) {
-    const num = parseInt(filename.split("-")[0], 10);
+    const num = Number.parseInt(filename.split("-")[0], 10);
     if (isNaN(num)) {
       console.log("Found invalid evolution filename:", filename);
     }
@@ -383,7 +383,9 @@ program
 
 program
   .command("insert-local-datastore")
-  .description("Inserts local datastore (note that this is redundant to initialData on webknossos startup)")
+  .description(
+    "Inserts local datastore (note that this is redundant to initialData on webknossos startup)",
+  )
   .action(() => {
     console.log("Inserting local datastore in the local database");
     console.log(
@@ -401,7 +403,7 @@ program
     console.log("Enabling jobs in the local database by inserting a worker.");
     console.log(
       callPsql(
-        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands, name) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file, infer_mitochondria, train_model, infer_with_model, align_sections}', 'Dev Worker') ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands;`,
+        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands, name) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file, infer_mitochondria, train_neuron_model, train_instance_model, infer_instances, align_sections}', 'Dev Worker') ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands;`,
       ),
     );
     console.log("✨✨ Done");
@@ -414,6 +416,24 @@ program
     console.log(callPsql(`DELETE FROM webknossos.workers WHERE _id = '6194dc03040200b0027f28a1';`));
     console.log(
       "If existing jobs prevent the delete, use yarn refresh-schema to reset the db or remove the existing jobs manually.",
+    );
+    console.log("✨✨ Done");
+  });
+
+program
+  .command("enable-storage-scan")
+  .description("Activates dataset storage scan in WEBKNOSSOS for the default datastore.")
+  .action(() => {
+    console.log("Activating dataset storage scan in WEBKNOSSOS for the default datastore...");
+    console.log(
+      callPsql(
+        `UPDATE webknossos.datastores SET reportUsedStorageEnabled = TRUE WHERE name = 'localhost'`,
+      ),
+    );
+    console.log(
+      callPsql(
+        `UPDATE webknossos.organizations SET lastStorageScanTime = '1970-01-01T00:00:00.000Z' WHERE _id = 'sample_organization'`,
+      ),
     );
     console.log("✨✨ Done");
   });

@@ -16,6 +16,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
+import slick.dbio.DBIO
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -63,12 +64,12 @@ case class Annotation(
 
   def skeletonTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
 
   def volumeTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
 
   def volumeAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
@@ -106,13 +107,14 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
 
   private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] =
     for {
-      typ <- AnnotationLayerType.fromString(r.typ)
+      typ <- AnnotationLayerType.fromString(r.typ).toFox
+      statistics <- JsonHelper.parseAs[JsObject](r.statistics).toFox
     } yield {
       AnnotationLayer(
         r.tracingid,
         typ,
         r.name,
-        Json.parse(r.statistics).as[JsObject],
+        statistics,
       )
     }
 
@@ -125,18 +127,12 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       parsed <- Fox.serialCombined(rows.toList)(parse)
     } yield parsed
 
-  def insertForAnnotation(annotationId: ObjectId, annotationLayers: List[AnnotationLayer]): Fox[Unit] =
-    for {
-      _ <- Fox.serialCombined(annotationLayers)(insertOne(annotationId, _))
-    } yield ()
-
   def insertOne(annotationId: ObjectId, annotationLayer: AnnotationLayer): Fox[Unit] =
     for {
       _ <- run(insertOneQuery(annotationId, annotationLayer))
     } yield ()
 
-  def insertLayerQueries(annotationId: ObjectId,
-                         layers: List[AnnotationLayer]): List[SqlAction[Int, NoStream, Effect]] =
+  def insertLayerQueries(annotationId: ObjectId, layers: Seq[AnnotationLayer]): Seq[SqlAction[Int, NoStream, Effect]] =
     layers.map { annotationLayer =>
       insertOneQuery(annotationId, annotationLayer)
     }
@@ -165,29 +161,20 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       head <- rList.headOption.toFox
     } yield head
 
-  def findAllVolumeLayers: Fox[List[AnnotationLayer]] =
+  def updateLayers(annotationId: ObjectId,
+                   newLayers: Seq[AnnotationLayer],
+                   updatedLayers: Seq[AnnotationLayer]): Fox[Unit] = {
+    val insertQueries = insertLayerQueries(annotationId, newLayers)
+    val updateQueries = updatedLayers.map { updatedLayer =>
+      q"""UPDATE webknossos.annotation_layers
+                         SET name = ${updatedLayer.name}
+                         WHERE _annotation = $annotationId
+                         AND tracingId = ${updatedLayer.tracingId}""".asUpdate
+    }
     for {
-      rows <- run(q"""SELECT _annotation, tracingId, typ, name, statistics
-                      FROM webknossos.annotation_layers
-                      WHERE typ = 'Volume'""".as[AnnotationLayersRow])
-      parsed <- Fox.serialCombined(rows.toList)(parse)
-    } yield parsed
-
-  def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String): Fox[Unit] =
-    for {
-      _ <- run(q"""UPDATE webknossos.annotation_layers
-                   SET tracingId = $newTracingId
-                   WHERE _annotation = $annotationId
-                   AND tracingId = $oldTracingId""".asUpdate)
+      _ <- run(DBIO.sequence(insertQueries ++ updateQueries).transactionally)
     } yield ()
-
-  def updateName(annotationId: ObjectId, tracingId: String, newName: String): Fox[Unit] =
-    for {
-      _ <- run(q"""UPDATE webknossos.annotation_layers
-                   SET name = $newName
-                   WHERE _annotation = $annotationId
-                   AND tracingId = $tracingId""".asUpdate)
-    } yield ()
+  }
 
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
     q"DELETE FROM webknossos.annotation_layers WHERE _annotation = $annotationId".asUpdate
@@ -213,7 +200,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
-      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAndValidateJson[JsObject](_))
+      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAs[JsObject](_).toFox)
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
     } yield {
@@ -361,7 +348,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
     val annotationLayerStatistics =
-      parseArrayLiteral(<<[String]).map(layerStats => Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
+      parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
 
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
@@ -399,62 +386,99 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
       typQuery = q"a.typ = ${AnnotationType.Explorational}"
-
-      query = q"""WITH
-                    -- teams_agg is extracted to avoid left-join fanout.
-                    -- Note that only one of the joins in it has 1:n, so they can happen together
-                  teams_agg AS (
-                    SELECT
-                    a._id AS _annotation,
-                    ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
-                    ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
-                    ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids
-                    FROM webknossos.annotations a
-                    LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = a._id
-                    LEFT JOIN webknossos.teams_ t ON ast._team = t._id
-                    LEFT JOIN webknossos.organizations_ o ON t._organization = o._id
-                    GROUP BY a._id
-                  )
-                  SELECT
-                    a._id,
-                    a.name,
-                    a.description,
-                    a._user,
-                    u.firstname,
-                    u.lastname,
-                    a.othersmayedit,
-                    teams_agg.team_ids,
-                    teams_agg.team_names,
-                    teams_agg.team_organization_ids,
-                    a.modified,
-                    a.tags,
-                    a.state,
-                    a.isLockedByOwner,
-                    d.name,
-                    a.typ,
-                    a.visibility,
-                    a.tracingtime,
-                    o._id,
-                    ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
-                    ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
-                    ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
-                    ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
-                  FROM webknossos.annotations_ AS a
-                  JOIN webknossos.users_ u ON u._id = a._user
-                  JOIN teams_agg ON teams_agg._annotation = a._id
-                  JOIN webknossos.datasets_ d ON d._id = a._dataset
-                  JOIN webknossos.organizations_ AS o ON o._id = d._organization
-                  JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
-                  WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
-                  GROUP BY
-                    a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
-                    a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
-                    u.firstname, u.lastname,
-                    teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
-                    d.name, o._id
-                  ORDER BY a._id DESC
-                  LIMIT $limit
-                  OFFSET ${pageNumber * limit}"""
+      query = q"""
+          -- We need to separate the querying of the annotation with all its inner joins from the 1:n join to collect the shared teams
+          -- This is to prevent left-join fanout.
+          -- Note that only one of the left joins in it has 1:n, so they can happen together
+          -- The WITH is structured this way round to get in the LIMIT early and not fetch the shared teams of all annotations first.
+          WITH an AS( -- select annotations with the relevant properties first
+            SELECT
+              a._id,
+              a.name,
+              a.description,
+              a._user,
+              u.firstname,
+              u.lastname,
+              a.othersmayedit,
+              a.modified,
+              a.tags,
+              a.state,
+              a.isLockedByOwner,
+              d.name AS datasetName,
+              a.typ,
+              a.visibility,
+              a.tracingtime,
+              o._id AS organizationId,
+              ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
+              ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
+              ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
+              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+            FROM webknossos.annotations_ AS a
+            JOIN webknossos.users_ u ON u._id = a._user
+            JOIN webknossos.datasets_ d ON d._id = a._dataset
+            JOIN webknossos.organizations_ AS o ON o._id = d._organization
+            JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
+            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
+            GROUP BY
+              a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
+              a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
+              u.firstname, u.lastname,
+              d.name, o._id
+            ORDER BY a._id DESC
+            LIMIT $limit
+            OFFSET ${pageNumber * limit}
+          )
+          SELECT  -- select now add the shared teams, and propagate everything to the output
+            an._id,
+            an.name,
+            an.description,
+            an._user,
+            an.firstname,
+            an.lastname,
+            an.othersmayedit,
+            ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
+            ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
+            ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids,
+            an.modified,
+            an.tags,
+            an.state,
+            an.isLockedByOwner,
+            an.datasetName,
+            an.typ,
+            an.visibility,
+            an.tracingtime,
+            an.organizationId,
+            an.tracing_ids,
+            an.tracing_names,
+            an.tracing_typs,
+            an.annotation_layer_statistics
+          FROM an
+          LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = an._id
+          LEFT JOIN webknossos.teams_ t ON ast._team = t._id
+          LEFT JOIN webknossos.organizations_ o ON t._organization = o._id
+          GROUP BY
+            an._id,
+            an.name,
+            an.description,
+            an._user,
+            an.firstname,
+            an.lastname,
+            an.othersmayedit,
+            an.modified,
+            an.tags,
+            an.state,
+            an.isLockedByOwner,
+            an.datasetName,
+            an.typ,
+            an.visibility,
+            an.tracingtime,
+            an.organizationId,
+            an.tracing_ids,
+            an.tracing_names,
+            an.tracing_typs,
+            an.annotation_layer_statistics
+          ORDER BY an._id DESC
+         """
       rows <- run(query.as[AnnotationCompactInfo])
     } yield rows.toList
 
@@ -494,14 +518,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    AND typ = $annotationType
                    AND $stateQuery
                    AND $accessQuery""".as[Int])
-      parsed <- r.headOption
+      parsed <- r.headOption.toFox
     } yield parsed
   }
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
       countList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _team = $teamId".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
@@ -538,7 +562,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    AND typ = ${AnnotationType.TracingBase}
                    AND state != ${AnnotationState.Cancelled}
                    AND $accessQuery""".as[ObjectId])
-      firstRow <- r.headOption
+      firstRow <- r.headOption.toFox
     } yield firstRow
 
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
@@ -593,7 +617,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                              WHERE $excludeTeamsQ
                            ) q
                          """.as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   def countActiveByTask(taskId: ObjectId, typ: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] =
@@ -605,7 +629,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                            AND typ = $typ
                            AND state = ${AnnotationState.Active}
                            AND $accessQuery""".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   def countAllForOrganization(organizationId: String): Fox[Int] =
@@ -614,7 +638,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                            FROM $existingCollectionName a
                            JOIN webknossos.users_ u ON a._user = u._id
                            WHERE u._organization = $organizationId""".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   def countAllByDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
@@ -624,7 +648,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                            FROM $existingCollectionName
                            WHERE _dataset = $datasetId
                            AND $accessQuery""".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   // update operations

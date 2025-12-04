@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
-  DataLayerWithMagLocators
+  StaticLayer
 }
 
 import scala.concurrent.ExecutionContext
@@ -18,9 +18,9 @@ import scala.util.Try
 
 trait ExploreLayerUtils extends FoxImplicits {
 
-  def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
-                              preferredVoxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] =
+  protected def adaptLayersAndVoxelSize(
+      layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],
+      preferredVoxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[(List[StaticLayer], VoxelSize)] =
     for {
       (rescaledLayers, voxelSize) <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
       renamedLayers = makeLayerNamesUnique(rescaledLayers)
@@ -29,7 +29,7 @@ trait ExploreLayerUtils extends FoxImplicits {
                                                                                  voxelSize)
     } yield (layersWithCoordinateTransformations, voxelSize)
 
-  def makeLayerNamesUnique(layers: List[DataLayerWithMagLocators]): List[DataLayerWithMagLocators] = {
+  def makeLayerNamesUnique(layers: List[StaticLayer]): List[StaticLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()
     layers.map { layer =>
       var nameCandidate = layer.name
@@ -46,9 +46,9 @@ trait ExploreLayerUtils extends FoxImplicits {
     }
   }
 
-  private def addCoordinateTransformationsToLayers(layers: List[DataLayerWithMagLocators],
+  private def addCoordinateTransformationsToLayers(layers: List[StaticLayer],
                                                    preferredVoxelSize: Option[VoxelSize],
-                                                   voxelSize: VoxelSize): List[DataLayerWithMagLocators] =
+                                                   voxelSize: VoxelSize): List[StaticLayer] =
     layers.map(l => {
       val generatedCoordinateTransformation = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
       val existingCoordinateTransformations = l.coordinateTransformations
@@ -77,13 +77,13 @@ trait ExploreLayerUtils extends FoxImplicits {
 
     val mag = (voxelSize / minVoxelSize).round.toVec3Int
     for {
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- Fox.fromBool(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 
   private def checkForDuplicateMags(magGroup: List[Vec3Int])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
+      _ <- Fox.fromBool(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
     } yield ()
 
   private def findBaseVoxelSize(minVoxelSize: VoxelSize, preferredVoxelSizeOpt: Option[VoxelSize]): VoxelSize =
@@ -121,9 +121,9 @@ trait ExploreLayerUtils extends FoxImplicits {
         }
     }
 
-  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
-                                             preferredVoxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] = {
+  private def rescaleLayersByCommonVoxelSize(
+      layersWithVoxelSizes: List[(StaticLayer, VoxelSize)],
+      preferredVoxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[(List[StaticLayer], VoxelSize)] = {
     val allVoxelSizes = layersWithVoxelSizes.flatMap {
       case (layer, voxelSize) =>
         layer.resolutions.map(mag => voxelSize * mag.toVec3Double)
@@ -131,7 +131,7 @@ trait ExploreLayerUtils extends FoxImplicits {
     val minVoxelSizeOpt = Try(allVoxelSizes.minBy(_.toNanometer.toTuple)).toOption
 
     for {
-      minVoxelSize <- option2Fox(minVoxelSizeOpt)
+      minVoxelSize <- minVoxelSizeOpt.toFox
       baseVoxelSize = findBaseVoxelSize(minVoxelSize, preferredVoxelSize)
       allMags <- Fox.combined(allVoxelSizes.map(magFromVoxelSize(baseVoxelSize, _)).toList) ?~> s"voxel sizes for layers are not uniform, got ${layersWithVoxelSizes
         .map(_._2)}"

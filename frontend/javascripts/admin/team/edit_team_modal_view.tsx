@@ -1,10 +1,10 @@
 import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
+import { getEditableUsers, updateUser } from "admin/rest_api";
 import { AutoComplete, Input, Modal, Spin, Tooltip } from "antd";
 import type { DefaultOptionType } from "antd/lib/select";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useState } from "react";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import { filterTeamMembersOf, renderUsersForTeam } from "./team_list_view";
 
 type Props = {

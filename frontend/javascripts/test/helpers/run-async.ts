@@ -1,11 +1,16 @@
+/**
+ * Executes a list of functions asynchronously with a delay between each execution.
+ * Each function can return either a synchronous value or a Promise.
+ *
+ * @param functions An array of functions to execute. Each function should accept no arguments.
+ * @param waitTimeMs The time to wait (in milliseconds) before executing each function. Defaults to 100ms.
+ * @returns A Promise that resolves when all functions have been executed.
+ */
 export default function runAsync(
-  functions: Array<(...args: Array<any>) => any>,
+  functions: Array<() => any | Promise<any>>,
   waitTimeMs: number = 100,
 ): Promise<void> {
-  // Executes a the list of functions, waiting `waitTimeMs` before executing
-  // each of them. The functions can either return synchronous or return a
-  // promise.
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     if (functions.length === 0) {
       resolve();
       return;
@@ -13,10 +18,13 @@ export default function runAsync(
 
     setTimeout(() => {
       const func = functions.shift();
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-      const result = func();
-      const promise = result instanceof Promise ? result : Promise.resolve();
-      promise.then(() => runAsync(functions, waitTimeMs).then(resolve));
+      if (func) {
+        const result = func();
+        const promise = result instanceof Promise ? result : Promise.resolve(result);
+        promise.then(() => runAsync(functions, waitTimeMs).then(resolve));
+      } else {
+        resolve(); // Resolve if func is undefined (shouldn't happen, but safe)
+      }
     }, waitTimeMs);
   });
 }

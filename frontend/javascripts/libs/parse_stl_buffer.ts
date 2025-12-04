@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 /* eslint-disable */
-import * as THREE from "three";
+import { BufferAttribute, BufferGeometry, Float32BufferAttribute, LoaderUtils, Vector3 } from "three";
 /**
  * @author aleeper / http://adamleeper.com/
  * @author mrdoob / http://mrdoob.com/
@@ -103,7 +103,7 @@ export default function parse(data) {
 
     var dataOffset = 84;
     var faceLength = 12 * 4 + 2;
-    var geometry = new THREE.BufferGeometry();
+    var geometry = new BufferGeometry();
     var vertices = [];
     var normals = [];
 
@@ -141,11 +141,11 @@ export default function parse(data) {
       }
     }
 
-    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertices), 3));
-    geometry.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(normals), 3));
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(vertices), 3));
+    geometry.setAttribute("normal", new BufferAttribute(new Float32Array(normals), 3));
 
     if (hasColors) {
-      geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
+      geometry.setAttribute("color", new BufferAttribute(new Float32Array(colors), 3));
       geometry.hasColors = true;
       geometry.alpha = alpha;
     }
@@ -154,7 +154,7 @@ export default function parse(data) {
   }
 
   function parseASCII(data) {
-    var geometry = new THREE.BufferGeometry();
+    var geometry = new BufferGeometry();
     var patternFace = /facet([\s\S]*?)endfacet/g;
     var faceCounter = 0;
     var patternFloat = /[\s]+([+-]?(?:\d*)(?:\.\d*)?(?:[eE][+-]?\d+)?)/.source;
@@ -162,7 +162,7 @@ export default function parse(data) {
     var patternNormal = new RegExp("normal" + patternFloat + patternFloat + patternFloat, "g");
     var vertices = [];
     var normals = [];
-    var normal = new THREE.Vector3();
+    var normal = new Vector3();
     var result;
 
     while ((result = patternFace.exec(data)) !== null) {
@@ -200,14 +200,14 @@ export default function parse(data) {
       faceCounter++;
     }
 
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute("normal", new Float32BufferAttribute(normals, 3));
     return geometry;
   }
 
   function ensureString(buffer) {
     if (typeof buffer !== "string") {
-      return THREE.LoaderUtils.decodeText(new Uint8Array(buffer));
+      return LoaderUtils.decodeText(new Uint8Array(buffer));
     }
 
     return buffer;

@@ -1,8 +1,8 @@
 import messages from "messages";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_types";
 
 export enum PricingPlanEnum {
-  Basic = "Basic",
+  Personal = "Personal",
   Team = "Team",
   Power = "Power",
   TeamTrial = "Team_Trial",
@@ -11,25 +11,26 @@ export enum PricingPlanEnum {
 }
 
 export const teamPlanFeatures = [
+  "Everything from Personal plan",
   "Collaborative Annotation",
   "Project Management",
   "Dataset Management and Access Control",
   "5 Users / 1TB Storage (upgradable)",
   "Priority Email Support",
-  "Everything from Basic plan",
 ];
+
 export const powerPlanFeatures = [
+  "Everything from Team and Personal plans",
   "Up to Unlimited Users",
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",
-  "Everything from Team and Basic plans",
 ];
 
-export const maxInludedUsersInBasicPlan = 3;
+export const maxIncludedUsersInPersonalPlan = 1;
 
 export function getActiveUserCount(users: APIUser[]): number {
-  return users.filter((user) => user.isActive && !user.isSuperUser).length;
+  return users.filter((user) => user.isActive && !user.isUnlisted && !user.isGuest).length;
 }
 
 export function hasPricingPlanExpired(organization: APIOrganization): boolean {
@@ -47,12 +48,16 @@ export function hasPricingPlanExceededStorage(organization: APIOrganization): bo
   return organization.usedStorageBytes > organization.includedStorageBytes;
 }
 
+export function getLeftOverStorageBytes(organization: APIOrganization): number {
+  return organization.includedStorageBytes - organization.usedStorageBytes;
+}
+
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
   return user.isAdmin || user.isOrganizationOwner;
 }
 
 const PLAN_TO_RANK = {
-  [PricingPlanEnum.Basic]: 0,
+  [PricingPlanEnum.Personal]: 0,
   [PricingPlanEnum.Team]: 1,
   [PricingPlanEnum.TeamTrial]: 1,
   [PricingPlanEnum.Power]: 2,
@@ -71,11 +76,11 @@ export function isFeatureAllowedByPricingPlan(
   organization: APIOrganization | null,
   requiredPricingPlan: PricingPlanEnum,
 ) {
-  // This function should not be called to check for "Basic" plans since its the default plan for all users anyway.
+  // This function should not be called to check for "Personal" plans since its the default plan for all users anyway.
 
-  if (requiredPricingPlan === PricingPlanEnum.Basic) {
+  if (requiredPricingPlan === PricingPlanEnum.Personal) {
     console.debug(
-      "Restricting a feature to Basic Plan does not make sense. Consider removing the restriction",
+      "Restricting a feature to Personal Plan does not make sense. Consider removing the restriction",
     );
     return true;
   }

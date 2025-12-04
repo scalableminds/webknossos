@@ -12,8 +12,8 @@
 
 ------
 (Please delete unneeded items, merge only when none are left open)
-- [ ] Updated [changelog](../blob/master/CHANGELOG.unreleased.md#unreleased)
-- [ ] Updated [migration guide](../blob/master/MIGRATIONS.unreleased.md#unreleased) if applicable
+- [ ] Added changelog entry (create a `$PR_NUMBER.md` file in `unreleased_changes` or use `./tools/create-changelog-entry.py`)
+- [ ] Added migration guide entry if applicable (edit the same file as for the changelog)
 - [ ] Updated [documentation](../blob/master/docs) if applicable
 - [ ] Adapted [wk-libs python client](https://github.com/scalableminds/webknossos-libs/tree/master/webknossos/webknossos/client) if relevant API parts change
 - [ ] Removed dev-only changes like prints and application.conf edits

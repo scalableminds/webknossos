@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.{ArrayDataType, bytesPerElementFor}
-import net.liftweb.common.Box
-import net.liftweb.common.Box.tryo
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
+import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder}
@@ -10,7 +10,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 object BytesConverter {
   def toByteArray(multiArray: MultiArray, dataType: ArrayDataType, byteOrder: ByteOrder): Box[Array[Byte]] = tryo {
     val array = multiArray.getStorage
-    val bytesPerElement = bytesPerElementFor(dataType)
+    val bytesPerElement = ArrayDataType.bytesPerElement(dataType)
     // If the multiArray dtype size is 1, use the array directly.
     // This may be happen due to the skipTyping shortcut even for non-uint8-datasets
     if (multiArray.getDataType.getSize == 1) {

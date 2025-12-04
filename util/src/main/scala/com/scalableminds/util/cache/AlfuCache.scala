@@ -2,7 +2,7 @@ package com.scalableminds.util.cache
 
 import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, RemovalCause, RemovalListener, Weigher}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import net.liftweb.common.{Box, Failure}
+import com.scalableminds.util.tools.{Box, Failure}
 
 import java.util.concurrent.{CompletableFuture, Executor, TimeUnit}
 import java.util.function.BiFunction
@@ -16,7 +16,7 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 
   def getOrLoad(key: K, loadFn: K => Fox[V])(implicit ec: ExecutionContext): Fox[V] =
     for {
-      box <- getOrLoadAdapter(key, key => loadFn(key).futureBox)
+      box <- Fox.fromFuture(getOrLoadAdapter(key, key => loadFn(key).futureBox))
       _ = box match {
         case _: Failure => remove(key) // Do not cache failures
         case _          => ()

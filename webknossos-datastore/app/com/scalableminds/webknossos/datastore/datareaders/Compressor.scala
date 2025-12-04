@@ -1,23 +1,21 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.bloscjava.Blosc
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO.GZIPOutputStream
+import com.scalableminds.webknossos.datastore.compresso.NativeCompressoCompressor
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
   CompressedSegmentation32,
   CompressedSegmentation64
 }
-import com.sun.jna.ptr.NativeLongByReference
 import org.apache.commons.compress.compressors.lz4.{BlockLZ4CompressorInputStream, BlockLZ4CompressorOutputStream}
 import org.apache.commons.compress.compressors.zstandard.{ZstdCompressorInputStream, ZstdCompressorOutputStream}
-import org.blosc.{BufferSizes, IBloscDll, JBlosc}
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io._
-import java.nio.ByteBuffer
-import java.util
-import java.util.zip.{Deflater, DeflaterOutputStream, GZIPInputStream, Inflater, InflaterInputStream}
+import java.util.zip._
 import javax.imageio.ImageIO
 import javax.imageio.ImageIO.createImageInputStream
 import javax.imageio.stream.ImageInputStream
@@ -186,37 +184,33 @@ class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Co
 }
 
 object BloscCompressor {
-  val AUTOSHUFFLE: Int = -1
-  val NOSHUFFLE = 0
-  val BYTESHUFFLE = 1
-  val BITSHUFFLE = 2
   val keyCname = "cname"
-  val defaultCname = "lz4"
+  val defaultCname = Blosc.Compressor.LZ4
   val keyClevel = "clevel"
   val defaultCLevel = 5
   val keyShuffle = "shuffle"
-  val defaultShuffle: Int = BYTESHUFFLE
+  val defaultShuffle = Blosc.Shuffle.BYTE_SHUFFLE
   val keyBlocksize = "blocksize"
   val defaultBlocksize = 0
-  val supportedShuffle: List[Int] = List(AUTOSHUFFLE, NOSHUFFLE, BYTESHUFFLE, BITSHUFFLE)
-  val supportedCnames: List[String] = List("zstd", "blosclz", defaultCname, "lz4hc", "zlib")
+  val supportedCnames: List[String] = Blosc.Compressor.values().map(_.getValue).toList
   val keyTypesize = "typesize"
   val defaultTypesize = 1
 }
 
 class BloscCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
-  val cname: String = properties.get(BloscCompressor.keyCname) match {
+  val cname: Blosc.Compressor = properties.get(BloscCompressor.keyCname) match {
     case None                                        => BloscCompressor.defaultCname
     case Some(StringCompressionSetting(cnameString)) => validateCname(cnameString)
     case _                                           => throw new IllegalArgumentException("Blosc cname must be string")
   }
 
-  private def validateCname(cname: String) = {
-    if (!BloscCompressor.supportedCnames.contains(cname))
+  private def validateCname(cname: String): Blosc.Compressor = {
+    val validatedCname = Blosc.Compressor.fromString(cname)
+    if (validatedCname == null)
       throw new IllegalArgumentException(
         "blosc: compressor not supported: '" + cname + "'; expected one of " +
           BloscCompressor.supportedCnames.mkString(","))
-    cname
+    validatedCname
   }
 
   val clevel: Int = properties.get(BloscCompressor.keyClevel) match {
@@ -232,21 +226,47 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     clevel
   }
 
-  val shuffle: Int = properties.get(BloscCompressor.keyShuffle) match {
+  val typesize: Int = properties.get(BloscCompressor.keyTypesize) match {
+    case None                                           => BloscCompressor.defaultTypesize
+    case Some(StringCompressionSetting(typeSizeString)) => typeSizeString.toInt
+    case Some(IntCompressionSetting(typeSizeInt))       => typeSizeInt
+    case _                                              => throw new IllegalArgumentException("Blosc typesize must be int or string")
+  }
+
+  val shuffle: Blosc.Shuffle = properties.get(BloscCompressor.keyShuffle) match {
     case None                                          => BloscCompressor.defaultShuffle
-    case Some(StringCompressionSetting(shuffleString)) => validateShuffle(shuffleString.toInt)
-    case Some(IntCompressionSetting(shuffleInt))       => validateShuffle(shuffleInt)
+    case Some(StringCompressionSetting(shuffleString)) => validateShuffleStr(shuffleString)
+    case Some(IntCompressionSetting(shuffleInt))       => validateShuffleInt(shuffleInt)
     case _                                             => throw new IllegalArgumentException("Blosc shuffle must be int or string")
   }
 
-  private def validateShuffle(shuffle: Int): Int = {
+  private def validateShuffleStr(shuffle: String): Blosc.Shuffle = {
     val supportedShuffleNames =
-      List("-1 (AUTOSHUFFLE), 0 (NOSHUFFLE)", "1 (BYTESHUFFLE)", "2 (BITSHUFFLE)")
+      List("noshuffle", "shuffle", "bitshuffle")
 
-    if (!BloscCompressor.supportedShuffle.contains(shuffle))
+    val validatedShuffle = Blosc.Shuffle.fromString(shuffle)
+    if (validatedShuffle == null)
       throw new IllegalArgumentException(
         f"blosc: shuffle type '$shuffle' not supported. Expected one of ${supportedShuffleNames.mkString(",")}")
-    shuffle
+    validatedShuffle
+  }
+
+  private def validateShuffleInt(shuffle: Int): Blosc.Shuffle = {
+    val supportedShuffleNames =
+      List("-1 (AUTOSHUFFLE)", " 0 (NOSHUFFLE)", "1 (BYTESHUFFLE)", "2 (BITSHUFFLE)")
+
+    val newShuffle = if (shuffle == -1) {
+      if (typesize == 1)
+        2
+      else
+        1
+    } else shuffle
+
+    val validatedShuffle = Blosc.Shuffle.fromInt(newShuffle)
+    if (validatedShuffle == null)
+      throw new IllegalArgumentException(
+        f"blosc: shuffle type '$shuffle' not supported. Expected one of ${supportedShuffleNames.mkString(",")}")
+    validatedShuffle
   }
 
   val blocksize: Int = properties.get(BloscCompressor.keyBlocksize) match {
@@ -256,61 +276,19 @@ class BloscCompressor(val properties: Map[String, CompressionSetting]) extends C
     case _                                               => throw new IllegalArgumentException("Blosc blocksize must be int or string")
   }
 
-  val typesize: Int = properties.get(BloscCompressor.keyTypesize) match {
-    case None                                           => BloscCompressor.defaultTypesize
-    case Some(StringCompressionSetting(typeSizeString)) => typeSizeString.toInt
-    case Some(IntCompressionSetting(typeSizeInt))       => typeSizeInt
-    case _                                              => throw new IllegalArgumentException("Blosc typesize must be int or string")
-  }
-
   override def getId = "blosc"
 
   override def toString: String =
     "compressor=" + getId + "/cname=" + cname + "/clevel=" + clevel.toString + "/blocksize=" + blocksize + "/shuffle=" + shuffle + "/typesize=" + typesize
 
   @throws[IOException]
-  override def compress(input: Array[Byte]): Array[Byte] = {
-    val is = new ByteArrayInputStream(input)
-
-    val baos = new ByteArrayOutputStream
-    passThrough(is, baos)
-    val inputBytes = baos.toByteArray
-    val inputSize = inputBytes.length
-    val outputSize = inputSize + JBlosc.OVERHEAD
-    val inputBuffer = ByteBuffer.wrap(inputBytes)
-    val outBuffer = ByteBuffer.allocate(outputSize)
-    JBlosc.compressCtx(clevel, shuffle, typesize, inputBuffer, inputSize, outBuffer, outputSize, cname, blocksize, 1)
-    val bs = cbufferSizes(outBuffer)
-    val compressedChunk = util.Arrays.copyOfRange(outBuffer.array, 0, bs.getCbytes.toInt)
-    compressedChunk
-  }
+  override def compress(input: Array[Byte]): Array[Byte] =
+    Blosc.compress(input, typesize, cname, clevel, shuffle, blocksize, 1)
 
   @throws[IOException]
-  override def decompress(input: Array[Byte]): Array[Byte] = {
-    val is = new ByteArrayInputStream(input)
+  override def decompress(input: Array[Byte]): Array[Byte] =
+    Blosc.decompress(input, 1)
 
-    val di = new DataInputStream(is)
-    val header = new Array[Byte](JBlosc.OVERHEAD)
-    di.readFully(header)
-    val bs = cbufferSizes(ByteBuffer.wrap(header))
-    val compressedSize = bs.getCbytes.toInt
-    val uncompressedSize = bs.getNbytes.toInt
-    val inBytes = util.Arrays.copyOf(header, compressedSize)
-    di.readFully(inBytes, header.length, compressedSize - header.length)
-    val outBuffer = ByteBuffer.allocate(uncompressedSize)
-    JBlosc.decompressCtx(ByteBuffer.wrap(inBytes), outBuffer, outBuffer.limit, 1)
-
-    outBuffer.array
-  }
-
-  private def cbufferSizes(cbuffer: ByteBuffer) = {
-    val nbytes = new NativeLongByReference
-    val cbytes = new NativeLongByReference
-    val blocksize = new NativeLongByReference
-    IBloscDll.blosc_cbuffer_sizes(cbuffer, nbytes, cbytes, blocksize)
-    val bs = new BufferSizes(nbytes.getValue.longValue, cbytes.getValue.longValue, blocksize.getValue.longValue)
-    bs
-  }
 }
 
 class JpegCompressor() extends Compressor {
@@ -333,6 +311,20 @@ class JpegCompressor() extends Compressor {
     val data = dbb.getData.grouped(width).toList
     data.flatten.toArray
   }
+}
+
+class CompressoCompressor extends Compressor {
+  override def getId = "compresso"
+
+  override def toString: String = getId
+
+  @throws[IOException]
+  override def compress(input: Array[Byte]): Array[Byte] = ???
+
+  @throws[IOException]
+  override def decompress(input: Array[Byte]): Array[Byte] =
+    new NativeCompressoCompressor().decompress(input)
+
 }
 
 class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Array[Int], blockSize: Vec3Int)
@@ -362,7 +354,12 @@ class ZstdCompressor(level: Int, checksum: Boolean) extends Compressor {
   override def compress(input: Array[Byte]): Array[Byte] = {
     val is = new ByteArrayInputStream(input)
     val os = new ByteArrayOutputStream()
-    val zstd = new ZstdCompressorOutputStream(os, level, true, checksum)
+    val zstd = ZstdCompressorOutputStream.builder
+      .setOutputStream(os)
+      .setLevel(level)
+      .setCloseFrameOnFlush(true)
+      .setChecksum(checksum)
+      .get()
     try passThrough(is, zstd)
     finally if (zstd != null) zstd.close()
     os.toByteArray

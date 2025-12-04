@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.models.annotation
 
-import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationLayerProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -46,7 +45,7 @@ object AnnotationLayer extends FoxImplicits {
         AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName, AnnotationLayerStatistics.unknown))
     ).flatten
     for {
-      _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
+      _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
     } yield annotationLayers
   }
 }
@@ -73,7 +72,9 @@ object AnnotationLayerStatistics {
 case class FetchedAnnotationLayer(tracingId: String,
                                   name: String,
                                   tracing: Either[SkeletonTracing, VolumeTracing],
-                                  volumeDataOpt: Option[Array[Byte]] = None) {
+                                  volumeDataOpt: Option[Array[Byte]] = None,
+                                  editedMappingEdgesOpt: Option[Array[Byte]] = None,
+                                  baseMappingNameOpt: Option[String] = None) {
   def typ: AnnotationLayerType =
     if (tracing.isLeft) AnnotationLayerType.Skeleton else AnnotationLayerType.Volume
 
@@ -82,22 +83,32 @@ case class FetchedAnnotationLayer(tracingId: String,
     val nameLabel = s"_$name"
     s"data$indexLabel$nameLabel.zip"
   }
+
+  def editedMappingEdgesZipName(index: Int, isSingle: Boolean): String = {
+    val indexLabel = if (isSingle) "" else s"_$index"
+    val nameLabel = s"_$name"
+    s"editedMappingEdges$indexLabel$nameLabel.zip"
+  }
 }
 
 object FetchedAnnotationLayer {
   def fromAnnotationLayer[T <: GeneratedMessage](
       annotationLayer: AnnotationLayer,
       tracing: Either[SkeletonTracing, VolumeTracing],
-      volumeDataOpt: Option[Array[Byte]] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
+      volumeDataOpt: Option[Array[Byte]] = None,
+      editedEdgesDataOpt: Option[Array[Byte]] = None,
+      baseMappingNameOpt: Option[String] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
     for {
-      _ <- bool2Fox(
+      _ <- Fox.fromBool(
         (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight) ?~> "annotation.download.fetch.typeMismatch"
     } yield {
       FetchedAnnotationLayer(
         annotationLayer.tracingId,
         annotationLayer.name,
         tracing,
-        volumeDataOpt
+        volumeDataOpt,
+        editedEdgesDataOpt,
+        baseMappingNameOpt
       )
     }
 
@@ -110,14 +121,14 @@ object FetchedAnnotationLayer {
       volumeTracingOpt: Option[VolumeTracing],
       assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[FetchedAnnotationLayer]] =
     for {
-      _ <- bool2Fox(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> "annotation.mismatchingSkeletonIdsAndTracings"
-      _ <- bool2Fox(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> "annotation.mismatchingVolumeIdsAndTracings"
+      _ <- Fox.fromBool(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> "annotation.mismatchingSkeletonIdsAndTracings"
+      _ <- Fox.fromBool(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> "annotation.mismatchingVolumeIdsAndTracings"
       annotationLayers: List[FetchedAnnotationLayer] = List(
         skeletonTracingIdOpt.map(
           FetchedAnnotationLayer(_, AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracingOpt.get))),
         volumeTracingIdOpt.map(
           FetchedAnnotationLayer(_, AnnotationLayer.defaultVolumeLayerName, Right(volumeTracingOpt.get)))
       ).flatten
-      _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
+      _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
     } yield annotationLayers
 }

@@ -1,5 +1,6 @@
 import { CloseCircleOutlined } from "@ant-design/icons";
 import { Collapse, notification } from "antd";
+import _ from "lodash";
 import type React from "react";
 import { useEffect } from "react";
 import { animationFrame, sleep } from "./utils";
@@ -16,7 +17,9 @@ export type ToastConfig = {
   sticky?: boolean;
   timeout?: number;
   key?: string;
+  customFooter?: React.ReactNode;
   onClose?: () => void;
+  className?: string;
 };
 
 export type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
@@ -147,8 +150,9 @@ const Toast = {
       duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
       message: toastMessage,
       style: {},
-      className: "",
+      className: config.className || "",
       onClose,
+      btn: config.customFooter,
     };
 
     if (type === "error") {
@@ -243,3 +247,16 @@ const Toast = {
   },
 };
 export default Toast;
+
+export const showToastOnce = _.debounce(
+  (
+    type: ToastStyle,
+    message: React.ReactNode,
+    config: ToastConfig = {},
+    details?: string | undefined,
+  ) => {
+    Toast[type](message, config, details);
+  },
+  60000,
+  { leading: true },
+);

@@ -1,4 +1,4 @@
-import type { Vector4, Vector5 } from "oxalis/constants";
+import type { Vector4, Vector5 } from "viewer/constants";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
 // Note that AbstractCuckooTable uses a 4-channel texture which

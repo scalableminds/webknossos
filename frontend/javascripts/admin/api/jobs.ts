@@ -1,71 +1,33 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
+import _ from "lodash";
 import type {
   APIAnnotationType,
-  APIEffectiveJobState,
   APIJob,
-  APIJobManualState,
-  APIJobState,
   AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
-} from "types/api_flow_types";
+} from "types/api_types";
+import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
-    id: job.id,
-    datasetId: job.commandArgs.datasetId,
-    owner: job.owner,
-    type: job.command,
-    datasetName: job.commandArgs.dataset_name,
-    datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-    annotationLayerName: job.commandArgs.annotation_layer_name,
-    boundingBox: job.commandArgs.bbox,
-    ndBoundingBox: job.commandArgs.nd_bbox,
-    exportFileName: job.commandArgs.export_file_name,
-    tracingId: job.commandArgs.volume_tracing_id,
-    annotationId: job.commandArgs.annotation_id,
-    annotationType: job.commandArgs.annotation_type,
-    mergeSegments: job.commandArgs.merge_segments,
-    trainingAnnotations: job.commandArgs.training_annotations,
-    state: adaptJobState(job.state, job.manualState),
-    manualState: job.manualState,
-    result: job.returnValue,
-    resultLink: job.resultLink,
-    createdAt: job.created,
-    voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
+    ...job,
+    args: _.mapKeys(job.args, (_value, key) => _.camelCase(key)),
   };
 }
 
 export async function getJobs(): Promise<APIJob[]> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
-  return (
-    jobs
-      .map(transformBackendJobToAPIJob)
-      // Newest jobs should be first
-      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
-  );
+  return jobs.map(transformBackendJobToAPIJob);
 }
 
 export async function getJob(jobId: string): Promise<APIJob> {
   const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
   return transformBackendJobToAPIJob(job);
-}
-
-function adaptJobState(
-  celeryState: APIJobState,
-  manualState: APIJobManualState,
-): APIEffectiveJobState {
-  if (manualState) {
-    return manualState;
-  }
-
-  return celeryState || "UNKNOWN";
 }
 
 export async function cancelJob(jobId: string): Promise<APIJob> {
@@ -74,6 +36,24 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
   });
 }
 
+export type JobCreditCostInfo = {
+  // The cost is encoded as a string decimal for precision reasons. The front-end should not do any arithmetic with this
+  costInCredits: string;
+  hasEnoughCredits: boolean;
+  // The organizations credits used during calculation whether the organization has enough credits for the job.
+  organizationCredits: string;
+};
+
+export async function getJobCreditCost(
+  command: string,
+  boundingBoxInMag: Vector6,
+): Promise<JobCreditCostInfo> {
+  const params = new URLSearchParams({
+    command,
+    boundingBoxInMag: boundingBoxInMag.join(","),
+  });
+  return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
+}
 export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
@@ -171,13 +151,16 @@ export function startNucleiInferralJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
+  invertColorLayer: boolean,
 ): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${datasetId}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
-    {
-      method: "POST",
-    },
-  );
+  const urlParams = new URLSearchParams({
+    layerName,
+    newDatasetName,
+    invertColorLayer: invertColorLayer.toString(),
+  });
+  return Request.receiveJSON(`/api/jobs/run/inferNuclei/${datasetId}?${urlParams.toString()}`, {
+    method: "POST",
+  });
 }
 
 export function startNeuronInferralJob(
@@ -185,35 +168,42 @@ export function startNeuronInferralJob(
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
+  invertColorLayer: boolean,
   doSplitMergerEvaluation: boolean,
   annotationId?: string,
-  useSparseTracing?: boolean,
-  evalMaxEdgeLength?: number,
-  evalSparseTubeThresholdNm?: number,
-  evalMinMergerPathLengthNm?: number,
+  splitMergerEvaluationSettings?: SplitMergerEvaluationSettings,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
     newDatasetName,
     doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
+    invertColorLayer: invertColorLayer.toString(),
   });
   if (doSplitMergerEvaluation) {
     if (!annotationId) {
       throw new Error("annotationId is required when doSplitMergerEvaluation is true");
     }
     urlParams.append("annotationId", `${annotationId}`);
-    if (useSparseTracing != null) {
-      urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
-    }
-    if (evalMaxEdgeLength != null) {
-      urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
-    }
-    if (evalSparseTubeThresholdNm != null) {
-      urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
-    }
-    if (evalMinMergerPathLengthNm != null) {
-      urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+    if (splitMergerEvaluationSettings != null) {
+      const {
+        useSparseTracing,
+        maxEdgeLength,
+        sparseTubeThresholdInNm,
+        minimumMergerPathLengthInNm,
+      } = splitMergerEvaluationSettings;
+      if (useSparseTracing != null) {
+        urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
+      }
+      if (maxEdgeLength != null) {
+        urlParams.append("evalMaxEdgeLength", `${maxEdgeLength}`);
+      }
+      if (sparseTubeThresholdInNm != null) {
+        urlParams.append("evalSparseTubeThresholdNm", `${sparseTubeThresholdInNm}`);
+      }
+      if (minimumMergerPathLengthInNm != null) {
+        urlParams.append("evalMinMergerPathLengthNm", `${minimumMergerPathLengthInNm}`);
+      }
     }
   }
   return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
@@ -331,7 +321,11 @@ export function startAlignSectionsJob(
   });
 }
 
-type AiModelCategory = "em_neurons" | "em_nuclei";
+// This enum needs to be kept in sync with the backend/database
+export enum APIAiModelCategory {
+  EM_NEURONS = "em_neurons",
+  EM_NUCLEI = "em_nuclei",
+}
 
 type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
@@ -340,22 +334,38 @@ type AiModelTrainingAnnotationSpecification = {
   mag: Vector3;
 };
 
-type RunTrainingParameters = {
-  trainingAnnotations: Array<AiModelTrainingAnnotationSpecification>;
+type RunNeuronModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
+  aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
-  aiModelCategory?: AiModelCategory;
   workflowYaml?: string;
 };
 
-export function runTraining(params: RunTrainingParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/runTraining", {
+export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronModelTraining", {
     method: "POST",
     data: JSON.stringify(params),
   });
 }
 
-type RunInferenceParameters = {
+type RunInstanceModelTrainingParameters = {
+  trainingAnnotations: AiModelTrainingAnnotationSpecification[];
+  name: string;
+  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
+  maxDistanceNm: number;
+  comment?: string;
+  workflowYaml?: string;
+};
+
+export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runInstanceModelTraining", {
+    method: "POST",
+    data: JSON.stringify(params),
+  });
+}
+
+export type BaseModelInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
   datasetDirectoryName: string;
@@ -364,11 +374,26 @@ type RunInferenceParameters = {
   boundingBox: Vector6;
   newDatasetName: string;
   workflowYaml?: string;
+  invertColorLayer: boolean;
   // maskAnnotationLayerName?: string | null
 };
+type RunNeuronModelInferenceParameters = BaseModelInferenceParameters;
 
-export function runInferenceJob(params: RunInferenceParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runInference", {
+type RunInstanceModelInferenceParameters = BaseModelInferenceParameters & {
+  seedGeneratorDistanceThreshold: number;
+};
+
+export function runNeuronModelInferenceWithAiModelJob(params: RunNeuronModelInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronModelInference", {
+    method: "POST",
+    data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
+  });
+}
+
+export function runInstanceModelInferenceWithAiModelJob(
+  params: RunInstanceModelInferenceParameters,
+) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomInstanceModelInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });
@@ -380,4 +405,15 @@ export async function getAiModels(): Promise<AiModel[]> {
     ...model,
     trainingJob: model.trainingJob == null ? null : transformBackendJobToAPIJob(model.trainingJob),
   }));
+}
+
+export async function updateAiModel(aiModel: AiModel) {
+  return Request.sendJSONReceiveJSON(`/api/aiModels/${aiModel.id}`, {
+    method: "PUT",
+    data: {
+      name: aiModel.name,
+      comment: aiModel.comment,
+      sharedOrganizationIds: aiModel.sharedOrganizationIds,
+    },
+  });
 }

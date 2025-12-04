@@ -1,4 +1,4 @@
-import { finishAnnotation } from "admin/admin_rest_api";
+import { finishAnnotation } from "admin/rest_api";
 import type {
   NewNmlTask,
   NewTask,
@@ -8,18 +8,14 @@ import type { QueryObject } from "admin/task/task_search_form";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
-import type {
-  APIActiveUser,
-  APIAnnotation,
-  APIAnnotationWithTask,
-  APITask,
-} from "types/api_flow_types";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
+import type { APIActiveUser, APIAnnotation, APIAnnotationWithTask, APITask } from "types/api_types";
+import { APIAnnotationTypeEnum } from "types/api_types";
 import { assertResponseLimit } from "./api_utils";
 
 export function peekNextTasks(): Promise<APITask | null | undefined> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
+
 export async function requestTask(): Promise<APIAnnotationWithTask> {
   const taskWithMessages = await Request.receiveJSON("/api/user/tasks/request", {
     method: "POST",
@@ -29,12 +25,14 @@ export async function requestTask(): Promise<APIAnnotationWithTask> {
   const { messages: _messages, ...task } = taskWithMessages;
   return task;
 }
+
 export function getAnnotationsForTask(
   taskId: string,
   options?: RequestOptions,
 ): Promise<Array<APIAnnotation>> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`, options);
 }
+
 export function deleteTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}`, {
     method: "DELETE",

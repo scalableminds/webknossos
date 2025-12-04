@@ -1,4 +1,4 @@
-import com.scalableminds.util.mvc.{CspHeaders, ExtendedController}
+import com.scalableminds.util.mvc.{ApiVersioning, CspHeaders, ExtendedController}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.{Assets, SitemapController, AboutPageRedirectController}
 
@@ -9,7 +9,7 @@ import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands
 import play.filters.csp.CSPConfig
-import utils.{ApiVersioning, WkConf}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 

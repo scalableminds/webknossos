@@ -46,7 +46,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
           }
       }
     }
-    foxFuture.toFox.flatten
+    Fox.fromFuture(foxFuture).flatten
   }
 
   private def logError[R](ex: Throwable, stackMarker: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {

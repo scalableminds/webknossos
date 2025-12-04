@@ -67,7 +67,7 @@ class ProjectController @Inject()(projectService: ProjectService,
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       project <- projectDAO.findOne(id) ?~> "project.notFound" ~> NOT_FOUND
-      _ <- bool2Fox(project.isDeletableBy(request.identity)) ?~> "project.remove.notAllowed" ~> FORBIDDEN
+      _ <- Fox.fromBool(project.isDeletableBy(request.identity)) ?~> "project.remove.notAllowed" ~> FORBIDDEN
       _ <- projectService.deleteOne(project._id) ?~> "project.remove.failure"
     } yield JsonOk(Messages("project.remove.success"))
   }
@@ -157,7 +157,7 @@ class ProjectController @Inject()(projectService: ProjectService,
   def incrementEachTasksInstances(id: ObjectId, delta: Option[Long]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(delta.getOrElse(1L) >= 0) ?~> "project.increaseTaskInstances.negative"
+        _ <- Fox.fromBool(delta.getOrElse(1L) >= 0) ?~> "project.increaseTaskInstances.negative"
         project <- projectDAO.findOne(id) ?~> "project.notFound" ~> NOT_FOUND
         _ <- taskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
         pendingInstancesAndTime <- taskDAO.countPendingInstancesAndTimeForProject(project._id)

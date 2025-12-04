@@ -22,6 +22,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     multiUserDAO: MultiUserDAO,
                                     userDAO: UserDAO,
                                     teamDAO: TeamDAO,
+                                    creditTransactionDAO: CreditTransactionDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
@@ -37,7 +38,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       "name" -> organization.name
     )
 
-  def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
+  def publicWrites(organization: Organization, requestingUser: Option[User] = None)(
+      implicit ctx: DBAccessContext): Fox[JsObject] = {
 
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
@@ -48,7 +50,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-      ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
+      ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
+      creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+        creditTransactionDAO.getCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -62,43 +66,42 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
-        "ownerName" -> ownerNameOpt
+        "ownerName" -> ownerNameOpt,
+        "creditBalance" -> creditBalanceOpt.map(_.toString)
       ) ++ adminOnlyInfo
   }
 
-  def findOneByInviteByIdOrDefault(inviteOpt: Option[Invite], organizationIdOpt: Option[String])(
-      implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
-      case Some(invite) => organizationDAO.findOne(invite._organization)
+      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> "organization.notFound.byInvite"
       case None =>
-        organizationIdOpt match {
-          case Some(organizationId) => organizationDAO.findOne(organizationId)
-          case None =>
-            for {
-              allOrganizations <- organizationDAO.findAll
-              _ <- bool2Fox(allOrganizations.length == 1) ?~> "organization.ambiguous"
-              defaultOrganization <- allOrganizations.headOption
-            } yield defaultOrganization
-        }
-
+        for {
+          allOrganizations <- organizationDAO.findAll
+          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
+          defaultOrganization <- allOrganizations.headOption.toFox
+        } yield defaultOrganization
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val activatedInConfig = bool2Fox(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
-    val userIsSuperUser = requestingUser.toFox.flatMap(user =>
-      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
+    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
+    val userIsSuperUser = requestingUser.toFox.flatMap(
+      user =>
+        multiUserDAO
+          .findOne(user._multiUser)(GlobalAccessContext)
+          .flatMap(multiUser => Fox.fromBool(multiUser.isSuperUser)))
 
     // If at least one of the conditions is fulfilled, success is returned.
-    Fox
-      .sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser))
-      .map(_.headOption)
-      .toFox
+    for {
+      fulls <- Fox.fromFuture(
+        Fox.sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser)))
+      _ <- Fox.fromBool(fulls.nonEmpty)
+    } yield ()
   }
 
   def assertNoOrganizationsPresent: Fox[Unit] =
     for {
       organizations <- organizationDAO.findAll(GlobalAccessContext)
-      _ <- bool2Fox(organizations.isEmpty) ?~> "organizationsNotEmpty"
+      _ <- Fox.fromBool(organizations.isEmpty) ?~> "organizationsNotEmpty"
     } yield ()
 
   def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
@@ -108,9 +111,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
-      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
-      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
+      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
+      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
+      initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
 
@@ -134,13 +137,14 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/createOrganizationDirectory")
-        .addQueryString("token" -> dataStoreToken, "organizationId" -> organizationId)
+        .addQueryParam("token", dataStoreToken)
+        .addQueryParam("organizationId", organizationId)
         .postEmpty()
         .futureBox
 
     for {
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Future.sequence(datastores.map(sendRPCToDataStore))
+      _ <- Fox.fromFuture(Future.sequence(datastores.map(sendRPCToDataStore)))
     } yield ()
   }
 
@@ -150,7 +154,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(organizationId)
       userCount <- userDAO.countAllForOrganization(organizationId)
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
-        bool2Fox(userCount + usersToAddCount <= includedUsers))
+        Fox.fromBool(userCount + usersToAddCount <= includedUsers))
     } yield ()
 
   private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
@@ -170,10 +174,16 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
                                                                  m: MessagesProvider): Fox[Unit] =
     for {
-      _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
       requiredVersion = conf.WebKnossos.TermsOfService.version
-      _ <- bool2Fox(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
+      _ <- Fox.fromBool(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch",
+                                                                 requiredVersion,
+                                                                 version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
+
+  // Currently disabled as in the credit system trail phase all organizations should be able to start paid jobs.
+  // See tracking issue: https://github.com/scalableminds/webknossos/issues/8458
+  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] = Fox.successful(())
 
 }

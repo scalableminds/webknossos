@@ -48,18 +48,19 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       Json.obj(
         "id" -> team._id.toString,
         "name" -> team.name,
-        "organization" -> organization._id
+        "organization" -> organization._id,
+        "isOrganizationTeam" -> team.isOrganizationTeam
       )
     }
 
   def assertNoReferences(teamId: ObjectId)(implicit mp: MessagesProvider): Fox[Unit] =
     for {
       projectCount <- projectDAO.countForTeam(teamId)
-      _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.projects", projectCount)
+      _ <- Fox.fromBool(projectCount == 0) ?~> Messages("team.inUse.projects", projectCount)
       taskTypeCount <- taskTypeDAO.countForTeam(teamId)
-      _ <- bool2Fox(taskTypeCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
+      _ <- Fox.fromBool(taskTypeCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
       annotationCount <- annotationDAO.countForTeam(teamId)
-      _ <- bool2Fox(annotationCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
+      _ <- Fox.fromBool(annotationCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
     } yield ()
 
   def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(
@@ -132,7 +133,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       countList <- run(
         q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
@@ -222,7 +223,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           WHERE fp._descendant = $folderId""".as[ObjectId])
     } yield rows.toList
 
-  def updateAllowedTeamsForDataset(datasetId: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
+  def updateAllowedTeamsForDataset(datasetId: ObjectId, allowedTeams: Seq[ObjectId]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_allowedTeams WHERE _dataset = $datasetId".asUpdate
     val insertQueries = allowedTeams.map(teamId => q"""INSERT INTO webknossos.dataset_allowedTeams(_dataset, _team)
              VALUES($datasetId, $teamId)""".asUpdate)

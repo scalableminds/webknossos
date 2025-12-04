@@ -23,10 +23,19 @@ import {
   Tooltip,
 } from "antd";
 import dayjs from "dayjs";
-import type { Action as HistoryAction, Location as HistoryLocation } from "history";
 import React from "react";
 import { connect } from "react-redux";
 
+import {
+  AllowedTeamsFormItem,
+  CardContainer,
+  DatasetNameFormItem,
+  DatastoreFormItem,
+} from "admin/dataset/dataset_components";
+import {
+  getLeftOverStorageBytes,
+  hasPricingPlanExceededStorage,
+} from "admin/organization/pricing_plan_utils";
 import {
   type UnfinishedUpload,
   cancelDatasetUpload,
@@ -37,14 +46,7 @@ import {
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
   startConvertToWkwJob,
-} from "admin/admin_rest_api";
-import {
-  AllowedTeamsFormItem,
-  CardContainer,
-  DatasetNameFormItem,
-  DatastoreFormItem,
-} from "admin/dataset/dataset_components";
-import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -53,23 +55,24 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
+import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
+import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
-import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "oxalis/constants";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import type { OxalisState } from "oxalis/store";
 import { type FileWithPath, useDropzone } from "react-dropzone";
-import { Link, type RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
-  APIJobType,
+  APIJobCommand,
   type APIOrganization,
   type APITeam,
   type APIUser,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { syncValidator } from "types/validation";
+import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import type { WebknossosState } from "viewer/store";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
@@ -92,10 +95,7 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   organization: APIOrganization;
 };
-type Props = OwnProps & StateProps;
-type PropsWithFormAndRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+type PropsWithFormAndRouter = OwnProps & StateProps & RouteComponentProps & WithBlockerProps;
 type State = {
   isUploading: boolean;
   isFinishing: boolean;
@@ -111,18 +111,21 @@ type State = {
   unfinishedUploads: UnfinishedUpload[];
 };
 
-function WkwExample() {
+function Zarr3Example() {
   const description = `
-  great_dataset          # Root folder
-  ├─ color               # Dataset layer (e.g., color, segmentation)
-  │  ├─ 1                # Magnification step (1, 2, 4, 8, 16 etc.)
-  │  │  ├─ header.wkw    # Header wkw file
-  │  │  ├─ z0
-  │  │  │  ├─ y0
-  │  │  │  │  ├─ x0.wkw  # Actual data wkw file
-  │  │  │  │  └─ x1.wkw  # Actual data wkw file
-  │  │  │  └─ y1/...
-  │  │  └─ z1/...
+  great_dataset           # Root folder
+  ├─ color                # Dataset layer (e.g., color, segmentation)
+  │  ├─ zarr.json         # Zarr3 metadata (layer)
+  │  ├─ 1                 # Magnification step (1, 2, 4, 8, 16 etc.)
+  │  │  ├─ zarr.json      # Zarr3 metadata (magnication step)
+  │  │  └─ c
+  │  │     └─ 0
+  │  │        ├─ 0
+  │  │        │  ├─ 0
+  │  │        │  │  ├─ 0  # Actual image data shards
+  │  │        │  │  └─ 1
+  │  │        │  └─ 1/...
+  │  │        └─ 1/...
   │  └─ 2/...
   ├─ segmentation/...
   └─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existent)
@@ -170,6 +173,10 @@ function MultiLayerImageStackExample() {
   );
 }
 
+function getFileSize(files: FileWithPath[]) {
+  return files.reduce((accSize, file) => accSize + file.size, 0);
+}
+
 type UploadFormFieldTypes = {
   name: string;
   initialTeams: Array<APITeam>;
@@ -211,7 +218,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     unfinishedUploadToContinue: null,
   };
 
-  unblock: ((...args: Array<any>) => any) | null | undefined;
   blockTimeoutId: number | null = null;
   formRef: React.RefObject<FormInstance<UploadFormFieldTypes>> = React.createRef<FormInstance>();
 
@@ -261,14 +267,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   unblockHistory() {
     window.onbeforeunload = null;
+    this.props.blocker.reset ? this.props.blocker.reset() : void 0;
 
     if (this.blockTimeoutId != null) {
       clearTimeout(this.blockTimeoutId);
       this.blockTimeoutId = null;
-    }
-
-    if (this.unblock != null) {
-      this.unblock();
     }
   }
 
@@ -291,35 +294,34 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       uploadProgress: 0,
     });
 
-    const beforeUnload = (
-      newLocation: HistoryLocation<unknown>,
-      action: HistoryAction,
-    ): string | false | void => {
-      // Only show the prompt if this is a proper beforeUnload event from the browser
-      // or the pathname changed
-      // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || newLocation.pathname !== window.location.pathname) {
-        const { isUploading } = this.state;
+    const beforeUnload = (args: BeforeUnloadEvent | BlockerFunction): boolean | undefined => {
+      // Navigation blocking can be triggered by two sources:
+      // 1. The browser's native beforeunload event
+      // 2. The React-Router block function (useBlocker or withBlocker HOC)
 
-        if (isUploading) {
-          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+      if (this.state.isUploading) {
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
-          this.blockTimeoutId = window.setTimeout(() => {
-            // restore the event handler in case a user chose to stay on the page
-            // @ts-ignore
-            window.onbeforeunload = beforeUnload;
-          }, 500);
-          return messages["dataset.leave_during_upload"];
-        }
+        this.blockTimeoutId = window.setTimeout(() => {
+          // restore the event handler in case a user chose to stay on the page
+          window.onbeforeunload = beforeUnload;
+        }, 500);
+        // The native event requires a truthy return value to show a generic message
+        // The React Router blocker accepts a boolean
+        return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
       }
 
+      // The native event requires an empty return value to not show a message
       return;
     };
+
     const { unfinishedUploadToContinue } = this.state;
 
-    this.unblock = this.props.history.block(beforeUnload);
-    // @ts-ignore
     window.onbeforeunload = beforeUnload;
+    this.props.setBlocking({
+      // @ts-ignore beforeUnload signature is overloaded
+      shouldBlock: beforeUnload,
+    });
 
     const getRandomString = () => {
       const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
@@ -331,6 +333,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       ? unfinishedUploadToContinue.uploadId
       : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
+    const totalFileSizeInBytes = getFileSize(formValues.zipFile);
     const reserveUploadInformation = {
       uploadId,
       name: newDatasetName,
@@ -339,9 +342,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
+      totalFileSizeInBytes,
       layersToLink: [],
       initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
+      needsConversion: this.state.needsConversion,
     };
     const datastoreUrl = formValues.datastoreUrl;
     await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
@@ -491,17 +496,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         open={isUploading}
         keyboard={false}
         maskClosable={false}
-        className="no-footer-modal"
-        okButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
-        cancelButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
+        footer={null}
         onCancel={this.cancelUpload}
       >
         <div
@@ -638,7 +633,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       Modal.info({
         content: (
           <div>
-            The selected dataset does not seem to be in the WKW or Zarr format. Please convert the
+            The selected dataset does not seem to be in the Zarr or WKW format. Please convert the
             dataset using the{" "}
             <a target="_blank" href="https://docs.webknossos.org/cli" rel="noopener noreferrer">
               webknossos CLI
@@ -690,7 +685,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : this.getDatastoreForUrl(this.state.datastoreUrl);
 
     return (
-      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobCommand.CONVERT_TO_WKW) ||
       false
     );
   };
@@ -714,6 +709,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       (unfinishedUploads) => unfinishedUploads.uploadId !== unfinishedUploadToContinue?.uploadId,
     );
     const continuingUnfinishedUpload = unfinishedUploadToContinue != null;
+    const isActiveUserAdmin = this.props.activeUser?.isAdmin;
 
     return (
       <div
@@ -807,10 +803,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             ref={this.formRef}
             initialValues={{
               initialTeams: [],
-              voxelSize: [0, 0, 0],
+              voxelSizeUnit: UnitLong.nm,
               zipFile: [],
               targetFolderId: new URLSearchParams(location.search).get("to"),
-              unit: UnitLong.nm,
             }}
           >
             {features().isWkorgInstance && (
@@ -883,7 +878,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
                     // @ts-ignore
                     disabled={this.state.needsConversion}
-                    help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                    help="Your dataset is not yet in a WEBKNOSSOS format. Therefore, you need to define the voxel size."
                     rules={[
                       {
                         required: this.state.needsConversion,
@@ -899,6 +894,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   >
                     <Vector3Input
                       allowDecimals
+                      placeholder="e.g. 11.23, 11.23, 28.3"
                       onChange={(voxelSizeFactor: Vector3) => {
                         if (this.formRef.current == null) return;
                         this.formRef.current.setFieldsValue({
@@ -994,6 +990,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     // Either there are no archives, or all files are archives
                     return archives.length === 0 || archives.length === files.length;
                   }, "Archives cannot be mixed with other files."),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const fileSize = getFileSize(files);
+                      return getLeftOverStorageBytes(this.props.organization) >= fileSize;
+                    },
+                    `The selected files exceed the available storage of your organization. Please ${
+                      isActiveUserAdmin
+                        ? "use the organization management page to request more storage"
+                        : "ask your administrator to request more storage"
+                    }.`,
+                  ),
                 },
                 {
                   validator: syncValidator((files: FileWithPath[]) => {
@@ -1172,7 +1181,7 @@ function FileUploadArea({
         >
           {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
             <>
-              Drag and drop your files in WKW format.
+              Drag and drop your files in WEBKNOSSOS format.
               <div
                 style={{
                   textAlign: "left",
@@ -1213,8 +1222,8 @@ function FileUploadArea({
                 The following file formats are supported:
                 <ul>
                   <li>
-                    <Popover content={<WkwExample />} trigger="hover">
-                      WKW dataset
+                    <Popover content={<Zarr3Example />} trigger="hover">
+                      Zarr or WKW dataset
                       <InfoCircleOutlined
                         style={{
                           marginLeft: 4,
@@ -1347,10 +1356,10 @@ function FileUploadArea({
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   organization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetUploadView));
+export default connector(withBlocker(withRouter<PropsWithFormAndRouter>(DatasetUploadView)));

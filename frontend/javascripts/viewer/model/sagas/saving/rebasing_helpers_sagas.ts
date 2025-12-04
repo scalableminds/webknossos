@@ -7,11 +7,13 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type { Mapping, NumberLikeMap, SaveQueueEntry, Segment } from "viewer/store";
 import type {
+  CreateSegmentUpdateAction,
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
   UpdateSegmentUpdateAction,
 } from "../volume/update_actions";
+import _ from "lodash";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,
@@ -158,139 +160,148 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   const annotationBeforeUpdate = yield* select((state) => state.annotation);
 
   let success = true;
-  const updatedSaveQueue = saveQueue.map((saveQueueEntry) => ({
-    ...saveQueueEntry,
-    actions: saveQueueEntry.actions
-      .map((action) => {
-        switch (action.name) {
-          case "mergeAgglomerate":
-          case "splitAgglomerate": {
-            const { segmentId1, segmentId2, actionTracingId } = action.value;
-            const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
-            if (!mappingSyncedWithBackend) {
-              console.error(
-                "Found proofreading action without matching mapping in save queue. This should never happen.",
-                action,
-              );
-              success = false;
-              return null;
-            }
-            if (segmentId1 == null || segmentId2 == null) {
-              console.error(
-                "Found proofreading action without given segmentIds in save queue. This should never happen.",
-                action,
-              );
-              success = false;
-              return null;
-            }
+  const updatedSaveQueue = saveQueue
+    .map((saveQueueEntry): SaveQueueEntry | null => {
+      const newActions = saveQueueEntry.actions
+        .map((action) => {
+          switch (action.name) {
+            case "mergeAgglomerate":
+            case "splitAgglomerate": {
+              const { segmentId1, segmentId2, actionTracingId } = action.value;
+              const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
+              if (!mappingSyncedWithBackend) {
+                console.error(
+                  "Found proofreading action without matching mapping in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+              if (segmentId1 == null || segmentId2 == null) {
+                console.error(
+                  "Found proofreading action without given segmentIds in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
 
-            const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
-            let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
-              adaptToType(segmentId1),
-            );
-            let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
-              adaptToType(segmentId2),
-            );
-            if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
-              console.error(
-                "Found proofreading action without loaded agglomerate ids. This should never occur.",
-                action,
+              const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
+              let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(segmentId1),
               );
-              success = false;
-              return null;
+              let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(segmentId2),
+              );
+              if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
+                console.error(
+                  "Found proofreading action without loaded agglomerate ids. This should never occur.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+              if (action.name === "mergeAgglomerate") {
+                return {
+                  name: action.name,
+                  value: {
+                    ...action.value,
+                    agglomerateId1: Number(upToDateAgglomerateId1),
+                    agglomerateId2: Number(upToDateAgglomerateId2),
+                  },
+                } satisfies MergeAgglomerateUpdateAction;
+              } else {
+                return {
+                  name: action.name,
+                  value: {
+                    ...action.value,
+                    agglomerateId: Number(upToDateAgglomerateId1),
+                  },
+                } satisfies SplitAgglomerateUpdateAction;
+              }
             }
-            if (action.name === "mergeAgglomerate") {
-              return {
-                name: action.name,
+            case "createSegment": {
+              console.log("adapting createSegment action?", action);
+
+              const { actionTracingId } = action.value;
+
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                return action;
+              }
+
+              const newAction: UpdateSegmentUpdateAction = {
+                name: "updateSegment",
                 value: {
-                  ...action.value,
-                  agglomerateId1: Number(upToDateAgglomerateId1),
-                  agglomerateId2: Number(upToDateAgglomerateId2),
+                  actionTracingId: action.value.actionTracingId,
+                  id: action.value.id ?? maybeExistingSegment.id,
+                  name: action.value.name ?? maybeExistingSegment.name,
+                  anchorPosition:
+                    action.value.anchorPosition ?? maybeExistingSegment.anchorPosition,
+                  additionalCoordinates:
+                    action.value.additionalCoordinates ??
+                    maybeExistingSegment.additionalCoordinates,
+                  creationTime: action.value.creationTime ?? maybeExistingSegment.creationTime,
+                  color: action.value.color ?? maybeExistingSegment.color,
+                  groupId: action.value.groupId ?? maybeExistingSegment.groupId,
+                  metadata: action.value.metadata ?? maybeExistingSegment.metadata,
+                  // ...action.value,
                 },
-              } satisfies MergeAgglomerateUpdateAction;
-            } else {
-              return {
-                name: action.name,
+                // todop: omit?
+                changedPropertyNames: [],
+              };
+              return newAction;
+            }
+            case "updateSegment": {
+              ColoredLogger.logGreen("adapting updateSegment action?", action);
+
+              const { actionTracingId } = action.value;
+
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                // Another user removed the segment. The update action of the current user gets lost now.
+                return null;
+              }
+              const changedPropertyNames = action.changedPropertyNames ?? [];
+
+              const newAction: UpdateSegmentUpdateAction = {
+                name: "updateSegment",
                 value: {
-                  ...action.value,
-                  agglomerateId: Number(upToDateAgglomerateId1),
+                  actionTracingId: action.value.actionTracingId,
+                  ...maybeExistingSegment,
+                  ...Object.fromEntries(
+                    changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]),
+                  ),
                 },
-              } satisfies SplitAgglomerateUpdateAction;
+                changedPropertyNames,
+              };
+              return newAction;
             }
-          }
-          case "createSegment": {
-            console.log("adapting createSegment action?", action);
 
-            const { actionTracingId } = action.value;
-
-            const tracing = annotationBeforeUpdate.volumes.find(
-              (v) => v.tracingId === actionTracingId,
-            );
-            const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
-
-            if (!maybeExistingSegment) {
+            default:
               return action;
-            }
-
-            const newAction: UpdateSegmentUpdateAction = {
-              name: "updateSegment",
-              value: {
-                actionTracingId: action.value.actionTracingId,
-                id: action.value.id ?? maybeExistingSegment.id,
-                name: action.value.name ?? maybeExistingSegment.name,
-                anchorPosition: action.value.anchorPosition ?? maybeExistingSegment.anchorPosition,
-                additionalCoordinates:
-                  // todop: additionalCoordinates does not exist in CreateSegment action?
-                  // action.value.additionalCoordinates ??
-                  maybeExistingSegment.additionalCoordinates,
-                creationTime: action.value.creationTime ?? maybeExistingSegment.creationTime,
-                color: action.value.color ?? maybeExistingSegment.color,
-                groupId: action.value.groupId ?? maybeExistingSegment.groupId,
-                metadata: action.value.metadata ?? maybeExistingSegment.metadata,
-                // ...action.value,
-              },
-              // todop: omit?
-              changedPropertyNames: [],
-            };
-            return newAction;
           }
-          case "updateSegment": {
-            ColoredLogger.logGreen("adapting updateSegment action?", action);
-
-            const { actionTracingId } = action.value;
-
-            const tracing = annotationBeforeUpdate.volumes.find(
-              (v) => v.tracingId === actionTracingId,
-            );
-            const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
-
-            if (!maybeExistingSegment) {
-              // todop: change to removeSegment
-              return action;
-            }
-            const changedPropertyNames = action.changedPropertyNames ?? [];
-
-            const newAction: UpdateSegmentUpdateAction = {
-              name: "updateSegment",
-              value: {
-                actionTracingId: action.value.actionTracingId,
-                ...maybeExistingSegment,
-                ...Object.fromEntries(
-                  changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]),
-                ),
-              },
-              changedPropertyNames,
-            };
-            return newAction;
-          }
-
-          default:
-            return action;
-        }
-      })
-      .filter((a) => a != null),
-  }));
+        })
+        .filter((a) => a != null);
+      if (newActions.length === 0) {
+        return null;
+      }
+      return {
+        ...saveQueueEntry,
+        actions: newActions,
+      };
+    })
+    .filter((a) => a != null);
   if (success) {
+    ColoredLogger.logRed("new updatedSaveQueue", updatedSaveQueue);
     yield put(replaceSaveQueueAction(updatedSaveQueue));
     return { success: true, updatedSaveQueue };
   }

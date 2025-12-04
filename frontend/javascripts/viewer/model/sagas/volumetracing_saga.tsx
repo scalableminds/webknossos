@@ -430,6 +430,7 @@ function* uncachedDiffSegmentLists(
     yield createSegmentVolumeAction(
       segment.id,
       segment.anchorPosition,
+      segment.additionalCoordinates,
       segment.name,
       segment.color,
       segment.groupId,

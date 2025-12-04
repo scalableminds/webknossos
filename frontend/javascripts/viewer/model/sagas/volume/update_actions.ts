@@ -729,6 +729,7 @@ export function updateUserBoundingBoxVisibilityInSkeletonTracing(
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -742,6 +743,7 @@ export function createSegmentVolumeAction(
       actionTracingId,
       id,
       anchorPosition,
+      additionalCoordinates,
       name,
       color,
       groupId,

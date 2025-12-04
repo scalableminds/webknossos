@@ -37,6 +37,7 @@ import {
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
 import { MutexFetchingStrategy, getCurrentMutexFetchingStrategy } from "./save_mutex_saga";
+import { ColoredLogger } from "libs/utils";
 
 const MAX_ON_CONFLICT_RETRIES = 10;
 
@@ -179,6 +180,7 @@ export function* sendSaveRequestToServer(
    */
 
   const fullSaveQueue = yield* select((state) => state.save.queue);
+  ColoredLogger.logRed("sendSaveRequestToServer fullSaveQueue", fullSaveQueue);
   const withoutFEOnlyActions = filterOutFrontendOnlySupportedActions(fullSaveQueue);
   const saveQueue = sliceAppropriateBatchCount(withoutFEOnlyActions);
   let compactedSaveQueue = compactSaveQueue(saveQueue);

@@ -67,7 +67,6 @@ type Writable<T> = T extends object ? { -readonly [K in keyof T]: Writable<T[K]>
 
 function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
-    console.log("############# handleUpdateSegment in reducer", action);
     const { segmentId, segment } = action;
     if (segmentId === 0) {
       return segments;
@@ -104,7 +103,6 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     newSegment.metadata = sanitizeMetadata(newSegment.metadata);
 
     const newSegmentMap = segments.set(segmentId, newSegment);
-    console.log("newSegmentMap", newSegmentMap.getNullable(1));
     return newSegmentMap;
   });
 }

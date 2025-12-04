@@ -81,7 +81,7 @@
     "build-watch": "node_modules/.bin/webpack -w",
     "listening": "lsof -i:5005,7155,9000,9001,9002",
     "kill-listeners": "kill -9 $(lsof -t -i:5005,7155,9000,9001,9002)",
-    "rm-fossil-lock": "rm fossildb/data/LOCK",
+    "rm-fossil-lock": "rm -f fossildb/data/LOCK",
     "test": "vitest --config vitest_spec.config.ts run",
     "test-changed": "vitest --config vitest_spec.config.ts changed",
     "test-watch": "vitest --config vitest_spec.config.ts watch",

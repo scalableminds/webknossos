@@ -13,8 +13,7 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
-import { Flex } from "antd/lib";
+import { Flex, Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";

@@ -37,9 +37,9 @@ const createSegment = (id: number, groupId: number | null, isVisible: boolean): 
   name: "TestSegment",
   color: [23, 23, 23],
   creationTime: 12345678,
-  somePosition: [0, 0, 0],
+  anchorPosition: [0, 0, 0],
   isVisible,
-  someAdditionalCoordinates: [],
+  additionalCoordinates: [],
   groupId,
   metadata: [],
 });

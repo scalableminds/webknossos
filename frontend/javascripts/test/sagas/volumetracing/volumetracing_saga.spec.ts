@@ -107,8 +107,8 @@ describe("VolumeTracingSaga", () => {
         VolumeTracingActions.updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            somePosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            anchorPosition: startEditingAction.position,
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),
@@ -149,8 +149,8 @@ describe("VolumeTracingSaga", () => {
         VolumeTracingActions.updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            somePosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            anchorPosition: startEditingAction.position,
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),
@@ -204,8 +204,8 @@ describe("VolumeTracingSaga", () => {
         VolumeTracingActions.updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            somePosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            anchorPosition: startEditingAction.position,
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),
@@ -271,8 +271,8 @@ describe("VolumeTracingSaga", () => {
         VolumeTracingActions.updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            somePosition: startEditingAction.position,
-            someAdditionalCoordinates: [],
+            anchorPosition: startEditingAction.position,
+            additionalCoordinates: [],
           },
           volumeTracing.tracingId,
         ),

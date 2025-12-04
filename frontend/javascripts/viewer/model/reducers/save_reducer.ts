@@ -223,6 +223,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
           skeleton: {
             $set: rebaseInfo.skeleton,
           },
+          volumes: { $set: rebaseInfo.volumes },
         },
         temporaryConfiguration: {
           activeMappingByLayer: {
@@ -279,6 +280,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
             },
             skeleton: {
               $set: state.annotation.skeleton,
+            },
+            volumes: {
+              $set: state.annotation.volumes,
             },
           },
         },

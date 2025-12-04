@@ -729,6 +729,7 @@ export function updateUserBoundingBoxVisibilityInSkeletonTracing(
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -742,6 +743,7 @@ export function createSegmentVolumeAction(
       actionTracingId,
       id,
       anchorPosition,
+      additionalCoordinates,
       name,
       color,
       groupId,
@@ -760,8 +762,12 @@ export function updateSegmentVolumeAction(
   groupId: number | null | undefined,
   metadata: Array<MetadataEntryProto>,
   actionTracingId: string,
-  creationTime: number | null | undefined = Date.now(),
+  creationTime: number | null | undefined,
+  // This property is only maintained in the front-end. It is used to enable fine granular rebasing.
+  // todop: or should we store it too?
+  changedPropertyNames?: string[],
 ) {
+  const opt = changedPropertyNames != null ? { changedPropertyNames } : {};
   return {
     name: "updateSegment",
     value: {
@@ -775,6 +781,11 @@ export function updateSegmentVolumeAction(
       metadata: enforceValidMetadata(metadata),
       creationTime,
     },
+    // The following line is mostly equivalent to:
+    // changedPropertyNames
+    // but ensures that the return type of this function marks
+    // changedPropertyNames as optional
+    ...opt,
   } as const;
 }
 

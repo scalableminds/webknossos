@@ -2,7 +2,7 @@ import { getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import _ from "lodash";
 import { type Channel, buffers } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -282,7 +282,10 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     yield* call(diffTracingsAndPrepareRebase);
   }
 
+  ColoredLogger.logRed("needsRebasing", needsRebasing);
+
   try {
+    ColoredLogger.logRed("apply from server", missingUpdateActions);
     if (missingUpdateActions.length > 0) {
       const { successful } = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
       if (!successful) {
@@ -290,6 +293,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       }
     }
     if (needsRebasing) {
+      ColoredLogger.logRed("Reapply from save queue");
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
       const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue);
       if (!successful) {

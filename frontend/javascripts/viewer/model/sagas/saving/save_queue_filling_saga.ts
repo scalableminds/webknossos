@@ -1,9 +1,3 @@
-/*
- * This module contains the sagas responsible for populating the save queue
- * with update actions that need to be saved to the server. Note that for proofreading,
- * the proofreading saga is directly responsible for filling the queue.
- */
-
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
@@ -151,10 +145,9 @@ export function* setupSavingForTracingType(
     }
 
     // The allowUpdate setting could have changed in the meantime.
-    const allowUpdate = yield* select(
-      (state) =>
-        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
-    );
+    const allowUpdate = yield* select((state) => {
+      return state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave;
+    });
     // Ignore changes while rebasing as during this time actions are simply replayed on top of the server's state.
     // Therefore, these actions were already added to the save queue and should not be added again.
     const isRebasing = yield* select(

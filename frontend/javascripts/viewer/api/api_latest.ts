@@ -23,7 +23,7 @@ import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,
@@ -649,13 +649,11 @@ class TracingApi {
    */
   registerSegment(
     segmentId: number,
-    somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+    anchorPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
   /**
@@ -800,8 +798,8 @@ class TracingApi {
    *   3,
    *   {
    *     name: "A name",
-   *     somePosition: [1, 2, 3],
-   *     someAdditionalCoordinates: [],
+   *     anchorPosition: [1, 2, 3],
+   *     additionalCoordinates: [],
    *     color: [1, 2, 3],
    *     groupId: 1,
    *   },
@@ -2345,8 +2343,8 @@ class DataApi {
       updateSegmentAction(
         segmentId,
         {
-          somePosition: globalPositionsMag1[0],
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: globalPositionsMag1[0],
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),

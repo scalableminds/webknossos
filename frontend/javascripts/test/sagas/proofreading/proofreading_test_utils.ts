@@ -130,14 +130,14 @@ class BackendMock {
   getCurrentMappingEntriesFromServer = (version?: number | null | undefined): Vector2[] => {
     if (version == null) {
       version = this.agglomerateMapping.currentVersion;
-      console.log("defaulting to version", version);
+      // console.log("defaulting to version", version);
     }
     // This function should always return the full current mapping.
     // The values will be filtered according to the requested keys
     // in `getAgglomeratesForSegmentsImpl`.
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
 
-    console.log(`Replying with mapping for v=${version}: `, mapping);
+    // console.log(`Replying with mapping for v=${version}: `, mapping);
     return mapping;
   };
 
@@ -182,7 +182,7 @@ class BackendMock {
 
     // Process received update actions and update agglomerateMapping.
     for (const item of newItems) {
-      console.log("pushing to server: v=", item.version, "with", item.value);
+      console.log(`Updating mocked server to: v=${item.version} with`, item.value);
       let isFirstUpdateAction = true;
       for (const updateAction of item.value) {
         const bumpVersion = isFirstUpdateAction;
@@ -269,7 +269,9 @@ class BackendMock {
      * saving can finish.
      */
     this.addOnSavedListener(() => {
+      console.log("current version", this.updateActionLog.at(-1)?.version);
       if (this.updateActionLog.at(-1)?.version === targetVersion - 1) {
+        console.log("injecting...");
         this.injectVersion(updateActions, targetVersion);
       }
     });

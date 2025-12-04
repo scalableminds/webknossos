@@ -1,23 +1,22 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import memoizeOne from "memoize-one";
-import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
-import getSceneController from "viewer/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { AnnotationLayerEnum } from "types/api_types";
+import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
+import getSceneController from "viewer/controller/scene_controller_provider";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   isBrushTool,
   isTraceTool,
@@ -82,7 +81,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import type { SegmentMap, VolumeTracing } from "viewer/store";
+import { type SegmentMap, SegmentProperties, type VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -231,8 +230,8 @@ export function* editVolumeLayerAsync(): Saga<never> {
       updateSegmentAction(
         activeCellId,
         {
-          somePosition: startEditingAction.position,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: startEditingAction.position,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -339,8 +338,8 @@ export function* editVolumeLayerAsync(): Saga<never> {
       updateSegmentAction(
         activeCellId,
         {
-          somePosition: lastPosition,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: lastPosition,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -430,7 +429,8 @@ function* uncachedDiffSegmentLists(
     const segment = newSegments.getOrThrow(segmentId);
     yield createSegmentVolumeAction(
       segment.id,
-      segment.somePosition,
+      segment.anchorPosition,
+      segment.additionalCoordinates,
       segment.name,
       segment.color,
       segment.groupId,
@@ -449,17 +449,26 @@ function* uncachedDiffSegmentLists(
     const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
     const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
 
-    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
+    let changedPropertyNames = [];
+    for (const propertyName of SegmentProperties) {
+      if (
+        !_.isEqual(prevSegmentWithoutIsVisible[propertyName], segmentWithoutIsVisible[propertyName])
+      ) {
+        changedPropertyNames.push(propertyName);
+      }
+    }
+    if (changedPropertyNames.length > 0) {
       yield updateSegmentVolumeAction(
         segment.id,
-        segment.somePosition,
-        segment.someAdditionalCoordinates,
+        segment.anchorPosition,
+        segment.additionalCoordinates,
         segment.name,
         segment.color,
         segment.groupId,
         segment.metadata,
         tracingId,
         segment.creationTime,
+        changedPropertyNames,
       );
     }
 
@@ -566,8 +575,8 @@ function* ensureSegmentExists(
       updateSegmentAction(
         segmentId,
         {
-          somePosition: seedPosition,
-          someAdditionalCoordinates: seedAdditionalCoordinates,
+          anchorPosition: seedPosition,
+          additionalCoordinates: seedAdditionalCoordinates,
         },
         layerName,
       ),
@@ -577,9 +586,9 @@ function* ensureSegmentExists(
     // This way the most up-to-date position of a cell is used to jump to when a
     // segment is selected in the segment list. Also, the position of the active
     // cell is used in the proofreading mode.
-    const { somePosition, someAdditionalCoordinates } = action;
+    const { anchorPosition, additionalCoordinates } = action;
 
-    if (somePosition == null) {
+    if (anchorPosition == null) {
       // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
       // via the UI.
       return;
@@ -593,8 +602,8 @@ function* ensureSegmentExists(
       updateSegmentAction(
         segmentId,
         {
-          somePosition,
-          someAdditionalCoordinates: someAdditionalCoordinates,
+          anchorPosition,
+          additionalCoordinates: additionalCoordinates,
         },
         layerName,
         undefined,
@@ -602,7 +611,7 @@ function* ensureSegmentExists(
       ),
     );
 
-    yield put(updateProofreadingMarkerPositionAction(somePosition, layerName));
+    yield put(updateProofreadingMarkerPositionAction(anchorPosition, layerName));
 
     yield* call(updateClickedSegments, action);
   }

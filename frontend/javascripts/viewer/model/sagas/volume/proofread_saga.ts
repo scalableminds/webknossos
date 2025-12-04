@@ -1722,7 +1722,7 @@ function* gatherInfoForOperation(
     console.warn("[Proofreading] Cannot execute operation because no active segment item exists");
     return null;
   }
-  const activeSegmentPositionFloat = activeSegment.somePosition;
+  const activeSegmentPositionFloat = activeSegment.anchorPosition;
   if (activeSegmentPositionFloat == null) {
     console.warn("[Proofreading] Cannot execute operation because active segment has no position");
     return null;

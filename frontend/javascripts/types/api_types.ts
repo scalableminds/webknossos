@@ -26,7 +26,7 @@ import type {
   RecommendedConfiguration,
   SegmentGroup,
 } from "viewer/store";
-import type { EmptyObject } from "./globals";
+import type { EmptyObject } from "./type_utils";
 
 // Re-export
 export type { BoundingBoxProto } from "types/bounding_box";

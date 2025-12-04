@@ -88,8 +88,8 @@ describe("Update Action Application for VolumeTracing", () => {
   const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
-    VolumeTracingActions.updateSegmentAction(2, { somePosition: [1, 2, 3] }, tracingId),
-    VolumeTracingActions.updateSegmentAction(3, { somePosition: [3, 4, 5] }, tracingId),
+    VolumeTracingActions.updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),
+    VolumeTracingActions.updateSegmentAction(3, { anchorPosition: [3, 4, 5] }, tracingId),
     VolumeTracingActions.updateSegmentAction(
       3,
       {
@@ -126,7 +126,7 @@ describe("Update Action Application for VolumeTracing", () => {
     VolumeTracingActions.setActiveCellAction(4),
     VolumeTracingActions.updateSegmentAction(
       4,
-      { groupId: 3, somePosition: [7, 8, 9], isVisible: true },
+      { groupId: 3, anchorPosition: [7, 8, 9], isVisible: true },
       tracingId,
     ),
     VolumeTracingActions.toggleSegmentGroupAction(3, tracingId),

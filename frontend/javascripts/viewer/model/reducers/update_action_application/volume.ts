@@ -8,7 +8,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Segment, WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   type VolumeTracingReducerAction,
@@ -51,17 +51,23 @@ function applySingleAction(
       const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
       return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
     }
-    case "createSegment":
+    case "createSegment": {
+      const { actionTracingId, ...segment } = ua.value;
+      return VolumeTracingReducer(state, updateSegmentAction(segment.id, segment, actionTracingId));
+    }
     case "updateSegment": {
-      const { actionTracingId, ...originalSegment } = ua.value;
-      const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
-      const segment: Partial<Segment> = {
-        somePosition: anchorPosition ?? undefined,
-        ...segmentWithoutAnchor,
-      };
+      const { changedPropertyNames } = ua;
+      const { actionTracingId, ...segment } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(originalSegment.id, segment, actionTracingId),
+        updateSegmentAction(
+          segment.id,
+          segment,
+          actionTracingId,
+          Date.now(),
+          false,
+          changedPropertyNames,
+        ),
       );
     }
     case "deleteSegment": {

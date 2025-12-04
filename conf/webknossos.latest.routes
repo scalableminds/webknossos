@@ -246,6 +246,7 @@ GET           /organizations/default                                            
 GET           /organizationsIsEmpty                                                             controllers.OrganizationController.organizationsIsEmpty()
 GET           /organizations/:organizationId                                                    controllers.OrganizationController.get(organizationId: String)
 PATCH         /organizations/:organizationId                                                    controllers.OrganizationController.update(organizationId: String)
+POST          /organizations/:organizationId/updatePlan                                         controllers.OrganizationController.updatePlan(organizationId: String)
 DELETE        /organizations/:organizationId                                                    controllers.OrganizationController.delete(organizationId: String)
 POST          /organizations/:organizationId/addUser                                            controllers.OrganizationController.addUser(organizationId: String)
 GET           /operatorData                                                                     controllers.OrganizationController.getOperatorData()

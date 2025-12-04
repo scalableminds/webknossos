@@ -361,8 +361,11 @@ CREATE TABLE webknossos.organization_plan_updates(
   description TEXT DEFAULT NULL,
   pricingPlan webknossos.PRICING_PLANS DEFAULT NULL,
   paidUntil TIMESTAMPTZ DEFAULT NULL,
+  paidUntilChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   includedUsers INTEGER DEFAULT NULL,
+  includedUsersChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   includedStorage BIGINT DEFAULT NULL,
+  includedStorageChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
 );

@@ -3,13 +3,16 @@ package controllers
 import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TristateOptionJsonHelper}
+import controllers.DatasetUpdateParameters.tristateOptionParsing
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
 import models.team.PricingPlan
+import models.team.PricingPlan.PricingPlan
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsNull, JsValue, Json, OFormat, __}
@@ -20,6 +23,26 @@ import scala.concurrent.duration._
 import security.{WkEnv, WkSilhouetteEnvironment}
 
 import scala.concurrent.ExecutionContext
+
+case class OrganizationPlanUpdate(
+    organizationId: String,
+    description: Option[String],
+    pricingPlan: Option[PricingPlan],
+    paidUntil: Option[Option[Instant]] = Some(None), // None means unchanged, Some(None) means set to None
+    includedUsers: Option[Option[Int]] = Some(None), // None means unchanged, Some(None) means set to None
+    includedStorageBytes: Option[Option[Long]] = Some(None), // None means unchanged, Some(None) means set to None
+    created: Instant = Instant.now
+) {
+  lazy val pricingPlanChanged: Boolean = pricingPlan.isDefined
+  lazy val paidUntilChanged: Boolean = paidUntil.isDefined
+  lazy val includedUsersChanged: Boolean = includedUsers.isDefined
+  lazy val includedStorageChanged: Boolean = includedStorageBytes.isDefined
+}
+
+object OrganizationPlanUpdate extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[OrganizationPlanUpdate] =
+    Json.configured(tristateOptionParsing).format[OrganizationPlanUpdate]
+}
 
 class OrganizationController @Inject()(
     organizationDAO: OrganizationDAO,
@@ -292,4 +315,13 @@ class OrganizationController @Inject()(
           ))
     }
 
+  def updatePlan(organizationId: String): Action[OrganizationPlanUpdate] =
+    sil.SecuredAction.async(validateJson[OrganizationPlanUpdate]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
+        _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
+        _ <- organizationDAO.updatePlan(organization._id, request.body)
+      } yield Ok
+    }
 }

@@ -10,6 +10,7 @@ import models.team.PricingPlan.PricingPlan
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
+import controllers.OrganizationPlanUpdate
 import slick.dbio.DBIO
 import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -305,4 +306,41 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   private def assertUpdateAccess(organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     assertUpdateAccess(ObjectId(organizationId))
 
+  def updatePlan(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =
+    for {
+      _ <- Fox.runOptional(planUpdate.pricingPlan)(newPricingPlan =>
+        run(
+          q"""UPDATE webknossos.organizations SET pricingPlan = $newPricingPlan WHERE _id = $organizationId""".asUpdate))
+      _ <- Fox.runIf(planUpdate.paidUntilChanged)(
+        run(
+          q"""UPDATE webknossos.organizations SET paidUntil = ${planUpdate.paidUntil.flatten} WHERE _id = $organizationId""".asUpdate)
+      )
+      _ <- Fox.runIf(planUpdate.includedUsersChanged)(
+        run(
+          q"""UPDATE webknossos.organizations SET includedUsers = ${planUpdate.includedUsers.flatten} WHERE _id = $organizationId""".asUpdate)
+      )
+      _ <- Fox.runIf(planUpdate.includedStorageChanged)(
+        run(
+          q"""UPDATE webknossos.organizations SET includedStorage = ${planUpdate.includedStorageBytes.flatten} WHERE _id = $organizationId""".asUpdate)
+      )
+    } yield ()
+
+  def insertPlanUpdate(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =
+    for {
+      _ <- run(s"""INSERT INTO webknossos.organization_plan_updates(
+                     _organization, description, pricingPlan,
+                     paidUntil, paidUntilChanged,
+                     includedUsers, includedUsersChanged,
+                     includedStorage, includedStorageChanged,
+                     created
+                   )
+                   VALUES(
+                     $organizationId, ${planUpdate.description}, ${planUpdate.pricingPlan},
+                     ${planUpdate.paidUntil.flatten}, ${planUpdate.paidUntilChanged},
+                     ${planUpdate.includedUsers.flatten}, ${planUpdate.includedUsersChanged},
+                     ${planUpdate.includedStorageBytes.flatten}, ${planUpdate.includedStorageChanged},
+                     ${planUpdate.created}
+                   )
+          """.asUpdate)
+    } yield ()
 }

@@ -27,6 +27,7 @@ import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
@@ -254,8 +255,8 @@ function TaskListView({ initialFieldValues }: Props) {
       dataIndex: "id",
       key: "id",
       sorter: Utils.localeCompareBy<APITask>((task) => task.id),
-      className: "monospace-id",
-      width: 100,
+      render: (id: string) => <FormattedId id={id} />,
+      width: 120,
     },
     {
       title: "Project",

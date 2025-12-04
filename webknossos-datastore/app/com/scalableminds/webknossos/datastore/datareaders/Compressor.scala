@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.bloscjava.Blosc
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO.GZIPOutputStream
+import com.scalableminds.webknossos.datastore.compresso.NativeCompressoCompressor
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.compressedsegmentation.{
   CompressedSegmentation32,
@@ -310,6 +311,20 @@ class JpegCompressor() extends Compressor {
     val data = dbb.getData.grouped(width).toList
     data.flatten.toArray
   }
+}
+
+class CompressoCompressor extends Compressor {
+  override def getId = "compresso"
+
+  override def toString: String = getId
+
+  @throws[IOException]
+  override def compress(input: Array[Byte]): Array[Byte] = ???
+
+  @throws[IOException]
+  override def decompress(input: Array[Byte]): Array[Byte] =
+    new NativeCompressoCompressor().decompress(input)
+
 }
 
 class CompressedSegmentationCompressor(dataType: ArrayDataType, volumeSize: Array[Int], blockSize: Vec3Int)

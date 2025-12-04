@@ -435,10 +435,10 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   const newJobs = jobs
     .filter(
       (job) =>
-        job.type === "convert_to_wkw" &&
-        dayjs.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
+        job.command === "convert_to_wkw" &&
+        dayjs.duration(now.diff(job.created)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
     )
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .sort((a, b) => b.created - a.created);
 
   if (newJobs.length === 0) {
     return null;
@@ -468,12 +468,12 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
             <Col>
               <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
               {job.state === "SUCCESS" && job.resultLink ? (
-                <Link to={job.resultLink}>{job.datasetName}</Link>
+                <Link to={job.resultLink}>{job.args.datasetName}</Link>
               ) : (
-                job.datasetName || "UNKNOWN"
+                job.args.datasetName || "UNKNOWN"
               )}
               {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
-              <FormattedDate timestamp={job.createdAt} />
+              <FormattedDate timestamp={job.created} />
               <span>)</span>
             </Col>
           </Row>

@@ -50,7 +50,7 @@ import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_types";
+import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
@@ -435,7 +435,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_MESH_FILE,
+        APIJobCommand.COMPUTE_MESH_FILE,
       )
     ) {
       this.pollJobData();
@@ -680,7 +680,8 @@ class SegmentsView extends React.Component<Props, State> {
     const jobs = this.props.activeUser != null ? await getJobs() : [];
     const oldActiveJobId = this.state.activeMeshJobId;
     const meshJobsForDataset = jobs.filter(
-      (job) => job.type === "compute_mesh_file" && job.datasetName === this.props.datasetName,
+      (job) =>
+        job.command === "compute_mesh_file" && job.args.datasetName === this.props.datasetName,
     );
     const activeJob =
       oldActiveJobId != null ? meshJobsForDataset.find((job) => job.id === oldActiveJobId) : null;
@@ -708,7 +709,6 @@ class SegmentsView extends React.Component<Props, State> {
         }
 
         case "STARTED":
-        case "UNKNOWN":
         case "PENDING": {
           break;
         }
@@ -760,7 +760,7 @@ class SegmentsView extends React.Component<Props, State> {
 
     if (
       !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_MESH_FILE,
+        APIJobCommand.COMPUTE_MESH_FILE,
       )
     ) {
       title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";

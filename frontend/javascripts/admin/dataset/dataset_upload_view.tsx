@@ -64,7 +64,7 @@ import { type FileWithPath, useDropzone } from "react-dropzone";
 import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
-  APIJobType,
+  APIJobCommand,
   type APIOrganization,
   type APITeam,
   type APIUser,
@@ -685,7 +685,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : this.getDatastoreForUrl(this.state.datastoreUrl);
 
     return (
-      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobCommand.CONVERT_TO_WKW) ||
       false
     );
   };

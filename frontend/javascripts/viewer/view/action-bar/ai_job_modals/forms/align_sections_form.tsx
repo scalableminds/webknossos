@@ -4,7 +4,7 @@ import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { type JobApiCallArgsType, StartJobForm } from "./start_job_form";
 
@@ -26,7 +26,7 @@ export function AlignSectionsForm() {
   return (
     <StartJobForm
       handleClose={handleClose}
-      jobName={APIJobType.ALIGN_SECTIONS}
+      jobName={APIJobCommand.ALIGN_SECTIONS}
       buttonLabel="Start section alignment job"
       title="Section Alignment"
       suggestedDatasetSuffix="aligned"

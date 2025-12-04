@@ -376,7 +376,7 @@ describe("Collaborative editing of segment items", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should handle concurrent delete and update segment update actions", async (context: WebknossosTestContext) => {
+  it("should handle concurrent delete and update segment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
@@ -384,11 +384,7 @@ describe("Collaborative editing of segment items", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    // On the backend, a segment with the following properties is created.
-    // Note that the anchorPosition, in particular, will survive the rebase.
-    // The local user will create the same segment with another name and a color
-    // (which should then also be present in the final segment).
-
+    // On the backend, the segment is deleted.
     backendMock.planVersionInjection(5, [
       {
         name: "deleteSegment",
@@ -433,6 +429,80 @@ describe("Collaborative editing of segment items", () => {
       ]);
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
       expect(finalSegment).toBeUndefined();
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it.only("should handle multiple pending update segment update actions", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const segmentId = 1;
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const injectedSegmentProps = {
+      actionTracingId: tracingId,
+      id: segmentId,
+      anchorPosition: [1, 2, 3] as Vector3,
+      additionalCoordinates: null,
+      name: "Some Name",
+      color: null,
+      groupId: null,
+      creationTime: Date.now(),
+      metadata: [],
+    };
+
+    backendMock.planVersionInjection(5, [
+      {
+        name: "updateSegment",
+        value: injectedSegmentProps,
+      },
+    ]);
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      // Create the segment (creation also uses the updateSegmentAction redux action)
+      const updateSegmentProps1 = { name: "Some Name", color: [128, 0, 0] as Vector3 };
+      yield put(updateSegmentAction(segmentId, updateSegmentProps1, tracingId));
+
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      const updateSegmentProps2 = { groupId: 4 };
+      yield put(updateSegmentAction(segmentId, updateSegmentProps2, tracingId));
+
+      const updateSegmentProps3 = { anchorPosition: [1, 2, 3] as Vector3 };
+      yield put(updateSegmentAction(segmentId, updateSegmentProps3, tracingId));
+
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      const expectedShapeWithTracingId = {
+        ...updateSegmentProps1,
+        ...injectedSegmentProps,
+        ...updateSegmentProps2,
+        ...updateSegmentProps3,
+      };
+      const { actionTracingId, ...expectedShape } = expectedShapeWithTracingId;
+
+      // todop: reactivate once partial update for segments is implemented
+      // const removeSegmentSaveAction = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      // expect(removeSegmentSaveAction).toMatchObject([
+      //   {
+      //     name: "updateSegment",
+      //     value: expectedShape,
+      //   },
+      // ]);
+      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
+      expect(finalSegment).toMatchObject(expectedShape);
     });
 
     await task.toPromise();

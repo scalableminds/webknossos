@@ -129,8 +129,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
             style={{
               padding: "0 16px",
             }}
-            onKeyDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
           >
             <Tooltip title="Add a new Layout">
               <Button

@@ -495,7 +495,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   );
   return (
     <Alert
-      message={newJobsHeader}
+      title={newJobsHeader}
       description={newJobsList}
       type="info"
       style={{

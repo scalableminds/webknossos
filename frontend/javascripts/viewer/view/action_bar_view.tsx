@@ -50,7 +50,7 @@ import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
   <Alert
-    message="Read-only version restore mode active!"
+    title="Read-only version restore mode active!"
     style={{
       padding: "4px 15px",
     }}
@@ -304,7 +304,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       <ButtonComponent
         key="ai-job-button"
         onClick={() => Store.dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
-        style={{ marginLeft: 12, pointerEvents: "auto" }}
+        style={{ marginLeft: 10, pointerEvents: "auto" }}
         disabled={disabled}
         title={tooltipText}
         icon={<i className="fas fa-magic" />}

@@ -22,7 +22,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
+import { Button, Card, Col, Input, Modal, Row, Space, Spin, Table, Tag, Tooltip } from "antd";
 import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -719,7 +719,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Tags",
         dataIndex: "tags",
         render: (tags: Array<string>, annotation: APIAnnotationInfo) => (
-          <div>
+          <Space wrap>
             {tags.map((tag) => (
               <CategorizationLabel
                 key={tag}
@@ -739,7 +739,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
               />
             )}
-          </div>
+          </Space>
         ),
       },
       {

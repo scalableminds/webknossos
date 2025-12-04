@@ -322,7 +322,7 @@ function _ShareModalView(props: Props) {
         style={{
           marginBottom: 18,
         }}
-        message={message}
+        title={message}
         type="warning"
         showIcon
       />

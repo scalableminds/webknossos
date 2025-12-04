@@ -493,7 +493,7 @@ function CreateAnimationModal(props: Props) {
             <Alert
               type="error"
               style={{ marginTop: 18, width: "100%" }}
-              message={
+              title={
                 <ul>
                   {validationErrors.map((errorMessage) => (
                     <li key={errorMessage.slice(5)}>{errorMessage}</li>

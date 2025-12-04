@@ -137,7 +137,7 @@ function TaskListView({ initialFieldValues }: Props) {
             />
           </div>
           <Alert
-            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
+            title="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
             type="info"
           />
         </>

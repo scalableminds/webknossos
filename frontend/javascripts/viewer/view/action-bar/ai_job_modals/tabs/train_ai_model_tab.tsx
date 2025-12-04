@@ -28,7 +28,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
     <>
       <Row style={{ marginBottom: 16 }}>
         <Alert
-          message="Please note that this feature is experimental. All bounding boxes should have equal dimensions or have dimensions which are multiples of the smallest bounding box. Ensure the size is not too small (we recommend at least 10 Vx per dimension) and choose boxes that represent the data well."
+          title="Please note that this feature is experimental. All bounding boxes should have equal dimensions or have dimensions which are multiples of the smallest bounding box. Ensure the size is not too small (we recommend at least 10 Vx per dimension) and choose boxes that represent the data well."
           type="info"
           showIcon
         />

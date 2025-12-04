@@ -152,7 +152,7 @@ const Toast = {
       style: {},
       className: config.className || "",
       onClose,
-      btn: config.customFooter,
+      actions: config.customFooter,
     };
 
     if (type === "error") {

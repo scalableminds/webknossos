@@ -171,7 +171,7 @@ function UserListView() {
 
     return newInactiveUsers.length ? (
       <Alert
-        message={newInactiveUsersHeader}
+        title={newInactiveUsersHeader}
         description={newInactiveUsersList}
         type="info"
         icon={<UserOutlined className="icon-margin-right" />}
@@ -194,7 +194,7 @@ function UserListView() {
     );
     return isLoading ? null : (
       <Alert
-        message="Invite more users"
+        title="Invite more users"
         description={noUsersMessage}
         type="info"
         showIcon
@@ -213,7 +213,7 @@ function UserListView() {
   function renderUpgradePlanAlert() {
     return (
       <Alert
-        message="You reached the maximum number of users"
+        title="You reached the maximum number of users"
         description={
           <>
             Your organization has reached the maximum number of users allowed in your current plan.

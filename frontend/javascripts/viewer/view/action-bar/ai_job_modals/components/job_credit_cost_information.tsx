@@ -23,7 +23,7 @@ export function JobCreditCostInformation({
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>
         <Alert
-          message={
+          title={
             <>
               Billing for this job is not active during testing phase. This job is billed at{" "}
               {jobCreditCostPerGVx} {pluralize("credit", jobCreditCostPerGVx)} per Gigavoxel

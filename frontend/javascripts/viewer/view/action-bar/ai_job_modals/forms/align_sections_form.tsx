@@ -42,7 +42,7 @@ export function AlignSectionsForm() {
           </Row>
           <Row style={{ display: "grid", marginBottom: 16 }}>
             <Alert
-              message="Please note that this feature is still experimental. Contact us if you have any problems or need alignment errors to be fixed."
+              title="Please note that this feature is still experimental. Contact us if you have any problems or need alignment errors to be fixed."
               type="warning"
               showIcon
             />

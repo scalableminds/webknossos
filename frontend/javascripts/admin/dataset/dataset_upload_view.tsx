@@ -725,7 +725,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"
-              message={
+              title={
                 <>
                   Your organization has exceeded the available storage. Uploading new datasets is
                   disabled. Visit the{" "}
@@ -739,7 +739,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
           {unfinishedAndNotSelectedUploads.length > 0 && (
             <Alert
-              message={
+              title={
                 <>
                   Unfinished Dataset Uploads{" "}
                   <Tooltip
@@ -813,7 +813,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           >
             {features().isWkorgInstance && (
               <Alert
-                message={
+                title={
                   <>
                     We are happy to help!
                     <br />

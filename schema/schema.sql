@@ -356,6 +356,17 @@ CREATE TABLE webknossos.organizations(
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
+CREATE TABLE webknossos.organization_plan_updates(
+  _organization TEXT NOT NULL,
+  description TEXT DEFAULT NULL,
+  pricingPlan webknossos.PRICING_PLANS DEFAULT NULL,
+  paidUntil TIMESTAMPTZ DEFAULT NULL,
+  includedUsers INTEGER DEFAULT NULL,
+  includedStorage BIGINT DEFAULT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
 CREATE TABLE webknossos.organization_usedStorage_mags (
     _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
     layerName TEXT NOT NULL,

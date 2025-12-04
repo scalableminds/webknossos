@@ -162,10 +162,7 @@ class Plane {
     this.lastScaleFactors[1] = yFactor;
     // Scale to base voxel space which is the same coordinate space the cameras use
     const baseVoxelUnit = getBaseVoxelInUnit(this.datasetScaleFactor);
-    const scaleVector: Vector3 = V3.multiply(
-      [xFactor, yFactor, 1],
-      [baseVoxelUnit, baseVoxelUnit, baseVoxelUnit],
-    );
+    const scaleVector: Vector3 = V3.scale([xFactor, yFactor, 1], baseVoxelUnit);
     this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 

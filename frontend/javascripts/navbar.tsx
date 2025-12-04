@@ -1,6 +1,7 @@
 import {
   BarChartOutlined,
   BellOutlined,
+  ExperimentOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
@@ -211,30 +212,12 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       ]
     : [];
 
-  if (features().jobsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/jobs",
-      label: <Link to="/jobs">Processing Jobs</Link>,
-    });
-
   if (isAdmin) {
     adminstrationSubMenuItems.push({
       key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }
-  if (activeUser.isSuperUser) {
-    adminstrationSubMenuItems.push({
-      key: "/aiModels",
-      label: <Link to={"/aiModels"}>AI Models</Link>,
-    });
-  }
-
-  if (features().voxelyticsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/workflows",
-      label: <Link to="/workflows">Voxelytics</Link>,
-    });
 
   if (adminstrationSubMenuItems.length === 0) {
     return null;
@@ -249,6 +232,44 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       collapse,
     ),
     children: adminstrationSubMenuItems,
+  };
+}
+
+export function getAnalysisSubMenu(collapse: boolean) {
+  const analysisSubMenuItems = [];
+
+  if (features().jobsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/jobs",
+      label: <Link to="/jobs">Processing Jobs</Link>,
+    });
+  }
+
+  analysisSubMenuItems.push({
+    key: "/aiModels",
+    label: <Link to={"/aiModels"}>AI Models</Link>,
+  });
+
+  if (features().voxelyticsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/workflows",
+      label: <Link to="/workflows">Voxelytics</Link>,
+    });
+  }
+
+  if (analysisSubMenuItems.length === 0) {
+    return null;
+  }
+
+  return {
+    key: "analysisMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle(
+      "Analysis",
+      <ExperimentOutlined className="icon-margin-right" />,
+      collapse,
+    ),
+    children: analysisSubMenuItems,
   };
 }
 
@@ -822,6 +843,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   if (_isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
+    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
 
     if (isAdminOrManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));

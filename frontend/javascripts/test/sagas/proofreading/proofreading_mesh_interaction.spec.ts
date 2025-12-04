@@ -2,7 +2,6 @@ import type { MinCutTargetEdge } from "admin/rest_api";
 import _ from "lodash";
 import { call, put, take } from "redux-saga/effects";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
-import { delay } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -18,9 +17,8 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import {
   type ActiveMappingInfo,
@@ -32,6 +30,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
 import {
   initializeMappingAndTool,
+  makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -49,9 +48,7 @@ describe("Proofreading (with mesh actions)", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  function* simulateMergeAgglomeratesViaMeshes(
-    context: WebknossosTestContext,
-  ): Generator<any, void, any> {
+  function* simulateMergeAgglomeratesViaMeshes(context: WebknossosTestContext): Saga<void> {
     const { api } = context;
     const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
     yield call(initializeMappingAndTool, context, tracingId);
@@ -66,7 +63,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
     yield put(setActiveCellAction(1, undefined, null, 1));
 
-    yield call(createEditableMapping);
+    yield makeMappingEditableHelper();
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
@@ -115,7 +112,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    const task = startSaga(function* task(): Generator<any, void, any> {
+    const task = startSaga(function* task(): Saga<void> {
       yield simulateMergeAgglomeratesViaMeshes(context);
 
       const finalMapping = yield select(
@@ -162,7 +159,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    const task = startSaga(function* task(): Generator<any, void, any> {
+    const task = startSaga(function* task(): Saga<void> {
       yield simulateMergeAgglomeratesViaMeshes(context);
 
       const finalMapping = yield select(
@@ -220,9 +217,7 @@ describe("Proofreading (with mesh actions)", () => {
       },
     );
 
-  function* simulateSplitAgglomeratesViaMeshes(
-    context: WebknossosTestContext,
-  ): Generator<any, void, any> {
+  function* simulateSplitAgglomeratesViaMeshes(context: WebknossosTestContext): Saga<void> {
     const { api } = context;
     const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
     const expectedInitialMapping = new Map([
@@ -247,7 +242,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
-    yield call(createEditableMapping);
+    yield makeMappingEditableHelper();
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
@@ -291,7 +286,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    const task = startSaga(function* task(): Generator<any, void, any> {
+    const task = startSaga(function* task(): Saga<void> {
       yield simulateSplitAgglomeratesViaMeshes(context);
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
@@ -367,7 +362,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    const task = startSaga(function* task(): Generator<any, void, any> {
+    const task = startSaga(function* task(): Saga<void> {
       yield simulateSplitAgglomeratesViaMeshes(context);
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
@@ -385,7 +380,7 @@ describe("Proofreading (with mesh actions)", () => {
           },
         },
       ]);
-      yield delay(400);
+
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -454,7 +449,7 @@ describe("Proofreading (with mesh actions)", () => {
 
   function* simulatePartitionedSplitAgglomeratesViaMeshes(
     context: WebknossosTestContext,
-  ): Generator<any, void, any> {
+  ): Saga<void> {
     const { api } = context;
     const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
     const expectedInitialMapping = new Map([
@@ -479,8 +474,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
-    yield call(createEditableMapping);
-
+    yield makeMappingEditableHelper();
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
       (state) =>
@@ -527,7 +521,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    const task = startSaga(function* task(): Generator<any, void, any> {
+    const task = startSaga(function* task(): Saga<void> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
@@ -635,7 +629,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
-    const task = startSaga(function* task(): Generator<any, void, any> {
+    const task = startSaga(function* task(): Saga<void> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;

@@ -178,7 +178,7 @@ function TeamListView() {
       </React.Fragment>
     );
     return isLoading ? null : (
-      <Alert message="Add more teams" description={teamMessage} type="info" showIcon />
+      <Alert title="Add more teams" description={teamMessage} type="info" showIcon />
     );
   }
 

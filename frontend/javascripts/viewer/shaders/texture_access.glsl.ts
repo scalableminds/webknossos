@@ -204,7 +204,7 @@ export const getColorForCoords: ShaderModule = {
 
       // To avoid rare rendering artifacts, don't use the precomputed
       // bucket address when being at the border of buckets.
-      bool beSafe = isFlycamRotated || !<%= isOrthogonal %>;
+      bool beSafe = useBucketBorderVertexOptimization < 0.5;
       renderedMagIdx = outputMagIdx[globalLayerIndex];
       vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
       vec3 absoluteBucketPosition = div(coords, bucketWidth);

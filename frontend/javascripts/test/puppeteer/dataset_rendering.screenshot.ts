@@ -42,6 +42,7 @@ const datasetNames = [
   "Multi-Channel-Test",
   "connectome_file_test_dataset",
   "kiwi", // This dataset is rotated and translated.
+  "test-extreme-anisotropy",
 ];
 
 type DatasetName = string;
@@ -63,6 +64,7 @@ const viewOverrides: Record<string, string> = {
   connectome_file_test_dataset:
     '{"position":[102,109,60],"mode":"orthogonal","zoomStep":0.734,"stateByLayer":{"segmentation":{"connectomeInfo":{"connectomeName":"connectome","agglomerateIdsToImport":[1]}}}}',
   kiwi: "1191,1112,21,0,8.746",
+  "test-extreme-anisotropy": "100,100,75,0,6.727",
 };
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   ROI2017_wkw: {

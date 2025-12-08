@@ -97,7 +97,7 @@ function AccountProfileView() {
         <Space.Compact>
           <Button>{themeItems.find((item) => item.key === selectedTheme)?.label}</Button>
           <Dropdown menu={{ items: themeItems }} trigger={["click"]}>
-            <Button icon={<DownOutlined />} />
+            <Button icon={<DownOutlined />} aria-label="Select theme" />
           </Dropdown>
         </Space.Compact>
       ),

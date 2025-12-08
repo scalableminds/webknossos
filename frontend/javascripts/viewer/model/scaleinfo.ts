@@ -2,9 +2,10 @@ import { UnitsMap } from "libs/format_utils";
 import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type UnitShort, type Vector3 } from "viewer/constants";
 
-export function getBaseVoxelInUnit(voxelSizeFactor: Vector3): number {
-  // base voxel should be a cube with highest mag
-  return Math.min(...voxelSizeFactor);
+export function getBaseVoxelInUnit(_voxelSizeFactor: Vector3): number {
+  // base voxel should be a cube with highest resolution
+  return 1;
+  // return Math.min(...voxelSizeFactor);
 }
 
 export function voxelToVolumeInUnit(

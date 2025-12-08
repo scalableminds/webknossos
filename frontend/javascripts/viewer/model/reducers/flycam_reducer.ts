@@ -100,11 +100,17 @@ function rotateReducer(
   });
 }
 
+// export function getMatrixScale(voxelSize: Vector3): Vector3 {
+//   const scale = [1 / voxelSize[0], 1 / voxelSize[1], 1 / voxelSize[2]];
+//   const maxScale = Math.max(scale[0], scale[1], scale[2]);
+//   const multi = 1 / maxScale;
+//   return [multi * scale[0], multi * scale[1], multi * scale[2]];
+// }
+
 export function getMatrixScale(voxelSize: Vector3): Vector3 {
-  const scale = [1 / voxelSize[0], 1 / voxelSize[1], 1 / voxelSize[2]];
-  const maxScale = Math.max(scale[0], scale[1], scale[2]);
-  const multi = 1 / maxScale;
-  return [multi * scale[0], multi * scale[1], multi * scale[2]];
+  const baseVoxelSize = 1;
+  // const baseVoxelSize = Math.min(...voxelSize);
+  return [baseVoxelSize / voxelSize[0], baseVoxelSize / voxelSize[1], baseVoxelSize / voxelSize[2]];
 }
 
 function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {

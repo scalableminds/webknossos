@@ -243,12 +243,11 @@ export function getAnalysisSubMenu(collapse: boolean) {
       key: "/jobs",
       label: <Link to="/jobs">Processing Jobs</Link>,
     });
+    analysisSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
   }
-
-  analysisSubMenuItems.push({
-    key: "/aiModels",
-    label: <Link to={"/aiModels"}>AI Models</Link>,
-  });
 
   if (features().voxelyticsEnabled) {
     analysisSubMenuItems.push({

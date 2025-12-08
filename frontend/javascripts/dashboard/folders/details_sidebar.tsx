@@ -259,7 +259,9 @@ function DatasetsDetails({
       setProgressInPercent(0);
 
       if (deletedIds.length > 0) {
-        Toast.success(`Successfully deleted ${deletedIds.length} datasets.`);
+        Toast.success(
+          `Successfully deleted ${deletedIds.length} ${pluralize("dataset", deletedIds.length)}.`,
+        );
       }
     },
   });

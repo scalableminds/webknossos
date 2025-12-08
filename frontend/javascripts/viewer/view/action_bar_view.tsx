@@ -219,9 +219,6 @@ function CreateAnnotationButton() {
       <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="You have to register or login to create an annotation."
-        style={{
-          marginLeft: 12,
-        }}
         type="primary"
         onClick={onClick}
       >

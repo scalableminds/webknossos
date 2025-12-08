@@ -1,6 +1,6 @@
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { getProjectProgressReport } from "admin/rest_api";
-import { Badge, Card, Spin, Table } from "antd";
+import { Badge, Button, Card, Space, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
@@ -72,9 +72,21 @@ function ProjectProgressReportView() {
     <div className="container">
       <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
       <div className="pull-right">
-        {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}{" "}
-        <SettingOutlined onClick={handleOpenSettings} />
-        <ReloadOutlined onClick={handleReload} />
+        <Space>
+          {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}{" "}
+          <Button
+            icon={<SettingOutlined />}
+            shape="circle"
+            variant="outlined"
+            onClick={handleOpenSettings}
+          />
+          <Button
+            icon={<ReloadOutlined />}
+            shape="circle"
+            variant="outlined"
+            onClick={handleReload}
+          />
+        </Space>
       </div>
       <h3>Project Progress</h3>
       {areSettingsVisible ? (

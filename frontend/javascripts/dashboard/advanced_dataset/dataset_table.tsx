@@ -863,7 +863,7 @@ export function DatasetTags({
   };
 
   return (
-    <div className="tags-container">
+    <Space>
       {dataset.tags.map((tag) => (
         <CategorizationLabel
           tag={tag}
@@ -881,7 +881,7 @@ export function DatasetTags({
           label="Add Tag"
         />
       ) : null}
-    </div>
+    </Space>
   );
 }
 

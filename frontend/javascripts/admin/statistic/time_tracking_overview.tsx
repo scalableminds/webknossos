@@ -223,92 +223,95 @@ function TimeTrackingOverview() {
   };
 
   return (
-    <Card
-      title={"Annotation Time per User"}
-      style={{
-        marginTop: 30,
-        marginBottom: 30,
-      }}
-    >
-      <FilterOutlined />
-      <ProjectAndAnnotationTypeDropdown
-        setSelectedProjectIds={setSelectedProjectIds}
-        selectedProjectIds={selectedProjectIds}
-        setSelectedAnnotationType={setSelectedTypes}
-        selectedAnnotationType={selectedTypes}
-        selectedAnnotationState={selectedState}
-        setSelectedAnnotationState={setSelectedState}
-        style={{ ...filterStyle }}
-      />
-      <Select
-        mode="multiple"
-        placeholder="Filter teams"
-        defaultValue={[]}
-        disabled={!isCurrentUserAdminOrManager}
-        style={{ width: 200, ...filterStyle }}
-        options={allTeams.map((team) => {
-          return {
-            label: team.name,
-            value: team.id,
-          };
-        })}
-        value={selectedTeams}
-        onSelect={(teamIdOrKey: string) => setSelectedTeams([...selectedTeams, teamIdOrKey])}
-        onDeselect={(removedTeamId: string) => {
-          setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId));
+    <div className="container">
+      <Card
+        title={"Annotation Time per User"}
+        style={{
+          marginTop: 30,
+          marginBottom: 30,
         }}
-      />
-      <RangePicker
-        style={filterStyle}
-        value={[startDate, endDate]}
-        presets={rangePresets}
-        onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
-          if (dates == null || dates[0] == null || dates[1] == null) return;
-          if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
-            Toast.error(messages["timetracking.date_range_too_long"]);
-            return;
-          }
-          setStartDate(dates[0].startOf("day"));
-          setEndeDate(dates[1].endOf("day"));
-        }}
-      />
-      <Spin spinning={isFetching} size="large">
-        <FixedExpandableTable
-          dataSource={filteredTimeEntries}
-          rowKey="user"
-          style={{
-            marginTop: 30,
-            marginBottom: 30,
-          }}
-          pagination={false}
-          columns={timeTrackingTableColumns}
-          expandable={{
-            expandedRowRender: (entry) => (
-              <TimeTrackingDetailView
-                userId={entry.user.id}
-                dateRange={[startDate.valueOf(), endDate.valueOf()]}
-                annotationType={selectedTypes}
-                annotationState={selectedState}
-                projectIds={selectedProjectIds}
-              />
-            ),
-          }}
-          locale={{
-            emptyText: renderPlaceholder(),
-          }}
-          summary={getSummaryRow}
-        />
-      </Spin>
-      <Button
-        type="primary"
-        icon={<DownloadOutlined />}
-        style={{ float: "right" }}
-        onClick={() => exportToCSV()}
-        disabled={filteredTimeEntries == null || filteredTimeEntries?.length === 0}
+        extra={
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={() => exportToCSV()}
+            disabled={filteredTimeEntries == null || filteredTimeEntries?.length === 0}
+          >
+            Export to CSV
+          </Button>
+        }
       >
-        Export to CSV
-      </Button>
-    </Card>
+        <FilterOutlined />
+        <ProjectAndAnnotationTypeDropdown
+          setSelectedProjectIds={setSelectedProjectIds}
+          selectedProjectIds={selectedProjectIds}
+          setSelectedAnnotationType={setSelectedTypes}
+          selectedAnnotationType={selectedTypes}
+          selectedAnnotationState={selectedState}
+          setSelectedAnnotationState={setSelectedState}
+          style={{ ...filterStyle }}
+        />
+        <Select
+          mode="multiple"
+          placeholder="Filter teams"
+          defaultValue={[]}
+          disabled={!isCurrentUserAdminOrManager}
+          style={{ width: 200, ...filterStyle }}
+          options={allTeams.map((team) => {
+            return {
+              label: team.name,
+              value: team.id,
+            };
+          })}
+          value={selectedTeams}
+          onSelect={(teamIdOrKey: string) => setSelectedTeams([...selectedTeams, teamIdOrKey])}
+          onDeselect={(removedTeamId: string) => {
+            setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId));
+          }}
+        />
+        <RangePicker
+          style={filterStyle}
+          value={[startDate, endDate]}
+          presets={rangePresets}
+          onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
+            if (dates == null || dates[0] == null || dates[1] == null) return;
+            if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
+              Toast.error(messages["timetracking.date_range_too_long"]);
+              return;
+            }
+            setStartDate(dates[0].startOf("day"));
+            setEndeDate(dates[1].endOf("day"));
+          }}
+        />
+        <Spin spinning={isFetching} size="large">
+          <FixedExpandableTable
+            dataSource={filteredTimeEntries}
+            rowKey="user"
+            style={{
+              marginTop: 30,
+              marginBottom: 30,
+            }}
+            pagination={false}
+            columns={timeTrackingTableColumns}
+            expandable={{
+              expandedRowRender: (entry) => (
+                <TimeTrackingDetailView
+                  userId={entry.user.id}
+                  dateRange={[startDate.valueOf(), endDate.valueOf()]}
+                  annotationType={selectedTypes}
+                  annotationState={selectedState}
+                  projectIds={selectedProjectIds}
+                />
+              ),
+            }}
+            locale={{
+              emptyText: renderPlaceholder(),
+            }}
+            summary={getSummaryRow}
+          />
+        </Spin>
+      </Card>
+    </div>
   );
 }
 

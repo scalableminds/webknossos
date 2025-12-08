@@ -431,12 +431,20 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         >
           {task.projectName} (<FormattedDate timestamp={task.created} />)
         </span>
-        {getSkeletonDescriptor(task.annotation) == null ? null : <Tag color="green">skeleton</Tag>}
+        {getSkeletonDescriptor(task.annotation) == null ? null : (
+          <Tag color="green" variant="outlined">
+            skeleton
+          </Tag>
+        )}
         {getVolumeDescriptors(task.annotation).length === 0 ? null : (
-          <Tag color="orange">volume</Tag>
+          <Tag color="orange" variant="outlined">
+            volume
+          </Tag>
         )}
         {task.type.settings.allowedModes.map((mode) => (
-          <Tag key={mode}>{mode}</Tag>
+          <Tag key={mode} variant="outlined">
+            {mode}
+          </Tag>
         ))}
       </React.Fragment>
     );

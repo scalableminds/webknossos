@@ -1,5 +1,5 @@
 import {
-  DownOutlined,
+  EllipsisOutlined,
   HourglassOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
@@ -310,22 +310,22 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
   const organizationId = useWkSelector((state) => state.activeOrganization?.id);
 
   return (
-    <FastTooltip
-      title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
-    >
-      <Space.Compact>
+    <Space.Compact>
+      <FastTooltip
+        title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
+      >
         <Button onClick={() => context.fetchDatasets()} disabled={context.isChecking}>
           {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
         </Button>
-        <Dropdown
-          menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
-        >
-          <Button disabled={context.isChecking}>
-            <DownOutlined />
-          </Button>
-        </Dropdown>
-      </Space.Compact>
-    </FastTooltip>
+      </FastTooltip>
+      <Dropdown
+        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
+      >
+        <Button disabled={context.isChecking}>
+          <EllipsisOutlined />
+        </Button>
+      </Dropdown>
+    </Space.Compact>
   );
 }
 

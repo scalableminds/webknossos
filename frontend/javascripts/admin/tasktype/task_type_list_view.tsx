@@ -189,18 +189,22 @@ function TaskTypeListView() {
             render={(settings: APITaskType["settings"], taskType: APITaskType) =>
               [
                 taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
-                  <Tag color="green" key={`${taskType.id}_skeleton`}>
+                  <Tag color="green" key={`${taskType.id}_skeleton`} variant="outlined">
                     skeleton
                   </Tag>
                 ) : null,
                 taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
-                  <Tag color="orange" key={`${taskType.id}_volume`}>
+                  <Tag color="orange" key={`${taskType.id}_volume`} variant="outlined">
                     volume
                   </Tag>
                 ) : null,
               ].concat(
                 settings.allowedModes.map((mode) => (
-                  <Tag key={mode} color={mode === settings.preferredMode ? "blue" : undefined}>
+                  <Tag
+                    key={mode}
+                    color={mode === settings.preferredMode ? "blue" : undefined}
+                    variant="outlined"
+                  >
                     {mode}
                   </Tag>
                 )),
@@ -214,16 +218,20 @@ function TaskTypeListView() {
             render={(settings) => {
               const elements = [];
               if (settings.branchPointsAllowed)
-                elements.push(<Tag key="branchPointsAllowed">Branchpoints</Tag>);
+                elements.push(
+                  <Tag key="branchPointsAllowed" variant="outlined">
+                    Branchpoints
+                  </Tag>,
+                );
               if (settings.somaClickingAllowed)
                 elements.push(
-                  <Tag key="somaClickingAllowed">
+                  <Tag key="somaClickingAllowed" variant="outlined">
                     Allow Single-node-tree mode (&quot;Soma clicking&quot;)
                   </Tag>,
                 );
               if (settings.mergerMode)
                 elements.push(
-                  <Tag color="purple" key="mergerMode">
+                  <Tag color="purple" key="mergerMode" variant="outlined">
                     Merger Mode
                   </Tag>,
                 );

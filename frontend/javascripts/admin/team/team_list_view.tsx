@@ -38,7 +38,7 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
 
   const renderTag = (text: string, color: string) => {
     return (
-      <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }} variant="outlined">
         {text}
       </Tag>
     );
@@ -101,7 +101,7 @@ function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
         });
 
   return tags.map(([text, color]) => (
-    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }} variant="outlined">
       {text}
     </Tag>
   ));

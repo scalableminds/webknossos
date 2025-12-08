@@ -897,6 +897,7 @@ export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDatas
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
           }}
+          variant="outlined"
         >
           {layer.name} - {layer.elementClass}
         </Tag>
@@ -919,7 +920,7 @@ export function TeamTags({
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {
-    return <Tag>{emptyValue}</Tag>;
+    return <Tag variant="outlined">{emptyValue}</Tag>;
   }
 
   const allowedTeamsById = _.keyBy(dataset.allowedTeams, "id");
@@ -943,6 +944,7 @@ export function TeamTags({
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
               }}
+              variant="outlined"
               color={stringToColor(team.name)}
             >
               {team.name}
@@ -972,7 +974,7 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
 
   return (
     <Tooltip title={`This dataset is located in ${formatPath(allParts)}.`}>
-      <Tag style={{ marginTop: "5px" }}>
+      <Tag style={{ marginTop: "5px" }} variant="outlined">
         <FolderOpenOutlined className="icon-margin-right" />
         {formatPath(parts)}
       </Tag>

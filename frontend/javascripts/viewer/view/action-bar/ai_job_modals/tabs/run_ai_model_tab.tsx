@@ -68,7 +68,7 @@ export function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) 
               checked={aIJobModalState === APIJobCommand.INFER_NEURONS}
               onClick={() => dispatch(setAIJobModalStateAction(APIJobCommand.INFER_NEURONS))}
             >
-              <Card bordered={false}>
+              <Card variant="borderless">
                 <Space orientation="vertical" size="small">
                   <Row className="ai-job-title">Neuron segmentation</Row>
                   <Row>

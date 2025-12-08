@@ -269,7 +269,7 @@ function UserListView() {
     selectedRowKeys: selectedUserIds,
   };
   const activationFilterWarning = activationFilter.includes("activated") ? (
-    <Tag closable onClose={handleDismissActivationFilter} color="blue">
+    <Tag closable onClose={handleDismissActivationFilter} color="blue" variant="outlined">
       Show Active Users Only
     </Tag>
   ) : null;
@@ -402,7 +402,7 @@ function UserListView() {
             width={250}
             render={(experiences: ExperienceMap, user: APIUser) =>
               _.map(experiences, (value, domain) => (
-                <Tag key={`experience_${user.id}_${domain}`}>
+                <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
                   <span
                     onClick={(evt) => {
                       evt.stopPropagation();

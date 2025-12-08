@@ -349,7 +349,7 @@ export default function TaskListView({
       () => notification.success({ title: "All artifact paths were copied to the clipboard" }),
       () =>
         notification.error({
-          title: "Could not assign task",
+          title: "Could not copy artifact paths",
           description: `Could not copy the following artifact paths to clipboard: ${artifactPaths.join(
             "\n",
           )}`,

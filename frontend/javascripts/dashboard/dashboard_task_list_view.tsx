@@ -388,18 +388,18 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                         Tasks are a powerful way to distribute annotation jobs among groups of users
                         as part of the WEBKNOSSOS project management.{" "}
                       </p>
-                      <a
-                        href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        <Button>Learn more</Button>
-                      </a>
-                      <Link to="/tasks">
-                        <Button type="primary" style={{ marginLeft: 20 }}>
-                          Create new Tasks
+                      <Space size="middle">
+                        <Button
+                          href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          Learn more
                         </Button>
-                      </Link>
+                        <Link to="/tasks">
+                          <Button type="primary">Create new Tasks</Button>
+                        </Link>
+                      </Space>
                     </>
                   )}
                 </>
@@ -445,12 +445,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     const TaskCard = (task: APITaskWithAnnotation) =>
       this.state.showFinishedTasks ? (
-        <Card
-          key={task.id}
-          style={{
-            margin: "10px",
-          }}
-        >
+        <Card key={task.id}>
           <Row gutter={16}>
             <Col span={7}>
               <b>Task ID:</b> {task.id}
@@ -465,13 +460,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           </Row>
         </Card>
       ) : (
-        <Card
-          key={task.id}
-          title={<TaskCardTitle task={task} />}
-          style={{
-            margin: "10px",
-          }}
-        >
+        <Card key={task.id} title={<TaskCardTitle task={task} />}>
           <Row gutter={16}>
             <Col span={16}>
               <div className={descriptionClassName}>
@@ -519,9 +508,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           toggleShowFinished={this.toggleShowFinished}
           getFinishVerb={this.getFinishVerb}
         />
-        <h3 id="tasksHeadline" className="TestTasksHeadline">
-          {this.state.showFinishedTasks ? "My Finished Tasks" : null}
-        </h3>
+        {this.state.showFinishedTasks ? (
+          <h3 id="tasksHeadline" className="TestTasksHeadline">
+            My Finished Tasks
+          </h3>
+        ) : null}
         {this.renderTaskList()}
         <div
           style={{

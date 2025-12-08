@@ -691,8 +691,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => {}
           }
         />
-        <FixedExpandableTable
-          expandable={{ childrenColumnName: "notUsed" }}
+        <Table
           dataSource={sortedDataSourceRenderers}
           columns={columns}
           rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
@@ -705,6 +704,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           locale={{
             emptyText: this.renderEmptyText(),
           }}
+          scroll={{
+          x: "max-content",
+        }}
           summary={(currentPageData) => {
             // Workaround to get to the currently rendered entries (since the ordering
             // is managed by antd).

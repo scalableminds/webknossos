@@ -157,7 +157,7 @@ export function formatScale(scale: VoxelSize | null | undefined, roundTo: number
     (value) => Utils.roundTo(value / conversionFactor, roundTo),
     scaleFactor,
   );
-  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/voxel`;
+  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/Vx`;
 }
 
 function toOptionalFixed(num: number, decimalPrecision: number): string {
@@ -399,7 +399,7 @@ function findBestUnitForFormatting(
 }
 export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {
   const roundedLength = Utils.roundTo(lengthInVx, roundTo);
-  return `${roundedLength} vx`;
+  return `${roundedLength}${ThinSpace}Vx`;
 }
 export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
   return `${formatLengthAsVx(areaInVx, roundTo)}²`;

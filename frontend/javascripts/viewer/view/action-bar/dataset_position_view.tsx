@@ -10,7 +10,6 @@ import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
 import { useState } from "react";
-import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
@@ -36,46 +35,6 @@ const positionInputDefaultStyle: React.CSSProperties = {
 const positionInputErrorStyle: React.CSSProperties = {
   ...positionInputDefaultStyle,
   ...warningColors,
-};
-
-const getPositionTooltipContent = (position: Vector3, voxelSize: VoxelSize) => {
-  const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
-  const positionInVx = position.map((coord) => formatVoxelsForHighNumbers(coord));
-  const voxelSizeInMetricUnit = convertVoxelSizeToUnit(voxelSize, shortUnit);
-  const positionInMetrics = position.map((coord, index) => coord * voxelSizeInMetricUnit[index]);
-  const positionInMetricString = positionInMetrics.map((coord) =>
-    formatNumberToLength(coord, shortUnit),
-  );
-  return (
-    <div>
-      <Row justify="space-between" gutter={16} wrap={false}>
-        <Col span={7}>{positionInVx[0]},</Col>
-        <Col span={7}>{positionInVx[1]},</Col>
-        <Col span={7}>{positionInVx[2]}</Col>
-        <Col span={3}>
-          {" "}
-          <CopyOutlined
-            onClick={() => {
-              copyToClipboad(positionInVx.join(""));
-            }}
-          />{" "}
-        </Col>
-      </Row>
-      <Row justify="space-between" gutter={16} wrap={false}>
-        <Col span={7}>{positionInMetricString[0]},</Col>
-        <Col span={7}>{positionInMetricString[1]},</Col>
-        <Col span={7}>{positionInMetricString[2]}</Col>
-        <Col span={3}>
-          {" "}
-          <CopyOutlined
-            onClick={() => {
-              copyToClipboad(positionInMetricString.join(""));
-            }}
-          />{" "}
-        </Col>
-      </Row>
-    </div>
-  );
 };
 
 function DatasetPositionView() {
@@ -136,7 +95,45 @@ function DatasetPositionView() {
   } else if (!maybeErrorMessage && isOutOfTaskBounds) {
     maybeErrorMessage = message["tracing.out_of_task_bounds"];
   }
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const [getPositionStrings, setGetPositionStrings] = useState(false);
+
+  const getPositionTooltipContent = () => {
+    const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
+    const positionInVxStrings = position.map((coord) => formatVoxelsForHighNumbers(coord));
+    const voxelSizeInMetricUnit = convertVoxelSizeToUnit(voxelSize, shortUnit);
+    const positionInMetrics = position.map((coord, index) => coord * voxelSizeInMetricUnit[index]);
+    const positionInMetricStrings = positionInMetrics.map((coord) =>
+      formatNumberToLength(coord, shortUnit),
+    );
+    return (
+      <div>
+        <Row justify="space-between" gutter={16} wrap={false}>
+          <Col span={7}>{positionInVxStrings[0]},</Col>
+          <Col span={7}>{positionInVxStrings[1]},</Col>
+          <Col span={7}>{positionInVxStrings[2]}</Col>
+          <Col span={3}>
+            <CopyOutlined
+              onClick={() => {
+                copyToClipboad(positionInVxStrings.join(", "));
+              }}
+            />
+          </Col>
+        </Row>
+        <Row justify="space-between" gutter={16} wrap={false}>
+          <Col span={7}>{positionInMetricStrings[0]},</Col>
+          <Col span={7}>{positionInMetricStrings[1]},</Col>
+          <Col span={7}>{positionInMetricStrings[2]}</Col>
+          <Col span={3}>
+            <CopyOutlined
+              onClick={() => {
+                copyToClipboad(positionInMetricStrings.join(", "));
+              }}
+            />
+          </Col>
+        </Row>
+      </div>
+    );
+  };
 
   return (
     <FastTooltip title={maybeErrorMessage || null} wrapper="div">
@@ -155,9 +152,9 @@ function DatasetPositionView() {
           </ButtonComponent>
         </FastTooltip>
         <Popover
-          title={isTooltipOpen ? getPositionTooltipContent(position, voxelSize) : null}
-          open={isTooltipOpen}
+          content={getPositionStrings ? getPositionTooltipContent() : <></>} // popover needs some content to open, even if empty
           style={{ minWidth: 300 }}
+          onOpenChange={setGetPositionStrings}
         >
           <Vector3Input
             value={position}
@@ -165,8 +162,6 @@ function DatasetPositionView() {
             autoSize
             style={positionInputStyle}
             allowDecimals
-            onMouseEnter={() => setIsTooltipOpen(true)}
-            onMouseLeave={() => setIsTooltipOpen(false)}
           />
         </Popover>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />

@@ -52,6 +52,7 @@ organization.creditOrder.notPositive=You cannot order a negative number of WEBKN
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 
 user.notFound=User not found
+user.superUserOnly=This feature is currently only available for superusers.
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.
 user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.

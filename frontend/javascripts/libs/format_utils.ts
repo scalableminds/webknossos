@@ -533,6 +533,28 @@ export function formatVoxels(voxelCount: number) {
   return `${voxelCount} Vx`;
 }
 
+export function formatVoxelsForHighNumbers(voxelCount: number) {
+  if (voxelCount == null) {
+    return "";
+  }
+  if (!Number.isFinite(voxelCount)) {
+    return "Infinity";
+  }
+  if (voxelCount > 10 ** 15) {
+    return `${(voxelCount / 10 ** 15).toPrecision(4)}${ThinSpace}PVx`;
+  }
+  if (voxelCount > 10 ** 12) {
+    return `${(voxelCount / 10 ** 12).toPrecision(4)}${ThinSpace}TVx`;
+  }
+  if (voxelCount > 10 ** 9) {
+    return `${(voxelCount / 10 ** 9).toPrecision(4)}${ThinSpace}GVx`;
+  }
+  if (voxelCount > 10 ** 6) {
+    return `${(voxelCount / 10 ** 6).toPrecision(4)}${ThinSpace}MVx`;
+  }
+  return `${voxelCount}${ThinSpace}Vx`;
+}
+
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
 }

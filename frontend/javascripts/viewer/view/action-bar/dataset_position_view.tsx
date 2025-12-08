@@ -1,7 +1,8 @@
-import { PushpinOutlined } from "@ant-design/icons";
-import { Col, Row, Space, Tooltip } from "antd";
+import { CopyOutlined, PushpinOutlined } from "@ant-design/icons";
+import { copyToClipboad } from "admin/voxelytics/utils";
+import { Col, Popover, Row, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import { formatNumberToLength } from "libs/format_utils";
+import { formatNumberToLength, formatVoxelsForHighNumbers } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -38,26 +39,40 @@ const positionInputErrorStyle: React.CSSProperties = {
 };
 
 const getPositionTooltipContent = (position: Vector3, voxelSize: VoxelSize) => {
-  const voxelSizeInMetricUnit = convertVoxelSizeToUnit(
-    voxelSize,
-    LongUnitToShortUnitMap[voxelSize.unit],
-  );
+  const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
+  const positionInVx = position.map((coord) => formatVoxelsForHighNumbers(coord));
+  const voxelSizeInMetricUnit = convertVoxelSizeToUnit(voxelSize, shortUnit);
   const positionInMetrics = position.map((coord, index) => coord * voxelSizeInMetricUnit[index]);
   const positionInMetricString = positionInMetrics.map((coord) =>
-    formatNumberToLength(coord, LongUnitToShortUnitMap[voxelSize.unit]),
+    formatNumberToLength(coord, shortUnit),
   );
-  console.log("positionInMetricString", positionInMetricString);
   return (
     <div>
-      <Row justify="space-between" gutter={4}>
-        <Col>{position[0]}vx,</Col>
-        <Col>{position[1]}vx,</Col>
-        <Col>{position[2]}vx</Col>
+      <Row justify="space-between" gutter={16} wrap={false}>
+        <Col span={7}>{positionInVx[0]},</Col>
+        <Col span={7}>{positionInVx[1]},</Col>
+        <Col span={7}>{positionInVx[2]}</Col>
+        <Col span={3}>
+          {" "}
+          <CopyOutlined
+            onClick={() => {
+              copyToClipboad(positionInVx.join(""));
+            }}
+          />{" "}
+        </Col>
       </Row>
-      <Row justify="space-between" gutter={4}>
-        <Col>{positionInMetricString[0]},</Col>
-        <Col>{positionInMetricString[1]},</Col>
-        <Col>{positionInMetricString[2]}</Col>
+      <Row justify="space-between" gutter={16} wrap={false}>
+        <Col span={7}>{positionInMetricString[0]},</Col>
+        <Col span={7}>{positionInMetricString[1]},</Col>
+        <Col span={7}>{positionInMetricString[2]}</Col>
+        <Col span={3}>
+          {" "}
+          <CopyOutlined
+            onClick={() => {
+              copyToClipboad(positionInMetricString.join(""));
+            }}
+          />{" "}
+        </Col>
       </Row>
     </div>
   );
@@ -139,9 +154,10 @@ function DatasetPositionView() {
             <PushpinOutlined style={positionIconStyle} />
           </ButtonComponent>
         </FastTooltip>
-        <Tooltip
+        <Popover
           title={isTooltipOpen ? getPositionTooltipContent(position, voxelSize) : null}
           open={isTooltipOpen}
+          style={{ minWidth: 300 }}
         >
           <Vector3Input
             value={position}
@@ -152,7 +168,7 @@ function DatasetPositionView() {
             onMouseEnter={() => setIsTooltipOpen(true)}
             onMouseLeave={() => setIsTooltipOpen(false)}
           />
-        </Tooltip>
+        </Popover>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
         <ShareButton dataset={dataset} style={iconColoringStyle} />
       </Space.Compact>

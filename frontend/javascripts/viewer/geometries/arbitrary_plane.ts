@@ -122,7 +122,12 @@ class ArbitraryPlane {
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = adaptPlane(
       new Mesh(
-        new PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
+        new PlaneGeometry(
+          constants.ARBITRARY_VIEWPORT_WIDTH,
+          constants.ARBITRARY_VIEWPORT_WIDTH,
+          1,
+          1,
+        ),
         textureMaterial,
       ),
     );
@@ -176,7 +181,12 @@ class ArbitraryPlane {
     debuggerMaterial.transparent = true;
     shaderEditor.addMaterial(99, debuggerMaterial);
     const debuggerPlane = new Mesh(
-      new PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 50, 50),
+      new PlaneGeometry(
+        constants.ARBITRARY_VIEWPORT_WIDTH,
+        constants.ARBITRARY_VIEWPORT_WIDTH,
+        50,
+        50,
+      ),
       debuggerMaterial,
     );
     return debuggerPlane;

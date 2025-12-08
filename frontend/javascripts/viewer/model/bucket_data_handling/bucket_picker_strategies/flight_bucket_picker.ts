@@ -49,7 +49,7 @@ export default function determineBucketsForFlight(
   abortLimit?: number,
 ): void {
   const queryMatrix = M4x4.scale1(1, matrix);
-  const width = constants.VIEWPORT_WIDTH;
+  const width = constants.ARBITRARY_VIEWPORT_WIDTH;
   const halfWidth = width / 2;
   const cameraVertex: Vector3 = [0, 0, -sphericalCapRadius];
   const fallbackZoomStep = logZoomStep + 1;

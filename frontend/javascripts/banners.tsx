@@ -64,6 +64,7 @@ function UpcomingMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: Maint
       banner
       style={BANNER_STYLE}
       closable={{
+        closeIcon: true,
         onClose: () => {
           saveUserClosedMaintenanceInfo(maintenanceInfo);
           setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
@@ -230,6 +231,7 @@ export function UpgradeVersionBanner() {
       banner
       style={UPGRADE_BANNER_STYLE}
       closable={{
+        closeIcon: true,
         onClose: () => {
           localStorage.setItem(
             UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,

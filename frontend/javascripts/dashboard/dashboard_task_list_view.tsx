@@ -423,14 +423,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     });
 
     const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
-      <React.Fragment>
-        <span
-          style={{
-            marginRight: 8,
-          }}
-        >
-          {task.projectName} (<FormattedDate timestamp={task.created} />)
-        </span>
+      <Space>
+        {task.projectName} (<FormattedDate timestamp={task.created} />)
         {getSkeletonDescriptor(task.annotation) == null ? null : (
           <Tag color="green" variant="outlined">
             skeleton
@@ -446,7 +440,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
             {mode}
           </Tag>
         ))}
-      </React.Fragment>
+      </Space>
     );
 
     const TaskCard = (task: APITaskWithAnnotation) =>

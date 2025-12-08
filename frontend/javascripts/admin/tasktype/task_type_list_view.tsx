@@ -12,7 +12,7 @@ import {
   downloadAnnotation,
   getTaskTypes,
 } from "admin/rest_api";
-import { App, Button, Input, Spin, Table, Tag } from "antd";
+import { App, Button, Input, Space, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -186,57 +186,55 @@ function TaskTypeListView() {
             dataIndex="settings"
             key="allowedModes"
             width={200}
-            render={(settings: APITaskType["settings"], taskType: APITaskType) =>
-              [
-                taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
-                  <Tag color="green" key={`${taskType.id}_skeleton`} variant="outlined">
-                    skeleton
-                  </Tag>
-                ) : null,
-                taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
-                  <Tag color="orange" key={`${taskType.id}_volume`} variant="outlined">
-                    volume
-                  </Tag>
-                ) : null,
-              ].concat(
-                settings.allowedModes.map((mode) => (
-                  <Tag
-                    key={mode}
-                    color={mode === settings.preferredMode ? "blue" : undefined}
-                    variant="outlined"
-                  >
-                    {mode}
-                  </Tag>
-                )),
-              )
-            }
+            render={(settings: APITaskType["settings"], taskType: APITaskType) => {
+              return (
+                <Space wrap>
+                  {taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
+                    <Tag color="green" key={`${taskType.id}_skeleton`} variant="outlined">
+                      skeleton
+                    </Tag>
+                  ) : null}
+                  {taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
+                    <Tag color="orange" key={`${taskType.id}_volume`} variant="outlined">
+                      volume
+                    </Tag>
+                  ) : null}
+                  {settings.allowedModes.map((mode) => (
+                    <Tag
+                      key={mode}
+                      color={mode === settings.preferredMode ? "blue" : undefined}
+                      variant="outlined"
+                    >
+                      {mode}
+                    </Tag>
+                  ))}
+                </Space>
+              );
+            }}
           />
           <Column
             title="Settings"
             dataIndex="settings"
             key="settings"
-            render={(settings) => {
-              const elements = [];
-              if (settings.branchPointsAllowed)
-                elements.push(
+            render={(settings) => (
+              <Space wrap>
+                {settings.branchPointsAllowed ? (
                   <Tag key="branchPointsAllowed" variant="outlined">
                     Branchpoints
-                  </Tag>,
-                );
-              if (settings.somaClickingAllowed)
-                elements.push(
+                  </Tag>
+                ) : null}
+                {settings.somaClickingAllowed ? (
                   <Tag key="somaClickingAllowed" variant="outlined">
                     Allow Single-node-tree mode (&quot;Soma clicking&quot;)
-                  </Tag>,
-                );
-              if (settings.mergerMode)
-                elements.push(
+                  </Tag>
+                ) : null}
+                {settings.mergerMode ? (
                   <Tag color="purple" key="mergerMode" variant="outlined">
                     Merger Mode
-                  </Tag>,
-                );
-              return elements;
-            }}
+                  </Tag>
+                ) : null}
+              </Space>
+            )}
             width={200}
           />
           <Column

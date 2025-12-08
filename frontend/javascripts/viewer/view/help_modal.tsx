@@ -44,6 +44,7 @@ function HelpButton() {
         type="info"
         title="Help"
         closable={{
+          closeIcon: true,
           onClose: discardButton,
         }}
         onClick={() => setModalOpen(true)}

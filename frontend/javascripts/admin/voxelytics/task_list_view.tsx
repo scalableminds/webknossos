@@ -669,7 +669,7 @@ export default function TaskListView({
         >
           <Flex gap={"small"}>
             <Search
-              placeholder="Filter workflows"
+              placeholder="Filter tasks"
               onSearch={handleOnSearch}
               style={{ minWidth: 150 }}
               allowClear

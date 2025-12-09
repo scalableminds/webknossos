@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { APIJobType } from "types/api_types";
+import { APIJobCommand } from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import { getBestFittingMagComparedToTrainingDS, isDatasetOrBoundingBoxTooSmall } from "../utils";
@@ -33,9 +33,9 @@ export function NucleiDetectionForm() {
       const mag = getBestFittingMagComparedToTrainingDS(
         colorLayer,
         dataset.dataSource.scale,
-        APIJobType.INFER_NUCLEI,
+        APIJobCommand.INFER_NUCLEI,
       );
-      if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
+      if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobCommand.INFER_NUCLEI)) {
         return;
       }
       const layerConfiguration = datasetConfiguration.layers[colorLayer.name];
@@ -53,7 +53,7 @@ export function NucleiDetectionForm() {
     <StartJobForm
       handleClose={handleClose}
       buttonLabel="Start AI nuclei detection"
-      jobName={APIJobType.INFER_NUCLEI}
+      jobName={APIJobCommand.INFER_NUCLEI}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={jobApiCall}

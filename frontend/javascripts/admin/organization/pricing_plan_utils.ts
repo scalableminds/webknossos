@@ -21,7 +21,7 @@ export const teamPlanFeatures = [
 
 export const powerPlanFeatures = [
   "Everything from Team and Personal plans",
-  "Unlimited Users",
+  "Up to Unlimited Users",
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",

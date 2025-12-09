@@ -379,7 +379,7 @@ class DataSourceController @Inject()(
       }
     }
 
-  private def clearCachesOfDataSource(dataSource: DataSource, layerName: Option[String]): Unit = {
+  private def clearCachesOfDataSource(datasetId: ObjectId, dataSource: DataSource, layerName: Option[String]): Unit = {
     val dataSourceId = dataSource.id
     val organizationId = dataSourceId.organizationId
     val datasetDirectoryName = dataSourceId.directoryName
@@ -392,6 +392,7 @@ class DataSourceController @Inject()(
     val closedConnectomeFileHandleCount =
       connectomeFileService.clearCache(dataSourceId, layerName)
     datasetErrorLoggingService.clearForDataset(organizationId, datasetDirectoryName)
+    fullMeshService.clearCache(datasetId, layerName)
     val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(dataSource, layerName)
     clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
       logger.info(
@@ -404,7 +405,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
         for {
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
-          _ = clearCachesOfDataSource(dataSource, layerName)
+          _ = clearCachesOfDataSource(datasetId, dataSource, layerName)
           reloadedDataSource <- refreshDataSource(datasetId)
         } yield Ok(Json.toJson(reloadedDataSource))
       }
@@ -645,10 +646,15 @@ class DataSourceController @Inject()(
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
             )
-            for {
-              data: Array[Byte] <- fullMeshService.loadFor(dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
-              surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
-            } yield surfaceArea
+            fullMeshService.segmentSurfaceAreaCache.getOrLoad(
+              (datasetId, dataLayer.name, fullMeshRequest),
+              _ =>
+                for {
+                  data: Array[Byte] <- fullMeshService
+                    .loadFor(dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+                  surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
+                } yield surfaceArea
+            )
           }
         } yield Ok(Json.toJson(surfaceAreas))
       }

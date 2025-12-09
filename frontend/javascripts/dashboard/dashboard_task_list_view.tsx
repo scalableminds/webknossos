@@ -246,7 +246,6 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin ? (
           <>
             <AsyncLink
-              href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);

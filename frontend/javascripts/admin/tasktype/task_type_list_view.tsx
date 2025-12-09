@@ -12,7 +12,7 @@ import {
   downloadAnnotation,
   getTaskTypes,
 } from "admin/rest_api";
-import { App, Button, Input, Space, Spin, Table, Tag } from "antd";
+import { App, Button, Flex, Input, Space, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -96,34 +96,27 @@ function TaskTypeListView() {
     );
   }
 
-  const marginRight = {
-    marginRight: 20,
-  };
   return (
     <div className="container">
-      <div className="pull-right">
-        <Link to="/taskTypes/create">
-          <Button icon={<PlusOutlined />} style={marginRight} type="primary">
-            Add Task Type
-          </Button>
-        </Link>
-        <Search
-          style={{
-            width: 200,
-          }}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.ChangeEvent<HTMLInputElement>)... Remove this comment to see the full error message
-          onPressEnter={handleSearch}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </div>
-      <h3>Task Types</h3>
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
+      <Flex justify="space-between" align="flex-start">
+        <h3>Task Types</h3>
+        <Space>
+          <Link to="/taskTypes/create">
+            <Button icon={<PlusOutlined />} type="primary">
+              Add Task Type
+            </Button>
+          </Link>
+          <Search
+            style={{
+              width: 200,
+            }}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.ChangeEvent<HTMLInputElement>)... Remove this comment to see the full error message
+            onPressEnter={handleSearch}
+            onChange={handleSearch}
+            value={searchQuery}
+          />
+        </Space>
+      </Flex>
 
       <Spin spinning={isLoading} size="large">
         <Table
@@ -138,7 +131,6 @@ function TaskTypeListView() {
           }}
           style={{
             marginTop: 30,
-            marginBottom: 30,
           }}
           locale={{
             emptyText: renderPlaceholder(),

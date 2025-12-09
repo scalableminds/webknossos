@@ -184,8 +184,9 @@ export type Segment = {
   readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
+type SegmentWithoutUserState = Omit<Segment, "isVisible">;
 
-export const SegmentProperties = ensureExactKeys<Segment>()([
+export const SegmentPropertiesWithoutUserState = ensureExactKeys<SegmentWithoutUserState>()([
   "id",
   "name",
   "anchorPosition",
@@ -193,9 +194,8 @@ export const SegmentProperties = ensureExactKeys<Segment>()([
   "creationTime",
   "color",
   "groupId",
-  "isVisible",
   "metadata",
-] as const) as unknown as keyof Segment;
+] as const) as unknown as Array<keyof SegmentWithoutUserState>;
 
 export type SegmentMap = DiffableMap<number, Segment>;
 

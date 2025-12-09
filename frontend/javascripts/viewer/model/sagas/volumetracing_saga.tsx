@@ -81,7 +81,12 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import { type SegmentMap, SegmentProperties, type VolumeTracing, Segment } from "viewer/store";
+import {
+  type SegmentMap,
+  SegmentPropertiesWithoutUserState,
+  type VolumeTracing,
+  type Segment,
+} from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -449,8 +454,8 @@ function* uncachedDiffSegmentLists(
     const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
     const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
 
-    let changedPropertyNames = [];
-    for (const propertyName of SegmentProperties) {
+    let changedPropertyNames: Array<Exclude<keyof Segment, "isVisible">> = [];
+    for (const propertyName of SegmentPropertiesWithoutUserState) {
       if (
         !_.isEqual(prevSegmentWithoutIsVisible[propertyName], segmentWithoutIsVisible[propertyName])
       ) {

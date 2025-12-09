@@ -180,7 +180,7 @@ export function* sendSaveRequestToServer(
    */
 
   const fullSaveQueue = yield* select((state) => state.save.queue);
-  ColoredLogger.logRed("sendSaveRequestToServer fullSaveQueue", fullSaveQueue);
+  // ColoredLogger.logRed("sendSaveRequestToServer fullSaveQueue", fullSaveQueue);
   const withoutFEOnlyActions = filterOutFrontendOnlySupportedActions(fullSaveQueue);
   const saveQueue = sliceAppropriateBatchCount(withoutFEOnlyActions);
   let compactedSaveQueue = compactSaveQueue(saveQueue);

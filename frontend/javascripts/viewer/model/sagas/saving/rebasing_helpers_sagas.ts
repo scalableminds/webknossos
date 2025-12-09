@@ -150,7 +150,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
       updatedSaveQueue: SaveQueueEntry[];
     }
 > {
-  ColoredLogger.logRed("updateSaveQueueEntriesToStateAfterRebase");
+  // ColoredLogger.logRed("updateSaveQueueEntriesToStateAfterRebase");
   const saveQueue = yield* select((state) => state.save.queue);
   const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
   yield* call(addMissingSegmentsToLoadedMappings, idsToFetch);
@@ -257,7 +257,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
               return newAction;
             }
             case "updateSegment": {
-              ColoredLogger.logGreen("adapting updateSegment action?", action);
+              // ColoredLogger.logGreen("adapting updateSegment action?", action);
 
               const { actionTracingId } = action.value;
 
@@ -314,7 +314,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
     })
     .filter((a) => a != null);
   if (success) {
-    ColoredLogger.logRed("new updatedSaveQueue", updatedSaveQueue);
+    // ColoredLogger.logRed("new updatedSaveQueue", updatedSaveQueue);
     yield put(replaceSaveQueueAction(updatedSaveQueue));
     return { success: true, updatedSaveQueue };
   }

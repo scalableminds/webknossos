@@ -100,7 +100,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         ).affineMatrix,
       );
 
-      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
+      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
 
       const zoomLevels = yield* call(
         getZoomLevelsFn,

@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Form, Modal, Tooltip } from "antd";
+import { Divider, Form, Modal, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/lib/form";
 import type { NamePath } from "antd/lib/form/interface";
 import sum from "lodash/sum";
@@ -76,3 +76,7 @@ export const hasFormError = (formErrors: FieldError[], key: string): boolean => 
   );
   return sum(errorsForKey) > 0;
 };
+
+export const DividerWithSubtitle = ({ children }: { children: React.ReactNode }) => (
+  <Divider style={{ margin: "18px 0" }}>{children}</Divider>
+);

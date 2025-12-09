@@ -10,7 +10,7 @@ import * as React from "react";
 import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import type { APIDataset, APISegmentationLayer, APIUser } from "types/api_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_types";
+import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
 import {
@@ -303,7 +303,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <ButtonComponent
         key="ai-job-button"
-        onClick={() => Store.dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
+        onClick={() => Store.dispatch(setAIJobModalStateAction(APIJobCommand.INFER_NEURONS))}
         style={{ marginLeft: 12, pointerEvents: "auto" }}
         disabled={disabled}
         title={tooltipText}
@@ -325,10 +325,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.ALIGN_SECTIONS);
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_NEURONS) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+          APIJobCommand.INFER_MITOCHONDRIA,
+        ) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_NUCLEI) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.ALIGN_SECTIONS);
       return jobsEnabled;
     };
 

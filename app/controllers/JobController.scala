@@ -87,9 +87,8 @@ class JobController @Inject()(jobDAO: JobDAO,
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      jobs <- jobDAO.findAll
-      jobsJsonList <- Fox.serialCombined(jobs.sortBy(_.created).reverse)(jobService.publicWrites)
-    } yield Ok(Json.toJson(jobsJsonList))
+      jobsCompact <- jobDAO.findAllCompact
+    } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
   }
 
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import type { APIDataLayer, APIJob, APIJobType } from "types/api_types";
+import type { APIDataLayer, APIJob, APIJobCommand } from "types/api_types";
 import { getColorLayers, getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { getReadableNameOfVolumeLayer } from "viewer/model/accessors/volumetracing_accessor";
@@ -39,7 +39,7 @@ export type JobApiCallArgsType = {
 };
 export type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
-  jobName: APIJobType;
+  jobName: APIJobCommand;
   description: React.ReactNode;
   jobSpecificInputFields?: React.ReactNode | undefined;
   isBoundingBoxConfigurable?: boolean;

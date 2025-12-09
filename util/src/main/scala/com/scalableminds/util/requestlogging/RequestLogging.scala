@@ -33,7 +33,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
       block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[_], result: Result): Unit = {
       val debugString =
-        s"Request ${request.method} ${request.uri} took ${formatDuration(executionTime)} and was${if (result.header.status != 200) " not "
+        s"Request `${request.method}` `${request.uri}` took ${formatDuration(executionTime)} and was${if (result.header.status != 200) " not "
         else " "}successful"
       logger.info(debugString)
       notifier(debugString)

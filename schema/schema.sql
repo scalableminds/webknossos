@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(147);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(148);
 COMMIT TRANSACTION;
 
 
@@ -575,6 +575,7 @@ CREATE TABLE webknossos.jobs(
   retriedBySuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
+  lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );

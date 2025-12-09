@@ -19,7 +19,13 @@ import { setNavbarHeightAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 
-const INITIAL_DELAY = 5000;
+// INITIAL_DELAY controls the delay with which the info for maintenance and outdated
+// is polled.
+// Previously, this delay value was set to 5000. However, this could to a UI jump
+// which was annoying when one wanted to click something in the same moment.
+// It is now set to 0 to check whether this is enough to fix the above issue.
+// If yes, we can remove the delay altogether.
+const INITIAL_DELAY = 0;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
 const UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAway";
 

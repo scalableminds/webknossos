@@ -1,6 +1,6 @@
 import * as Utils from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
-import { EmptyObject } from "types/type_utils";
+import type { EmptyObject } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
@@ -785,31 +785,33 @@ export function LEGACY_updateSegmentVolumeAction(
 
 export function updateSegmentPartialVolumeAction(
   shape: {
-    id: number,
-    anchorPosition?: Vector3 | null | undefined,
-    additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
-    name?: string | null | undefined,
-    color?: Vector3 | null,
-    groupId?: number | null | undefined,
-    metadata?: Array<MetadataEntryProto>,
-    creationTime?: number | null | undefined,
+    id: number;
+    anchorPosition?: Vector3 | null | undefined;
+    additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
+    name?: string | null | undefined;
+    color?: Vector3 | null;
+    groupId?: number | null | undefined;
+    metadata?: Array<MetadataEntryProto>;
+    creationTime?: number | null | undefined;
   },
   actionTracingId: string,
 ) {
   const { metadata } = shape;
-  const maybeMetadataWrapper = metadata != null ? {
-    metadata: enforceValidMetadata(metadata),
-  } : {} as EmptyObject;
+  const maybeMetadataWrapper =
+    metadata != null
+      ? {
+          metadata: enforceValidMetadata(metadata),
+        }
+      : ({} as EmptyObject);
   return {
     name: "updateSegmentPartial",
     value: {
       actionTracingId,
       ...shape,
-      ...maybeMetadataWrapper
+      ...maybeMetadataWrapper,
     },
   } as const;
 }
-
 
 export function updateSegmentVisibilityVolumeAction(
   id: number,

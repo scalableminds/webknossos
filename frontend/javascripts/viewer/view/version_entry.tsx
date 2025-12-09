@@ -41,6 +41,7 @@ import type {
   DeleteUserBoundingBoxInSkeletonTracingAction,
   DeleteUserBoundingBoxInVolumeTracingAction,
   LEGACY_MergeTreeUpdateAction,
+  LEGACY_UpdateSegmentUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
@@ -61,7 +62,7 @@ import type {
   UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
   UpdateSegmentGroupsUpdateAction,
-  LEGACY_UpdateSegmentUpdateAction,
+  UpdateSegmentPartialUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
@@ -72,7 +73,6 @@ import type {
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
-  UpdateSegmentPartialUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";

@@ -76,16 +76,16 @@ import {
   updateMappingName,
   updateSegmentGroups,
   updateSegmentGroupsExpandedState,
-  updateSegmentVisibilityVolumeAction,
   updateSegmentPartialVolumeAction,
+  updateSegmentVisibilityVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
 import {
+  type Segment,
   type SegmentMap,
   SegmentPropertiesWithoutUserState,
   type VolumeTracing,
-  type Segment,
 } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";

@@ -35,7 +35,6 @@ import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { ColoredLogger } from "libs/utils";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
-import _ from "lodash";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

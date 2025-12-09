@@ -1,5 +1,6 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
+import _ from "lodash";
 import { call, put } from "typed-redux-saga";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
@@ -12,7 +13,6 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
-import _ from "lodash";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,

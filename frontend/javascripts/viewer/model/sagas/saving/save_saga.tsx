@@ -2,7 +2,7 @@ import { getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { ColoredLogger, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import _ from "lodash";
 import { type Channel, buffers } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";

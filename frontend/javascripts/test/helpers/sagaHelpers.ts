@@ -1,4 +1,4 @@
-import { Saga, select, take } from "viewer/model/sagas/effect-generators";
+import { type Saga, select, take } from "viewer/model/sagas/effect-generators";
 import type { ExpectStatic } from "vitest";
 
 /**

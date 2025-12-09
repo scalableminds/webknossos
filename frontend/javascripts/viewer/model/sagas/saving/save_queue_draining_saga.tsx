@@ -37,7 +37,6 @@ import {
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
 import { MutexFetchingStrategy, getCurrentMutexFetchingStrategy } from "./save_mutex_saga";
-import { ColoredLogger } from "libs/utils";
 
 const MAX_ON_CONFLICT_RETRIES = 10;
 

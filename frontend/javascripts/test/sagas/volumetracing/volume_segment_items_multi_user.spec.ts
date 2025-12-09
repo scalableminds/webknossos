@@ -21,7 +21,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "../proofreading/proofreading_test_utils";
-import _ from "lodash";
 import type { Vector3 } from "viewer/constants";
 import { ColoredLogger } from "libs/utils";
 

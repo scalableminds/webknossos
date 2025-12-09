@@ -6,9 +6,14 @@ import type {
 } from "types/api_types";
 
 import { Root } from "protobufjs";
-import type { TreeType } from "viewer/constants";
+import { TreeTypeEnum, type TreeType } from "viewer/constants";
 import { PROTO_FILES, PROTO_TYPES } from "viewer/model/helpers/proto_helpers";
-import type { Edge } from "viewer/model/types/tree_types";
+import type { Edge, TreeMap } from "viewer/model/types/tree_types";
+import type { WebknossosTestContext } from "test/helpers/apiHelpers";
+import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
+import { vi } from "vitest";
+import { type Saga, take, call, select } from "viewer/model/sagas/effect-generators";
+import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
 
 export function encodeServerTracing(
   tracing: ServerTracing,
@@ -37,20 +42,11 @@ export function encodeServerTracing(
  * @param tracingId id for the resulting tracing
  */
 export function createSkeletonTracingFromAdjacency(
-  adjacencyList: Array<[number, number]>,
+  adjacencyList: Map<number, Set<number>>,
   startNode: number,
   tracingId: string,
   version: number,
 ): ServerSkeletonTracing {
-  // Build adjacency map (undirected)
-  const adj = new Map<number, Set<number>>();
-  for (const [a, b] of adjacencyList) {
-    if (!adj.has(a)) adj.set(a, new Set());
-    if (!adj.has(b)) adj.set(b, new Set());
-    adj.get(a)!.add(b);
-    adj.get(b)!.add(a);
-  }
-
   // BFS to find component containing startNode
   const visited = new Set<number>();
   const queue: number[] = [startNode];
@@ -59,7 +55,7 @@ export function createSkeletonTracingFromAdjacency(
 
   while (queue.length) {
     const n = queue.shift()!;
-    const neighbours = adj.get(n);
+    const neighbours = adjacencyList.get(n);
     if (!neighbours) continue;
     for (const nb of neighbours) {
       if (!visited.has(nb)) {
@@ -75,9 +71,18 @@ export function createSkeletonTracingFromAdjacency(
   const componentNodes = Array.from(visited).sort((a, b) => a - b);
   const componentNodeSet = new Set(componentNodes);
 
-  const componentEdges: Edge[] = adjacencyList
-    .filter(([a, b]) => componentNodeSet.has(a) && componentNodeSet.has(b) && a !== b)
-    .map(([a, b]) => ({ source: a, target: b }));
+  const componentEdges: Edge[] = [];
+  for (const [node, neighbours] of adjacencyList) {
+    for (const neighbour of neighbours) {
+      if (
+        componentNodeSet.has(node) &&
+        componentNodeSet.has(neighbour) &&
+        !componentEdges.some((e) => e.source === neighbour && e.target === node)
+      ) {
+        componentEdges.push({ source: node, target: neighbour });
+      }
+    }
+  }
 
   // Build ServerNode objects. Position = (n,n,n) as requested.
   const now = Date.now();
@@ -140,4 +145,34 @@ export function createSkeletonTracingFromAdjacency(
   };
 
   return tracing;
+}
+
+// Little helper to load a list of agglomerate skeletons in a test.
+// Should be done before any other mapping changes. Else the assumptions of the tests are not correct.
+// The agglomerate ids must correspond to one of the agglomerate positions.
+// Should be the case initially for all proofreading tests.
+export function* loadAgglomerateSkeletons(
+  context: WebknossosTestContext,
+  agglomerateIdsToLoad: number[],
+  shouldSaveAfterLoadingTrees: boolean,
+  isInLiveCollabMode: boolean,
+): Saga<TreeMap> {
+  // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+  vi.mocked(context.mocks.parseProtoTracing).mockRestore();
+  for (let index = 0; index < agglomerateIdsToLoad.length; ++index) {
+    const agglomerateId = agglomerateIdsToLoad[index];
+    yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]);
+    // Wait until skeleton saga has loaded the skeleton.
+    if (isInLiveCollabMode) {
+      yield take("DONE_SAVING");
+    } else {
+      yield take("ADD_TREES_AND_GROUPS");
+    }
+  }
+  if (shouldSaveAfterLoadingTrees) {
+    yield call(() => context.api.tracing.save()); // Also pulls newest version from backend.
+  }
+  return yield* select((state) =>
+    getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+  );
 }

@@ -17,7 +17,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
+import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type {
@@ -31,6 +31,8 @@ import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { delay } from "typed-redux-saga";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -289,12 +291,22 @@ class BackendMock {
     _tracingId: string,
     agglomerateId: number,
   ): Promise<ArrayBuffer> => {
+    // Does not currently support versioning as this would require a versioned adjacency list.
     const version = this.agglomerateMapping.currentVersion;
+    const adjacencyList = this.agglomerateMapping.getAdjacencyList();
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
-    // TODOM: createSkeletonTracingFromAdjacency expects an unmapped id and not an agglomerateId
+    const someSegmentOfAgglomerate = mapping.find(
+      ([_segment, agglomerate]) => agglomerate === agglomerateId,
+    );
+    if (!someSegmentOfAgglomerate) {
+      throw new Error(
+        `Could not find any segment pointing to agglomerate with id ${agglomerateId}!`,
+      );
+    }
+    const segmentId = someSegmentOfAgglomerate[0];
     const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
-      mapping,
-      agglomerateId,
+      adjacencyList,
+      segmentId,
       "agglomerateSkeleton",
       version,
     );
@@ -348,4 +360,21 @@ export function mockInitialBucketAndAgglomerateData(
   );
 
   return backendMock;
+}
+
+export function* makeMappingEditableHelper(): Saga<void> {
+  // Usually the user creates an editable mapping via the first proofreading action.
+  // Therefore the context is busy blocked by the proofreading saga.
+  // As we do this manually here, we need to mock that wk is busy.
+  yield put(setBusyBlockingInfoAction(true, "Blocking in test for making mapping editable"));
+  yield call(createEditableMapping);
+  yield put(setBusyBlockingInfoAction(false));
+  // Delay is needed to avoid the auto mapping data reloading of mapping saga to interfere with tests.
+  // Some tests check whether the missing agglomerate ids not present in the partial mapping in the frontend
+  // are actually loaded during rebasing. Such a scenario might happen when doing proofreading via meshes.
+  // But without the delay the mapping saga will directly replace the mapping (including the new mapping info form the rebasing)
+  // directly after the rebasing with a version where the additionally loaded segments are not present as they are "off screen".
+  // The delay gives the mapping saga time to do the update now instead of the tests directly starting the proofreading interaction and thus rebasing.
+  // This would delay the reloading of the partial mapping of the mapping saga, thus we wait here shortly manually.
+  yield delay(10);
 }

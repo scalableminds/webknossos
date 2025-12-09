@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
-import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationService}
+import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationPlanUpdate, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
 import models.team.PricingPlan
 import play.api.i18n.Messages
@@ -281,6 +281,27 @@ class OrganizationController @Inject()(
             "isExceeded" -> isExceeded,
             "isAlmostExceeded" -> isAlmostExceeded
           ))
+    }
+
+  def updatePlan(): Action[OrganizationPlanUpdate] =
+    sil.SecuredAction.async(validateJson[OrganizationPlanUpdate]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        organization <- organizationDAO.findOne(request.body.organizationId) ?~> Messages(
+          "organization.notFound",
+          request.body.organizationId) ~> NOT_FOUND
+        _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
+        _ <- organizationDAO.updatePlan(organization._id, request.body)
+      } yield Ok
+    }
+
+  def listPlanUpdates: Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        isSuperUser <- userService.isSuperUser(request.identity._multiUser)
+        _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listPlanUpdates.onlyAdmin"
+        planUpdates <- organizationDAO.findPlanUpdates(request.identity._organization)
+      } yield Ok(Json.toJson(planUpdates))
     }
 
 }

@@ -503,6 +503,7 @@ function JobListView() {
             title="Job Id"
             dataIndex="id"
             key="id"
+            width={120}
             render={(id) => <FormattedId id={id} />}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
           />
@@ -526,6 +527,7 @@ function JobListView() {
           <Column
             title="Date"
             key="createdAt"
+            width={190}
             render={(job) => <FormattedDate timestamp={job.created} />}
             sorter={Utils.compareBy<APIJob>((job) => job.created)}
             defaultSortOrder="descend"
@@ -536,6 +538,7 @@ function JobListView() {
           <Column
             title="State"
             key="state"
+            width={120}
             render={renderState}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
           />

@@ -112,7 +112,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
   def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit ec: ExecutionContext,
       tc: TokenContext,
-      m: MessagesProvider): Fox[List[ConnectomeFileNameWithMappingName]] = {
+      m: MessagesProvider): Fox[Seq[ConnectomeFileNameWithMappingName]] = {
     val connectomeFileNames = dataLayer.attachments.map(_.connectomes).getOrElse(Seq.empty).map(_.name)
 
     Fox.fromFuture(
@@ -128,7 +128,13 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
           } yield ConnectomeFileNameWithMappingName(connectomeFileName, mappingName)
         }
         // Only return successes, we don’t want a malformed file breaking the list request.
-        .map(_.flatten))
+        .map { boxes: Seq[Box[ConnectomeFileNameWithMappingName]] =>
+          boxes.filter(_.isEmpty).foreach { emptyBox =>
+            logger.warn(s"Failed to list a connectome file for $dataSourceId: $emptyBox")
+          }
+          boxes.flatten
+        }
+    )
   }
 
   private def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext,

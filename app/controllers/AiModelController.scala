@@ -122,7 +122,6 @@ class AiModelController @Inject()(
   def listAiModels: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- userService.assertIsSuperUser(request.identity)
         aiModels <- aiModelDAO.findAll
         jsResults <- Fox.serialCombined(aiModels)(model => aiModelService.publicWrites(model, request.identity))
       } yield Ok(Json.toJson(jsResults))

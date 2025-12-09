@@ -77,11 +77,14 @@ class OrganizationController @Inject()(
         owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
         org <- organizationService.createOrganization(request.body.organization, request.body.organizationName)
         user <- userDAO.findFirstByMultiUser(owner._id)
+        teamMemberships <- userService.initialTeamMemberships(org._id, inviteIdOpt = None)
         _ <- userService.joinOrganization(user,
                                           org._id,
                                           autoActivate = true,
                                           isAdmin = true,
-                                          isOrganizationOwner = true)
+                                          isDatasetManager = false,
+                                          isOrganizationOwner = true,
+                                          teamMemberships = teamMemberships)
         _ <- freeCreditTransactionService.handOutMonthlyFreeCredits()
       } yield Ok(org._id)
     }
@@ -179,7 +182,13 @@ class OrganizationController @Inject()(
         multiUser <- multiUserDAO.findOneByEmail(request.body)
         organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
         user <- userDAO.findFirstByMultiUser(multiUser._id)
-        user <- userService.joinOrganization(user, organization._id, autoActivate = true, isAdmin = false)
+        teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
+        user <- userService.joinOrganization(user,
+                                             organization._id,
+                                             autoActivate = true,
+                                             isAdmin = false,
+                                             isDatasetManager = false,
+                                             teamMemberships = teamMemberships)
       } yield Ok(user._id.toString)
     }
 
@@ -193,12 +202,7 @@ class OrganizationController @Inject()(
       organization <- organizationDAO
         .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
       userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail))
-      _ = Mailer ! Send(
-        defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                   userEmail,
-                                                   organization.name,
-                                                   "Extend WEBKNOSSOS plan by a year"))
+      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail, organization.name))
     } yield Ok
   }
 
@@ -215,12 +219,7 @@ class OrganizationController @Inject()(
         } else {
           defaultMails.upgradePricingPlanToPowerMail _
         }
-        _ = Mailer ! Send(mail(request.identity, userEmail))
-        _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
-                                                     organization.name,
-                                                     s"Upgrade WEBKNOSSOS Plan to $requestedPlan"))
+        _ = Mailer ! Send(mail(request.identity, userEmail, organization.name))
       } yield Ok
   }
 
@@ -230,12 +229,8 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
-        _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
         _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
-                                                     organization.name,
-                                                     s"Purchase $requestedUsers additional users"))
+          defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers, organization.name))
       } yield Ok
     }
 
@@ -245,12 +240,8 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
-        _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
         _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
-                                                     organization.name,
-                                                     s"Purchase $requestedStorage TB additional storage"))
+          defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage, organization.name))
       } yield Ok
     }
 

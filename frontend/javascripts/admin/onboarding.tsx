@@ -16,19 +16,23 @@ import { useQuery } from "@tanstack/react-query";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
-import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
+import { getDatastores, getEditableTeams, sendInvitesForOrganization } from "admin/rest_api";
 import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import features from "features";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";
+import { PERMISSIONS, PermissionsAndTeamsComponent } from "./user/permissions_and_teams_modal_view";
 
 const FormItem = Form.Item;
 
@@ -218,11 +222,32 @@ export function InviteUsersModal({
   currentUserCount?: number;
   maxUserCountPerOrganization?: number;
 }) {
+  const teams = useFetch(getEditableTeams, [], []);
   const [inviteesString, setInviteesString] = useState("");
+  const [selectedTeams, setSelectedTeams] = useState<Record<string, APITeamMembership>>({});
+  const [selectedPermission, setSelectedPermission] = useState<PERMISSIONS>(PERMISSIONS.member);
   const isOrganizationLimitAlreadyReached = useMemo(
     () => currentUserCount >= maxUserCountPerOrganization,
     [currentUserCount, maxUserCountPerOrganization],
   );
+
+  const defaultTeam = useMemo(() => teams.find((t) => t.name === "Default"), [teams]);
+
+  const setDefaultTeam = useCallback(() => {
+    if (defaultTeam != null) {
+      setSelectedTeams({
+        [defaultTeam.name]: {
+          id: defaultTeam.id,
+          name: defaultTeam.name,
+          isTeamManager: false,
+        },
+      });
+    }
+  }, [defaultTeam]);
+
+  useEffect(() => {
+    setDefaultTeam();
+  }, [setDefaultTeam]);
 
   const extractEmailAddresses = useCallback(
     (): string[] =>
@@ -233,16 +258,43 @@ export function InviteUsersModal({
     [inviteesString],
   );
 
+  const resetFields = useCallback(() => {
+    setInviteesString("");
+    setDefaultTeam();
+    setSelectedPermission(PERMISSIONS.member);
+  }, [setDefaultTeam]);
+
   const sendInvite = useCallback(async () => {
     const addresses = extractEmailAddresses();
+    if (addresses.length === 0) {
+      Toast.error("Please provide at least one valid email address.");
+      return;
+    }
 
-    await sendInvitesForOrganization(addresses, true);
+    const isAdmin = selectedPermission === PERMISSIONS.admin;
+    const isDatasetManager = selectedPermission === PERMISSIONS.datasetManager;
+    const selectedTeamsForInvite = Object.values(selectedTeams);
+
+    await sendInvitesForOrganization(
+      addresses,
+      true,
+      isAdmin,
+      isDatasetManager,
+      selectedTeamsForInvite,
+    );
     Toast.success("An invitation was sent to the provided email addresses.");
 
-    setInviteesString("");
+    resetFields();
     if (handleVisibleChange != null) handleVisibleChange(false);
     if (destroy != null) destroy();
-  }, [destroy, extractEmailAddresses, handleVisibleChange]);
+  }, [
+    destroy,
+    extractEmailAddresses,
+    handleVisibleChange,
+    selectedPermission,
+    selectedTeams,
+    resetFields,
+  ]);
 
   const doNewUsersExceedLimit =
     currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
@@ -250,7 +302,8 @@ export function InviteUsersModal({
   const onCancel = useCallback(() => {
     if (handleVisibleChange != null) handleVisibleChange(false);
     if (destroy != null) destroy();
-  }, [destroy, handleVisibleChange]);
+    resetFields();
+  }, [destroy, handleVisibleChange, resetFields]);
 
   const handleInviteesStringChange = useCallback((evt: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInviteesString(evt.target.value);
@@ -280,11 +333,7 @@ export function InviteUsersModal({
           Share datasets, collaboratively work on annotations, and organize complex analysis
           projects.
         </p>
-        <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>
-        <p>
-          Note that new users have limited access permissions by default. Please doublecheck their
-          roles and team assignments after they join your organization.
-        </p>
+        <p>All invited users will be assigned the permissions and roles specified below.</p>
         {isOrganizationLimitAlreadyReached ? (
           <p>
             As your organization has reached its user limit, you can only invite guests to your
@@ -293,6 +342,14 @@ export function InviteUsersModal({
           </p>
         ) : null}
         {exceedingUserLimitAlert}
+        <DividerWithSubtitle>
+          <h5>
+            <b>Invitee Email Addresses</b>
+          </h5>
+        </DividerWithSubtitle>
+        <p style={{ marginTop: -10 }}>
+          Multiple email addresses should be separated with a comma, a space or a new line.
+        </p>
         <Input.TextArea
           spellCheck={false}
           autoSize={{
@@ -300,7 +357,16 @@ export function InviteUsersModal({
           }}
           onChange={handleInviteesStringChange}
           placeholder={"jane@example.com\njoe@example.com"}
-          defaultValue={inviteesString}
+          value={inviteesString}
+        />
+        <PermissionsAndTeamsComponent
+          selectedTeams={selectedTeams}
+          setSelectedTeams={setSelectedTeams}
+          selectedPermission={selectedPermission}
+          setSelectedPermission={setSelectedPermission}
+          userIsAdmin={true}
+          onlyEditingSingleUser={true}
+          renderSubtitlesWithDivider={true}
         />
       </Fragment>
     );
@@ -310,6 +376,8 @@ export function InviteUsersModal({
     inviteesString,
     isOrganizationLimitAlreadyReached,
     organizationId,
+    selectedPermission,
+    selectedTeams,
   ]);
 
   return (

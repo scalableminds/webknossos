@@ -590,8 +590,8 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
     newParentId
       .map(parentId => {
         val updatedOrNewGroup = this.findGroup(tracing.segmentGroups) match {
-          // Empty children to avoid implicitly reparenting the children groups as well.
-          case Some(group) => group.copy(name = name.getOrElse(group.name), children = Seq())
+          // Children are kept and moved as well.
+          case Some(group) => group.copy(name = name.getOrElse(group.name))
           case _           => newGroup
         }
         val updatedGroups = updateGroupParent(tracing.segmentGroups, updatedOrNewGroup, parentId)
@@ -625,18 +625,17 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
                                 updatedOrNewGroup: SegmentGroup,
                                 parentId: Int): Seq[SegmentGroup] =
     groups.collect {
-      // All cases return a sequence of groups to allow extracting the group for proper reparenting.
-      // Afterward, the additional wrapping sequence is flattened out.
-      case SegmentGroup(_, id, children, _, _) if id == this.groupId =>
-        updateGroupParent(children, updatedOrNewGroup, parentId)
+      // Filter out the group with groupId and append it to the new parent.
+      case SegmentGroup(_, id, _, _, _) if id == this.groupId =>
+        None
       case SegmentGroup(name, id, children, isExpanded, _) if id == parentId =>
-        Seq(
+        Some(
           SegmentGroup(name,
                        id,
                        updateGroupParent(children, updatedOrNewGroup, parentId) ++ Seq(updatedOrNewGroup),
                        isExpanded))
       case segmentGroup =>
-        Seq(segmentGroup.withChildren(updateGroupParent(segmentGroup.children, updatedOrNewGroup, parentId)))
+        Some(segmentGroup.withChildren(updateGroupParent(segmentGroup.children, updatedOrNewGroup, parentId)))
     }.flatten
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
@@ -657,11 +656,10 @@ case class DeleteSegmentGroupVolumeAction(groupId: Int,
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def removeFromGroupHierarchy(groups: Seq[SegmentGroup]): Seq[SegmentGroup] =
       groups.collect {
-        // All cases return a sequence of groups to allow extracting the group for proper reparenting
         case SegmentGroup(_, id, children, _, _) if id == this.groupId =>
-          removeFromGroupHierarchy(children)
+          None
         case segmentGroup =>
-          Seq(segmentGroup.withChildren(removeFromGroupHierarchy(segmentGroup.children)))
+          Some(segmentGroup.withChildren(removeFromGroupHierarchy(segmentGroup.children)))
       }.flatten
     tracing.withSegmentGroups(removeFromGroupHierarchy(tracing.segmentGroups))
   }

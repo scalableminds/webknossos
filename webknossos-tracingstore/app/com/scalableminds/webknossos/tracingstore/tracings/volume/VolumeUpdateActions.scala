@@ -626,7 +626,7 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
                                 parentId: Int): Seq[SegmentGroup] = {
     val updatedGroups = groups.collect {
       // All cases return a sequence of groups to allow extracting the group for proper reparenting
-      case SegmentGroup(_name, id, children, _, _) if id == this.groupId =>
+      case SegmentGroup(_, id, children, _, _) if id == this.groupId =>
         updateGroupParent(children, updatedOrNewGroup, parentId)
       case SegmentGroup(name, id, children, isExpanded, _) if id == parentId =>
         Seq(
@@ -637,11 +637,6 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
       case segmentGroup =>
         Seq(segmentGroup.withChildren(updateGroupParent(segmentGroup.children, updatedOrNewGroup, parentId)))
     }.flatten
-    /*groups.map(group => {
-      val childrenWithoutInsertGroup = group.children.filter(g => g.groupId != groupId)
-      if (group.groupId == parentId) group.withChildren(childrenWithoutInsertGroup.appended(updatedOrNewGroup))
-      else group.withChildren(childrenWithoutInsertGroup)
-    })*/
     updatedGroups
   }
 

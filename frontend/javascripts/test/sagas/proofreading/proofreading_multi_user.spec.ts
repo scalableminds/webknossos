@@ -28,6 +28,7 @@ import {
 } from "./proofreading_test_utils";
 import type { NeighborInfo } from "admin/rest_api";
 import type { Vector3 } from "viewer/constants";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -44,18 +45,53 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+    /*
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Backend merges segments 5 and 6
+      - Frontend merges 4 and 1
+
+      The resulting mapping will be:
+      {6 <- 5 <- 4 -> 1 -> 2 -> 3}
+      {1337, 1338}
+     */
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     backendMock.planVersionInjection(5, [
       {
+        name: "updateSegment",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 6,
+          anchorPosition: [1, 2, 3],
+          additionalCoordinates: undefined,
+          name: "",
+          color: [1, 2, 3],
+          groupId: null,
+          metadata: [],
+          creationTime: 0,
+        },
+      },
+      {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 5,
           segmentId2: 6,
           agglomerateId1: 4,
           agglomerateId2: 6,
+        },
+      },
+      {
+        name: "deleteSegment",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 6,
         },
       },
     ]);
@@ -75,6 +111,7 @@ describe("Proofreading (Multi User)", () => {
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      // yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);
@@ -88,8 +125,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -108,7 +145,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 1,
             segmentId2: 4,
             agglomerateId1: 1,
@@ -122,6 +159,12 @@ describe("Proofreading (Multi User)", () => {
       );
 
       expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
+
+      const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4);
+      expect(segment4AfterSaving).toBeUndefined();
+
+      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
+      expect(segment6AfterSaving).toBeUndefined();
     });
 
     await task.toPromise();
@@ -135,7 +178,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 3,
           segmentId2: 2,
           agglomerateId: 1,
@@ -171,8 +214,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -192,7 +235,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 1,
             segmentId2: 4,
             agglomerateId1: 1339,
@@ -303,7 +346,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 2,
           agglomerateId: 1,
@@ -323,7 +366,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1339,
@@ -361,7 +404,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 4,
           segmentId2: 2,
           agglomerateId1: 1,
@@ -382,7 +425,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1,
@@ -422,7 +465,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 2,
           agglomerateId: 1,
@@ -458,8 +501,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          3, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          3, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -471,7 +514,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 3,
             segmentId2: 4,
             agglomerateId1: 1339,
@@ -519,7 +562,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1337,
           segmentId2: 5,
           agglomerateId1: 1337,
@@ -556,8 +599,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // unmappedId=4 / mappedId=4 at this position
-          4, // unmappedId=1 maps to 1
+          [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
+          4, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -587,7 +630,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 4,
             segmentId2: 1,
             agglomerateId1: 1337,
@@ -649,7 +692,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 7,
           segmentId2: 1337,
           agglomerateId: 1337,
@@ -672,7 +715,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1337,
           segmentId2: 5,
           agglomerateId1: 1339,
@@ -719,8 +762,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the1339 actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // unmappedId=4 / mappedId=4 at this position
-          4, // unmappedId=1 maps to 1
+          [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
+          4, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -751,7 +794,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 4,
             segmentId2: 1,
             agglomerateId1: 1339,
@@ -803,8 +846,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -816,7 +859,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 1,
             segmentId2: 4,
             agglomerateId1: 1,

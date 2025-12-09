@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, getAdaptToTypeFunction, isNumberMap } from "libs/utils";
+import { ColoredLogger, SoftError, getAdaptToTypeFunction, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -320,7 +320,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   if (!proofreadUsingMeshes()) return;
 
-  /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
+  /* Load a coarse mesh of the agglomerate at the click position */
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
@@ -1041,6 +1041,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
+  if (action.type === "PROOFREAD_MERGE") {
+    ColoredLogger.logRed("remove segment action", targetAgglomerateId);
+    // Remove the segment that doesn't exist anymore.
+    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
+  }
+
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
 
@@ -1101,11 +1107,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
 
     console.log("finished updating the mapping after a min-cut");
-  }
-
-  if (action.type === "PROOFREAD_MERGE") {
-    // Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
   }
 
   /* Reload meshes */

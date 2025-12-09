@@ -10,7 +10,6 @@ import models.team.PricingPlan.PricingPlan
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
-import controllers.OrganizationPlanUpdate
 import slick.dbio.DBIO
 import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}

@@ -29,7 +29,6 @@ class UserController @Inject()(userService: UserService,
                                credentialsProvider: CredentialsProvider,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
-                               teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -183,7 +182,7 @@ class UserController @Inject()(userService: UserService,
       (__ \ "isActive").readNullable[Boolean] and
       (__ \ "isAdmin").readNullable[Boolean] and
       (__ \ "isDatasetManager").readNullable[Boolean] and
-      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads())) and
+      (__ \ "teams").readNullable[List[TeamMembership]] and
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
@@ -192,9 +191,9 @@ class UserController @Inject()(userService: UserService,
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) =>
         for {
-          _ <- Fox.fromBool(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
-                                                                            team.name,
-                                                                            user.name) ~> FORBIDDEN
+          _ <- Fox.fromBool(user._organization == team._organization) ?~> Messages("team.admin.notPossibleBy",
+                                                                                   team.name,
+                                                                                   user.name) ~> FORBIDDEN
         } yield ()
       case (_, _) =>
         Fox.successful(())

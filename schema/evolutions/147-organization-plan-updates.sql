@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-DO $$ BEGIN IF (SELECT schemaVersion FROM webknossos.releaseInformation) <> 145 THEN RAISE EXCEPTION 'Previous schema version mismatch'; END IF; END; $$ LANGUAGE PLPGSQL;
+DO $$ BEGIN IF (SELECT schemaVersion FROM webknossos.releaseInformation) <> 146 THEN RAISE EXCEPTION 'Previous schema version mismatch'; END IF; END; $$ LANGUAGE PLPGSQL;
 
 CREATE TABLE webknossos.organization_plan_updates(
   _organization TEXT NOT NULL,
@@ -19,6 +19,6 @@ CREATE TABLE webknossos.organization_plan_updates(
 ALTER TABLE webknossos.organization_plan_updates
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 146;
+UPDATE webknossos.releaseInformation SET schemaVersion = 147;
 
 COMMIT TRANSACTION;

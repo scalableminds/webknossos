@@ -623,6 +623,78 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
 
   private def updateGroupParent(groups: Seq[SegmentGroup],
                                 updatedOrNewGroup: SegmentGroup,
+                                parentId: Int): Seq[SegmentGroup] =
+    groups.collect {
+      // All cases return a sequence of groups to allow extracting the group for proper reparenting.
+      // Afterward, the additional wrapping sequence is flattened out.
+      case SegmentGroup(_, id, children, _, _) if id == this.groupId =>
+        updateGroupParent(children, updatedOrNewGroup, parentId)
+      case SegmentGroup(name, id, children, isExpanded, _) if id == parentId =>
+        Seq(
+          SegmentGroup(name,
+                       id,
+                       updateGroupParent(children, updatedOrNewGroup, parentId) ++ Seq(updatedOrNewGroup),
+                       isExpanded))
+      case segmentGroup =>
+        Seq(segmentGroup.withChildren(updateGroupParent(segmentGroup.children, updatedOrNewGroup, parentId)))
+    }.flatten
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+case class DeleteSegmentGroupVolumeAction(groupId: Int,
+                                          actionTracingId: String,
+                                          actionTimestamp: Option[Long] = None,
+                                          actionAuthorId: Option[ObjectId] = None,
+                                          info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction
+    with VolumeUpdateActionHelper {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+    val newGroup = SegmentGroup(name = name.getOrElse(s"Group $groupId"),
+                                groupId = groupId,
+                                children = Seq(),
+                                isExpanded = Some(true))
+    newParentId
+      .map(parentId => {
+        val updatedOrNewGroup = this.findGroup(tracing.segmentGroups) match {
+          // Empty children to avoid implicitly reparenting the children groups as well.
+          case Some(group) => group.copy(name = name.getOrElse(group.name), children = Seq())
+          case _           => newGroup
+        }
+        val updatedGroups = updateGroupParent(tracing.segmentGroups, updatedOrNewGroup, parentId)
+        val updatedGroupsWithMaybeRootAppended =
+          if (parentId == -1) updatedGroups.appended(updatedOrNewGroup) else updatedGroups
+        tracing.withSegmentGroups(updatedGroupsWithMaybeRootAppended)
+      })
+      .getOrElse {
+        val foundGroup = this.findGroup(tracing.segmentGroups)
+        if (foundGroup.isDefined)
+          tracing.withSegmentGroups(this.renameInGroups(tracing.segmentGroups))
+        else
+          tracing.withSegmentGroups(tracing.segmentGroups.appended(newGroup))
+      }
+  }
+
+  private def renameInGroups(groups: Seq[SegmentGroup]): Seq[SegmentGroup] =
+    groups.map(
+      g =>
+        if (g.groupId == groupId) g.copy(name = name.getOrElse(g.name), children = renameInGroups(g.children))
+        else g.withChildren(renameInGroups(g.children)))
+
+  private def findGroup(groups: Seq[SegmentGroup]): Option[SegmentGroup] =
+    groups.collectFirst {
+      case g if g.groupId == groupId => Some(g)
+      case g if g.children.nonEmpty =>
+        findGroup(g.children)
+    }.flatten
+
+  private def updateGroupParent(groups: Seq[SegmentGroup],
+                                updatedOrNewGroup: SegmentGroup,
                                 parentId: Int): Seq[SegmentGroup] = {
     val updatedGroups = groups.collect {
       // All cases return a sequence of groups to allow extracting the group for proper reparenting

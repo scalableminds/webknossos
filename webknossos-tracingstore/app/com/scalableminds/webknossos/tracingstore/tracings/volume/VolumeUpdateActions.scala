@@ -590,10 +590,14 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
     newParentId
       .map(parentId => {
         val updatedOrNewGroup = this.findGroup(tracing.segmentGroups) match {
-          case Some(group) => group.copy(name = name.getOrElse(group.name))
+          // Empty children to avoid implicitly reparenting the children groups as well.
+          case Some(group) => group.copy(name = name.getOrElse(group.name), children = Seq())
           case _           => newGroup
         }
-        tracing.withSegmentGroups(updateGroupParent(tracing.segmentGroups, updatedOrNewGroup, parentId))
+        val updatedGroups = updateGroupParent(tracing.segmentGroups, updatedOrNewGroup, parentId)
+        val updatedGroupsWithMaybeRootAppended =
+          if (parentId == -1) updatedGroups.appended(updatedOrNewGroup) else updatedGroups
+        tracing.withSegmentGroups(updatedGroupsWithMaybeRootAppended)
       })
       .getOrElse {
         val foundGroup = this.findGroup(tracing.segmentGroups)
@@ -619,12 +623,27 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
 
   private def updateGroupParent(groups: Seq[SegmentGroup],
                                 updatedOrNewGroup: SegmentGroup,
-                                parentId: Int): Seq[SegmentGroup] =
-    groups.map(group => {
+                                parentId: Int): Seq[SegmentGroup] = {
+    val updatedGroups = groups.collect {
+      // All cases return a sequence of groups to allow extracting the group for proper reparenting
+      case SegmentGroup(_name, id, children, _, _) if id == this.groupId =>
+        updateGroupParent(children, updatedOrNewGroup, parentId)
+      case SegmentGroup(name, id, children, isExpanded, _) if id == parentId =>
+        Seq(
+          SegmentGroup(name,
+                       id,
+                       updateGroupParent(children, updatedOrNewGroup, parentId) ++ Seq(updatedOrNewGroup),
+                       isExpanded))
+      case segmentGroup =>
+        Seq(segmentGroup.withChildren(updateGroupParent(segmentGroup.children, updatedOrNewGroup, parentId)))
+    }.flatten
+    /*groups.map(group => {
       val childrenWithoutInsertGroup = group.children.filter(g => g.groupId != groupId)
       if (group.groupId == parentId) group.withChildren(childrenWithoutInsertGroup.appended(updatedOrNewGroup))
       else group.withChildren(childrenWithoutInsertGroup)
-    })
+    })*/
+    updatedGroups
+  }
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =

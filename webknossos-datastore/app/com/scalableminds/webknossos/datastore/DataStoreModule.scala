@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.datastore.services.mapping.{
 }
 import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMeshServiceHolder,
+  DSFullMeshService,
   Hdf5MeshFileService,
   MeshFileService,
   NeuroglancerPrecomputedMeshFileService,
@@ -62,6 +63,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[Hdf5ConnectomeFileService]).asEagerSingleton()
     bind(classOf[NeuroglancerPrecomputedMeshFileService]).asEagerSingleton()
     bind(classOf[DSChunkCacheService]).asEagerSingleton()
+    bind(classOf[DSFullMeshService]).asEagerSingleton()
     bind(classOf[DatasetCache]).asEagerSingleton()
   }
 }

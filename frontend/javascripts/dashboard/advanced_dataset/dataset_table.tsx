@@ -6,7 +6,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import type { DatasetUpdater } from "admin/rest_api";
-import { Dropdown, type MenuProps, Space, Tag, Tooltip } from "antd";
+import { Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
 import type {
   ColumnType,
   FilterValue,
@@ -648,9 +648,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
       },
     ];
     if (
-      this.props.isUserAdminOrDatasetManager &&
-      context.usedStorageInOrga != null &&
-      context.usedStorageInOrga > 0
+      (this.props.isUserAdminOrDatasetManager &&
+        context.usedStorageInOrga != null &&
+        context.usedStorageInOrga > 0)
     ) {
       const datasetStorageSizeColumn = {
         title: (
@@ -699,14 +699,19 @@ class DatasetTable extends React.PureComponent<Props, State> {
           pagination={{
             defaultPageSize: 50,
           }}
-          className="hide-checkbox-selection"
+          styles={
+            {
+              // hide/offset the first column containing the checkbox for row selection
+             section: { marginLeft: "-36px" } 
+            }
+          }
           onChange={this.handleChange}
           locale={{
             emptyText: this.renderEmptyText(),
           }}
           scroll={{
-          x: "max-content",
-        }}
+            x: "max-content",
+          }}
           summary={(currentPageData) => {
             // Workaround to get to the currently rendered entries (since the ordering
             // is managed by antd).
@@ -813,6 +818,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             };
           }}
           rowSelection={{
+            columnWidth: 0,
             selectedRowKeys,
             onSelectNone: () => {
               this.props.onSelectDataset(null);

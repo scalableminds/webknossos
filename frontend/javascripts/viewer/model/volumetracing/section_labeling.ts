@@ -189,7 +189,6 @@ class SectionLabeler {
     public readonly plane: OrthoView,
     thirdDimensionValue: number,
     public readonly activeMag: Vector3,
-    public readonly isSwapped: boolean,
   ) {
     this.maxCoord = null;
     this.minCoord = null;
@@ -587,7 +586,7 @@ function isAlmostZero(num: number, threshold: number = 0.01) {
 export function mapTransformedPlane(
   originalPlane: OrthoView,
   transform: Transform,
-): [OrthoView, boolean /* swapped */, (scale: Vector3) => Vector2 /* adaptScaleFn */] {
+): [OrthoView, (scale: Vector3) => Vector2 /* adaptScaleFn */] {
   if (originalPlane === "TDView") {
     throw new Error("Unexpected 3D view");
   }
@@ -627,7 +626,7 @@ export function mapTransformedPlane(
     }
   };
 
-  return [bestView, bestView === originalPlane && swapped, adaptScaleFn];
+  return [bestView, adaptScaleFn];
 }
 
 export class TransformedSectionLabeler {
@@ -635,7 +634,6 @@ export class TransformedSectionLabeler {
   applyTransform: (pos: Vector3) => Vector3;
   applyInverseTransform: (pos: Vector3) => Vector3;
   readonly mappedPlane: OrthoView;
-  private readonly isSwapped: boolean;
   private adaptScaleFn: (scale: Vector3) => Vector2;
 
   constructor(
@@ -645,10 +643,7 @@ export class TransformedSectionLabeler {
     activeMag: Vector3,
     private readonly transform: Transform,
   ) {
-    [this.mappedPlane, this.isSwapped, this.adaptScaleFn] = mapTransformedPlane(
-      originalPlane,
-      transform,
-    );
+    [this.mappedPlane, this.adaptScaleFn] = mapTransformedPlane(originalPlane, transform);
 
     const thirdDimensionValue = getThirdDimValue(
       Dimensions.thirdDimensionForPlane(this.mappedPlane),
@@ -660,7 +655,6 @@ export class TransformedSectionLabeler {
       this.mappedPlane,
       thirdDimensionValue,
       activeMag,
-      this.isSwapped,
     );
 
     this.applyTransform = transformPointUnscaled(this.transform);

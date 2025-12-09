@@ -8,16 +8,16 @@ import { mapTransformedPlane as originalMapTransformedPlane } from "viewer/model
 import { describe, expect, it } from "vitest";
 
 const mapTransformedPlane = (plane: OrthoView, transform: Transform) => {
-  const [transformedPlane, isSwapped, adaptFn] = originalMapTransformedPlane(plane, transform);
+  const [transformedPlane, adaptFn] = originalMapTransformedPlane(plane, transform);
   const adaptedScale = adaptFn([0, 1, 2]);
-  return [transformedPlane, isSwapped, adaptedScale];
+  return [transformedPlane, adaptedScale];
 };
 
 describe("TransformedSectionLabeler", () => {
   it("Identity transform should result in identity mapping of plane", async () => {
-    expect(mapTransformedPlane("PLANE_XY", IdentityTransform)).toEqual(["PLANE_XY", false, [0, 1]]);
-    expect(mapTransformedPlane("PLANE_YZ", IdentityTransform)).toEqual(["PLANE_YZ", false, [2, 1]]);
-    expect(mapTransformedPlane("PLANE_XZ", IdentityTransform)).toEqual(["PLANE_XZ", false, [0, 2]]);
+    expect(mapTransformedPlane("PLANE_XY", IdentityTransform)).toEqual(["PLANE_XY", [0, 1]]);
+    expect(mapTransformedPlane("PLANE_YZ", IdentityTransform)).toEqual(["PLANE_YZ", [2, 1]]);
+    expect(mapTransformedPlane("PLANE_XZ", IdentityTransform)).toEqual(["PLANE_XZ", [0, 2]]);
   });
 
   it("Rotation by 90deg around X should be handled correctly", async () => {
@@ -30,21 +30,9 @@ describe("TransformedSectionLabeler", () => {
       [1, 2, 3],
     );
 
-    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual([
-      "PLANE_XZ",
-      false,
-      [0, 1],
-    ]);
-    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual([
-      "PLANE_YZ",
-      true,
-      [1, 2],
-    ]);
-    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual([
-      "PLANE_XY",
-      false,
-      [0, 2],
-    ]);
+    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual(["PLANE_XZ", [0, 1]]);
+    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual(["PLANE_YZ", [1, 2]]);
+    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual(["PLANE_XY", [0, 2]]);
   });
 
   it("[L4] Rotation by 90deg around X should be handled correctly", async () => {
@@ -83,21 +71,9 @@ describe("TransformedSectionLabeler", () => {
       [11, 19, 28],
     );
 
-    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual([
-      "PLANE_XZ",
-      false,
-      [0, 1],
-    ]);
-    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual([
-      "PLANE_YZ",
-      true,
-      [1, 2],
-    ]);
-    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual([
-      "PLANE_XY",
-      false,
-      [0, 2],
-    ]);
+    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual(["PLANE_XZ", [0, 1]]);
+    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual(["PLANE_YZ", [1, 2]]);
+    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual(["PLANE_XY", [0, 2]]);
   });
 
   it("[L4] Rotation by 90deg around Z should be handled correctly", async () => {
@@ -154,21 +130,9 @@ describe("TransformedSectionLabeler", () => {
       [11, 19, 28],
     );
 
-    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual([
-      "PLANE_XY",
-      true,
-      [1, 0],
-    ]);
-    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual([
-      "PLANE_XZ",
-      false,
-      [1, 2],
-    ]);
-    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual([
-      "PLANE_YZ",
-      false,
-      [2, 0],
-    ]);
+    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual(["PLANE_XY", [1, 0]]);
+    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual(["PLANE_XZ", [1, 2]]);
+    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual(["PLANE_YZ", [2, 0]]);
   });
 
   // Todo #8965. Does not work yet
@@ -226,20 +190,8 @@ describe("TransformedSectionLabeler", () => {
       [11, 19, 28],
     );
 
-    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual([
-      "PLANE_YZ",
-      false,
-      [0, 1],
-    ]);
-    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual([
-      "PLANE_XY",
-      false,
-      [2, 1],
-    ]);
-    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual([
-      "PLANE_XZ",
-      true,
-      [2, 0],
-    ]);
+    expect(mapTransformedPlane("PLANE_XY", rotationalTransform)).toEqual(["PLANE_YZ", [0, 1]]);
+    expect(mapTransformedPlane("PLANE_YZ", rotationalTransform)).toEqual(["PLANE_XY", [2, 1]]);
+    expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual(["PLANE_XZ", [2, 0]]);
   });
 });

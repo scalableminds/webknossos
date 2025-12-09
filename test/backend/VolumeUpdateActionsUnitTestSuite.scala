@@ -5,17 +5,7 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.MetadataEntry
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ApplyableVolumeUpdateAction,
-  CreateSegmentVolumeAction,
-  DeleteSegmentVolumeAction,
-  LEGACY_UpdateSegmentGroupsVolumeAction,
-  LEGACY_UpdateSegmentVolumeAction,
-  UpdateActionSegmentGroup,
-  UpdateMetadataOfSegmentVolumeAction,
-  UpdateSegmentPartialVolumeAction,
-  UpsertSegmentGroupVolumeAction
-}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ApplyableVolumeUpdateAction, CreateSegmentVolumeAction, DeleteSegmentGroupVolumeAction, DeleteSegmentVolumeAction, LEGACY_UpdateSegmentGroupsVolumeAction, LEGACY_UpdateSegmentVolumeAction, UpdateActionSegmentGroup, UpdateMetadataOfSegmentVolumeAction, UpdateSegmentPartialVolumeAction, UpsertSegmentGroupVolumeAction}
 import org.scalatestplus.play._
 
 class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplicits {
@@ -324,6 +314,41 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       assert(result2.segmentGroups.head.children.head.children.length == 1)
       assert(result2.segmentGroups.head.children.head.children.head.groupId == groupId2)
       assert(result2.segmentGroups.head.children.head.children.head.children.isEmpty)
+    }
+
+    "should delete a segment group correctly" in {
+      val deleteGroup1Action = DeleteSegmentGroupVolumeAction(
+        groupId = groupId1,
+        actionTracingId = Dummies.tracingId
+      )
+      val result = deleteGroup1Action.applyOn(tracingWithSegmentGroups)
+      assert(result.segmentGroups.length == 1)
+      assert(result.segmentGroups.head.groupId == groupId2)
+      assert(result.segmentGroups.head.children.length == 1)
+      assert(result.segmentGroups.head.children.head.groupId == groupId3)
+      assert(result.segmentGroups.head.children.head.children.isEmpty)
+
+      val deleteGroup2Action = DeleteSegmentGroupVolumeAction(
+        groupId = groupId2,
+        actionTracingId = Dummies.tracingId
+      )
+      val result2 = deleteGroup2Action.applyOn(tracingWithSegmentGroups)
+      assert(result2.segmentGroups.length == 1)
+      assert(result2.segmentGroups.head.groupId == groupId1)
+      assert(result2.segmentGroups.head.children.length == 1)
+      assert(result2.segmentGroups.head.children.head.groupId == groupId3)
+      assert(result2.segmentGroups.head.children.head.children.isEmpty)
+
+      val deleteGroup3Action = DeleteSegmentGroupVolumeAction(
+        groupId = groupId3,
+        actionTracingId = Dummies.tracingId
+      )
+      val result3 = deleteGroup3Action.applyOn(tracingWithSegmentGroups)
+      assert(result3.segmentGroups.length == 1)
+      assert(result3.segmentGroups.head.groupId == groupId1)
+      assert(result3.segmentGroups.head.children.length == 1)
+      assert(result3.segmentGroups.head.children.head.groupId == groupId2)
+      assert(result3.segmentGroups.head.children.head.children.isEmpty)
     }
   }
 

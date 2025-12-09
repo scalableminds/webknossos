@@ -572,6 +572,7 @@ export function* tryToIncorporateActions(
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
         case "mergeTree":
+        case "updateSegment":
         case "updateSkeletonTracing":
         case "updateVolumeTracing":
         case "updateUserBoundingBoxesInSkeletonTracing":

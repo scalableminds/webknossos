@@ -52,6 +52,7 @@ describe("Collaborative editing of segment items", () => {
       actionTracingId: tracingId,
       id: segmentId,
       anchorPosition: [1, 2, 3] as Vector3,
+      additionalCoordinates: null,
       name: "Some Name",
       color: null,
       groupId: null,
@@ -208,6 +209,8 @@ describe("Collaborative editing of segment items", () => {
     const injectedBaseSegmentProps = {
       actionTracingId: tracingId,
       id: segmentId,
+    };
+    const injectedInitialSegmentProps = {
       anchorPosition: [1, 2, 3] as Vector3,
       additionalCoordinates: null,
       name: "Some Name",
@@ -220,7 +223,7 @@ describe("Collaborative editing of segment items", () => {
     backendMock.planVersionInjection(4, [
       {
         name: "createSegment",
-        value: injectedBaseSegmentProps,
+        value: { ...injectedBaseSegmentProps, ...injectedInitialSegmentProps },
       },
       {
         name: "updateSegmentPartial",
@@ -280,7 +283,7 @@ describe("Collaborative editing of segment items", () => {
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
 
       expect(finalSegment).toMatchObject({
-        anchorPosition: injectedBaseSegmentProps.anchorPosition,
+        anchorPosition: injectedInitialSegmentProps.anchorPosition,
         color: updateSegmentProps1.color,
         name: updateSegmentProps2.name,
         groupId: updateSegmentProps2.groupId,
@@ -427,8 +430,6 @@ describe("Collaborative editing of segment items", () => {
       id: segmentId,
       anchorPosition: [1, 1, 1] as Vector3,
       name: "Some Name",
-      // color: null,
-      // groupId: null,
       creationTime: Date.now(),
       metadata: [],
     };
@@ -513,7 +514,6 @@ describe("Collaborative editing of segment items", () => {
           actionTracingId: tracingId,
           id: segmentId,
         },
-        _injected: true,
       },
     ]);
 

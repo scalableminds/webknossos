@@ -15,7 +15,6 @@ import type {
 } from "antd/lib/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
-import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
   getDatasetActionContextMenu,
@@ -648,9 +647,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
       },
     ];
     if (
-      (this.props.isUserAdminOrDatasetManager &&
-        context.usedStorageInOrga != null &&
-        context.usedStorageInOrga > 0)
+      this.props.isUserAdminOrDatasetManager &&
+      context.usedStorageInOrga != null &&
+      context.usedStorageInOrga > 0
     ) {
       const datasetStorageSizeColumn = {
         title: (
@@ -699,12 +698,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
           pagination={{
             defaultPageSize: 50,
           }}
-          styles={
-            {
-              // hide/offset the first column containing the checkbox for row selection
-             section: { marginLeft: "-36px" } 
-            }
-          }
+          styles={{
+            // hide/offset the first column containing the checkbox for row selection
+            section: { marginLeft: "-36px" },
+          }}
           onChange={this.handleChange}
           locale={{
             emptyText: this.renderEmptyText(),

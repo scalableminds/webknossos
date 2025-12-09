@@ -1,6 +1,5 @@
-import { CopyOutlined, PushpinOutlined } from "@ant-design/icons";
-import { copyToClipboad } from "admin/voxelytics/utils";
-import { Col, Popover, Row, Space } from "antd";
+import { PushpinOutlined } from "@ant-design/icons";
+import { Col, Row, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { formatNumberToLength, formatVoxelsForHighNumbers } from "libs/format_utils";
 import { V3 } from "libs/mjs";
@@ -9,7 +8,7 @@ import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
-import { useState } from "react";
+import { useCallback } from "react";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
@@ -95,9 +94,8 @@ function DatasetPositionView() {
   } else if (!maybeErrorMessage && isOutOfTaskBounds) {
     maybeErrorMessage = message["tracing.out_of_task_bounds"];
   }
-  const [getPositionStrings, setGetPositionStrings] = useState(false);
 
-  const getPositionTooltipContent = () => {
+  const getPositionTooltipContent = useCallback(() => {
     const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
     const positionInVxStrings = position.map((coord) => formatVoxelsForHighNumbers(coord));
     const voxelSizeInMetricUnit = convertVoxelSizeToUnit(voxelSize, shortUnit);
@@ -108,32 +106,18 @@ function DatasetPositionView() {
     return (
       <div>
         <Row justify="space-between" gutter={16} wrap={false}>
-          <Col span={7}>{positionInVxStrings[0]},</Col>
-          <Col span={7}>{positionInVxStrings[1]},</Col>
-          <Col span={7}>{positionInVxStrings[2]}</Col>
-          <Col span={3}>
-            <CopyOutlined
-              onClick={() => {
-                copyToClipboad(positionInVxStrings.join(", "));
-              }}
-            />
-          </Col>
+          <Col span={8}>{positionInVxStrings[0]},</Col>
+          <Col span={8}>{positionInVxStrings[1]},</Col>
+          <Col span={8}>{positionInVxStrings[2]}</Col>
         </Row>
         <Row justify="space-between" gutter={16} wrap={false}>
-          <Col span={7}>{positionInMetricStrings[0]},</Col>
-          <Col span={7}>{positionInMetricStrings[1]},</Col>
-          <Col span={7}>{positionInMetricStrings[2]}</Col>
-          <Col span={3}>
-            <CopyOutlined
-              onClick={() => {
-                copyToClipboad(positionInMetricStrings.join(", "));
-              }}
-            />
-          </Col>
+          <Col span={8}>{positionInMetricStrings[0]},</Col>
+          <Col span={8}>{positionInMetricStrings[1]},</Col>
+          <Col span={8}>{positionInMetricStrings[2]}</Col>
         </Row>
       </div>
     );
-  };
+  }, [position, voxelSize]);
 
   return (
     <FastTooltip title={maybeErrorMessage || null} wrapper="div">
@@ -151,11 +135,7 @@ function DatasetPositionView() {
             <PushpinOutlined style={positionIconStyle} />
           </ButtonComponent>
         </FastTooltip>
-        <Popover
-          content={getPositionStrings ? getPositionTooltipContent() : <></>} // popover needs some content to open, even if empty
-          style={{ minWidth: 300 }}
-          onOpenChange={setGetPositionStrings}
-        >
+        <FastTooltip dynamicRenderer={getPositionTooltipContent} style={{ minWidth: 300 }}>
           <Vector3Input
             value={position}
             onChange={handleChangePosition}
@@ -163,7 +143,7 @@ function DatasetPositionView() {
             style={positionInputStyle}
             allowDecimals
           />
-        </Popover>
+        </FastTooltip>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
         <ShareButton dataset={dataset} style={iconColoringStyle} />
       </Space.Compact>

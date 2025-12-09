@@ -62,7 +62,7 @@ const applyActions = chainReduce(combinedReducer);
 // if the following dictionary doesn't contain that action.
 const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   updateLargestSegmentId: true,
-  updateSegment: true,
+  updateSegmentPartial: true,
   createSegment: true,
   deleteSegment: true,
   updateSegmentGroups: true,

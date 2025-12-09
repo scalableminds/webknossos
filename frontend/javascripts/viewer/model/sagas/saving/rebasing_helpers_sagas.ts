@@ -5,13 +5,12 @@ import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { Mapping, NumberLikeMap, SaveQueueEntry, Segment } from "viewer/store";
+import type { Mapping, NumberLikeMap, SaveQueueEntry } from "viewer/store";
 import type {
-  CreateSegmentUpdateAction,
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
-  UpdateSegmentUpdateAction,
+  UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
 import _ from "lodash";
 
@@ -135,7 +134,15 @@ export function* addMissingSegmentsToLoadedMappings(
   }
 }
 
-// Gathers mapped info for segment ids from proofreading actions where the mapping is unknown.
+// During rebasing, the front-end rolls back to the last version that is known to be saved on the server
+// (pending update actions are "stashed").
+// Then, the front-end is forwarded to the newest state known to the server.
+// Afterwards, the stashed update actions need to be applied again. However, these update actions
+// need to be adapted to the newest state.
+// This adaption takes place in the following saga.
+//
+// For proofreading actions, this saga gathers mapped info for segment ids from proofreading actions
+// where the mapping is unknown.
 // This happens in case of mesh proofreading actions. To re-apply the user's changes in the rebasing
 // up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
 // is first loaded and then the save queue update actions are remapped to update their agglomerate id infos
@@ -234,29 +241,20 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
                 return action;
               }
 
-              const newAction: UpdateSegmentUpdateAction = {
-                name: "updateSegment",
+              // The local user created a segment, but after rebase the segment already exists
+              // (probably because another user also created that segment).
+              // Let's only update the properties that are not null.
+              const newAction: UpdateSegmentPartialUpdateAction = {
+                name: "updateSegmentPartial",
                 value: {
+                  ..._.omitBy(action.value, (value) => value == null),
                   actionTracingId: action.value.actionTracingId,
-                  id: action.value.id ?? maybeExistingSegment.id,
-                  name: action.value.name ?? maybeExistingSegment.name,
-                  anchorPosition:
-                    action.value.anchorPosition ?? maybeExistingSegment.anchorPosition,
-                  additionalCoordinates:
-                    action.value.additionalCoordinates ??
-                    maybeExistingSegment.additionalCoordinates,
-                  creationTime: action.value.creationTime ?? maybeExistingSegment.creationTime,
-                  color: action.value.color ?? maybeExistingSegment.color,
-                  groupId: action.value.groupId ?? maybeExistingSegment.groupId,
-                  metadata: action.value.metadata ?? maybeExistingSegment.metadata,
-                  // ...action.value,
+                  id: action.value.id,
                 },
-                // todop: omit?
-                changedPropertyNames: [],
               };
               return newAction;
             }
-            case "updateSegment": {
+            case "updateSegmentPartial": {
               // ColoredLogger.logGreen("adapting updateSegment action?", action);
 
               const { actionTracingId } = action.value;
@@ -270,20 +268,10 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
                 // Another user removed the segment. The update action of the current user gets lost now.
                 return null;
               }
-              const changedPropertyNames = action.changedPropertyNames ?? [];
 
-              const newAction: UpdateSegmentUpdateAction = {
-                name: "updateSegment",
-                value: {
-                  actionTracingId: action.value.actionTracingId,
-                  ...maybeExistingSegment,
-                  ...Object.fromEntries(
-                    changedPropertyNames.map((prop: keyof Segment) => [prop, action.value[prop]]),
-                  ),
-                },
-                changedPropertyNames,
-              };
-              return newAction;
+              // Since the update action precisely encodes what changed within the segment,
+              // we don't need to adapt the action itself.
+              return action;
             }
             case "deleteSegment": {
               const { actionTracingId } = action.value;

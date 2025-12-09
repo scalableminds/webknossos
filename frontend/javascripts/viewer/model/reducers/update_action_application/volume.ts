@@ -55,19 +55,11 @@ function applySingleAction(
       const { actionTracingId, ...segment } = ua.value;
       return VolumeTracingReducer(state, updateSegmentAction(segment.id, segment, actionTracingId));
     }
-    case "updateSegment": {
-      const { changedPropertyNames } = ua;
+    case "updateSegmentPartial": {
       const { actionTracingId, ...segment } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(
-          segment.id,
-          segment,
-          actionTracingId,
-          Date.now(),
-          false,
-          changedPropertyNames,
-        ),
+        updateSegmentAction(segment.id, segment, actionTracingId, Date.now(), false),
       );
     }
     case "deleteSegment": {

@@ -84,12 +84,7 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
       groupId: getSelectedIds(state)[0].group,
       metadata: [],
       ...oldSegment,
-      ...Object.fromEntries(
-        Object.entries(segment).filter(
-          ([key, _value]) =>
-            action.changedPropertyNames.length === 0 || action.changedPropertyNames.includes(key),
-        ),
-      ),
+      ...segment,
     };
 
     if (newSegment.anchorPosition) {
@@ -174,6 +169,7 @@ export function serverVolumeToClientVolumeTracing(
           additionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
           isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
+          groupId: segment.groupId ?? null,
         };
         return [segment.segmentId, clientSegment];
       }),

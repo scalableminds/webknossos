@@ -1,5 +1,9 @@
 import { actionChannel, call, flush, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import {
+  type WebknossosTestContext,
+  setupWebknossosForTesting,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
@@ -253,11 +257,7 @@ describe("Proofreading (Multi User)", () => {
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      const receivedUpdateActions = _.flatten(
-        context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
-          saveQueueEntries.map((entry) => entry.actions),
-        ),
-      );
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.at(-2)).toEqual([
         {
           name: "mergeAgglomerate",

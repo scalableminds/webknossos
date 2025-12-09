@@ -1,5 +1,6 @@
 import * as Utils from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
+import { EmptyObject } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
@@ -39,7 +40,8 @@ type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVol
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
 export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
-export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
+export type LEGACY_UpdateSegmentUpdateAction = ReturnType<typeof LEGACY_updateSegmentVolumeAction>;
+export type UpdateSegmentPartialUpdateAction = ReturnType<typeof updateSegmentPartialVolumeAction>;
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
   typeof updateSegmentVisibilityVolumeAction
 >;
@@ -143,7 +145,7 @@ export type ApplicableSkeletonUpdateAction =
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
-  | UpdateSegmentUpdateAction
+  | UpdateSegmentPartialUpdateAction
   | CreateSegmentUpdateAction
   | DeleteSegmentUpdateAction
   | UpdateSegmentGroupsUpdateAction
@@ -189,7 +191,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
-  | UpdateSegmentUpdateAction
+  | LEGACY_UpdateSegmentUpdateAction
+  | UpdateSegmentPartialUpdateAction
   | UpdateSegmentVisibilityVolumeAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
@@ -753,7 +756,7 @@ export function createSegmentVolumeAction(
   } as const;
 }
 
-export function updateSegmentVolumeAction(
+export function LEGACY_updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
@@ -763,11 +766,7 @@ export function updateSegmentVolumeAction(
   metadata: Array<MetadataEntryProto>,
   actionTracingId: string,
   creationTime: number | null | undefined,
-  // This property is only maintained in the front-end. It is used to enable fine granular rebasing.
-  // todop: or should we store it too?
-  changedPropertyNames?: string[],
 ) {
-  const opt = changedPropertyNames != null ? { changedPropertyNames } : {};
   return {
     name: "updateSegment",
     value: {
@@ -781,13 +780,36 @@ export function updateSegmentVolumeAction(
       metadata: enforceValidMetadata(metadata),
       creationTime,
     },
-    // The following line is mostly equivalent to:
-    // changedPropertyNames
-    // but ensures that the return type of this function marks
-    // changedPropertyNames as optional
-    ...opt,
   } as const;
 }
+
+export function updateSegmentPartialVolumeAction(
+  shape: {
+    id: number,
+    anchorPosition?: Vector3 | null | undefined,
+    additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
+    name?: string | null | undefined,
+    color?: Vector3 | null,
+    groupId?: number | null | undefined,
+    metadata?: Array<MetadataEntryProto>,
+    creationTime?: number | null | undefined,
+  },
+  actionTracingId: string,
+) {
+  const { metadata } = shape;
+  const maybeMetadataWrapper = metadata != null ? {
+    metadata: enforceValidMetadata(metadata),
+  } : {} as EmptyObject;
+  return {
+    name: "updateSegmentPartial",
+    value: {
+      actionTracingId,
+      ...shape,
+      ...maybeMetadataWrapper
+    },
+  } as const;
+}
+
 
 export function updateSegmentVisibilityVolumeAction(
   id: number,

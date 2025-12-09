@@ -1,5 +1,9 @@
 import { call, put } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
@@ -84,28 +88,14 @@ describe("Collaborative editing of segment items", () => {
 
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-      console.log(
-        "context.receivedDataPerSaveRequest",
-        _.flatten(context.receivedDataPerSaveRequest).map((g) => g.actions),
-      );
-
       const updateSegment = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
-      for (const batch of context.receivedDataPerSaveRequest.at(-1)!) {
-        console.log("batch", batch);
-        for (const action of batch.actions) {
-          console.log("action", action);
-        }
-      }
-
-      // todop: check that changedPropertyNames is not in updateSegment
       expect(updateSegment).toMatchObject([
         {
-          name: "updateSegment",
+          name: "updateSegmentPartial",
           value: {
             actionTracingId: tracingId,
             id: segmentId,
-            anchorPosition: injectedSegmentProps.anchorPosition,
             color: updateSegmentProps.color,
             name: updateSegmentProps.name,
           },
@@ -149,7 +139,7 @@ describe("Collaborative editing of segment items", () => {
 
     backendMock.planVersionInjection(5, [
       {
-        name: "updateSegment",
+        name: "updateSegmentPartial",
         value: injectedSegmentProps,
       },
     ]);
@@ -178,31 +168,15 @@ describe("Collaborative editing of segment items", () => {
       ColoredLogger.logGreen("Trying to save color 129.");
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-      // console.log(
-      //   "context.receivedDataPerSaveRequest",
-      //   _.flatten(context.receivedDataPerSaveRequest).map((g) => g.actions),
-      // );
-
       const updateSegment = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
-      // for (const batch of context.receivedDataPerSaveRequest.at(-1)!) {
-      //   console.log("batch", batch);
-      //   for (const action of batch.actions) {
-      //     console.log("action", action);
-      //   }
-      // }
-
-      // todop: check that changedPropertyNames is not in updateSegment
       expect(updateSegment).toMatchObject([
         {
-          name: "updateSegment",
+          name: "updateSegmentPartial",
           value: {
             actionTracingId: tracingId,
             id: segmentId,
-            anchorPosition: injectedSegmentProps.anchorPosition,
             color: updateSegmentProps.color,
-            name: injectedSegmentProps.name,
-            groupId: injectedSegmentProps.groupId,
           },
         },
       ]);
@@ -249,13 +223,13 @@ describe("Collaborative editing of segment items", () => {
         value: injectedBaseSegmentProps,
       },
       {
-        name: "updateSegment",
+        name: "updateSegmentPartial",
         value: { ...injectedBaseSegmentProps, name: "Some Name 2" },
       },
     ]);
     backendMock.planVersionInjection(5, [
       {
-        name: "updateSegment",
+        name: "updateSegmentPartial",
         value: { ...injectedBaseSegmentProps, name: "Some Name 3", groupId: 2 },
       },
     ]);
@@ -280,23 +254,29 @@ describe("Collaborative editing of segment items", () => {
 
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-      // const updateSegmentSaveAction = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      // todop: check that changedPropertyNames is not in updateSegmentSaveAction
-      // todop: reactivate
-      // expect(updateSegmentSaveAction).toMatchObject([
-      //   {
-      //     name: "updateSegment",
-      //     value: {
-      //       actionTracingId: tracingId,
-      //       id: segmentId,
-      //       anchorPosition: injectedBaseSegmentProps.anchorPosition,
-      //       color: updateSegmentProps1.color,
-      //       name: updateSegmentProps2.name,
-      //       groupId: updateSegmentProps2.groupId,
-      //     },
-      //   },
-      // ]);
+      expect(receivedUpdateActions.at(-2)).toMatchObject([
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: tracingId,
+            id: segmentId,
+            color: updateSegmentProps1.color,
+          },
+        },
+      ]);
+      expect(receivedUpdateActions.at(-1)).toMatchObject([
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: tracingId,
+            id: segmentId,
+            name: updateSegmentProps2.name,
+            groupId: updateSegmentProps2.groupId,
+          },
+        },
+      ]);
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
 
       expect(finalSegment).toMatchObject({
@@ -333,7 +313,7 @@ describe("Collaborative editing of segment items", () => {
 
     backendMock.planVersionInjection(5, [
       {
-        name: "updateSegment",
+        name: "updateSegmentPartial",
         value: injectedBaseSegmentProps,
       },
     ]);
@@ -445,18 +425,17 @@ describe("Collaborative editing of segment items", () => {
     const injectedSegmentProps = {
       actionTracingId: tracingId,
       id: segmentId,
-      anchorPosition: [1, 2, 3] as Vector3,
-      additionalCoordinates: null,
+      anchorPosition: [1, 1, 1] as Vector3,
       name: "Some Name",
-      color: null,
-      groupId: null,
+      // color: null,
+      // groupId: null,
       creationTime: Date.now(),
       metadata: [],
     };
 
     backendMock.planVersionInjection(5, [
       {
-        name: "updateSegment",
+        name: "updateSegmentPartial",
         value: injectedSegmentProps,
       },
     ]);
@@ -493,14 +472,24 @@ describe("Collaborative editing of segment items", () => {
       };
       const { actionTracingId, ...expectedShape } = expectedShapeWithTracingId;
 
-      // todop: reactivate once partial update for segments is implemented
-      // const removeSegmentSaveAction = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-      // expect(removeSegmentSaveAction).toMatchObject([
-      //   {
-      //     name: "updateSegment",
-      //     value: expectedShape,
-      //   },
-      // ]);
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+
+      expect(receivedUpdateActions.at(-2)).toMatchObject([
+        {
+          name: "updateSegmentPartial",
+          value: {
+            ...updateSegmentProps2,
+          },
+        },
+      ]);
+      expect(receivedUpdateActions.at(-1)).toMatchObject([
+        {
+          name: "updateSegmentPartial",
+          value: {
+            ...updateSegmentProps3,
+          },
+        },
+      ]);
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
       expect(finalSegment).toMatchObject(expectedShape);
     });
@@ -508,7 +497,7 @@ describe("Collaborative editing of segment items", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should handle concurrent delete segment update actions", async (context: WebknossosTestContext) => {
+  it("should handle concurrent delete segment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 

@@ -104,6 +104,14 @@ export interface WebknossosTestContext extends BaseTestContext {
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
 }
 
+export function getFlattenedUpdateActions(context: WebknossosTestContext) {
+  return _.flatten(
+    context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
+      saveQueueEntries.map((entry) => entry.actions),
+    ),
+  );
+}
+
 // Create mock objects
 vi.mock("libs/request", () => ({
   default: {

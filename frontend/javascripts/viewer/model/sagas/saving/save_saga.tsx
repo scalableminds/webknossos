@@ -485,7 +485,7 @@ export function* tryToIncorporateActions(
         case "updateLargestSegmentId":
         case "createSegment":
         case "deleteSegment":
-        case "updateSegment":
+        case "updateSegmentPartial":
         case "updateSegmentGroups":
         // Volume User Bounding Boxes
         case "addUserBoundingBoxInVolumeTracing":

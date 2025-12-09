@@ -277,7 +277,6 @@ export const updateSegmentAction = (
   layerName: string,
   timestamp: number = Date.now(),
   createsNewUndoState: boolean = false,
-  changedPropertyNames: Array<keyof Segment> = [],
 ) => {
   if (segmentId == null) {
     throw new Error("Segment ID must not be null.");
@@ -290,7 +289,6 @@ export const updateSegmentAction = (
     layerName,
     timestamp,
     createsNewUndoState,
-    changedPropertyNames,
   } as const;
 };
 

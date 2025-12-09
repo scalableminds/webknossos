@@ -919,7 +919,7 @@ type ServerSegment = {
   additionalCoordinates: AdditionalCoordinate[] | null;
   creationTime: number | null | undefined;
   color: ColorObject | null;
-  groupId: number | null | undefined;
+  groupId?: number | null | undefined;
   isVisible?: boolean;
   metadata: MetadataEntryProto[];
 };

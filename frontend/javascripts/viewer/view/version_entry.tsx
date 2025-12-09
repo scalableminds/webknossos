@@ -61,7 +61,7 @@ import type {
   UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
   UpdateSegmentGroupsUpdateAction,
-  UpdateSegmentUpdateAction,
+  LEGACY_UpdateSegmentUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
@@ -72,6 +72,7 @@ import type {
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+  UpdateSegmentPartialUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -325,7 +326,21 @@ const descriptionFns: Record<
     };
   },
   updateSegment: (
-    firstAction: AsServerAction<UpdateSegmentUpdateAction>,
+    firstAction: AsServerAction<LEGACY_UpdateSegmentUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  updateSegmentPartial: (
+    firstAction: AsServerAction<UpdateSegmentPartialUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {

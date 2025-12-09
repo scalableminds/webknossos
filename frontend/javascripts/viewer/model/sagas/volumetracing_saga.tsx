@@ -77,11 +77,11 @@ import {
   updateSegmentGroups,
   updateSegmentGroupsExpandedState,
   updateSegmentVisibilityVolumeAction,
-  updateSegmentVolumeAction,
+  updateSegmentPartialVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import { type SegmentMap, SegmentProperties, type VolumeTracing } from "viewer/store";
+import { type SegmentMap, SegmentProperties, type VolumeTracing, Segment } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -458,17 +458,12 @@ function* uncachedDiffSegmentLists(
       }
     }
     if (changedPropertyNames.length > 0) {
-      yield updateSegmentVolumeAction(
-        segment.id,
-        segment.anchorPosition,
-        segment.additionalCoordinates,
-        segment.name,
-        segment.color,
-        segment.groupId,
-        segment.metadata,
+      yield updateSegmentPartialVolumeAction(
+        Object.fromEntries([
+          ["id", segment.id],
+          ...changedPropertyNames.map((prop) => [prop, segmentWithoutIsVisible[prop]]),
+        ]),
         tracingId,
-        segment.creationTime,
-        changedPropertyNames,
       );
     }
 

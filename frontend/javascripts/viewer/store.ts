@@ -195,7 +195,7 @@ export const SegmentProperties = ensureExactKeys<Segment>()([
   "groupId",
   "isVisible",
   "metadata",
-] as const);
+] as const) as unknown as keyof Segment;
 
 export type SegmentMap = DiffableMap<number, Segment>;
 

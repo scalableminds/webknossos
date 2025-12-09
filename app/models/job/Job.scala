@@ -211,6 +211,16 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
+  def cancelConvertToWkwJobForDataset(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.jobs
+                   SET manualState = ${JobState.CANCELLED}
+                   WHERE command = ${JobCommand.convert_to_wkw}
+                   AND commandArgs->>'dataset_id' = $datasetId
+                   AND (state = ${JobState.PENDING} OR state = ${JobState.STARTED})
+            """.asUpdate)
+    } yield ()
+
   def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
     if (jobCommands.isEmpty) Fox.successful(0)
     else {

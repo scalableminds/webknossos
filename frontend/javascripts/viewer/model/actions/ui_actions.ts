@@ -42,6 +42,9 @@ type SetRenderAnimationModalVisibilityAction = ReturnType<
 >;
 type SetUserScriptsModalVisibilityAction = ReturnType<typeof setUserScriptsModalVisibilityAction>;
 type SetZarrLinksModalVisibilityAction = ReturnType<typeof setZarrLinksModalVisibilityAction>;
+type SetKeyboardShortcutConfigModalVisibilityAction = ReturnType<
+  typeof setKeyboardShortcutConfigModalVisibilityAction
+>;
 type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAction>;
 
 export type UiAction =
@@ -63,6 +66,7 @@ export type UiAction =
   | SetMergeModalVisibilityAction
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
+  | SetKeyboardShortcutConfigModalVisibilityAction
   | SetBusyBlockingInfoAction
   | AllowSagaWhileBusyAction
   | DisallowSagaWhileBusyAction
@@ -164,6 +168,11 @@ export const setUserScriptsModalVisibilityAction = (visible: boolean) =>
 export const setZarrLinksModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_ZARR_LINKS_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setKeyboardShortcutConfigModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY",
     visible,
   }) as const;
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>

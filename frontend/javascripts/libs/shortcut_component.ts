@@ -2,6 +2,7 @@ import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import { useEffect } from "react";
 // This component provides a lightweight wrapper around the input library.
 // It leverages reacts lifecycle hooks to allow rendering-sensitive activation of shortcuts.
+// TODOM
 type Props = {
   keys: string;
   onTrigger: () => any;

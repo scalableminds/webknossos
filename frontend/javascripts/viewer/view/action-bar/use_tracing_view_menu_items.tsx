@@ -26,6 +26,7 @@ import Constants, { ControlModeEnum } from "viewer/constants";
 import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   setDownloadModalVisibilityAction,
+  setKeyboardShortcutConfigModalVisibilityAction,
   setMergeModalVisibilityAction,
   setShareModalVisibilityAction,
   setUserScriptsModalVisibilityAction,
@@ -74,6 +75,10 @@ const handleUserScriptsOpen = () => {
 
 const handleZarrLinksOpen = () => {
   Store.dispatch(setZarrLinksModalVisibilityAction(true));
+};
+
+const handleShowKeyboardShortcutConfigModal = () => {
+  Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(true));
 };
 
 const handleChangeLockedStateOfAnnotation = async (
@@ -219,6 +224,13 @@ export const useTracingViewMenuItems = (
         label: "Restore Older Version",
       });
     }
+
+    menuItems.push({
+      key: "Keyboard Shortcuts",
+      onClick: handleShowKeyboardShortcutConfigModal,
+      icon: <i className="fas fa-keyboard" />,
+      label: "Keyboard Shortcuts",
+    });
 
     if (layoutMenu != null) menuItems.push(layoutMenu);
 

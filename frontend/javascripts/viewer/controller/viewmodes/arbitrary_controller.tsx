@@ -1,3 +1,4 @@
+import app from "app";
 import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
@@ -49,6 +50,18 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import ArbitraryView from "viewer/view/arbitrary_view";
+import {
+  ArbitraryControllerNavigationConfigKeyboardShortcuts,
+  ArbitraryControllerNavigationKeyboardShortcuts,
+  ArbitraryControllerNoLoopKeyboardShortcuts,
+  type KeyboardShortcutHandlerMap,
+  type KeyboardShortcutLoopedHandlerMap,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import {
+  buildKeyBindingsFromConfigAndLoopedMapping,
+  buildKeyBindingsFromConfigAndMapping,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { SkeletonToolController } from "../combinations/tool_controls";
 
@@ -81,6 +94,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  unsubscribeKeyboardListener: any = () => {};
 
   componentDidMount() {
     this.input = {
@@ -92,6 +106,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   componentWillUnmount() {
     this.stop();
+    this.unsubscribeKeyboardListener();
   }
 
   initMouse(): void {
@@ -146,98 +161,116 @@ class ArbitraryController extends React.PureComponent<Props> {
     });
   }
 
-  initKeyboard(): void {
+  getKeyboardNavigationShortcutsHandlerMap(): KeyboardShortcutLoopedHandlerMap<ArbitraryControllerNavigationKeyboardShortcuts> {
     const getRotateValue = () => Store.getState().userConfiguration.rotateValue;
 
     const isArbitrary = () => this.props.viewMode === constants.MODE_ARBITRARY;
+    const keyboardShortcutsHandlerMapForArbitraryController: KeyboardShortcutLoopedHandlerMap<ArbitraryControllerNavigationKeyboardShortcuts> =
+      {
+        [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITH_RECORDING]: (
+          timeFactor: number,
+        ) => {
+          this.setRecord(true);
+          this.move(timeFactor);
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITH_RECORDING]: (
+          timeFactor: number,
+        ) => {
+          this.setRecord(true);
+          this.move(-timeFactor);
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING]: (
+          timeFactor: number,
+        ) => {
+          this.setRecord(false);
+          this.move(timeFactor);
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING]: (
+          timeFactor: number,
+        ) => {
+          this.setRecord(false);
+          this.move(-timeFactor);
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_AT_CENTER]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_AT_CENTER]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_POSITIVE_AT_CENTER]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_AT_CENTER]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_IN_DISTANCE]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_IN_DISTANCE]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_POSITIVE_IN_DISTANCE]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_IN_DISTANCE]: (
+          timeFactor: number,
+        ) => {
+          Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_IN_ARBITRARY]: () => {
+          Store.dispatch(zoomInAction());
+        },
+        [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_OUT_ARBITRARY]: () => {
+          Store.dispatch(zoomOutAction());
+        },
+      };
+    return keyboardShortcutsHandlerMapForArbitraryController;
+  }
 
-    this.input.keyboard = new InputKeyboard({
-      // KeyboardJS is sensitive to ordering (complex combos first)
-      // Move
-      space: (timeFactor: number) => {
-        this.setRecord(true);
-        this.move(timeFactor);
-      },
-      "ctrl + space": (timeFactor: number) => {
-        this.setRecord(true);
-        this.move(-timeFactor);
-      },
-      f: (timeFactor: number) => {
-        this.setRecord(false);
-        this.move(timeFactor);
-      },
-      d: (timeFactor: number) => {
-        this.setRecord(false);
-        this.move(-timeFactor);
-      },
-      // Rotate at centre
-      "shift + left": (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor));
-      },
-      "shift + right": (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor));
-      },
-      "shift + up": (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor));
-      },
-      "shift + down": (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor));
-      },
-      // Rotate in distance
-      left: (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
-      },
-      right: (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
-      },
-      up: (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
-      },
-      down: (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
-      },
-      // Zoom in/out
-      i: () => {
-        Store.dispatch(zoomInAction());
-      },
-      o: () => {
-        Store.dispatch(zoomOutAction());
-      },
-    });
-    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
-    this.input.keyboardLoopDelayed = new InputKeyboard(
-      {
-        h: () => this.changeMoveValue(25),
-        g: () => this.changeMoveValue(-25),
-      },
-      {
-        delay: Store.getState().userConfiguration.keyboardDelay,
-      },
-    );
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop({
-      "1": () => {
+  getKeyboardNavigationConfigShortcutsHandlerMap(): KeyboardShortcutLoopedHandlerMap<ArbitraryControllerNavigationConfigKeyboardShortcuts> {
+    return {
+      [ArbitraryControllerNavigationConfigKeyboardShortcuts.INCREASE_MOVE_VALUE_ARBITRARY]: () =>
+        this.changeMoveValue(25),
+      [ArbitraryControllerNavigationConfigKeyboardShortcuts.DECREASE_MOVE_VALUE_ARBITRARY]: () =>
+        this.changeMoveValue(-25),
+    };
+  }
+
+  getKeyboardNoLoopShortcutsHandlerMap(): KeyboardShortcutHandlerMap<ArbitraryControllerNoLoopKeyboardShortcuts> {
+    return {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES_ARBITRARY]: () => {
         Store.dispatch(toggleAllTreesAction());
       },
-      "2": () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES_ARBITRARY]: () => {
         Store.dispatch(toggleInactiveTreesAction());
       },
-      // Delete active node
-      delete: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE_ARBITRARY]: () => {
         Store.dispatch(deleteNodeAsUserAction(Store.getState()));
       },
-      backspace: () => {
-        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
-      },
-      c: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_TREE_ARBITRARY]: () => {
         Store.dispatch(createTreeAction());
       },
-      // Branches
-      b: () => this.pushBranch(),
-      j: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT_ARBITRARY]: () => {
+        this.pushBranch();
+      },
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT_ARBITRARY]: () => {
         Store.dispatch(requestDeleteBranchPointAction());
       },
-      // Recenter active node
-      s: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE_ARBITRARY]: () => {
         const state = Store.getState();
         const skeletonTracing = state.annotation.skeleton;
 
@@ -254,24 +287,58 @@ class ArbitraryController extends React.PureComponent<Props> {
           );
         }
       },
-      ".": () => this.nextNode(true),
-      ",": () => this.nextNode(false),
-      // Rotate view by 180 deg
-      r: () => {
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD_ARBITRARY]: () => {
+        this.nextNode(true);
+      },
+      [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD_ARBITRARY]: () => {
+        this.nextNode(false);
+      },
+      [ArbitraryControllerNoLoopKeyboardShortcuts.ROTATE_VIEW_180]: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
       },
-      // Delete active node and recenter last node
-      "shift + space": () => {
-        const skeletonTracing = Store.getState().annotation.skeleton;
+      [ArbitraryControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT_ARBITRARY]:
+        downloadScreenshot,
+    };
+  }
 
-        if (!skeletonTracing) {
-          return;
-        }
+  reloadKeyboardShortcuts() {
+    if (this.input.keyboard) {
+      this.input.keyboard.destroy();
+    }
+    if (this.input.keyboardLoopDelayed) {
+      this.input.keyboardLoopDelayed.destroy();
+    }
+    if (this.input.keyboardNoLoop) {
+      this.input.keyboardNoLoop.destroy();
+    }
+    const keybindingConfig = loadKeyboardShortcuts();
+    const navigationKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+      keybindingConfig,
+      this.getKeyboardNavigationShortcutsHandlerMap(),
+    );
+    this.input.keyboard = new InputKeyboard(navigationKeyboardBindings);
 
-        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
-      },
-      q: downloadScreenshot,
+    const navigationConfigKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+      keybindingConfig,
+      this.getKeyboardNavigationConfigShortcutsHandlerMap(),
+    );
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
+    this.input.keyboardLoopDelayed = new InputKeyboard(navigationConfigKeyboardBindings, {
+      delay: Store.getState().userConfiguration.keyboardDelay,
     });
+
+    const noLoopKeyboardBindings = buildKeyBindingsFromConfigAndMapping(
+      keybindingConfig,
+      this.getKeyboardNoLoopShortcutsHandlerMap(),
+    );
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(noLoopKeyboardBindings);
+  }
+
+  initKeyboard(): void {
+    this.reloadKeyboardShortcuts();
+    this.unsubscribeKeyboardListener = app.vent.on("refreshKeyboardShortcuts", () =>
+      this.reloadKeyboardShortcuts(),
+    );
   }
 
   setRecord(record: boolean): void {

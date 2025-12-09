@@ -252,6 +252,7 @@ const defaultState: WebknossosState = {
     showAddScriptModal: false,
     showMergeAnnotationModal: false,
     showZarrPrivateLinksModal: false,
+    showKeyboardShortcutConfigModal: true,
     showPythonClientModal: false,
     aIJobModalState: "invisible",
     showRenderAnimationModal: false,

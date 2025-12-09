@@ -539,6 +539,7 @@ type UiInformation = {
   readonly showMergeAnnotationModal: boolean;
   readonly showZarrPrivateLinksModal: boolean;
   readonly showAddScriptModal: boolean;
+  readonly showKeyboardShortcutConfigModal: boolean;
   readonly aIJobModalState: StartAIJobModalState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;

@@ -98,8 +98,8 @@ const Toast = {
         <Collapse
           className="collapsibleToastDetails"
           bordered={false}
+          ghost
           style={{
-            background: "transparent",
             marginLeft: -16,
           }}
           items={[

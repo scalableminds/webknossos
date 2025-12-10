@@ -265,10 +265,14 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def getJobCostPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
     jobCommand match {
-      case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
-      case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
-      case JobCommand.align_sections     => Fox.successful(wkConf.Features.alignmentCostPerGVx)
-      case _                             => Fox.failure(s"Unsupported job command $jobCommand")
+      case JobCommand.infer_neurons        => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
+      case JobCommand.infer_nuclei         => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
+      case JobCommand.infer_mitochondria   => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
+      case JobCommand.infer_instances      => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
+      case JobCommand.train_neuron_model   => Fox.successful(BigDecimal(0))
+      case JobCommand.train_instance_model => Fox.successful(BigDecimal(0))
+      case JobCommand.align_sections       => Fox.successful(wkConf.Features.alignmentCostPerGVx)
+      case _                               => Fox.failure(s"Unsupported job command $jobCommand")
     }
 
   def calculateJobCostInCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =

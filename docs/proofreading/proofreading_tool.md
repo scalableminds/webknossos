@@ -31,5 +31,5 @@ If case you want to reload, hide or remove a 3D mesh during proofreading, you ca
 
 In addition to the handy shortcuts available from the right-click context menu, users can also directly modify the supervoxel graph like any other skeleton to manually add/remove nodes and edges for fine-grained control.
 
-!!!info 
+!!! info  
     The proofreading tool requires a supervoxel graph representation of a segmentation to work. At this time, these can only be obtained from the [Voxelytics AI segmentation pipeline](https://voxelytics.com). We are actively working to make this available for more users, so please reach out to us to get you started and provide feedback: [hello@webknossos.org](mailto:hello@webknossos.org)

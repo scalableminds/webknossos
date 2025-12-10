@@ -3,7 +3,7 @@ import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
 import { APIJobCommand, type AiModel } from "types/api_types";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
@@ -12,7 +12,8 @@ const { Title, Text } = Typography;
 
 type PretrainedModel = {
   name: string;
-  comment: string | React.ReactNode;
+  comment: string;
+  commentNode?: ReactNode;
   id: string;
   jobType:
     | APIJobCommand.INFER_NEURONS
@@ -34,14 +35,12 @@ const preTrainedModels: PretrainedModel[] = [
   },
   {
     name: "Mitochondria Detection",
-    comment: (
+    comment:
+      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by MitoNet (Conrad & Narayan 2022).",
+    commentNode: (
       <>
         Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by{" "}
-        <a
-          href="https://volume-em.github.io/empanada"
-          rel="noreferrer noopener noreferrer"
-          target="_blank"
-        >
+        <a href="https://volume-em.github.io/empanada" rel="noreferrer noopener" target="_blank">
           MitoNet (Conrad &amp; Narayan 2022)
         </a>
         .
@@ -183,7 +182,7 @@ export const AiModelSelector: React.FC = () => {
                   {item.disabled && <Tag>Coming Soon</Tag>}
                 </Space>
               }
-              description={item.comment}
+              description={item.commentNode || item.comment}
             />
           </List.Item>
         )}

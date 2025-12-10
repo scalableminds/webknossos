@@ -1,7 +1,7 @@
 import { DownOutlined, DownloadOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
-import { Button, Col, Dropdown, Form, Input, Row, Select } from "antd";
+import { Button, Col, Dropdown, Flex, Form, Input, Row, Select, Space } from "antd";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import _ from "lodash";
@@ -202,55 +202,42 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
         </Col>
       </Row>
       <Row>
-        <Col
-          span={24}
-          style={{
-            textAlign: "right",
-          }}
-        >
-          <Dropdown
-            menu={{
-              onClick: () => handleSearchFormFinish(true),
-              items: [
-                {
-                  key: "1",
-                  icon: <RetweetOutlined />,
-                  label: "Show random subset",
-                },
-              ],
-            }}
-          >
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={isLoading}
-              loading={isLoading}
-              style={{
-                paddingRight: 3,
+        <Col span={24}>
+          <Flex justify="flex-end" gap="small">
+            <Dropdown
+              menu={{
+                onClick: () => handleSearchFormFinish(true),
+                items: [
+                  {
+                    key: "1",
+                    icon: <RetweetOutlined />,
+                    label: "Show random subset",
+                  },
+                ],
               }}
             >
-              Search <DownOutlined />
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={isLoading}
+                loading={isLoading}
+                icon={<DownOutlined />}
+                iconPlacement="end"
+              >
+                Search
+              </Button>
+            </Dropdown>
+
+            <Button onClick={handleReset}>Clear</Button>
+            <Button
+              onClick={handleDownloadAllTasks}
+              disabled={isLoading}
+              loading={isLoading}
+              icon={<DownloadOutlined />}
+            >
+              Download tasks as CSV
             </Button>
-          </Dropdown>
-          <Button
-            style={{
-              marginLeft: 8,
-            }}
-            onClick={handleReset}
-          >
-            Clear
-          </Button>
-          <Button
-            style={{
-              marginLeft: 8,
-            }}
-            onClick={handleDownloadAllTasks}
-            disabled={isLoading}
-            loading={isLoading}
-          >
-            Download tasks as CSV
-            <DownloadOutlined />
-          </Button>
+          </Flex>
         </Col>
       </Row>
     </Form>

@@ -1,34 +1,46 @@
-import { EyeOutlined, FileTextOutlined, SyncOutlined, TeamOutlined } from "@ant-design/icons";
+import {
+  EyeOutlined,
+  FileTextOutlined,
+  InfoCircleOutlined,
+  SyncOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
 import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
-import { Button, Col, Modal, Row, Select, Table, Typography } from "antd";
+import { Button, Col, Flex, Modal, Row, Select, Table, Tooltip, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
-import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
+import uniq from "lodash/uniq";
 import { useState } from "react";
 import type { Key } from "react";
-import { formatUserName } from "viewer/model/accessors/user_accessor";
-
 import { Link } from "react-router-dom";
 import type { AiModel } from "types/api_types";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 export default function AiModelListView() {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
-  const [aiModels, isLoading] = useGuardedFetch(
-    getAiModels,
-    [],
-    [refreshCounter],
-    "Could not load model list.",
-  );
 
-  if (!activeUser?.isSuperUser) {
-    return <PageNotAvailableToNormalUser />;
-  }
+  const {
+    data: aiModels = [],
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: ["aiModels"],
+    queryFn: async () => {
+      try {
+        return await getAiModels();
+      } catch (err) {
+        Toast.error("Could not load model list.");
+        console.error(err);
+        throw err;
+      }
+    },
+  });
 
   return (
     <div className="container voxelytics-view">
@@ -37,17 +49,33 @@ export default function AiModelListView() {
           model={currentlyEditedModel}
           onClose={() => {
             setCurrentlyEditedModel(null);
-            setRefreshCounter((val) => val + 1);
+            refetch();
           }}
           owningOrganization={activeUser.organization}
         />
       ) : null}
-      <div className="pull-right">
-        <Button onClick={() => setRefreshCounter((val) => val + 1)}>
-          <SyncOutlined spin={isLoading} /> Refresh
+      <Flex justify="space-between" align="flex-start">
+        <h3>AI Models</h3>
+        <Button onClick={() => refetch()}>
+          <SyncOutlined spin={isFetching} /> Refresh
         </Button>
-      </div>
-      <h3>AI Models</h3>
+      </Flex>
+      <Typography.Paragraph type="secondary" style={{ marginBottom: 20 }}>
+        This list shows all AI models available in your organization. You can use these models to
+        run AI segmentation jobs on your datasets.
+        <a
+          href="https://docs.webknossos.org/webknossos/automation/ai_segmentation.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Tooltip title="Read more in the documentation">
+            <InfoCircleOutlined className="icon-margin-left" />
+          </Tooltip>
+        </a>
+        <br />
+        Model training functionality is coming soon.
+      </Typography.Paragraph>
+
       <Table
         bordered
         rowKey={(run: AiModel) => `${run.id}`}
@@ -70,7 +98,7 @@ export default function AiModelListView() {
             dataIndex: "user",
             key: "user",
             render: (user: AiModel["user"]) => formatUserName(activeUser, user),
-            filters: _.uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
+            filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
               (username) => ({
                 text: username,
                 value: username,

@@ -720,6 +720,18 @@ export function isNoElementFocussed(): boolean {
   return document.activeElement === document.body;
 }
 
+export function isEditableEventTarget(target: EventTarget | null): boolean {
+  if (target == null || !(target instanceof Element)) {
+    return false; // not an element (could be Window, Document, Text, ...), ignore
+  }
+  const element = target as HTMLElement;
+  const tag = element.tagName?.toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || element.isContentEditable) {
+    return true; // ignore Enter inside these fields
+  }
+  return false;
+}
+
 // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Safely_detecting_option_support
 const areEventListenerOptionsSupported = _.once(() => {
   let passiveSupported = false;

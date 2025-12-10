@@ -27,12 +27,7 @@ case class Team(
     isOrganizationTeam: Boolean = false,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
-) extends FoxImplicits {
-
-  def couldBeAdministratedBy(user: User): Boolean =
-    user._organization == this._organization
-
-}
+)
 
 class TeamService @Inject()(organizationDAO: OrganizationDAO,
                             annotationDAO: AnnotationDAO,

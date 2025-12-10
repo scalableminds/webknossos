@@ -131,7 +131,7 @@ export function updateDirectionReducer(
 export function addToContourListReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
-  position: Vector3,
+  positionInLayerSpace: Vector3,
 ) {
   const { isUpdatingCurrentlyAllowed } = state.annotation;
 
@@ -143,7 +143,7 @@ export function addToContourListReducer(
   }
 
   return updateVolumeTracing(state, volumeTracing.tracingId, {
-    contourList: [...volumeTracing.contourList, position],
+    contourList: [...volumeTracing.contourList, positionInLayerSpace],
   });
 }
 export function resetContourReducer(state: WebknossosState, volumeTracing: VolumeTracing) {

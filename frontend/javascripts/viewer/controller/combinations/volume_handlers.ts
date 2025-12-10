@@ -245,12 +245,17 @@ export function handlePickCellFromGlobalPosition(
     ),
   );
 }
-export function handleFloodFill(pos: Point2, plane: OrthoView) {
-  const globalPosRounded = calculateGlobalPos(Store.getState(), pos).rounded;
-  handleFloodFillFromGlobalPosition(globalPosRounded, plane);
+export function handleFloodFill(state: WebknossosState, screenPos: Point2, plane: OrthoView) {
+  const globalPosRounded = calculateGlobalPos(Store.getState(), screenPos).rounded;
+  handleFloodFillFromGlobalPosition(state, globalPosRounded, plane);
 }
-export function handleFloodFillFromGlobalPosition(globalPos: Vector3, plane: OrthoView) {
-  Store.dispatch(floodFillAction(globalPos, plane));
+export function handleFloodFillFromGlobalPosition(
+  state: WebknossosState,
+  globalPos: Vector3,
+  plane: OrthoView,
+) {
+  const positionInLayerSpace = getUntransformedSegmentationPosition(state, globalPos);
+  Store.dispatch(floodFillAction(positionInLayerSpace, plane));
 }
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;

@@ -207,7 +207,7 @@ export type VolumeTracing = TracingBase & {
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
-  // Stores points of the currently drawn region in global coordinates
+  // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;

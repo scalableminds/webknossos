@@ -221,7 +221,8 @@ export function* labelWithVoxelBuffer2D(
     const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
-    // globalA (first dim) and globalB (second dim) are global coordinates
+    // globalA (first dim) and globalB (second dim) are global coordinates in layer-space.
+    // They are "global" in the sense that they are not bucket-local coordinates.
     // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
     // and the LabeledVoxelMap
     for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {

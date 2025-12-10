@@ -1457,7 +1457,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           allowUpdate && !disabledVolumeInfo.FILL_CELL.isDisabled
             ? {
                 key: "fill-cell",
-                onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
+                onClick: () =>
+                  handleFloodFillFromGlobalPosition(Store.getState(), globalPosition, viewport),
                 label: "Fill Segment (flood-fill region)",
               }
             : null,

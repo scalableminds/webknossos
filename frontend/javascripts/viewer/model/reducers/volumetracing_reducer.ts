@@ -433,7 +433,7 @@ function VolumeTracingReducer(
     }
 
     case "ADD_TO_CONTOUR_LIST": {
-      return addToContourListReducer(state, volumeTracing, action.position);
+      return addToContourListReducer(state, volumeTracing, action.positionInLayerSpace);
     }
 
     case "RESET_CONTOUR": {

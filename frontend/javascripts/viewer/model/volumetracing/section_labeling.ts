@@ -59,6 +59,9 @@ export class VoxelBuffer2D {
     }
   }
 
+  /*
+   * These methods return the coordinates in mag-1 layer space.
+   */
   getTopLeft3DCoord = () => this.get3DCoordinateFromLocal2D([0, 0]);
   getBottomRight3DCoord = () => this.get3DCoordinateFromLocal2D([this.width, this.height]);
 
@@ -103,6 +106,9 @@ export class VoxelBuffer2D {
   }
 }
 export class VoxelNeighborQueue3D {
+  /*
+   * The positions are in layer space.
+   */
   queue: Array<Vector3>;
 
   constructor(initialPosition: Vector3) {
@@ -171,14 +177,15 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
 
 class SectionLabeler {
   /*
-  From the outside, the SectionLabeler accepts only global positions. Internally,
-  these are converted to the actual used mags (activeMag).
+  From the outside, the SectionLabeler accepts only global (mag 1 and not bucket-local)
+  positions in layer space. Internally, these are converted to the actual used
+  mags (activeMag).
   Therefore, members of this class are in the mag space of
   `activeMag`.
   */
   readonly thirdDimensionValue: number;
 
-  // Stored in global (but mag-dependent) coordinates:
+  // Stored in global (but mag-dependent) coordinates in layer space:
   minCoord: Vector3 | null | undefined;
   maxCoord: Vector3 | null | undefined;
 
@@ -230,13 +237,18 @@ class SectionLabeler {
     return difference[0] * difference[1] * difference[2];
   }
 
-  private getContourList(useGlobalCoords: boolean = false) {
+  private getContourList(useActiveMag: boolean = false) {
+    /*
+     * Returns layer-space coordinates in mag 1 if useActiveMag is false.
+     * Otherwise, return layer-space coordinates in `activeMag`.
+     */
+
     const globalContourList = getVolumeTracingById(
       Store.getState().annotation,
       this.volumeTracingId,
     ).contourList;
 
-    if (useGlobalCoords) {
+    if (useActiveMag) {
       return globalContourList;
     }
 
@@ -513,13 +525,14 @@ class SectionLabeler {
   }
 
   public get2DCoordinate(coord3d: Vector3): Vector2 {
+    // coord3d is in layer space.
     // Throw out 'thirdCoordinate' which is always the same, anyway.
     const transposed = Dimensions.transDim(coord3d, this.plane);
     return [transposed[0], transposed[1]];
   }
 
   getUnzoomedCentroid(): Vector3 {
-    /* Returns the centroid (in the global coordinate system).
+    /* Returns the centroid (in layer space).
      *
      * Formula:
      * https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon

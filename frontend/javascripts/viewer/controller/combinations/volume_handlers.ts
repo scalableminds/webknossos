@@ -3,12 +3,21 @@ import memoizeOne from "memoize-one";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
-import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
+import {
+  getLayerByName,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
+import {
+  getTransformsForLayer,
+  globalToLayerTransformedPosition,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import {
+  type PositionWithRounding,
+  calculateGlobalPos,
+} from "viewer/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
-  addToLayerAction,
+  addToContourListAction,
   finishEditingAction,
   floodFillAction,
   resetContourAction,
@@ -17,35 +26,71 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import {
+  invertTransform,
+  transformPointUnscaled,
+} from "viewer/model/helpers/transformation_helpers";
 import { Model, Store, api } from "viewer/singletons";
+import type { WebknossosState } from "viewer/store";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
   const globalPosRounded = calculateGlobalPos(state, pos).rounded;
+  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-  Store.dispatch(startEditingAction(globalPosRounded, plane));
-  Store.dispatch(addToLayerAction(globalPosRounded));
+  Store.dispatch(startEditingAction(layerPos, plane));
+  Store.dispatch(addToContourListAction(layerPos));
 }
+
+export function getUntransformedSegmentationPosition(
+  state: WebknossosState,
+  globalPosRounded: Vector3,
+) {
+  /*
+   * Converts the given position from world space to layer space.
+   */
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const maybeLayer = Model.getVisibleSegmentationLayer();
+  if (maybeLayer == null) {
+    throw new Error("Segmentation layer does not exist");
+  }
+
+  const layer = getLayerByName(state.dataset, maybeLayer.name);
+  const segmentationTransforms = getTransformsForLayer(
+    state.dataset,
+    layer,
+    nativelyRenderedLayerName,
+  );
+  const layerPos = transformPointUnscaled(invertTransform(segmentationTransforms))(
+    globalPosRounded,
+  );
+  return layerPos;
+}
+
 export function handleEraseStart(pos: Point2, plane: OrthoView) {
+  const state = Store.getState();
+  const globalPosRounded = calculateGlobalPos(state, pos).rounded;
+  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
-  Store.dispatch(startEditingAction(calculateGlobalPos(Store.getState(), pos).rounded, plane));
+  Store.dispatch(startEditingAction(layerPos, plane));
 }
 export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
-  Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos).rounded));
+  const globalPosRounded = calculateGlobalPos(state, pos).rounded;
+  const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
+  Store.dispatch(addToContourListAction(layerPos));
 }
 export function handleEndForDrawOrErase() {
   Store.dispatch(finishEditingAction());
   Store.dispatch(resetContourAction());
 }
 export function handlePickCell(pos: Point2) {
-  const storeState = Store.getState();
-  const globalPosRounded = calculateGlobalPos(storeState, pos).rounded;
+  const state = Store.getState();
+  const globalPos = calculateGlobalPos(state, pos);
 
-  return handlePickCellFromGlobalPosition(
-    globalPosRounded,
-    storeState.flycam.additionalCoordinates || [],
-  );
+  return handlePickCellFromGlobalPosition(globalPos, state.flycam.additionalCoordinates || []);
 }
 
 const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
@@ -171,27 +216,22 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
   );
 }
-function handlePickCellFromGlobalPosition(
-  globalPos: Vector3,
+export function handlePickCellFromGlobalPosition(
+  globalPos: PositionWithRounding,
   additionalCoordinates: AdditionalCoordinate[],
 ) {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
-  if (visibleSegmentationLayer == null) {
-    return;
-  }
-  const posInLayerSpace = globalToLayerTransformedPosition(
-    globalPos,
-    visibleSegmentationLayer.name,
-    "segmentation",
-    Store.getState(),
-  );
-
-  const segmentId = getSegmentIdForPosition(globalPos);
+  const segmentId = getSegmentIdForPosition(globalPos.rounded);
 
   if (segmentId === 0) {
     return;
   }
-  Store.dispatch(setActiveCellAction(segmentId, posInLayerSpace, additionalCoordinates));
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+  if (visibleSegmentationLayer == null) {
+    return;
+  }
+  const state = Store.getState();
+  const layerPos = getUntransformedSegmentationPosition(state, globalPos.floating);
+  Store.dispatch(setActiveCellAction(segmentId, layerPos, additionalCoordinates));
 
   Store.dispatch(
     updateSegmentAction(
@@ -205,12 +245,17 @@ function handlePickCellFromGlobalPosition(
     ),
   );
 }
-export function handleFloodFill(pos: Point2, plane: OrthoView) {
-  const globalPosRounded = calculateGlobalPos(Store.getState(), pos).rounded;
-  handleFloodFillFromGlobalPosition(globalPosRounded, plane);
+export function handleFloodFill(state: WebknossosState, screenPos: Point2, plane: OrthoView) {
+  const globalPosRounded = calculateGlobalPos(Store.getState(), screenPos).rounded;
+  handleFloodFillFromGlobalPosition(state, globalPosRounded, plane);
 }
-export function handleFloodFillFromGlobalPosition(globalPos: Vector3, plane: OrthoView) {
-  Store.dispatch(floodFillAction(globalPos, plane));
+export function handleFloodFillFromGlobalPosition(
+  state: WebknossosState,
+  globalPos: Vector3,
+  plane: OrthoView,
+) {
+  const positionInLayerSpace = getUntransformedSegmentationPosition(state, globalPos);
+  Store.dispatch(floodFillAction(positionInLayerSpace, plane));
 }
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;

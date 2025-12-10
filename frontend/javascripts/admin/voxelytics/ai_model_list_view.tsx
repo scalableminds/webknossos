@@ -16,9 +16,10 @@ import Toast from "libs/toast";
 import uniq from "lodash/uniq";
 import { useState } from "react";
 import type { Key } from "react";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
+
 import { Link } from "react-router-dom";
 import type { AiModel } from "types/api_types";
-import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 export default function AiModelListView() {

@@ -13,10 +13,11 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { Flex, Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
+import { App, Flex, Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
+import LinkButton from "components/link_button";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -65,14 +66,16 @@ const { Column } = Table;
 const { Search } = Input;
 
 export const getShowTrainingDataLink = (
+  modal: ReturnType<typeof App.useApp>["modal"],
   trainingAnnotations: {
     annotationId: string;
   }[],
 ) => {
   return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-    <a
+    <LinkButton
+      icon={<EyeOutlined />}
       onClick={() => {
-        Modal.info({
+        modal.info({
           content: (
             <div>
               The following annotations were used during training:
@@ -95,15 +98,16 @@ export const getShowTrainingDataLink = (
       }}
     >
       Show Training Data
-    </a>
+    </LinkButton>
   ) : (
-    <a
+    <LinkButton
+      icon={<EyeOutlined />}
       href={`/annotations/${trainingAnnotations[0].annotationId}`}
       target="_blank"
       rel="noreferrer noopener"
     >
       Show Training Data
-    </a>
+    </LinkButton>
   );
 };
 
@@ -134,6 +138,7 @@ export function JobState({ job }: { job: APIJob }) {
 
 function JobListView() {
   const queryClient = useQueryClient();
+  const { modal } = App.useApp();
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["jobs"],
     queryFn: getJobs,
@@ -170,6 +175,7 @@ function JobListView() {
   function renderDescription(__: any, job: APIJob) {
     const linkToDataset = getLinkToDataset(job);
     const layerName = job.args.annotationLayerName || job.args.layerName;
+
     if (job.command === APIJobCommand.CONVERT_TO_WKW && job.args.datasetName) {
       return <span>{`Conversion to WKW of ${job.args.datasetName}`}</span>;
     } else if (job.command === APIJobCommand.EXPORT_TIFF && linkToDataset != null) {
@@ -308,7 +314,7 @@ function JobListView() {
       return (
         <span>
           {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
-          {getShowTrainingDataLink(job.args.trainingAnnotations)}
+          {getShowTrainingDataLink(modal, job.args.trainingAnnotations)}
         </span>
       );
     } else {

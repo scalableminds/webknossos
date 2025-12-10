@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
@@ -41,6 +41,7 @@ function DatasetPositionView() {
   const dataset = useWkSelector((state) => state.dataset);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const task = useWkSelector((state) => state.task);
+  const maybeErrorMessageRef = useRef<string | null>(null);
 
   const copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(flycam)).join(", ");
@@ -94,12 +95,18 @@ function DatasetPositionView() {
   } else if (!maybeErrorMessage && isOutOfTaskBounds) {
     maybeErrorMessage = message["tracing.out_of_task_bounds"];
   }
+  maybeErrorMessageRef.current = maybeErrorMessage;
 
   const getPositionTooltipContent = useCallback(() => {
+    if (maybeErrorMessageRef.current != null) return null;
+    const currentFlycam = Store.getState().flycam;
+    const currentPosition = V3.floor(getPosition(currentFlycam));
     const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
-    const positionInVxStrings = position.map((coord) => formatVoxelsForHighNumbers(coord));
+    const positionInVxStrings = currentPosition.map((coord) => formatVoxelsForHighNumbers(coord));
     const voxelSizeInMetricUnit = convertVoxelSizeToUnit(voxelSize, shortUnit);
-    const positionInMetrics = position.map((coord, index) => coord * voxelSizeInMetricUnit[index]);
+    const positionInMetrics = currentPosition.map(
+      (coord, index) => coord * voxelSizeInMetricUnit[index],
+    );
     const positionInMetricStrings = positionInMetrics.map((coord) =>
       formatNumberToLength(coord, shortUnit),
     );
@@ -117,7 +124,7 @@ function DatasetPositionView() {
         </Row>
       </div>
     );
-  }, [position, voxelSize]);
+  }, [voxelSize]);
 
   return (
     <FastTooltip title={maybeErrorMessage || null} wrapper="div">
@@ -135,7 +142,7 @@ function DatasetPositionView() {
             <PushpinOutlined style={positionIconStyle} />
           </ButtonComponent>
         </FastTooltip>
-        <FastTooltip dynamicRenderer={getPositionTooltipContent} style={{ minWidth: 300 }}>
+        <FastTooltip dynamicRenderer={getPositionTooltipContent}>
           <Vector3Input
             value={position}
             onChange={handleChangePosition}

@@ -19,7 +19,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",
   keyboardDelay: "Keyboard delay (ms)",
-  moveValue: "Move Value (nm/s)",
+  moveValue: "Move Value",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   centerNewNode: "Auto-center Nodes",
   applyNodeRotationOnActivation: "Auto-rotate to Nodes",

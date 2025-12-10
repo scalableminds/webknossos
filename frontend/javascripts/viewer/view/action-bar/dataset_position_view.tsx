@@ -1,16 +1,19 @@
 import { PushpinOutlined } from "@ant-design/icons";
-import { Space } from "antd";
+import { Col, Row, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { formatNumberToLength, formatVoxelsForHighNumbers } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
-import type { Vector3 } from "viewer/constants";
+import { useCallback, useRef } from "react";
+import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action-bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -36,7 +39,9 @@ const positionInputErrorStyle: React.CSSProperties = {
 function DatasetPositionView() {
   const flycam = useWkSelector((state) => state.flycam);
   const dataset = useWkSelector((state) => state.dataset);
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const task = useWkSelector((state) => state.task);
+  const maybeErrorMessageRef = useRef<string | null>(null);
 
   const copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(flycam)).join(", ");
@@ -90,6 +95,36 @@ function DatasetPositionView() {
   } else if (!maybeErrorMessage && isOutOfTaskBounds) {
     maybeErrorMessage = message["tracing.out_of_task_bounds"];
   }
+  maybeErrorMessageRef.current = maybeErrorMessage;
+
+  const getPositionTooltipContent = useCallback(() => {
+    if (maybeErrorMessageRef.current != null) return null;
+    const currentFlycam = Store.getState().flycam;
+    const currentPosition = V3.floor(getPosition(currentFlycam));
+    const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
+    const positionInVxStrings = currentPosition.map((coord) => formatVoxelsForHighNumbers(coord));
+    const voxelSizeInMetricUnit = convertVoxelSizeToUnit(voxelSize, shortUnit);
+    const positionInMetrics = currentPosition.map(
+      (coord, index) => coord * voxelSizeInMetricUnit[index],
+    );
+    const positionInMetricStrings = positionInMetrics.map((coord) =>
+      formatNumberToLength(coord, shortUnit),
+    );
+    return (
+      <div>
+        <Row justify="space-between" gutter={16} wrap={false}>
+          <Col span={8}>{positionInVxStrings[0]},</Col>
+          <Col span={8}>{positionInVxStrings[1]},</Col>
+          <Col span={8}>{positionInVxStrings[2]}</Col>
+        </Row>
+        <Row justify="space-between" gutter={16} wrap={false}>
+          <Col span={8}>{positionInMetricStrings[0]},</Col>
+          <Col span={8}>{positionInMetricStrings[1]},</Col>
+          <Col span={8}>{positionInMetricStrings[2]}</Col>
+        </Row>
+      </div>
+    );
+  }, [voxelSize]);
 
   return (
     <FastTooltip title={maybeErrorMessage || null} wrapper="div">
@@ -107,13 +142,15 @@ function DatasetPositionView() {
             <PushpinOutlined style={positionIconStyle} />
           </ButtonComponent>
         </FastTooltip>
-        <Vector3Input
-          value={position}
-          onChange={handleChangePosition}
-          autoSize
-          style={positionInputStyle}
-          allowDecimals
-        />
+        <FastTooltip dynamicRenderer={getPositionTooltipContent}>
+          <Vector3Input
+            value={position}
+            onChange={handleChangePosition}
+            autoSize
+            style={positionInputStyle}
+            allowDecimals
+          />
+        </FastTooltip>
         <DatasetRotationPopoverButtonView style={iconColoringStyle} />
         <ShareButton dataset={dataset} style={iconColoringStyle} />
       </Space.Compact>

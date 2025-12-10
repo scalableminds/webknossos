@@ -157,7 +157,7 @@ export function formatScale(scale: VoxelSize | null | undefined, roundTo: number
     (value) => Utils.roundTo(value / conversionFactor, roundTo),
     scaleFactor,
   );
-  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/voxel`;
+  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/Vx`;
 }
 
 function toOptionalFixed(num: number, decimalPrecision: number): string {
@@ -399,7 +399,7 @@ function findBestUnitForFormatting(
 }
 export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {
   const roundedLength = Utils.roundTo(lengthInVx, roundTo);
-  return `${roundedLength} vx`;
+  return `${roundedLength}${ThinSpace}Vx`;
 }
 export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
   return `${formatLengthAsVx(areaInVx, roundTo)}²`;
@@ -531,6 +531,28 @@ export function formatVoxels(voxelCount: number) {
     return `${(voxelCount / 10 ** 3).toPrecision(4)} KVx`;
   }
   return `${voxelCount} Vx`;
+}
+
+export function formatVoxelsForHighNumbers(voxelCount: number) {
+  if (voxelCount == null) {
+    return "";
+  }
+  if (!Number.isFinite(voxelCount)) {
+    return "Infinity";
+  }
+  if (voxelCount > 10 ** 15) {
+    return `${(voxelCount / 10 ** 15).toPrecision(4)}${ThinSpace}PVx`;
+  }
+  if (voxelCount > 10 ** 12) {
+    return `${(voxelCount / 10 ** 12).toPrecision(4)}${ThinSpace}TVx`;
+  }
+  if (voxelCount > 10 ** 9) {
+    return `${(voxelCount / 10 ** 9).toPrecision(4)}${ThinSpace}GVx`;
+  }
+  if (voxelCount > 10 ** 6) {
+    return `${(voxelCount / 10 ** 6).toPrecision(4)}${ThinSpace}MVx`;
+  }
+  return `${voxelCount}${ThinSpace}Vx`;
 }
 
 export function formatNumber(num: number): string {

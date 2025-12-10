@@ -1,6 +1,7 @@
 import { ExperimentOutlined } from "@ant-design/icons";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
+import Markdown from "libs/markdown_adapter";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -34,7 +35,8 @@ const preTrainedModels: PretrainedModel[] = [
   },
   {
     name: "Mitochondria Detection",
-    comment: "Instance segmentation model for mitochondria detection. Optimized for EM data.",
+    comment:
+      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada).",
     id: "mitochondria-detection",
     jobType: APIJobCommand.INFER_MITOCHONDRIA,
     image: "/assets/images/mito_inferral_example.jpg",
@@ -171,7 +173,7 @@ export const AiModelSelector: React.FC = () => {
                   {item.disabled && <Tag>Coming Soon</Tag>}
                 </Space>
               }
-              description={item.comment}
+              description={<Markdown>{item.comment}</Markdown>}
             />
           </List.Item>
         )}

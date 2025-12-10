@@ -32,6 +32,7 @@ case class Job(
     retriedBySuperUser: Boolean = false,
     started: Option[Instant] = None,
     ended: Option[Instant] = None,
+    lastRetry: Option[Instant] = None,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends JobResultLinks {
@@ -47,6 +48,9 @@ case class Job(
       e <- ended
       s <- started
     } yield e - s
+
+  def waitDuration: Option[FiniteDuration] =
+    started.map(s => s - lastRetry.getOrElse(created))
 
   def effectiveState: JobState = manualState.getOrElse(state)
 
@@ -124,6 +128,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.retriedbysuperuser,
         r.started.map(Instant.fromSql),
         r.ended.map(Instant.fromSql),
+        r.lastretry.map(Instant.fromSql),
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -211,6 +216,16 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
+  def cancelConvertToWkwJobForDataset(datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.jobs
+                   SET manualState = ${JobState.CANCELLED}
+                   WHERE command = ${JobCommand.convert_to_wkw}
+                   AND commandArgs->>'dataset_id' = $datasetId
+                   AND (state = ${JobState.PENDING} OR state = ${JobState.STARTED})
+            """.asUpdate)
+    } yield ()
+
   def countUnassignedPendingForDataStore(dataStoreName: String, jobCommands: Set[JobCommand]): Fox[Int] =
     if (jobCommands.isEmpty) Fox.successful(0)
     else {
@@ -279,13 +294,13 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""INSERT INTO webknossos.jobs(
                     _id, _owner, _dataStore, command, commandArgs,
                     state, manualState, _worker,
-                    latestRunId, returnValue, started, ended,
+                    latestRunId, returnValue, started, ended, lastRetry,
                     created, isDeleted
                    )
                    VALUES(
                     ${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, ${j.args},
                     ${j.state}, ${j.manualState}, ${j._worker},
-                    ${j.latestRunId}, ${j.returnValue}, ${j.started}, ${j.ended},
+                    ${j.latestRunId}, ${j.returnValue}, ${j.started}, ${j.ended}, ${j.lastRetry},
                     ${j.created}, ${j.isDeleted})""".asUpdate)
     } yield ()
 
@@ -299,7 +314,10 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs
-             SET state = ${JobState.PENDING}, manualState = NULL, retriedBySuperUser = true
+             SET state = ${JobState.PENDING},
+                 manualState = NULL,
+                 retriedBySuperUser = true,
+                 lastRetry = ${Instant.now}
              WHERE _id = $id
              AND (
                state IN (${JobState.FAILURE}, ${JobState.CANCELLED})

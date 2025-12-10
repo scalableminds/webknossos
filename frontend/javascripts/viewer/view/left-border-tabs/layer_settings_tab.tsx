@@ -129,7 +129,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/ai_job_modals/materialize_volume_annotation_modal";
+import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
   ColorSetting,

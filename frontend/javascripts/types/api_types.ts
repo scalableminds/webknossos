@@ -759,6 +759,8 @@ export type APIFeatureToggles = {
   readonly voxelyticsEnabled: boolean;
   readonly neuronInferralCostPerGVx: number;
   readonly mitochondriaInferralCostPerGVx: number;
+  readonly nucleiInferralCostPerGVx: number;
+  readonly instancesInferralCostPerGVx: number;
   readonly alignmentCostPerGVx: number;
   readonly costPerCreditInEuro: number;
   readonly costPerCreditInDollar: number;
@@ -787,11 +789,11 @@ export enum APIJobCommand {
   FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
   INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
+  INFER_MITOCHONDRIA = "infer_mitochondria",
+  INFER_INSTANCES = "infer_instances",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",
-  INFER_MITOCHONDRIA = "infer_mitochondria",
-  INFER_INSTANCES = "infer_instances",
   // Only used for backwards compatibility, e.g. to display results.
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
   DEPRECATED_TRAIN_MODEL = "train_model",

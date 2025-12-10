@@ -492,7 +492,6 @@ function JobListView() {
           }}
           style={{
             marginTop: 30,
-            marginBottom: 30,
           }}
         >
           <Column

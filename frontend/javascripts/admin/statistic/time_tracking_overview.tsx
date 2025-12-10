@@ -1,6 +1,16 @@
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/rest_api";
-import { Button, Card, DatePicker, Select, Spin, Table, type TimeRangePickerProps } from "antd";
+import {
+  Button,
+  DatePicker,
+  Flex,
+  Select,
+  Space,
+  Spin,
+  Table,
+  type TimeRangePickerProps,
+  Typography,
+} from "antd";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
@@ -67,7 +77,6 @@ function TimeTrackingOverview() {
     [],
     [selectedTeams, selectedTypes, selectedState, selectedProjectIds, startDate, endDate],
   );
-  const filterStyle = { marginInline: 10 };
 
   const downloadTimeSpans = async (
     userId: string,
@@ -198,50 +207,49 @@ function TimeTrackingOverview() {
     if (pageData.length === 0) {
       return null;
     }
+
     let totalNumberOfTasksAndAnnotations = 0;
     let totalTimeMs = 0;
     pageData.forEach(({ timeMillis, annotationCount }) => {
       totalNumberOfTasksAndAnnotations += annotationCount;
       totalTimeMs += timeMillis;
     });
+
     return (
-      <>
-        <Table.Summary.Row>
-          <Table.Summary.Cell index={0} />
-          <Table.Summary.Cell index={1}>
-            <b>Total</b>
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
-          <Table.Summary.Cell index={3}>
-            {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
-          </Table.Summary.Cell>
-          <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>
-          <Table.Summary.Cell index={5} />
-        </Table.Summary.Row>
-      </>
+      <Table.Summary.Row>
+        <Table.Summary.Cell index={0} />
+        <Table.Summary.Cell index={1}>
+          <b>Total</b>
+        </Table.Summary.Cell>
+        <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
+        <Table.Summary.Cell index={3}>
+          {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
+        </Table.Summary.Cell>
+        <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>
+        <Table.Summary.Cell index={5} />
+      </Table.Summary.Row>
     );
   };
 
   return (
     <div className="container">
-      <Card
-        title={"Annotation Time per User"}
-        style={{
-          marginTop: 30,
-          marginBottom: 30,
-        }}
-        extra={
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={() => exportToCSV()}
-            disabled={filteredTimeEntries == null || filteredTimeEntries?.length === 0}
-          >
-            Export to CSV
-          </Button>
-        }
-      >
-        <FilterOutlined />
+      <Flex justify="space-between" align="flex-start">
+        <h3>Annotation Time per User</h3>
+        <Button
+          type="primary"
+          icon={<DownloadOutlined />}
+          onClick={() => exportToCSV()}
+          disabled={filteredTimeEntries == null || filteredTimeEntries?.length === 0}
+        >
+          Export to CSV
+        </Button>
+      </Flex>
+      <Typography.Paragraph type="secondary">
+        Analyze the time spent on annotations and tasks by users. Filter results by project,
+        annotation type, state, team, and date range.
+      </Typography.Paragraph>
+
+      <Space>
         <ProjectAndAnnotationTypeDropdown
           setSelectedProjectIds={setSelectedProjectIds}
           selectedProjectIds={selectedProjectIds}
@@ -249,14 +257,13 @@ function TimeTrackingOverview() {
           selectedAnnotationType={selectedTypes}
           selectedAnnotationState={selectedState}
           setSelectedAnnotationState={setSelectedState}
-          style={{ ...filterStyle }}
         />
         <Select
           mode="multiple"
           placeholder="Filter teams"
           defaultValue={[]}
           disabled={!isCurrentUserAdminOrManager}
-          style={{ width: 200, ...filterStyle }}
+          style={{ width: 200 }}
           options={allTeams.map((team) => {
             return {
               label: team.name,
@@ -268,9 +275,9 @@ function TimeTrackingOverview() {
           onDeselect={(removedTeamId: string) => {
             setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId));
           }}
+          prefix={<FilterOutlined />}
         />
         <RangePicker
-          style={filterStyle}
           value={[startDate, endDate]}
           presets={rangePresets}
           onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
@@ -283,34 +290,33 @@ function TimeTrackingOverview() {
             setEndeDate(dates[1].endOf("day"));
           }}
         />
-        <Spin spinning={isFetching} size="large">
-          <FixedExpandableTable
-            dataSource={filteredTimeEntries}
-            rowKey="user"
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-            pagination={false}
-            columns={timeTrackingTableColumns}
-            expandable={{
-              expandedRowRender: (entry) => (
-                <TimeTrackingDetailView
-                  userId={entry.user.id}
-                  dateRange={[startDate.valueOf(), endDate.valueOf()]}
-                  annotationType={selectedTypes}
-                  annotationState={selectedState}
-                  projectIds={selectedProjectIds}
-                />
-              ),
-            }}
-            locale={{
-              emptyText: renderPlaceholder(),
-            }}
-            summary={getSummaryRow}
-          />
-        </Spin>
-      </Card>
+      </Space>
+      <Spin spinning={isFetching} size="large">
+        <FixedExpandableTable
+          dataSource={filteredTimeEntries}
+          rowKey="user"
+          style={{
+            marginTop: 30,
+          }}
+          pagination={false}
+          columns={timeTrackingTableColumns}
+          expandable={{
+            expandedRowRender: (entry) => (
+              <TimeTrackingDetailView
+                userId={entry.user.id}
+                dateRange={[startDate.valueOf(), endDate.valueOf()]}
+                annotationType={selectedTypes}
+                annotationState={selectedState}
+                projectIds={selectedProjectIds}
+              />
+            ),
+          }}
+          locale={{
+            emptyText: renderPlaceholder(),
+          }}
+          summary={getSummaryRow}
+        />
+      </Spin>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { getProjectProgressReport } from "admin/rest_api";
-import { Badge, Button, Card, Space, Spin, Table } from "antd";
+import { Badge, Button, Card, Flex, Space, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
@@ -71,7 +71,8 @@ function ProjectProgressReportView() {
   return (
     <div className="container">
       <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
-      <div className="pull-right">
+      <Flex justify="space-between" align="flex-start">
+        <h3>Project Progress</h3>
         <Space>
           {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}{" "}
           <Button
@@ -87,8 +88,8 @@ function ProjectProgressReportView() {
             onClick={handleReload}
           />
         </Space>
-      </div>
-      <h3>Project Progress</h3>
+      </Flex>
+
       {areSettingsVisible ? (
         <Card>
           <TeamSelectionForm value={team} onChange={handleTeamChange} />
@@ -104,7 +105,6 @@ function ProjectProgressReportView() {
           rowKey="projectName"
           style={{
             marginTop: 30,
-            marginBottom: 30,
           }}
           size="small"
           className="large-table"

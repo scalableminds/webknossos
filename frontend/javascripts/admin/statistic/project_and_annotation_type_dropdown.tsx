@@ -1,3 +1,4 @@
+import { FilterOutlined } from "@ant-design/icons";
 import { getProjects } from "admin/rest_api";
 import { Select } from "antd";
 import { useFetch } from "libs/react_helpers";
@@ -126,6 +127,7 @@ function ProjectAndAnnotationTypeDropdown({
       popupMatchSelectWidth={400}
       onDeselect={(removedKey: string) => onDeselect(removedKey)}
       onSelect={(newSelection: string) => setSelectedProjects(selectedFilters, newSelection)}
+      prefix={<FilterOutlined />}
     />
   );
 }

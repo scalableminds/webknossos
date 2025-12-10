@@ -76,10 +76,13 @@ export const getShowTrainingDataLink = (
       icon={<EyeOutlined />}
       onClick={() => {
         modal.info({
+          title: "Training Data",
+          closable: true,
+          maskClosable: true,
           content: (
             <div>
               The following annotations were used during training:
-              <ul>
+              <ul style={{ padding: 15 }}>
                 {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
                   <li key={`annotation_${index}`}>
                     <a

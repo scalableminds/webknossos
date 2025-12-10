@@ -154,7 +154,6 @@ const renderActionsForModel = (
     <Col>
       {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
       {voxelyticsWorkflowHash != null ? (
-        /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
         <Row>
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>
             <LinkButton icon={<FileTextOutlined />}>Voxelytics Report</LinkButton>
@@ -208,7 +207,7 @@ function EditModelSharedOrganizationsModal({
 
   return (
     <Modal
-      title={`Edit Organizations with Access to AI Model ${model.name}`}
+      title={"Edit Organizations with Access to this AI Model"}
       open
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
@@ -221,23 +220,23 @@ function EditModelSharedOrganizationsModal({
         <Typography.Text italic>{model.name}</Typography.Text>.
       </p>
       <Typography.Paragraph type="secondary">
-        You can only select or deselect organizations that you are a member of. However, other users
-        in your organization may have granted access to additional organizations that you are not
-        part of. Only members of your organization who have access to those organizations can modify
-        their access.
+        You can only manage access for organizations you belong to. Other members of your
+        organization may have access to additional organizations not listed here. Only they can
+        modify access for those organizations.
       </Typography.Paragraph>
-      <Col span={14} offset={4}>
+      <Flex justify="center">
         <Select
           mode="multiple"
           allowClear
           autoFocus
-          style={{ width: "100%" }}
+          style={{ minWidth: 400 }}
+          dropdownMatchSelectWidth={false}
           placeholder="Please select"
           onChange={handleChange}
           options={options}
           value={selectedOrganizationIds}
         />
-      </Col>
+      </Flex>
     </Modal>
   );
 }

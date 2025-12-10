@@ -12,7 +12,7 @@ const { Title, Text } = Typography;
 
 type PretrainedModel = {
   name: string;
-  comment: string;
+  comment: string | React.ReactNode;
   id: string;
   jobType:
     | APIJobCommand.INFER_NEURONS
@@ -34,7 +34,19 @@ const preTrainedModels: PretrainedModel[] = [
   },
   {
     name: "Mitochondria Detection",
-    comment: "Instance segmentation model for mitochondria detection. Optimized for EM data.",
+    comment: (
+      <>
+        Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by{" "}
+        <a
+          href="https://volume-em.github.io/empanada"
+          rel="noreferrer noopener noreferrer"
+          target="_blank"
+        >
+          MitoNet (Conrad &amp; Narayan 2022)
+        </a>
+        .
+      </>
+    ),
     id: "mitochondria-detection",
     jobType: APIJobCommand.INFER_MITOCHONDRIA,
     image: "/assets/images/mito_inferral_example.jpg",

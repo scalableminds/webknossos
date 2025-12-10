@@ -1,9 +1,10 @@
 import { ExperimentOutlined } from "@ant-design/icons";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
+import Markdown from "libs/markdown_adapter";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
 import { APIJobCommand, type AiModel } from "types/api_types";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
@@ -13,7 +14,6 @@ const { Title, Text } = Typography;
 type PretrainedModel = {
   name: string;
   comment: string;
-  commentNode?: ReactNode;
   id: string;
   jobType:
     | APIJobCommand.INFER_NEURONS
@@ -36,16 +36,7 @@ const preTrainedModels: PretrainedModel[] = [
   {
     name: "Mitochondria Detection",
     comment:
-      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by MitoNet (Conrad & Narayan 2022).",
-    commentNode: (
-      <>
-        Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by{" "}
-        <a href="https://volume-em.github.io/empanada" rel="noreferrer noopener" target="_blank">
-          MitoNet (Conrad &amp; Narayan 2022)
-        </a>
-        .
-      </>
-    ),
+      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada).",
     id: "mitochondria-detection",
     jobType: APIJobCommand.INFER_MITOCHONDRIA,
     image: "/assets/images/mito_inferral_example.jpg",
@@ -182,7 +173,7 @@ export const AiModelSelector: React.FC = () => {
                   {item.disabled && <Tag>Coming Soon</Tag>}
                 </Space>
               }
-              description={item.commentNode || item.comment}
+              description={<Markdown>{item.comment}</Markdown>}
             />
           </List.Item>
         )}

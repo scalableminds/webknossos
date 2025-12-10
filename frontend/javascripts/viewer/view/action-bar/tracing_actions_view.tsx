@@ -9,7 +9,7 @@ import {
   RollbackOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
-import { Button, Flex, Space, Tooltip } from "antd";
+import { Button, Flex, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import messages from "messages";
 import * as React from "react";
@@ -198,10 +198,8 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 function TracingActionsView({ layoutMenu }: Props) {
   return (
     <>
-      <Space.Compact>
-        <SaveActions />
-        <TaskCompletionActions />
-      </Space.Compact>
+      <SaveActions />
+      <TaskCompletionActions />
       <TracingModals />
       <ActionsMenu layoutMenu={layoutMenu} />
     </>

@@ -22,14 +22,12 @@ function LinkRenderer(props: { children: React.ReactNode; href: string }) {
   );
 }
 
-const Markdown = loadable<Props>(() => import("react-markdown") as Promise<any>);
+const ReactMarkdown = loadable<Props>(() => import("react-markdown") as Promise<any>);
 
-export default Markdown as React.FC<{ children: React.ReactNode; className?: string }>;
-
-export const MarkdownWithExternalLinks = ({ children, className }: Props) => {
+export default function Markdown({ children, className }: Props) {
   return (
-    <Markdown components={{ a: LinkRenderer }} className={className}>
+    <ReactMarkdown components={{ a: LinkRenderer }} className={className}>
       {children}
-    </Markdown>
+    </ReactMarkdown>
   );
-};
+}

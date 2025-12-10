@@ -200,9 +200,10 @@ export const setPythonClientModalVisibilityAction = (visible: boolean) =>
     type: "SET_PYTHON_MODAL_VISIBILITY",
     visible,
   }) as const;
-export const enterAction = () =>
+export const enterAction = (event: KeyboardEvent) =>
   ({
     type: "ENTER",
+    event,
   }) as const;
 export const escapeAction = () =>
   ({

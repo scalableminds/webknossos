@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, getAdaptToTypeFunction, isNumberMap } from "libs/utils";
+import { SoftError, getAdaptToTypeFunction, isEditableEventTarget, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -685,9 +685,11 @@ function* performMinCut(
   return [false, edgesToRemove];
 }
 
-function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction): Saga<void> {
+function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction): Saga<void> {
   const isMultiSplitActive = yield* select((state) => state.userConfiguration.isMultiSplitActive);
-  if (!isMultiSplitActive) {
+  const isFromEditingEvent = action.type === "ENTER" && isEditableEventTarget(action.event.target);
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+  if (!isMultiSplitActive || activeTool !== AnnotationTool.PROOFREAD || isFromEditingEvent) {
     return;
   }
 

@@ -1,5 +1,4 @@
 import {
-  EyeOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
   PlusOutlined,
@@ -9,7 +8,19 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
 import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
-import { Button, Col, Flex, Modal, Row, Select, Space, Table, Tooltip, Typography } from "antd";
+import {
+  App,
+  Button,
+  Col,
+  Flex,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tooltip,
+  Typography,
+} from "antd";
 import FormattedDate from "components/formatted_date";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -23,6 +34,7 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { TrainAiModelForm } from "viewer/view/action-bar/ai_job_modals/forms/train_ai_model_form";
 import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
 
+import LinkButton from "components/link_button";
 import { Link } from "react-router-dom";
 import type { APIAnnotation, AiModel } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -32,6 +44,7 @@ export default function AiModelListView() {
   const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
   const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
+  const { modal } = App.useApp();
 
   const {
     data: aiModels = [],
@@ -142,7 +155,7 @@ export default function AiModelListView() {
           {
             title: "Actions",
             render: (aiModel: AiModel) =>
-              renderActionsForModel(aiModel, () => setCurrentlyEditedModel(aiModel)),
+              renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
             key: "actions",
           },
         ]}
@@ -211,12 +224,15 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () => void) => {
+const renderActionsForModel = (
+  modal: ReturnType<typeof App.useApp>["modal"],
+  model: AiModel,
+  onChangeSharedOrganizations: () => void,
+) => {
   const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <a onClick={onChangeSharedOrganizations}>
-      <TeamOutlined className="icon-margin-right" />
+    <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
       Manage Access
-    </a>
+    </LinkButton>
   ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
@@ -231,19 +247,12 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
         /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
         <Row>
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>
-            <FileTextOutlined className="icon-margin-right" />
-            Voxelytics Report
+            <LinkButton icon={<FileTextOutlined />}>Voxelytics Report</LinkButton>
           </Link>
         </Row>
       ) : null}
       {trainingAnnotations != null ? (
-        <Row>
-          <EyeOutlined
-            className="icon-margin-right"
-            style={{ color: "var(--ant-color-primary)" }}
-          />
-          {getShowTrainingDataLink(trainingAnnotations)}
-        </Row>
+        <Row>{getShowTrainingDataLink(modal, trainingAnnotations)}</Row>
       ) : null}
     </Col>
   );

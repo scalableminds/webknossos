@@ -1,6 +1,6 @@
 import { type Mock, vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
-import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector3, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
@@ -20,7 +20,10 @@ import {
   annotation as VOLUME_ANNOTATION,
   annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
-import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
+import DATASET, {
+  sampleHdf5AgglomerateName,
+  sampleMappingFileName,
+} from "../fixtures/dataset_server_object";
 import type { ApiInterface } from "viewer/api/api_latest";
 import type { ModelType } from "viewer/model";
 
@@ -52,6 +55,7 @@ import {
 import {
   resetStoreAction,
   restartSagaAction,
+  sceneControllerInitializedAction,
   wkInitializedAction,
 } from "viewer/model/actions/actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
@@ -73,10 +77,18 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
   ElementClass,
+  APIMeshFileInfo,
+  AdditionalCoordinate,
 } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import { __setFeatures } from "features";
+import type { MeshChunkDataRequestList, MeshSegmentInfo } from "admin/api/mesh.ts";
+import CustomLOD from "viewer/controller/custom_lod";
+import { createUnitCubeBufferGeometry, makeSimpleMesh } from "./geometry_helpers";
+import type { SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
+import * as THREE from "three";
+import type { BufferGeometryWithInfo } from "viewer/controller/mesh_helpers";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -102,6 +114,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   api: ApiInterface;
   tearDownPullQueues: () => void;
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
+  segmentLodGroups: Record<string, CustomLOD>;
 }
 
 // Create mock objects
@@ -223,6 +236,88 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
+    getMeshfilesForDatasetLayer: vi.fn(
+      async (
+        _dataStoreUrl: string,
+        _dataset: APIDataset,
+        _layerName: string,
+      ): Promise<Array<APIMeshFileInfo>> => {
+        return [
+          {
+            name: sampleMappingFileName,
+            mappingName: null, // Set to null to be usable for proofreading helper meshes.
+            formatVersion: 3,
+          },
+        ];
+      },
+    ),
+  };
+});
+
+// Mocks required to mock precomputed meshes loading
+vi.mock("libs/draco.ts", async () => {
+  return {
+    getDracoLoader: vi.fn(() => ({
+      decodeDracoFileAsync: createUnitCubeBufferGeometry,
+    })),
+  };
+});
+
+vi.mock("admin/api/mesh.ts", async () => {
+  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
+
+  const getMeshfileChunksForSegment = vi.fn(
+    async (
+      _dataStoreUrl: string,
+      _datasetId: string,
+      _layerName: string,
+      _meshFile: APIMeshFileInfo,
+      segmentId: number,
+      _targetMappingName: string | null | undefined,
+      _editableMappingTracingId: string | null | undefined,
+    ): Promise<MeshSegmentInfo> => {
+      console.log("Requesting default mesh segment info in mocked test.");
+      await sleep(100);
+      return {
+        meshFormat: "draco",
+        lods: [
+          {
+            chunks: [
+              {
+                position: [0, 0, 0],
+                byteOffset: 0,
+                byteSize: 666,
+                unmappedSegmentId: segmentId,
+              },
+            ],
+            transform: [
+              [1, 0, 0, 0],
+              [0, 1, 0, 0],
+              [0, 0, 1, 0],
+            ], // 4x3 matrix
+          },
+        ],
+        chunkScale: [1, 1, 1],
+      };
+    },
+  );
+
+  const getMeshfileChunkData = vi.fn(
+    async (
+      _dataStoreUrl: string,
+      _datasetId: string,
+      _layerName: string,
+      _batchDescription: MeshChunkDataRequestList,
+    ): Promise<ArrayBuffer[]> => {
+      return [new ArrayBuffer()];
+    },
+  );
+
+  return {
+    ...actual,
+    getMeshfileChunksForSegment,
+    getMeshfileChunkData,
+    // TODOM
   };
 });
 
@@ -485,14 +580,80 @@ export async function setupWebknossosForTesting(
   );
   vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(annotationProto));
 
+  // clear segmentLodGroups
+  if (testContext.segmentLodGroups == null) {
+    testContext.segmentLodGroups = {};
+  }
+  const { segmentLodGroups } = testContext;
+  Object.keys(segmentLodGroups).forEach((key) => delete segmentLodGroups[key]);
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-ignore
     segmentMeshController: {
       meshesGroupsPerSegmentId: {},
       updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
+      getLODGroupOfLayer(layerName: string): CustomLOD | undefined {
+        return segmentLodGroups[layerName];
+      },
+      addMeshFromGeometry: vi.fn(
+        (
+          geometry: BufferGeometryWithInfo,
+          segmentId: number,
+          _scale: Vector3 | null = null,
+          _lod: number,
+          layerName: string,
+          _additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+          _opacity: number | undefined,
+          _isMerged: boolean,
+        ) => {
+          // TODOM: make geometry, make mesh, add to internal structure
+          console.error("adding mesh", segmentId);
+          const mesh = makeSimpleMesh(geometry);
+          const group = new THREE.Group() as SceneGroupForMeshes;
+          group.add(mesh);
+          group.segmentId = segmentId;
+          if (!segmentLodGroups[layerName]) {
+            segmentLodGroups[layerName] = new CustomLOD();
+          }
+          const lodGroup = segmentLodGroups[layerName];
+          lodGroup.addNoLODSupportedMesh(group);
+        },
+      ),
+      removeMeshById: vi.fn((segmentId: number, layerName: string, _options?: { lod: number }) => {
+        console.error("removing mesh", segmentId);
+        let groupToRemove = null;
+        segmentLodGroups[layerName]?.traverse((group) => {
+          if ((group as SceneGroupForMeshes)?.segmentId === segmentId) {
+            groupToRemove = group;
+          }
+        }) as SceneGroupForMeshes | undefined;
+        if (groupToRemove) {
+          segmentLodGroups[layerName]?.removeNoLODSupportedMesh(groupToRemove);
+        } else {
+          console.warn(
+            `Tried to remove mesh for segment ${segmentId} in mocked segmentMeshController.`,
+          );
+        }
+      }),
+      setMeshVisibility: vi.fn(
+        (
+          id: number,
+          visibility: boolean,
+          layerName: string,
+          _additionalCoordinates?: AdditionalCoordinate[] | null,
+        ) => {
+          const lodGroup = segmentLodGroups[layerName];
+          lodGroup.children.forEach((group) => {
+            if ((group as SceneGroupForMeshes).segmentId === id) {
+              group.visible = visibility;
+            }
+          });
+        },
+      ),
     },
   });
+
+  Store.dispatch(sceneControllerInitializedAction());
 
   __setFeatures({});
 

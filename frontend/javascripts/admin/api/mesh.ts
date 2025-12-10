@@ -15,7 +15,7 @@ export type MeshLodInfo = {
   transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
 };
 
-type MeshSegmentInfo = {
+export type MeshSegmentInfo = {
   meshFormat: "draco";
   lods: Array<MeshLodInfo>;
   chunkScale: Vector3;
@@ -71,7 +71,7 @@ type MeshChunkDataRequest = {
   segmentId: number | null; // Only relevant for neuroglancer precomputed meshes
 };
 
-type MeshChunkDataRequestList = {
+export type MeshChunkDataRequestList = {
   meshFileName: string;
   requests: MeshChunkDataRequest[];
 };

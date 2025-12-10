@@ -9,6 +9,7 @@ import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annota
 import {
   minCutAgglomerateWithPositionAction,
   minCutPartitionsAction,
+  proofreadAtPosition,
   proofreadMergeAction,
   toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
@@ -33,6 +34,8 @@ import {
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { coarselyLoadedSegmentIds } from "viewer/model/sagas/volume/proofreading/proofread_saga";
+import { delay } from "typed-redux-saga";
 
 describe("Proofreading (with mesh actions)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -674,6 +677,46 @@ describe("Proofreading (with mesh actions)", () => {
       );
     });
 
+    await task.toPromise();
+  });
+
+  it("should load auxiliary meshes", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const task = startSaga(function* task(): Saga<void> {
+      const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+      yield call(initializeMappingAndTool, context, tracingId);
+      const autoRenderMeshInProofreading = yield* select(
+        (state) => state.userConfiguration.autoRenderMeshInProofreading,
+      );
+      console.log("autoRender", autoRenderMeshInProofreading);
+      const mapping0 = yield select(
+        (state: WebknossosState) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(proofreadAtPosition([1, 1, 1]));
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1, undefined, null, 1));
+      // Give mesh loading a little time
+      yield delay(2000);
+      const loadedMeshIds = new Set();
+      for (const layerName of Object.keys(context.segmentLodGroups)) {
+        for (const lodGroup of context.segmentLodGroups[layerName].children) {
+          for (const meshGroup of lodGroup.children) {
+            if ("segmentId" in meshGroup) {
+              loadedMeshIds.add(meshGroup.segmentId);
+            }
+          }
+        }
+      }
+      expect([...loadedMeshIds]).toEqual([1]);
+
+      // After making the
+    });
     await task.toPromise();
   });
 });

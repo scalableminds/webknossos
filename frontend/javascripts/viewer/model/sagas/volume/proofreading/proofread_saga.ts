@@ -322,9 +322,9 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   yield put(updateProofreadingMarkerPositionAction(position, layerName));
 
-  const segmentId = yield* call(getSegmentIdForPositionAsync, position);
-
   if (!proofreadUsingMeshes()) return;
+
+  const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
   /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);

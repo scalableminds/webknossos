@@ -377,8 +377,7 @@ function JobListView() {
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Dataset">
-              <EyeOutlined className="icon-margin-right" />
-              View
+              <LinkButton icon={<EyeOutlined />}>View</LinkButton>
             </Link>
           )}
         </span>
@@ -387,10 +386,9 @@ function JobListView() {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Download">
-              <DownloadOutlined className="icon-margin-right" />
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Download
-            </a>
+            </LinkButton>
           )}
         </span>
       );
@@ -398,10 +396,9 @@ function JobListView() {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Download">
-              <DownloadOutlined className="icon-margin-right" />
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Download
-            </a>
+            </LinkButton>
           )}
         </span>
       );
@@ -441,9 +438,9 @@ function JobListView() {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Result">
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Result
-            </a>
+            </LinkButton>
           )}
           {job.returnValue && <p>{job.returnValue}</p>}
         </span>

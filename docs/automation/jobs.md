@@ -6,7 +6,7 @@ WEBKNOSSOS will notify you via email upon completion or failure of any job.
 
 Example workflows:
 
-- [AI segmentation](./ai_segmentation.md), e.g. running AI model for nuclei segmentation and mitchondria detection  
+- [AI segmentation](./ai_segmentation.md), e.g. running AI model for nuclei segmentation and mitochondria detection  
 - [converting datasets on upload](../data/upload_ui.md)
 - [mesh file (pre)-computation](../meshes/precomputed_meshes.md)
 - [applying a merger mode annotation](../proofreading/merger_mode.md)

@@ -1,4 +1,4 @@
-import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
+import { DownloadOutlined, InboxOutlined, ReloadOutlined } from "@ant-design/icons";
 import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import {
   getActiveDatasetsOfMyOrganization,
@@ -15,11 +15,13 @@ import type {
 } from "admin/task/task_create_bulk_view";
 import { NUM_TASKS_PER_BATCH, normalizeFileEvent } from "admin/task/task_create_bulk_view";
 import {
+  Alert,
   App,
   Button,
   Card,
   Col,
   Divider,
+  Flex,
   Form,
   Input,
   InputNumber,
@@ -29,6 +31,7 @@ import {
   Select,
   Spin,
   Tooltip,
+  Typography,
   Upload,
   type UploadFile,
 } from "antd";
@@ -37,9 +40,13 @@ import { AsyncButton } from "components/async_clickables";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { saveAs } from "file-saver";
-import { coalesce, tryToAwaitPromise } from "libs/utils";
+import { coalesce, pluralize, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
+import isNil from "lodash/isNil";
+import omit from "lodash/omit";
+import omitBy from "lodash/omitBy";
+import uniq from "lodash/uniq";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -108,7 +115,7 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   const lastCreationTime = Math.max(...tasks.map((task) => task.created));
   const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime, "YYYY-MM-DD_HH-mm");
 
-  const allProjectNames = _.uniq(tasks.map((task) => task.projectName)).join("_");
+  const allProjectNames = uniq(tasks.map((task) => task.projectName)).join("_");
 
   const allTasksAsStrings = tasks.map((task) => taskToText(task)).join("\n");
   const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
@@ -128,9 +135,7 @@ export function handleTaskCreationResponse(
   const successfulTasks: APITask[] = [];
   const failedTasks: string[] = [];
   let teamName: string | null = null;
-  const subHeadingStyle: React.CSSProperties = {
-    fontWeight: "bold",
-  };
+
   const displayResultsStyle: React.CSSProperties = {
     maxHeight: 300,
     overflow: "auto",
@@ -148,7 +153,7 @@ export function handleTaskCreationResponse(
     }
   });
 
-  const allProjectNames = _.uniq(successfulTasks.map((task) => task.projectName));
+  const allProjectNames = uniq(successfulTasks.map((task) => task.projectName));
 
   if (allProjectNames.length > 1) {
     warnings.push(
@@ -159,62 +164,54 @@ export function handleTaskCreationResponse(
   const warningsContent =
     warnings.length > 0 ? (
       <div>
-        <div style={subHeadingStyle}>
-          <WarningOutlined
-            style={{
-              color: "var(--ant-color-warning)",
-            }}
-          />{" "}
-          There were warnings during task creation:
-        </div>
-        <div
-          style={{
-            whiteSpace: "pre-line",
-          }}
-        >
-          {warnings.join("\n")}
-        </div>
+        <Alert
+          showIcon
+          type="warning"
+          title="There were warnings during task creation"
+          description={warnings.join("\n")}
+        />
       </div>
     ) : null;
 
   const failedTasksAsString = failedTasks.join("");
   const successfulTasksContent =
     successfulTasks.length <= maxDisplayedTasksCount ? (
-      <pre>
-        taskId,filename,position
-        <br />
-        {successfulTasks.map((task) => taskToShortText(task)).join("\n")}
-      </pre>
+      <Typography.Paragraph code>
+        <pre>
+          taskId,filename,position
+          <br />
+          {successfulTasks.map((task) => taskToShortText(task)).join("\n")}
+        </pre>
+      </Typography.Paragraph>
     ) : (
       "Too many tasks to show, please use the CSV download above for a full list."
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
-      <pre>{failedTasksAsString}</pre>
+      <Typography.Paragraph code copyable>
+        <pre>{failedTasksAsString}</pre>
+      </Typography.Paragraph>
     ) : (
       "Too many failed tasks to show, please use the CSV download for a full list."
     );
-  const successPlural = successfulTasks.length === 1 ? "" : "s";
-  const warningsPlural = warnings.length === 1 ? "" : "s";
+
   modal.info({
-    title: `${successfulTasks.length} task${successPlural} successfully created, ${failedTasks.length} failed. ${warnings.length} warning${warningsPlural}.`,
+    title: `${successfulTasks.length} ${pluralize("task", successfulTasks.length)} successfully created, ${failedTasks.length} ${pluralize("task", failedTasks.length)} failed. ${warnings.length} ${pluralize("warning", warnings.length)}.`,
     content: (
       <div>
         {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                margin: 20,
-              }}
-            >
-              <Button onClick={() => downloadTasksAsCSV(successfulTasks)} type="primary">
+            <Flex justify="center" style={{ margin: 20 }}>
+              <Button
+                onClick={() => downloadTasksAsCSV(successfulTasks)}
+                type="primary"
+                icon={<DownloadOutlined />}
+              >
                 Download task info as CSV
               </Button>
-            </div>
-            <div style={subHeadingStyle}> Successful Tasks: </div>
+            </Flex>
+            <Typography.Text strong>Successful Tasks:</Typography.Text>
             <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
         ) : null}
@@ -222,10 +219,9 @@ export function handleTaskCreationResponse(
           <React.Fragment>
             <Divider />
             <div>
-              <div
+              <Flex
+                justify="center"
                 style={{
-                  display: "flex",
-                  justifyContent: "center",
                   margin: 20,
                 }}
               >
@@ -236,14 +232,13 @@ export function handleTaskCreationResponse(
                     });
                     saveAs(blob, "failed-tasks.csv");
                   }}
+                  icon={<DownloadOutlined />}
                 >
                   Download failed task info as CSV
                 </Button>
-              </div>
-              <div style={subHeadingStyle}> Failed Tasks:</div>
+              </Flex>
+              <Typography.Text strong>Failed Tasks:</Typography.Text>
               <div style={displayResultsStyle}> {failedTasksContent}</div>
-              <br />
-              <br />
             </div>
           </React.Fragment>
         ) : null}
@@ -255,18 +250,9 @@ export function handleTaskCreationResponse(
 
 export function CreateResourceButton({ text, link }: { text: string; link: string }) {
   return (
-    <Col span={4} style={{ marginTop: 11 }}>
+    <Col span={4} style={{ marginBottom: "var(--ant-form-item-margin-bottom)" }}>
       <Button block href={link} target="_blank" rel="noreferrer">
-        <span
-          style={{
-            display: "block",
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {text}
-        </span>
+        {text}
       </Button>
     </Col>
   );
@@ -280,9 +266,9 @@ export function ReloadResourceButton({
   onReload: () => Promise<void>;
 }) {
   return (
-    <Col flex="40px">
+    <Col flex="40px" style={{ marginBottom: "var(--ant-form-item-margin-bottom)" }}>
       <Tooltip title={tooltip}>
-        <AsyncButton style={{ marginTop: 7 }} icon={<ReloadOutlined />} onClick={onReload} />
+        <AsyncButton icon={<ReloadOutlined />} onClick={onReload} />
       </Tooltip>
     </Col>
   );
@@ -349,7 +335,7 @@ function TaskCreateFormView() {
         pendingInstances: task.status.pending,
       });
 
-      const validFormValues = _.omitBy(defaultValues, _.isNil);
+      const validFormValues = omitBy(defaultValues, isNil);
 
       // The task type is not needed for the form and leads to antd errors if it contains null values
       const { type, ...neededFormValues } = validFormValues;
@@ -374,7 +360,7 @@ function TaskCreateFormView() {
     if (taskId != null) {
       // either update an existing task
       const newTask = {
-        ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+        ...omit(formValues, "nmlFiles", "baseAnnotation"),
         boundingBox,
       };
       const confirmedTask = await updateTask(taskId, newTask);
@@ -397,7 +383,7 @@ function TaskCreateFormView() {
             const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
 
             const newTask: NewNmlTask = {
-              ..._.omit(formValues, "baseAnnotation"),
+              ...omit(formValues, "baseAnnotation"),
               boundingBox,
             };
             const response = await createTaskFromNML(newTask, batchOfNmls);
@@ -414,7 +400,7 @@ function TaskCreateFormView() {
               : formValues.baseAnnotation;
 
           const newTask = {
-            ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+            ...omit(formValues, "nmlFiles", "baseAnnotation"),
             boundingBox,
             baseAnnotation,
           };
@@ -426,7 +412,7 @@ function TaskCreateFormView() {
 
         handleTaskCreationResponse(modal, {
           tasks: taskResponses,
-          warnings: _.uniq(warnings),
+          warnings: uniq(warnings),
         });
       } finally {
         setIsUploading(false);
@@ -503,7 +489,7 @@ function TaskCreateFormView() {
 
                   if (
                     taskResponse?.datasetId != null &&
-                    _.isEqual(taskResponse.status, {
+                    isEqual(taskResponse.status, {
                       pending: 0,
                       active: 0,
                       finished: 1,
@@ -529,7 +515,7 @@ function TaskCreateFormView() {
           </FormItem>
         ) : null}
 
-        <Row gutter={8} align="middle" wrap={false}>
+        <Row gutter={8} align="bottom" wrap={false}>
           <Col flex="auto">
             <FormItem
               name="datasetId"
@@ -600,7 +586,6 @@ function TaskCreateFormView() {
   const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
   return (
     <div
-      className="container"
       style={{
         paddingTop: 20,
       }}
@@ -616,7 +601,7 @@ function TaskCreateFormView() {
               editRotation: [0, 0, 0],
             }}
           >
-            <Row gutter={8} align="middle" wrap={false}>
+            <Row gutter={8} align="bottom" wrap={false}>
               <Col flex="auto">
                 <FormItem
                   name="taskTypeId"
@@ -649,7 +634,7 @@ function TaskCreateFormView() {
               <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
             </Row>
 
-            <Row gutter={8} align="middle" wrap={false}>
+            <Row gutter={8} align="bottom" wrap={false}>
               <Col span={10}>
                 <FormItem
                   name={["neededExperience", "domain"]}
@@ -706,7 +691,7 @@ function TaskCreateFormView() {
               <InputNumber style={fullWidth} min={0} />
             </FormItem>
 
-            <Row gutter={8} align="middle" wrap={false}>
+            <Row gutter={8} align="bottom" wrap={false}>
               <Col flex="auto">
                 <FormItem
                   name="projectName"
@@ -739,7 +724,7 @@ function TaskCreateFormView() {
               <CreateResourceButton text="Create new Project" link="/projects/create" />
             </Row>
 
-            <Row gutter={8} align="middle" wrap={false}>
+            <Row gutter={8} align="bottom" wrap={false}>
               <Col flex="auto">
                 <FormItem name="scriptId" label="Script" hasFeedback>
                   <Select

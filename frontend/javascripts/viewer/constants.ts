@@ -283,9 +283,10 @@ export const Unicode = {
   MultiplicationSymbol: "×",
 };
 // A LabeledVoxelsMap maps from a bucket address
-// to a 2D slice of labeled voxels. These labeled voxels
-// are stored in a Uint8Array in a binary way (which cell
-// id the voxels should be changed to is not encoded).
+// to a 2D slice of labeled voxels within a bucket.
+// These labeled voxels are stored in a Uint8Array in a binary way (which
+// segment id the voxels should be changed to is not encoded).
+// The array should have BUCKET_WIDTH**2 entries.
 export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 
 // LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference

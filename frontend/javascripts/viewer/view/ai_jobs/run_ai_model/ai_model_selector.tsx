@@ -1,7 +1,7 @@
 import { ExperimentOutlined } from "@ant-design/icons";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
-import Markdown from "libs/markdown_adapter";
+import { MarkdownWithExternalLinks } from "libs/markdown_adapter";
 import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -173,7 +173,7 @@ export const AiModelSelector: React.FC = () => {
                   {item.disabled && <Tag>Coming Soon</Tag>}
                 </Space>
               }
-              description={<Markdown>{item.comment}</Markdown>}
+              description={<MarkdownWithExternalLinks>{item.comment}</MarkdownWithExternalLinks>}
             />
           </List.Item>
         )}

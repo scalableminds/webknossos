@@ -616,7 +616,6 @@ export function mapTransformedPlane(
   const n2 = basis.n.clone().applyMatrix4(m).normalize();
 
   // find which canonical plane the transformed normal aligns with
-
   let bestView: OrthoView = OrthoViews.PLANE_XY;
   let bestDot = Number.NEGATIVE_INFINITY;
 
@@ -628,6 +627,11 @@ export function mapTransformedPlane(
     }
   }
 
+  // TODO: Sometimes the u and v coordinates need to be swapped.
+  // However, the detection for this doesn't fully work yet.
+  // See transformed_section_labeler.spec.ts for tests.
+  // The code was already added during a refactoring (#9023)
+  // and needs to be fixed and finished as a follow-up.
   const swapped = isAlmostZero(basis.u.dot(u2));
 
   const adaptScaleFn = (scale: Vector3): Vector2 => {
@@ -643,6 +647,16 @@ export function mapTransformedPlane(
 }
 
 export class TransformedSectionLabeler {
+  /*
+   * This class is a wrapper around SectionLabeler
+   * and should enable labelling a transformed dataset
+   * by mapping the annotated plane to another one.
+   *
+   * TODO: The class does not fully work yet.
+   * See transformed_section_labeler.spec.ts for tests.
+   * It was already added during a refactoring (#9023)
+   * and needs to be fixed and finished as a follow-up.
+   */
   private readonly base: SectionLabeler;
   applyTransform: (pos: Vector3) => Vector3;
   applyInverseTransform: (pos: Vector3) => Vector3;
@@ -708,6 +722,7 @@ export class TransformedSectionLabeler {
       getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
     );
 
+    // todo: does this need a transformation?
     return this.base.getCircleVoxelBuffer2D(position, scale);
   }
 

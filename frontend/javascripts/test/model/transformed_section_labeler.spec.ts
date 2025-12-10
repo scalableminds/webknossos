@@ -76,6 +76,10 @@ describe("TransformedSectionLabeler", () => {
     expect(mapTransformedPlane("PLANE_XZ", rotationalTransform)).toEqual(["PLANE_XY", [0, 2]]);
   });
 
+  it.skip("[L4] Rotation by 90deg around Y should be handled correctly", async () => {
+    // TODO: Implement in a follow-up.
+  });
+
   it("[L4] Rotation by 90deg around Z should be handled correctly", async () => {
     const coordinateTransformations = [
       {

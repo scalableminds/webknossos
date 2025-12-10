@@ -1077,7 +1077,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
 
     const annotationVersion = yield* select((state) => state.annotation.version);
-    // Now that the changes are saved, we can split the mapping locally (because it requires
+    // Now that the changes are saved, we can split the local mapping (because it requires
     // communication with the back-end).
     const splitMapping = yield* splitAgglomerateInMapping(
       activeMapping,

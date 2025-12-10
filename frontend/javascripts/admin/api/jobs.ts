@@ -9,7 +9,7 @@ import type {
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
-import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
+import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
@@ -147,7 +147,7 @@ export function startComputeSegmentIndexFileJob(
   });
 }
 
-export function startNucleiInferralJob(
+export function runPretrainedNucleiInferenceJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
@@ -163,7 +163,7 @@ export function startNucleiInferralJob(
   });
 }
 
-export function startNeuronInferralJob(
+export function runPretrainedNeuronInferenceJob(
   datasetId: string,
   layerName: string,
   bbox: Vector6,
@@ -281,7 +281,7 @@ export function startMaterializingVolumeAnnotationJob(
   );
 }
 
-export function startMitochondriaInferralJob(
+export function runPretrainedMitochondriaInferenceJob(
   datasetId: string,
   layerName: string,
   bbox: Vector6,
@@ -327,7 +327,7 @@ export enum APIAiModelCategory {
   EM_NUCLEI = "em_nuclei",
 }
 
-type AiModelTrainingAnnotationSpecification = {
+export type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
   colorLayerName: string;
   segmentationLayerName: string;
@@ -365,7 +365,7 @@ export function runInstanceModelTraining(params: RunInstanceModelTrainingParamet
   });
 }
 
-export type BaseModelInferenceParameters = {
+export type BaseCustomModelInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
   datasetDirectoryName: string;
@@ -377,21 +377,21 @@ export type BaseModelInferenceParameters = {
   invertColorLayer: boolean;
   // maskAnnotationLayerName?: string | null
 };
-type RunNeuronModelInferenceParameters = BaseModelInferenceParameters;
+type RunCustomNeuronModelInferenceParameters = BaseCustomModelInferenceParameters;
 
-type RunInstanceModelInferenceParameters = BaseModelInferenceParameters & {
+type RunCustomInstanceModelInferenceParameters = BaseCustomModelInferenceParameters & {
   seedGeneratorDistanceThreshold: number;
 };
 
-export function runNeuronModelInferenceWithAiModelJob(params: RunNeuronModelInferenceParameters) {
+export function runCustomNeuronModelInferenceJob(params: RunCustomNeuronModelInferenceParameters) {
   return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronModelInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });
 }
 
-export function runInstanceModelInferenceWithAiModelJob(
-  params: RunInstanceModelInferenceParameters,
+export function runCustomInstanceModelInferenceJob(
+  params: RunCustomInstanceModelInferenceParameters,
 ) {
   return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomInstanceModelInference", {
     method: "POST",

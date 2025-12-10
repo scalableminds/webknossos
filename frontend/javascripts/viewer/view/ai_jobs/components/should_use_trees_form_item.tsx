@@ -4,7 +4,7 @@ import type { RuleObject } from "antd/es/form";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 
-export function ShouldUseTreesFormItem() {
+export function ShouldUseManualMatchesFormItem() {
   const annotation = useWkSelector((state) => state.annotation);
   const trees = useMemo(
     () => (annotation.skeleton ? annotation.skeleton.trees.values().toArray() : []),
@@ -36,28 +36,26 @@ export function ShouldUseTreesFormItem() {
   );
 
   return (
-    <div>
-      <Form.Item
-        name="useAnnotation"
-        label={
-          <Space>
-            <div style={{}}>
-              Manual Matches{" "}
-              <Tooltip title="Please select whether the alignment should take connected skeleton nodes between adjacent sections as alignment guideline whenever available.">
-                <InfoCircleOutlined />
-              </Tooltip>
-            </div>
-          </Space>
-        }
-        valuePropName="checked"
-        rules={[
-          {
-            validator,
-          },
-        ]}
-      >
-        <Checkbox> Use manual matches from skeleton. </Checkbox>
-      </Form.Item>
-    </div>
+    <Form.Item
+      name="useAnnotation"
+      label={
+        <Space>
+          <div style={{}}>
+            Manual Matches{" "}
+            <Tooltip title="Please select whether the alignment should take connected skeleton nodes between adjacent sections as alignment guideline whenever available.">
+              <InfoCircleOutlined />
+            </Tooltip>
+          </div>
+        </Space>
+      }
+      valuePropName="checked"
+      rules={[
+        {
+          validator,
+        },
+      ]}
+    >
+      <Checkbox> Use manual matches from skeleton. </Checkbox>
+    </Form.Item>
   );
 }

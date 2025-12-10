@@ -245,10 +245,6 @@ function TaskListView({ initialFieldValues }: Props) {
     );
   }
 
-  const marginRight = {
-    marginRight: 20,
-  };
-
   const columns: ColumnType<APITask>[] = [
     {
       title: "ID",

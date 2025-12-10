@@ -269,9 +269,9 @@ function ProjectListView() {
             filters={greaterThanZeroFilters}
             onFilter={(value, project: APIProjectWithStatus) => {
               if (value === "0") {
-                return project.tracingTime === 0;
+                return project.pendingInstances === 0;
               }
-              return project.tracingTime > 0;
+              return project.pendingInstances > 0;
             }}
           />
           <Column

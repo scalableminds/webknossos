@@ -86,9 +86,6 @@ function ScriptListView() {
     );
   }
 
-  const marginRight = {
-    marginRight: 20,
-  };
   return (
     <div className="container">
       <Flex justify="space-between" align="flex-start">

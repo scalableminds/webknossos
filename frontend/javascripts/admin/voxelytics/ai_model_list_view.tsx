@@ -217,7 +217,7 @@ function EditModelSharedOrganizationsModal({
       width={800}
     >
       <p>
-        Select all organization that should have access to the AI model{" "}
+        Select all organizations that should have access to the AI model{" "}
         <Typography.Text italic>{model.name}</Typography.Text>.
       </p>
       <Typography.Paragraph type="secondary">

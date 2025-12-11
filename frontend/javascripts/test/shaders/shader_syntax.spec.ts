@@ -24,7 +24,7 @@ describe("Shader syntax", () => {
   });
 
   // Extend the context by creating a new test function, because the extra context type cannot be supplied
-  // to it.for otherwise.
+  // to it otherwise
   const shaderTest = it.extend({
     warnings: { emittedCount: 0 },
   });

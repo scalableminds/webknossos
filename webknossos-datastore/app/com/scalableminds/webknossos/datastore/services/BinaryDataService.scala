@@ -216,13 +216,13 @@ class BinaryDataService(val dataBaseDir: Path,
 
     rs.reverse.foreach {
       case (bucket, data) =>
-        val xMin = math.max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag)
-        val yMin = math.max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag)
-        val zMin = math.max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag)
+        val xMin = math.max(0, math.max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag))
+        val yMin = math.max(0, math.max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag))
+        val zMin = math.max(0, math.max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag))
 
-        val xMax = math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength)
-        val yMax = math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength)
-        val zMax = math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength)
+        val xMax = math.max(0, math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength))
+        val yMax = math.max(0, math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength))
+        val zMax = math.max(0, math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength))
 
         for {
           z <- zMin until zMax

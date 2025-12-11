@@ -192,6 +192,7 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
     );
   } catch (exc) {
     Toast.error(`The mesh for segment ${action.segmentId} could not be loaded. Please try again.`);
+    console.log("Exception when loading ad-hoc mesh for segment", action.segmentId, ":", exc);
     ErrorHandling.notify(exc as any);
   }
 }
@@ -469,11 +470,12 @@ function* maybeLoadMeshChunk(
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
-  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
-  const paddedPositionWithinLayer =
-    layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
-  if (threeDMap.get(paddedPositionWithinLayer)) {
+  // Move position by -1,-1,-1 in mag to get a closing edge at the topleft layer border
+  // and to fill grid gaps (cube size will be increased by 1,1,1 accordingly)
+  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
+
+  if (threeDMap.get(paddedPosition)) {
     return [];
   }
 
@@ -482,7 +484,7 @@ function* maybeLoadMeshChunk(
   }
 
   batchCounterPerSegment[segmentId]++;
-  threeDMap.set(paddedPositionWithinLayer, true);
+  threeDMap.set(paddedPosition, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
 
   if (isInitialRequest) {
@@ -495,7 +497,13 @@ function* maybeLoadMeshChunk(
 
   const { segmentMeshController } = getSceneController();
 
-  const cubeSize = marchingCubeSizeInTargetMag();
+  let cubeSize = marchingCubeSizeInTargetMag();
+  cubeSize = V3.toArray(V3.add(cubeSize, [1, 1, 1]));
+  if (cubePreciselyTouchesBottomRightLayerEdge(paddedPosition, mag, cubeSize, layer)) {
+    // cube ends precisely at layer bbox,
+    // increase size by 1,1,1 again to get a closing edge
+    cubeSize = V3.toArray(V3.add(cubeSize, [1, 1, 1]));
+  }
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
@@ -506,7 +514,7 @@ function* maybeLoadMeshChunk(
         },
         layerSourceInfo,
         {
-          positionWithPadding: paddedPositionWithinLayer,
+          positionWithPadding: paddedPosition,
           additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,
@@ -548,6 +556,21 @@ function* maybeLoadMeshChunk(
   }
 
   return [];
+}
+
+function cubePreciselyTouchesBottomRightLayerEdge(
+  paddedPosition: Vector3, // in mag1
+  mag: Vector3,
+  cubeSize: Vector3, // in target mag
+  layer: DataLayer,
+) {
+  const cubeBottomRight = V3.add(paddedPosition, V3.scale3(cubeSize, mag));
+  const layerBottomRight = layer.cube.boundingBox.max;
+  return (
+    cubeBottomRight[0] === layerBottomRight[0] ||
+    cubeBottomRight[1] === layerBottomRight[1] ||
+    cubeBottomRight[2] === layerBottomRight[2]
+  );
 }
 
 function* markEditedCellAsDirty(): Saga<void> {

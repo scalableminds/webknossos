@@ -319,17 +319,20 @@ class ActionBarView extends React.PureComponent<Props, State> {
     ];
 
     return (
-      <Dropdown
-        key="ai-job-dropdown"
-        menu={{
-          items: menuItems,
-        }}
-        disabled={disabled}
-      >
-        <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
-          AI Analysis
-        </Button>
-      </Dropdown>
+      // div is for left spacing through CSS
+      <div>
+        <Dropdown
+          key="ai-job-dropdown"
+          menu={{
+            items: menuItems,
+          }}
+          disabled={disabled}
+        >
+          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
+            AI Analysis
+          </Button>
+        </Dropdown>
+      </div>
     );
   }
 

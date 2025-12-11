@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-import { V3 } from "libs/mjs";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
@@ -1965,7 +1964,7 @@ export function computeAdHocMesh(
           // is added here to the position and bbox size.
           position: positionWithPadding, // position is in mag1
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
+          cubeSize: cubeSize, // cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
           voxelSizeFactorInUnit: scaleFactor,

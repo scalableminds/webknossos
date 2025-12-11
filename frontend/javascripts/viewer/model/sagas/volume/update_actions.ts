@@ -42,6 +42,9 @@ export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargest
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type LEGACY_UpdateSegmentUpdateAction = ReturnType<typeof LEGACY_updateSegmentVolumeAction>;
 export type UpdateSegmentPartialUpdateAction = ReturnType<typeof updateSegmentPartialVolumeAction>;
+export type UpdateMetadataOfSegmentUpdateAction = ReturnType<
+  typeof updateMetadataOfSegmentUpdateAction
+>;
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
   typeof updateSegmentVisibilityVolumeAction
 >;
@@ -146,6 +149,7 @@ export type ApplicableSkeletonUpdateAction =
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
   | UpdateSegmentPartialUpdateAction
+  | UpdateMetadataOfSegmentUpdateAction
   | CreateSegmentUpdateAction
   | DeleteSegmentUpdateAction
   | UpdateSegmentGroupsUpdateAction
@@ -193,6 +197,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | CreateSegmentUpdateAction
   | LEGACY_UpdateSegmentUpdateAction
   | UpdateSegmentPartialUpdateAction
+  | UpdateMetadataOfSegmentUpdateAction
   | UpdateSegmentVisibilityVolumeAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
@@ -809,6 +814,23 @@ export function updateSegmentPartialVolumeAction(
       actionTracingId,
       ...shape,
       ...maybeMetadataWrapper,
+    },
+  } as const;
+}
+
+export function updateMetadataOfSegmentUpdateAction(
+  id: number,
+  upsertEntriesByKey: Array<MetadataEntryProto>,
+  removeEntriesByKey: Array<string>,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateMetadataOfSegment",
+    value: {
+      id,
+      upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
+      removeEntriesByKey,
+      actionTracingId,
     },
   } as const;
 }

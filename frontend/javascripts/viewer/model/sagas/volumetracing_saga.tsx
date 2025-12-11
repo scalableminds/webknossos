@@ -78,6 +78,7 @@ import {
   updateSegmentGroupsExpandedState,
   updateSegmentPartialVolumeAction,
   updateSegmentVisibilityVolumeAction,
+  updateMetadataOfSegmentUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
@@ -93,6 +94,7 @@ import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
+import { diffArrays } from "libs/utils";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -451,31 +453,62 @@ function* uncachedDiffSegmentLists(
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 
-    const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
-    const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
-
-    let changedPropertyNames: Array<Exclude<keyof Segment, "isVisible">> = [];
+    const changedPropertyNames: Set<Exclude<keyof Segment, "isVisible">> = new Set();
     for (const propertyName of SegmentPropertiesWithoutUserState) {
-      if (
-        !_.isEqual(prevSegmentWithoutIsVisible[propertyName], segmentWithoutIsVisible[propertyName])
-      ) {
-        changedPropertyNames.push(propertyName);
+      if (!_.isEqual(prevSegment[propertyName], segment[propertyName])) {
+        changedPropertyNames.add(propertyName);
       }
     }
-    if (changedPropertyNames.length > 0) {
+    if (changedPropertyNames.size > 0) {
+      if (changedPropertyNames.has("metadata")) {
+        changedPropertyNames.delete("metadata");
+        yield* diffMetadataOfSegments(segment, prevSegment, tracingId);
+      }
+
       yield updateSegmentPartialVolumeAction(
         Object.fromEntries([
           ["id", segment.id],
-          ...changedPropertyNames.map((prop) => [prop, segmentWithoutIsVisible[prop]]),
+          ...Array.from(changedPropertyNames).map((prop) => [prop, segment[prop]]),
         ]),
         tracingId,
       );
     }
 
-    if (isVisible !== prevIsVisible) {
+    if (segment.isVisible !== prevSegment.isVisible) {
       yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
     }
   }
+}
+
+export function* diffMetadataOfSegments(segment: Segment, prevSegment: Segment, tracingId: string) {
+  const { metadata } = segment;
+  const { metadata: prevMetadata } = prevSegment;
+
+  if (metadata === prevMetadata) {
+    return;
+  }
+
+  const metadataDict = _.keyBy(metadata, "key");
+  const prevMetadataDict = _.keyBy(prevMetadata, "key");
+
+  const { both, onlyA, onlyB } = diffArrays(
+    prevMetadata.map((m) => m.key),
+    metadata.map((m) => m.key),
+  );
+
+  const changedKeys = both.filter((key) => metadataDict[key] !== prevMetadataDict[key]);
+  const upsertEntriesByKey = [
+    ...changedKeys.map((key) => metadataDict[key]),
+    ...onlyB.map((key) => metadataDict[key]),
+  ];
+  const removeEntriesByKey = onlyA;
+
+  yield updateMetadataOfSegmentUpdateAction(
+    segment.id,
+    upsertEntriesByKey,
+    removeEntriesByKey,
+    tracingId,
+  );
 }
 
 export function* diffVolumeTracing(

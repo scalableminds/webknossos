@@ -66,6 +66,7 @@ const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   createSegment: true,
   deleteSegment: true,
   updateSegmentGroups: true,
+  updateMetadataOfSegment: true,
   addUserBoundingBoxInVolumeTracing: true,
   updateUserBoundingBoxInVolumeTracing: true,
   deleteUserBoundingBoxInVolumeTracing: true,
@@ -97,8 +98,12 @@ describe("Update Action Application for VolumeTracing", () => {
         groupId: 3,
         metadata: [
           {
-            key: "someKey",
-            stringValue: "some string value",
+            key: "someKey1",
+            stringValue: "some string value (will be changed later)",
+          },
+          {
+            key: "someKey2",
+            stringValue: "will be deleted later",
           },
         ],
       },
@@ -130,6 +135,22 @@ describe("Update Action Application for VolumeTracing", () => {
       tracingId,
     ),
     VolumeTracingActions.toggleSegmentGroupAction(3, tracingId),
+    VolumeTracingActions.updateSegmentAction(
+      3,
+      {
+        metadata: [
+          {
+            key: "someKey1",
+            stringValue: "changed",
+          },
+          {
+            key: "someKey3",
+            stringValue: "added",
+          },
+        ],
+      },
+      tracingId,
+    ),
     VolumeTracingActions.removeSegmentAction(3, tracingId),
     VolumeTracingActions.setLargestSegmentIdAction(10000),
   ];

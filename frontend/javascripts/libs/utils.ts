@@ -311,6 +311,11 @@ export function computeShapeFromBoundingBox(bb: BoundingBoxMinMaxType): Vector3 
   return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
 }
 
+export function computeVolumeFromBoundingBox(bb: BoundingBoxMinMaxType): number {
+  const shape = computeShapeFromBoundingBox(bb);
+  return shape[0] * shape[1] * shape[2];
+}
+
 export function aggregateBoundingBox(
   boundingBoxes: Array<BoundingBoxObject>,
 ): BoundingBoxMinMaxType {
@@ -713,6 +718,18 @@ export function isNoElementFocussed(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
   return document.activeElement === document.body;
+}
+
+export function isEditableEventTarget(target: EventTarget | null): boolean {
+  if (target == null || !(target instanceof Element)) {
+    return false; // not an element (could be Window, Document, Text, ...), ignore
+  }
+  const element = target as HTMLElement;
+  const tag = element.tagName?.toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || element.isContentEditable) {
+    return true; // ignore Enter inside these fields
+  }
+  return false;
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Safely_detecting_option_support

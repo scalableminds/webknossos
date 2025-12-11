@@ -469,7 +469,7 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + d": createDelayAwareMoveHandler(-5, true),
         "shift + space": createDelayAwareMoveHandler(-1),
         "ctrl + space": createDelayAwareMoveHandler(-1),
-        enter: () => Store.dispatch(enterAction()),
+        enter: (_, _isOriginalEvent, event) => Store.dispatch(enterAction(event)),
         esc: () => Store.dispatch(escapeAction()),
         space: createDelayAwareMoveHandler(1),
         f: createDelayAwareMoveHandler(1, true),

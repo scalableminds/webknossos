@@ -8,7 +8,7 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { ColoredLogger, SoftError, getAdaptToTypeFunction, isNumberMap } from "libs/utils";
+import { SoftError, getAdaptToTypeFunction, isEditableEventTarget, isNumberMap } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -215,7 +215,6 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
-  ColoredLogger.logRed("clickSegmentAction");
   yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
 
   const autoRenderMeshInProofreading = yield* select(
@@ -689,9 +688,11 @@ function* performMinCut(
   return [false, edgesToRemove];
 }
 
-function* performPartitionedMinCut(_action: MinCutPartitionsAction | EnterAction): Saga<void> {
+function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction): Saga<void> {
   const isMultiSplitActive = yield* select((state) => state.userConfiguration.isMultiSplitActive);
-  if (!isMultiSplitActive) {
+  const isFromEditingEvent = action.type === "ENTER" && isEditableEventTarget(action.event.target);
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+  if (!isMultiSplitActive || activeTool !== AnnotationTool.PROOFREAD || isFromEditingEvent) {
     return;
   }
 
@@ -1046,7 +1047,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   }
 
   if (action.type === "PROOFREAD_MERGE") {
-    ColoredLogger.logRed("remove segment action", targetAgglomerateId);
     // Remove the segment that doesn't exist anymore.
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
   }
@@ -1160,7 +1160,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     Toast.info(`Assigned name "${sourceAgglomerate.name}" to new split-off segment.`);
   }
 
-  ColoredLogger.logRed("refreshAffectedSegmentItemsAndMeshes");
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: sourceAgglomerateId,

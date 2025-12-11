@@ -38,7 +38,7 @@ import { useState } from "react";
 import {
   type APIDataLayer,
   type APIDataset,
-  APIJobType,
+  APIJobCommand,
   type AdditionalAxis,
   type VoxelSize,
 } from "types/api_types";
@@ -59,8 +59,8 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { Model } from "viewer/singletons";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
-import { BoundingBoxSelection } from "viewer/view/action-bar/ai_job_modals/components/bounding_box_selection";
-import { MagSlider } from "viewer/view/action-bar/ai_job_modals/components/mag_slider";
+import { MagSlider } from "viewer/view/action-bar/mag_slider";
+import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -591,7 +591,7 @@ function _DownloadModalView({
         </Text>
       </Row>
       {activeTabKey === "export" &&
-      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF) ? (
+      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.EXPORT_TIFF) ? (
         workerInfo
       ) : (
         <div>

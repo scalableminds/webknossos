@@ -1,5 +1,4 @@
 import {
-  CopyOutlined,
   DownloadOutlined,
   FolderOpenOutlined,
   InboxOutlined,
@@ -22,15 +21,16 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
+import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import TextWithDescription from "components/text_with_description";
 import update from "immutability-helper";
 import { handleGenericError } from "libs/error_handling";
-import { formatHash, stringToColor } from "libs/format_utils";
+import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -308,7 +308,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           </Link>
           <br />
           <AsyncLink
-            href="#"
             onClick={() => {
               const hasVolumeAnnotation = getVolumeDescriptors(annotation).length > 0;
               return downloadAnnotation(id, typ, hasVolumeAnnotation);
@@ -321,7 +320,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <>
               <br />
               <AsyncLink
-                href="#"
                 onClick={() => this.finishOrReopenAnnotation("finish", annotation)}
                 icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
                 disabled={annotation.isLockedByOwner}
@@ -337,7 +335,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <>
               <br />
               <AsyncLink
-                href="#"
                 onClick={() => this.setLockedState(annotation, !annotation.isLockedByOwner)}
                 icon={
                   annotation.isLockedByOwner ? (
@@ -357,7 +354,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink
-            href="#"
             onClick={() => this.finishOrReopenAnnotation("reopen", annotation)}
             icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
@@ -547,30 +543,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     return filteredAnnotations.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
   }
 
-  renderIdAndCopyButton(annotation: APIAnnotationInfo) {
-    const copyIdToClipboard = async () => {
-      await navigator.clipboard.writeText(annotation.id);
-      Toast.success("ID copied to clipboard");
-    };
-
-    return (
-      <div>
-        <Tooltip title="Copy long ID" placement="bottom">
-          <Button
-            onClick={copyIdToClipboard}
-            icon={<CopyOutlined />}
-            style={{
-              boxShadow: "none",
-              backgroundColor: "transparent",
-              borderColor: "transparent",
-            }}
-          />
-        </Tooltip>
-        {formatHash(annotation.id)}
-      </div>
-    );
-  }
-
   renderNameWithDescription(annotation: APIAnnotationInfo) {
     return (
       <div style={{ color: annotation.name ? "inherit" : "#7c7c7c" }}>
@@ -646,10 +618,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       {
         title: "ID",
         dataIndex: "id",
-        width: 100,
+        width: 120,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <>
-            <div className="monospace-id">{this.renderIdAndCopyButton(annotation)}</div>
+            <FormattedId id={annotation.id} />
 
             {!this.isAnnotationEditable(annotation) ? (
               <div style={disabledColor}>{READ_ONLY_ICON} read-only</div>

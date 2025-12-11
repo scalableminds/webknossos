@@ -48,7 +48,7 @@ import {
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
-  APIJobType,
+  APIJobCommand,
   type APISkeletonLayer,
   AnnotationLayerEnum,
   type AnnotationLayerType,
@@ -124,7 +124,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/ai_job_modals/materialize_volume_annotation_modal";
+import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
   ColorSetting,
@@ -709,7 +709,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : null,
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
+        APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
       )
         ? {
             label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),

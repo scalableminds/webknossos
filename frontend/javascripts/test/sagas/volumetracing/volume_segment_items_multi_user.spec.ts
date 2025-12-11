@@ -22,7 +22,6 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "../proofreading/proofreading_test_utils";
 import type { Vector3 } from "viewer/constants";
-import { ColoredLogger } from "libs/utils";
 
 describe("Collaborative editing of segment items", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -134,10 +133,28 @@ describe("Collaborative editing of segment items", () => {
       color: null,
       groupId: 4,
       creationTime: Date.now(),
-      metadata: [],
     };
 
+    const injectedMetadataValue = {
+      actionTracingId: "volumeTracingId",
+      id: 1,
+      upsertEntriesByKey: [
+        {
+          key: "BASE_1",
+          stringValue: "changed by remote",
+        },
+        {
+          key: "ADDED_BY_REMOTE",
+          stringValue: "ADDED_BY_REMOTE",
+        },
+      ],
+      removeEntriesByKey: ["BASE_2"],
+    };
     backendMock.planVersionInjection(5, [
+      {
+        name: "updateMetadataOfSegment",
+        value: injectedMetadataValue,
+      },
       {
         name: "updateSegmentPartial",
         value: injectedSegmentProps,
@@ -156,21 +173,63 @@ describe("Collaborative editing of segment items", () => {
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
       // and save so that it exists in the base version.
-      const baseSegmentProps = { name: "Some Name", color: [128, 0, 0] as Vector3 };
+      const baseSegmentProps = {
+        name: "Some Name",
+        color: [128, 0, 0] as Vector3,
+        metadata: [
+          {
+            key: "BASE_1",
+            stringValue: "BASE_1", // will be changed by both users
+          },
+          {
+            key: "BASE_2", // will be deleted by remote user
+            stringValue: "BASE_2",
+          },
+          {
+            key: "BASE_3", // will be deleted by local user
+            stringValue: "BASE_3",
+          },
+        ],
+      };
       yield put(updateSegmentAction(segmentId, baseSegmentProps, tracingId));
       yield call(() => api.tracing.save());
 
-      ColoredLogger.logGreen("Set up complete.");
+      // The preparation is complete now.
 
-      const updateSegmentProps = { color: [129, 0, 0] as Vector3 };
+      const updateSegmentProps = {
+        color: [129, 0, 0] as Vector3,
+        metadata: [
+          {
+            key: "BASE_1",
+            stringValue: "changed by local user",
+          },
+          baseSegmentProps.metadata[1], // don't change BASE_2
+          // BASE_3 is deleted
+          {
+            key: "ADDED_BY_LOCAL_USER",
+            booleanValue: true,
+          },
+        ],
+      };
       yield put(updateSegmentAction(segmentId, updateSegmentProps, tracingId));
 
-      ColoredLogger.logGreen("Trying to save color 129.");
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const updateSegment = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
       expect(updateSegment).toMatchObject([
+        {
+          name: "updateMetadataOfSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            id: 1,
+            removeEntriesByKey: ["BASE_3"],
+            upsertEntriesByKey: [
+              updateSegmentProps.metadata[0], // BASE_1
+              updateSegmentProps.metadata[2], // ADDED_BY_LOCAL_USER
+            ],
+          },
+        },
         {
           name: "updateSegmentPartial",
           value: {
@@ -187,6 +246,13 @@ describe("Collaborative editing of segment items", () => {
         color: updateSegmentProps.color,
         name: injectedSegmentProps.name,
         groupId: injectedSegmentProps.groupId,
+        metadata: [
+          injectedMetadataValue.upsertEntriesByKey[1], // ADDED_BY_REMOTE
+          updateSegmentProps.metadata[0], // BASE_1 (was changed by both but local user won the race)
+          // BASE_2 was deleted by remote user
+          // BASE_3 was deleted by local user
+          updateSegmentProps.metadata[2], // ADDED_BY_LOCAL_USER
+        ],
       });
     });
 

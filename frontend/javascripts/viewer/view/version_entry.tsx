@@ -58,6 +58,7 @@ import type {
   UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
+  UpdateMetadataOfSegmentUpdateAction,
   UpdateNodeUpdateAction,
   UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
@@ -350,6 +351,14 @@ const descriptionFns: Record<
     );
     return {
       description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  updateMetadataOfSegment: (
+    action: AsServerAction<UpdateMetadataOfSegmentUpdateAction>,
+  ): Description => {
+    return {
+      description: `Updated metadata of segment with id: ${action.value.id}`,
       icon: <EditOutlined />,
     };
   },

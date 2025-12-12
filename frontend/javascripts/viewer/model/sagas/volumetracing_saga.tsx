@@ -1,12 +1,8 @@
-import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import _ from "lodash";
-import memoizeOne from "memoize-one";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
-import { AnnotationLayerEnum } from "types/api_types";
 import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
@@ -16,8 +12,8 @@ import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
+  AnnotationTool,
   isBrushTool,
   isTraceTool,
   isVolumeDrawingTool,
@@ -65,36 +61,14 @@ import {
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
-import {
-  type UpdateActionWithoutIsolationRequirement,
-  createSegmentVolumeAction,
-  deleteSegmentDataVolumeAction,
-  deleteSegmentVolumeAction,
-  removeFallbackLayer,
-  updateActiveSegmentId,
-  updateLargestSegmentId,
-  updateMappingName,
-  updateSegmentGroups,
-  updateSegmentGroupsExpandedState,
-  updateSegmentPartialVolumeAction,
-  updateSegmentVisibilityVolumeAction,
-  updateMetadataOfSegmentUpdateAction,
-} from "viewer/model/sagas/volume/update_actions";
+import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
-import { Model, api } from "viewer/singletons";
-import {
-  type Segment,
-  type SegmentMap,
-  SegmentPropertiesWithoutUserState,
-  type VolumeTracing,
-} from "viewer/store";
+import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
-import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { createVolumeLayer, labelWithVoxelBuffer2D, type BooleanBox } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
-import { diffArrays } from "libs/utils";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -409,178 +383,6 @@ export function* ensureToolIsAllowedInMag(): Saga<void> {
     if (isMagTooLow) {
       yield* put(setToolAction(AnnotationTool.MOVE));
     }
-  }
-}
-
-export const cachedDiffSegmentLists = memoizeOne(
-  (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
-    Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
-);
-
-function* uncachedDiffSegmentLists(
-  tracingId: string,
-  prevSegments: SegmentMap,
-  newSegments: SegmentMap,
-): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  const {
-    onlyA: deletedSegmentIds,
-    onlyB: addedSegmentIds,
-    changed: bothSegmentIds,
-  } = diffDiffableMaps(prevSegments, newSegments);
-
-  for (const segmentId of deletedSegmentIds) {
-    yield deleteSegmentVolumeAction(segmentId, tracingId);
-  }
-
-  for (const segmentId of addedSegmentIds) {
-    const segment = newSegments.getOrThrow(segmentId);
-    yield createSegmentVolumeAction(
-      segment.id,
-      segment.anchorPosition,
-      segment.additionalCoordinates,
-      segment.name,
-      segment.color,
-      segment.groupId,
-      segment.metadata,
-      tracingId,
-    );
-    if (!segment.isVisible) {
-      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
-    }
-  }
-
-  for (const segmentId of bothSegmentIds) {
-    const segment = newSegments.getOrThrow(segmentId);
-    const prevSegment = prevSegments.getOrThrow(segmentId);
-
-    const changedPropertyNames: Set<Exclude<keyof Segment, "isVisible">> = new Set();
-    for (const propertyName of SegmentPropertiesWithoutUserState) {
-      if (!_.isEqual(prevSegment[propertyName], segment[propertyName])) {
-        changedPropertyNames.add(propertyName);
-      }
-    }
-    if (changedPropertyNames.size > 0) {
-      if (changedPropertyNames.has("metadata")) {
-        changedPropertyNames.delete("metadata");
-        yield* diffMetadataOfSegments(segment, prevSegment, tracingId);
-      }
-
-      yield updateSegmentPartialVolumeAction(
-        Object.fromEntries([
-          ["id", segment.id],
-          ...Array.from(changedPropertyNames).map((prop) => [prop, segment[prop]]),
-        ]),
-        tracingId,
-      );
-    }
-
-    if (segment.isVisible !== prevSegment.isVisible) {
-      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
-    }
-  }
-}
-
-export function* diffMetadataOfSegments(segment: Segment, prevSegment: Segment, tracingId: string) {
-  const { metadata } = segment;
-  const { metadata: prevMetadata } = prevSegment;
-
-  if (metadata === prevMetadata) {
-    return;
-  }
-
-  const metadataDict = _.keyBy(metadata, "key");
-  const prevMetadataDict = _.keyBy(prevMetadata, "key");
-
-  const { both, onlyA, onlyB } = diffArrays(
-    prevMetadata.map((m) => m.key),
-    metadata.map((m) => m.key),
-  );
-
-  const changedKeys = both.filter((key) => metadataDict[key] !== prevMetadataDict[key]);
-  const upsertEntriesByKey = [
-    ...changedKeys.map((key) => metadataDict[key]),
-    ...onlyB.map((key) => metadataDict[key]),
-  ];
-  const removeEntriesByKey = onlyA;
-
-  yield updateMetadataOfSegmentUpdateAction(
-    segment.id,
-    upsertEntriesByKey,
-    removeEntriesByKey,
-    tracingId,
-  );
-}
-
-export function* diffVolumeTracing(
-  prevVolumeTracing: VolumeTracing,
-  volumeTracing: VolumeTracing,
-): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  if (prevVolumeTracing === volumeTracing) {
-    return;
-  }
-  if (prevVolumeTracing.activeCellId !== volumeTracing.activeCellId) {
-    yield updateActiveSegmentId(volumeTracing.activeCellId, volumeTracing.tracingId);
-  }
-  if (prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId) {
-    yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);
-  }
-
-  yield* diffBoundingBoxes(
-    prevVolumeTracing.userBoundingBoxes,
-    volumeTracing.userBoundingBoxes,
-    volumeTracing.tracingId,
-    AnnotationLayerEnum.Volume,
-  );
-
-  if (prevVolumeTracing.segments !== volumeTracing.segments) {
-    for (const action of cachedDiffSegmentLists(
-      volumeTracing.tracingId,
-      prevVolumeTracing.segments,
-      volumeTracing.segments,
-    )) {
-      yield action;
-    }
-  }
-
-  const groupDiff = diffGroups(prevVolumeTracing.segmentGroups, volumeTracing.segmentGroups);
-
-  if (groupDiff.didContentChange) {
-    // The groups (without isExpanded) actually changed. Save them to the server.
-    yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
-  }
-
-  if (groupDiff.newlyExpandedIds.length > 0) {
-    yield updateSegmentGroupsExpandedState(
-      groupDiff.newlyExpandedIds,
-      true,
-      volumeTracing.tracingId,
-    );
-  }
-  if (groupDiff.newlyNotExpandedIds.length > 0) {
-    yield updateSegmentGroupsExpandedState(
-      groupDiff.newlyNotExpandedIds,
-      false,
-      volumeTracing.tracingId,
-    );
-  }
-
-  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-    yield removeFallbackLayer(volumeTracing.tracingId);
-  }
-
-  if (
-    prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
-    prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
-  ) {
-    // Once the first volume action is performed on a volume layer, the mapping state is locked.
-    // In case no mapping is active, this is denoted by setting the mapping name to null.
-    const action = updateMappingName(
-      volumeTracing.mappingName || null,
-      volumeTracing.hasEditableMapping || null,
-      volumeTracing.mappingIsLocked,
-      volumeTracing.tracingId,
-    );
-    yield action;
   }
 }
 

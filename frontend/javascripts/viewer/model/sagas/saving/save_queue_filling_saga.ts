@@ -24,7 +24,7 @@ import {
   updateCameraAnnotation,
   updateTdCamera,
 } from "viewer/model/sagas/volume/update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
+import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 import type {
   CameraData,
   Flycam,

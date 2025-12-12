@@ -1,6 +1,6 @@
 import type { MetadataEntryProto } from "types/api_types";
 import { updateMetadataOfSegmentUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import { diffMetadataOfSegments } from "viewer/model/sagas/volumetracing_saga";
+import { diffMetadataOfSegments } from "viewer/model/sagas/volume/volume_diffing";
 import type { Segment } from "viewer/store";
 import { describe, expect, it } from "vitest";
 

@@ -12,7 +12,6 @@ import {
 import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import type {
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
@@ -21,6 +20,7 @@ import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, test } from "vitest";
 import { transformStateAsReadOnly } from "test/helpers/utils";
+import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];

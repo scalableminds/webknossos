@@ -13,7 +13,7 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import defaultState from "viewer/default_state";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
+import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 import { type Tree, TreeMap, type TreeGroup } from "viewer/model/types/tree_types";
 
 const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({

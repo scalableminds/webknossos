@@ -20,7 +20,7 @@ import {
 import type { Mesh } from "three";
 import {
   type APIDataLayer,
-  APIJobType,
+  APIJobCommand,
   type APISegmentationLayer,
   CAMERA_POSITIONS,
   MOVIE_RESOLUTIONS,
@@ -39,7 +39,7 @@ import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { BoundingBoxSelection } from "./ai_job_modals/components/bounding_box_selection";
+import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
 
 type Props = {
   isOpen: boolean;
@@ -330,7 +330,7 @@ function CreateAnimationModal(props: Props) {
 
   const isFeatureDisabled = !(
     dataset.dataStore.jobsEnabled &&
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.RENDER_ANIMATION)
+    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.RENDER_ANIMATION)
   );
 
   return (

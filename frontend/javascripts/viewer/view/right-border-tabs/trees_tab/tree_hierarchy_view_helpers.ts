@@ -252,6 +252,11 @@ export function getGroupByIdWithSubgroups(
   treeGroups: TreeGroup[],
   groupId: number | undefined,
 ): number[] {
+  /*
+   * Given a nested array of groups and a group id,
+   * returns the ids of the given group and all its
+   * subgroups.
+   */
   const groupWithSubgroups: number[] = [];
   callDeepWithChildren(treeGroups, groupId, (treeGroup) => {
     groupWithSubgroups.push(treeGroup.groupId);

@@ -36,11 +36,13 @@ import type {
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
   DeleteSegmentDataUpdateAction,
+  DeleteSegmentGroupUpdateAction,
   DeleteSegmentUpdateAction,
   DeleteTreeUpdateAction,
   DeleteUserBoundingBoxInSkeletonTracingAction,
   DeleteUserBoundingBoxInVolumeTracingAction,
   LEGACY_MergeTreeUpdateAction,
+  LEGACY_UpdateSegmentUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
@@ -57,11 +59,12 @@ import type {
   UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
+  UpdateMetadataOfSegmentUpdateAction,
   UpdateNodeUpdateAction,
   UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
-  UpdateSegmentGroupsUpdateAction,
-  UpdateSegmentUpdateAction,
+  LEGACY_UpdateSegmentGroupsUpdateAction,
+  UpdateSegmentPartialUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
@@ -72,6 +75,7 @@ import type {
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+  UpsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -233,7 +237,7 @@ const descriptionFns: Record<
     };
   },
   updateSegmentGroups: (
-    firstAction: AsServerAction<UpdateSegmentGroupsUpdateAction>,
+    firstAction: AsServerAction<LEGACY_UpdateSegmentGroupsUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -243,6 +247,34 @@ const descriptionFns: Record<
     );
     return {
       description: `Updated the segment groups of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  deleteSegmentGroup: (
+    firstAction: AsServerAction<DeleteSegmentGroupUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Deleted the segment group with id ${firstAction.value.groupId} of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
+    };
+  },
+  upsertSegmentGroup: (
+    firstAction: AsServerAction<UpsertSegmentGroupUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Added/changed the segment group with id ${firstAction.value.groupId} of layer ${layerName}.`,
       icon: <EditOutlined />,
     };
   },
@@ -325,7 +357,7 @@ const descriptionFns: Record<
     };
   },
   updateSegment: (
-    firstAction: AsServerAction<UpdateSegmentUpdateAction>,
+    firstAction: AsServerAction<LEGACY_UpdateSegmentUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -335,6 +367,28 @@ const descriptionFns: Record<
     );
     return {
       description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  updateSegmentPartial: (
+    firstAction: AsServerAction<UpdateSegmentPartialUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  updateMetadataOfSegment: (
+    action: AsServerAction<UpdateMetadataOfSegmentUpdateAction>,
+  ): Description => {
+    return {
+      description: `Updated metadata of segment with id: ${action.value.id}`,
       icon: <EditOutlined />,
     };
   },

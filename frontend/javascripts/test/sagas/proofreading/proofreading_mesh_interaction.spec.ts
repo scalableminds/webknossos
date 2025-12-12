@@ -63,7 +63,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+    yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
     yield put(setActiveCellAction(1, undefined, null, 1));
 
     yield call(createEditableMapping);
@@ -244,7 +244,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
+    yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
     yield call(createEditableMapping);
@@ -476,7 +476,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
+    yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
     yield call(createEditableMapping);

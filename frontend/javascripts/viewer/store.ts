@@ -62,6 +62,7 @@ import type {
 } from "./model/types/tree_types";
 
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
+import { ensureExactKeys } from "types/type_utils";
 // Value imports
 import defaultState from "viewer/default_state";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
@@ -175,14 +176,27 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly somePosition: Vector3 | undefined;
-  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
+  readonly anchorPosition?: Vector3 | null;
+  readonly additionalCoordinates?: AdditionalCoordinate[] | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
   readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
+type SegmentWithoutUserState = Omit<Segment, "isVisible">;
+
+export const SegmentPropertiesWithoutUserState = ensureExactKeys<SegmentWithoutUserState>()([
+  "id",
+  "name",
+  "anchorPosition",
+  "additionalCoordinates",
+  "creationTime",
+  "color",
+  "groupId",
+  "metadata",
+] as const) as unknown as Array<keyof SegmentWithoutUserState>;
+
 export type SegmentMap = DiffableMap<number, Segment>;
 
 export type LabelAction = {
@@ -453,6 +467,7 @@ export type RebaseRelevantAnnotationState = {
   readonly annotationDescription: string;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
+  readonly volumes: Array<VolumeTracing>;
   readonly isRebasing: boolean;
 };
 export type SaveState = {

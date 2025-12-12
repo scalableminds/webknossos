@@ -12,7 +12,6 @@ import {
 import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import type {
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
@@ -21,6 +20,7 @@ import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, test } from "vitest";
 import { transformStateAsReadOnly } from "test/helpers/utils";
+import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];
@@ -62,10 +62,12 @@ const applyActions = chainReduce(combinedReducer);
 // if the following dictionary doesn't contain that action.
 const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   updateLargestSegmentId: true,
-  updateSegment: true,
+  updateSegmentPartial: true,
   createSegment: true,
   deleteSegment: true,
-  updateSegmentGroups: true,
+  upsertSegmentGroup: true,
+  deleteSegmentGroup: true,
+  updateMetadataOfSegment: true,
   addUserBoundingBoxInVolumeTracing: true,
   updateUserBoundingBoxInVolumeTracing: true,
   deleteUserBoundingBoxInVolumeTracing: true,
@@ -88,8 +90,8 @@ describe("Update Action Application for VolumeTracing", () => {
   const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
-    VolumeTracingActions.updateSegmentAction(2, { somePosition: [1, 2, 3] }, tracingId),
-    VolumeTracingActions.updateSegmentAction(3, { somePosition: [3, 4, 5] }, tracingId),
+    VolumeTracingActions.updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),
+    VolumeTracingActions.updateSegmentAction(3, { anchorPosition: [3, 4, 5] }, tracingId),
     VolumeTracingActions.updateSegmentAction(
       3,
       {
@@ -97,8 +99,12 @@ describe("Update Action Application for VolumeTracing", () => {
         groupId: 3,
         metadata: [
           {
-            key: "someKey",
-            stringValue: "some string value",
+            key: "someKey1",
+            stringValue: "some string value (will be changed later)",
+          },
+          {
+            key: "someKey2",
+            stringValue: "will be deleted later",
           },
         ],
       },
@@ -126,10 +132,26 @@ describe("Update Action Application for VolumeTracing", () => {
     VolumeTracingActions.setActiveCellAction(4),
     VolumeTracingActions.updateSegmentAction(
       4,
-      { groupId: 3, somePosition: [7, 8, 9], isVisible: true },
+      { groupId: 3, anchorPosition: [7, 8, 9], isVisible: true },
       tracingId,
     ),
     VolumeTracingActions.toggleSegmentGroupAction(3, tracingId),
+    VolumeTracingActions.updateSegmentAction(
+      3,
+      {
+        metadata: [
+          {
+            key: "someKey1",
+            stringValue: "changed",
+          },
+          {
+            key: "someKey3",
+            stringValue: "added",
+          },
+        ],
+      },
+      tracingId,
+    ),
     VolumeTracingActions.removeSegmentAction(3, tracingId),
     VolumeTracingActions.setLargestSegmentIdAction(10000),
   ];

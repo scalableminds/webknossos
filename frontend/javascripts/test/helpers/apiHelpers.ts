@@ -74,7 +74,7 @@ import type {
   ServerVolumeTracing,
   ElementClass,
 } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import { __setFeatures } from "features";
 
@@ -102,6 +102,14 @@ export interface WebknossosTestContext extends BaseTestContext {
   api: ApiInterface;
   tearDownPullQueues: () => void;
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
+}
+
+export function getFlattenedUpdateActions(context: WebknossosTestContext) {
+  return _.flatten(
+    context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
+      saveQueueEntries.map((entry) => entry.actions),
+    ),
+  );
 }
 
 // Create mock objects

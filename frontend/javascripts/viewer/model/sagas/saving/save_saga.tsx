@@ -282,7 +282,10 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     yield* call(diffTracingsAndPrepareRebase);
   }
 
+  // ColoredLogger.logRed("needsRebasing", needsRebasing);
+
   try {
+    // ColoredLogger.logRed("apply from server", missingUpdateActions);
     if (missingUpdateActions.length > 0) {
       const { successful } = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
       if (!successful) {
@@ -290,6 +293,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       }
     }
     if (needsRebasing) {
+      // ColoredLogger.logRed("Reapply from save queue");
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
       const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue);
       if (!successful) {
@@ -481,8 +485,10 @@ export function* tryToIncorporateActions(
         case "updateLargestSegmentId":
         case "createSegment":
         case "deleteSegment":
-        case "updateSegment":
-        case "updateSegmentGroups":
+        case "updateSegmentPartial":
+        case "updateMetadataOfSegment":
+        case "upsertSegmentGroup":
+        case "deleteSegmentGroup":
         // Volume User Bounding Boxes
         case "addUserBoundingBoxInVolumeTracing":
         case "deleteUserBoundingBoxInVolumeTracing":
@@ -568,9 +574,11 @@ export function* tryToIncorporateActions(
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
         case "mergeTree":
+        case "updateSegment":
         case "updateSkeletonTracing":
         case "updateVolumeTracing":
         case "updateUserBoundingBoxesInSkeletonTracing":
+        case "updateSegmentGroups":
         case "updateUserBoundingBoxesInVolumeTracing": {
           console.error("Cannot apply action", action.name);
           yield* call(finalize);

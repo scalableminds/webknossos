@@ -13,6 +13,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import type { UserBoundingBox } from "viewer/store";
 import type { TreeGroup } from "../types/tree_types";
+import { callDeepWithChildren } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 function stripIsExpanded(groups: TreeGroup[]): TreeGroup[] {
   return groups.map((group) => ({
@@ -61,6 +62,55 @@ export function diffGroups(prevGroups: TreeGroup[], groups: TreeGroup[]) {
   );
 
   return { didContentChange, newlyExpandedIds, newlyNotExpandedIds };
+}
+
+type FlatGroup = {
+  id: number;
+  name: string;
+  parentGroupId: number | null | undefined;
+};
+
+function getGroupByIdDictionary(groups: TreeGroup[]) {
+  const flatGroupById = new Map<number, FlatGroup>();
+  callDeepWithChildren(
+    groups,
+    undefined,
+    (
+      group: TreeGroup,
+      _index: number,
+      _treeGroups: TreeGroup[],
+      parentGroupId: number | null | undefined,
+    ) => {
+      const flatGroup = {
+        id: group.groupId,
+        name: group.name,
+        parentGroupId,
+      };
+      flatGroupById.set(group.groupId, flatGroup);
+    },
+    undefined,
+    true,
+  );
+  return flatGroupById;
+}
+
+export function diffGroupsGranular(prevGroups: TreeGroup[], groups: TreeGroup[]) {
+  const prevGroupsById = getGroupByIdDictionary(prevGroups);
+  const groupsById = getGroupByIdDictionary(groups);
+
+  const { newlyExpandedIds, newlyNotExpandedIds } = diffGroups(prevGroups, groups);
+
+  const { onlyA, onlyB, changed } = Utils.diffMaps(prevGroupsById, groupsById, _.isEqual);
+
+  return {
+    prevGroupsById,
+    groupsById,
+    onlyA,
+    onlyB,
+    changed,
+    newlyExpandedIds,
+    newlyNotExpandedIds,
+  };
 }
 
 function stripIsVisible(boxes: UserBoundingBox[]): Omit<UserBoundingBox, "isVisible">[] {

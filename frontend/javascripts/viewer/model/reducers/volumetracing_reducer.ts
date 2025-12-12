@@ -1,7 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
-import type { APIUserBase, AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
+import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,
@@ -63,6 +63,8 @@ function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction
   return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
 }
 
+type Writable<T> = T extends object ? { -readonly [K in keyof T]: Writable<T[K]> } : T;
+
 function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
     const { segmentId, segment } = action;
@@ -71,24 +73,8 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     }
     const oldSegment = segments.getNullable(segmentId);
 
-    let somePosition;
-    let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
-    if (segment.somePosition) {
-      somePosition = Utils.floor3(segment.somePosition);
-      someAdditionalCoordinates = segment.someAdditionalCoordinates;
-    } else if (oldSegment != null) {
-      somePosition = oldSegment.somePosition;
-      someAdditionalCoordinates = oldSegment.someAdditionalCoordinates;
-    } else {
-      // UPDATE_SEGMENT was called for a non-existing segment without providing
-      // a position. This is necessary to define custom colors for segments
-      // which are listed in a JSON mapping. The action will store the segment
-      // without a position.
-    }
-
-    const metadata = sanitizeMetadata(segment.metadata || oldSegment?.metadata || []);
-
-    const newSegment: Segment = {
+    const newSegment: Writable<Segment> = {
+      id: segmentId,
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
       creationTime: action.timestamp,
@@ -96,13 +82,20 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
       color: null,
       isVisible: true,
       groupId: getSelectedIds(state)[0].group,
-      someAdditionalCoordinates: someAdditionalCoordinates,
+      metadata: [],
       ...oldSegment,
       ...segment,
-      metadata,
-      somePosition,
-      id: segmentId,
     };
+
+    if (newSegment.anchorPosition) {
+      newSegment.anchorPosition = Utils.floor3(newSegment.anchorPosition);
+    } else {
+      // UPDATE_SEGMENT was called for a non-existing segment without providing
+      // a position. This is necessary to define custom colors for segments
+      // which are listed in a JSON mapping. The action will store the segment
+      // without a position.
+    }
+    newSegment.metadata = sanitizeMetadata(newSegment.metadata);
 
     const newSegmentMap = segments.set(segmentId, newSegment);
     return newSegmentMap;
@@ -170,12 +163,13 @@ export function serverVolumeToClientVolumeTracing(
         const clientSegment: Segment = {
           ...segment,
           id: segment.segmentId,
-          somePosition: segment.anchorPosition
+          anchorPosition: segment.anchorPosition
             ? Utils.point3ToVector3(segment.anchorPosition)
             : undefined,
-          someAdditionalCoordinates: segment.additionalCoordinates,
+          additionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
           isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
+          groupId: segment.groupId ?? null,
         };
         return [segment.segmentId, clientSegment];
       }),
@@ -292,7 +286,14 @@ function VolumeTracingReducer(
         }
       }
 
-      return newState;
+      return update(newState, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            // todop: strictly speaking, we should only add the new volume entry
+            volumes: { $set: newState.annotation.volumes },
+          },
+        },
+      });
     }
 
     case "INITIALIZE_EDITABLE_MAPPING": {

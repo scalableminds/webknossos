@@ -1,20 +1,24 @@
+import _ from "lodash";
+import type { MetadataEntryProto } from "types/api_types";
 import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getSegmentsForLayer,
+  getVolumeTracingById,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
   removeSegmentAction,
   setActiveCellAction,
-  setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Segment, WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
-  type VolumeTracingReducerAction,
   setLargestSegmentIdReducer,
   setSegmentGroups,
   toggleSegmentGroupReducer,
+  type VolumeTracingReducerAction,
 } from "../volumetracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
@@ -51,17 +55,42 @@ function applySingleAction(
       const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
       return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
     }
-    case "createSegment":
-    case "updateSegment": {
-      const { actionTracingId, ...originalSegment } = ua.value;
-      const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
-      const segment: Partial<Segment> = {
-        somePosition: anchorPosition ?? undefined,
-        ...segmentWithoutAnchor,
-      };
+    case "createSegment": {
+      const { actionTracingId, ...segment } = ua.value;
+      return VolumeTracingReducer(state, updateSegmentAction(segment.id, segment, actionTracingId));
+    }
+    case "updateSegmentPartial": {
+      const { actionTracingId, ...segment } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(originalSegment.id, segment, actionTracingId),
+        updateSegmentAction(segment.id, segment, actionTracingId, Date.now(), false),
+      );
+    }
+    case "updateMetadataOfSegment": {
+      const { actionTracingId, id, upsertEntriesByKey, removeEntriesByKey } = ua.value;
+      const segments = getSegmentsForLayer(state, actionTracingId);
+      const segment = segments.getNullable(id);
+      if (segment == null) {
+        throw new Error(`Cannot find segment with id ${id} during application of update action.`);
+      }
+      const { metadata } = segment;
+
+      const removeKeySet = new Set(removeEntriesByKey);
+      const upsertDict = _.keyBy(upsertEntriesByKey, "key");
+
+      const metadataEntries = metadata.map(
+        (item) => [item.key, item] as [string, MetadataEntryProto],
+      );
+
+      const newMetadata = metadataEntries
+        // Only keep the items that should not be removed or changed
+        .filter(([key]) => !removeKeySet.has(key) && upsertDict[key] == null)
+        .map(([_key, item]) => item)
+        .concat(upsertEntriesByKey);
+
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(id, { metadata: newMetadata }, actionTracingId, Date.now(), false),
       );
     }
     case "deleteSegment": {
@@ -70,11 +99,17 @@ function applySingleAction(
         removeSegmentAction(ua.value.id, ua.value.actionTracingId),
       );
     }
-    case "updateSegmentGroups": {
-      return VolumeTracingReducer(
-        state,
-        setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
-      );
+    case "upsertSegmentGroup": {
+      // todop
+      return state;
+      // return VolumeTracingReducer(
+      //   state,
+      //   setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
+      // );
+    }
+    case "deleteSegmentGroup": {
+      // todop
+      return state;
     }
     case "updateUserBoundingBoxInVolumeTracing": {
       return applyUpdateUserBoundingBox(

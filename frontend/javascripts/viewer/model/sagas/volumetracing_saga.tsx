@@ -1,24 +1,19 @@
-import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import memoizeOne from "memoize-one";
-import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
-import getSceneController from "viewer/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-
-import _ from "lodash";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
-import { AnnotationLayerEnum } from "types/api_types";
+import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
+import getSceneController from "viewer/controller/scene_controller_provider";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  AnnotationTool,
   isBrushTool,
   isTraceTool,
   isVolumeDrawingTool,
@@ -66,28 +61,13 @@ import {
 } from "viewer/model/sagas/saga_helpers";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
-import {
-  type UpdateActionWithoutIsolationRequirement,
-  createSegmentVolumeAction,
-  deleteSegmentDataVolumeAction,
-  deleteSegmentVolumeAction,
-  removeFallbackLayer,
-  updateActiveSegmentId,
-  updateLargestSegmentId,
-  updateMappingName,
-  updateSegmentGroups,
-  updateSegmentGroupsExpandedState,
-  updateSegmentVisibilityVolumeAction,
-  updateSegmentVolumeAction,
-} from "viewer/model/sagas/volume/update_actions";
+import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
-import { Model, api } from "viewer/singletons";
-import type { SegmentMap, VolumeTracing } from "viewer/store";
+import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
-import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { createVolumeLayer, labelWithVoxelBuffer2D, type BooleanBox } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
@@ -231,8 +211,8 @@ export function* editVolumeLayerAsync(): Saga<never> {
       updateSegmentAction(
         activeCellId,
         {
-          somePosition: startEditingAction.position,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: startEditingAction.position,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -339,8 +319,8 @@ export function* editVolumeLayerAsync(): Saga<never> {
       updateSegmentAction(
         activeCellId,
         {
-          somePosition: lastPosition,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: lastPosition,
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -406,142 +386,6 @@ export function* ensureToolIsAllowedInMag(): Saga<void> {
   }
 }
 
-export const cachedDiffSegmentLists = memoizeOne(
-  (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
-    Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
-);
-
-function* uncachedDiffSegmentLists(
-  tracingId: string,
-  prevSegments: SegmentMap,
-  newSegments: SegmentMap,
-): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  const {
-    onlyA: deletedSegmentIds,
-    onlyB: addedSegmentIds,
-    changed: bothSegmentIds,
-  } = diffDiffableMaps(prevSegments, newSegments);
-
-  for (const segmentId of deletedSegmentIds) {
-    yield deleteSegmentVolumeAction(segmentId, tracingId);
-  }
-
-  for (const segmentId of addedSegmentIds) {
-    const segment = newSegments.getOrThrow(segmentId);
-    yield createSegmentVolumeAction(
-      segment.id,
-      segment.somePosition,
-      segment.name,
-      segment.color,
-      segment.groupId,
-      segment.metadata,
-      tracingId,
-    );
-    if (!segment.isVisible) {
-      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
-    }
-  }
-
-  for (const segmentId of bothSegmentIds) {
-    const segment = newSegments.getOrThrow(segmentId);
-    const prevSegment = prevSegments.getOrThrow(segmentId);
-
-    const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
-    const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
-
-    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
-      yield updateSegmentVolumeAction(
-        segment.id,
-        segment.somePosition,
-        segment.someAdditionalCoordinates,
-        segment.name,
-        segment.color,
-        segment.groupId,
-        segment.metadata,
-        tracingId,
-        segment.creationTime,
-      );
-    }
-
-    if (isVisible !== prevIsVisible) {
-      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
-    }
-  }
-}
-
-export function* diffVolumeTracing(
-  prevVolumeTracing: VolumeTracing,
-  volumeTracing: VolumeTracing,
-): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  if (prevVolumeTracing === volumeTracing) {
-    return;
-  }
-  if (prevVolumeTracing.activeCellId !== volumeTracing.activeCellId) {
-    yield updateActiveSegmentId(volumeTracing.activeCellId, volumeTracing.tracingId);
-  }
-  if (prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId) {
-    yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);
-  }
-
-  yield* diffBoundingBoxes(
-    prevVolumeTracing.userBoundingBoxes,
-    volumeTracing.userBoundingBoxes,
-    volumeTracing.tracingId,
-    AnnotationLayerEnum.Volume,
-  );
-
-  if (prevVolumeTracing.segments !== volumeTracing.segments) {
-    for (const action of cachedDiffSegmentLists(
-      volumeTracing.tracingId,
-      prevVolumeTracing.segments,
-      volumeTracing.segments,
-    )) {
-      yield action;
-    }
-  }
-
-  const groupDiff = diffGroups(prevVolumeTracing.segmentGroups, volumeTracing.segmentGroups);
-
-  if (groupDiff.didContentChange) {
-    // The groups (without isExpanded) actually changed. Save them to the server.
-    yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
-  }
-
-  if (groupDiff.newlyExpandedIds.length > 0) {
-    yield updateSegmentGroupsExpandedState(
-      groupDiff.newlyExpandedIds,
-      true,
-      volumeTracing.tracingId,
-    );
-  }
-  if (groupDiff.newlyNotExpandedIds.length > 0) {
-    yield updateSegmentGroupsExpandedState(
-      groupDiff.newlyNotExpandedIds,
-      false,
-      volumeTracing.tracingId,
-    );
-  }
-
-  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-    yield removeFallbackLayer(volumeTracing.tracingId);
-  }
-
-  if (
-    prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
-    prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
-  ) {
-    // Once the first volume action is performed on a volume layer, the mapping state is locked.
-    // In case no mapping is active, this is denoted by setting the mapping name to null.
-    const action = updateMappingName(
-      volumeTracing.mappingName || null,
-      volumeTracing.hasEditableMapping || null,
-      volumeTracing.mappingIsLocked,
-      volumeTracing.tracingId,
-    );
-    yield action;
-  }
-}
-
 function* ensureSegmentExists(
   action: AddAdHocMeshAction | AddPrecomputedMeshAction | SetActiveCellAction | ClickSegmentAction,
 ): Saga<void> {
@@ -566,8 +410,8 @@ function* ensureSegmentExists(
       updateSegmentAction(
         segmentId,
         {
-          somePosition: seedPosition,
-          someAdditionalCoordinates: seedAdditionalCoordinates,
+          anchorPosition: seedPosition,
+          additionalCoordinates: seedAdditionalCoordinates,
         },
         layerName,
       ),
@@ -577,9 +421,9 @@ function* ensureSegmentExists(
     // This way the most up-to-date position of a cell is used to jump to when a
     // segment is selected in the segment list. Also, the position of the active
     // cell is used in the proofreading mode.
-    const { somePosition, someAdditionalCoordinates } = action;
+    const { anchorPosition, additionalCoordinates } = action;
 
-    if (somePosition == null) {
+    if (anchorPosition == null) {
       // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
       // via the UI.
       return;
@@ -593,8 +437,8 @@ function* ensureSegmentExists(
       updateSegmentAction(
         segmentId,
         {
-          somePosition,
-          someAdditionalCoordinates: someAdditionalCoordinates,
+          anchorPosition,
+          additionalCoordinates: additionalCoordinates,
         },
         layerName,
         undefined,
@@ -602,7 +446,7 @@ function* ensureSegmentExists(
       ),
     );
 
-    yield put(updateProofreadingMarkerPositionAction(somePosition, layerName));
+    yield put(updateProofreadingMarkerPositionAction(anchorPosition, layerName));
 
     yield* call(updateClickedSegments, action);
   }

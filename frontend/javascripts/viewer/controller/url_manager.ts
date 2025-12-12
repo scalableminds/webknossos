@@ -8,7 +8,7 @@ import _ from "lodash";
 import messages from "messages";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
 import type { APIDataset, AdditionalCoordinate } from "types/api_types";
-import type { Mutable } from "types/globals";
+import type { Mutable } from "types/type_utils";
 import { validateUrlStateJSON } from "types/validation";
 import type { Vector3, ViewMode } from "viewer/constants";
 import constants, { ViewModeValues, MappingStatusEnum } from "viewer/constants";

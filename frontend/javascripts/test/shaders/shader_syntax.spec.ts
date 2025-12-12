@@ -8,30 +8,24 @@ import { parser } from "@shaderfrog/glsl-parser";
 
 type ShaderFunction = (params: Params) => string;
 
-describe("Shader syntax", () => {
-  const originalWarn = console.warn;
+describe.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
+  "Shader Syntax %o",
+  (getShader) => {
+    const originalWarn = console.warn;
 
-  interface TestContext {
-    warnings: { emittedCount: number };
-  }
+    interface TestContext {
+      warningEmittedCount: number;
+    }
 
-  beforeEach<TestContext>(async ({ warnings }) => {
-    console.warn = (...args: any[]) => {
-      warnings.emittedCount++;
-      originalWarn(...args);
-    };
-    warnings.emittedCount = 0;
-  });
+    beforeEach<TestContext>(async (context) => {
+      console.warn = (...args: any[]) => {
+        context.warningEmittedCount++;
+        originalWarn(...args);
+      };
+      context.warningEmittedCount = 0;
+    });
 
-  // Extend the context by creating a new test function, because the extra context type cannot be supplied
-  // to it otherwise
-  const shaderTest = it.extend({
-    warnings: { emittedCount: 0 },
-  });
-
-  shaderTest.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
-    "Ortho Mode %o",
-    (getShader, { warnings }) => {
+    it<TestContext>("Ortho Mode", ({ warningEmittedCount }) => {
       const code = getShader({
         globalLayerCount: 2,
         colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -69,17 +63,14 @@ describe("Shader syntax", () => {
       /*
        * If the code contains a syntax error, parse() will throw an exception
        * which makes the test fail.
-       * If a warning was emitted during parsing, the `warnings.emittedCount`
+       * If a warning was emitted during parsing, the `warningEmittedCount`
        * will reflect this.
        */
       parser.parse(code);
-      expect(warnings.emittedCount).toBe(0);
-    },
-  );
+      expect(warningEmittedCount).toBe(0);
+    });
 
-  shaderTest.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
-    "Ortho Mode + Segmentation - Mapping %o",
-    (getShader, { warnings }) => {
+    it<TestContext>("Ortho Mode + Segmentation - Mapping", ({ warningEmittedCount }) => {
       const code = getShader({
         globalLayerCount: 2,
         colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -123,13 +114,10 @@ describe("Shader syntax", () => {
         isWindows: true,
       });
       parser.parse(code);
-      expect(warnings.emittedCount).toBe(0);
-    },
-  );
+      expect(warningEmittedCount).toBe(0);
+    });
 
-  shaderTest.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
-    "Ortho Mode + Segmentation + Mapping %o",
-    (getShader, { warnings }) => {
+    it<TestContext>("Ortho Mode + Segmentation + Mapping", ({ warningEmittedCount }) => {
       const code = getShader({
         globalLayerCount: 2,
         colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -170,17 +158,14 @@ describe("Shader syntax", () => {
         useInterpolation: true,
         voxelSizeFactorInverted: [1, 1, 1],
         tpsTransformPerLayer: {},
-        isWindows: false,
+        isWindows: true,
       });
 
       parser.parse(code);
-      expect(warnings.emittedCount).toBe(0);
-    },
-  );
+      expect(warningEmittedCount).toBe(0);
+    });
 
-  shaderTest.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
-    "Arbitrary Mode (no segmentation available) %o",
-    (getShader, { warnings }) => {
+    it<TestContext>("Arbitrary Mode (no segmentation available)", ({ warningEmittedCount }) => {
       const code = getShader({
         globalLayerCount: 2,
         colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -215,13 +200,10 @@ describe("Shader syntax", () => {
         isWindows: true,
       });
       parser.parse(code);
-      expect(warnings.emittedCount).toBe(0);
-    },
-  );
+      expect(warningEmittedCount).toBe(0);
+    });
 
-  shaderTest.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
-    "Arbitrary Mode (segmentation available) %o",
-    (getShader, { warnings }) => {
+    it<TestContext>("Arbitrary Mode (segmentation available)", ({ warningEmittedCount }) => {
       const code = getShader({
         globalLayerCount: 2,
         colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -265,13 +247,10 @@ describe("Shader syntax", () => {
         isWindows: false,
       });
       parser.parse(code);
-      expect(warnings.emittedCount).toBe(0);
-    },
-  );
+      expect(warningEmittedCount).toBe(0);
+    });
 
-  shaderTest.for<ShaderFunction>([getMainFragmentShader, getMainVertexShader])(
-    "Ortho Mode (rgb and float layer) %o",
-    (getShader, { warnings }) => {
+    it<TestContext>("Ortho Mode (rgb and float layer)", ({ warningEmittedCount }) => {
       const code = getShader({
         globalLayerCount: 2,
         colorLayerNames: ["color_layer_1", "color_layer_2"],
@@ -306,7 +285,7 @@ describe("Shader syntax", () => {
         isWindows: true,
       });
       parser.parse(code);
-      expect(warnings.emittedCount).toBe(0);
-    },
-  );
-});
+      expect(warningEmittedCount).toBe(0);
+    });
+  },
+);

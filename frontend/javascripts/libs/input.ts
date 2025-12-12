@@ -73,6 +73,7 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 // Pressing a button will only fire an event once.
 const EXTENDED_COMMAND_KEYS = "ctrl + k";
 const EXTENDED_COMMAND_DURATION = 3000;
+
 export class InputKeyboardNoLoop {
   keyboard: Keyboard;
   bindings: Array<KeyboardBindingPress> = [];
@@ -175,6 +176,7 @@ export class InputKeyboardNoLoop {
           return;
         }
         const isInExtendedMode = this.keyboard.getContext() === "extended";
+
         if (isInExtendedMode) {
           this.cancelExtendedModeTimeout();
           this.keyboard.setContext("global");
@@ -192,6 +194,7 @@ export class InputKeyboardNoLoop {
       },
       false,
     ];
+
     if (isExtendedCommand) {
       this.keyboard.withContext("extended", () => {
         this.keyboard.bind(...binding);

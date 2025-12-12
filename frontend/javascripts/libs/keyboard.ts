@@ -1,7 +1,8 @@
 // @ts-nocheck
 
-// Based on KeyboardJS v2.6.2
-// https://github.com/RobertWHurst/KeyboardJS/releases/tag/v2.6.2
+// Based on KeyboardJS v2.7.0
+// https://github.com/RobertWHurst/KeyboardJS/releases/tag/v2.7.0
+
 export class KeyCombo {
   constructor(keyComboStr) {
     this.sourceStr = keyComboStr;

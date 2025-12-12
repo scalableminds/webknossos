@@ -1,3 +1,4 @@
+import { Space } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import Store from "viewer/store";
@@ -16,7 +17,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
   }
 
   return (
-    <>
+    <Space.Compact>
       <AsyncButton
         className="narrow undo-redo-button"
         key="undo-button"
@@ -37,7 +38,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
       >
         <i className="fas fa-redo" aria-hidden="true" />
       </AsyncButton>
-    </>
+    </Space.Compact>
   );
 }
 

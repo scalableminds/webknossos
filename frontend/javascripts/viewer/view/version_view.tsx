@@ -49,7 +49,7 @@ function VersionView() {
         >
           <Alert
             type="info"
-            message={
+            title={
               <React.Fragment>
                 You are currently previewing older versions of this annotation. Either restore a
                 version by selecting it or close this view to continue annotating. The shown

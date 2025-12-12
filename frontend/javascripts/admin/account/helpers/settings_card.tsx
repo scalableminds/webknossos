@@ -20,9 +20,11 @@ export function SettingsCard({ title, content, tooltip, action, style }: Setting
             {tooltip != null ? (
               <Popover
                 content={tooltip}
-                overlayInnerStyle={{
-                  maxWidth: 250,
-                  wordWrap: "break-word",
+                styles={{
+                  container: {
+                    maxWidth: 250,
+                    wordWrap: "break-word",
+                  },
                 }}
               >
                 <InfoCircleOutlined style={{ marginLeft: 8 }} />

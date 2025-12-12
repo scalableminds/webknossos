@@ -6,7 +6,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import type { DatasetUpdater } from "admin/rest_api";
-import { Dropdown, type MenuProps, Space, Tag, Tooltip } from "antd";
+import { Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
 import type {
   ColumnType,
   FilterValue,
@@ -15,7 +15,6 @@ import type {
 } from "antd/lib/table/interface";
 import classNames from "classnames";
 import FastTooltip from "components/fast_tooltip";
-import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
   getDatasetActionContextMenu,
@@ -129,10 +128,10 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
       <Dropdown
         menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
+        classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        destroyPopupOnHide
+        destroyOnHidden
       >
         <div />
       </Dropdown>
@@ -691,8 +690,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => {}
           }
         />
-        <FixedExpandableTable
-          expandable={{ childrenColumnName: "notUsed" }}
+        <Table
           dataSource={sortedDataSourceRenderers}
           columns={columns}
           rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
@@ -700,10 +698,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
           pagination={{
             defaultPageSize: 50,
           }}
-          className="hide-checkbox-selection"
+          styles={{
+            // hide/offset the first column containing the checkbox for row selection
+            section: { marginLeft: "-36px" },
+          }}
           onChange={this.handleChange}
           locale={{
             emptyText: this.renderEmptyText(),
+          }}
+          scroll={{
+            x: "max-content",
           }}
           summary={(currentPageData) => {
             // Workaround to get to the currently rendered entries (since the ordering
@@ -811,6 +815,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             };
           }}
           rowSelection={{
+            columnWidth: 0,
             selectedRowKeys,
             onSelectNone: () => {
               this.props.onSelectDataset(null);
@@ -863,7 +868,7 @@ export function DatasetTags({
   };
 
   return (
-    <div className="tags-container">
+    <Space>
       {dataset.tags.map((tag) => (
         <CategorizationLabel
           tag={tag}
@@ -881,7 +886,7 @@ export function DatasetTags({
           label="Add Tag"
         />
       ) : null}
-    </div>
+    </Space>
   );
 }
 
@@ -897,6 +902,7 @@ export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDatas
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
           }}
+          variant="outlined"
         >
           {layer.name} - {layer.elementClass}
         </Tag>
@@ -919,7 +925,7 @@ export function TeamTags({
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {
-    return <Tag>{emptyValue}</Tag>;
+    return <Tag variant="outlined">{emptyValue}</Tag>;
   }
 
   const allowedTeamsById = _.keyBy(dataset.allowedTeams, "id");
@@ -943,6 +949,7 @@ export function TeamTags({
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
               }}
+              variant="outlined"
               color={stringToColor(team.name)}
             >
               {team.name}
@@ -972,7 +979,7 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
 
   return (
     <Tooltip title={`This dataset is located in ${formatPath(allParts)}.`}>
-      <Tag style={{ marginTop: "5px" }}>
+      <Tag style={{ marginTop: "5px" }} variant="outlined">
         <FolderOpenOutlined className="icon-margin-right" />
         {formatPath(parts)}
       </Tag>

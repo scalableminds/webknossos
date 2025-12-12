@@ -57,7 +57,7 @@ export default class ErrorBoundary extends React.Component<
             <Alert
               style={{ maxHeight: "70vh", overflow: "auto" }}
               type="error"
-              message={errorMessage}
+              title={errorMessage}
               description={<pre>{errorDescription}</pre>}
             />
           </div>

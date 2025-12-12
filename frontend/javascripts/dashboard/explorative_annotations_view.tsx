@@ -21,7 +21,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag } from "antd";
+import { Button, Card, Col, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -485,7 +485,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       <Row gutter={32} justify="center" style={{ padding: 50 }}>
         <Col span="6">
           <Card
-            bordered={false}
+            variant="borderless"
             cover={
               <div style={{ display: "flex", justifyContent: "center" }}>
                 <i className="drawing drawing-empty-list-annotations" />
@@ -695,7 +695,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Tags",
         dataIndex: "tags",
         render: (tags: Array<string>, annotation: APIAnnotationInfo) => (
-          <div>
+          <Space wrap>
             {tags.map((tag) => (
               <CategorizationLabel
                 key={tag}
@@ -715,7 +715,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
               />
             )}
-          </div>
+          </Space>
         ),
       },
       {
@@ -831,14 +831,10 @@ function TopBar({
   const activeTab = React.useContext(ActiveTabContext);
   const renderingTab = React.useContext(RenderingTabContext);
 
-  const marginRight = {
-    marginRight: 8,
-  };
   const search = (
     <Search
       style={{
         width: 200,
-        float: "right",
       }}
       onSearch={handleOnSearch}
       onChange={handleSearchChanged}
@@ -849,24 +845,19 @@ function TopBar({
   const content = isAdminView ? (
     search
   ) : (
-    <div className="pull-right">
+    <Space>
       <Button
         icon={<UploadOutlined />}
-        style={marginRight}
         onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
       >
         Upload Annotation(s)
       </Button>
-      <Button onClick={toggleShowArchived} style={marginRight}>
+      <Button onClick={toggleShowArchived}>
         Show {shouldShowArchivedAnnotations ? "Open" : "Archived"} Annotations
       </Button>
-      {!shouldShowArchivedAnnotations ? (
-        <Button onClick={archiveAll} style={marginRight}>
-          Archive All
-        </Button>
-      ) : null}
+      {!shouldShowArchivedAnnotations ? <Button onClick={archiveAll}>Archive All</Button> : null}
       {search}
-    </div>
+    </Space>
   );
 
   return (

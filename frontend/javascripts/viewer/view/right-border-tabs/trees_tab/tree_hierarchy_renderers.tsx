@@ -535,7 +535,7 @@ function handleMeasureSkeletonLength(treeId: number, treeName: string) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
 
   notification.open({
-    message: messages["tracing.tree_length_notification"](
+    title: messages["tracing.tree_length_notification"](
       treeName,
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
       formatLengthAsVx(lengthInVx),

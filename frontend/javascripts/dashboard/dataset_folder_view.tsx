@@ -99,7 +99,10 @@ function DatasetFolderViewInner(props: Props) {
   const renderNoDatasetsPlaceHolder = () => {
     const openPublicDatasetCard = (
       <Col span={7}>
-        <Card bordered={false} cover={<i className="drawing drawing-empty-list-public-gallery" />}>
+        <Card
+          variant="borderless"
+          cover={<i className="drawing drawing-empty-list-public-gallery" />}
+        >
           <Card.Meta
             title="Open a Demo Dataset"
             description={
@@ -118,7 +121,7 @@ function DatasetFolderViewInner(props: Props) {
     const uploadPlaceholderCard = (
       <Col span={7}>
         <Card
-          bordered={false}
+          variant="borderless"
           cover={
             <div style={{ display: "flex", justifyContent: "center" }}>
               <i className="drawing drawing-empty-list-dataset-upload" />

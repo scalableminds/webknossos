@@ -208,7 +208,9 @@ export function OwningOrganizationRow({ organizationId }: { organizationId: stri
       <div className="info-tab-block">
         <p className="sidebar-label">Organization</p>
         <p>
-          <Tag color="blue">{organizationId === null ? <i>loading...</i> : organizationId}</Tag>
+          <Tag color="blue" variant="outlined">
+            {organizationId === null ? <i>loading...</i> : organizationId}
+          </Tag>
         </p>
       </div>
     </FastTooltip>
@@ -533,12 +535,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const contributorTags =
       contributors.length > 0
         ? contributors.map((user) => (
-            <Tag key={user.id} color="blue">
+            <Tag key={user.id} color="blue" variant="outlined">
               {formatUserName(activeUser, user)}
             </Tag>
           ))
         : [
-            <Tag key="None" color="blue">
+            <Tag key="None" color="blue" variant="outlined">
               None
             </Tag>,
           ];
@@ -548,7 +550,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <div className="info-tab-block">
           <p className="sidebar-label">Owner</p>
           <p>
-            <Tag color="blue">{formatUserName(activeUser, owner)}</Tag>
+            <Tag color="blue" variant="outlined">
+              {formatUserName(activeUser, owner)}
+            </Tag>
           </p>
         </div>
         <div className="info-tab-block">

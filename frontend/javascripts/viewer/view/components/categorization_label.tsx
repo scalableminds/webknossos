@@ -26,6 +26,7 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
         onClick={onClick}
         onClose={onClose}
         closable={closable}
+        variant="outlined"
         style={{
           cursor: "pointer",
         }}

@@ -37,6 +37,7 @@ import {
   switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
+import type { MenuProps } from "antd";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -47,7 +48,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -333,7 +333,7 @@ function getHelpSubMenu(
   isAuthenticated: boolean,
   isAdminOrManager: boolean,
   collapse: boolean,
-  openHelpModal: MenuClickEventHandler,
+  openHelpModal: MenuProps["onClick"],
 ) {
   const polledVersionString =
     polledVersion != null && polledVersion !== version
@@ -724,7 +724,7 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" className="flex-center-child" variant="outlined">
           Locked by unknown user.
         </Tag>
       </Tooltip>
@@ -732,7 +732,7 @@ function AnnotationLockedByUserTag({
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success" className="flex-center-child">
+        <Tag color="success" className="flex-center-child" variant="outlined">
           Locked by you. Reload to edit.
         </Tag>
       </Tooltip>
@@ -745,7 +745,7 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" className="flex-center-child" variant="outlined">
           Locked by {blockingUserName}
         </Tag>
       </Tooltip>
@@ -766,7 +766,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
     messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
   return (
     <Tooltip title={tooltipMessage}>
-      <Tag color="warning" className="flex-center-child">
+      <Tag color="warning" className="flex-center-child" variant="outlined">
         Locked by {props.annotationOwnerName}
       </Tag>
     </Tooltip>

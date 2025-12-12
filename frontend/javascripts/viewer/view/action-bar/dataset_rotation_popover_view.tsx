@@ -83,7 +83,7 @@ const PopoverContent: React.FC<EmptyObject> = () => {
             <Button
               type="text"
               icon={<RollbackOutlined />}
-              iconPosition="end"
+              iconPlacement="end"
               onClick={() => handleChangeRotation([0, 0, 0])}
             >
               Reset all

@@ -1,9 +1,9 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import type { FieldError } from "@rc-component/form/es/interface";
 import { Divider, Form, Modal, Tooltip } from "antd";
 import type { FormItemProps, Rule } from "antd/lib/form";
 import type { NamePath } from "antd/lib/form/interface";
 import sum from "lodash/sum";
-import type { FieldError } from "rc-field-form/es/interface";
 
 const FormItem = Form.Item;
 

@@ -264,7 +264,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
         <Alert
           type="warning"
           style={{ margin: 10 }}
-          message={
+          title={
             <>
               Histogram couldn’t be fetched.{" "}
               <a href="#" onClick={this.props.reloadHistogram}>

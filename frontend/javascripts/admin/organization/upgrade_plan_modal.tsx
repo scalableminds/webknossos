@@ -17,6 +17,7 @@ import dayjs from "dayjs";
 import features from "features";
 import { formatCurrency } from "libs/format_utils";
 
+import type { GetRef } from "antd/lib";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -76,7 +77,7 @@ export function upgradeUserQuota() {
 }
 
 function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
-  const userInputRef = useRef<HTMLInputElement | null>(null);
+  const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
 
   const handleUserUpgrade = async () => {
     if (userInputRef.current) {
@@ -120,7 +121,7 @@ export function upgradeStorageQuota() {
   renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
-  const storageInputRef = useRef<HTMLInputElement | null>(null);
+  const storageInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
 
   const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
@@ -315,7 +316,7 @@ export function orderWebknossosCredits() {
 }
 
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
-  const userInputRef = useRef<HTMLInputElement | null>(null);
+  const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
   const defaultCostPerCreditInEuro = formatCurrency(features().costPerCreditInEuro, "€");
   const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "$");
   const [creditCostAsString, setCreditCostsAsString] = useState<string>(

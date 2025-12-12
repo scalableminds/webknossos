@@ -183,7 +183,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       <Modal open footer={null} onCancel={this.props.hideDropzoneModal}>
         {this.props.isUpdateAllowed ? (
           <Alert
-            message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
+            title="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
             style={{
               marginBottom: 12,
             }}

@@ -384,10 +384,10 @@ function ExperienceModalView({
             >
               <Tag
                 style={{
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ magin: number; marginTop: number; }' is no... Remove this comment to see the full error message
-                  magin: 8,
+                  margin: 8,
                   marginTop: 10,
                 }}
+                variant="outlined"
                 className="clickable-icon"
                 onClick={() => {
                   setRemovedDomains(

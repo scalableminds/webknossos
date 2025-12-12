@@ -67,14 +67,14 @@ const DatasetSettingsView: React.FC = () => {
         status === notImportedYetStatus ? (
           <Alert
             key="dataSourceStatus"
-            message={<span>{messages["dataset.missing_datasource_json"]}</span>}
+            title={<span>{messages["dataset.missing_datasource_json"]}</span>}
             type="error"
             showIcon
           />
         ) : (
           <Alert
             key="dataSourceStatus"
-            message={
+            title={
               <span>
                 {messages["dataset.invalid_datasource_json"]}
                 <br />
@@ -95,7 +95,7 @@ const DatasetSettingsView: React.FC = () => {
       messageElements.push(
         <Alert
           key="dataSourceStatus"
-          message={<span>{messages["dataset.import_complete"]}</span>}
+          title={<span>{messages["dataset.import_complete"]}</span>}
           type="success"
           showIcon
         />,

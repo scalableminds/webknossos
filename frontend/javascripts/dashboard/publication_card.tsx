@@ -213,7 +213,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
         },
       }}
       className="publication-item-card"
-      bordered={false}
+      variant="borderless"
     >
       <div
         style={{

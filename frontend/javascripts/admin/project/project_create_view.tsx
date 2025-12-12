@@ -103,9 +103,8 @@ function ProjectCreateView() {
             ]}
           >
             <Select
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Select a Team"
-              optionFilterProp="label"
               style={fullWidth}
               disabled={isEditMode}
               loading={isFetchingData}
@@ -127,9 +126,8 @@ function ProjectCreateView() {
             ]}
           >
             <Select
-              showSearch
               placeholder="Select a User"
-              optionFilterProp="label"
+              showSearch={{ optionFilterProp: "label" }}
               style={fullWidth}
               disabled={isEditMode}
               loading={isFetchingData}

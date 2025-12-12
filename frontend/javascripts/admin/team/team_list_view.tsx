@@ -2,7 +2,7 @@ import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { Alert, App, Button, Input, Spin, Table, Tag, Tooltip } from "antd";
+import { Alert, App, Button, Flex, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -38,7 +38,7 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
 
   const renderTag = (text: string, color: string) => {
     return (
-      <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }} variant="outlined">
         {text}
       </Tag>
     );
@@ -101,7 +101,7 @@ function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
         });
 
   return tags.map(([text, color]) => (
-    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }} variant="outlined">
       {text}
     </Tag>
   ));
@@ -178,39 +178,35 @@ function TeamListView() {
       </React.Fragment>
     );
     return isLoading ? null : (
-      <Alert message="Add more teams" description={teamMessage} type="info" showIcon />
+      <Alert title="Add more teams" description={teamMessage} type="info" showIcon />
     );
   }
 
-  const marginRight = {
-    marginRight: 20,
-  };
   return (
     <div className="container">
-      <div className="pull-right">
-        <Button
-          icon={<PlusOutlined />}
-          style={marginRight}
-          type="primary"
-          onClick={() => setIsTeamCreationModalVisible(true)}
-        >
-          Add Team
-        </Button>
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </div>
-      <h3>Teams</h3>
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
+      <Flex
+        justify="space-between"
+        align="flex-start"
+        style={{ marginBottom: "var(--ant-padding-xs)" }}
+      >
+        <h3>Teams</h3>
+        <Space>
+          <Button
+            icon={<PlusOutlined />}
+            type="primary"
+            onClick={() => setIsTeamCreationModalVisible(true)}
+          >
+            Add Team
+          </Button>
+          <Search
+            style={{
+              width: 200,
+            }}
+            onChange={handleSearch}
+            value={searchQuery}
+          />
+        </Space>
+      </Flex>
 
       <Spin spinning={isLoading} size="large">
         {teams.length <= 1 ? renderPlaceholder() : null}
@@ -226,7 +222,6 @@ function TeamListView() {
           }}
           style={{
             marginTop: 30,
-            marginBottom: 30,
           }}
         >
           <Column

@@ -81,7 +81,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   addNewEntryMenuItems,
 }) => {
   return (
-    <Tag>
+    <Tag variant="outlined">
       <div className="flex-center-child empty-metadata-placeholder">
         <img
           src="/assets/images/metadata-teaser.svg"

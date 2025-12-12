@@ -97,11 +97,7 @@ export default function ViewDatasetActionsView(props: Props) {
   const userTheme = getThemeFromUser(activeUser);
 
   return (
-    <div
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <div>
       <ConfigProvider theme={getAntdTheme(userTheme)}>
         {shareDatasetModal}
         {pythonClientModal}

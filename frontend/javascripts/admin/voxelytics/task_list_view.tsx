@@ -2,6 +2,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownOutlined,
   ExclamationCircleOutlined,
   ExportOutlined,
   FieldTimeOutlined,
@@ -16,10 +17,12 @@ import {
   Collapse,
   type CollapseProps,
   Dropdown,
+  Flex,
   Input,
   type MenuProps,
   Row,
   Select,
+  Space,
   Tag,
   Tooltip,
   message,
@@ -343,10 +346,11 @@ export default function TaskListView({
     );
 
     navigator.clipboard.writeText(artifactPaths.join("\n")).then(
-      () => notification.success({ message: "All artifacts path were copied to the clipboard" }),
+      () => notification.success({ title: "All artifact paths were copied to the clipboard" }),
       () =>
         notification.error({
-          message: `Could not copy the following artifact paths to clipboard: ${artifactPaths.join(
+          title: "Could not copy artifact paths",
+          description: `Could not copy the following artifact paths to clipboard: ${artifactPaths.join(
             "\n",
           )}`,
         }),
@@ -660,42 +664,58 @@ export default function TaskListView({
           className="ant-collapse tasks-header"
           style={{
             marginBottom: 10,
-            padding: 5,
             zIndex: 1,
-            display: "flex",
           }}
         >
-          <Search
-            placeholder="Filter workflows"
-            onSearch={handleOnSearch}
-            style={{ minWidth: 150 }}
-            allowClear
-          />
-          <div style={{ flex: 1 }} />
-          <Button onClick={() => onReload()}>
-            <SyncOutlined spin={isLoading} /> Refresh
-          </Button>
-          <Select
-            value={runId ?? ""}
-            onChange={(value) =>
-              navigate(
-                value === ""
-                  ? removeUrlParam(location, "runId")
-                  : addUrlParam(location, "runId", value),
-              )
-            }
-            style={{ maxWidth: "70%" }}
-          >
-            <Select.Option value="">Consolidated</Select.Option>
-            {report.runs.map((run) => (
-              <Select.Option value={run.id} key={run.id}>
-                {run.name}
-              </Select.Option>
-            ))}
-          </Select>
-          <Dropdown.Button menu={overflowMenu} onClick={() => setExpandedTasks([])}>
-            Collapse All
-          </Dropdown.Button>
+          <Flex gap={"small"}>
+            <Search
+              placeholder="Filter tasks"
+              onSearch={handleOnSearch}
+              style={{ minWidth: 150 }}
+              allowClear
+            />
+            <Space>
+              <Button onClick={() => onReload()}>
+                <SyncOutlined spin={isLoading} /> Refresh
+              </Button>
+              <Select
+                value={runId ?? ""}
+                onChange={(value) =>
+                  navigate(
+                    value === ""
+                      ? removeUrlParam(location, "runId")
+                      : addUrlParam(location, "runId", value),
+                  )
+                }
+                popupMatchSelectWidth={false}
+                styles={{
+                  root: {
+                    maxWidth: 200,
+                  },
+                  popup: {
+                    root: {
+                      maxWidth: "90vw",
+                    },
+                  },
+                }}
+              >
+                <Select.Option value="">Consolidated</Select.Option>
+                {report.runs.map((run) => (
+                  <Select.Option value={run.id} key={run.id}>
+                    {run.name}
+                  </Select.Option>
+                ))}
+              </Select>
+              <Space.Compact>
+                <Button onClick={() => setExpandedTasks([])}>Collapse All</Button>
+                <Dropdown menu={overflowMenu}>
+                  <Button>
+                    <DownOutlined />
+                  </Button>
+                </Dropdown>
+              </Space.Compact>
+            </Space>
+          </Flex>
         </div>
 
         <div style={{ overflowY: "auto", flex: 1 }}>

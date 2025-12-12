@@ -1121,6 +1121,7 @@ class PlaneMaterialFactory {
       isOrthogonal: this.isOrthogonal,
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
+      isWindows: Utils.isWindows(),
     });
     return [
       code,
@@ -1161,6 +1162,7 @@ class PlaneMaterialFactory {
       isOrthogonal: this.isOrthogonal,
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
+      isWindows: Utils.isWindows(),
     });
   }
 

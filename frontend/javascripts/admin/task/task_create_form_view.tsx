@@ -167,7 +167,7 @@ export function handleTaskCreationResponse(
         <Alert
           showIcon
           type="warning"
-          title="There were warnings during task creation"
+          message="There were warnings during task creation"
           description={warnings.join("\n")}
         />
       </div>
@@ -176,7 +176,7 @@ export function handleTaskCreationResponse(
   const failedTasksAsString = failedTasks.join("");
   const successfulTasksContent =
     successfulTasks.length <= maxDisplayedTasksCount ? (
-      <Typography.Paragraph code>
+      <Typography.Paragraph>
         <pre>
           taskId,filename,position
           <br />
@@ -188,7 +188,7 @@ export function handleTaskCreationResponse(
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
-      <Typography.Paragraph code copyable>
+      <Typography.Paragraph>
         <pre>{failedTasksAsString}</pre>
       </Typography.Paragraph>
     ) : (

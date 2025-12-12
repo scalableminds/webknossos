@@ -9,7 +9,6 @@ import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_act
 import {
   removeSegmentAction,
   setActiveCellAction,
-  setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
@@ -100,11 +99,17 @@ function applySingleAction(
         removeSegmentAction(ua.value.id, ua.value.actionTracingId),
       );
     }
-    case "updateSegmentGroups": {
-      return VolumeTracingReducer(
-        state,
-        setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
-      );
+    case "upsertSegmentGroup": {
+      // todop
+      return state;
+      // return VolumeTracingReducer(
+      //   state,
+      //   setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
+      // );
+    }
+    case "deleteSegmentGroup": {
+      // todop
+      return state;
     }
     case "updateUserBoundingBoxInVolumeTracing": {
       return applyUpdateUserBoundingBox(

@@ -487,7 +487,8 @@ export function* tryToIncorporateActions(
         case "deleteSegment":
         case "updateSegmentPartial":
         case "updateMetadataOfSegment":
-        case "updateSegmentGroups":
+        case "upsertSegmentGroup":
+        case "deleteSegmentGroup":
         // Volume User Bounding Boxes
         case "addUserBoundingBoxInVolumeTracing":
         case "deleteUserBoundingBoxInVolumeTracing":
@@ -577,6 +578,7 @@ export function* tryToIncorporateActions(
         case "updateSkeletonTracing":
         case "updateVolumeTracing":
         case "updateUserBoundingBoxesInSkeletonTracing":
+        case "updateSegmentGroups":
         case "updateUserBoundingBoxesInVolumeTracing": {
           console.error("Cannot apply action", action.name);
           yield* call(finalize);

@@ -629,14 +629,18 @@ export function diffArrays<T>(
 export function diffMaps<K, V>(
   stateA: Map<K, V>,
   stateB: Map<K, V>,
+  maybeEqualityFn?: (v1: V, v2: V) => boolean,
 ): {
-  changed: Iterable<K>;
-  onlyA: Iterable<K>;
-  onlyB: Iterable<K>;
+  changed: Iterable<K>; // Contains the keys K for which stateA[K] !== stateB[K]
+  onlyA: Iterable<K>; // Contains the keys K that only exist in A
+  onlyB: Iterable<K>; // Contains the keys K that only exist in B
 } {
+  const equalityFn = maybeEqualityFn ?? ((a, b) => a === b);
   const keysOfA = Array.from(stateA.keys());
   const keysOfB = Array.from(stateB.keys());
-  const changed = keysOfA.filter((x) => stateB.has(x) && stateB.get(x) !== stateA.get(x));
+  const changed = keysOfA.filter(
+    (x) => stateB.has(x) && !equalityFn(stateB.get(x)!, stateA.get(x)!),
+  );
   const onlyA = keysOfA.filter((x) => !stateB.has(x));
   const onlyB = keysOfB.filter((x) => !stateA.has(x));
   return {

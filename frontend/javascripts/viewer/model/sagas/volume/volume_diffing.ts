@@ -11,19 +11,21 @@ import {
   updateLargestSegmentId,
   updateMappingName,
   updateMetadataOfSegmentUpdateAction,
-  updateSegmentGroups,
   updateSegmentGroupsExpandedState,
   updateSegmentPartialVolumeAction,
   updateSegmentVisibilityVolumeAction,
   type UpdateActionWithoutIsolationRequirement,
+  deleteSegmentGroupUpdateAction,
+  upsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import {
   SegmentPropertiesWithoutUserState,
   type Segment,
   type SegmentMap,
   type VolumeTracing,
+  type SegmentGroup,
 } from "viewer/store";
-import { diffBoundingBoxes, diffGroups } from "viewer/model/helpers/diff_helpers";
+import { diffBoundingBoxes, diffGroupsGranular } from "viewer/model/helpers/diff_helpers";
 
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
@@ -56,27 +58,11 @@ export function* diffVolumeTracing(
     }
   }
 
-  const groupDiff = diffGroups(prevVolumeTracing.segmentGroups, volumeTracing.segmentGroups);
-
-  if (groupDiff.didContentChange) {
-    // The groups (without isExpanded) actually changed. Save them to the server.
-    yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
-  }
-
-  if (groupDiff.newlyExpandedIds.length > 0) {
-    yield updateSegmentGroupsExpandedState(
-      groupDiff.newlyExpandedIds,
-      true,
-      volumeTracing.tracingId,
-    );
-  }
-  if (groupDiff.newlyNotExpandedIds.length > 0) {
-    yield updateSegmentGroupsExpandedState(
-      groupDiff.newlyNotExpandedIds,
-      false,
-      volumeTracing.tracingId,
-    );
-  }
+  yield* diffSegmentGroups(
+    prevVolumeTracing.segmentGroups,
+    volumeTracing.segmentGroups,
+    volumeTracing.tracingId,
+  );
 
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
     yield removeFallbackLayer(volumeTracing.tracingId);
@@ -195,4 +181,56 @@ export function* diffMetadataOfSegments(segment: Segment, prevSegment: Segment, 
     removeEntriesByKey,
     tracingId,
   );
+}
+
+export function* diffSegmentGroups(
+  prevSegmentGroups: SegmentGroup[],
+  segmentGroups: SegmentGroup[],
+  volumeTracingId: string,
+) {
+  const groupDiff = diffGroupsGranular(prevSegmentGroups, segmentGroups);
+
+  // Delete groups that don't exist in volumeTracing anymore
+  for (const groupId of groupDiff.onlyA) {
+    yield deleteSegmentGroupUpdateAction(groupId, volumeTracingId);
+  }
+  // Update groups that were changed
+  for (const groupId of groupDiff.changed) {
+    const prevGroup = groupDiff.prevGroupsById.get(groupId)!;
+    const group = groupDiff.groupsById.get(groupId)!;
+
+    const maybeName = prevGroup.name !== group.name ? { name: group.name } : {};
+    const maybeParent =
+      prevGroup.parentGroupId !== group.parentGroupId ? { parentGroupId: group.parentGroupId } : {};
+
+    yield upsertSegmentGroupUpdateAction(
+      groupId,
+      {
+        ...maybeName,
+        ...maybeParent,
+      },
+      volumeTracingId,
+    );
+  }
+
+  // Add new groups
+  for (const groupId of groupDiff.onlyB) {
+    const group = groupDiff.groupsById.get(groupId)!;
+    yield upsertSegmentGroupUpdateAction(
+      groupId,
+      {
+        name: group.name,
+        newParentId: group.parentGroupId,
+      },
+      volumeTracingId,
+    );
+  }
+
+  // Update expanded state
+  if (groupDiff.newlyExpandedIds.length > 0) {
+    yield updateSegmentGroupsExpandedState(groupDiff.newlyExpandedIds, true, volumeTracingId);
+  }
+  if (groupDiff.newlyNotExpandedIds.length > 0) {
+    yield updateSegmentGroupsExpandedState(groupDiff.newlyNotExpandedIds, false, volumeTracingId);
+  }
 }

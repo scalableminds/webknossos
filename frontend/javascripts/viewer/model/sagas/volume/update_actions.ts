@@ -45,6 +45,8 @@ export type UpdateSegmentPartialUpdateAction = ReturnType<typeof updateSegmentPa
 export type UpdateMetadataOfSegmentUpdateAction = ReturnType<
   typeof updateMetadataOfSegmentUpdateAction
 >;
+export type UpsertSegmentGroupUpdateAction = ReturnType<typeof upsertSegmentGroupUpdateAction>;
+export type DeleteSegmentGroupUpdateAction = ReturnType<typeof deleteSegmentGroupUpdateAction>;
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
   typeof updateSegmentVisibilityVolumeAction
 >;
@@ -84,7 +86,7 @@ export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
   typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
-export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+export type LEGACY_UpdateSegmentGroupsUpdateAction = ReturnType<typeof LEGACY_updateSegmentGroups>;
 export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
   typeof updateSegmentGroupsExpandedState
 >;
@@ -150,9 +152,10 @@ export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
   | UpdateSegmentPartialUpdateAction
   | UpdateMetadataOfSegmentUpdateAction
+  | UpsertSegmentGroupUpdateAction
+  | DeleteSegmentGroupUpdateAction
   | CreateSegmentUpdateAction
   | DeleteSegmentUpdateAction
-  | UpdateSegmentGroupsUpdateAction
   | AddUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInVolumeTracingAction
@@ -198,6 +201,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | LEGACY_UpdateSegmentUpdateAction
   | UpdateSegmentPartialUpdateAction
   | UpdateMetadataOfSegmentUpdateAction
+  | UpsertSegmentGroupUpdateAction
+  | DeleteSegmentGroupUpdateAction
   | UpdateSegmentVisibilityVolumeAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
@@ -205,7 +210,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
-  | UpdateSegmentGroupsUpdateAction
+  | LEGACY_UpdateSegmentGroupsUpdateAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
   | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
@@ -835,6 +840,36 @@ export function updateMetadataOfSegmentUpdateAction(
   } as const;
 }
 
+export function upsertSegmentGroupUpdateAction(
+  groupId: number,
+  properties: {
+    // If not set, the name is not updated. A group must always have a name.
+    name?: string;
+    // Includes moving the groups current subgroups.
+    newParentId?: number | null | undefined;
+  },
+  actionTracingId: string,
+) {
+  return {
+    name: "upsertSegmentGroup",
+    value: {
+      groupId,
+      actionTracingId,
+      ...properties,
+    },
+  } as const;
+}
+
+export function deleteSegmentGroupUpdateAction(groupId: number, actionTracingId: string) {
+  return {
+    name: "deleteSegmentGroup",
+    value: {
+      groupId,
+      actionTracingId,
+    },
+  } as const;
+}
+
 export function updateSegmentVisibilityVolumeAction(
   id: number,
   isVisible: boolean,
@@ -890,7 +925,10 @@ export function updateBucket(
   } as const;
 }
 
-export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTracingId: string) {
+export function LEGACY_updateSegmentGroups(
+  segmentGroups: Array<SegmentGroup>,
+  actionTracingId: string,
+) {
   return {
     name: "updateSegmentGroups",
     value: {

@@ -5,6 +5,7 @@ import { mapGroupsWithRoot } from "viewer/model/accessors/skeletontracing_access
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
+import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -33,7 +34,6 @@ export function makeBasicGroupObject(
     groupId,
     name,
     children,
-    isExpanded: false,
   };
 }
 
@@ -286,6 +286,36 @@ export function moveGroupsHelper(
         : parentGroup.children,
   }));
   return newGroups;
+}
+
+export function createGroupHelper(
+  segmentGroups: TreeGroup[],
+  name: string | null | undefined,
+  newGroupId: number | null | undefined,
+  parentGroupId: number | null | undefined,
+) {
+  if (parentGroupId == null) {
+    // Guard against explicitly passed null or undefined.
+    parentGroupId = MISSING_GROUP_ID;
+  }
+
+  const newSegmentGroups = _.cloneDeep(segmentGroups);
+  newGroupId = newGroupId ?? getMaximumGroupId(newSegmentGroups) + 1;
+  const newGroup = {
+    name: name || `Group ${newGroupId}`,
+    groupId: newGroupId,
+    children: [],
+    isExpanded: false,
+  };
+
+  if (parentGroupId === MISSING_GROUP_ID) {
+    newSegmentGroups.push(newGroup);
+  } else {
+    callDeep(newSegmentGroups, parentGroupId, (item) => {
+      item.children.push(newGroup);
+    });
+  }
+  return { newSegmentGroups, newGroupId };
 }
 
 export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(

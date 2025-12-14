@@ -9,10 +9,11 @@ import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_act
 import {
   removeSegmentAction,
   setActiveCellAction,
+  setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { WebknossosState } from "viewer/store";
+import type { SegmentGroup, WebknossosState } from "viewer/store";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   setLargestSegmentIdReducer,
@@ -25,6 +26,11 @@ import {
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
+import {
+  createGroupHelper,
+  findGroup,
+  moveGroupsHelper,
+} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],
@@ -100,16 +106,71 @@ function applySingleAction(
       );
     }
     case "upsertSegmentGroup": {
-      // todop
-      return state;
-      // return VolumeTracingReducer(
-      //   state,
-      //   setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
-      // );
+      const { groupId, actionTracingId, newParentId, ...props } = ua.value;
+      const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
+      const oldSegmentGroups = volumeTracing.segmentGroups;
+
+      const existingGroup = findGroup(oldSegmentGroups, groupId);
+      let newSegmentGroups;
+      if (existingGroup) {
+        newSegmentGroups = mapGroups(oldSegmentGroups, (group) =>
+          group.groupId === ua.value.groupId
+            ? {
+                ...group,
+                ...props,
+              }
+            : group,
+        );
+
+        if ("newParentId" in ua.value) {
+          newSegmentGroups = moveGroupsHelper(newSegmentGroups, groupId, ua.value.newParentId);
+        }
+      } else {
+        newSegmentGroups = createGroupHelper(
+          oldSegmentGroups,
+          ua.value.name ?? null,
+          groupId,
+          newParentId ?? null,
+        ).newSegmentGroups;
+      }
+
+      return VolumeTracingReducer(
+        state,
+        setSegmentGroupsAction(newSegmentGroups, ua.value.actionTracingId),
+      );
     }
     case "deleteSegmentGroup": {
-      // todop
-      return state;
+      const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
+      const oldSegmentGroups = volumeTracing.segmentGroups;
+
+      function deepFilter<T extends SegmentGroup>(
+        nodes: T[],
+        predicate: (node: T) => boolean,
+      ): T[] {
+        // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
+        return nodes.reduce((acc: T[], node: T) => {
+          if (predicate(node)) {
+            acc.push(node);
+          }
+          if (node.children) {
+            acc.push({
+              ...node,
+              children: deepFilter(node.children as T[], predicate),
+            });
+          }
+          return acc;
+        }, []);
+      }
+
+      const newSegmentGroups = deepFilter(
+        oldSegmentGroups,
+        (group) => group.groupId !== ua.value.groupId,
+      );
+
+      return VolumeTracingReducer(
+        state,
+        setSegmentGroupsAction(newSegmentGroups, ua.value.actionTracingId),
+      );
     }
     case "updateUserBoundingBoxInVolumeTracing": {
       return applyUpdateUserBoundingBox(

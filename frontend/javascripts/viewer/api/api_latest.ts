@@ -167,7 +167,13 @@ import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
-import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
+import type {
+  MutableNode,
+  Node,
+  Tree,
+  TreeGroup,
+  TreeGroupTypeFlat,
+} from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { Model, api } from "viewer/singletons";
 import type {
@@ -186,6 +192,7 @@ import Store from "viewer/store";
 import {
   MISSING_GROUP_ID,
   callDeep,
+  createGroupHelper,
   createGroupToSegmentsMap,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -854,10 +861,6 @@ class TracingApi {
     parentGroupId: number = MISSING_GROUP_ID,
     volumeLayerName?: string,
   ): number {
-    if (parentGroupId == null) {
-      // Guard against explicitly passed null or undefined.
-      parentGroupId = MISSING_GROUP_ID;
-    }
     const volumeTracing = volumeLayerName
       ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
@@ -865,23 +868,12 @@ class TracingApi {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
     const { segmentGroups } = volumeTracing;
-
-    const newSegmentGroups = _.cloneDeep(segmentGroups);
-    const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
-    const newGroup = {
-      name: name || `Group ${newGroupId}`,
-      groupId: newGroupId,
-      children: [],
-      isExpanded: false,
-    };
-
-    if (parentGroupId === MISSING_GROUP_ID) {
-      newSegmentGroups.push(newGroup);
-    } else {
-      callDeep(newSegmentGroups, parentGroupId, (item) => {
-        item.children.push(newGroup);
-      });
-    }
+    const { newSegmentGroups, newGroupId } = createGroupHelper(
+      segmentGroups,
+      name,
+      null,
+      parentGroupId,
+    );
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
 
@@ -3038,6 +3030,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
+
 export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),

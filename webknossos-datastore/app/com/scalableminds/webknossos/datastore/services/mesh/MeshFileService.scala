@@ -19,7 +19,8 @@ import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
     meshFileName: String,
-    segmentId: Long
+    segmentId: Long,
+    editableMappingVersion: Option[Long],
 )
 
 object ListMeshChunksRequest {

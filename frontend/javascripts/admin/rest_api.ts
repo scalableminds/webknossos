@@ -1964,7 +1964,7 @@ export function computeAdHocMesh(
           // is added here to the position and bbox size.
           position: positionWithPadding, // position is in mag1
           additionalCoordinates,
-          cubeSize: cubeSize, // cubeSize is in target mag
+          cubeSize, // cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
           voxelSizeFactorInUnit: scaleFactor,

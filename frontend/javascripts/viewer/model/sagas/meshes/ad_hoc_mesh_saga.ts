@@ -473,7 +473,7 @@ function* maybeLoadMeshChunk(
 
   // Move position by -1,-1,-1 in mag to get a closing edge at the topleft layer border
   // and to fill grid gaps (cube size will be increased by 1,1,1 accordingly)
-  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
+  const paddedPosition = V3.sub(clippedPosition, mag);
 
   if (threeDMap.get(paddedPosition)) {
     return [];
@@ -498,11 +498,11 @@ function* maybeLoadMeshChunk(
   const { segmentMeshController } = getSceneController();
 
   let cubeSize = marchingCubeSizeInTargetMag();
-  cubeSize = V3.toArray(V3.add(cubeSize, [1, 1, 1]));
+  cubeSize = V3.add(cubeSize, [1, 1, 1]);
   if (cubePreciselyTouchesBottomRightLayerEdge(paddedPosition, mag, cubeSize, layer)) {
     // cube ends precisely at layer bbox,
     // increase size by 1,1,1 again to get a closing edge
-    cubeSize = V3.toArray(V3.add(cubeSize, [1, 1, 1]));
+    cubeSize = V3.add(cubeSize, [1, 1, 1]);
   }
 
   while (retryCount < MAX_RETRY_COUNT) {

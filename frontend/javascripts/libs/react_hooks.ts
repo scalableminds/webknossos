@@ -12,7 +12,10 @@ import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
  * @param ignoreNullAndUndefined - If true, null/undefined values won't update the previous value
  * @returns The previous value, or null if no previous value exists
  */
-export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
+export function usePrevious<T>(
+  value: T,
+  ignoreNullAndUndefined: boolean = false,
+): [T | null, () => void] {
   // Adapted from: https://usehooks.com/usePrevious/
 
   // The ref object is a generic container whose current property is mutable ...
@@ -24,9 +27,13 @@ export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false
       ref.current = value;
     }
   }, [value, ignoreNullAndUndefined]);
+
+  const clearFn = () => {
+    ref.current = null;
+  };
   // Only re-run if value changes
   // Return previous value (happens before update in useEffect above)
-  return ref.current;
+  return [ref.current, clearFn];
 }
 
 const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => ({

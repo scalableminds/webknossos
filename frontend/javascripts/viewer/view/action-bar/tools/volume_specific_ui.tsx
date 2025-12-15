@@ -112,8 +112,8 @@ export function OverwriteModeSwitch({
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
   const overwriteMode = useWkSelector((state) => state.userConfiguration.overwriteMode);
-  const previousIsControlOrMetaPressed = usePrevious(isControlOrMetaPressed);
-  const previousIsShiftPressed = usePrevious(isShiftPressed);
+  const [previousIsControlOrMetaPressed] = usePrevious(isControlOrMetaPressed);
+  const [previousIsShiftPressed] = usePrevious(isShiftPressed);
   // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
   useEffect(() => {
     // There are four possible states:

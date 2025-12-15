@@ -74,7 +74,7 @@ const Toast = {
         this.error(
           singleMessage.error,
           {
-            sticky: true,
+            timeout: 13000,
             key: singleMessage.key,
           },
           errorChainString,

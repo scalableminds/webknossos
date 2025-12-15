@@ -690,10 +690,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
   };
 
-  onFormValueChange = (
-    changedValues: Partial<UploadFormFieldTypes>,
-    _allValues: UploadFormFieldTypes,
-  ) => {
+  onFormValueChange = (changedValues: Partial<UploadFormFieldTypes>) => {
     if (changedValues.datastoreUrl) {
       this.setState({ datastoreUrl: changedValues.datastoreUrl });
       this.updateUnfinishedUploads();

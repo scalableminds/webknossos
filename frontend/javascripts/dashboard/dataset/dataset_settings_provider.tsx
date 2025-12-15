@@ -317,12 +317,9 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     form.validateFields().then(submitForm).catch(handleValidationFailed);
   }, [form, submitForm, handleValidationFailed]);
 
-  const onValuesChange = useCallback(
-    (_changedValues: Partial<DatasetSettingsFormData>, _allValues: DatasetSettingsFormData) => {
-      setHasUnsavedChanges(true);
-    },
-    [],
-  );
+  const onValuesChange = useCallback(() => {
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleCancel = useCallback(() => {
     onCancel();

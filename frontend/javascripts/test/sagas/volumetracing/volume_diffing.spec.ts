@@ -4,10 +4,13 @@ import {
   diffMetadataOfSegments,
   diffSegmentGroups,
 } from "viewer/model/sagas/volume/volume_diffing";
-import type { TreeGroup } from "viewer/model/types/tree_types";
 import type { Segment } from "viewer/store";
 import { describe, expect, it } from "vitest";
-import { MOVE_GROUP_EDGE_CASE } from "./segment_group_fixtures";
+import {
+  MOVE_GROUP_EDGE_CASE,
+  SEGMENT_GROUPS,
+  SEGMENT_GROUPS_EDITED,
+} from "./segment_group_fixtures";
 
 const createSegment = (
   id: number,
@@ -24,31 +27,6 @@ const createSegment = (
   groupId,
   metadata,
 });
-
-const segmentGroups: TreeGroup[] = [
-  {
-    name: "subroot1",
-    groupId: 1,
-    children: [
-      {
-        name: "subsubroot1",
-        groupId: 3,
-        children: [
-          {
-            name: "subsubsubroot1",
-            groupId: 4,
-            children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    name: "subroot2",
-    groupId: 2,
-    children: [],
-  },
-];
 
 const tracingId = "someTracingId";
 
@@ -108,8 +86,8 @@ describe("diffSegmentGroups for volume tracings", () => {
   it("diffSegmentGroups should detect zero changes if nothing changed", () => {
     const updateActions = Array.from(
       diffSegmentGroups(
-        segmentGroups,
-        segmentGroups.slice(), // use slice to get another identity
+        SEGMENT_GROUPS,
+        SEGMENT_GROUPS.slice(), // use slice to get another identity
         tracingId,
       ),
     );
@@ -121,27 +99,9 @@ describe("diffSegmentGroups for volume tracings", () => {
     // Delete group id 4
     // Rename group id 1
     // Move group id 3 so that it is a parent of group id 2
-    const newGroups: TreeGroup[] = [
-      {
-        name: "subroot1 - renamed",
-        groupId: 1,
-        children: [],
-      },
-      {
-        name: "subroot2",
-        groupId: 2,
-        children: [
-          {
-            name: "subsubroot1",
-            groupId: 3,
-            children: [],
-          },
-        ],
-      },
-    ];
 
     const updateActions = Array.from(
-      diffSegmentGroups(segmentGroups, newGroups.slice(), tracingId),
+      diffSegmentGroups(SEGMENT_GROUPS, SEGMENT_GROUPS_EDITED.slice(), tracingId),
     );
     expect(updateActions.length).toEqual(3);
 

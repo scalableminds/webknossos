@@ -22,7 +22,11 @@ import { afterAll, describe, it, expect, test } from "vitest";
 import { transformStateAsReadOnly } from "test/helpers/utils";
 import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 import { setSegmentGroups } from "viewer/model/reducers/volumetracing_reducer_helpers";
-import { MOVE_GROUP_EDGE_CASE } from "test/sagas/volumetracing/segment_group_fixtures";
+import {
+  MOVE_GROUP_EDGE_CASE,
+  SEGMENT_GROUPS,
+  SEGMENT_GROUPS_EDITED,
+} from "test/sagas/volumetracing/segment_group_fixtures";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];
@@ -252,6 +256,34 @@ describe("Update Action Application for VolumeTracing", () => {
       });
     },
   );
+
+  it("should be able to apply actions basic group editing", () => {
+    const state1 = applyActions(initialState, [
+      VolumeTracingActions.setSegmentGroupsAction(SEGMENT_GROUPS, tracingId),
+    ]);
+
+    const state2 = applyActions(state1, [
+      VolumeTracingActions.setSegmentGroupsAction(SEGMENT_GROUPS_EDITED, tracingId),
+    ]);
+
+    const volumeTracing1 = enforceVolumeTracing(state1);
+    const volumeTracing2 = enforceVolumeTracing(state2);
+
+    const updateActions = Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2));
+
+    console.log("updateActions", updateActions);
+
+    let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
+      applyActions(state, [
+        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        setActiveUserBoundingBoxId(null),
+      ]),
+    );
+
+    console.log("reappliedNewState.annotation.volumes[0]", JSON.stringify(reappliedNewState.annotation.volumes[0]));
+
+    expect(reappliedNewState.annotation.volumes[0]).toEqual(state2.annotation.volumes[0]);
+  });
 
   it.only("should be able to apply actions for edge case where a group is moved into one of its children", () => {
     // const state1 = initialState;

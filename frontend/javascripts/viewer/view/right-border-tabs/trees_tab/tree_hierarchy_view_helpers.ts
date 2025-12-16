@@ -34,6 +34,7 @@ export function makeBasicGroupObject(
     groupId,
     name,
     children,
+    isExpanded: false,
   };
 }
 
@@ -305,7 +306,7 @@ export function createGroupHelper(
     name: name || `Group ${newGroupId}`,
     groupId: newGroupId,
     children: [],
-    isExpanded: false,
+    // isExpanded: false,
   };
 
   if (parentGroupId === MISSING_GROUP_ID) {

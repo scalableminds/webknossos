@@ -195,13 +195,13 @@ export function* diffSegmentGroups(
     yield deleteSegmentGroupUpdateAction(groupId, volumeTracingId);
   }
   // Update groups that were changed
-  for (const groupId of groupDiff.changed) {
+  for (const groupId of Array.from(groupDiff.changed).toReversed()) {
     const prevGroup = groupDiff.prevGroupsById.get(groupId)!;
     const group = groupDiff.groupsById.get(groupId)!;
 
     const maybeName = prevGroup.name !== group.name ? { name: group.name } : {};
     const maybeParent =
-      prevGroup.parentGroupId !== group.parentGroupId ? { parentGroupId: group.parentGroupId } : {};
+      prevGroup.parentGroupId !== group.parentGroupId ? { newParentId: group.parentGroupId } : {};
 
     yield upsertSegmentGroupUpdateAction(
       groupId,

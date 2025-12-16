@@ -150,9 +150,6 @@ function applySingleAction(
         // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
         return nodes.reduce((acc: T[], node: T) => {
           if (predicate(node)) {
-            acc.push(node);
-          }
-          if (node.children) {
             acc.push({
               ...node,
               children: deepFilter(node.children as T[], predicate),

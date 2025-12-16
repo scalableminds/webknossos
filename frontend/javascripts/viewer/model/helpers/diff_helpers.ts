@@ -25,20 +25,20 @@ function stripIsExpanded(groups: TreeGroup[]): TreeGroup[] {
 
 function gatherIdToExpandedState(
   groups: TreeGroup[],
-  outputMap: { expanded: Set<number>; notExpanded: Set<number> } = {
+  outputSets: { expanded: Set<number>; notExpanded: Set<number> } = {
     expanded: new Set(),
     notExpanded: new Set(),
   },
 ) {
   for (const group of groups) {
     if (group.isExpanded) {
-      outputMap.expanded.add(group.groupId);
+      outputSets.expanded.add(group.groupId);
     } else {
-      outputMap.notExpanded.add(group.groupId);
+      outputSets.notExpanded.add(group.groupId);
     }
-    gatherIdToExpandedState(group.children, outputMap);
+    gatherIdToExpandedState(group.children, outputSets);
   }
-  return outputMap;
+  return outputSets;
 }
 
 export function diffGroups(prevGroups: TreeGroup[], groups: TreeGroup[]) {

@@ -172,6 +172,7 @@ class AiModelController @Inject()(
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
+          path = None, // TODO directly generate path here?
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -215,6 +216,7 @@ class AiModelController @Inject()(
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
+          path = None, // TODO directly generate path here?
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -350,6 +352,7 @@ class AiModelController @Inject()(
       }
     }
 
+  // TODO should this also be possible for arbitrary paths? probably not, right, permissions?
   def registerAiModel: Action[RegisterAiModelParameters] =
     sil.SecuredAction.async(validateJson[RegisterAiModelParameters]) { implicit request =>
       for {
@@ -359,16 +362,17 @@ class AiModelController @Inject()(
         _ <- aiModelDAO.findOneByName(request.body.name).reverse ?~> "aiModel.name.taken"
         _ <- aiModelDAO.insertOne(
           AiModel(
-            request.body.id,
+            _id = request.body.id,
             _organization = request.identity._organization,
             _sharedOrganizations = List(request.identity._organization),
-            request.body.dataStoreName,
-            request.identity._id,
-            None,
-            List.empty,
-            request.body.name,
-            request.body.comment,
-            request.body.category
+            _dataStore = request.body.dataStoreName,
+            _user = request.identity._id,
+            _trainingJob = None,
+            _trainingAnnotations = List.empty,
+            path = None,
+            name = request.body.name,
+            comment = request.body.comment,
+            category = request.body.category
           ))
       } yield Ok
     }

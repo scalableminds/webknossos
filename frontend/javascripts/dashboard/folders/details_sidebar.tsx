@@ -222,7 +222,7 @@ function DatasetsDetails({
   const deletableDatasets = selectedDatasets.filter((ds) => ds.isEditable);
   const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
 
-  const invalidateQueries = (deletedIds: string[]) => {
+  const updateAndInvalidateQueries = (deletedIds: string[]) => {
     const uniqueFolderIds = _.uniq(deletableDatasets.map((ds) => ds.folderId));
     uniqueFolderIds.forEach((folderId) => {
       queryClient.setQueryData(
@@ -254,7 +254,7 @@ function DatasetsDetails({
       return deletedIds;
     },
     onSuccess: (deletedIds) => {
-      invalidateQueries(deletedIds);
+      updateAndInvalidateQueries(deletedIds);
       setShowConfirmDeleteModal(false);
       setProgressInPercent(0);
 

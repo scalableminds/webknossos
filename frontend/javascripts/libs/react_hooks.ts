@@ -10,7 +10,7 @@ import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
  * Hook that returns the previous value of a state or prop.
  * @param value - The current value to track
  * @param ignoreNullAndUndefined - If true, null/undefined values won't update the previous value
- * @returns The previous value, or null if no previous value exists
+ * @returns The previous value, or null if no previous value exists; and a function to clear the stored previous value
  */
 export function usePrevious<T>(
   value: T,
@@ -28,9 +28,9 @@ export function usePrevious<T>(
     }
   }, [value, ignoreNullAndUndefined]);
 
-  const clearFn = () => {
+  const clearFn = useCallback(() => {
     ref.current = null;
-  };
+  }, []);
   // Only re-run if value changes
   // Return previous value (happens before update in useEffect above)
   return [ref.current, clearFn];

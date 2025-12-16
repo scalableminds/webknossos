@@ -13,10 +13,11 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
+import { App, Flex, Input, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
+import LinkButton from "components/link_button";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -65,18 +66,23 @@ const { Column } = Table;
 const { Search } = Input;
 
 export const getShowTrainingDataLink = (
+  modal: ReturnType<typeof App.useApp>["modal"],
   trainingAnnotations: {
     annotationId: string;
   }[],
 ) => {
   return trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-    <a
+    <LinkButton
+      icon={<EyeOutlined />}
       onClick={() => {
-        Modal.info({
+        modal.info({
+          title: "Training Data",
+          closable: true,
+          maskClosable: true,
           content: (
             <div>
               The following annotations were used during training:
-              <ul>
+              <ul style={{ padding: 15 }}>
                 {trainingAnnotations.map((annotation: { annotationId: string }, index: number) => (
                   <li key={`annotation_${index}`}>
                     <a
@@ -95,15 +101,16 @@ export const getShowTrainingDataLink = (
       }}
     >
       Show Training Data
-    </a>
+    </LinkButton>
   ) : (
-    <a
+    <LinkButton
+      icon={<EyeOutlined />}
       href={`/annotations/${trainingAnnotations[0].annotationId}`}
       target="_blank"
       rel="noreferrer noopener"
     >
       Show Training Data
-    </a>
+    </LinkButton>
   );
 };
 
@@ -134,6 +141,7 @@ export function JobState({ job }: { job: APIJob }) {
 
 function JobListView() {
   const queryClient = useQueryClient();
+  const { modal } = App.useApp();
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["jobs"],
     queryFn: getJobs,
@@ -170,6 +178,7 @@ function JobListView() {
   function renderDescription(__: any, job: APIJob) {
     const linkToDataset = getLinkToDataset(job);
     const layerName = job.args.annotationLayerName || job.args.layerName;
+
     if (job.command === APIJobCommand.CONVERT_TO_WKW && job.args.datasetName) {
       return <span>{`Conversion to WKW of ${job.args.datasetName}`}</span>;
     } else if (job.command === APIJobCommand.EXPORT_TIFF && linkToDataset != null) {
@@ -308,7 +317,7 @@ function JobListView() {
       return (
         <span>
           {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
-          {getShowTrainingDataLink(job.args.trainingAnnotations)}
+          {getShowTrainingDataLink(modal, job.args.trainingAnnotations)}
         </span>
       );
     } else {
@@ -371,8 +380,7 @@ function JobListView() {
         <span>
           {job.resultLink && (
             <Link to={job.resultLink} title="View Dataset">
-              <EyeOutlined className="icon-margin-right" />
-              View
+              <LinkButton icon={<EyeOutlined />}>View</LinkButton>
             </Link>
           )}
         </span>
@@ -381,10 +389,9 @@ function JobListView() {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Download">
-              <DownloadOutlined className="icon-margin-right" />
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Download
-            </a>
+            </LinkButton>
           )}
         </span>
       );
@@ -392,10 +399,9 @@ function JobListView() {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Download">
-              <DownloadOutlined className="icon-margin-right" />
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Download
-            </a>
+            </LinkButton>
           )}
         </span>
       );
@@ -435,9 +441,9 @@ function JobListView() {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Result">
+            <LinkButton href={job.resultLink} icon={<DownloadOutlined />}>
               Result
-            </a>
+            </LinkButton>
           )}
           {job.returnValue && <p>{job.returnValue}</p>}
         </span>
@@ -451,7 +457,26 @@ function JobListView() {
 
   return (
     <div className="container">
-      <div className="pull-right">
+      <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
+        <div>
+          <h3>Jobs</h3>
+          <Typography.Paragraph type="secondary">
+            Some actions such as dataset conversions or export as Tiff files require some time for
+            processing in the background.
+            <a
+              href="https://docs.webknossos.org/webknossos/automation/jobs.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Tooltip title="Read more in the documentation">
+                <InfoCircleOutlined className="icon-margin-left" />
+              </Tooltip>
+            </a>
+            <br />
+            WEBKNOSSOS will notify you via email when a background job has finished. Alternatively,
+            reload this page to track the progress.
+          </Typography.Paragraph>
+        </div>
         <Search
           style={{
             width: 200,
@@ -459,30 +484,7 @@ function JobListView() {
           onChange={handleSearch}
           value={searchQuery}
         />
-      </div>
-      <h3>Jobs</h3>
-      <Typography.Paragraph type="secondary">
-        Some actions such as dataset conversions or export as Tiff files require some time for
-        processing in the background.
-        <a
-          href="https://docs.webknossos.org/webknossos/automation/jobs.html"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Tooltip title="Read more in the documentation">
-            <InfoCircleOutlined style={{ marginLeft: 10 }} />
-          </Tooltip>
-        </a>
-        <br />
-        WEBKNOSSOS will notify you via email when a job has finished or reload this page to track
-        progress.
-      </Typography.Paragraph>
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
+      </Flex>
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={Utils.filterWithSearchQueryAND(
@@ -503,6 +505,7 @@ function JobListView() {
             title="Job Id"
             dataIndex="id"
             key="id"
+            width={120}
             render={(id) => <FormattedId id={id} />}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
           />
@@ -526,6 +529,7 @@ function JobListView() {
           <Column
             title="Date"
             key="createdAt"
+            width={190}
             render={(job) => <FormattedDate timestamp={job.created} />}
             sorter={Utils.compareBy<APIJob>((job) => job.created)}
             defaultSortOrder="descend"
@@ -536,6 +540,7 @@ function JobListView() {
           <Column
             title="State"
             key="state"
+            width={120}
             render={renderState}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
           />

@@ -1,72 +1,83 @@
 import {
-  EyeOutlined,
   FileTextOutlined,
-  PlusOutlined,
+  InfoCircleOutlined,
   SyncOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
 import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
-import { Button, Col, Modal, Row, Select, Space, Table, Typography } from "antd";
+import { App, Button, Col, Flex, Modal, Row, Select, Table, Tooltip, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
-import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import LinkButton from "components/link_button";
+import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
+import uniq from "lodash/uniq";
 import { useState } from "react";
 import type { Key } from "react";
-import type { Vector3 } from "viewer/constants";
-import { getMagInfo, getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { TrainAiModelForm } from "viewer/view/action-bar/ai_job_modals/forms/train_ai_model_form";
-import type { AnnotationInfoForAITrainingJob } from "viewer/view/action-bar/ai_job_modals/utils";
 
 import { Link } from "react-router-dom";
-import type { APIAnnotation, AiModel } from "types/api_types";
+import type { AiModel } from "types/api_types";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 
 export default function AiModelListView() {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-  const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
-  const [aiModels, isLoading] = useGuardedFetch(
-    getAiModels,
-    [],
-    [refreshCounter],
-    "Could not load model list.",
-  );
+  const { modal } = App.useApp();
 
-  if (!activeUser?.isSuperUser) {
-    return <PageNotAvailableToNormalUser />;
-  }
+  const {
+    data: aiModels = [],
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: ["aiModels"],
+    queryFn: async () => {
+      try {
+        return await getAiModels();
+      } catch (err) {
+        Toast.error("Could not load model list.");
+        console.error(err);
+        throw err;
+      }
+    },
+  });
 
   return (
     <div className="container voxelytics-view">
-      {isTrainModalVisible ? (
-        <TrainNewAiJobModal onClose={() => setIsTrainModalVisible(false)} />
-      ) : null}
       {currentlyEditedModel ? (
         <EditModelSharedOrganizationsModal
           model={currentlyEditedModel}
           onClose={() => {
             setCurrentlyEditedModel(null);
-            setRefreshCounter((val) => val + 1);
+            refetch();
           }}
           owningOrganization={activeUser.organization}
         />
       ) : null}
-      <div className="pull-right">
-        <Space>
-          <Button onClick={() => setIsTrainModalVisible(true)}>
-            <PlusOutlined /> Train new Model
-          </Button>
-          <Button onClick={() => setRefreshCounter((val) => val + 1)}>
-            <SyncOutlined spin={isLoading} /> Refresh
-          </Button>
-        </Space>
-      </div>
-      <h3>AI Models</h3>
+      <Flex justify="space-between" align="flex-start">
+        <h3>AI Models</h3>
+        <Button onClick={() => refetch()}>
+          <SyncOutlined spin={isFetching} /> Refresh
+        </Button>
+      </Flex>
+      <Typography.Paragraph type="secondary" style={{ marginBottom: 20 }}>
+        This list shows all AI models available in your organization. You can use these models to
+        run AI segmentation jobs on your datasets.
+        <a
+          href="https://docs.webknossos.org/webknossos/automation/ai_segmentation.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Tooltip title="Read more in the documentation">
+            <InfoCircleOutlined className="icon-margin-left" />
+          </Tooltip>
+        </a>
+        <br />
+        Model training functionality is coming soon.
+      </Typography.Paragraph>
+
       <Table
         bordered
         rowKey={(run: AiModel) => `${run.id}`}
@@ -89,7 +100,7 @@ export default function AiModelListView() {
             dataIndex: "user",
             key: "user",
             render: (user: AiModel["user"]) => formatUserName(activeUser, user),
-            filters: _.uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
+            filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
               (username) => ({
                 text: username,
                 value: username,
@@ -114,7 +125,7 @@ export default function AiModelListView() {
           {
             title: "Actions",
             render: (aiModel: AiModel) =>
-              renderActionsForModel(aiModel, () => setCurrentlyEditedModel(aiModel)),
+              renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
             key: "actions",
           },
         ]}
@@ -124,71 +135,15 @@ export default function AiModelListView() {
   );
 }
 
-function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
-  const [annotationInfosForAiJob, setAnnotationInfosForAiJob] = useState<
-    AnnotationInfoForAITrainingJob<APIAnnotation>[]
-  >([]);
-
-  const getMagsForSegmentationLayer = (annotationId: string, layerName: string) => {
-    // The layer name is a human-readable one. It can either belong to an annotationLayer
-    // (therefore, also to a volume tracing) or to the actual dataset.
-    // Both are checked below. This won't be ambiguous because annotationLayers must not
-    // have names that dataset layers already have.
-
-    const annotationWithDataset = annotationInfosForAiJob.find(({ annotation }) => {
-      return annotation.id === annotationId;
-    });
-    if (annotationWithDataset == null) {
-      throw new Error("Cannot find annotation for specified id.");
-    }
-
-    const { annotation, dataset, volumeTracings, volumeTracingMags } = annotationWithDataset;
-
-    let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
-    if (annotationLayer != null) {
-      const volumeTracingIndex = volumeTracings.findIndex(
-        (tracing) => tracing.tracingId === annotationLayer.tracingId,
-      );
-      const mags = volumeTracingMags[volumeTracingIndex] || [{ mag: [1, 1, 1] as Vector3 }];
-      return getMagInfo(mags);
-    } else {
-      const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getMagInfo(segmentationLayer.mags);
-    }
-  };
-
-  return (
-    <Modal
-      width={875}
-      open
-      title={
-        <>
-          <i className="fas fa-magic icon-margin-right" />
-          AI Analysis
-        </>
-      }
-      onCancel={onClose}
-      footer={null}
-      maskClosable={false}
-    >
-      <TrainAiModelForm
-        getMagsForSegmentationLayer={getMagsForSegmentationLayer}
-        onClose={onClose}
-        annotationInfos={annotationInfosForAiJob}
-        onAddAnnotationsInfos={(newItems) => {
-          setAnnotationInfosForAiJob([...annotationInfosForAiJob, ...newItems]);
-        }}
-      />
-    </Modal>
-  );
-}
-
-const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () => void) => {
+const renderActionsForModel = (
+  modal: ReturnType<typeof App.useApp>["modal"],
+  model: AiModel,
+  onChangeSharedOrganizations: () => void,
+) => {
   const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <a onClick={onChangeSharedOrganizations}>
-      <TeamOutlined className="icon-margin-right" />
+    <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
       Manage Access
-    </a>
+    </LinkButton>
   ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
@@ -200,22 +155,14 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
     <Col>
       {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
       {voxelyticsWorkflowHash != null ? (
-        /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
         <Row>
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>
-            <FileTextOutlined className="icon-margin-right" />
-            Voxelytics Report
+            <LinkButton icon={<FileTextOutlined />}>Voxelytics Report</LinkButton>
           </Link>
         </Row>
       ) : null}
       {trainingAnnotations != null ? (
-        <Row>
-          <EyeOutlined
-            className="icon-margin-right"
-            style={{ color: "var(--ant-color-primary)" }}
-          />
-          {getShowTrainingDataLink(trainingAnnotations)}
-        </Row>
+        <Row>{getShowTrainingDataLink(modal, trainingAnnotations)}</Row>
       ) : null}
     </Col>
   );
@@ -261,7 +208,7 @@ function EditModelSharedOrganizationsModal({
 
   return (
     <Modal
-      title={`Edit Organizations with Access to AI Model ${model.name}`}
+      title={"Edit Organizations with Access to this AI Model"}
       open
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
@@ -270,27 +217,27 @@ function EditModelSharedOrganizationsModal({
       width={800}
     >
       <p>
-        Select all organization that should have access to the AI model{" "}
+        Select all organizations that should have access to the AI model{" "}
         <Typography.Text italic>{model.name}</Typography.Text>.
       </p>
       <Typography.Paragraph type="secondary">
-        You can only select or deselect organizations that you are a member of. However, other users
-        in your organization may have granted access to additional organizations that you are not
-        part of. Only members of your organization who have access to those organizations can modify
-        their access.
+        You can only manage access for organizations you belong to. Other members of your
+        organization may have access to additional organizations not listed here. Only they can
+        modify access for those organizations.
       </Typography.Paragraph>
-      <Col span={14} offset={4}>
+      <Flex justify="center">
         <Select
           mode="multiple"
           allowClear
           autoFocus
-          style={{ width: "100%" }}
+          style={{ minWidth: 400 }}
+          dropdownMatchSelectWidth={false}
           placeholder="Please select"
           onChange={handleChange}
           options={options}
           value={selectedOrganizationIds}
         />
-      </Col>
+      </Flex>
     </Modal>
   );
 }

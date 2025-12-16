@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
-import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationService}
+import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationPlanUpdate, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
 import models.team.PricingPlan
 import play.api.i18n.Messages
@@ -77,11 +77,14 @@ class OrganizationController @Inject()(
         owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
         org <- organizationService.createOrganization(request.body.organization, request.body.organizationName)
         user <- userDAO.findFirstByMultiUser(owner._id)
+        teamMemberships <- userService.initialTeamMemberships(org._id, inviteIdOpt = None)
         _ <- userService.joinOrganization(user,
                                           org._id,
                                           autoActivate = true,
                                           isAdmin = true,
-                                          isOrganizationOwner = true)
+                                          isDatasetManager = false,
+                                          isOrganizationOwner = true,
+                                          teamMemberships = teamMemberships)
         _ <- freeCreditTransactionService.handOutMonthlyFreeCredits()
       } yield Ok(org._id)
     }
@@ -179,7 +182,13 @@ class OrganizationController @Inject()(
         multiUser <- multiUserDAO.findOneByEmail(request.body)
         organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
         user <- userDAO.findFirstByMultiUser(multiUser._id)
-        user <- userService.joinOrganization(user, organization._id, autoActivate = true, isAdmin = false)
+        teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
+        user <- userService.joinOrganization(user,
+                                             organization._id,
+                                             autoActivate = true,
+                                             isAdmin = false,
+                                             isDatasetManager = false,
+                                             teamMemberships = teamMemberships)
       } yield Ok(user._id.toString)
     }
 
@@ -193,12 +202,7 @@ class OrganizationController @Inject()(
       organization <- organizationDAO
         .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
       userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail))
-      _ = Mailer ! Send(
-        defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                   userEmail,
-                                                   organization.name,
-                                                   "Extend WEBKNOSSOS plan by a year"))
+      _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail, organization.name))
     } yield Ok
   }
 
@@ -215,12 +219,7 @@ class OrganizationController @Inject()(
         } else {
           defaultMails.upgradePricingPlanToPowerMail _
         }
-        _ = Mailer ! Send(mail(request.identity, userEmail))
-        _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
-                                                     organization.name,
-                                                     s"Upgrade WEBKNOSSOS Plan to $requestedPlan"))
+        _ = Mailer ! Send(mail(request.identity, userEmail, organization.name))
       } yield Ok
   }
 
@@ -230,12 +229,8 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
-        _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
         _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
-                                                     organization.name,
-                                                     s"Purchase $requestedUsers additional users"))
+          defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers, organization.name))
       } yield Ok
     }
 
@@ -245,12 +240,8 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
-        _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
         _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
-                                                     organization.name,
-                                                     s"Purchase $requestedStorage TB additional storage"))
+          defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage, organization.name))
       } yield Ok
     }
 
@@ -290,6 +281,27 @@ class OrganizationController @Inject()(
             "isExceeded" -> isExceeded,
             "isAlmostExceeded" -> isAlmostExceeded
           ))
+    }
+
+  def updatePlan(): Action[OrganizationPlanUpdate] =
+    sil.SecuredAction.async(validateJson[OrganizationPlanUpdate]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        organization <- organizationDAO.findOne(request.body.organizationId) ?~> Messages(
+          "organization.notFound",
+          request.body.organizationId) ~> NOT_FOUND
+        _ <- organizationDAO.insertPlanUpdate(organization._id, request.body)
+        _ <- organizationDAO.updatePlan(organization._id, request.body)
+      } yield Ok
+    }
+
+  def listPlanUpdates: Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        isSuperUser <- userService.isSuperUser(request.identity._multiUser)
+        _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listPlanUpdates.onlyAdmin"
+        planUpdates <- organizationDAO.findPlanUpdates(request.identity._organization)
+      } yield Ok(Json.toJson(planUpdates))
     }
 
 }

@@ -172,7 +172,8 @@ class AiModelController @Inject()(
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
-          path = None, // TODO directly generate path here?
+          path = None,
+          uploadToPathIsPending = false,
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -216,7 +217,8 @@ class AiModelController @Inject()(
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
-          path = None, // TODO directly generate path here?
+          path = None,
+          uploadToPathIsPending = false,
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -352,10 +354,10 @@ class AiModelController @Inject()(
       }
     }
 
-  // TODO should this also be possible for arbitrary paths? probably not, right, permissions?
-  def registerAiModel: Action[RegisterAiModelParameters] =
+  def reserveUploadToPath: Action[RegisterAiModelParameters] =
     sil.SecuredAction.async(validateJson[RegisterAiModelParameters]) { implicit request =>
       for {
+        // TODO if id is passed, mutate existing instead of creating new
         _ <- userService.assertIsSuperUser(request.identity)
         _ <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.id).reverse ?~> "aiModel.id.taken"
@@ -370,10 +372,18 @@ class AiModelController @Inject()(
             _trainingJob = None,
             _trainingAnnotations = List.empty,
             path = None,
+            uploadToPathIsPending = true,
             name = request.body.name,
             comment = request.body.comment,
             category = request.body.category
           ))
+      } yield Ok
+    }
+
+  def finishUploadToPath(id: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- Fox.successful(())
       } yield Ok
     }
 

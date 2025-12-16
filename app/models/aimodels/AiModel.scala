@@ -30,6 +30,7 @@ case class AiModel(_id: ObjectId,
                    _trainingJob: Option[ObjectId],
                    _trainingAnnotations: List[ObjectId],
                    path: Option[UPath],
+                   uploadToPathIsPending: Boolean,
                    name: String,
                    comment: Option[String],
                    category: Option[AiModelCategory],
@@ -78,7 +79,8 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "created" -> aiModel.created,
         "sharedOrganizationIds" -> sharedOrganizationIds,
         "category" -> aiModel.category,
-        "path" -> path
+        "path" -> path,
+        "isUsable" -> !aiModel.uploadToPathIsPending // TODO if non-finished training job exists, it’s not usable!
       )
 
   private def pathWithFallback(aiModel: AiModel)(implicit ec: ExecutionContext): Fox[UPath] =
@@ -117,6 +119,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r._Trainingjob.map(ObjectId(_)),
         trainingAnnotationIds,
         path,
+        r.uploadtopathispending,
         r.name,
         r.comment,
         r.category.flatMap(AiModelCategory.fromString),
@@ -168,10 +171,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
-                      _id, _organization, _dataStore, _user, _trainingJob, path, name,
+                      _id, _organization, _dataStore, _user, _trainingJob, path, uploadToPathIsPending, name,
                        comment, category, created, modified, isDeleted
                     ) VALUES (
-                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.name},
+                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.uploadToPathIsPending}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
            """.asUpdate

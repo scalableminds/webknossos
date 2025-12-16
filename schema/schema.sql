@@ -659,6 +659,7 @@ CREATE TABLE webknossos.aiModels(
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   _trainingJob TEXT CONSTRAINT _trainingJob_objectId CHECK (_trainingJob ~ '^[0-9a-f]{24}$'),
   path TEXT,
+  uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   name TEXT NOT NULL,
   comment TEXT,
   category webknossos.AI_MODEL_CATEGORY,

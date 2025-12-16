@@ -5,6 +5,7 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 149 
 DROP VIEW webknossos.aiModels_;
 
 ALTER TABLE webknossos.aiModels DROP COLUMN path;
+ALTER TABLE webknossos.aiModels DROP COLUMN uploadToPathIsPending;
 
 CREATE VIEW webknossos.aiModels_ AS SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 

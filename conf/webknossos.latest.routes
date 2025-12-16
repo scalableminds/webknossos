@@ -299,7 +299,8 @@ POST          /aiModels/inferences/runCustomInstanceModelInference              
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels
-POST          /aiModels/register                                                                controllers.AiModelController.registerAiModel
+POST          /aiModels/rerserveUploadToPath                                                    controllers.AiModelController.reserveUploadToPath
+POST          /aiModels/:id/finishUploadToPath                                                  controllers.AiModelController.finishUploadToPath(id: ObjectId)
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: ObjectId)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: ObjectId)
 DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: ObjectId)

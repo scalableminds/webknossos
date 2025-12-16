@@ -32,13 +32,14 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                        segmentId: Long,
                        mag: Vec3Int,
                        mappingName: Option[String],
-                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext,
-                                                                                 tc: TokenContext): Fox[Long] =
+                       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                       editableMappingVersion: Option[Long],
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     calculateSegmentVolume(
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, editableMappingVersion),
       getDataForBucketPositions(annotationId, tracingId)
     )
 
@@ -47,14 +48,14 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                             segmentId: Long,
                             mag: Vec3Int,
                             mappingName: Option[String],
-                            additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+                            additionalCoordinates: Option[Seq[AdditionalCoordinate]], editableMappingVersion: Option[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, editableMappingVersion),
       getDataForBucketPositions(annotationId, tracingId)
     )
 
@@ -91,9 +92,10 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
   private def getBucketPositions(annotationId: ObjectId,
                                  tracingId: String,
                                  mappingName: Option[String],
-                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      segmentId: Long,
-      mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
+                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                 editableMappingVersion: Option[Long])(segmentId: Long, mag: Vec3Int)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
@@ -105,6 +107,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         mag,
         mappingName,
         editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        editableMappingVersion.getOrElse(tracing.version),
         additionalCoordinates
       )
     } yield allBucketPositions

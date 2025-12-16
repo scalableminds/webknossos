@@ -117,7 +117,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         segmentIds,
         bucketPosition.mag,
         editableMappingTracingId,
-        bucketPosition.additionalCoordinates)
+        None, // use newest version: TODO for review check if that's true. My assumption was that this code is only called when the volume tracing is updated. Thus, always the newest version must be used.
+        bucketPosition.additionalCoordinates
+      )
       _ = previousBucketPositionsBySegment.foreach {
         case (segmentId, previousBucketPositions) =>
           val newBucketPositions = previousBucketPositions + bucketPosition.toVec3IntProto
@@ -147,6 +149,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                               mag: Vec3Int,
                               mappingName: Option[String],
                               editableMappingTracingId: Option[String],
+                              editableMappingVersion: Long,
                               additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Set[Vec3IntProto]] =
@@ -157,7 +160,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         elementClass = tracing.elementClass,
         mappingName = mappingName,
         volumeSegmentIndexClient = volumeSegmentIndexClient,
-        version = tracing.version,
+        version = editableMappingVersion,
         remoteDatastoreClient = remoteDatastoreClient,
         fallbackLayer = fallbackLayer,
         additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),

@@ -220,6 +220,7 @@ class VolumeTracingService @Inject()(
               mag,
               mappingName,
               editableMappingTracingId(volumeTracing, tracingId),
+              volumeTracing.version,
               additionalCoordinates
             )
             bucketPositions = bucketPositionsRaw.toSeq

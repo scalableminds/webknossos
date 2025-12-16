@@ -82,13 +82,18 @@ class VolumeSegmentIndexBuffer(
       editableMappingTracingId: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext): Fox[Set[Vec3IntProto]] =
     for {
-      resultList <- getMultiple(List(segmentId), mag, editableMappingTracingId, additionalCoordinates)
+      resultList <- getMultiple(List(segmentId),
+                                mag,
+                                editableMappingTracingId,
+                                Some(this.version),
+                                additionalCoordinates)
       result <- resultList.headOption.map(_._2).toFox
     } yield result
 
   def getMultiple(segmentIds: List[Long],
                   mag: Vec3Int,
                   editableMappingTracingId: Option[String],
+                  editableMappingVersion: Option[Long],
                   additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[List[(Long, Set[Vec3IntProto])]] =
     if (segmentIds.isEmpty) Fox.successful(List.empty)
@@ -102,7 +107,8 @@ class VolumeSegmentIndexBuffer(
                                                       mag,
                                                       additionalCoordinates,
                                                       mappingName,
-                                                      editableMappingTracingId)
+                                                      editableMappingTracingId,
+                                                      editableMappingVersion)
         _ = putMultiple(fromFossilOrTempHits.toSeq, mag, additionalCoordinates, markAsChanged = false)
         _ = putMultiple(fromDatastoreHits, mag, additionalCoordinates, markAsChanged = false)
         allHits = fromBufferHits ++ fromFossilOrTempHits ++ fromDatastoreHits
@@ -193,14 +199,16 @@ class VolumeSegmentIndexBuffer(
       // currently unused, segment index files in datastore cannot handle ND anyway.
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       mappingName: Option[String],
-      editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
+      editableMappingTracingId: Option[String],
+      editableMappingVersion: Option[Long])(implicit ec: ExecutionContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
     fallbackLayer match {
       case Some(remoteFallbackLayer) if segmentIds.nonEmpty =>
         remoteDatastoreClient.querySegmentIndexForMultipleSegments(remoteFallbackLayer,
                                                                    segmentIds,
                                                                    mag,
                                                                    mappingName,
-                                                                   editableMappingTracingId)(tc)
+                                                                   editableMappingTracingId,
+                                                                   editableMappingVersion)(tc)
       case _ => Fox.successful(List.empty)
     }
 

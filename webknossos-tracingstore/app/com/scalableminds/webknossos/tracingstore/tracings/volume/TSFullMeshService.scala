@@ -76,7 +76,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else
-        getAllAdHocChunksWithNeighborLogic(
+        getAllAdHocChunksWithNeighborLogic( // TODOM: collab with fm3 to make this versioned.
           annotationId,
           tracingId,
           tracing,
@@ -109,6 +109,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         mag,
         mappingName,
         volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        tracing.version, // TODOM: adjust so that the correct version is used
         fullMeshRequest.additionalCoordinates
       )
       bucketPositions = bucketPositionsRaw.toSeq

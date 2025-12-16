@@ -4,12 +4,12 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
+  type GranularGroupDiff,
   type ParentUpdate,
   buildOrderDependencies,
   diffBoundingBoxes,
   diffGroupsGranular,
   topologicallySortUpdates,
-  GranularGroupDiff,
 } from "viewer/model/helpers/diff_helpers";
 import {
   type UpdateActionWithoutIsolationRequirement,
@@ -227,7 +227,7 @@ export function* diffSegmentGroups(
   }
 }
 
-function* getOrderedUpsertsForChangedItems(groupDiff: GranularGroupDiff) {
+function* getOrderedUpsertsForChangedItems(groupDiff: GranularGroupDiff, volumeTracingId: string) {
   // Groups are diffed by comparing old and new properties. When updating
   // the parentGroupId, we must be careful that we don't move a group into one
   // of its subgroups first (instead, that action should come after an update action
@@ -265,8 +265,7 @@ function* getOrderedUpsertsForChangedItems(groupDiff: GranularGroupDiff) {
         ...(u.nameChanged ? { name: u.newName } : {}),
         ...(u.from !== u.to ? { newParentId: u.to } : {}),
       },
-      volumeTracingId
+      volumeTracingId,
     );
   }
 }
-

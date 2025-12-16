@@ -273,7 +273,9 @@ describe("Update Action Application for VolumeTracing", () => {
     const volumeTracing1 = enforceVolumeTracing(state1);
     const volumeTracing2 = enforceVolumeTracing(state2);
 
-    const updateActions = Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2));
+    const updateActions = Array.from(
+      diffVolumeTracing(volumeTracing1, volumeTracing2),
+    ) as ApplicableVolumeUpdateAction[];
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
@@ -297,7 +299,9 @@ describe("Update Action Application for VolumeTracing", () => {
     const volumeTracing1 = enforceVolumeTracing(state1);
     const volumeTracing2 = enforceVolumeTracing(state2);
 
-    const updateActions = Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2));
+    const updateActions = Array.from(
+      diffVolumeTracing(volumeTracing1, volumeTracing2),
+    ) as ApplicableVolumeUpdateAction[];
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
@@ -321,7 +325,9 @@ describe("Update Action Application for VolumeTracing", () => {
     const volumeTracing1 = enforceVolumeTracing(state1);
     const volumeTracing2 = enforceVolumeTracing(state2);
 
-    const updateActions = Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2));
+    const updateActions = Array.from(
+      diffVolumeTracing(volumeTracing1, volumeTracing2),
+    ) as ApplicableVolumeUpdateAction[];
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [

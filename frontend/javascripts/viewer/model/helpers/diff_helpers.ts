@@ -135,7 +135,10 @@ function isDescendant(
   return false;
 }
 
-export function buildOrderDependencies(updates: ParentUpdate[], prevGroupsById: Map<number, FlatGroup>) {
+export function buildOrderDependencies(
+  updates: ParentUpdate[],
+  prevGroupsById: Map<number, FlatGroup>,
+) {
   const prevChildrenMap = buildChildrenMap(prevGroupsById);
 
   const deps = new Map<number, Set<number>>(); // A -> Set of B (A depends on B)

@@ -1,13 +1,13 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
 import models.job.{JobCommand, JobService}
-import models.user.UserService
+import models.user.{User, UserService}
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -73,14 +73,16 @@ object UpdateAiModelParameters {
   implicit val jsonFormat: OFormat[UpdateAiModelParameters] = Json.format[UpdateAiModelParameters]
 }
 
-case class RegisterAiModelParameters(id: ObjectId, // must be a valid MongoDB ObjectId
-                                     dataStoreName: String,
-                                     name: String,
-                                     comment: Option[String],
-                                     category: Option[AiModelCategory])
+case class ReserveAiModelUploadToPathParameters(
+    id: Option[ObjectId], // if empty, a new model entry is generated and returned
+    dataStoreName: String,
+    name: String,
+    comment: Option[String],
+    category: Option[AiModelCategory])
 
-object RegisterAiModelParameters {
-  implicit val jsonFormat: OFormat[RegisterAiModelParameters] = Json.format[RegisterAiModelParameters]
+object ReserveAiModelUploadToPathParameters {
+  implicit val jsonFormat: OFormat[ReserveAiModelUploadToPathParameters] =
+    Json.format[ReserveAiModelUploadToPathParameters]
 }
 
 class AiModelController @Inject()(
@@ -354,36 +356,54 @@ class AiModelController @Inject()(
       }
     }
 
-  def reserveUploadToPath: Action[RegisterAiModelParameters] =
-    sil.SecuredAction.async(validateJson[RegisterAiModelParameters]) { implicit request =>
+  def reserveUploadToPath: Action[ReserveAiModelUploadToPathParameters] =
+    sil.SecuredAction.async(validateJson[ReserveAiModelUploadToPathParameters]) { implicit request =>
       for {
-        // TODO if id is passed, mutate existing instead of creating new
-        _ <- userService.assertIsSuperUser(request.identity)
         _ <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
-        _ <- aiModelDAO.findOne(request.body.id).reverse ?~> "aiModel.id.taken"
-        _ <- aiModelDAO.findOneByName(request.body.name).reverse ?~> "aiModel.name.taken"
-        _ <- aiModelDAO.insertOne(
-          AiModel(
-            _id = request.body.id,
-            _organization = request.identity._organization,
-            _sharedOrganizations = List(request.identity._organization),
-            _dataStore = request.body.dataStoreName,
-            _user = request.identity._id,
-            _trainingJob = None,
-            _trainingAnnotations = List.empty,
-            path = None,
-            uploadToPathIsPending = true,
-            name = request.body.name,
-            comment = request.body.comment,
-            category = request.body.category
-          ))
-      } yield Ok
+        aiModelId <- request.body.id match {
+          case Some(existingAiModelId) =>
+            reserveUploadToPathForPreliminary(existingAiModelId, request.body, request.identity)
+          case None => reserveUploadToPathNew(request.body, request.identity)
+        }
+        aiModel <- aiModelDAO.findOne(aiModelId)
+        aiModelJs <- aiModelService.publicWrites(aiModel, request.identity)
+      } yield Ok(aiModelJs)
     }
+
+  private def reserveUploadToPathForPreliminary(existingAiModelId: ObjectId,
+                                                params: ReserveAiModelUploadToPathParameters,
+                                                user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      existingModel <- aiModelDAO.findOne(existingAiModelId)
+      // TODO access checks
+      // TODO generate path, update it and the bool
+    } yield existingAiModelId
+
+  private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User): Fox[ObjectId] =
+    for {
+      _ <- aiModelDAO.findOneByName(params.name)(GlobalAccessContext).reverse ?~> "aiModel.name.taken"
+      // TODO generate path
+      newAiModel = AiModel(
+        _id = ObjectId.generate,
+        _organization = user._organization,
+        _sharedOrganizations = List(user._organization),
+        _dataStore = params.dataStoreName,
+        _user = user._id,
+        _trainingJob = None,
+        _trainingAnnotations = List.empty,
+        path = None,
+        uploadToPathIsPending = true,
+        name = params.name,
+        comment = params.comment,
+        category = params.category
+      )
+      _ <- aiModelDAO.insertOne(newAiModel)
+    } yield newAiModel._id
 
   def finishUploadToPath(id: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.successful(())
+        _ <- Fox.successful(()) // TODO update bool in db
       } yield Ok
     }
 

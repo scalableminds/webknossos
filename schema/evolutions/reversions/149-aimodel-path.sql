@@ -6,7 +6,7 @@ DROP VIEW webknossos.aiModels_;
 
 ALTER TABLE webknossos.aiModels DROP COLUMN path;
 
-CREATE VIEW webknossos.aiModels_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiModels_ AS SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 148;
 

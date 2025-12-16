@@ -1,5 +1,5 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
+import { getAdaptToTypeFunction } from "libs/utils";
 import _ from "lodash";
 import { call, put } from "typed-redux-saga";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";

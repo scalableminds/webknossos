@@ -63,11 +63,11 @@ import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
-import { api, Model } from "viewer/singletons";
+import { Model, api } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
-import { createVolumeLayer, labelWithVoxelBuffer2D, type BooleanBox } from "./volume/helpers";
+import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";

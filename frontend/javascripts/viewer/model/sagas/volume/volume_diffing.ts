@@ -4,7 +4,17 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
+  type ParentUpdate,
+  buildOrderDependencies,
+  diffBoundingBoxes,
+  diffGroupsGranular,
+  topologicallySortUpdates,
+  GranularGroupDiff,
+} from "viewer/model/helpers/diff_helpers";
+import {
+  type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
+  deleteSegmentGroupUpdateAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
   updateActiveSegmentId,
@@ -14,18 +24,15 @@ import {
   updateSegmentGroupsExpandedState,
   updateSegmentPartialVolumeAction,
   updateSegmentVisibilityVolumeAction,
-  type UpdateActionWithoutIsolationRequirement,
-  deleteSegmentGroupUpdateAction,
   upsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import {
-  SegmentPropertiesWithoutUserState,
   type Segment,
-  type SegmentMap,
-  type VolumeTracing,
   type SegmentGroup,
+  type SegmentMap,
+  SegmentPropertiesWithoutUserState,
+  type VolumeTracing,
 } from "viewer/store";
-import { diffBoundingBoxes, diffGroupsGranular } from "viewer/model/helpers/diff_helpers";
 
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
@@ -194,24 +201,9 @@ export function* diffSegmentGroups(
   for (const groupId of groupDiff.onlyA) {
     yield deleteSegmentGroupUpdateAction(groupId, volumeTracingId);
   }
+
   // Update groups that were changed
-  for (const groupId of Array.from(groupDiff.changed).toReversed()) {
-    const prevGroup = groupDiff.prevGroupsById.get(groupId)!;
-    const group = groupDiff.groupsById.get(groupId)!;
-
-    const maybeName = prevGroup.name !== group.name ? { name: group.name } : {};
-    const maybeParent =
-      prevGroup.parentGroupId !== group.parentGroupId ? { newParentId: group.parentGroupId } : {};
-
-    yield upsertSegmentGroupUpdateAction(
-      groupId,
-      {
-        ...maybeName,
-        ...maybeParent,
-      },
-      volumeTracingId,
-    );
-  }
+  yield* getOrderedUpsertsForChangedItems(groupDiff, volumeTracingId);
 
   // Add new groups
   for (const groupId of groupDiff.onlyB) {
@@ -234,3 +226,47 @@ export function* diffSegmentGroups(
     yield updateSegmentGroupsExpandedState(groupDiff.newlyNotExpandedIds, false, volumeTracingId);
   }
 }
+
+function* getOrderedUpsertsForChangedItems(groupDiff: GranularGroupDiff) {
+  // Groups are diffed by comparing old and new properties. When updating
+  // the parentGroupId, we must be careful that we don't move a group into one
+  // of its subgroups first (instead, that action should come after an update action
+  // that hoists the subgroup).
+  // For that we first build temporary ParentUpdate descriptors, sort these and then
+  // yield the actual upsertSegmentGroupUpdateAction.
+
+  const parentUpdates: ParentUpdate[] = [];
+
+  for (const groupId of groupDiff.changed) {
+    const prevGroup = groupDiff.prevGroupsById.get(groupId)!;
+    const group = groupDiff.groupsById.get(groupId)!;
+
+    const parentChanged = prevGroup.parentGroupId !== group.parentGroupId;
+    const nameChanged = prevGroup.name !== group.name;
+
+    if (!parentChanged && !nameChanged) continue;
+
+    parentUpdates.push({
+      groupId,
+      from: prevGroup.parentGroupId,
+      to: group.parentGroupId,
+      nameChanged,
+      newName: nameChanged ? group.name : undefined,
+    });
+  }
+
+  const deps = buildOrderDependencies(parentUpdates, groupDiff.prevGroupsById);
+  const orderedUpdates = topologicallySortUpdates(parentUpdates, deps);
+
+  for (const u of orderedUpdates) {
+    yield upsertSegmentGroupUpdateAction(
+      u.groupId,
+      {
+        ...(u.nameChanged ? { name: u.newName } : {}),
+        ...(u.from !== u.to ? { newParentId: u.to } : {}),
+      },
+      volumeTracingId
+    );
+  }
+}
+

@@ -14,23 +14,23 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { SegmentGroup, WebknossosState } from "viewer/store";
+import {
+  createGroupHelper,
+  findGroup,
+  moveGroupsHelper,
+} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
+  type VolumeTracingReducerAction,
   setLargestSegmentIdReducer,
   setSegmentGroups,
   toggleSegmentGroupReducer,
-  type VolumeTracingReducerAction,
 } from "../volumetracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
-import {
-  createGroupHelper,
-  findGroup,
-  moveGroupsHelper,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],

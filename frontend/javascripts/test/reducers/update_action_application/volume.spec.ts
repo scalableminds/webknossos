@@ -18,14 +18,14 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { afterAll, describe, it, expect, test } from "vitest";
+import { describe, it, expect, test, afterAll } from "vitest";
 import { transformStateAsReadOnly } from "test/helpers/utils";
 import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
-import { setSegmentGroups } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import {
   MOVE_GROUP_EDGE_CASE,
   SEGMENT_GROUPS,
   SEGMENT_GROUPS_EDITED,
+  SWAP_GROUP_EDGE_CASE,
 } from "test/sagas/volumetracing/segment_group_fixtures";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
@@ -160,6 +160,10 @@ describe("Update Action Application for VolumeTracing", () => {
     ),
     VolumeTracingActions.removeSegmentAction(3, tracingId),
     VolumeTracingActions.setLargestSegmentIdAction(10000),
+    VolumeTracingActions.setSegmentGroupsAction(
+      [makeBasicGroupObject(3, "group 3 - renamed")],
+      tracingId,
+    ),
   ];
 
   test("User actions for test should not contain no-ops", () => {
@@ -271,8 +275,6 @@ describe("Update Action Application for VolumeTracing", () => {
 
     const updateActions = Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2));
 
-    console.log("updateActions", updateActions);
-
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
         VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
@@ -280,17 +282,10 @@ describe("Update Action Application for VolumeTracing", () => {
       ]),
     );
 
-    console.log("reappliedNewState.annotation.volumes[0]", JSON.stringify(reappliedNewState.annotation.volumes[0]));
-
     expect(reappliedNewState.annotation.volumes[0]).toEqual(state2.annotation.volumes[0]);
   });
 
-  it.only("should be able to apply actions for edge case where a group is moved into one of its children", () => {
-    // const state1 = initialState;
-    // const state2 = applyActions(initialState, [
-    //   VolumeTracingActions.setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.BEFORE, tracingId),
-    // ]);
-
+  it("should be able to apply actions for edge case where a group is moved into one of its children", () => {
     const state1 = applyActions(initialState, [
       VolumeTracingActions.setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.BEFORE, tracingId),
     ]);
@@ -304,7 +299,29 @@ describe("Update Action Application for VolumeTracing", () => {
 
     const updateActions = Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2));
 
-    console.log("updateActions", updateActions);
+    let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
+      applyActions(state, [
+        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        setActiveUserBoundingBoxId(null),
+      ]),
+    );
+
+    expect(reappliedNewState.annotation.volumes[0]).toEqual(state2.annotation.volumes[0]);
+  });
+
+  it("should be able to apply actions for edge case where two groups are swapped", () => {
+    const state1 = applyActions(initialState, [
+      VolumeTracingActions.setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.BEFORE, tracingId),
+    ]);
+
+    const state2 = applyActions(state1, [
+      VolumeTracingActions.setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.AFTER, tracingId),
+    ]);
+
+    const volumeTracing1 = enforceVolumeTracing(state1);
+    const volumeTracing2 = enforceVolumeTracing(state2);
+
+    const updateActions = Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2));
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
@@ -316,7 +333,7 @@ describe("Update Action Application for VolumeTracing", () => {
     expect(reappliedNewState.annotation.volumes[0]).toEqual(state2.annotation.volumes[0]);
   });
 
-  // afterAll(() => {
-  //   expect(seenActionTypes).toEqual(new Set(actionNamesList));
-  // });
+  afterAll(() => {
+    expect(seenActionTypes).toEqual(new Set(actionNamesList));
+  });
 });

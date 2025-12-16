@@ -2,10 +2,10 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
-import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
+import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService, UploadToPathsService}
 import models.job.{JobCommand, JobService}
 import models.user.{User, UserService}
 import play.api.libs.json.{Json, OFormat}
@@ -79,7 +79,8 @@ case class ReserveAiModelUploadToPathParameters(
     dataStoreName: String,
     name: String,
     comment: Option[String],
-    category: Option[AiModelCategory])
+    category: Option[AiModelCategory],
+    pathPrefix: Option[UPath])
 
 object ReserveAiModelUploadToPathParameters {
   implicit val jsonFormat: OFormat[ReserveAiModelUploadToPathParameters] =
@@ -98,7 +99,8 @@ class AiModelController @Inject()(
     datasetService: DatasetService,
     jobService: JobService,
     datasetDAO: DatasetDAO,
-    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    dataStoreDAO: DataStoreDAO,
+    uploadToPathsService: UploadToPathsService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -378,7 +380,7 @@ class AiModelController @Inject()(
       existingModel <- aiModelDAO.findOne(existingAiModelId)
       _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> "aiModel.reserve.wrongOrga"
       _ <- Fox.fromBool(existingModel.uploadToPathIsPending) ?~> "aiModel.reserve.notPending"
-      path <- generatePath(existingAiModelId).toFox
+      path <- uploadToPathsService.generateAiModelPath(existingAiModelId, user._organization, params.pathPrefix)
       // TODO update fields in dao
     } yield existingAiModelId
 
@@ -386,7 +388,7 @@ class AiModelController @Inject()(
     for {
       _ <- aiModelDAO.findOneByName(params.name)(GlobalAccessContext).reverse ?~> "aiModel.name.taken"
       newId = ObjectId.generate
-      path <- generatePath(newId).toFox
+      path <- uploadToPathsService.generateAiModelPath(newId, user._organization, params.pathPrefix)
       newAiModel = AiModel(
         _id = newId,
         _organization = user._organization,
@@ -403,8 +405,6 @@ class AiModelController @Inject()(
       )
       _ <- aiModelDAO.insertOne(newAiModel)
     } yield newAiModel._id
-
-  private def generatePath(id: ObjectId): Box[UPath] = ???
 
   def finishUploadToPath(id: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>

@@ -212,6 +212,12 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
 
+  def generateAiModelPath(id: ObjectId, organizationId: String, pathPrefix: Option[UPath])(
+      implicit ec: ExecutionContext): Fox[UPath] =
+    for {
+      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+    } yield uploadToPathsPrefix / organizationId / ".aiModels" / id
+
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
       implicit ec: ExecutionContext,
       mp: MessagesProvider): Fox[UPath] =

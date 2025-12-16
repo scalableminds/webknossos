@@ -485,7 +485,6 @@ function* maybeLoadMeshChunk(
   */
   const paddedPosition = V3.sub(clippedPosition, mag);
   const paddedCubeSize = getPaddedCubeSizeInTargetMag(paddedPosition, mag, layer);
-  console.log(paddedCubeSize);
 
   if (threeDMap.get(paddedPosition)) {
     return [];

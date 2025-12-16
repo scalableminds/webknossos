@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
@@ -17,6 +17,7 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.OrganizationDAO
 import play.api.i18n.Messages
@@ -175,7 +176,7 @@ class AiModelController @Inject()(
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
           path = None,
-          uploadToPathIsPending = false,
+          uploadToPathIsPending = true,
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -220,7 +221,7 @@ class AiModelController @Inject()(
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
           path = None,
-          uploadToPathIsPending = false,
+          uploadToPathIsPending = true,
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -375,23 +376,26 @@ class AiModelController @Inject()(
                                                 user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
       existingModel <- aiModelDAO.findOne(existingAiModelId)
-      // TODO access checks
-      // TODO generate path, update it and the bool
+      _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> "aiModel.reserve.wrongOrga"
+      _ <- Fox.fromBool(existingModel.uploadToPathIsPending) ?~> "aiModel.reserve.notPending"
+      path <- generatePath(existingAiModelId).toFox
+      // TODO update fields in dao
     } yield existingAiModelId
 
   private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User): Fox[ObjectId] =
     for {
       _ <- aiModelDAO.findOneByName(params.name)(GlobalAccessContext).reverse ?~> "aiModel.name.taken"
-      // TODO generate path
+      newId = ObjectId.generate
+      path <- generatePath(newId).toFox
       newAiModel = AiModel(
-        _id = ObjectId.generate,
+        _id = newId,
         _organization = user._organization,
         _sharedOrganizations = List(user._organization),
         _dataStore = params.dataStoreName,
         _user = user._id,
         _trainingJob = None,
         _trainingAnnotations = List.empty,
-        path = None,
+        path = Some(path),
         uploadToPathIsPending = true,
         name = params.name,
         comment = params.comment,
@@ -400,10 +404,15 @@ class AiModelController @Inject()(
       _ <- aiModelDAO.insertOne(newAiModel)
     } yield newAiModel._id
 
+  private def generatePath(id: ObjectId): Box[UPath] = ???
+
   def finishUploadToPath(id: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.successful(()) // TODO update bool in db
+        existingAiModel <- aiModelDAO.findOne(id)
+        _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> "aiModel.finish.notPendnig"
+        _ <- Fox.fromBool(existingAiModel._organization == request.identity._organization) ?~> "aiModel.finish.wrongOrga"
+        // TODO update bool in db
       } yield Ok
     }
 

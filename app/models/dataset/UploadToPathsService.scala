@@ -34,13 +34,13 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
-                                            organizationDAO: OrganizationDAO,
-                                            datasetDAO: DatasetDAO,
-                                            dataStoreDAO: DataStoreDAO,
-                                            layerToLinkService: LayerToLinkService,
-                                            datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                            conf: WkConf)
+class UploadToPathsService @Inject()(datasetService: DatasetService,
+                                     organizationDAO: OrganizationDAO,
+                                     datasetDAO: DatasetDAO,
+                                     dataStoreDAO: DataStoreDAO,
+                                     layerToLinkService: LayerToLinkService,
+                                     datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                     conf: WkConf)
     extends FoxImplicits
     with DataSourceValidation {
 

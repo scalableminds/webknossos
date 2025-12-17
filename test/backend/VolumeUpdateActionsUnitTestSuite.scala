@@ -27,13 +27,39 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
   private val groupId1 = 1
   private val groupId2 = 2
   private val groupId3 = 3
+  private val groupId4 = 4
+  private val groupId5 = 5
+  private val groupId6 = 6
+  private val groupId7 = 7
+  // Group structure:
+  // - root
+  //  - Group 1
+  //    - Group 2
+  //      - Group 3
+  //        - Group 4
+  //  - Group 5
+  //    - Group 6
+  //    - Group 7
   private val tracingWithSegmentGroups = Dummies.volumeTracing.withSegmentGroups(
     Seq(
       SegmentGroup(
         "Group 1",
         groupId1,
-        Seq(SegmentGroup("Group 2", groupId2, Seq(SegmentGroup("Group 3", groupId3, Seq(), Some(true))), Some(true))),
-        Some(true))))
+        Seq(
+          SegmentGroup(
+            "Group 2",
+            groupId2,
+            Seq(
+              SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
+            Some(true))),
+        Some(true)
+      ),
+      SegmentGroup("Group 5",
+                   groupId5,
+                   Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                       SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                   Some(true))
+    ))
 
   "CreateSegmentVolumeAction" should {
     "add the specified segment" in {
@@ -312,6 +338,25 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       assert(result.segmentGroups.head.children.head.children.isEmpty)
       assert(result.segmentGroups.head.children(1).groupId == groupId3)
       assert(result.segmentGroups.head.children(1).children.isEmpty)
+
+      val upsertGroup2Action = UpsertSegmentGroupVolumeAction(
+        groupId = groupId2,
+        name = None,
+        newParentId = Some(newParent),
+        actionTracingId = Dummies.tracingId
+      )
+      val result2 = upsertGroup3Action.applyOn(tracingWithSegmentGroups)
+      assert(result2.segmentGroups.length == 1)
+      assert(result2.segmentGroups.head.groupId == groupId1)
+      assert(result2.segmentGroups.head.children.length == 2)
+      assert(result2.segmentGroups.head.children.head.groupId == groupId2)
+      assert(result2.segmentGroups.head.children.head.children.isEmpty)
+      assert(result2.segmentGroups.head.children(1).groupId == groupId3)
+      assert(result2.segmentGroups.head.children(1).children.isEmpty)
+
+      // TODOM: regression test: modify group in other subtree from root
+      // TODOM: move into different root subtree
+      // TODOM: move with subgroups into other root subtree
 
       /* TODOM Check whether support for this edge case is needed.
       val newParent2 = 3

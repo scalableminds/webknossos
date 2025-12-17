@@ -1,16 +1,19 @@
 import { getPublications } from "admin/rest_api";
-import { Input, List, Spin } from "antd";
+import { Flex, Input, List, Spin } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import type React from "react";
 import { memo, useEffect, useState } from "react";
 import type { APIPublication } from "types/api_types";
+
 const { Search } = Input;
+
 export function PublicationViewWithHeader() {
   const [isLoading, setIsLoading] = useState(false);
   const [publications, setPublications] = useState<Array<APIPublication>>([]);
   const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     (async () => {
       try {
@@ -32,7 +35,6 @@ export function PublicationViewWithHeader() {
     <Search
       style={{
         width: 200,
-        float: "right",
       }}
       placeholder="Search Publication"
       onChange={handleSearch}
@@ -41,19 +43,11 @@ export function PublicationViewWithHeader() {
   );
   return (
     <div>
-      <div className="pull-right">{publications.length > 0 && search}</div>
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
+      <Flex justify="flex-end">{publications.length > 0 && search}</Flex>
       <Spin size="large" spinning={isLoading}>
         <div
           style={{
             minHeight: "100px",
-            paddingLeft: 10,
-            paddingRight: 10,
           }}
         >
           <PublicationView publications={publications} searchQuery={searchQuery} />

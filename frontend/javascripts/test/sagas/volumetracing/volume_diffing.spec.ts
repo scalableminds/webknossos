@@ -120,7 +120,7 @@ describe("diffSegmentGroups for volume tracings", () => {
       },
       {
         name: "upsertSegmentGroup",
-        value: { groupId: 3, actionTracingId: "someTracingId", parentGroupId: 2 },
+        value: { groupId: 3, actionTracingId: "someTracingId", newParentId: 2 },
       },
     ]);
   });
@@ -144,11 +144,11 @@ describe("diffSegmentGroups for volume tracings", () => {
     expect(updateActions).toEqual([
       {
         name: "upsertSegmentGroup",
-        value: { groupId: 1, actionTracingId: "someTracingId", parentGroupId: 3 },
+        value: { groupId: 1, actionTracingId: "someTracingId", newParentId: 3 },
       },
       {
         name: "upsertSegmentGroup",
-        value: { groupId: 3, actionTracingId: "someTracingId", parentGroupId: -1 },
+        value: { groupId: 3, actionTracingId: "someTracingId", newParentId: -1 },
       },
     ]);
   });

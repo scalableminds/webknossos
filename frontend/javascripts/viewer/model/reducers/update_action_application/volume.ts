@@ -143,6 +143,7 @@ function applySingleAction(
       const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
       const oldSegmentGroups = volumeTracing.segmentGroups;
 
+      // todop: use sth similar to how moveGroupsHelper does it?
       function deepFilter<T extends SegmentGroup>(
         nodes: T[],
         predicate: (node: T) => boolean,

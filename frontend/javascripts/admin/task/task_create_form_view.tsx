@@ -528,13 +528,12 @@ function TaskCreateFormView() {
               ]}
             >
               <Select
-                showSearch
                 placeholder={
                   specificationType === SpecificationEnum.BaseAnnotation
                     ? "The dataset is inferred from the base annotation."
                     : "Select a Dataset"
                 }
-                optionFilterProp="label"
+                showSearch={{ optionFilterProp: "label" }}
                 style={fullWidth}
                 disabled={isEditingMode || specificationType === SpecificationEnum.BaseAnnotation}
                 loading={isFetchingData}
@@ -614,9 +613,8 @@ function TaskCreateFormView() {
                   ]}
                 >
                   <Select
-                    showSearch
                     placeholder="Select a Task Type"
-                    optionFilterProp="label"
+                    showSearch={{ optionFilterProp: "label" }}
                     style={fullWidth}
                     disabled={isEditingMode}
                     loading={isFetchingData}
@@ -704,9 +702,8 @@ function TaskCreateFormView() {
                   ]}
                 >
                   <Select
-                    showSearch
+                    showSearch={{ optionFilterProp: "label" }}
                     placeholder="Select a Project"
-                    optionFilterProp="label"
                     style={fullWidth}
                     disabled={isEditingMode}
                     loading={isFetchingData}
@@ -728,9 +725,8 @@ function TaskCreateFormView() {
               <Col flex="auto">
                 <FormItem name="scriptId" label="Script" hasFeedback>
                   <Select
-                    showSearch
+                    showSearch={{ optionFilterProp: "label" }}
                     placeholder="Select a Script"
-                    optionFilterProp="label"
                     style={fullWidth}
                     disabled={isEditingMode}
                     loading={isFetchingData}

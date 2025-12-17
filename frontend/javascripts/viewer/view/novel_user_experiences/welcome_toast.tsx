@@ -18,7 +18,7 @@ function showWelcomeToast(notification: NotificationInstance) {
     duration: 0,
     placement: "bottomRight",
     icon: <i className="logo" />,
-    message: "Welcome to WEBKNOSSOS",
+    title: "Welcome to WEBKNOSSOS!",
     description: (
       <div>
         <p>

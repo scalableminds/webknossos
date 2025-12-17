@@ -167,7 +167,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Datastore</div>
           {fullDataset && (
-            <Tag color={stringToColor(fullDataset.dataStore.name)}>
+            <Tag color={stringToColor(fullDataset.dataStore.name)} variant="outlined">
               {fullDataset.dataStore.name}
             </Tag>
           )}
@@ -176,7 +176,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">ID</div>
           {fullDataset && (
-            <Tag>
+            <Tag variant="outlined">
               <FormattedId id={fullDataset.id} />
             </Tag>
           )}
@@ -430,7 +430,7 @@ function FolderDetails({
 
 function FolderTeamTags({ folder }: { folder: Folder }) {
   if (folder.allowedTeamsCumulative.length === 0) {
-    return <Tag>Administrators & Dataset Managers</Tag>;
+    return <Tag variant="outlined">Administrators & Dataset Managers</Tag>;
   }
   const allowedTeamsById = _.keyBy(folder.allowedTeams, "id");
 
@@ -455,6 +455,7 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
                 textOverflow: "ellipsis",
               }}
               color={stringToColor(team.name)}
+              variant="outlined"
             >
               {team.name}
               {isCumulative ? "*" : ""}

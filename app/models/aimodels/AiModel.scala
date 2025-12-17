@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.dataset.{DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
-import models.job.{JobDAO, JobService}
+import models.job.{JobDAO, JobService, JobState}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.dbio.{DBIO, Effect, NoStream}
@@ -67,6 +67,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
       } yield Some(sharedOrgasIdsUserCanAccess)
       else Fox.successful(None)
       path <- pathWithFallback(aiModel)
+      isUsable = !aiModel.uploadToPathIsPending && trainingJobOpt.flatten.forall(_.effectiveState == JobState.SUCCESS)
     } yield
       Json.obj(
         "id" -> aiModel._id,
@@ -80,7 +81,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "sharedOrganizationIds" -> sharedOrganizationIds,
         "category" -> aiModel.category,
         "path" -> path,
-        "isUsable" -> !aiModel.uploadToPathIsPending // TODO if non-finished training job exists, it’s not usable!
+        "isUsable" -> isUsable
       )
 
   private def pathWithFallback(aiModel: AiModel)(implicit ec: ExecutionContext): Fox[UPath] =
@@ -232,5 +233,15 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       q"INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization) VALUES ($aiModelId, $organizationId)".asUpdate)
     run(DBIO.sequence(deleteQuery +: insertQueries).transactionally).map(_ => ())
   }
+
+  def updatePath(aiModelId: ObjectId, path: UPath): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.aiModels SET path = $path WHERE _id = $aiModelId".asUpdate)
+    } yield ()
+
+  def finishUploadToPath(aiModelId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.aiModels SET uploadToPathIsPending = ${false} WHERE _id = $aiModelId".asUpdate)
+    } yield ()
 
 }

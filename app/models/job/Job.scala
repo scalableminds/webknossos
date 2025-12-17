@@ -38,10 +38,8 @@ case class Job(
 ) extends JobResultLinks {
   protected def id: ObjectId = _id
 
-  def isEnded: Boolean = {
-    val relevantState = manualState.getOrElse(state)
-    relevantState == JobState.SUCCESS || state == JobState.FAILURE
-  }
+  def isEnded: Boolean =
+    effectiveState == JobState.SUCCESS || state == JobState.FAILURE
 
   def duration: Option[FiniteDuration] =
     for {

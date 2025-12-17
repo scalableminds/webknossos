@@ -381,7 +381,9 @@ class AiModelController @Inject()(
       _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> "aiModel.reserve.wrongOrga"
       _ <- Fox.fromBool(existingModel.uploadToPathIsPending) ?~> "aiModel.reserve.notPending"
       path <- uploadToPathsService.generateAiModelPath(existingAiModelId, user._organization, params.pathPrefix)
-      // TODO update fields in dao
+      _ <- aiModelDAO.updatePath(existingAiModelId, path)
+      _ <- aiModelDAO.updateOne(
+        existingModel.copy(name = params.name, comment = params.comment, modified = Instant.now))
     } yield existingAiModelId
 
   private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User): Fox[ObjectId] =
@@ -412,7 +414,7 @@ class AiModelController @Inject()(
         existingAiModel <- aiModelDAO.findOne(id)
         _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> "aiModel.finish.notPendnig"
         _ <- Fox.fromBool(existingAiModel._organization == request.identity._organization) ?~> "aiModel.finish.wrongOrga"
-        // TODO update bool in db
+        _ <- aiModelDAO.finishUploadToPath(id)
       } yield Ok
     }
 

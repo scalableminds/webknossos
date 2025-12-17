@@ -816,11 +816,18 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         <Link
           to="/dashboard"
           style={{
-            fontWeight: 400,
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle("WEBKNOSSOS", <span className="logo" />, collapseAllNavItems)}
+          {getCollapsibleMenuTitle(
+            "WEBKNOSSOS",
+            <img
+              src="/assets/images/logo-icon-only.svg"
+              className="logo icon-margin-right"
+              alt="logo"
+            />,
+            collapseAllNavItems,
+          )}
         </Link>
       ),
     },

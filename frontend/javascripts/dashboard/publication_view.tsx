@@ -11,7 +11,7 @@ const { Search } = Input;
 
 export function PublicationViewWithHeader() {
   const [isLoading, setIsLoading] = useState(false);
-  const [publications, setPublications] = useState<Array<APIPublication>>([]);
+  const [publications, setPublications] = useState<APIPublication[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function PublicationViewWithHeader() {
       style={{
         width: 200,
       }}
-      placeholder="Search Publication"
+      placeholder="Search Publications"
       onChange={handleSearch}
       value={searchQuery}
     />

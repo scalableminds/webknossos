@@ -24,6 +24,9 @@ function overrideAllowUpdateInState(state: WebknossosState, value: boolean) {
           $set: value,
         },
       },
+      isUpdatingCurrentlyAllowed: {
+        $set: value,
+      },
     },
   });
 }

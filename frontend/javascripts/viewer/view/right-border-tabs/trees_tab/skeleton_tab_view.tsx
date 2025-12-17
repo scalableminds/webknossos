@@ -836,7 +836,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { unit } = Store.getState().dataset.dataSource.scale;
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
     notification.open({
-      message: `The total length of all skeletons is ${formatNumberToLength(
+      title: `The total length of all skeletons is ${formatNumberToLength(
         totalLengthNm,
         LongUnitToShortUnitMap[unit],
       )} (${formatLengthAsVx(totalLengthVx)}).`,
@@ -1043,7 +1043,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: WebknossosState) => ({
-  allowUpdate: state.annotation.restrictions.allowUpdate,
+  allowUpdate: state.annotation.isUpdatingCurrentlyAllowed,
   skeletonTracing: state.annotation.skeleton,
   annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,

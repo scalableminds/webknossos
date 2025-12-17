@@ -1,7 +1,7 @@
 import { CodeSandboxOutlined, FileAddOutlined } from "@ant-design/icons";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { createExplorational, duplicateAnnotation } from "admin/rest_api";
-import { Button, Tooltip } from "antd";
+import { Button, Space, Tooltip } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -41,7 +41,7 @@ function ReadOnlyActions({
   }, [annotationId, annotationType]);
 
   return (
-    <>
+    <Space.Compact>
       <ButtonComponent
         key="read-only-button"
         danger
@@ -62,7 +62,7 @@ function ReadOnlyActions({
       >
         <span className="hide-on-small-screen">{copyAnnotationText}</span>
       </AsyncButtonWithAuthentication>
-    </>
+    </Space.Compact>
   );
 }
 
@@ -109,7 +109,7 @@ function SandboxActions({
   }, [dispatch, annotation, dataset]);
 
   return (
-    <>
+    <Space.Compact>
       <Tooltip
         placement="bottom"
         title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
@@ -129,13 +129,16 @@ function SandboxActions({
       >
         <span className="hide-on-small-screen">Copy To My Account</span>
       </AsyncButtonWithAuthentication>
-    </>
+    </Space.Compact>
   );
 }
 
 function SaveActions() {
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const isUpdatingCurrentlyAllowed = useWkSelector(
+    (state) => state.annotation.isUpdatingCurrentlyAllowed,
+  );
   const activeUser = useWkSelector((state) => state.activeUser);
   const hasTracing = useWkSelector(
     (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,
@@ -145,24 +148,24 @@ function SaveActions() {
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
 
-  if (!restrictions.allowUpdate) {
+  if (!isUpdatingCurrentlyAllowed) {
     return <ReadOnlyActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />;
   }
 
   if (!restrictions.allowSave) {
     return (
-      <>
+      <Space.Compact>
         <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
         <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
-      </>
+      </Space.Compact>
     );
   }
 
   return (
-    <>
+    <Space.Compact>
       <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
       <SaveButton key="save-button" />
-    </>
+    </Space.Compact>
   );
 }
 

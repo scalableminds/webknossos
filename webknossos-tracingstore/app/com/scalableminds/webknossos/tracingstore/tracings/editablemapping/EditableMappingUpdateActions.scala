@@ -11,12 +11,12 @@ trait EditableMappingUpdateAction extends LayerUpdateAction {
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
 // Both are now optional to support applying old update actions stored in the db.
-case class SplitAgglomerateUpdateAction(agglomerateId: Long, // Unused, we now look this up by position/segment
+case class SplitAgglomerateUpdateAction(agglomerateId: Option[Long], // Unused, we now look this up by position/segment
                                         segmentPosition1: Option[Vec3Int],
                                         segmentPosition2: Option[Vec3Int],
                                         segmentId1: Option[Long],
                                         segmentId2: Option[Long],
-                                        mag: Vec3Int,
+                                        mag: Option[Vec3Int],
                                         actionTracingId: String,
                                         actionTimestamp: Option[Long] = None,
                                         actionAuthorId: Option[ObjectId] = None,
@@ -36,13 +36,13 @@ object SplitAgglomerateUpdateAction {
 
 // we switched from positions to segment ids in https://github.com/scalableminds/webknossos/pull/7742.
 // Both are now optional to support applying old update actions stored in the db.
-case class MergeAgglomerateUpdateAction(agglomerateId1: Long, // Unused, we now look this up by position/segment
-                                        agglomerateId2: Long, // Unused, we now look this up by position/segment
+case class MergeAgglomerateUpdateAction(agglomerateId1: Option[Long], // Unused, we now look this up by position/segment
+                                        agglomerateId2: Option[Long], // Unused, we now look this up by position/segment
                                         segmentPosition1: Option[Vec3Int],
                                         segmentPosition2: Option[Vec3Int],
                                         segmentId1: Option[Long],
                                         segmentId2: Option[Long],
-                                        mag: Vec3Int,
+                                        mag: Option[Vec3Int],
                                         actionTracingId: String,
                                         actionTimestamp: Option[Long] = None,
                                         actionAuthorId: Option[ObjectId] = None,

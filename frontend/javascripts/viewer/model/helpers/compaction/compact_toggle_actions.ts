@@ -183,7 +183,7 @@ export default function compactToggleActions(
   );
 
   if (toggleActions.length <= 1) {
-    // Don't try to compact actons if there are no or only one toggleAction(s)
+    // Don't try to compact actions if there are no or only one toggleAction(s)
     return updateActions;
   }
 

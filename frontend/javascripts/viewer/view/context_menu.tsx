@@ -35,7 +35,6 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
-import type { MenuInfo } from "rc-menu/lib/interface";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
@@ -198,7 +197,7 @@ type NoNodeContextMenuProps = Props & {
   infoRows: ItemType[];
 };
 
-const hideContextMenu = (info?: MenuInfo | undefined) => {
+const hideContextMenu = (info?: Parameters<NonNullable<MenuProps["onClick"]>>[0] | undefined) => {
   if (info?.key === "load-stats") {
     return;
   }
@@ -215,7 +214,7 @@ export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProp
     {
       key: "view",
       disabled: true,
-      label: "No actions available.",
+      title: "No actions available.",
     },
   ],
 });
@@ -246,7 +245,7 @@ function measureAndShowLengthBetweenNodes(
     targetNodeId,
   );
   notification.open({
-    message: `The shortest path length between the nodes is ${formatNumberToLength(
+    title: `The shortest path length between the nodes is ${formatNumberToLength(
       lengthInUnit,
       LongUnitToShortUnitMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
@@ -270,7 +269,7 @@ function extractShortestPathAsNewTree(
 function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSizeUnit: UnitLong) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
-    message: messages["tracing.tree_length_notification"](
+    title: messages["tracing.tree_length_notification"](
       treeName,
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
@@ -1621,7 +1620,7 @@ function ContextMenuInner() {
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const dataset = useWkSelector((state) => state.dataset);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const currentMeshFile = useWkSelector((state) =>
@@ -2001,10 +2000,10 @@ function ContextMenuInner() {
 
       <Dropdown
         menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
+        classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        destroyPopupOnHide
+        destroyOnHidden
       >
         <div />
       </Dropdown>

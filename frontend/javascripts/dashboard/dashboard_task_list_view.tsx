@@ -236,7 +236,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         Finished
       </div>
     ) : (
-      <Space direction="vertical" size={1}>
+      <Space orientation="vertical" size={1}>
         <Link to={`/annotations/${annotation.id}`}>{label}</Link>
         {isAdmin || this.props.isAdminView ? (
           <LinkButton onClick={() => this.openTransferModal(annotation.id)} icon={<TeamOutlined />}>
@@ -246,7 +246,6 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin ? (
           <>
             <AsyncLink
-              href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
@@ -371,7 +370,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       <Row gutter={32} justify="center">
         <Col span="7">
           <Card
-            bordered={false}
+            variant="borderless"
             cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
             style={{ maxWidth: 460 }}
           >
@@ -389,18 +388,18 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                         Tasks are a powerful way to distribute annotation jobs among groups of users
                         as part of the WEBKNOSSOS project management.{" "}
                       </p>
-                      <a
-                        href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        <Button>Learn more</Button>
-                      </a>
-                      <Link to="/tasks">
-                        <Button type="primary" style={{ marginLeft: 20 }}>
-                          Create new Tasks
+                      <Space size="middle">
+                        <Button
+                          href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          Learn more
                         </Button>
-                      </Link>
+                        <Link to="/tasks">
+                          <Button type="primary">Create new Tasks</Button>
+                        </Link>
+                      </Space>
                     </>
                   )}
                 </>
@@ -424,32 +423,29 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     });
 
     const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
-      <React.Fragment>
-        <span
-          style={{
-            marginRight: 8,
-          }}
-        >
-          {task.projectName} (<FormattedDate timestamp={task.created} />)
-        </span>
-        {getSkeletonDescriptor(task.annotation) == null ? null : <Tag color="green">skeleton</Tag>}
+      <Space>
+        {task.projectName} (<FormattedDate timestamp={task.created} />)
+        {getSkeletonDescriptor(task.annotation) == null ? null : (
+          <Tag color="green" variant="outlined">
+            skeleton
+          </Tag>
+        )}
         {getVolumeDescriptors(task.annotation).length === 0 ? null : (
-          <Tag color="orange">volume</Tag>
+          <Tag color="orange" variant="outlined">
+            volume
+          </Tag>
         )}
         {task.type.settings.allowedModes.map((mode) => (
-          <Tag key={mode}>{mode}</Tag>
+          <Tag key={mode} variant="outlined">
+            {mode}
+          </Tag>
         ))}
-      </React.Fragment>
+      </Space>
     );
 
     const TaskCard = (task: APITaskWithAnnotation) =>
       this.state.showFinishedTasks ? (
-        <Card
-          key={task.id}
-          style={{
-            margin: "10px",
-          }}
-        >
+        <Card key={task.id}>
           <Row gutter={16}>
             <Col span={7}>
               <b>Task ID:</b> {task.id}
@@ -464,13 +460,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           </Row>
         </Card>
       ) : (
-        <Card
-          key={task.id}
-          title={<TaskCardTitle task={task} />}
-          style={{
-            margin: "10px",
-          }}
-        >
+        <Card key={task.id} title={<TaskCardTitle task={task} />}>
           <Row gutter={16}>
             <Col span={16}>
               <div className={descriptionClassName}>
@@ -518,9 +508,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           toggleShowFinished={this.toggleShowFinished}
           getFinishVerb={this.getFinishVerb}
         />
-        <h3 id="tasksHeadline" className="TestTasksHeadline">
-          {this.state.showFinishedTasks ? "My Finished Tasks" : null}
-        </h3>
+        {this.state.showFinishedTasks ? (
+          <h3 id="tasksHeadline" className="TestTasksHeadline">
+            My Finished Tasks
+          </h3>
+        ) : null}
         {this.renderTaskList()}
         <div
           style={{
@@ -568,7 +560,7 @@ function TopBar({
   const renderingTab = React.useContext(RenderingTabContext);
 
   const content = (
-    <div className="pull-right">
+    <Space>
       <AsyncButton
         type="primary"
         icon={<UserAddOutlined />}
@@ -577,15 +569,8 @@ function TopBar({
       >
         Get a New Task
       </AsyncButton>
-      <Button
-        onClick={toggleShowFinished}
-        style={{
-          marginLeft: 20,
-        }}
-      >
-        Show {getFinishVerb()} Tasks Only
-      </Button>
-    </div>
+      <Button onClick={toggleShowFinished}>Show {getFinishVerb()} Tasks Only</Button>
+    </Space>
   );
 
   return (

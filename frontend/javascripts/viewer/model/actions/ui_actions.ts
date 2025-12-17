@@ -1,7 +1,7 @@
-import type { OrthoView, Vector3 } from "viewer/constants";
+import type { OrthoView, SagaIdentifier, Vector3 } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { BorderOpenStatus, Theme, WebknossosState } from "viewer/store";
-import type { StartAIJobModalState } from "viewer/view/action-bar/ai_job_modals/constants";
+import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
@@ -16,9 +16,11 @@ type SetThemeAction = ReturnType<typeof setThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetIsWkInitializedAction = ReturnType<typeof setIsWkInitializedAction>;
-type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+export type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+type AllowSagaWhileBusyAction = ReturnType<typeof allowSagaWhileBusyAction>;
+type DisallowSagaWhileBusyAction = ReturnType<typeof disallowSagaWhileBusyAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
-type SetAIJobModalStateAction = ReturnType<typeof setAIJobModalStateAction>;
+type SetaIJobDrawerStateAction = ReturnType<typeof setAIJobDrawerStateAction>;
 export type EnterAction = ReturnType<typeof enterAction>;
 export type EscapeAction = ReturnType<typeof escapeAction>;
 export type SetQuickSelectStateAction = ReturnType<typeof setQuickSelectStateAction>;
@@ -56,12 +58,14 @@ export type UiAction =
   | SetDownloadModalVisibilityAction
   | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
-  | SetAIJobModalStateAction
+  | SetaIJobDrawerStateAction
   | SetRenderAnimationModalVisibilityAction
   | SetMergeModalVisibilityAction
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
   | SetBusyBlockingInfoAction
+  | AllowSagaWhileBusyAction
+  | DisallowSagaWhileBusyAction
   | SetIsWkInitializedAction
   | EnterAction
   | EscapeAction
@@ -137,9 +141,9 @@ export const setShareModalVisibilityAction = (visible: boolean) =>
     type: "SET_SHARE_MODAL_VISIBILITY",
     visible,
   }) as const;
-export const setAIJobModalStateAction = (state: StartAIJobModalState) =>
+export const setAIJobDrawerStateAction = (state: StartAiJobDrawerState) =>
   ({
-    type: "SET_AI_JOB_MODAL_STATE",
+    type: "SET_AI_JOB_DRAWER_STATE",
     state,
   }) as const;
 export const setRenderAnimationModalVisibilityAction = (visible: boolean) =>
@@ -170,6 +174,21 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
       reason,
     },
   }) as const;
+export const allowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
+  ({
+    type: "ALLOW_SAGA_WHILE_BUSY_ACTION",
+    value: {
+      allowedSaga,
+    },
+  }) as const;
+
+export const disallowSagaWhileBusyAction = (allowedSaga: SagaIdentifier) =>
+  ({
+    type: "DISALLOW_SAGA_WHILE_BUSY_ACTION",
+    value: {
+      allowedSaga,
+    },
+  }) as const;
 export const setIsWkInitializedAction = (isInitialized: boolean) =>
   ({
     type: "SET_IS_WK_INITIALIZED",
@@ -181,9 +200,10 @@ export const setPythonClientModalVisibilityAction = (visible: boolean) =>
     type: "SET_PYTHON_MODAL_VISIBILITY",
     visible,
   }) as const;
-export const enterAction = () =>
+export const enterAction = (event: KeyboardEvent) =>
   ({
     type: "ENTER",
+    event,
   }) as const;
 export const escapeAction = () =>
   ({

@@ -8,7 +8,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
 import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
-import type { BoundingBoxObject, NumberLike, SegmentGroup } from "viewer/store";
+import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 
@@ -309,6 +309,11 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxMinMaxType): Vector6 
 
 export function computeShapeFromBoundingBox(bb: BoundingBoxMinMaxType): Vector3 {
   return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
+}
+
+export function computeVolumeFromBoundingBox(bb: BoundingBoxMinMaxType): number {
+  const shape = computeShapeFromBoundingBox(bb);
+  return shape[0] * shape[1] * shape[2];
 }
 
 export function aggregateBoundingBox(
@@ -713,6 +718,18 @@ export function isNoElementFocussed(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
   return document.activeElement === document.body;
+}
+
+export function isEditableEventTarget(target: EventTarget | null): boolean {
+  if (target == null || !(target instanceof Element)) {
+    return false; // not an element (could be Window, Document, Text, ...), ignore
+  }
+  const element = target as HTMLElement;
+  const tag = element.tagName?.toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || element.isContentEditable) {
+    return true; // ignore Enter inside these fields
+  }
+  return false;
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Safely_detecting_option_support
@@ -1255,6 +1272,16 @@ export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, nu
     return true;
   }
   return Boolean(typeof value[0] === "number");
+}
+
+export function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
+  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
+}
+
+export function getAdaptToTypeFunctionFromList<T extends number | bigint>(list: Array<T>) {
+  return list[0] == null || Boolean(typeof list[0] === "number")
+    ? (el: NumberLike) => el
+    : (el: NumberLike) => BigInt(el);
 }
 
 export function isBigInt(x: NumberLike): x is bigint {

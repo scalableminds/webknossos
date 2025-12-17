@@ -18,7 +18,7 @@ import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
   convertCellIdToRGB,
   getBrushOverlay,
-  getCrossHairOverlay,
+  getProofreadingCrossHairOverlay,
   getSegmentId,
   getSegmentationAlphaIncrement,
 } from "./segmentation.glsl";
@@ -137,8 +137,9 @@ uniform bool selectiveVisibilityInProofreading;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
+uniform vec3 globalPosition;
 uniform vec3 positionOffset;
-uniform vec3 activeSegmentPosition;
+uniform vec3 proofreadingMarkerPosition;
 uniform float zoomValue;
 uniform float blendMode;
 uniform vec3 globalMousePosition;
@@ -173,6 +174,7 @@ flat in vec2 index;
 flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
 flat in float outputAddress[<%= globalLayerCount %>];
+flat in float useBucketBorderVertexOptimization;
 in vec4 worldCoord;
 in vec4 modelCoord;
 in mat4 savedModelMatrix;
@@ -198,7 +200,7 @@ ${compileShader(
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentId : null,
-  hasSegmentation ? getCrossHairOverlay : null,
+  hasSegmentation ? getProofreadingCrossHairOverlay : null,
   hasSegmentation ? getSegmentationAlphaIncrement : null,
   almostEq,
   scaleToFloat,
@@ -393,7 +395,7 @@ void main() {
   <% }) %>
 
   // This will only have an effect in proofreading mode
-  vec4 crossHairOverlayColor = getCrossHairOverlay(worldCoordUVW);
+  vec4 crossHairOverlayColor = getProofreadingCrossHairOverlay(worldCoordUVW);
   gl_FragColor = mix(gl_FragColor, crossHairOverlayColor, crossHairOverlayColor.a);
   gl_FragColor.a = 1.0;
 
@@ -437,6 +439,8 @@ flat out vec2 index;
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
+// bool varyings are not supported
+flat out float useBucketBorderVertexOptimization;
 
 uniform bool is3DViewBeingRendered;
 uniform vec3 representativeMagForVertexAlignment;
@@ -475,6 +479,8 @@ void main() {
   <% }
   }) %>
 
+  useBucketBorderVertexOptimization = 1.0;
+
   vUv = uv;
   modelCoord = vec4(position, 1.0);
   savedModelMatrix = modelMatrix;
@@ -485,6 +491,7 @@ void main() {
   // The same goes when all layers of the dataset are transformed.
   // This shouldn't really impact the performance as isFlycamRotated is a uniform.
   if(isFlycamRotated || !<%= isOrthogonal %> || doAllLayersHaveTransforms) {
+    useBucketBorderVertexOptimization = 0.0;
     return;
   }
   // Remember the original z position, since it can subtly diverge in the
@@ -521,6 +528,14 @@ void main() {
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
+  vec2 viewportWidthInVoxelsUV = abs(worldCoordBottomRight.xy - worldCoordTopLeft.xy) / voxelSizeFactorUVW.xy;
+  // If the plane subdivision vertices cannot possibly cover all bucket borders, the optimization must not be used.
+  // Otherwise, rendering artifacts will occur (partially rendered planes).
+  if ((d * PLANE_SUBDIVISION).x < viewportWidthInVoxelsUV.x || (d * PLANE_SUBDIVISION).y < viewportWidthInVoxelsUV.y) {
+    useBucketBorderVertexOptimization = 0.0;
+    return;
+  }
+
   vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 

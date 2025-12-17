@@ -305,4 +305,72 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   private def assertUpdateAccess(organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     assertUpdateAccess(ObjectId(organizationId))
 
+  def updatePlan(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =
+    for {
+      _ <- Fox.runOptional(planUpdate.pricingPlan)(newPricingPlan =>
+        run(q"UPDATE webknossos.organizations SET pricingPlan = $newPricingPlan WHERE _id = $organizationId".asUpdate))
+      _ <- Fox.runIf(planUpdate.paidUntilChanged)(
+        run(
+          q"""UPDATE webknossos.organizations SET paidUntil = ${planUpdate.paidUntilFlat} WHERE _id = $organizationId""".asUpdate)
+      )
+      _ <- Fox.runIf(planUpdate.includedUsersChanged)(
+        run(
+          q"""UPDATE webknossos.organizations SET includedUsers = ${planUpdate.includedUsersFlat} WHERE _id = $organizationId""".asUpdate)
+      )
+      _ <- Fox.runIf(planUpdate.includedStorageChanged)(
+        run(
+          q"""UPDATE webknossos.organizations SET includedStorage = ${planUpdate.includedStorageFlat} WHERE _id = $organizationId""".asUpdate)
+      )
+    } yield ()
+
+  def insertPlanUpdate(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =
+    for {
+      _ <- run(q"""INSERT INTO webknossos.organization_plan_updates(
+                     _organization, description, pricingPlan,
+                     paidUntil, paidUntilChanged,
+                     includedUsers, includedUsersChanged,
+                     includedStorage, includedStorageChanged,
+                     created
+                   )
+                   VALUES(
+                     $organizationId, ${planUpdate.description}, ${planUpdate.pricingPlan},
+                     ${planUpdate.paidUntilFlat}, ${planUpdate.paidUntilChanged},
+                     ${planUpdate.includedUsersFlat}, ${planUpdate.includedUsersChanged},
+                     ${planUpdate.includedStorageFlat}, ${planUpdate.includedStorageChanged},
+                     ${planUpdate.created}
+                   )
+          """.asUpdate)
+    } yield ()
+
+  private def parsePlanUpdate(row: OrganizationPlanUpdatesRow): Fox[OrganizationPlanUpdate] =
+    for {
+      pricingPlan: Option[PricingPlan] <- row.pricingplan match {
+        case Some(pricingPlanStr) => PricingPlan.fromString(pricingPlanStr).toFox.map(Some(_))
+        case None                 => Fox.successful(None)
+      }
+      paidUntil = if (row.paiduntilchanged) Some(row.paiduntil.map(Instant.fromSql)) else None
+      includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage) else None
+      includedUsers = if (row.includeduserschanged) Some(row.includedusers) else None
+    } yield
+      OrganizationPlanUpdate(
+        row._Organization,
+        row.description,
+        pricingPlan,
+        paidUntil,
+        includedUsers,
+        includedStorageBytes,
+        Instant.fromSql(row.created)
+      )
+
+  def findPlanUpdates(organizationId: String): Fox[Seq[OrganizationPlanUpdate]] =
+    for {
+      rows <- run(q"""SELECT _organization, description, pricingPlan, paidUntil, paidUntilChanged, includedUsers,
+                              includedUsersChanged, includedStorage, includedStorageChanged, created
+                      FROM webknossos.organization_plan_updates
+                      WHERE _organization = $organizationId
+                      ORDER BY created
+         """.as[OrganizationPlanUpdatesRow])
+      parsed <- Fox.serialCombined(rows)(parsePlanUpdate)
+    } yield parsed
+
 }

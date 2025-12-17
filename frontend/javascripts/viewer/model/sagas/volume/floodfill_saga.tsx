@@ -155,7 +155,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     return;
   }
 
-  const { position: positionFloat, planeId } = floodFillAction;
+  const { positionInLayerSpace: positionFloat, planeId } = floodFillAction;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   if (volumeTracing.hasEditableMapping) {
     const message = "Volume modification is not allowed when an editable mapping is active.";

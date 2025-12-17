@@ -178,6 +178,20 @@ function _getOriginalTransformsForLayerOrNull(
     return null;
   }
 
+  return combineCoordinateTransformations(
+    coordinateTransformations,
+    dataset.dataSource.scale.factor,
+  );
+}
+
+export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
+  _getOriginalTransformsForLayerOrNull,
+);
+
+export function combineCoordinateTransformations(
+  coordinateTransformations: CoordinateTransformation[],
+  scaleFactor: Vector3,
+): Transform {
   const transforms = coordinateTransformations.map((coordTransformation) => {
     const { type } = coordTransformation;
     if (type === "affine") {
@@ -186,7 +200,7 @@ function _getOriginalTransformsForLayerOrNull(
     } else if (type === "thin_plate_spline") {
       const { source, target } = coordTransformation.correspondences;
 
-      return createThinPlateSplineTransform(source, target, dataset.dataSource.scale.factor);
+      return createThinPlateSplineTransform(source, target, scaleFactor);
     }
 
     console.error(
@@ -196,10 +210,6 @@ function _getOriginalTransformsForLayerOrNull(
   });
   return transforms.reduce(chainTransforms, IdentityTransform);
 }
-
-export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
-  _getOriginalTransformsForLayerOrNull,
-);
 
 export function isLayerWithoutTransformationConfigSupport(layer: APIDataLayer | APISkeletonLayer) {
   return (

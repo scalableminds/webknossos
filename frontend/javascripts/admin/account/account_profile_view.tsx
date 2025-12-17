@@ -1,7 +1,7 @@
 import { CheckOutlined, DownOutlined, EditOutlined } from "@ant-design/icons";
 import ChangeEmailView from "admin/auth/change_email_view";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
-import { Button, Col, Dropdown, Row } from "antd";
+import { Button, Col, Dropdown, Row, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import { useState } from "react";
@@ -94,9 +94,12 @@ function AccountProfileView() {
     {
       title: "Theme",
       content: (
-        <Dropdown.Button menu={{ items: themeItems }} trigger={["click"]} icon={<DownOutlined />}>
-          {themeItems.find((item) => item.key === selectedTheme)?.label}
-        </Dropdown.Button>
+        <Space.Compact>
+          <Button>{themeItems.find((item) => item.key === selectedTheme)?.label}</Button>
+          <Dropdown menu={{ items: themeItems }} trigger={["click"]}>
+            <Button icon={<DownOutlined />} aria-label="Select theme" />
+          </Dropdown>
+        </Space.Compact>
       ),
     },
   ];

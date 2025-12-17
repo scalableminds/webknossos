@@ -531,8 +531,8 @@ class DataSourceController @Inject()(
             dataSource.id,
             dataLayer,
             request.body.mappingName,
-            request.body.editableMappingTracingId,
             None,
+            request.body.editableMappingVersion,
             segmentId.toLong,
             mappingNameForMeshFile = None,
             omitMissing = false

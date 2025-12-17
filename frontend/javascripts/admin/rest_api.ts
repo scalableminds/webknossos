@@ -2006,7 +2006,7 @@ export function getBucketPositionsForAdHocMesh(
           mag,
           additionalCoordinates,
           mappingName,
-          tracingVersion,
+          editableMappingVersion: tracingVersion,
         },
         method: "POST",
       },

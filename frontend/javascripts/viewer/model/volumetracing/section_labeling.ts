@@ -95,7 +95,7 @@ export class VoxelBuffer2D {
 
   print(): void {
     const lines = [];
-    for (let y = 0; y < this.width; y++) {
+    for (let y = 0; y < this.height; y++) {
       const line = [];
       for (let x = 0; x < this.width; x++) {
         line.push(this.getValue(x, y));

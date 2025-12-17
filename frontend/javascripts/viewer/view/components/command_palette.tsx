@@ -8,7 +8,8 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { useCallback, useMemo, useState } from "react";
-import ReactCommandPalette from "react-command-palette";
+import ReactCommandPalette, { type Command } from "react-command-palette";
+import { useNavigate } from "react-router-dom";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
@@ -29,16 +30,6 @@ import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
 const commandEntryColor = "#5660ff";
-
-// todo_c maybe remove, or fix in another way
-type Command = {
-  id: number;
-  color: string;
-  name: string;
-  shortcut?: string;
-  highlight?: string;
-  command: () => void;
-};
 
 type CommandWithoutId = Omit<Command, "id">;
 
@@ -84,7 +75,7 @@ const cleanStringOfMostHTML = (dirtyString: string | undefined) => {
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
-  const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
@@ -94,6 +85,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
+
+  const navigate = useNavigate();
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -108,7 +101,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const theme = getThemeFromUser(activeUser);
 
   const getTabsAndSettingsMenuItems = () => {
-    if (!isInTracingView) return [];
+    if (!isInAnnotationView) return [];
     const commands: CommandWithoutId[] = [];
 
     (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key) => {
@@ -164,14 +157,14 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const getDatasetItems = useCallback(async () => {
     const datasets = await getDatasets();
     return datasets.map((dataset) => ({
-      name: `View Dataset ${dataset.name} (id ${dataset.id})`,
+      name: `View Dataset: ${dataset.name} (id ${dataset.id})`,
       command: () => {
-        window.location.href = getViewDatasetURL(dataset);
+        navigate(getViewDatasetURL(dataset));
       },
       color: commandEntryColor,
       id: dataset.id,
     }));
-  }, []);
+  }, [navigate]);
 
   const viewDatasetsItem = {
     name: DynamicCommands.viewDataset,
@@ -185,15 +178,15 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
     return sortedAnnotations.map((annotation) => {
       return {
-        name: `View Annotation ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
+        name: `View Annotation: ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
         command: () => {
-          window.location.href = `/annotations/${annotation.id}`;
+          navigate(`/annotations/${annotation.id}`);
         },
         color: commandEntryColor,
         id: annotation.id,
       };
     });
-  }, []);
+  }, [navigate]);
 
   const viewAnnotationItems = {
     name: DynamicCommands.viewAnnotation,
@@ -252,7 +245,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       commands.push({
         name: `Go to ${entry.name}`,
         command: () => {
-          window.location.href = entry.path;
+          navigate(entry.path);
         },
         color: commandEntryColor,
       });
@@ -289,7 +282,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   };
 
   const getViewModeEntries = () => {
-    if (!isInTracingView) return [];
+    if (!isInAnnotationView) return [];
     const commands = ViewModeValues.map((mode) => ({
       name: `Switch to ${mode} mode`,
       command: () => {
@@ -319,7 +312,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   };
 
   const getToolEntries = () => {
-    if (!isInTracingView) return [];
+    if (!isInAnnotationView) return [];
     const commands: CommandWithoutId[] = [];
     let availableTools = Object.values(AnnotationTool);
     if (isViewMode || !allowUpdate) {
@@ -339,12 +332,12 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const tracingMenuItems = useTracingViewMenuItems(props, null);
 
   const menuActions = useMemo(() => {
-    if (!isInTracingView) return [];
+    if (!isInAnnotationView) return [];
     if (isViewMode) {
       return viewDatasetMenu;
     }
     return tracingMenuItems;
-  }, [isInTracingView, isViewMode, tracingMenuItems]);
+  }, [isInAnnotationView, isViewMode, tracingMenuItems]);
 
   const allStaticCommands = [
     viewDatasetsItem,

@@ -61,7 +61,10 @@ const DatasetSettingsDeleteTab = () => {
                   Note that annotations for the dataset stay downloadable and the name stays
                   reserved.
                 </p>
-                <p>Only admins are allowed to delete datasets.</p>
+                <p>
+                  Admins, dataset managers and team managers of the datasets' team(s) are allowed to
+                  delete datasets.
+                </p>
                 <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
                   Delete Dataset on Disk
                 </Button>

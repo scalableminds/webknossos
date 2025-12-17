@@ -34,7 +34,6 @@ import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";
 import { PERMISSIONS, PermissionsAndTeamsComponent } from "./user/permissions_and_teams_modal_view";
 
-const { Step } = Steps;
 const FormItem = Form.Item;
 
 function StepHeader({
@@ -153,7 +152,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
       }}
     >
       <Card
-        bordered={false}
+        variant="borderless"
         styles={{
           body: {
             textAlign: "center",
@@ -753,11 +752,8 @@ function OnboardingView() {
               style={{
                 height: 25,
               }}
-            >
-              {availableSteps.map(({ title }) => (
-                <Step title={title} key={title} />
-              ))}
-            </Steps>
+              items={availableSteps.map(({ title }) => ({ title, key: title }))}
+            />
           </Col>
         </Row>
         <div

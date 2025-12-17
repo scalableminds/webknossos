@@ -56,7 +56,7 @@ export function MarkdownModal({
       ]}
     >
       <Alert
-        message={
+        title={
           <React.Fragment>
             In addition to using{" "}
             <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">

@@ -24,7 +24,7 @@ export type DatasetSettingsContextValue = {
   handleSubmit: () => void;
   handleCancel: () => void;
   onValuesChange: (
-    changedValues: DatasetSettingsFormData,
+    changedValues: Partial<DatasetSettingsFormData>,
     allValues: DatasetSettingsFormData,
   ) => void;
   getFormValidationSummary: () => Record<string, any>;

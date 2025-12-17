@@ -17,7 +17,7 @@ import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
-import { Alert, App, Button, Col, Input, Row, Spin, Table, Tag, Tooltip } from "antd";
+import { Alert, App, Button, Col, Flex, Input, Row, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import Persistence from "libs/persistence";
@@ -171,14 +171,11 @@ function UserListView() {
 
     return newInactiveUsers.length ? (
       <Alert
-        message={newInactiveUsersHeader}
+        title={newInactiveUsersHeader}
         description={newInactiveUsersList}
         type="info"
         icon={<UserOutlined className="icon-margin-right" />}
         showIcon
-        style={{
-          marginTop: 20,
-        }}
       />
     ) : null;
   }
@@ -194,13 +191,10 @@ function UserListView() {
     );
     return isLoading ? null : (
       <Alert
-        message="Invite more users"
+        title="Invite more users"
         description={noUsersMessage}
         type="info"
         showIcon
-        style={{
-          marginTop: 20,
-        }}
         action={
           <Button type="primary" onClick={inviteUsersCallback}>
             Invite Users
@@ -213,7 +207,7 @@ function UserListView() {
   function renderUpgradePlanAlert() {
     return (
       <Alert
-        message="You reached the maximum number of users"
+        title="You reached the maximum number of users"
         description={
           <>
             Your organization has reached the maximum number of users allowed in your current plan.
@@ -226,9 +220,6 @@ function UserListView() {
         }
         type="warning"
         showIcon
-        style={{
-          marginTop: 20,
-        }}
         action={
           <Link to={`/organizations/${activeUser.organization}`}>
             <Button type="primary">Upgrade Plan</Button>
@@ -269,84 +260,63 @@ function UserListView() {
     selectedRowKeys: selectedUserIds,
   };
   const activationFilterWarning = activationFilter.includes("activated") ? (
-    <Tag closable onClose={handleDismissActivationFilter} color="blue">
+    <Tag closable onClose={handleDismissActivationFilter} color="blue" variant="outlined">
       Show Active Users Only
     </Tag>
   ) : null;
-  const marginRight = {
-    marginRight: 20,
-  };
+
   const noOtherUsers = users.length < 2;
   const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
 
   return (
-    <div className="container test-UserListView">
+    <div className="container">
       <h3>Users</h3>
-
-      <div
-        style={{
-          marginBottom: 20,
-        }}
-      >
-        {hasRowsSelected ? (
-          <span style={marginRight}>{selectedUserIds.length} selected user(s)</span>
-        ) : null}
-        <Button
-          onClick={() => setIsTeamRoleModalOpen(true)}
-          icon={<TeamOutlined />}
-          disabled={!hasRowsSelected}
-          style={marginRight}
-        >
-          Edit Teams &amp; Permissions
-        </Button>
-        <Button
-          onClick={() => {
-            setIsExperienceModalOpen(true);
-          }}
-          icon={<TrophyOutlined />}
-          disabled={!hasRowsSelected}
-          style={marginRight}
-        >
-          Change Experience
-        </Button>
-        <Button
-          icon={<UserAddOutlined />}
-          style={marginRight}
-          onClick={() => setIsInviteModalOpen(true)}
-        >
-          Invite {isNewUserInvitesDisabled ? "Guests" : "Users"}
-        </Button>
-        <InviteUsersModal
-          currentUserCount={getActiveUserCount(users)}
-          maxUserCountPerOrganization={activeOrganization.includedUsers}
-          isOpen={isInviteModalOpen}
-          organizationId={activeUser.organization}
-          handleVisibleChange={(visible) => {
-            setIsInviteModalOpen(visible);
-          }}
-        />
-      </div>
-      <div
-        style={{
-          marginBottom: 20,
-        }}
-      >
-        {activationFilterWarning}
+      <Flex justify="space-between" style={{ marginBottom: "var(--ant-padding-xs)" }}>
+        <Space>
+          {hasRowsSelected ? <span>{selectedUserIds.length} selected user(s)</span> : null}
+          <Button
+            onClick={() => setIsTeamRoleModalOpen(true)}
+            icon={<TeamOutlined />}
+            disabled={!hasRowsSelected}
+          >
+            Edit Teams &amp; Permissions
+          </Button>
+          <Button
+            onClick={() => {
+              setIsExperienceModalOpen(true);
+            }}
+            icon={<TrophyOutlined />}
+            disabled={!hasRowsSelected}
+          >
+            Change Experience
+          </Button>
+          <Button icon={<UserAddOutlined />} onClick={() => setIsInviteModalOpen(true)}>
+            Invite {isNewUserInvitesDisabled ? "Guests" : "Users"}
+          </Button>
+          <InviteUsersModal
+            currentUserCount={getActiveUserCount(users)}
+            maxUserCountPerOrganization={activeOrganization.includedUsers}
+            isOpen={isInviteModalOpen}
+            organizationId={activeUser.organization}
+            handleVisibleChange={(visible) => {
+              setIsInviteModalOpen(visible);
+            }}
+          />
+        </Space>
         <Search
           style={{
             width: 200,
-            float: "right",
           }}
           onChange={handleSearch}
           value={searchQuery}
         />
-        <div className="clearfix" />
-      </div>
-
-      {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
-      {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
-      {renderNewUsersAlert()}
-
+      </Flex>
+      <Space orientation="vertical" style={{ width: "100%" }}>
+        {activationFilterWarning}
+        {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
+        {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
+        {renderNewUsersAlert()}
+      </Space>
       <Spin size="large" spinning={isLoading}>
         <Table
           dataSource={Utils.filterWithSearchQueryAND(
@@ -402,7 +372,7 @@ function UserListView() {
             width={250}
             render={(experiences: ExperienceMap, user: APIUser) =>
               _.map(experiences, (value, domain) => (
-                <Tag key={`experience_${user.id}_${domain}`}>
+                <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
                   <span
                     onClick={(evt) => {
                       evt.stopPropagation();

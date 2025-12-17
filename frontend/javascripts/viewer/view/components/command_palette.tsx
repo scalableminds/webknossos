@@ -7,7 +7,7 @@ import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useNavigate } from "react-router-dom";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
@@ -72,6 +72,19 @@ const cleanStringOfMostHTML = (dirtyString: string | undefined) => {
   return DOMPurify.sanitize(dirtyString, { ALLOWED_TAGS: ["b"] });
 };
 
+const shortCutDictForTools: Record<string, string> = {
+  [AnnotationTool.MOVE.id]: "Ctrl + K, M",
+  [AnnotationTool.SKELETON.id]: "Ctrl + K, S",
+  [AnnotationTool.BRUSH.id]: "Ctrl + K, B",
+  [AnnotationTool.ERASE_BRUSH.id]: "Ctrl + K, E",
+  [AnnotationTool.TRACE.id]: "Ctrl + K, L",
+  [AnnotationTool.ERASE_TRACE.id]: "Ctrl + K, R",
+  [AnnotationTool.VOXEL_PIPETTE.id]: "Ctrl + K, P",
+  [AnnotationTool.QUICK_SELECT.id]: "Ctrl + K, Q",
+  [AnnotationTool.BOUNDING_BOX.id]: "Ctrl + K, X",
+  [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
+};
+
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
@@ -87,6 +100,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
 
   const navigate = useNavigate();
+  const [paletteKey, setPaletteKey] = useState(0);
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -298,20 +312,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const shortCutDictForTools: Record<string, string> = {
-    [AnnotationTool.MOVE.id]: "Ctrl + K, M",
-    [AnnotationTool.SKELETON.id]: "Ctrl + K, S",
-    [AnnotationTool.BRUSH.id]: "Ctrl + K, B",
-    [AnnotationTool.ERASE_BRUSH.id]: "Ctrl + K, E",
-    [AnnotationTool.TRACE.id]: "Ctrl + K, L",
-    [AnnotationTool.ERASE_TRACE.id]: "Ctrl + K, R",
-    [AnnotationTool.VOXEL_PIPETTE.id]: "Ctrl + K, P",
-    [AnnotationTool.QUICK_SELECT.id]: "Ctrl + K, Q",
-    [AnnotationTool.BOUNDING_BOX.id]: "Ctrl + K, X",
-    [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
-  };
-
-  const getToolEntries = () => {
+  const getToolEntries = useCallback(() => {
     if (!isInAnnotationView) return [];
     const commands: CommandWithoutId[] = [];
     let availableTools = Object.values(AnnotationTool);
@@ -327,7 +328,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       });
     });
     return commands;
-  };
+  }, [isInAnnotationView, isViewMode, allowUpdate]);
 
   const tracingMenuItems = useTracingViewMenuItems(props, null);
 
@@ -352,7 +353,11 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   ];
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
-  const [paletteKey, setPaletteKey] = useState(0);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only rerun if allowUpdate changes
+  useEffect(() => {
+    setCommands(allStaticCommands);
+  }, [allowUpdate]);
 
   const closePalette = () => {
     setPaletteKey((prevKey) => prevKey + 1);

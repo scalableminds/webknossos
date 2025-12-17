@@ -1,4 +1,4 @@
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
@@ -81,7 +81,10 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
-  const mostRecentlyUsedActiveFolderId = usePrevious(activeFolderId, true);
+  const [mostRecentlyUsedActiveFolderId, clearMostRecentlyUsedActiveFolderId] = usePrevious(
+    activeFolderId,
+    true,
+  );
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
   const { data: folder, isError: didFolderLoadingError } = useFolderQuery(activeFolderId);
@@ -95,6 +98,7 @@ export default function DatasetCollectionContextProvider({
     setGlobalSearchQueryInner(value ? value : null);
   }, []);
   const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
+  const queryClient = useQueryClient();
 
   // Keep url GET parameters in sync with search and active folder
   useManagedUrlParams(
@@ -117,8 +121,18 @@ export default function DatasetCollectionContextProvider({
 
     if (didFolderLoadingError) {
       setActiveFolderId(null);
+      clearMostRecentlyUsedActiveFolderId();
+      if (!folderHierarchyQuery.isFetching) {
+        queryClient.invalidateQueries({ queryKey: ["folders"] });
+      }
     }
-  }, [folder, activeFolderId, didFolderLoadingError]);
+  }, [
+    folder,
+    activeFolderId,
+    didFolderLoadingError,
+    clearMostRecentlyUsedActiveFolderId,
+    queryClient,
+  ]);
 
   const folderHierarchyQuery = useFolderHierarchyQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(

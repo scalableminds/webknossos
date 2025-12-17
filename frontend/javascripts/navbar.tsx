@@ -19,7 +19,6 @@ import {
   Layout,
   Menu,
   Popover,
-  Space,
   type SubMenuProps,
   Tag,
   Tooltip,
@@ -133,7 +132,6 @@ function UserInitials({
   isMultiMember: boolean;
 }) {
   const { firstName, lastName } = activeUser;
-
   const initialOf = (str: string) => str.slice(0, 1).toUpperCase();
 
   return (
@@ -744,7 +742,7 @@ function AnnotationLockedByUserTag({
       </Tooltip>
     );
   }
-  return <Space>{content}</Space>;
+  return content;
 }
 
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {

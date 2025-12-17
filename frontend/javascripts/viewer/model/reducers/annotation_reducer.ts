@@ -372,6 +372,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         opacity,
+        annotationVersion,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -383,6 +384,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         mappingName,
         mappingType,
+        syncedWithVersion: annotationVersion,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -418,6 +420,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         opacity,
+        annotationVersion,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -429,6 +432,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         meshFileName,
         mappingName,
+        syncedWithVersion: annotationVersion,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);

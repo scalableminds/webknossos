@@ -90,7 +90,10 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import { Model, Store, api } from "viewer/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
-import { getCurrentMag } from "../../../accessors/flycam_accessor";
+import {
+  getAdditionalCoordinatesAsString,
+  getCurrentMag,
+} from "../../../accessors/flycam_accessor";
 import type { Action } from "../../../actions/actions";
 import type { Tree } from "../../../types/tree_types";
 import { ensureWkInitialized } from "../../ready_sagas";
@@ -1537,23 +1540,43 @@ export function* refreshAffectedMeshes(
   // and which were fetched again to avoid doing redundant work.
   const removedIds = new Set();
   const newlyLoadedIds = new Set();
+  const meshLoadingEffects = [];
+  const annotationVersion = yield* select((state) => state.annotation.version);
+  const meshInfos =
+    (yield* select((state) => {
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      return state.localSegmentationData[layerName]?.meshes?.[additionalCoordKey];
+    })) ?? {};
   for (const item of items) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
+    const shouldReloadId = item.agglomerateId === item.newAgglomerateId;
+    const versionOfOldAgglomerateId = meshInfos[item.agglomerateId]?.syncedWithVersion;
+    const versionOfNewAgglomerateId = meshInfos[item.newAgglomerateId]?.syncedWithVersion;
+    if (shouldReloadId && versionOfOldAgglomerateId === annotationVersion) {
+      continue;
+    }
     if (!removedIds.has(item.agglomerateId)) {
       yield* put(removeMeshAction(layerName, Number(item.agglomerateId)));
       removedIds.add(item.agglomerateId);
     }
-    if (!newlyLoadedIds.has(item.newAgglomerateId)) {
-      yield* call(
-        loadCoarseMesh,
-        layerName,
-        Number(item.newAgglomerateId),
-        item.nodePosition,
-        additionalCoordinates,
-      );
-      newlyLoadedIds.add(item.newAgglomerateId);
+    if (versionOfNewAgglomerateId !== annotationVersion) {
+      if (!newlyLoadedIds.has(item.newAgglomerateId)) {
+        meshLoadingEffects.push(
+          call(
+            loadCoarseMesh,
+            layerName,
+            Number(item.newAgglomerateId),
+            item.nodePosition,
+            additionalCoordinates,
+          ),
+        );
+        newlyLoadedIds.add(item.newAgglomerateId);
+      }
     }
   }
+  // Do all mesh loadings in parallel for more speed.
+  yield* all(meshLoadingEffects);
 }
 
 function getDeleteEdgeActionForEdgePositions(

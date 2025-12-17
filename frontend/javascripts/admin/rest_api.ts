@@ -875,6 +875,7 @@ export function getSegmentVolumes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  // TODOM: Add versioning parameter editableMappingVersion. -> backend supports this already
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
@@ -900,6 +901,7 @@ export function getSegmentSurfaceArea(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  // TODOM: Add versioning parameter tracingVersion. -> backend supports this already
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
@@ -926,6 +928,7 @@ export function getSegmentBoundingBoxes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  // TODOM: Add versioning parameter editableMappingVersion. -> backend supports this already
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
@@ -1983,6 +1986,7 @@ export function getBucketPositionsForAdHocMesh(
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  tracingVersion: number,
 ): Promise<Vector3[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
@@ -1996,6 +2000,7 @@ export function getBucketPositionsForAdHocMesh(
           mag,
           additionalCoordinates,
           mappingName,
+          tracingVersion,
         },
         method: "POST",
       },

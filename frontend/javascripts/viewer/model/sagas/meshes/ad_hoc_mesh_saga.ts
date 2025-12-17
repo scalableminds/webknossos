@@ -326,6 +326,7 @@ function* loadFullAdHocMesh(
 ): Saga<void> {
   let isInitialRequest = true;
   const { mappingName, mappingType, opacity } = meshExtraInfo;
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, magInfo);
   yield* put(
     addAdHocMeshAction(
@@ -336,6 +337,7 @@ function* loadFullAdHocMesh(
       mappingName,
       mappingType,
       opacity,
+      annotationVersion,
     ),
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
@@ -389,6 +391,7 @@ function* loadFullAdHocMesh(
         clippedPosition,
         additionalCoordinates,
         mappingName,
+        annotation.version,
       )
     : [clippedPosition];
 
@@ -436,6 +439,7 @@ function* getChunkPositionsFromSegmentIndex(
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  tracingVersion: number,
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
@@ -445,6 +449,7 @@ function* getChunkPositionsFromSegmentIndex(
     mag,
     additionalCoordinates,
     mappingName,
+    tracingVersion,
   );
   const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
@@ -467,6 +472,7 @@ function* maybeLoadMeshChunk(
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
   const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
@@ -513,6 +519,7 @@ function* maybeLoadMeshChunk(
           cubeSize,
           scaleFactor,
           findNeighbors,
+          version: annotationVersion,
           ...meshExtraInfo,
         },
       );

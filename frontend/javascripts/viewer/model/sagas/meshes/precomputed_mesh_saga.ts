@@ -156,6 +156,7 @@ function* loadPrecomputedMeshForSegmentId(
   opacity: number | undefined,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const mappingName = yield* call(getMappingName, segmentationLayer);
   yield* put(
     addPrecomputedMeshAction(
@@ -166,6 +167,7 @@ function* loadPrecomputedMeshForSegmentId(
       meshFileName,
       mappingName,
       opacity,
+      annotationVersion,
     ),
   );
   yield* put(startedLoadingMeshAction(layerName, segmentId));
@@ -202,6 +204,7 @@ function* loadPrecomputedMeshForSegmentId(
       dataset,
       segmentationLayer,
       meshFile,
+      annotationVersion,
     );
     lods = chunkDescriptors.segmentInfo.lods;
     availableChunksMap = chunkDescriptors.availableChunksMap;
@@ -257,6 +260,7 @@ function* _getChunkLoadingDescriptors(
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFileInfo,
+  annotationVersion: number,
 ) {
   const availableChunksMap: ChunksMap = {};
   let loadingOrder: number[] = [];
@@ -296,6 +300,7 @@ function* _getChunkLoadingDescriptors(
     // without a mapping.
     meshFile.mappingName == null ? mappingName : null,
     editableMapping != null && tracing ? tracing.tracingId : null,
+    annotationVersion,
   );
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;

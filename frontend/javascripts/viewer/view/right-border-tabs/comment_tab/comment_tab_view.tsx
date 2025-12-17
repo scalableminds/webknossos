@@ -6,6 +6,8 @@ import {
   InfoCircleOutlined,
   SearchOutlined,
   ShrinkOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
 } from "@ant-design/icons";
 import {
   Tree as AntdTree,
@@ -332,13 +334,6 @@ function CommentTabView(props: Props) {
     );
   }
 
-  function renderSortIcon() {
-    const sortAsc = isSortedAscending;
-    const sortNumeric = sortBy === SortByEnum.ID;
-    const iconClass = `fas fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "down" : "up"}`;
-    return <i className={iconClass} />;
-  }
-
   function getSortDropdown(): MenuProps {
     return {
       selectedKeys: [sortBy],
@@ -510,9 +505,13 @@ function CommentTabView(props: Props) {
                   icon={<ArrowRightOutlined />}
                 />
                 <Dropdown menu={getSortDropdown()} trigger={["click"]}>
-                  <ButtonComponent title="Sort" onClick={toggleSortingDirection}>
-                    {renderSortIcon()}
-                  </ButtonComponent>
+                  <ButtonComponent
+                    title="Sort"
+                    onClick={toggleSortingDirection}
+                    icon={
+                      isSortedAscending ? <SortAscendingOutlined /> : <SortDescendingOutlined />
+                    }
+                  />
                 </Dropdown>
                 <ButtonComponent
                   onClick={toggleExpandAllTrees}

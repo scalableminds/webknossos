@@ -1,6 +1,7 @@
 import {
   BarChartOutlined,
   BellOutlined,
+  ExperimentOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
@@ -36,6 +37,7 @@ import {
   switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
+import type { MenuProps } from "antd";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -46,7 +48,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -211,30 +212,12 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       ]
     : [];
 
-  if (features().jobsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/jobs",
-      label: <Link to="/jobs">Processing Jobs</Link>,
-    });
-
   if (isAdmin) {
     adminstrationSubMenuItems.push({
       key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }
-  if (activeUser.isSuperUser) {
-    adminstrationSubMenuItems.push({
-      key: "/aiModels",
-      label: <Link to={"/aiModels"}>AI Models</Link>,
-    });
-  }
-
-  if (features().voxelyticsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/workflows",
-      label: <Link to="/workflows">Voxelytics</Link>,
-    });
 
   if (adminstrationSubMenuItems.length === 0) {
     return null;
@@ -249,6 +232,43 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       collapse,
     ),
     children: adminstrationSubMenuItems,
+  };
+}
+
+export function getAnalysisSubMenu(collapse: boolean) {
+  const analysisSubMenuItems = [];
+
+  if (features().jobsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/jobs",
+      label: <Link to="/jobs">Processing Jobs</Link>,
+    });
+    analysisSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
+
+  if (features().voxelyticsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/workflows",
+      label: <Link to="/workflows">Voxelytics</Link>,
+    });
+  }
+
+  if (analysisSubMenuItems.length === 0) {
+    return null;
+  }
+
+  return {
+    key: "analysisMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle(
+      "Analysis",
+      <ExperimentOutlined className="icon-margin-right" />,
+      collapse,
+    ),
+    children: analysisSubMenuItems,
   };
 }
 
@@ -313,7 +333,7 @@ function getHelpSubMenu(
   isAuthenticated: boolean,
   isAdminOrManager: boolean,
   collapse: boolean,
-  openHelpModal: MenuClickEventHandler,
+  openHelpModal: MenuProps["onClick"],
 ) {
   const polledVersionString =
     polledVersion != null && polledVersion !== version
@@ -383,7 +403,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "credits",
       label: (
-        <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="https://home.webknossos.org/about-us" rel="noopener noreferrer">
           About & Credits
         </a>
       ),
@@ -704,7 +724,7 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" className="flex-center-child" variant="outlined">
           Locked by unknown user.
         </Tag>
       </Tooltip>
@@ -712,7 +732,7 @@ function AnnotationLockedByUserTag({
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success" className="flex-center-child">
+        <Tag color="success" className="flex-center-child" variant="outlined">
           Locked by you. Reload to edit.
         </Tag>
       </Tooltip>
@@ -725,7 +745,7 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" className="flex-center-child" variant="outlined">
           Locked by {blockingUserName}
         </Tag>
       </Tooltip>
@@ -746,7 +766,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
     messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
   return (
     <Tooltip title={tooltipMessage}>
-      <Tag color="warning" className="flex-center-child">
+      <Tag color="warning" className="flex-center-child" variant="outlined">
         Locked by {props.annotationOwnerName}
       </Tag>
     </Tooltip>
@@ -822,6 +842,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   if (_isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
+    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
 
     if (isAdminOrManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));

@@ -71,10 +71,12 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "exportTiffMaxEdgeLengthVx": 8192,
   "exportTiffMaxVolumeMVx": 1024,
   "hideNavbarLogin": false,
+  "instancesInferralCostPerGVx": 0.5,
   "isWkorgInstance": false,
   "jobsEnabled": false,
   "mitochondriaInferralCostPerGVx": 0.5,
   "neuronInferralCostPerGVx": 1,
+  "nucleiInferralCostPerGVx": 0.5,
   "openIdConnectEnabled": false,
   "optInTabs": [
     "ConnectomeView",

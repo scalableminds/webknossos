@@ -2,7 +2,9 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -53,6 +55,15 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
   adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
+
+  lazy val segmentSurfaceAreaCache: AlfuCache[(ObjectId, String, FullMeshRequest), Float] =
+    AlfuCache(maxCapacity = 10000)
+
+  def clearCache(datasetId: ObjectId, layerNameOpt: Option[String]): Int =
+    segmentSurfaceAreaCache.clear {
+      case (keyDatasetId, keyLayerName, _) =>
+        keyDatasetId == datasetId && layerNameOpt.forall(_ == keyLayerName)
+    }
 
   def loadFor(dataSource: UsableDataSource, dataLayer: DataLayer, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext,

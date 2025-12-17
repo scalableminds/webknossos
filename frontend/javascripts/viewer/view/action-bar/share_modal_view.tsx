@@ -14,7 +14,6 @@ import {
   Alert,
   Button,
   Col,
-  Divider,
   Input,
   Modal,
   Radio,
@@ -25,6 +24,7 @@ import {
 } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -322,7 +322,7 @@ function _ShareModalView(props: Props) {
         style={{
           marginBottom: 18,
         }}
-        message={message}
+        title={message}
         type="warning"
         showIcon
       />
@@ -371,14 +371,10 @@ function _ShareModalView(props: Props) {
           </Hint>
         </Col>
       </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
+      <DividerWithSubtitle>
         <i className={`fas fa-${iconMap[visibility]} icon-margin-right`} />
         Visibility
-      </Divider>
+      </DividerWithSubtitle>
       {maybeShowWarning()}
       <Row>
         <Col
@@ -442,14 +438,10 @@ function _ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
+      <DividerWithSubtitle>
         <ShareAltOutlined className="icon-margin-right" />
         Team Sharing
-      </Divider>
+      </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
         <Row>
           <Col

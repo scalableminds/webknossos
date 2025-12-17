@@ -722,7 +722,7 @@ export class TransformedSectionLabeler {
       getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
     );
 
-    // todo: does this need a transformation?
+    // TODO: does this need a transformation?
     return this.base.getCircleVoxelBuffer2D(position, scale);
   }
 

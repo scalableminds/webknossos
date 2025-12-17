@@ -75,7 +75,7 @@ object UpdateAiModelParameters {
 }
 
 case class ReserveAiModelUploadToPathParameters(
-    id: Option[ObjectId], // if empty, a new model entry is generated and returned
+    existingAiModelId: Option[ObjectId], // if empty, a new model entry is generated and returned
     dataStoreName: String,
     name: String,
     comment: Option[String],
@@ -363,7 +363,7 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[ReserveAiModelUploadToPathParameters]) { implicit request =>
       for {
         _ <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
-        aiModelId <- request.body.id match {
+        aiModelId <- request.body.existingAiModelId match {
           case Some(existingAiModelId) =>
             reserveUploadToPathForPreliminary(existingAiModelId, request.body, request.identity)
           case None => reserveUploadToPathNew(request.body, request.identity)

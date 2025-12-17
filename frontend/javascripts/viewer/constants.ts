@@ -336,7 +336,7 @@ const Constants = {
   FLOOD_FILL_EXTENTS: {
     // In 2D mode, the third axis is set to 1 later in the code.
     _2D: (process.env.IS_TESTING ? [512, 512, 512] : [768, 768, 768]) as Vector3,
-    _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
+    _3D: (process.env.IS_TESTING ? [64, 64, 32] : [200, 200, 200]) as Vector3,
   },
   // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
   // we are more lax with the flood fill extent.

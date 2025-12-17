@@ -70,7 +70,7 @@ describe("Proofreading (Multi User)", () => {
 
     backendMock.planVersionInjection(5, [
       {
-        name: "updateSegment",
+        name: "updateSegmentPartial",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
           id: 6,

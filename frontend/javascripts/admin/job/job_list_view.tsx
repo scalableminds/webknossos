@@ -166,7 +166,10 @@ function JobListView() {
   function getLinkToDataset(job: APIJob) {
     // prefer updated link over legacy link.
     if (job.args.datasetId != null)
-      return getViewDatasetURL({ name: job.args.datasetName || "unknown_name", id: job.args.datasetId });
+      return getViewDatasetURL({
+        name: job.args.datasetName || "unknown_name",
+        id: job.args.datasetId,
+      });
     if (
       job.organizationId != null &&
       (job.args.datasetName != null || job.args.datasetDirectoryName != null)
@@ -311,7 +314,7 @@ function JobListView() {
       const numberOfTrainingAnnotations = job.args.trainingAnnotations?.length || 0;
       const modelName =
         job.command === APIJobCommand.TRAIN_NEURON_MODEL ||
-          job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
+        job.command === APIJobCommand.DEPRECATED_TRAIN_MODEL
           ? "neuron model"
           : "instance model";
       return (

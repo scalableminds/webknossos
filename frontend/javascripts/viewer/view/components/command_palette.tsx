@@ -385,7 +385,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       onRequestClose={() => setCommands(allStaticCommands)}
       closeOnSelect={false}
       renderCommand={(command) => {
-        const { shortcut, highlight: maybeDirtyString, name } = command;
+        const { shortcut, highlight: maybeDirtyString, name } = command as Command;
         const cleanString = cleanStringOfMostHTML(maybeDirtyString);
         return (
           <div

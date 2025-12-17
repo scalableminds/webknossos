@@ -22,7 +22,7 @@ import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Card, Input, Modal, Spin, Tag } from "antd";
+import { Alert, App, Button, Card, Flex, Input, Modal, Space, Spin, Tag } from "antd";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
@@ -138,7 +138,7 @@ function TaskListView({ initialFieldValues }: Props) {
             />
           </div>
           <Alert
-            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
+            title="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
             type="info"
           />
         </>
@@ -244,10 +244,6 @@ function TaskListView({ initialFieldValues }: Props) {
       </>
     );
   }
-
-  const marginRight = {
-    marginRight: 20,
-  };
 
   const columns: ColumnType<APITask>[] = [
     {
@@ -417,28 +413,23 @@ function TaskListView({ initialFieldValues }: Props) {
 
   return (
     <div className="container">
-      <div className="pull-right">
-        <Link to="/tasks/create">
-          <Button icon={<PlusOutlined />} style={marginRight} type="primary">
-            Add Task
-          </Button>
-        </Link>
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </div>
-      <h3
-        style={{
-          display: "inline-block",
-          verticalAlign: "top",
-        }}
-      >
-        Tasks
-      </h3>
+      <Flex justify="space-between" align="flex-start">
+        <h3>Tasks</h3>
+        <Space>
+          <Link to="/tasks/create">
+            <Button icon={<PlusOutlined />} type="primary">
+              Add Task
+            </Button>
+          </Link>
+          <Search
+            style={{
+              width: 200,
+            }}
+            onChange={handleSearch}
+            value={searchQuery}
+          />
+        </Space>
+      </Flex>
       {features().isWkorgInstance ? (
         <>
           <a

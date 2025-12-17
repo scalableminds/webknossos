@@ -192,6 +192,7 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
     );
   } catch (exc) {
     Toast.error(`The mesh for segment ${action.segmentId} could not be loaded. Please try again.`);
+    console.log("Exception when loading ad-hoc mesh for segment", action.segmentId, ":", exc);
     ErrorHandling.notify(exc as any);
   }
 }
@@ -469,11 +470,23 @@ function* maybeLoadMeshChunk(
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
-  const paddedPosition = V3.toArray(V3.sub(clippedPosition, mag));
-  const paddedPositionWithinLayer =
-    layer.cube.boundingBox.clipPositionIntoBoundingBox(paddedPosition);
 
-  if (threeDMap.get(paddedPositionWithinLayer)) {
+  /*
+  Both cube position and cubeSize are padded. This is to achieve two effects:
+  (1) An overlap of 1vx (target mag) is added between cubes to fill visible gaps in the
+      mesh chunk grid.
+  (2) Cubes directly at dataset layer borders should actually extend by 1vx (target mag)
+     *beyond* the layer border so that marchingCubes can add closing surfaces for segments
+     that touch the layer borders.
+  To achieve both, all positions are moved by 1vx towards topleft and all sizes increased by 1.
+  Additionally, cubes that touch a lower layer border are increased by 1 again in that direction.
+  Note that this process can result in negative positions at the topleft layer border.
+  This is expected and the backend will handle it, adding the closing surface.
+  */
+  const paddedPosition = V3.sub(clippedPosition, mag);
+  const paddedCubeSize = getPaddedCubeSizeInTargetMag(paddedPosition, mag, layer);
+
+  if (threeDMap.get(paddedPosition)) {
     return [];
   }
 
@@ -482,7 +495,7 @@ function* maybeLoadMeshChunk(
   }
 
   batchCounterPerSegment[segmentId]++;
-  threeDMap.set(paddedPositionWithinLayer, true);
+  threeDMap.set(paddedPosition, true);
   const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
 
   if (isInitialRequest) {
@@ -495,8 +508,6 @@ function* maybeLoadMeshChunk(
 
   const { segmentMeshController } = getSceneController();
 
-  const cubeSize = marchingCubeSizeInTargetMag();
-
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(
@@ -506,11 +517,11 @@ function* maybeLoadMeshChunk(
         },
         layerSourceInfo,
         {
-          positionWithPadding: paddedPositionWithinLayer,
+          positionWithPadding: paddedPosition,
           additionalCoordinates: additionalCoordinates || undefined,
           mag,
           segmentId,
-          cubeSize,
+          cubeSize: paddedCubeSize,
           scaleFactor,
           findNeighbors,
           ...meshExtraInfo,
@@ -548,6 +559,29 @@ function* maybeLoadMeshChunk(
   }
 
   return [];
+}
+
+function getPaddedCubeSizeInTargetMag(
+  paddedPosition: Vector3,
+  mag: Vector3,
+  layer: DataLayer,
+): Vector3 {
+  let cubeSize = marchingCubeSizeInTargetMag();
+
+  // Always increase cubeSize by 1,1,1 to fill grid gaps
+  cubeSize = V3.add(cubeSize, [1, 1, 1]);
+
+  // If a cube precisely touches a lower layer border, increase its size in that direction
+  // by 1 again, to provide a closing surface on that layer border.
+  // Note that the paddedPosition already takes care of the upper layer borders
+  const cubeBottomRight = V3.add(paddedPosition, V3.scale3(cubeSize, mag));
+  const layerBottomRight = layer.cube.boundingBox.max;
+  for (let dimension = 0; dimension < 3; dimension++) {
+    if (cubeBottomRight[dimension] === layerBottomRight[dimension]) {
+      cubeSize[dimension] += 1;
+    }
+  }
+  return cubeSize;
 }
 
 function* markEditedCellAsDirty(): Saga<void> {

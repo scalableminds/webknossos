@@ -7,7 +7,12 @@ import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
-import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
+import type {
+  LocalMeshesInfo,
+  MeshInformation,
+  UserBoundingBox,
+  WebknossosState,
+} from "viewer/store";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
@@ -373,6 +378,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingType,
         opacity,
         annotationVersion,
+        isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -385,6 +391,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         syncedWithVersion: annotationVersion,
+        isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -421,6 +428,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         opacity,
         annotationVersion,
+        isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -433,6 +441,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         syncedWithVersion: annotationVersion,
+        isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -502,6 +511,32 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         },
       });
       return updatedKey;
+    }
+
+    case "UPDATE_AUXILIARY_AGGLOMERATE_MESH_VERSION_ACTION": {
+      const { layerName } = action;
+      const version = state.annotation.version;
+      const meshInfoForAdditionalCoordinatesToUpdate =
+        state.localSegmentationData[layerName].meshes;
+      if (!meshInfoForAdditionalCoordinatesToUpdate) {
+        return state;
+      }
+
+      const updatedMeshData = _.mapValues(
+        meshInfoForAdditionalCoordinatesToUpdate,
+        (meshInfoForAdditionalCoordinates) =>
+          meshInfoForAdditionalCoordinates
+            ? _.mapValues(meshInfoForAdditionalCoordinates, (meshInfo) =>
+                meshInfo.isProofreadingAuxiliaryMesh
+                  ? { ...meshInfo, syncedWithVersion: version }
+                  : meshInfo,
+              )
+            : meshInfoForAdditionalCoordinates,
+      ) as LocalMeshesInfo;
+
+      return updateKey2(state, "localSegmentationData", layerName, {
+        meshes: updatedMeshData,
+      });
     }
 
     case "UPDATE_MESH_FILE_LIST": {

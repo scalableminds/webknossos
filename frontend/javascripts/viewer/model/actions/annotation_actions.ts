@@ -332,6 +332,7 @@ export const addAdHocMeshAction = (
   mappingType: MappingType | null | undefined,
   opacity: number | undefined,
   annotationVersion: number,
+  isProofreadingAuxiliaryMesh: boolean,
 ) =>
   ({
     type: "ADD_AD_HOC_MESH",
@@ -343,6 +344,7 @@ export const addAdHocMeshAction = (
     mappingType,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
     annotationVersion,
+    isProofreadingAuxiliaryMesh,
   }) as const;
 
 export const addPrecomputedMeshAction = (
@@ -354,6 +356,7 @@ export const addPrecomputedMeshAction = (
   mappingName: string | null | undefined,
   opacity: number | undefined,
   annotationVersion: number,
+  isProofreadingAuxiliaryMesh: boolean,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -365,6 +368,7 @@ export const addPrecomputedMeshAction = (
     mappingName,
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
     annotationVersion,
+    isProofreadingAuxiliaryMesh,
   }) as const;
 
 export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>

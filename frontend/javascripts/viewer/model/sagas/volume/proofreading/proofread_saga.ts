@@ -252,6 +252,8 @@ function* loadCoarseMesh(
     return;
   }
 
+  const isProofreadingAuxiliaryMesh = true;
+
   if (
     currentMeshFile != null &&
     currentMeshFile.formatVersion >= 3 &&
@@ -266,6 +268,7 @@ function* loadCoarseMesh(
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
+        isProofreadingAuxiliaryMesh,
         undefined,
       ),
     );
@@ -278,7 +281,7 @@ function* loadCoarseMesh(
     // Load the whole agglomerate mesh in a coarse mag for performance reasons
     const preferredQuality = proofreadCoarseMagIndex();
     yield* put(
-      loadAdHocMeshAction(segmentId, position, additionalCoordinates, {
+      loadAdHocMeshAction(segmentId, position, additionalCoordinates, isProofreadingAuxiliaryMesh, {
         mappingName,
         mappingType,
         preferredQuality,
@@ -1068,22 +1071,18 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
 
-  if (action.type === "MIN_CUT_AGGLOMERATE") {
-    console.log("start updating the mapping after a min-cut");
-    if (sourceAgglomerateId !== targetAgglomerateId) {
-      const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
-      const additionalErrorExplanation = isOthersMayEditEnabled
-        ? " Maybe another user already splitted the agglomerate in the meantime."
-        : "";
-      Toast.error(
-        `The selected positions are not part of the same agglomerate and cannot be split.${additionalErrorExplanation}`,
-      );
-      return;
-    }
+  if (action.type === "MIN_CUT_AGGLOMERATE" && sourceAgglomerateId !== targetAgglomerateId) {
+    const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
+    const additionalErrorExplanation = isOthersMayEditEnabled
+      ? " Maybe another user already splitted the agglomerate in the meantime."
+      : "";
+    Toast.error(
+      `The selected positions are not part of the same agglomerate and cannot be split.${additionalErrorExplanation}`,
+    );
+    return;
+  }
 
-    // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
-    // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated.
-
+  function* reloadMappingAndAggloIds() {
     activeMapping = yield* select(
       (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
     );
@@ -1099,8 +1098,14 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         adaptToType(targetInfo.unmappedId),
       ) ?? targetAgglomerateId,
     );
+  }
+  // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
+  // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated. Therefore, we reload them.
+  yield* call(reloadMappingAndAggloIds);
 
-    const annotationVersion = yield* select((state) => state.annotation.version);
+  annotationVersion = yield* select((state) => state.annotation.version);
+  if (action.type === "MIN_CUT_AGGLOMERATE") {
+    console.log("start updating the mapping after a min-cut");
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
     const splitMappingInfo = yield* splitAgglomerateInMapping(
@@ -1133,30 +1138,21 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         },
       ),
     );
+    // Now the agglomerate Ids have changed again, thus, reload them.
+    yield* call(reloadMappingAndAggloIds);
 
     console.log("finished updating the mapping after a min-cut");
   }
 
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
+    // TODOM: in my test case this is wrong!
+    // TODOM: this breaks segment list syncing.! -> maybe removes mesh as well :thinking:
+    // yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
     yield* call(syncAgglomerateSkeletonsAfterMergeAction, volumeTracingId, sourceInfo, targetInfo);
   }
 
   /* Reload meshes */
-  const newMapping = yield* select(
-    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId].mapping,
-  );
-  const newSourceAgglomerateId = yield* call(
-    preparation.mapSegmentId,
-    sourceInfo.unmappedId,
-    newMapping,
-  );
-  const newTargetAgglomerateId = yield* call(
-    preparation.mapSegmentId,
-    targetInfo.unmappedId,
-    newMapping,
-  );
   // Preserving custom names across merges & splits.
   if (
     action.type === "PROOFREAD_MERGE" &&
@@ -1168,9 +1164,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       .filter((name) => name != null)
       .join(",");
     if (mergedName !== sourceAgglomerate.name) {
-      yield* put(
-        updateSegmentAction(newSourceAgglomerateId, { name: mergedName }, volumeTracingId),
-      );
+      yield* put(updateSegmentAction(sourceAgglomerateId, { name: mergedName }, volumeTracingId));
       Toast.info(`Renamed segment "${getSegmentName(sourceAgglomerate)}" to "${mergedName}."`);
     }
   } else if (
@@ -1181,7 +1175,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // Assign custom name to split-off target.
     yield* put(
       updateSegmentAction(
-        Number(newTargetAgglomerateId),
+        Number(targetAgglomerateId),
         { name: sourceAgglomerate.name },
         volumeTracingId,
       ),
@@ -1193,12 +1187,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
       agglomerateId: sourceInfo.agglomerateId,
-      newAgglomerateId: newSourceAgglomerateId,
+      newAgglomerateId: sourceAgglomerateId,
       nodePosition: sourceInfo.position,
     },
     {
       agglomerateId: targetInfo.agglomerateId,
-      newAgglomerateId: newTargetAgglomerateId,
+      newAgglomerateId: targetAgglomerateId,
       nodePosition: targetInfo.position,
     },
   ]);
@@ -1552,10 +1546,11 @@ export function* refreshAffectedMeshes(
     })) ?? {};
   for (const item of items) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
-    const shouldReloadId = item.agglomerateId === item.newAgglomerateId;
-    const versionOfOldAgglomerateId = meshInfos[item.agglomerateId]?.syncedWithVersion;
     const versionOfNewAgglomerateId = meshInfos[item.newAgglomerateId]?.syncedWithVersion;
-    if (shouldReloadId && versionOfOldAgglomerateId === annotationVersion) {
+    if (versionOfNewAgglomerateId === annotationVersion) {
+      // The agglomerate mesh has already been updated to the latest version or is already in the process of doing so.
+      // In that case, the rebasing mechanism took over refreshing this mesh and removing the related outdated meshes.
+      // Therefore, we skip this item here.
       continue;
     }
     if (!removedIds.has(item.agglomerateId)) {

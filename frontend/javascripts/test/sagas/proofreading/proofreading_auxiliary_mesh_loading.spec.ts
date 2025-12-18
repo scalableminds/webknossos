@@ -1,7 +1,6 @@
 import { call, put, take } from "redux-saga/effects";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
@@ -15,13 +14,12 @@ import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { type WebknossosState, startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { initialMapping } from "./proofreading_fixtures";
 import {
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { cancel, delay, takeEvery } from "typed-redux-saga";
+import { cancel, takeEvery } from "typed-redux-saga";
 import {
   setOthersMayEditForAnnotationAction,
   type FinishedLoadingMeshAction,
@@ -152,9 +150,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield loadAgglomerateMeshes([1, 2, 4]);
+      yield loadAgglomerateMeshes([1, 4]);
 
-      yield take("FINISHED_LOADING_MESH");
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       // Give mesh loading a little time
@@ -264,6 +261,21 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         },
       },
     ]);
+    backendMock.planVersionInjection(10, [
+      {
+        name: "createSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          id: 1339,
+          anchorPosition: [0, 0, 0],
+          name: null,
+          color: null,
+          groupId: null,
+          metadata: [],
+          creationTime: 1494695001688,
+        },
+      },
+    ]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -295,11 +307,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
       yield take("FINISHED_LOADING_MESH");
-      yield delay(2000);
+      yield take("FINISHED_LOADING_MESH");
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 1339]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 4]);
+      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
+      expect(_.sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
       expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);

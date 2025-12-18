@@ -108,8 +108,15 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName, opacity } =
-    action;
+  const {
+    segmentId,
+    seedPosition,
+    seedAdditionalCoordinates,
+    meshFileName,
+    layerName,
+    opacity,
+    isProofreadingAuxiliaryMesh,
+  } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -134,6 +141,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       meshFileName,
       layer,
       opacity,
+      isProofreadingAuxiliaryMesh,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -154,6 +162,7 @@ function* loadPrecomputedMeshForSegmentId(
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
   opacity: number | undefined,
+  isProofreadingAuxiliaryMesh: boolean,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const annotationVersion = yield* select((state) => state.annotation.version);
@@ -168,6 +177,7 @@ function* loadPrecomputedMeshForSegmentId(
       mappingName,
       opacity,
       annotationVersion,
+      isProofreadingAuxiliaryMesh,
     ),
   );
   yield* put(startedLoadingMeshAction(layerName, segmentId));

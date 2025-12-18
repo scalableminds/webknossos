@@ -570,6 +570,7 @@ type BaseMeshInformation = {
   readonly isVisible: boolean;
   readonly opacity: number;
   readonly mappingName: string | null | undefined;
+  readonly isProofreadingAuxiliaryMesh: boolean;
   readonly syncedWithVersion: number;
 };
 export type AdHocMeshInformation = BaseMeshInformation & {
@@ -589,10 +590,13 @@ export type ConnectomeData = {
   readonly skeleton: SkeletonTracing | null | undefined;
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
+export type LocalMeshesInfo =
+  | Record<string, Record<number, MeshInformation> | undefined>
+  | undefined;
 export type LocalSegmentationData = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
-  readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  readonly meshes: LocalMeshesInfo;
   readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
   readonly currentMeshFile: APIMeshFileInfo | null | undefined;
   // Note that for a volume tracing, this information should be stored

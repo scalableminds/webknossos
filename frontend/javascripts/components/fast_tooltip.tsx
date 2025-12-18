@@ -49,7 +49,7 @@ export type FastTooltipPlacement =
   | "left-end";
 
 // See docstring above for context.
-const uniqueKeyToDynamicRenderer: Record<string, () => React.ReactElement> = {};
+const uniqueKeyToDynamicRenderer: Record<string, () => React.ReactElement | null> = {};
 
 export default function FastTooltip({
   title,
@@ -76,7 +76,7 @@ export default function FastTooltip({
   className?: string; // class name attached to the wrapper
   style?: React.CSSProperties; // style attached to the wrapper
   variant?: "dark" | "light" | "success" | "warning" | "error" | "info";
-  dynamicRenderer?: () => React.ReactElement;
+  dynamicRenderer?: () => React.ReactElement | null;
 }) {
   const Tag = wrapper || "span";
   const [uniqueKeyForDynamic, setUniqueDynamicId] = useState<string | undefined>(undefined);

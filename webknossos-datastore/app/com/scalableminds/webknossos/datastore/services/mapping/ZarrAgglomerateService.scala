@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, E
 import com.scalableminds.webknossos.datastore.services.{DSChunkCacheService, DataConverter}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
+import spire.std.map
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
@@ -76,17 +77,21 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
         .array
     }
 
+    val t0 = java.time.Instant.now
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val distinctSegmentIds =
       bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned = false, skipZeroes = false)
+    val t1 = java.time.Instant.now
 
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
+      t2 = java.time.Instant.now
       relevantAgglomerateMap: Map[Long, Long] <- Fox
         .serialCombined(distinctSegmentIds) { segmentId =>
           mapSingleSegment(segmentToAgglomerate, segmentId).map((segmentId, _))
         }
         .map(_.toMap)
+      t3 = java.time.Instant.now
       mappedBytes: Array[Byte] = convertData(data, elementClass) match {
         case data: Array[Byte] =>
           val longBuffer = LongBuffer.allocate(data.length)
@@ -103,7 +108,16 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
         case data: Array[Long] => convertToAgglomerate(data, relevantAgglomerateMap, bytesPerElement, putLong)
         case _                 => data
       }
-    } yield mappedBytes
+      t4 = java.time.Instant.now
+    } yield {
+      val d1 = java.time.Duration.between(t0, t1)
+      val d2 = java.time.Duration.between(t1, t2)
+      val d3 = java.time.Duration.between(t2, t3)
+      val d4 = java.time.Duration.between(t3, t4)
+      logger.info(
+        s"scan ${d1.toNanos / 1000} setup ${d2.toNanos / 1000} buildMap ${d3.toNanos / 1000} apply ${d4.toNanos / 1000}")
+      mappedBytes
+    }
   }
 
   def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,

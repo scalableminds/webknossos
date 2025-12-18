@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.util.tools.Box.tryo
+import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.ByteOrder
@@ -26,7 +27,8 @@ class DatasetArray(vaultPath: VaultPath,
                    channelIndex: Option[Int],
                    additionalAxes: Option[Seq[AdditionalAxis]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
     FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, axisOrder, additionalAxes)
@@ -248,7 +250,10 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[MultiArray] =
+      tc: TokenContext): Fox[MultiArray] = {
+    if (vaultPath.toString == "/home/f/scm/code/webknossos/binaryData/sample_organization/agglomerates-perf-test/segmentation/agglomerates/agglomerate_zarr/segment_to_agglomerate") {
+      logger.info(s"Cache miss chunk ${chunkIndex.mkString(",")}")
+    }
     if (header.isSharded) {
       val chunkShape = chunkShapeAtIndex(chunkIndex)
       for {
@@ -265,6 +270,7 @@ class DatasetArray(vaultPath: VaultPath,
       val chunkShape = chunkShapeAtIndex(chunkIndex)
       chunkReader.read(chunkPath, chunkShape, None, useSkipTypingShortcut)
     }
+  }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
     if (axisOrder.hasZAxis) {

@@ -18,7 +18,7 @@ export const PullQueueConstants = {
   PRIORITY_HIGHEST: -1,
   BATCH_LIMIT: 6,
 } as const;
-const BATCH_SIZE = 6;
+const BATCH_SIZE = 1;
 const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
 const MAX_RETRY_DELAY = 5000;
 

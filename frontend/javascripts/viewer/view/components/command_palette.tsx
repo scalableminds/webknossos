@@ -178,12 +178,12 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return datasets.map((dataset) => ({
       name: `View Dataset: ${dataset.name} (id ${dataset.id})`,
       command: () => {
-        navigate(getViewDatasetURL(dataset));
+        window.location.href = getViewDatasetURL(dataset);
       },
       color: commandEntryColor,
       id: dataset.id,
     }));
-  }, [navigate]);
+  }, []);
 
   const viewDatasetsItem = {
     name: DynamicCommands.viewDataset,
@@ -199,13 +199,13 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       return {
         name: `View Annotation: ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
         command: () => {
-          navigate(`/annotations/${annotation.id}`);
+          window.location.href = `/annotations/${annotation.id}`;
         },
         color: commandEntryColor,
         id: annotation.id,
       };
     });
-  }, [navigate]);
+  }, []);
 
   const viewAnnotationItems = {
     name: DynamicCommands.viewAnnotation,

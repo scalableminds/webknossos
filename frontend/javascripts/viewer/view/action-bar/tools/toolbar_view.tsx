@@ -240,11 +240,12 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
   const { isDisabled, explanation } = disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id];
 
   const handleSetMeasurementTool = (evt: RadioChangeEvent) => {
-    dispatch(setToolAction(evt.target.value));
+    const value = evt.target.value as AnnotationToolId;
+    dispatch(setToolAction(AnnotationTool[value]));
   };
   return (
     <Radio.Group
-      value={activeTool}
+      value={activeTool.id}
       onChange={handleSetMeasurementTool}
       style={{
         marginLeft: 10,
@@ -253,7 +254,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
       <RadioButtonWithTooltip
         title="Measure distances with connected lines by using Left Click."
         style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.LINE_MEASUREMENT}
+        value={AnnotationTool.LINE_MEASUREMENT.id}
       >
         <img src="/assets/images/line-measurement.svg" alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
@@ -263,7 +264,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
           "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
         }
         style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.AREA_MEASUREMENT}
+        value={AnnotationTool.AREA_MEASUREMENT.id}
         disabled={isDisabled}
       >
         <img

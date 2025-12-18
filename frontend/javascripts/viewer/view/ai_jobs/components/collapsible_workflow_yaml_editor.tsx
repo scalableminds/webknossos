@@ -22,12 +22,14 @@ export function CollapsibleWorkflowYamlEditor({
           children: (
             <FormItem name="workflowYaml" label="Workflow Description (yaml)">
               <TextArea
-                className="input-monospace"
                 autoSize={{
                   minRows: 6,
                 }}
-                style={{
-                  fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                styles={{
+                  textarea: {
+                    fontFamily:
+                      'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
+                  },
                 }}
               />
             </FormItem>

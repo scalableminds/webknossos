@@ -296,13 +296,17 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
       val result = upsertGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result.segmentGroups.length == 2)
+      assert(result.segmentGroups.length == 3)
       assert(result.segmentGroups.head.groupId == groupId1)
       assert(result.segmentGroups.head.children.length == 1)
       assert(result.segmentGroups.head.children.head.groupId == groupId2)
       assert(result.segmentGroups.head.children.head.children.isEmpty)
-      assert(result.segmentGroups(1).groupId == groupId3)
-      assert(result.segmentGroups(1).children.isEmpty)
+      assert(result.segmentGroups(1).groupId == groupId5)
+      assert(result.segmentGroups(1).children.length == 2)
+      assert(result.segmentGroups(2).groupId == groupId3)
+      assert(result.segmentGroups(2).children.length == 1)
+      assert(result.segmentGroups(2).children.head.groupId == groupId4)
+      assert(result.segmentGroups(2).children.head.children.isEmpty)
 
       val upsertGroup2Action = UpsertSegmentGroupVolumeAction(
         groupId = groupId2,
@@ -311,13 +315,21 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
       val result2 = upsertGroup2Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups.length == 2)
+      assert(result2.segmentGroups.length == 3)
       assert(result2.segmentGroups.head.groupId == 1)
       assert(result2.segmentGroups.head.children.isEmpty)
-      assert(result2.segmentGroups(1).groupId == groupId2)
-      assert(result2.segmentGroups(1).children.length == 1)
-      assert(result2.segmentGroups(1).children.head.groupId == groupId3)
+      assert(result2.segmentGroups(1).groupId == groupId5)
+      assert(result2.segmentGroups(1).children.length == 2)
+      assert(result2.segmentGroups(1).children.head.groupId == groupId6)
       assert(result2.segmentGroups(1).children.head.children.isEmpty)
+      assert(result2.segmentGroups(1).children(1).groupId == groupId7)
+      assert(result2.segmentGroups(1).children(1).children.isEmpty)
+      assert(result2.segmentGroups(2).groupId == groupId2)
+      assert(result2.segmentGroups(2).children.length == 1)
+      assert(result2.segmentGroups(2).children.head.groupId == groupId3)
+      assert(result2.segmentGroups(2).children.head.children.length == 1)
+      assert(result2.segmentGroups(2).children.head.children.head.groupId == groupId4)
+      assert(result2.segmentGroups(2).children.head.children.head.children.isEmpty)
 
     }
 
@@ -331,50 +343,50 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
       val result = upsertGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result.segmentGroups.length == 1)
+      assert(result.segmentGroups.length == 2)
       assert(result.segmentGroups.head.groupId == groupId1)
+      assert(result.segmentGroups(1).groupId == groupId5)
       assert(result.segmentGroups.head.children.length == 2)
       assert(result.segmentGroups.head.children.head.groupId == groupId2)
       assert(result.segmentGroups.head.children.head.children.isEmpty)
       assert(result.segmentGroups.head.children(1).groupId == groupId3)
-      assert(result.segmentGroups.head.children(1).children.isEmpty)
+      assert(result.segmentGroups.head.children(1).children.length == 1)
+      assert(result.segmentGroups.head.children(1).children.head.groupId == groupId4)
+      assert(result.segmentGroups.head.children(1).children.head.children.isEmpty)
+    }
 
-      val upsertGroup2Action = UpsertSegmentGroupVolumeAction(
-        groupId = groupId2,
-        name = None,
-        newParentId = Some(newParent),
-        actionTracingId = Dummies.tracingId
-      )
-      val result2 = upsertGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups.length == 1)
-      assert(result2.segmentGroups.head.groupId == groupId1)
-      assert(result2.segmentGroups.head.children.length == 2)
-      assert(result2.segmentGroups.head.children.head.groupId == groupId2)
-      assert(result2.segmentGroups.head.children.head.children.isEmpty)
-      assert(result2.segmentGroups.head.children(1).groupId == groupId3)
-      assert(result2.segmentGroups.head.children(1).children.isEmpty)
+    "should reparent a segment group into a different root subtree with children" in {
 
-      // TODOM: regression test: modify group in other subtree from root
-      // TODOM: move into different root subtree
-      // TODOM: move with subgroups into other root subtree
-
-      /* TODOM Check whether support for this edge case is needed.
-      val newParent2 = 3
-
-      val upsertGroup2Action = UpsertSegmentGroupVolumeAction(
-        groupId = groupId2,
+      val newParent2 = 4
+      val upsertGroup5Action = UpsertSegmentGroupVolumeAction(
+        groupId = groupId5,
         name = None,
         newParentId = Some(newParent2),
         actionTracingId = Dummies.tracingId
       )
-      val result2 = upsertGroup2Action.applyOn(tracingWithSegmentGroups)
+      val result2 = upsertGroup5Action.applyOn(tracingWithSegmentGroups)
       assert(result2.segmentGroups.length == 1)
-      assert(result2.segmentGroups.head.groupId == groupId1)
-      assert(result2.segmentGroups.head.children.length == 1)
-      assert(result2.segmentGroups.head.children.head.groupId == groupId3)
-      assert(result2.segmentGroups.head.children.head.children.length == 1)
-      assert(result2.segmentGroups.head.children.head.children.head.groupId == groupId2)
-      assert(result2.segmentGroups.head.children.head.children.head.children.isEmpty)*/
+      val group1 = result2.segmentGroups.head
+      assert(group1.groupId == groupId1)
+      assert(group1.children.length == 1)
+      val group2 = group1.children.head
+      assert(group2.groupId == groupId2)
+      assert(group2.children.length == 1)
+      val group3 = group2.children.head
+      assert(group3.groupId == groupId3)
+      assert(group3.children.length == 1)
+      val group4 = group3.children.head
+      assert(group4.groupId == groupId4)
+      assert(group4.children.length == 1)
+      val group5 = group4.children.head
+      assert(group5.groupId == groupId5)
+      assert(group5.children.length == 2)
+      val group6 = group5.children.head
+      val group7 = group5.children(1)
+      assert(group6.groupId == groupId6)
+      assert(group6.children.isEmpty)
+      assert(group7.groupId == groupId7)
+      assert(group7.children.isEmpty)
     }
   }
   "DeleteSegmentGroupVolumeAction" should {

@@ -70,7 +70,8 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
       )
 
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(implicit ec: ExecutionContext,
-                                                                           tc: TokenContext): Fox[Array[Byte]] =
+                                                                           tc: TokenContext): Fox[Array[Byte]] = {
+    val before = java.time.Instant.now
     for {
       mappingName <- request.settings.appliedAgglomerate.toFox
       elementClass = request.dataLayer.elementClass
@@ -82,7 +83,10 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
           hdf5AgglomerateService.applyAgglomerate(agglomerateFileKey, request)(data).toFox
         case _ => unsupportedDataFormat(agglomerateFileKey)
       }
+      d = java.time.Duration.between(before, java.time.Instant.now)
+      //_ = logger.info(s"${d.toNanos / 1000}")
     } yield data
+  }
 
   def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,
                        agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =

@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, E
 import com.scalableminds.webknossos.datastore.services.{DSChunkCacheService, DataConverter}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
+import spire.std.map
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
@@ -65,45 +66,34 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, elementClass: ElementClass.Value)(
       data: Array[Byte])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] = {
 
-    def convertToAgglomerate(segmentIds: Array[Long],
-                             relevantAgglomerateMap: Map[Long, Long],
-                             bytesPerElement: Int,
-                             putToBufferFunction: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
-      val agglomerateIds = segmentIds.map(relevantAgglomerateMap)
-      agglomerateIds
-        .foldLeft(ByteBuffer.allocate(bytesPerElement * segmentIds.length).order(ByteOrder.LITTLE_ENDIAN))(
-          putToBufferFunction)
-        .array
-    }
-
+    val t0 = java.time.Instant.now
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val distinctSegmentIds =
       bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned = false, skipZeroes = false)
+    val t1 = java.time.Instant.now
 
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
-      relevantAgglomerateMap: Map[Long, Long] <- Fox
+      t2 = java.time.Instant.now
+      agglomerateIdForDistinctSegmentIds: Array[Long] <- Fox
         .serialCombined(distinctSegmentIds) { segmentId =>
-          mapSingleSegment(segmentToAgglomerate, segmentId).map((segmentId, _))
+          mapSingleSegment(segmentToAgglomerate, segmentId)
         }
-        .map(_.toMap)
-      mappedBytes: Array[Byte] = convertData(data, elementClass) match {
-        case data: Array[Byte] =>
-          val longBuffer = LongBuffer.allocate(data.length)
-          data.foreach(e => longBuffer.put(uByteToLong(e)))
-          convertToAgglomerate(longBuffer.array, relevantAgglomerateMap, bytesPerElement, putByte)
-        case data: Array[Short] =>
-          val longBuffer = LongBuffer.allocate(data.length)
-          data.foreach(e => longBuffer.put(uShortToLong(e)))
-          convertToAgglomerate(longBuffer.array, relevantAgglomerateMap, bytesPerElement, putShort)
-        case data: Array[Int] =>
-          val longBuffer = LongBuffer.allocate(data.length)
-          data.foreach(e => longBuffer.put(uIntToLong(e)))
-          convertToAgglomerate(longBuffer.array, relevantAgglomerateMap, bytesPerElement, putInt)
-        case data: Array[Long] => convertToAgglomerate(data, relevantAgglomerateMap, bytesPerElement, putLong)
-        case _                 => data
-      }
-    } yield mappedBytes
+        .map(_.toArray)
+      t3 = java.time.Instant.now
+      mappedBytes: Array[Byte] = bucketScanner.applyAgglomerate(data,
+                                                                bytesPerElement,
+                                                                distinctSegmentIds,
+                                                                agglomerateIdForDistinctSegmentIds)
+      t4 = java.time.Instant.now
+    } yield {
+      val d1 = java.time.Duration.between(t0, t1)
+      val d2 = java.time.Duration.between(t1, t2)
+      val d3 = java.time.Duration.between(t2, t3)
+      val d4 = java.time.Duration.between(t3, t4)
+      //logger.info(s"scan ${d1.toNanos / 1000} setup ${d2.toNanos / 1000} buildMap ${d3.toNanos / 1000} apply ${d4.toNanos / 1000}")
+      mappedBytes
+    }
   }
 
   def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,

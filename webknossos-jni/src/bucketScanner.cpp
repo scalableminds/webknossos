@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <unordered_set>
 #include <stdint.h>
+#include <map>
 
 uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
@@ -168,4 +169,30 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
          throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
          return nullptr;
      }
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyAgglomerate
+  (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jlongArray distinctSegmentIdsJavaArray, jlongArray agglomerateIdForDistinctSegmentIdsJavaArray) {
+  jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+  jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+
+  jsize mapSize = env -> GetArrayLength(distinctSegmentIdsJavaArray);
+  jlong * distinctSegmentIds = env -> GetLongArrayElements(distinctSegmentIdsJavaArray, NULL);
+  jlong * agglomerateIdForDistinctSegmentIds = env -> GetLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, NULL);
+
+  std::map<uint64_t, uint16_t> mapping;
+  for (size_t i = 0; i < mapSize; ++i) {
+    mapping[distinctSegmentIds[i]] = agglomerateIdForDistinctSegmentIds[i];
+  }
+
+
+
+  // TODO create output array
+
+  // TODO iterate over input elements, look up in map, write output (needs to be converted back to bytesPerElement - add writeSegmentIdAtIndex function?)
+
+  // TODO error handling
+
+  env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+  return bucketBytesJavaArray;
 }

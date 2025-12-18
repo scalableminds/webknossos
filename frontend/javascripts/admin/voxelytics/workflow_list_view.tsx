@@ -2,7 +2,7 @@ import { SyncOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery } from "@tanstack/react-query";
 import { getVoxelyticsWorkflows } from "admin/rest_api";
-import { Button, Input, Progress, Spin, Table, Tooltip } from "antd";
+import { Button, Flex, Input, Progress, Space, Spin, Table, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
@@ -83,13 +83,15 @@ export default function WorkflowListView() {
     queryKey: ["voxelyticsWorkflows"],
     queryFn: async () => {
       try {
-        return (await getVoxelyticsWorkflows()).map(parseWorkflowInfo);
+        return await getVoxelyticsWorkflows();
       } catch (err) {
         Toast.error("Could not load workflow list.");
         console.error(err);
         throw err;
       }
     },
+    // We use the select to transform the data because it is run on cached and fetched data
+    select: (data) => data.map(parseWorkflowInfo),
     refetchInterval: VX_POLLING_INTERVAL ?? false,
   });
 
@@ -169,19 +171,21 @@ export default function WorkflowListView() {
 
   return (
     <div className="container voxelytics-view">
-      <div className="pull-right">
-        <Button onClick={() => refetch()} style={{ marginRight: 20 }}>
-          <SyncOutlined spin={isFetching} /> Refresh
-        </Button>
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </div>
-      <h3>Voxelytics Workflows</h3>
+      <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
+        <h3>Voxelytics Workflows</h3>
+        <Space>
+          <Button onClick={() => refetch()}>
+            <SyncOutlined spin={isFetching} /> Refresh
+          </Button>
+          <Search
+            style={{
+              width: 200,
+            }}
+            onChange={handleSearch}
+            value={searchQuery}
+          />
+        </Space>
+      </Flex>
       <Spin spinning={isLoading} size="large">
         <Table
           bordered

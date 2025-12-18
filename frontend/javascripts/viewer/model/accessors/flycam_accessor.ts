@@ -1,8 +1,8 @@
-import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import type { Matrix4x4 } from "mjs";
 import { type Euler, MathUtils, Matrix4, Object3D } from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
@@ -31,7 +31,7 @@ import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
 import * as scaleInfo from "viewer/model/scaleinfo";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "viewer/store";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import {
@@ -44,7 +44,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -197,8 +197,8 @@ export function _getMaximumZoomForAllMags(
 }
 
 // Only exported for testing.
-export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
-  const scaleMatrix = getMatrixScale(scale);
+export const _getDummyFlycamMatrix = memoizeOne((voxelSize: VoxelSize) => {
+  const scaleMatrix = getBaseVoxelFactorsInUnit(voxelSize);
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 

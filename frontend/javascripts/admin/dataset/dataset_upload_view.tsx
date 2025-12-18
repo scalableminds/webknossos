@@ -64,7 +64,7 @@ import { type FileWithPath, useDropzone } from "react-dropzone";
 import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
-  APIJobType,
+  APIJobCommand,
   type APIOrganization,
   type APITeam,
   type APIUser,
@@ -189,7 +189,7 @@ type UploadFormFieldTypes = {
 };
 
 export const dataPrivacyInfo = (
-  <Space direction="horizontal" size={4}>
+  <Space orientation="horizontal" size={4}>
     Per default, imported data is private and only visible within your organization.
     <a
       style={{ color: "var(--ant-color-primary)" }}
@@ -685,12 +685,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : this.getDatastoreForUrl(this.state.datastoreUrl);
 
     return (
-      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobCommand.CONVERT_TO_WKW) ||
       false
     );
   };
 
-  onFormValueChange = (changedValues: UploadFormFieldTypes) => {
+  onFormValueChange = (changedValues: Partial<UploadFormFieldTypes>) => {
     if (changedValues.datastoreUrl) {
       this.setState({ datastoreUrl: changedValues.datastoreUrl });
       this.updateUnfinishedUploads();
@@ -722,7 +722,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"
-              message={
+              title={
                 <>
                   Your organization has exceeded the available storage. Uploading new datasets is
                   disabled. Visit the{" "}
@@ -736,7 +736,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
           {unfinishedAndNotSelectedUploads.length > 0 && (
             <Alert
-              message={
+              title={
                 <>
                   Unfinished Dataset Uploads{" "}
                   <Tooltip
@@ -810,7 +810,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           >
             {features().isWkorgInstance && (
               <Alert
-                message={
+                title={
                   <>
                     We are happy to help!
                     <br />

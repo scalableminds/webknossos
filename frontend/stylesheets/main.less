@@ -178,15 +178,6 @@ button.narrow {
   margin-right: 0;
 }
 
-.monospace-id {
-  // break long IDs
-  word-wrap: break-word;
-  max-width: 154px;
-  font-family: monospace;
-  font-size: 14px;
-  width: 135px;
-}
-
 .hide-on-small-screen {
   @media (max-width: 1200px) {
     display: none !important;
@@ -718,8 +709,28 @@ button.narrow {
   }
 }
 
-.many-bucket-updates-warning{
-  .ant-notification-notice-btn{
+.hoverable-list-item {
+  // used in AI Job Drawer for selecting models, tasks etc.
+  transition: background-color 0.2s ease-in-out;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 8px !important;
+  margin-bottom: 16px !important;
+  padding: 16px !important;
+
+  &:hover,
+  &.selected {
+    border-color: var(--color-wk-blue) !important;
+    background-color: var(--ant-color-info-text-hover);
+
+    .ant-typography,
+    .ant-list-item-meta-description {
+      color: var(--ant-color-primary-bg) !important;
+    }
+  }
+}
+
+.many-bucket-updates-warning {
+  .ant-notification-notice-btn {
     margin-top: 0 !important;
   }
 }

@@ -10,9 +10,7 @@ import {
 import { Alert, Breadcrumb, Button, Form, Layout, Menu, Tooltip } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
-
 import features from "features";
-import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import type React from "react";
 import { useCallback } from "react";
@@ -44,7 +42,6 @@ const DatasetSettingsView: React.FC = () => {
     getFormValidationSummary,
     hasFormErrors,
   } = useDatasetSettingsContext();
-  const isUserAdmin = useWkSelector((state) => state.activeUser?.isAdmin || false);
   const location = useLocation();
   const navigate = useNavigate();
   const selectedKey =
@@ -67,14 +64,14 @@ const DatasetSettingsView: React.FC = () => {
         status === notImportedYetStatus ? (
           <Alert
             key="dataSourceStatus"
-            message={<span>{messages["dataset.missing_datasource_json"]}</span>}
+            title={<span>{messages["dataset.missing_datasource_json"]}</span>}
             type="error"
             showIcon
           />
         ) : (
           <Alert
             key="dataSourceStatus"
-            message={
+            title={
               <span>
                 {messages["dataset.invalid_datasource_json"]}
                 <br />
@@ -95,7 +92,7 @@ const DatasetSettingsView: React.FC = () => {
       messageElements.push(
         <Alert
           key="dataSourceStatus"
-          message={<span>{messages["dataset.import_complete"]}</span>}
+          title={<span>{messages["dataset.import_complete"]}</span>}
           type="success"
           showIcon
         />,
@@ -154,7 +151,7 @@ const DatasetSettingsView: React.FC = () => {
           icon: formErrors.defaultConfig ? errorIcon : <SettingOutlined />,
           label: "View Configuration",
         },
-        isUserAdmin && features().allowDeleteDatasets
+        features().allowDeleteDatasets
           ? {
               key: "delete",
               icon: <DeleteOutlined />,

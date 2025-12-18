@@ -74,7 +74,7 @@ const Toast = {
         this.error(
           singleMessage.error,
           {
-            sticky: true,
+            timeout: 13000,
             key: singleMessage.key,
           },
           errorChainString,
@@ -98,8 +98,8 @@ const Toast = {
         <Collapse
           className="collapsibleToastDetails"
           bordered={false}
+          ghost
           style={{
-            background: "transparent",
             marginLeft: -16,
           }}
           items={[
@@ -148,11 +148,11 @@ const Toast = {
       icon: undefined,
       key,
       duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
-      message: toastMessage,
+      title: toastMessage,
       style: {},
       className: config.className || "",
       onClose,
-      btn: config.customFooter,
+      actions: config.customFooter,
     };
 
     if (type === "error") {

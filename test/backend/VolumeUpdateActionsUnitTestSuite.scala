@@ -388,6 +388,34 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       assert(group7.groupId == groupId7)
       assert(group7.children.isEmpty)
     }
+
+    "should rename a group in first root subtree" in {
+
+      val newName = "New Name"
+      val renameGroup3Action = UpsertSegmentGroupVolumeAction(
+        groupId = groupId3,
+        name = Some(newName),
+        newParentId = None,
+        actionTracingId = Dummies.tracingId
+      )
+      val result2 = renameGroup3Action.applyOn(tracingWithSegmentGroups)
+      assert(result2.segmentGroups.head.children.head.children.head.groupId == groupId3)
+      assert(result2.segmentGroups.head.children.head.children.head.name == newName)
+    }
+
+    "should rename a group in second root subtree" in {
+
+      val newName = "New Name"
+      val renameGroup6Action = UpsertSegmentGroupVolumeAction(
+        groupId = groupId6,
+        name = Some(newName),
+        newParentId = None,
+        actionTracingId = Dummies.tracingId
+      )
+      val result2 = renameGroup6Action.applyOn(tracingWithSegmentGroups)
+      assert(result2.segmentGroups(1).children.head.groupId == groupId6)
+      assert(result2.segmentGroups(1).children.head.name == newName)
+    }
   }
   "DeleteSegmentGroupVolumeAction" should {
 

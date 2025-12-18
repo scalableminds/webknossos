@@ -169,3 +169,20 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
          return nullptr;
      }
 }
+
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyAgglomerate
+  (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jlongArray distinctSegmentIds, jlongArray agglomerateIdForDistinctSegmentIds) {
+  jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+  jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+
+  // TODO build map from distinctSegmentIds, agglomerateIdForDistinctSegmentIds
+
+  // TODO create output array
+
+  // TODO iterate over input elements, look up in map, write output (needs to be converted back to bytesPerElement - add writeSegmentIdAtIndex function?)
+
+  // TODO error handling
+
+  env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+  return bucketBytesJavaArray;
+}

@@ -625,32 +625,34 @@ export default function TaskListView({
         minHeight: "calc(100vh - 100px)",
       }}
     >
-      <Col xs={10} style={{ display: "flex", flexDirection: "column" }}>
-        <h3
-          style={{
-            marginBottom: 0,
-            maxWidth: "100%",
-            overflowWrap: "anywhere",
-          }}
-          title={readableWorkflowName}
-        >
-          {readableWorkflowName}
-        </h3>
-        <h4 style={{ color: "#51686e" }}>
-          {formatDateMedium(new Date(runBeginTimeString))}{" "}
-          <Tooltip title={formatDurationStrict(totalRuntime)}>
-            <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
-            {totalRuntime.humanize()}
-          </Tooltip>
-        </h4>
-        <div style={{ flex: 1, position: "relative" }}>
-          <DAGView
-            key={filteredTasks.map((t) => t.taskName).join("_")}
-            dag={report.dag}
-            filteredTasks={filteredTasks}
-            onClickHandler={handleSelectTask}
-          />
-        </div>
+      <Col xs={10}>
+        <Flex vertical style={{ height: "100%" }}>
+          <h3
+            style={{
+              marginBottom: 0,
+              maxWidth: "100%",
+              overflowWrap: "anywhere",
+            }}
+            title={readableWorkflowName}
+          >
+            {readableWorkflowName}
+          </h3>
+          <h4 style={{ color: "#51686e" }}>
+            {formatDateMedium(new Date(runBeginTimeString))}{" "}
+            <Tooltip title={formatDurationStrict(totalRuntime)}>
+              <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
+              {totalRuntime.humanize()}
+            </Tooltip>
+          </h4>
+          <div style={{ flex: 1, position: "relative" }}>
+            <DAGView
+              key={filteredTasks.map((t) => t.taskName).join("_")}
+              dag={report.dag}
+              filteredTasks={filteredTasks}
+              onClickHandler={handleSelectTask}
+            />
+          </div>
+        </Flex>
       </Col>
       <Col xs={14} className="task-panel">
         {openMetatask != null && (

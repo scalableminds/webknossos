@@ -8,6 +8,7 @@ import {
   Button,
   Col,
   Form,
+  Flex,
   type FormInstance,
   Input,
   InputNumber,
@@ -457,7 +458,7 @@ function SimpleLayerForm({
 
           {isSegmentation ? (
             <div>
-              <div style={{ display: "flex", alignItems: "end" }}>
+              <Flex align="flex-end">
                 <FormItemWithInfo
                   name={["dataSource", "dataLayers", index, "largestSegmentId"]}
                   label="Largest segment ID"
@@ -547,7 +548,7 @@ function SimpleLayerForm({
                     )}
                   </DelegatePropsToFirstChild>
                 </FormItemWithInfo>
-              </div>
+              </Flex>
               {mostRecentSuccessfulJob && (
                 <div style={{ marginTop: -6 }}>
                   Output of most recent job: {mostRecentSuccessfulJob.returnValue}

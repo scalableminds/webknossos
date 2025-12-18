@@ -88,7 +88,7 @@ const persistence = new Persistence<PartialState>(
 );
 
 const READ_ONLY_ICON = (
-  <span className="fa-stack fa-1x">
+  <span className="fa-stack fa-1x" style={{ width: "1em" }}>
     <i className="fas fa-pen fa-stack-1x" />
     <i className="fas fa-slash fa-stack-1x" />
   </span>

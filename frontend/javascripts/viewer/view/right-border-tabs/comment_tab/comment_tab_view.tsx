@@ -453,7 +453,7 @@ function CommentTabView(props: Props) {
           return (
             <React.Fragment>
               {renderMarkdownModal()}
-              <Space.Compact className="compact-items compact-icons">
+              <Space.Compact block>
                 <AdvancedSearchPopover
                   onSelect={(comment) => {
                     setActiveNode(comment.nodeId);

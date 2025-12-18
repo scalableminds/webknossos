@@ -1,5 +1,5 @@
 import { requestVerificationMail, verifyEmail } from "admin/rest_api";
-import { Spin } from "antd";
+import { Flex, Spin } from "antd";
 import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { useEffect } from "react";
@@ -84,9 +84,10 @@ export default function VerifyEmailView() {
       navigate("/");
     }
   }, [result, exception]);
+
   return (
-    <div style={{ display: "flex", justifyContent: "center", marginTop: 64 }}>
+    <Flex justify="center" style={{ marginTop: 64 }}>
       <Spin size="large" spinning />
-    </div>
+    </Flex>
   );
 }

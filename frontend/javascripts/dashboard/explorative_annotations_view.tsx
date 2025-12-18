@@ -21,7 +21,7 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
+import { Button, Card, Col, Flex, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
@@ -487,9 +487,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <Card
             variant="borderless"
             cover={
-              <div style={{ display: "flex", justifyContent: "center" }}>
+              <Flex justify="center">
                 <i className="drawing drawing-empty-list-annotations" />
-              </div>
+              </Flex>
             }
             style={{ background: "transparent" }}
           >

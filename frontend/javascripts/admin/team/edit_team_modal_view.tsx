@@ -1,6 +1,6 @@
 import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { getEditableUsers, updateUser } from "admin/rest_api";
-import { AutoComplete, Input, Modal, Spin, Tooltip } from "antd";
+import { AutoComplete, Flex, Input, Modal, Spin, Tooltip } from "antd";
 import type { DefaultOptionType } from "antd/lib/select";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useState } from "react";
@@ -66,34 +66,24 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const renderTeamMember = (user: APIUser): DefaultOptionType => ({
     value: `${user.firstName} ${user.lastName} ${user.email}`,
     label: (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+      <Flex justify="space-between">
         {user.firstName} {user.lastName}
         {renderRemoveSpan(user)}
-      </div>
+      </Flex>
     ),
   });
 
   const renderUserNotInTeam = (user: APIUser): DefaultOptionType => ({
     value: `${user.firstName} ${user.lastName} ${user.email}`,
     label: (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+      <Flex justify="space-between">
         <span>
           {user.firstName} {user.lastName}
         </span>
         <span onClick={() => addTo(user, team)}>
           <PlusCircleOutlined /> Add to {team?.name}
         </span>
-      </div>
+      </Flex>
     ),
   });
 

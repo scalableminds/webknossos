@@ -31,7 +31,12 @@ import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_pal
 
 const commandEntryColor = "#5660ff";
 
-type CommandWithoutId = Omit<Command, "id">;
+type ExtendedCommand = Command & {
+  shortcut?: string;
+  highlight?: string;
+};
+
+type CommandWithoutId = Omit<ExtendedCommand, "id">;
 
 enum DynamicCommands {
   viewDataset = "View Dataset ",
@@ -383,7 +388,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       onRequestClose={() => setCommands(allStaticCommands)}
       closeOnSelect={false}
       renderCommand={(command) => {
-        const { shortcut, highlight: maybeDirtyString, name } = command as Command;
+        const { shortcut, highlight: maybeDirtyString, name } = command as ExtendedCommand;
         const cleanString = cleanStringOfMostHTML(maybeDirtyString);
         return (
           <div

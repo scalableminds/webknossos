@@ -36,7 +36,7 @@ case class AiModel(_id: ObjectId,
                    category: Option[AiModelCategory],
                    created: Instant = Instant.now,
                    modified: Instant = Instant.now,
-                   isDeleted: Boolean = false) {}
+                   isDeleted: Boolean = false)
 
 class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                dataStoreService: DataStoreService,
@@ -93,6 +93,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
           dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
           dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
           baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
+          // No custom path, use legacy path schema:
           fallbackPath = baseDirUPath / aiModel._organization / ".aiModels" / aiModel._id.toString
         } yield fallbackPath
     }

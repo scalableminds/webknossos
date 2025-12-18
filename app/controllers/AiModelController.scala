@@ -378,7 +378,7 @@ class AiModelController @Inject()(
                                                 user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
       existingModel <- aiModelDAO.findOne(existingAiModelId)
-      _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> "aiModel.reserve.wrongOrga"
+      _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> "aiModel.reserve.wrongOrga" ~> FORBIDDEN
       _ <- Fox.fromBool(existingModel.uploadToPathIsPending) ?~> "aiModel.reserve.notPending"
       path <- uploadToPathsService.generateAiModelPath(existingAiModelId, user._organization, params.pathPrefix)
       _ <- aiModelDAO.updatePath(existingAiModelId, path)
@@ -386,10 +386,9 @@ class AiModelController @Inject()(
         existingModel.copy(name = params.name, comment = params.comment, modified = Instant.now))
     } yield existingAiModelId
 
-  private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User): Fox[ObjectId] =
+  private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User): Fox[ObjectId] = {
+    val newId = ObjectId.generate
     for {
-      _ <- aiModelDAO.findOneByName(params.name)(GlobalAccessContext).reverse ?~> "aiModel.name.taken"
-      newId = ObjectId.generate
       path <- uploadToPathsService.generateAiModelPath(newId, user._organization, params.pathPrefix)
       newAiModel = AiModel(
         _id = newId,
@@ -407,13 +406,14 @@ class AiModelController @Inject()(
       )
       _ <- aiModelDAO.insertOne(newAiModel)
     } yield newAiModel._id
+  }
 
   def finishUploadToPath(id: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         existingAiModel <- aiModelDAO.findOne(id)
-        _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> "aiModel.finish.notPendnig"
-        _ <- Fox.fromBool(existingAiModel._organization == request.identity._organization) ?~> "aiModel.finish.wrongOrga"
+        _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> "aiModel.finish.notPending"
+        _ <- Fox.fromBool(existingAiModel._organization == request.identity._organization) ?~> "aiModel.finish.wrongOrga" ~> FORBIDDEN
         _ <- aiModelDAO.finishUploadToPath(id)
       } yield Ok
     }

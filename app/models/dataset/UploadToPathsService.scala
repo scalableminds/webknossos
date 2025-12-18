@@ -151,7 +151,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       organizationId: String,
       requestedPrefix: Option[UPath])(implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       orgaDir = uploadToPathsPrefix / organizationId
       datasetParent = uploadToPathsInfixOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
       datasetPath = datasetParent / dataSource.id.directoryName
@@ -215,7 +215,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   def generateAiModelPath(id: ObjectId, organizationId: String, pathPrefix: Option[UPath])(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
     } yield uploadToPathsPrefix / organizationId / ".aiModels" / id
 
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
@@ -231,7 +231,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
         parameters.attachmentType)
       existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       attachmentPath = generateAttachmentPath(parameters.attachmentName,

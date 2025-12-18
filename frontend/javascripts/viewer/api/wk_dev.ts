@@ -12,7 +12,7 @@ import type ApiLoader from "./api_loader";
 // for debugging or one off scripts.
 export const WkDevFlags = {
   logActions: false,
-  liveCollab: false,
+  liveCollab: true, // todop: revert
   sam: {
     useLocalMask: true,
   },

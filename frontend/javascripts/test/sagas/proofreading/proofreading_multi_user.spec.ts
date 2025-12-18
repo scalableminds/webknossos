@@ -1,5 +1,9 @@
 import { actionChannel, call, flush, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import {
+  type WebknossosTestContext,
+  setupWebknossosForTesting,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
@@ -28,6 +32,9 @@ import {
 } from "./proofreading_test_utils";
 import type { NeighborInfo } from "admin/rest_api";
 import type { Vector3 } from "viewer/constants";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
+import { ColoredLogger } from "libs/utils";
+import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -44,18 +51,53 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+    /*
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Backend merges segments 5 and 6
+      - Frontend merges 4 and 1
+
+      The resulting mapping will be:
+      {6 <- 5 <- 4 -> 1 -> 2 -> 3}
+      {1337, 1338}
+     */
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     backendMock.planVersionInjection(5, [
       {
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 6,
+          anchorPosition: [1, 2, 3],
+          additionalCoordinates: undefined,
+          name: "",
+          color: [1, 2, 3],
+          groupId: null,
+          metadata: [],
+          creationTime: 0,
+        },
+      },
+      {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 5,
           segmentId2: 6,
           agglomerateId1: 4,
           agglomerateId2: 6,
+        },
+      },
+      {
+        name: "deleteSegment",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 6,
         },
       },
     ]);
@@ -74,7 +116,8 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      // yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);
@@ -88,8 +131,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -108,7 +151,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 1,
             segmentId2: 4,
             agglomerateId1: 1,
@@ -122,12 +165,37 @@ describe("Proofreading (Multi User)", () => {
       );
 
       expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
+
+      const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4);
+      expect(segment4AfterSaving).toBeUndefined();
+
+      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
+      expect(segment6AfterSaving).toBeUndefined();
     });
 
     await task.toPromise();
   }, 8000);
 
   it("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
+    /*
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Backend splits agglomerate 1 (segments 2 and 3)
+      - Frontend merges agglomerates 4 and 1
+
+      The resulting mapping will be:
+      [1, 1339],
+      [2, 1339],
+      [3, 1],
+      [4, 1339],
+      [5, 1339],
+      [6, 6],
+      [7, 6],
+     */
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
@@ -135,7 +203,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 3,
           segmentId2: 2,
           agglomerateId: 1,
@@ -156,7 +224,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);
@@ -171,8 +239,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -184,15 +252,16 @@ describe("Proofreading (Multi User)", () => {
 
       expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
 
+      // Wait until proofreading saga is done
+      yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
-      expect(mergeSaveActionBatch).toEqual([
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+      expect(receivedUpdateActions.at(-2)).toEqual([
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 1,
             segmentId2: 4,
             agglomerateId1: 1339,
@@ -200,6 +269,17 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
+
+      expect(receivedUpdateActions.at(-1)).toMatchObject([
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1339,
+          },
+        },
+      ]);
+
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -219,6 +299,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
+    ColoredLogger.logGreen("task done");
   }, 8000);
 
   function prepareGetNeighborsForAgglomerateNode(mocks: WebknossosTestContext["mocks"]) {
@@ -272,7 +353,7 @@ describe("Proofreading (Multi User)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+    yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
     yield put(setActiveCellAction(2));
 
     yield call(createEditableMapping);
@@ -295,6 +376,19 @@ describe("Proofreading (Multi User)", () => {
   }
 
   it("should cut agglomerate from all neighbors after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+    /*
+      todop: double check this docstring
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Backend splits agglomerate 1 (segments 1 and 2)
+      - Frontend cuts agglomerate 2 from its neighbors (segment 3)
+
+      The resulting mapping will reflect both the frontend cut and the backend split.
+     */
     const { mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     prepareGetNeighborsForAgglomerateNode(mocks);
@@ -303,7 +397,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 2,
           agglomerateId: 1,
@@ -323,7 +417,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1339,
@@ -353,6 +447,19 @@ describe("Proofreading (Multi User)", () => {
   }, 8000);
 
   it("should not cut agglomerate from all neighbors due to interfering merge action", async (context: WebknossosTestContext) => {
+    /*
+      todop: double check this docstring
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Backend merges agglomerates 1 and 4 (segments 4 and 2)
+      - Frontend attempts to cut agglomerate 2 from all neighbors (segment 3)
+
+      The resulting mapping shows segment 3 cut from 2, but 2 remains merged with 4 due to the backend action.
+     */
     const { mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     prepareGetNeighborsForAgglomerateNode(mocks);
@@ -361,7 +468,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 4,
           segmentId2: 2,
           agglomerateId1: 1,
@@ -382,7 +489,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1,
@@ -416,13 +523,26 @@ describe("Proofreading (Multi User)", () => {
   }, 8000);
 
   it("should merge two agglomerates after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+    /*
+      todop: double check this docstring
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Backend splits agglomerate 1 (segments 1 and 2)
+      - Frontend merges agglomerates 4 and 1 (target segment 3)
+
+      The resulting mapping incorporates both the frontend merge and the backend split.
+     */
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     backendMock.planVersionInjection(7, [
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 2,
           agglomerateId: 1,
@@ -443,7 +563,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(3, { somePosition: [3, 3, 3] }, tracingId));
+      yield put(updateSegmentAction(3, { anchorPosition: [3, 3, 3] }, tracingId));
       yield put(setActiveCellAction(3));
 
       yield call(createEditableMapping);
@@ -458,8 +578,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          3, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          3, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -471,7 +591,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 3,
             segmentId2: 4,
             agglomerateId1: 1339,
@@ -501,6 +621,19 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate a new merge action from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
+    /*
+      todop: double check this docstring
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Backend merges agglomerates 1337 and 4 (segments 1337 and 5), where 1337 is initially not loaded
+      - Frontend merges agglomerates 4 and 1 (target segment 4)
+
+      The resulting mapping correctly incorporates the backend merge, even with the initially not-loaded segment.
+     */
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
@@ -519,7 +652,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1337,
           segmentId2: 5,
           agglomerateId1: 1337,
@@ -541,7 +674,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
       yield call(createEditableMapping);
@@ -556,8 +689,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // unmappedId=4 / mappedId=4 at this position
-          4, // unmappedId=1 maps to 1
+          [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
+          4, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -587,7 +720,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 4,
             segmentId2: 1,
             agglomerateId1: 1337,
@@ -619,6 +752,21 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
+    /*
+      todop: double check this docstring
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 1337}
+      {7 -> 1337}
+      {1338 -> 1337} (1337 and 1338 not loaded)
+
+      - Backend splits agglomerate 1337 (segments 7 and 1337)
+      - Backend merges agglomerates 1339 and 4 (segments 1337 and 5)
+      - Frontend merges agglomerates 4 and 1 (target segment 4)
+
+      The resulting mapping correctly incorporates all backend split and merge actions, including those involving initially not-loaded segments.
+     */
     const { api } = context;
 
     /* Initial mapping should now be
@@ -649,7 +797,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "splitAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 7,
           segmentId2: 1337,
           agglomerateId: 1337,
@@ -672,7 +820,7 @@ describe("Proofreading (Multi User)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1337,
           segmentId2: 5,
           agglomerateId1: 1339,
@@ -704,7 +852,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
       yield call(createEditableMapping);
@@ -719,8 +867,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the1339 actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // unmappedId=4 / mappedId=4 at this position
-          4, // unmappedId=1 maps to 1
+          [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
+          4, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -751,7 +899,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 4,
             segmentId2: 1,
             agglomerateId1: 1339,
@@ -783,6 +931,19 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and not trigger rebasing due to no incoming backend actions", async (context: WebknossosTestContext) => {
+    /*
+      todop: double check this docstring
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Frontend merges agglomerates 4 and 1 (target segment 1)
+      - No backend actions are applied.
+
+      The resulting mapping reflects only the frontend merge, and no rebasing is triggered.
+     */
     const { api } = context;
     const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
@@ -795,7 +956,7 @@ describe("Proofreading (Multi User)", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield call(createEditableMapping);
@@ -803,8 +964,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -816,7 +977,7 @@ describe("Proofreading (Multi User)", () => {
         {
           name: "mergeAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             segmentId1: 1,
             segmentId2: 4,
             agglomerateId1: 1,

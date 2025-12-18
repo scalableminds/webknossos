@@ -5,7 +5,7 @@ import window, { document, location } from "libs/window";
 import _ from "lodash";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { ArbitraryObject, Comparator } from "types/globals";
+import type { ArbitraryObject, Comparator } from "types/type_utils";
 import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
 import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
@@ -629,14 +629,18 @@ export function diffArrays<T>(
 export function diffMaps<K, V>(
   stateA: Map<K, V>,
   stateB: Map<K, V>,
+  maybeEqualityFn?: (v1: V, v2: V) => boolean,
 ): {
-  changed: Iterable<K>;
-  onlyA: Iterable<K>;
-  onlyB: Iterable<K>;
+  changed: Iterable<K>; // Contains the keys K for which stateA[K] !== stateB[K]
+  onlyA: Iterable<K>; // Contains the keys K that only exist in A
+  onlyB: Iterable<K>; // Contains the keys K that only exist in B
 } {
+  const equalityFn = maybeEqualityFn ?? ((a, b) => a === b);
   const keysOfA = Array.from(stateA.keys());
   const keysOfB = Array.from(stateB.keys());
-  const changed = keysOfA.filter((x) => stateB.has(x) && stateB.get(x) !== stateA.get(x));
+  const changed = keysOfA.filter(
+    (x) => stateB.has(x) && !equalityFn(stateB.get(x)!, stateA.get(x)!),
+  );
   const onlyA = keysOfA.filter((x) => !stateB.has(x));
   const onlyB = keysOfB.filter((x) => !stateA.has(x));
   return {

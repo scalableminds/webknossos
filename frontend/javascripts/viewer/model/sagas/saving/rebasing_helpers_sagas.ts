@@ -1,5 +1,6 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { getAdaptToTypeFunction } from "libs/utils";
+import _ from "lodash";
 import { call, put } from "typed-redux-saga";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
@@ -10,6 +11,7 @@ import type {
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
+  UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
@@ -132,7 +134,15 @@ export function* addMissingSegmentsToLoadedMappings(
   }
 }
 
-// Gathers mapped info for segment ids from proofreading actions where the mapping is unknown.
+// During rebasing, the front-end rolls back to the last version that is known to be saved on the server
+// (pending update actions are "stashed").
+// Then, the front-end is forwarded to the newest state known to the server.
+// Afterwards, the stashed update actions need to be applied again. However, these update actions
+// need to be adapted to the newest state.
+// This adaption takes place in the following saga.
+//
+// For proofreading actions, this saga gathers mapped info for segment ids from proofreading actions
+// where the mapping is unknown.
 // This happens in case of mesh proofreading actions. To re-apply the user's changes in the rebasing
 // up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
 // is first loaded and then the save queue update actions are remapped to update their agglomerate id infos
@@ -147,81 +157,152 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
       updatedSaveQueue: SaveQueueEntry[];
     }
 > {
+  // ColoredLogger.logRed("updateSaveQueueEntriesToStateAfterRebase");
   const saveQueue = yield* select((state) => state.save.queue);
   const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
   yield* call(addMissingSegmentsToLoadedMappings, idsToFetch);
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
+  const annotationBeforeUpdate = yield* select((state) => state.annotation);
 
   let success = true;
-  const updatedSaveQueue = saveQueue.map((saveQueueEntry) => ({
-    ...saveQueueEntry,
-    actions: saveQueueEntry.actions
-      .map((action) => {
-        switch (action.name) {
-          case "mergeAgglomerate":
-          case "splitAgglomerate": {
-            const { segmentId1, segmentId2, actionTracingId } = action.value;
-            const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
-            if (!mappingSyncedWithBackend) {
-              console.error(
-                "Found proofreading action without matching mapping in save queue. This should never happen.",
-                action,
+  const updatedSaveQueue = saveQueue
+    .map((saveQueueEntry): SaveQueueEntry | null => {
+      const newActions = saveQueueEntry.actions
+        .map((action) => {
+          switch (action.name) {
+            case "mergeAgglomerate":
+            case "splitAgglomerate": {
+              const { segmentId1, segmentId2, actionTracingId } = action.value;
+              const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
+              if (!mappingSyncedWithBackend) {
+                console.error(
+                  "Found proofreading action without matching mapping in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+              if (segmentId1 == null || segmentId2 == null) {
+                console.error(
+                  "Found proofreading action without given segmentIds in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+
+              const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
+              let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(segmentId1),
               );
-              success = false;
-              return null;
+              let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(segmentId2),
+              );
+              if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
+                console.error(
+                  "Found proofreading action without loaded agglomerate ids. This should never occur.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+              if (action.name === "mergeAgglomerate") {
+                return {
+                  name: action.name,
+                  value: {
+                    ...action.value,
+                    agglomerateId1: Number(upToDateAgglomerateId1),
+                    agglomerateId2: Number(upToDateAgglomerateId2),
+                  },
+                } satisfies MergeAgglomerateUpdateAction;
+              } else {
+                return {
+                  name: action.name,
+                  value: {
+                    ...action.value,
+                    agglomerateId: Number(upToDateAgglomerateId1),
+                  },
+                } satisfies SplitAgglomerateUpdateAction;
+              }
             }
-            if (segmentId1 == null || segmentId2 == null) {
-              console.error(
-                "Found proofreading action without given segmentIds in save queue. This should never happen.",
-                action,
+            case "createSegment": {
+              console.log("adapting createSegment action?", action);
+
+              const { actionTracingId } = action.value;
+
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
               );
-              success = false;
-              return null;
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                return action;
+              }
+
+              // The local user created a segment, but after rebase the segment already exists
+              // (probably because another user also created that segment).
+              // Let's only update the properties that are not null.
+              const newAction: UpdateSegmentPartialUpdateAction = {
+                name: "updateSegmentPartial",
+                value: {
+                  ..._.omitBy(action.value, (value) => value == null),
+                  actionTracingId: action.value.actionTracingId,
+                  id: action.value.id,
+                },
+              };
+              return newAction;
+            }
+            case "updateSegmentPartial": {
+              // ColoredLogger.logGreen("adapting updateSegment action?", action);
+
+              const { actionTracingId } = action.value;
+
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                // Another user removed the segment. The update action of the current user gets lost now.
+                return null;
+              }
+
+              // Since the update action precisely encodes what changed within the segment,
+              // we don't need to adapt the action itself.
+              return action;
+            }
+            case "deleteSegment": {
+              const { actionTracingId } = action.value;
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                // Another user removed the segment. The update action of the current user gets lost now.
+                return null;
+              }
+              return action;
             }
 
-            const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
-            let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
-              adaptToType(segmentId1),
-            );
-            let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
-              adaptToType(segmentId2),
-            );
-            if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
-              console.error(
-                "Found proofreading action without loaded agglomerate ids. This should never occur.",
-                action,
-              );
-              success = false;
-              return null;
-            }
-            if (action.name === "mergeAgglomerate") {
-              return {
-                name: action.name,
-                value: {
-                  ...action.value,
-                  agglomerateId1: Number(upToDateAgglomerateId1),
-                  agglomerateId2: Number(upToDateAgglomerateId2),
-                },
-              } satisfies MergeAgglomerateUpdateAction;
-            } else {
-              return {
-                name: action.name,
-                value: {
-                  ...action.value,
-                  agglomerateId: Number(upToDateAgglomerateId1),
-                },
-              } satisfies SplitAgglomerateUpdateAction;
-            }
+            default:
+              return action;
           }
-          default:
-            return action;
-        }
-      })
-      .filter((a) => a != null),
-  }));
+        })
+        .filter((a) => a != null);
+      if (newActions.length === 0) {
+        return null;
+      }
+      return {
+        ...saveQueueEntry,
+        actions: newActions,
+      };
+    })
+    .filter((a) => a != null);
   if (success) {
+    // ColoredLogger.logRed("new updatedSaveQueue", updatedSaveQueue);
     yield put(replaceSaveQueueAction(updatedSaveQueue));
     return { success: true, updatedSaveQueue };
   }

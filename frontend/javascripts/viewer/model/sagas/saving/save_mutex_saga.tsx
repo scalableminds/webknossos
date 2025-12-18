@@ -263,9 +263,9 @@ function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
         ? `${blockedByUser.firstName} ${blockedByUser.lastName}`
         : "unknown";
       Toast.warning(
-        `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds. 
-        User ${blockingUserName} is currently blocking the annotation. 
-        This might be due to using non-live collab supported features. 
+        `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds.
+        User ${blockingUserName} is currently blocking the annotation.
+        This might be due to using non-live collab supported features.
         Ensure they are sticking to tools supporting live collaboration.`,
         { sticky: true },
       );

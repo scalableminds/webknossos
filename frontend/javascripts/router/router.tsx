@@ -42,7 +42,7 @@ import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import ErrorBoundary from "components/error_boundary";
 import loadable from "libs/lazy_loader";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;

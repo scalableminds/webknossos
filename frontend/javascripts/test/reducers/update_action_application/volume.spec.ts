@@ -12,15 +12,21 @@ import {
 import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import type {
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { afterAll, describe, expect, test } from "vitest";
+import { describe, it, expect, test, afterAll } from "vitest";
 import { transformStateAsReadOnly } from "test/helpers/utils";
+import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
+import {
+  MOVE_GROUP_EDGE_CASE,
+  SEGMENT_GROUPS,
+  SEGMENT_GROUPS_EDITED,
+  SWAP_GROUP_EDGE_CASE,
+} from "test/sagas/volumetracing/segment_group_fixtures";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];
@@ -62,10 +68,12 @@ const applyActions = chainReduce(combinedReducer);
 // if the following dictionary doesn't contain that action.
 const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   updateLargestSegmentId: true,
-  updateSegment: true,
+  updateSegmentPartial: true,
   createSegment: true,
   deleteSegment: true,
-  updateSegmentGroups: true,
+  upsertSegmentGroup: true,
+  deleteSegmentGroup: true,
+  updateMetadataOfSegment: true,
   addUserBoundingBoxInVolumeTracing: true,
   updateUserBoundingBoxInVolumeTracing: true,
   deleteUserBoundingBoxInVolumeTracing: true,
@@ -88,8 +96,8 @@ describe("Update Action Application for VolumeTracing", () => {
   const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
-    VolumeTracingActions.updateSegmentAction(2, { somePosition: [1, 2, 3] }, tracingId),
-    VolumeTracingActions.updateSegmentAction(3, { somePosition: [3, 4, 5] }, tracingId),
+    VolumeTracingActions.updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),
+    VolumeTracingActions.updateSegmentAction(3, { anchorPosition: [3, 4, 5] }, tracingId),
     VolumeTracingActions.updateSegmentAction(
       3,
       {
@@ -97,8 +105,12 @@ describe("Update Action Application for VolumeTracing", () => {
         groupId: 3,
         metadata: [
           {
-            key: "someKey",
-            stringValue: "some string value",
+            key: "someKey1",
+            stringValue: "some string value (will be changed later)",
+          },
+          {
+            key: "someKey2",
+            stringValue: "will be deleted later",
           },
         ],
       },
@@ -126,12 +138,32 @@ describe("Update Action Application for VolumeTracing", () => {
     VolumeTracingActions.setActiveCellAction(4),
     VolumeTracingActions.updateSegmentAction(
       4,
-      { groupId: 3, somePosition: [7, 8, 9], isVisible: true },
+      { groupId: 3, anchorPosition: [7, 8, 9], isVisible: true },
       tracingId,
     ),
     VolumeTracingActions.toggleSegmentGroupAction(3, tracingId),
+    VolumeTracingActions.updateSegmentAction(
+      3,
+      {
+        metadata: [
+          {
+            key: "someKey1",
+            stringValue: "changed",
+          },
+          {
+            key: "someKey3",
+            stringValue: "added",
+          },
+        ],
+      },
+      tracingId,
+    ),
     VolumeTracingActions.removeSegmentAction(3, tracingId),
     VolumeTracingActions.setLargestSegmentIdAction(10000),
+    VolumeTracingActions.setSegmentGroupsAction(
+      [makeBasicGroupObject(3, "group 3 - renamed")],
+      tracingId,
+    ),
   ];
 
   test("User actions for test should not contain no-ops", () => {
@@ -228,6 +260,84 @@ describe("Update Action Application for VolumeTracing", () => {
       });
     },
   );
+
+  it("should be able to apply actions basic group editing", () => {
+    const state1 = applyActions(initialState, [
+      VolumeTracingActions.setSegmentGroupsAction(SEGMENT_GROUPS, tracingId),
+    ]);
+
+    const state2 = applyActions(state1, [
+      VolumeTracingActions.setSegmentGroupsAction(SEGMENT_GROUPS_EDITED, tracingId),
+    ]);
+
+    const volumeTracing1 = enforceVolumeTracing(state1);
+    const volumeTracing2 = enforceVolumeTracing(state2);
+
+    const updateActions = Array.from(
+      diffVolumeTracing(volumeTracing1, volumeTracing2),
+    ) as ApplicableVolumeUpdateAction[];
+
+    let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
+      applyActions(state, [
+        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        setActiveUserBoundingBoxId(null),
+      ]),
+    );
+
+    expect(reappliedNewState.annotation.volumes[0]).toEqual(state2.annotation.volumes[0]);
+  });
+
+  it("should be able to apply actions for edge case where a group is moved into one of its children", () => {
+    const state1 = applyActions(initialState, [
+      VolumeTracingActions.setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.BEFORE, tracingId),
+    ]);
+
+    const state2 = applyActions(state1, [
+      VolumeTracingActions.setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.AFTER, tracingId),
+    ]);
+
+    const volumeTracing1 = enforceVolumeTracing(state1);
+    const volumeTracing2 = enforceVolumeTracing(state2);
+
+    const updateActions = Array.from(
+      diffVolumeTracing(volumeTracing1, volumeTracing2),
+    ) as ApplicableVolumeUpdateAction[];
+
+    let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
+      applyActions(state, [
+        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        setActiveUserBoundingBoxId(null),
+      ]),
+    );
+
+    expect(reappliedNewState.annotation.volumes[0]).toEqual(state2.annotation.volumes[0]);
+  });
+
+  it("should be able to apply actions for edge case where two groups are swapped", () => {
+    const state1 = applyActions(initialState, [
+      VolumeTracingActions.setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.BEFORE, tracingId),
+    ]);
+
+    const state2 = applyActions(state1, [
+      VolumeTracingActions.setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.AFTER, tracingId),
+    ]);
+
+    const volumeTracing1 = enforceVolumeTracing(state1);
+    const volumeTracing2 = enforceVolumeTracing(state2);
+
+    const updateActions = Array.from(
+      diffVolumeTracing(volumeTracing1, volumeTracing2),
+    ) as ApplicableVolumeUpdateAction[];
+
+    let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
+      applyActions(state, [
+        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        setActiveUserBoundingBoxId(null),
+      ]),
+    );
+
+    expect(reappliedNewState.annotation.volumes[0]).toEqual(state2.annotation.volumes[0]);
+  });
 
   afterAll(() => {
     expect(seenActionTypes).toEqual(new Set(actionNamesList));

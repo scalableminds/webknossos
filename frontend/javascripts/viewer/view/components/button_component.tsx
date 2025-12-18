@@ -4,7 +4,6 @@ import noop from "lodash/noop";
 import React from "react";
 
 type ButtonComponentProps = ButtonProps & {
-  faIcon?: string;
   tooltipPlacement?: FastTooltipPlacement | undefined;
 };
 /*
@@ -20,15 +19,7 @@ const ButtonComponent = React.forwardRef<
   HTMLButtonElement | HTMLAnchorElement,
   ButtonComponentProps
 >((props, ref) => {
-  const {
-    children,
-    faIcon,
-    title,
-    tooltipPlacement,
-    onClick = noop,
-    onTouchEnd,
-    ...restProps
-  } = props;
+  const { children, title, tooltipPlacement, onClick = noop, onTouchEnd, ...restProps } = props;
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.blur();
@@ -42,20 +33,12 @@ const ButtonComponent = React.forwardRef<
     }
   };
 
-  const iconEl = faIcon != null && !props.loading ? <i className={faIcon} /> : null;
-  const button =
-    // Differentiate via children != null, since antd uses a different styling for buttons
-    // with a single icon child (.ant-btn-icon-only will be assigned)
-    children != null ? (
-      <Button {...restProps} onClick={handleClick} onTouchEnd={handleTouchEnd} ref={ref}>
-        {iconEl}
-        {children}
-      </Button>
-    ) : (
-      <Button {...restProps} onClick={handleClick} onTouchEnd={handleTouchEnd} ref={ref}>
-        {iconEl}
-      </Button>
-    );
+  const button = (
+    <Button {...restProps} onClick={handleClick} onTouchEnd={handleTouchEnd} ref={ref}>
+      {children}
+    </Button>
+  );
+
   return title != null ? (
     <FastTooltip title={title} placement={tooltipPlacement}>
       {button}

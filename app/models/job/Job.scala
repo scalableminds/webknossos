@@ -39,7 +39,7 @@ case class Job(
   protected def id: ObjectId = _id
 
   def isEnded: Boolean =
-    effectiveState == JobState.SUCCESS || state == JobState.FAILURE
+    effectiveState == JobState.SUCCESS || effectiveState == JobState.FAILURE
 
   def duration: Option[FiniteDuration] =
     for {

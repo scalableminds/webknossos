@@ -310,13 +310,12 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
     key: "timeStatisticMenu",
 
     label: (
-      <Link
-        to="/timetracking"
-        style={{
-          fontWeight: 400,
-        }}
-      >
-        {getCollapsibleMenuTitle("Time Tracking", <BarChartOutlined />, collapse)}
+      <Link to="/timetracking">
+        {getCollapsibleMenuTitle(
+          "Time Tracking",
+          <BarChartOutlined className="icon-margin-right" />,
+          collapse,
+        )}
       </Link>
     ),
   };

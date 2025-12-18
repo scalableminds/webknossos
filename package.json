@@ -136,7 +136,7 @@
     "@tanstack/react-query-persist-client": "^5.83.0",
     "@zip.js/zip.js": "^2.7.32",
     "ansi-to-react": "^6.1.6",
-    "antd": "^6.1.0",
+    "antd": "^6.1.1",
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^3.11.1",

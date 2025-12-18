@@ -327,6 +327,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             items: menuItems,
           }}
           disabled={disabled}
+          trigger={["click", "hover"]}
         >
           <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
             AI Analysis

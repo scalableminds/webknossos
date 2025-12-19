@@ -319,4 +319,152 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
     await task.toPromise();
   });
+
+  it("should load auxiliary meshes when splitting agglomerates and incorporating an interfering merge action from the backend", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planVersionInjection(9, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Load all meshes for all affected agglomerate meshes and one more.
+      yield loadAgglomerateMeshes([4, 6, 1]);
+
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+
+      // Set up the split-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+      yield makeMappingEditableHelper();
+
+      // Prepare the server's reply for the upcoming split.
+      vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+        Promise.resolve([
+          {
+            position1: [1, 1, 1],
+            position2: [2, 2, 2],
+            segmentId1: 1,
+            segmentId2: 2,
+          },
+        ]),
+      );
+
+      const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
+      const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
+      // Execute the split and wait for the finished mapping.
+      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      yield take("FINISHED_LOADING_MESH");
+      yield take("FINISHED_LOADING_MESH");
+
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
+      expect(_.sortBy([...removedMeshes])).toEqual([1, 4, 1339]); // TODOM: check why 1339 is removed. Maybe due to mesh assembling stuff?
+      expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
+      yield cancel(forkedEffect1);
+      yield cancel(forkedEffect2);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should load auxiliary meshes when splitting agglomerates and incorporating an interfering split action from the backend", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planVersionInjection(9, [
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 3,
+          segmentId2: 2,
+          agglomerateId: 1,
+        },
+      },
+    ]);
+    backendMock.planVersionInjection(10, [
+      {
+        name: "createSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          id: 1339,
+          anchorPosition: [0, 0, 0],
+          name: null,
+          color: null,
+          groupId: null,
+          metadata: [],
+          creationTime: 1494695001688,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Load all meshes for all affected agglomerate meshes and one more.
+      yield loadAgglomerateMeshes([4, 6, 1]);
+
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+
+      // Set up the split-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+      yield makeMappingEditableHelper();
+
+      // Prepare the server's reply for the upcoming split.
+      vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+        Promise.resolve([
+          {
+            position1: [1, 1, 1],
+            position2: [2, 2, 2],
+            segmentId1: 1,
+            segmentId2: 2,
+          },
+        ]),
+      );
+
+      const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
+      const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
+      // Execute the split and wait for the finished mapping.
+      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      // Loading meshes 1, 1339, 1340.
+      yield take("FINISHED_LOADING_MESH");
+      yield take("FINISHED_LOADING_MESH");
+      yield take("FINISHED_LOADING_MESH");
+
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      expect(_.sortBy([...removedMeshes])).toEqual([1, 1339, 1340]); // TODOM: check why 1340 is removed. Maybe due to mesh assembling stuff?
+      expect(_.sortBy([...addedMeshes])).toEqual([1, 1339, 1340]);
+      yield cancel(forkedEffect1);
+      yield cancel(forkedEffect2);
+    });
+
+    await task.toPromise();
+  });
 });

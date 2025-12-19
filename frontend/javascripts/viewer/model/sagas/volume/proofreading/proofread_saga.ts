@@ -1547,29 +1547,25 @@ export function* refreshAffectedMeshes(
   for (const item of items) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     const versionOfNewAgglomerateId = meshInfos[item.newAgglomerateId]?.syncedWithVersion;
-    if (versionOfNewAgglomerateId === annotationVersion) {
-      // The agglomerate mesh has already been updated to the latest version or is already in the process of doing so.
-      // In that case, the rebasing mechanism took over refreshing this mesh and removing the related outdated meshes.
-      // Therefore, we skip this item here.
-      continue;
-    }
-    if (!removedIds.has(item.agglomerateId)) {
+    const versionOfOldAgglomerateId = meshInfos[item.agglomerateId]?.syncedWithVersion;
+    if (!removedIds.has(item.agglomerateId) && versionOfOldAgglomerateId !== annotationVersion) {
       yield* put(removeMeshAction(layerName, Number(item.agglomerateId)));
       removedIds.add(item.agglomerateId);
     }
-    if (versionOfNewAgglomerateId !== annotationVersion) {
-      if (!newlyLoadedIds.has(item.newAgglomerateId)) {
-        meshLoadingEffects.push(
-          call(
-            loadCoarseMesh,
-            layerName,
-            Number(item.newAgglomerateId),
-            item.nodePosition,
-            additionalCoordinates,
-          ),
-        );
-        newlyLoadedIds.add(item.newAgglomerateId);
-      }
+    if (
+      !newlyLoadedIds.has(item.newAgglomerateId) &&
+      versionOfNewAgglomerateId !== annotationVersion
+    ) {
+      meshLoadingEffects.push(
+        call(
+          loadCoarseMesh,
+          layerName,
+          Number(item.newAgglomerateId),
+          item.nodePosition,
+          additionalCoordinates,
+        ),
+      );
+      newlyLoadedIds.add(item.newAgglomerateId);
     }
   }
   // Do all mesh loadings in parallel for more speed.

@@ -42,6 +42,7 @@ import {
   prepareRebaseAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
+import { updateAuxiliaryAgglomerateMeshVersionAction } from "viewer/model/actions/segmentation_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import {
@@ -71,7 +72,6 @@ import {
 } from "./rebasing_helpers_sagas";
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
-import { updateAuxiliaryAgglomerateMeshVersionAction } from "viewer/model/actions/segmentation_actions";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -769,8 +769,12 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
   ) {
     return;
   }
-  // Wait till saving is done and all updates are loaded.
-  yield* take("DONE_SAVING");
+  const isCurrentlySaving = yield* select((state) => state.save.isBusy);
+  if (isCurrentlySaving) {
+    // If we are currently saving, the server first needs all unsaved changes before the meshes can be properly reloaded.
+    // Thus wait till saving is done.
+    yield* take("DONE_SAVING");
+  }
   yield* spawn(
     reloadMeshes,
     artifactInfos.agglomerateIdsWithOutdatedMeshes,

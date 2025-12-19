@@ -28,6 +28,7 @@ import {
 import type { Task } from "@redux-saga/types";
 import { Store } from "viewer/singletons";
 import _ from "lodash";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 
 describe("Proofreading (with auxiliary mesh loading enabled)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -85,109 +86,232 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield take("FINISHED_LOADING_MESH");
     }
   }
+  describe.each([false, true])("With othersMayEdit=%s", (othersMayEdit: boolean) => {
+    it("should load auxiliary meshes", async (context: WebknossosTestContext) => {
+      const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
-  it("should load auxiliary meshes", async (context: WebknossosTestContext) => {
-    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+      const task = startSaga(function* task(): Saga<void> {
+        const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+        yield call(initializeMappingAndTool, context, tracingId);
+        if (othersMayEdit) {
+          yield put(setOthersMayEditForAnnotationAction(true));
+        }
 
-    const task = startSaga(function* task(): Saga<void> {
-      const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
-      yield loadAgglomerateMeshes([1]);
-      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-      expect([...loadedMeshIds]).toEqual([1]);
+        // Set up the merge-related segment partners. Normally, this would happen
+        // due to the user's interactions.
+        yield loadAgglomerateMeshes([1]);
+        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+        expect([...loadedMeshIds]).toEqual([1]);
+      });
+      await task.toPromise();
     });
-    await task.toPromise();
+
+    it("should reload auxiliary meshes after merge", async (context: WebknossosTestContext) => {
+      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+
+      const task = startSaga(function* task(): Saga<void> {
+        const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+        yield call(initializeMappingAndTool, context, tracingId);
+        if (othersMayEdit) {
+          yield put(setOthersMayEditForAnnotationAction(true));
+        }
+
+        // Set up the merge-related segment partners. Normally, this would happen
+        // due to the user's interactions.
+        yield loadAgglomerateMeshes([1, 6]);
+
+        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(setActiveCellAction(1));
+        // Give mesh loading a little time
+        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+        expect(_.sortBy([...loadedMeshIds])).toEqual([1, 6]);
+        yield loadAgglomerateMeshes([4]);
+
+        const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context);
+        expect(_.sortBy([...loadedMeshIds2])).toEqual([1, 4, 6]);
+
+        // Execute the actual merge and wait for the finished mapping.
+        const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
+        const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
+        yield put(proofreadMergeAction([4, 4, 4], 1));
+        yield take("FINISH_MAPPING_INITIALIZATION");
+
+        yield take("FINISHED_LOADING_MESH");
+        const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+        expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
+        expect(_.sortBy([...removedMeshes])).toEqual([1, 4]);
+        expect([...addedMeshes]).toEqual([1]);
+        yield cancel(forkedEffect1);
+        yield cancel(forkedEffect2);
+      });
+      await task.toPromise();
+    });
+
+    it("should reload auxiliary meshes after split", async (context: WebknossosTestContext) => {
+      const { mocks } = context;
+      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+
+      const task = startSaga(function* task(): Saga<void> {
+        const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+        yield call(initializeMappingAndTool, context, tracingId);
+        if (othersMayEdit) {
+          yield put(setOthersMayEditForAnnotationAction(true));
+        }
+        // Set up the merge-related segment partners. Normally, this would happen
+        // due to the user's interactions.
+        yield loadAgglomerateMeshes([1, 4]);
+
+        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(setActiveCellAction(1));
+        // Give mesh loading a little time
+        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+        expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4]);
+
+        // Prepare the server's reply for the upcoming split.
+        vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+          Promise.resolve([
+            {
+              position1: [1, 1, 1],
+              position2: [2, 2, 2],
+              segmentId1: 1,
+              segmentId2: 2,
+            },
+          ]),
+        );
+
+        // Execute the actual merge and wait for the finished mapping.
+        const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
+        const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
+        // Execute the split and wait for the auxiliary meshes being reloaded properly.
+        yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+        yield take("FINISH_MAPPING_INITIALIZATION");
+        yield take("FINISHED_LOADING_MESH");
+        yield take("FINISHED_LOADING_MESH");
+
+        const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+        expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
+        expect(_.sortBy([...removedMeshes])).toEqual([1, 1339]); // Although 1339 is not loaded it is tried to be removed by the proofreading saga to refresh it.
+        expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
+        yield cancel(forkedEffect1);
+        yield cancel(forkedEffect2);
+      });
+      await task.toPromise();
+    });
   });
 
-  it("should reload auxiliary meshes after merge", async (context: WebknossosTestContext) => {
-    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+  it("should reload auxiliary meshes after applying foreign merge action (no rebase)", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield loadAgglomerateMeshes([1, 6]);
-
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
-      yield put(setActiveCellAction(1));
-      // Give mesh loading a little time
+      yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 6]);
-      yield loadAgglomerateMeshes([4]);
+      expect([...loadedMeshIds]).toEqual([1, 4, 6]);
 
-      const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIds2])).toEqual([1, 4, 6]);
+      // After the meshes are loaded simulate a user making a merge.
+      backendMock.injectVersion(
+        [
+          {
+            name: "mergeAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              segmentId1: 5,
+              segmentId2: 6,
+              agglomerateId1: 4,
+              agglomerateId2: 6,
+            },
+          },
+        ],
+        4,
+      );
 
-      // Execute the actual merge and wait for the finished mapping.
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
-      yield put(proofreadMergeAction([4, 4, 4], 1));
-      yield take("FINISH_MAPPING_INITIALIZATION");
-
+      // And now load that merge.
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
       yield take("FINISHED_LOADING_MESH");
+
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 4]);
-      expect([...addedMeshes]).toEqual([1]);
+      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4]);
+      expect(_.sortBy([...removedMeshes])).toEqual([4, 6]);
+      expect(_.sortBy([...addedMeshes])).toEqual([4]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
     await task.toPromise();
   });
 
-  it("should reload auxiliary meshes after split", async (context: WebknossosTestContext) => {
-    const { mocks } = context;
-    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+  //---------------------------------------------------------------------------------
+  it("should reload auxiliary meshes after applying foreign split action (no rebase)", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
+      yield put(setOthersMayEditForAnnotationAction(true));
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield loadAgglomerateMeshes([1, 4]);
-
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
-      yield put(setActiveCellAction(1));
-      // Give mesh loading a little time
+      yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4]);
+      expect([...loadedMeshIds]).toEqual([1, 4, 6]);
 
-      // Prepare the server's reply for the upcoming split.
-      vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
-        Promise.resolve([
+      // After the meshes are loaded simulate a user making a split.
+      backendMock.injectVersion(
+        [
           {
-            position1: [1, 1, 1],
-            position2: [2, 2, 2],
-            segmentId1: 1,
-            segmentId2: 2,
+            name: "splitAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              segmentId1: 3,
+              segmentId2: 2,
+              agglomerateId: 1,
+            },
           },
-        ]),
+        ],
+        4,
+      );
+      backendMock.injectVersion(
+        [
+          {
+            name: "createSegment",
+            value: {
+              actionTracingId: "volumeTracingId",
+              id: 1339,
+              anchorPosition: [0, 0, 0],
+              name: null,
+              color: null,
+              groupId: null,
+              metadata: [],
+              creationTime: 1494695001688,
+            },
+          },
+        ],
+        5,
       );
 
-      // Execute the actual merge and wait for the finished mapping.
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
-      // Execute the split and wait for the auxiliary meshes being reloaded properly.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
-      yield take("FINISH_MAPPING_INITIALIZATION");
+      // And now load that merge.
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
       yield take("FINISHED_LOADING_MESH");
       yield take("FINISHED_LOADING_MESH");
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 1339]); // Although 1339 is not loaded it is tried to be removed by the proofreading saga to refresh it.
+      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339]);
+      expect(_.sortBy([...removedMeshes])).toEqual([1, 1339]);
       expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
     await task.toPromise();
   });
+  //---------------------------------------------------------------------------------
 
   it("should load auxiliary meshes when merging agglomerates and incorporating an interfering merge action from the backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);

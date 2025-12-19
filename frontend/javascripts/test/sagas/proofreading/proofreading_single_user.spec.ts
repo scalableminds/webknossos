@@ -310,11 +310,15 @@ describe("Proofreading (Single User)", () => {
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
       );
       expect(updatedAgglomerateTrees.size()).toBe(2);
-      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1); // TODO fix-> Id is not present
+      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1);
       expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
 
-      const agglomerateSkletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
-      yield expect(agglomerateSkletonReloadingUpdates).toMatchFileSnapshot(
+      const addAgglomerateSkeletonAndSplitUpdate = context.receivedDataPerSaveRequest.at(2)!;
+      const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(3)!;
+      yield expect([
+        addAgglomerateSkeletonAndSplitUpdate,
+        agglomerateSkeletonReloadingUpdates,
+      ]).toMatchFileSnapshot(
         "./__snapshots__/proofreading_single_user.spec.ts/split_should_refresh_agglomerate_skeletons.json",
       );
     });

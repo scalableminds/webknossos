@@ -260,6 +260,8 @@ describe("Proofreading (with mesh actions)", () => {
       ),
     );
     yield take("FINISH_MAPPING_INITIALIZATION");
+    yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   }
@@ -327,6 +329,7 @@ describe("Proofreading (with mesh actions)", () => {
     await task.toPromise();
   });
 
+  // ------------------------
   it("should load unknown unmapped segment ids of mesh split operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     // Initial mapping should be
@@ -365,7 +368,7 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Saga<void> {
       yield simulateSplitAgglomeratesViaMeshes(context);
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(3)![0]?.actions;
 
       expect(mergeSaveActionBatch).toEqual([
         {
@@ -632,7 +635,7 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Saga<void> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(4)![0]?.actions;
 
       expect(mergeSaveActionBatch).toEqual([
         {

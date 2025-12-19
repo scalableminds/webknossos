@@ -501,7 +501,6 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate a new merge action from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
-    const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     /* Should lead to the following full mapping:
@@ -579,9 +578,10 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(() => api.tracing.save());
+      yield take("DONE_SAVING");
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION");
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(3)![0]?.actions;
 
       expect(mergeSaveActionBatch).toEqual([
         {
@@ -619,8 +619,6 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
-    const { api } = context;
-
     /* Initial mapping should now be
      * [[ 1, 1 ],
      *  [ 2, 1 ],
@@ -743,9 +741,11 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(() => api.tracing.save());
+      yield take("DONE_SAVING");
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION");
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(4)![0]?.actions;
+      console.log(context.receivedDataPerSaveRequest);
 
       expect(mergeSaveActionBatch).toEqual([
         {

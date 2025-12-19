@@ -554,8 +554,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedSplit]);
       expect(injectedMergeRequest.version).toEqual(8);
       // This includes the split action of the split agglomerate tree.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
-      yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
+      const ownSplitAndReloadSkeletonUpdates = context.receivedDataPerSaveRequest.at(4)!;
+      yield expect(ownSplitAndReloadSkeletonUpdates).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_no-op.json",
       );
       const finalMapping = yield select(

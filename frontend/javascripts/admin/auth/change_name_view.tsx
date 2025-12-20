@@ -3,6 +3,7 @@ import { updateUser } from "admin/rest_api";
 import { Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import type { APIUser } from "types/api_types";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 
@@ -11,12 +12,18 @@ const FormItem = Form.Item;
 const FIRST_NAME_FIELD_KEY = "firstName";
 const LAST_NAME_FIELD_KEY = "lastName";
 
-function ChangeNameView({ onClose }: { onClose: () => void }) {
+function ChangeNameView({ onClose, user }: { onClose: () => void; user?: APIUser | null }) {
+  console.log("ChangeNameView user:", user);
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
+  const editedUser = user || activeUser;
+
+  if (editedUser == null) {
+    throw new Error("No user to edit");
+  }
 
   async function changeName(newFirstName: string, newLastName: string) {
-    const newUser = Object.assign({}, activeUser, {
+    const newUser = Object.assign({}, editedUser, {
       firstName: newFirstName,
       lastName: newLastName,
     });
@@ -24,15 +31,22 @@ function ChangeNameView({ onClose }: { onClose: () => void }) {
   }
 
   async function onFinish() {
+    if (editedUser == null) {
+      throw new Error("No user to edit");
+    }
     const hasNameBeenChanged =
       form.isFieldTouched(FIRST_NAME_FIELD_KEY) || form.isFieldTouched(LAST_NAME_FIELD_KEY);
     if (hasNameBeenChanged) {
       try {
-        const firstName = form.getFieldValue(FIRST_NAME_FIELD_KEY);
-        const lastName = form.getFieldValue(LAST_NAME_FIELD_KEY);
+        const firstName = form.getFieldValue(FIRST_NAME_FIELD_KEY) || editedUser.firstName;
+        const lastName = form.getFieldValue(LAST_NAME_FIELD_KEY) || editedUser.lastName;
         const updatedUser = await changeName(firstName, lastName);
-        Store.dispatch(setActiveUserAction(updatedUser));
-        Toast.success(`You successfully changed your name to ${firstName} ${lastName}.`);
+        if (activeUser?.id === editedUser?.id) {
+          Toast.success(`You successfully changed your name to ${firstName} ${lastName}.`);
+          Store.dispatch(setActiveUserAction(updatedUser));
+        } else {
+          Toast.success(`You successfully changed the name to ${firstName} ${lastName}.`);
+        }
       } catch (error) {
         const errorMsg = "An unexpected error occurred while changing the name.";
         Toast.error(errorMsg);
@@ -67,7 +81,7 @@ function ChangeNameView({ onClose }: { onClose: () => void }) {
               }}
             />
           }
-          defaultValue={activeUser?.firstName}
+          defaultValue={editedUser.firstName}
           placeholder="First Name"
         />
       </FormItem>
@@ -86,7 +100,7 @@ function ChangeNameView({ onClose }: { onClose: () => void }) {
               }}
             />
           }
-          defaultValue={activeUser?.lastName}
+          defaultValue={editedUser.lastName}
           placeholder="Last Name"
         />
       </FormItem>

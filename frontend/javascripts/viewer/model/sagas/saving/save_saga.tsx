@@ -24,8 +24,10 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getAllLoadedProofreadingAuxiliaryMeshes,
   getSegmentsForLayer,
   getVolumeTracingById,
+  isProofreadingAuxiliaryMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
@@ -61,7 +63,6 @@ import {
   takeEveryWithBatchActionSupport,
 } from "../saga_helpers";
 import {
-  coarselyLoadedSegmentIds as ProofreadSaga_LoadedProofreadingMeshIds,
   refreshAffectedMeshes,
   splitAgglomerateInMapping,
   updateMappingWithMerge,
@@ -591,11 +592,16 @@ export function* tryToIncorporateActions(
             agglomerateId2,
             !areUnsavedChangesOfUser,
           );
-          if (
-            (!ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId1) &&
-              !ProofreadSaga_LoadedProofreadingMeshIds.has(agglomerateId2)) ||
-            activeVolumeTracingId !== actionTracingId
-          ) {
+          // Only reload meshes if the action is regarding the active proofreading volume annotation.
+          if (action.value.actionTracingId !== activeVolumeTracingId) {
+            break;
+          }
+          const hasAnyOfBothAgglomerateMeshesLoaded = yield* select(
+            (state) =>
+              isProofreadingAuxiliaryMeshLoaded(state, agglomerateId1, activeVolumeTracingId) ||
+              isProofreadingAuxiliaryMeshLoaded(state, agglomerateId2, activeVolumeTracingId),
+          );
+          if (!hasAnyOfBothAgglomerateMeshesLoaded || activeVolumeTracingId !== actionTracingId) {
             break;
           }
           // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least one of the meshes loaded.
@@ -743,12 +749,16 @@ export function* tryToIncorporateActions(
           },
         ),
       );
-
-      const loadedProofreadingAuxiliaryMeshesOfSplitAction =
-        ProofreadSaga_LoadedProofreadingMeshIds.intersection(oldAgglomerateIds);
-      if (loadedProofreadingAuxiliaryMeshesOfSplitAction.size > 0) {
-        oldAgglomerateIds.forEach((aggloId) => agglomerateIdsWithOutdatedMeshes.add(aggloId));
-        newAgglomerateIds.forEach((aggloId) => agglomerateIdsToReloadMeshesFor.add(aggloId));
+      if (activeVolumeTracingId) {
+        const loadedProofreadingAuxiliaryMeshes = yield select((state) =>
+          getAllLoadedProofreadingAuxiliaryMeshes(state, activeVolumeTracingId),
+        );
+        const loadedProofreadingAuxiliaryMeshesOfSplitAction =
+          loadedProofreadingAuxiliaryMeshes.intersection(oldAgglomerateIds);
+        if (loadedProofreadingAuxiliaryMeshesOfSplitAction.size > 0) {
+          oldAgglomerateIds.forEach((aggloId) => agglomerateIdsWithOutdatedMeshes.add(aggloId));
+          newAgglomerateIds.forEach((aggloId) => agglomerateIdsToReloadMeshesFor.add(aggloId));
+        }
       }
     }
   }

@@ -218,8 +218,6 @@ function* syncWithBackend() {
   yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
 }
 
-export const coarselyLoadedSegmentIds = new Set<number>(); // TODOM
-
 function* loadCoarseMesh(
   layerName: string,
   segmentId: number,
@@ -288,9 +286,6 @@ function* loadCoarseMesh(
       }),
     );
   }
-
-  coarselyLoadedSegmentIds.add(segmentId);
-  console.log("coarselyLoadedSegmentIds", coarselyLoadedSegmentIds);
 }
 
 function* checkForAgglomerateSkeletonModification(
@@ -960,10 +955,21 @@ function* clearProofreadingByproducts() {
   if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
   const layerName = volumeTracingLayer.tracingId;
 
-  for (const segmentId of coarselyLoadedSegmentIds) {
-    yield* put(removeMeshAction(layerName, segmentId));
+  const additionalCoordinateKey = yield* select((state) =>
+    getAdditionalCoordinatesAsString(state.flycam.additionalCoordinates),
+  );
+  const meshInfos =
+    (yield* select(
+      (state) => state.localSegmentationData[layerName]?.meshes?.[additionalCoordinateKey],
+    )) || {};
+  const meshRemoveActions = Object.values(meshInfos)
+    .map((meshInfo) => {
+      meshInfo.isProofreadingAuxiliaryMesh ? removeMeshAction(layerName, meshInfo.segmentId) : null;
+    })
+    .filter((action) => action != null);
+  for (const action of meshRemoveActions) {
+    yield* put(action);
   }
-  coarselyLoadedSegmentIds.clear();
 }
 
 const MISSING_INFORMATION_WARNING =

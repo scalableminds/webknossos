@@ -11,13 +11,28 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import ChangeNameView from "admin/auth/change_name_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
-import { Alert, App, Button, Col, Flex, Input, Row, Space, Spin, Table, Tag, Tooltip } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Col,
+  Flex,
+  Input,
+  Modal,
+  Row,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+} from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import Persistence from "libs/persistence";
@@ -66,6 +81,7 @@ function UserListView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [singleSelectedUser, setSingleSelectedUser] = useState<APIUser | null | undefined>(null);
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(null);
+  const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
   useEffect(() => {
     const { searchQuery, activationFilter } = persistence.load();
@@ -302,6 +318,9 @@ function UserListView() {
               setIsInviteModalOpen(visible);
             }}
           />
+          <Modal destroyOnHidden title="Edit Name" open={editNameModalOpen} footer={null}>
+            <ChangeNameView onClose={() => setEditNameModalOpen(false)} user={singleSelectedUser} />
+          </Modal>
         </Space>
         <Search
           style={{
@@ -510,6 +529,16 @@ function UserListView() {
                 <Link to={`/users/${user.id}/details`}>
                   <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
+                <br />
+                <LinkButton
+                  icon={<UserOutlined />}
+                  onClick={() => {
+                    setEditNameModalOpen(true);
+                    setSingleSelectedUser(user);
+                  }}
+                >
+                  Edit Name
+                </LinkButton>
                 <br />
                 {user.isActive ? (
                   activeUser.isAdmin ? (

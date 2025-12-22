@@ -76,7 +76,6 @@ import {
 } from "viewer/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
-  removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
   updateSegmentAction,
@@ -607,7 +606,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     );
   } else {
     // A merge happened. Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
+    // TODOM: undo
+    // yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
   const pack = (agglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({

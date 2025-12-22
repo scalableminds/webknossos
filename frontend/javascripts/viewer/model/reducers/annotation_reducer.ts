@@ -7,12 +7,7 @@ import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
-import type {
-  LocalMeshesInfo,
-  MeshInformation,
-  UserBoundingBox,
-  WebknossosState,
-} from "viewer/store";
+import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/store";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
@@ -94,7 +89,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
       localSegmentationData: {
         [layerName]: {
           meshes: {
-            [additionalCoordKey]: { $set: [] },
+            [additionalCoordKey]: { $set: {} },
           },
         },
       },
@@ -522,20 +517,41 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         return state;
       }
 
-      const updatedMeshData = _.mapValues(
+      let updatedMeshInfo = meshInfoForAdditionalCoordinatesToUpdate;
+      for (const additionalCoordsKey of Object.keys(meshInfoForAdditionalCoordinatesToUpdate)) {
+        const meshesInfo = meshInfoForAdditionalCoordinatesToUpdate[additionalCoordsKey];
+        if (!meshesInfo) {
+          continue;
+        }
+        for (const meshSegmentId of Object.keys(meshesInfo)) {
+          // Casting to any because meshSegmentId is a string but number is required by typing.
+          const meshInfo = meshesInfo[meshSegmentId as any];
+          if (meshInfo?.isProofreadingAuxiliaryMesh) {
+            updatedMeshInfo = update(updatedMeshInfo, {
+              [additionalCoordsKey]: {
+                [meshSegmentId]: {
+                  syncedWithVersion: { $set: version },
+                },
+              },
+            });
+          }
+        }
+      }
+
+      /*const updatedMeshData = _.mapValues(
         meshInfoForAdditionalCoordinatesToUpdate,
         (meshInfoForAdditionalCoordinates) =>
           meshInfoForAdditionalCoordinates
             ? _.mapValues(meshInfoForAdditionalCoordinates, (meshInfo) =>
-                meshInfo.isProofreadingAuxiliaryMesh
+                meshInfo?.isProofreadingAuxiliaryMesh
                   ? { ...meshInfo, syncedWithVersion: version }
                   : meshInfo,
               )
             : meshInfoForAdditionalCoordinates,
-      ) as LocalMeshesInfo;
+      ) as LocalMeshesInfo;*/
 
       return updateKey2(state, "localSegmentationData", layerName, {
-        meshes: updatedMeshData,
+        meshes: updatedMeshInfo,
       });
     }
 

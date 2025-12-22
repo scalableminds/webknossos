@@ -16,7 +16,7 @@ import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { setMappingAction } from "viewer/model/actions/settings_actions";
+import { setMappingAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
@@ -24,15 +24,29 @@ import type {
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry } from "viewer/store";
+import type { NumberLike, SaveQueueEntry } from "viewer/store";
 import { expect, vi } from "vitest";
-import { edgesForInitialMapping } from "./proofreading_fixtures";
+import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
 import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import { delay } from "typed-redux-saga";
+import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import {
+  cutAgglomerateFromNeighborsAction,
+  minCutPartitionsAction,
+  proofreadAtPosition,
+  toggleSegmentInPartitionAction,
+} from "viewer/model/actions/proofread_actions";
+import {
+  updateSegmentAction,
+  setActiveCellAction,
+} from "viewer/model/actions/volumetracing_actions";
+import _ from "lodash";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -378,3 +392,220 @@ export function* makeMappingEditableHelper(): Saga<void> {
   // This would delay the reloading of the partial mapping of the mapping saga, thus we wait here shortly manually.
   yield delay(10);
 }
+
+export function prepareGetNeighborsForAgglomerateNode(
+  mocks: WebknossosTestContext["mocks"],
+  expectedVersion: number,
+  includeSegmentIdToOne: boolean,
+) {
+  // Prepare getNeighborsForAgglomerateNode mock
+  mocks.getNeighborsForAgglomerateNode.mockImplementation(
+    async (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      version: number,
+      segmentInfo: {
+        segmentId: NumberLike;
+        mag: Vector3;
+        agglomerateId: NumberLike;
+        editableMappingId: string;
+      },
+    ): Promise<NeighborInfo> => {
+      if (version !== expectedVersion) {
+        throw new Error(
+          `Version mismatch. Expected requested version to be ${expectedVersion} but got ${version}`,
+        );
+      }
+      if (segmentInfo.segmentId === 2) {
+        const neighbors = includeSegmentIdToOne
+          ? [
+              {
+                segmentId: 1,
+                position: [1, 1, 1] as Vector3,
+              },
+              {
+                segmentId: 3,
+                position: [3, 3, 3] as Vector3,
+              },
+            ]
+          : [
+              {
+                segmentId: 3,
+                position: [3, 3, 3] as Vector3,
+              },
+            ];
+        return {
+          segmentId: 2,
+          neighbors,
+        };
+      }
+      return {
+        segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
+        neighbors: [],
+      };
+    },
+  );
+}
+
+export function* loadAgglomerateMeshes(agglomerateIds: number[]): Saga<void> {
+  for (const id of agglomerateIds) {
+    yield put(proofreadAtPosition([id, id, id]));
+    yield take("FINISHED_LOADING_MESH");
+  }
+}
+export function getAllCurrentlyLoadedMeshIds(context: WebknossosTestContext) {
+  const loadedMeshIds = new Set();
+  for (const layerName of Object.keys(context.segmentLodGroups)) {
+    for (const lodGroup of context.segmentLodGroups[layerName].children) {
+      for (const meshGroup of lodGroup.children) {
+        if ("segmentId" in meshGroup) {
+          loadedMeshIds.add(meshGroup.segmentId);
+        }
+      }
+    }
+  }
+  return loadedMeshIds;
+}
+
+export function* performCutFromAllNeighbours(
+  context: WebknossosTestContext,
+  tracingId: string,
+  loadMeshes: boolean,
+): Saga<void> {
+  yield call(initializeMappingAndTool, context, tracingId);
+  const mapping0 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(initialMapping);
+  if (loadMeshes) {
+    // Load all meshes for all affected agglomerate meshes and one more.
+    yield loadAgglomerateMeshes([4, 6, 1]);
+
+    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+    expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+  }
+  // Set up the merge-related segment partners. Normally, this would happen
+  // due to the user's interactions.
+  yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+  yield put(setActiveCellAction(2));
+
+  yield makeMappingEditableHelper();
+  // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+  const mapping1 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping1).toEqual(initialMapping);
+  yield put(setOthersMayEditForAnnotationAction(true));
+
+  // Execute the actual merge and wait for the finished mapping.
+  yield put(
+    cutAgglomerateFromNeighborsAction(
+      [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
+    ),
+  );
+  yield take("DONE_SAVING");
+  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+}
+
+export function* simulatePartitionedSplitAgglomeratesViaMeshes(
+  context: WebknossosTestContext,
+  loadMeshes: boolean,
+): Saga<void> {
+  const { tracingId } = yield select((state) => state.annotation.volumes[0]);
+  const expectedInitialMapping = new Map([
+    [1, 1],
+    [2, 1],
+    [3, 1],
+    [4, 4],
+    [5, 4],
+    [6, 6],
+    [7, 6],
+  ]);
+
+  yield call(initializeMappingAndTool, context, tracingId);
+  const mapping0 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(expectedInitialMapping);
+  if (loadMeshes) {
+    // Load all meshes for all affected agglomerate meshes and one more.
+    yield loadAgglomerateMeshes([4, 6, 1]);
+
+    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+    expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+  }
+
+  // Set up the merge-related segment partners. Normally, this would happen
+  // due to the user's interactions.
+  yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
+  yield put(setActiveCellAction(6, undefined, null, 1337));
+
+  yield makeMappingEditableHelper();
+  // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+  const mapping1 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping1).toEqual(expectedInitialMapping);
+  yield put(setOthersMayEditForAnnotationAction(true));
+
+  //Activate Multi-split tool
+  yield put(updateUserSettingAction("isMultiSplitActive", true));
+  // Select partition 1
+  yield put(toggleSegmentInPartitionAction(1, 1, 1));
+  yield put(toggleSegmentInPartitionAction(2, 1, 1));
+  // Select partition 2
+  yield put(toggleSegmentInPartitionAction(1337, 2, 1));
+  yield put(toggleSegmentInPartitionAction(1338, 2, 1));
+  // Execute the actual merge and wait for the finished mapping.
+  yield put(minCutPartitionsAction());
+  yield take("FINISH_MAPPING_INITIALIZATION");
+  // Checking optimistic merge is not necessary as no "foreign" update was injected.
+  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+}
+
+export const mockEdgesForPartitionedAgglomerateMinCut = (
+  mocks: WebknossosTestContext["mocks"],
+  expectedRequestedVersion: number,
+) =>
+  vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
+    async (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      version: number,
+      segmentsInfo: {
+        partition1: NumberLike[];
+        partition2: NumberLike[];
+        mag: Vector3;
+        agglomerateId: NumberLike;
+        editableMappingId: string;
+      },
+    ): Promise<Array<MinCutTargetEdge>> => {
+      if (version !== expectedRequestedVersion) {
+        throw new Error(
+          `Unexpected version of min cut request. Expected version ${expectedRequestedVersion} but got ${version}`,
+        );
+      }
+      const { agglomerateId, partition1, partition2 } = segmentsInfo;
+      if (
+        agglomerateId === 1 &&
+        _.isEqual(partition1, [1, 2]) &&
+        _.isEqual(partition2, [1337, 1338])
+      ) {
+        return [
+          {
+            position1: [1, 1, 1],
+            position2: [1338, 1338, 1338],
+            segmentId1: 1,
+            segmentId2: 1338,
+          },
+          {
+            position1: [3, 3, 3],
+            position2: [1337, 1337, 1337],
+            segmentId1: 3,
+            segmentId2: 1337,
+          },
+        ];
+      }
+      throw new Error("Unexpected min cut request");
+    },
+  );

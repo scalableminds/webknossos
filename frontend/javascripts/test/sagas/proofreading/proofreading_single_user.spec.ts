@@ -209,7 +209,7 @@ describe("Proofreading (Single User)", () => {
     await task.toPromise();
   });
 
-  it("should merge two agglomerates and update not update agglomerate skeleton if not included in update actions.", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates and not update agglomerate skeleton if not included in update actions.", async (context: WebknossosTestContext) => {
     const { api } = context;
     mockInitialBucketAndAgglomerateData(context);
 

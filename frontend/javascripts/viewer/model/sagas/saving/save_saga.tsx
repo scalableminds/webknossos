@@ -5,12 +5,36 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import _ from "lodash";
 import { type Channel, buffers } from "redux-saga";
-import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
+import {
+  actionChannel,
+  call,
+  delay,
+  flush,
+  fork,
+  put,
+  race,
+  spawn,
+  takeEvery,
+} from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { SagaIdentifier } from "viewer/constants";
+import { SagaIdentifier, type Vector3 } from "viewer/constants";
+import {
+  getSegmentationLayerByName,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
+import {
+  getAllLoadedProofreadingAuxiliaryMeshes,
+  getSegmentsForLayer,
+  getVolumeTracingById,
+  isProofreadingAuxiliaryMeshLoaded,
+} from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
+import {
+  removeMeshAction,
+  showManyBucketUpdatesWarningAction,
+} from "viewer/model/actions/annotation_actions";
+import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import {
   type EnsureHasNewestVersionAction,
   type NotifyAboutUpdatedBucketsAction,
@@ -20,9 +44,14 @@ import {
   prepareRebaseAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
+import { updateAuxiliaryAgglomerateMeshVersionAction } from "viewer/model/actions/segmentation_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
-import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  applyVolumeUpdateActionsFromServerAction,
+  setHasEditableMappingAction,
+  setMappingIsLockedAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
@@ -33,7 +62,11 @@ import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
 } from "../saga_helpers";
-import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
+import {
+  refreshAffectedMeshes,
+  splitAgglomerateInMapping,
+  updateMappingWithMerge,
+} from "../volume/proofreading/proofread_saga";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updateSaveQueueEntriesToStateAfterRebase,
@@ -170,22 +203,50 @@ function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
 
 const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 
+// This type is designed to include information needed after applying update actions via tryToIncorporateActions.
+// This info is passed up the saga calling hierarchy.
+// E.g. info about which auxiliary agglomerate meshes need reloading and which need to be removed.
+// This info can then be used to trigger side effects after saving is done to e.g. reload the newest auxiliary agglomerate meshes.
+
+type ApplyingUpdateArtifacts = {
+  agglomerateIdsWithOutdatedMeshes: Set<number>;
+  agglomerateIdsToReloadMeshesFor: Set<number>;
+};
+
+type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
+
+const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
+  success: false,
+  artifactInfos: {
+    agglomerateIdsWithOutdatedMeshes: new Set<number>(),
+    agglomerateIdsToReloadMeshesFor: new Set<number>(),
+  },
+};
+const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
+  success: true,
+  artifactInfos: {
+    agglomerateIdsWithOutdatedMeshes: new Set<number>(),
+    agglomerateIdsToReloadMeshesFor: new Set<number>(),
+  },
+};
+
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
-): Saga<{ successful: boolean }> {
+): Saga<ApplyingUpdateResults> {
   if (actions.length === 0) {
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
-    return { successful: true };
+    return SuccessEmptyIncorporateActionsReturnValue;
   }
   const allowSave = yield* select(
     (state) =>
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
   try {
-    if ((yield* tryToIncorporateActions(actions, false)).success) {
+    const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
+    if (success) {
       // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
       yield* put(finishedApplyingMissingUpdatesAction());
-      return { successful: true };
+      return { success: true, artifactInfos };
     }
   } catch (exc) {
     // Afterwards, the user will be asked to reload the page.
@@ -209,7 +270,7 @@ function* applyNewestMissingUpdateActions(
     sticky: true,
     key: SAVING_CONFLICT_TOAST_KEY,
   });
-  return { successful: false };
+  return FailedIncorporateActionsReturnValue;
 }
 
 function* diffTracingsAndPrepareRebase(): Saga<void> {
@@ -235,11 +296,13 @@ function* fulfillAllEnsureHasNewestVersionActions(
   }
 }
 
-function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
+function* reapplyUpdateActionsFromSaveQueue(
+  artifactInfosFromBackendUpdates: ApplyingUpdateArtifacts,
+): Saga<ApplyingUpdateResults> {
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const currentVersion = yield* select((state) => state.annotation.version);
   if (saveQueueEntries.length === 0) {
-    return { successful: true };
+    return SuccessEmptyIncorporateActionsReturnValue;
   }
   // Potentially update save queue entries to state after applying missing backend actions.
   // Properties like unmapped segment ids of proofreading actions might have changed and are updated here.
@@ -250,16 +313,18 @@ function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
       updatedSaveQueue,
       currentVersion,
     );
-    const successfullyAppliedSaveQueueUpdates = (yield* tryToIncorporateActions(
-      saveQueueAsServerUpdateActionBatches,
-      true,
-    )).success;
+    const { success: successfullyAppliedSaveQueueUpdates, artifactInfos } =
+      yield* tryToIncorporateActions(
+        saveQueueAsServerUpdateActionBatches,
+        true,
+        artifactInfosFromBackendUpdates,
+      );
     if (successfullyAppliedSaveQueueUpdates) {
       yield* put(finishedRebaseAction());
-      return { successful: true };
+      return { success: true, artifactInfos };
     }
   }
-  return { successful: false };
+  return FailedIncorporateActionsReturnValue;
 }
 
 type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
@@ -269,6 +334,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   // saveQueueEntries should not change during performRebasing saga. When liveCollab is enabled, this is enforced via busy blocking.
   // When liveCollab is disabled, this code typically runs in read-only mode where the save queue is empty.
   const saveQueueEntries = yield* select((state) => state.save.queue);
+  const hasNewActionsFromBackend = missingUpdateActions.length > 0;
 
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing
   // This code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
@@ -276,26 +342,54 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const needsRebasing =
     WkDevFlags.liveCollab &&
     othersMayEdit &&
-    missingUpdateActions.length > 0 &&
+    hasNewActionsFromBackend &&
     saveQueueEntries.length > 0;
   if (needsRebasing) {
     yield* call(diffTracingsAndPrepareRebase);
   }
+  let artifactInfos = SuccessEmptyIncorporateActionsReturnValue.artifactInfos;
 
   try {
-    if (missingUpdateActions.length > 0) {
-      const { successful } = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
-      if (!successful) {
+    if (hasNewActionsFromBackend) {
+      const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
+      if (!applyingResult.success) {
         return { successful: false, shouldTerminate: false };
       }
+      artifactInfos = applyingResult.artifactInfos;
     }
     if (needsRebasing) {
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
-      const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue);
+      const { success: successful, artifactInfos: artifactInfosFromOwnPendingActions } =
+        yield* call(reapplyUpdateActionsFromSaveQueue, artifactInfos);
       if (!successful) {
         return { successful: false, shouldTerminate: false };
       }
+      // Combine artifactInfos
+      artifactInfos = {
+        agglomerateIdsWithOutdatedMeshes: artifactInfos.agglomerateIdsWithOutdatedMeshes.union(
+          artifactInfosFromOwnPendingActions.agglomerateIdsWithOutdatedMeshes,
+        ),
+        agglomerateIdsToReloadMeshesFor: artifactInfos.agglomerateIdsToReloadMeshesFor
+          .difference(artifactInfosFromOwnPendingActions.agglomerateIdsWithOutdatedMeshes)
+          .union(artifactInfosFromOwnPendingActions.agglomerateIdsToReloadMeshesFor),
+        // We only need to know whether the user unsaved actions included some splitting for proper waiting until refreshing
+      };
     }
+    // If update actions from the backend were incorporated, some data like meshes might be outdated.
+    // Thus, they need updating. This is done by resolveApplyingUpdateArtifacts. Moreover, it bumps the version
+    // of all-not-outdated auxiliary meshes.
+    if (saveQueueEntries.length > 0 && !hasNewActionsFromBackend) {
+      // If there is nothing new from the backend and only this user made changes,
+      // newly outdated auxiliary meshes still need to be removed and the other meshes' versions updated.
+      const newlyOutdatedMeshIds = yield getOutdatedProofreadingAuxiliaryMeshesBasedOnSaveQueue();
+      console.error("Identified as outdated", newlyOutdatedMeshIds);
+      artifactInfos.agglomerateIdsWithOutdatedMeshes =
+        artifactInfos.agglomerateIdsWithOutdatedMeshes.union(newlyOutdatedMeshIds);
+    }
+    // only if the backend had updates!
+    //if (hasNewActionsFromBackend) {
+    yield* spawn(resolveApplyingUpdateArtifacts, artifactInfos);
+    //}
     return { successful: true, shouldTerminate: false };
   } catch (exception) {
     // If the rebasing fails for some reason, we don't want to crash the entire
@@ -371,7 +465,8 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
-): Saga<{ success: boolean }> {
+  artifactInfos?: ApplyingUpdateArtifacts | undefined,
+): Saga<{ success: boolean; artifactInfos: ApplyingUpdateArtifacts }> {
   // After all actions were incorporated, volume buckets and hdf5 mappings
   // are reloaded (if they exist and necessary). This is done as a
   // "finalization step", because it requires that the newest version is set
@@ -383,6 +478,13 @@ export function* tryToIncorporateActions(
       yield* call(fn);
     }
   }
+  // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
+  // Maps from the old agglomerate id to a potentially new one.
+  // Duplicates are later ignored when refreshing the meshes.
+  const activeVolumeTracingId = (yield* select(getVisibleSegmentationLayer))?.tracingId;
+  const agglomerateIdsWithOutdatedMeshes = new Set<number>();
+  const agglomerateIdsToReloadMeshesFor = new Set<number>();
+
   for (const actionBatch of newerActions) {
     const agglomerateIdsToRefresh = new Set<NumberLike>();
     let volumeTracingIdOfMapping = null;
@@ -500,7 +602,7 @@ export function* tryToIncorporateActions(
               action.value,
             );
             yield* call(finalize);
-            return { success: false };
+            return FailedIncorporateActionsReturnValue;
           }
           const activeMapping = yield* select(
             (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
@@ -513,6 +615,34 @@ export function* tryToIncorporateActions(
             agglomerateId2,
             !areUnsavedChangesOfUser,
           );
+          // Only reload meshes if the action is regarding the active proofreading volume annotation.
+          if (action.value.actionTracingId !== activeVolumeTracingId) {
+            break;
+          }
+          const hasAnyOfBothAgglomerateMeshesLoaded = yield* select(
+            (state) =>
+              isProofreadingAuxiliaryMeshLoaded(state, agglomerateId1, activeVolumeTracingId) ||
+              isProofreadingAuxiliaryMeshLoaded(state, agglomerateId2, activeVolumeTracingId),
+          );
+          const isPlanningToLoadOneOfTheAgglomerateMeshes =
+            (artifactInfos?.agglomerateIdsToReloadMeshesFor.has(agglomerateId1) ||
+              artifactInfos?.agglomerateIdsToReloadMeshesFor.has(agglomerateId2)) ??
+            false;
+          if (
+            (!hasAnyOfBothAgglomerateMeshesLoaded && !isPlanningToLoadOneOfTheAgglomerateMeshes) ||
+            activeVolumeTracingId !== actionTracingId
+          ) {
+            break;
+          }
+          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least one of the meshes loaded.
+          // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
+          // Track outdated and updated agglomerateIds to refresh after applying updates.
+
+          agglomerateIdsWithOutdatedMeshes.add(agglomerateId1);
+          agglomerateIdsWithOutdatedMeshes.add(agglomerateId2);
+          // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
+          agglomerateIdsToReloadMeshesFor.delete(agglomerateId2);
+          agglomerateIdsToReloadMeshesFor.add(agglomerateId1);
           break;
         }
         case "splitAgglomerate": {
@@ -540,12 +670,41 @@ export function* tryToIncorporateActions(
               action.value,
             );
             yield* call(finalize);
-            return { success: false };
+            return FailedIncorporateActionsReturnValue;
           }
-
           break;
         }
 
+        case "updateMappingName": {
+          // TODO migrate to applyVolumeUpdateActionsFromServerAction.
+          // Refactor mapping activation first before implementing this.
+          const { actionTracingId, mappingName, isEditable, isLocked } = action.value;
+          let mappingType = undefined;
+          if (mappingName) {
+            let volumeDataLayer = yield* select((state) =>
+              getSegmentationLayerByName(state.dataset, actionTracingId),
+            );
+            if (volumeDataLayer.mappings == null || volumeDataLayer.agglomerates == null) {
+              yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
+              yield* take("SET_LAYER_MAPPINGS");
+            }
+            mappingType =
+              (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
+                ? ("HDF5" as const)
+                : ("JSON" as const);
+          }
+          yield* put(setMappingAction(actionTracingId, mappingName, mappingType, true));
+          const volume = yield* select((state) =>
+            getVolumeTracingById(state.annotation, actionTracingId),
+          );
+          if (!volume.hasEditableMapping && isEditable) {
+            yield* put(setHasEditableMappingAction(actionTracingId));
+          }
+          if (!volume.mappingIsLocked && isLocked) {
+            yield* put(setMappingIsLockedAction(actionTracingId));
+          }
+          break;
+        }
         /*
          * Currently NOT supported:
          */
@@ -563,7 +722,6 @@ export function* tryToIncorporateActions(
 
         // Volume
         case "removeFallbackLayer":
-        case "updateMappingName": // Refactor mapping activation first before implementing this.
 
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
@@ -574,7 +732,7 @@ export function* tryToIncorporateActions(
         case "updateUserBoundingBoxesInVolumeTracing": {
           console.error("Cannot apply action", action.name);
           yield* call(finalize);
-          return { success: false };
+          return FailedIncorporateActionsReturnValue;
         }
         default: {
           action satisfies never;
@@ -590,13 +748,23 @@ export function* tryToIncorporateActions(
       const activeMapping = yield* select(
         (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingIdOfMapping],
       );
-      const splitMapping = yield* splitAgglomerateInMapping(
+      const splitMappingInfo = yield* splitAgglomerateInMapping(
         activeMapping,
         //  TODO: Add 64 bit support
         Number(agglomerateIdToRefresh),
         volumeTracingIdOfMapping,
         actionBatch.version,
+        false,
       );
+
+      if (splitMappingInfo == null) {
+        const message =
+          "Failed to apply split mapping action from other user. Please refresh the page to resync and loose as less of your work as possible.";
+        console.error(message);
+        Toast.error(message);
+        return FailedIncorporateActionsReturnValue;
+      }
+      const { splitMapping, oldAgglomerateIds, newAgglomerateIds } = splitMappingInfo;
 
       yield* put(
         setMappingAction(
@@ -611,9 +779,127 @@ export function* tryToIncorporateActions(
           },
         ),
       );
+      if (activeVolumeTracingId) {
+        const loadedProofreadingAuxiliaryMeshes = yield select((state) =>
+          getAllLoadedProofreadingAuxiliaryMeshes(state, activeVolumeTracingId),
+        );
+        const plannedToLoadAuxiliaryMeshes =
+          artifactInfos?.agglomerateIdsToReloadMeshesFor ?? new Set<number>();
+        const allLoadedOrPlannedMeshes = loadedProofreadingAuxiliaryMeshes.union(
+          plannedToLoadAuxiliaryMeshes,
+        );
+        const loadedProofreadingAuxiliaryMeshesOfSplitAction =
+          allLoadedOrPlannedMeshes.intersection(oldAgglomerateIds);
+        if (loadedProofreadingAuxiliaryMeshesOfSplitAction.size > 0) {
+          oldAgglomerateIds.forEach((aggloId) => agglomerateIdsWithOutdatedMeshes.add(aggloId));
+          newAgglomerateIds.forEach((aggloId) => agglomerateIdsToReloadMeshesFor.add(aggloId));
+        }
+      }
     }
   }
+
   yield* call(finalize);
-  return { success: true };
+  return {
+    success: true,
+    artifactInfos: { agglomerateIdsWithOutdatedMeshes, agglomerateIdsToReloadMeshesFor },
+  };
 }
+
+function* getOutdatedProofreadingAuxiliaryMeshesBasedOnSaveQueue() {
+  const saveQueueEntries = yield* select((state) => state.save.queue);
+  const outdatedMeshIds = new Set<number>();
+  for (const entry of saveQueueEntries) {
+    for (const { name, value } of entry.actions) {
+      if (name === "splitAgglomerate" && value.agglomerateId != null) {
+        outdatedMeshIds.add(value.agglomerateId);
+      } else if (
+        name === "mergeAgglomerate" &&
+        value.agglomerateId1 != null &&
+        value.agglomerateId2 != null
+      ) {
+        outdatedMeshIds.add(value.agglomerateId1);
+        outdatedMeshIds.add(value.agglomerateId2);
+      }
+    }
+  }
+  return outdatedMeshIds;
+}
+
+// Should be called with spawn to not block the rebasing as this is done detached afterwards.
+function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts) {
+  const activeVolumeTracingId = (yield* select(getVisibleSegmentationLayer))?.tracingId;
+  if (!activeVolumeTracingId) {
+    return;
+  }
+  yield* call(
+    removeOutdatedMeshes,
+    artifactInfos.agglomerateIdsWithOutdatedMeshes,
+    activeVolumeTracingId,
+  );
+
+  const isCurrentlySaving = yield* select((state) => state.save.isBusy);
+  if (!isCurrentlySaving) {
+    yield* put(updateAuxiliaryAgglomerateMeshVersionAction(activeVolumeTracingId));
+  }
+  yield* call(
+    reloadMeshes,
+    artifactInfos.agglomerateIdsWithOutdatedMeshes,
+    artifactInfos.agglomerateIdsToReloadMeshesFor,
+    activeVolumeTracingId,
+  );
+}
+
+function* removeOutdatedMeshes(
+  agglomerateIdsWithOutdatedMeshes: Set<number>,
+  activeVolumeTracingId: string,
+) {
+  // Remove all outdated meshes.
+  console.log("Start removing outdated meshes", ...Array.from(agglomerateIdsWithOutdatedMeshes));
+  for (const aggloId of agglomerateIdsWithOutdatedMeshes) {
+    yield* put(removeMeshAction(activeVolumeTracingId, Number(aggloId)));
+  }
+  console.log("Finished removing outdated meshes", ...Array.from(agglomerateIdsWithOutdatedMeshes));
+}
+
+function* reloadMeshes(
+  agglomerateIdsWithOutdatedMeshes: Set<number>,
+  agglomerateIdsToReloadMeshesFor: Set<number>,
+  activeVolumeTracingId: string,
+) {
+  const isCurrentlySaving = yield* select((state) => state.save.isBusy);
+  if (isCurrentlySaving) {
+    // If we are currently saving, the server first needs all unsaved changes before the meshes can be properly reloaded.
+    // Thus wait till saving is done.
+    yield* take("DONE_SAVING");
+    yield* put(updateAuxiliaryAgglomerateMeshVersionAction(activeVolumeTracingId));
+  }
+  const someAgglomerateIdToRemove = agglomerateIdsWithOutdatedMeshes.values().next()?.value || 0;
+  // construct refreshAffectedMeshes parameters.
+  // As all outdated meshes were already removed, someAgglomerateIdToRemove can be used in every refresh list item.
+  const refreshList: Array<{
+    agglomerateId: number;
+    newAgglomerateId: number;
+    nodePosition: Vector3;
+  }> = [];
+  const { hasSegmentIndex } = yield* select((state) =>
+    getVolumeTracingById(state.annotation, activeVolumeTracingId),
+  );
+  const segments = yield* select((state) => getSegmentsForLayer(state, activeVolumeTracingId));
+
+  for (const agglomerateId of agglomerateIdsToReloadMeshesFor) {
+    const segmentPosition = segments.getNullable(agglomerateId)?.somePosition;
+    // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
+    if (segmentPosition || hasSegmentIndex) {
+      refreshList.push({
+        agglomerateId: someAgglomerateIdToRemove,
+        newAgglomerateId: agglomerateId,
+        nodePosition: segmentPosition ?? [0, 0, 0],
+      });
+    }
+  }
+  console.log("Start refreshing segments", refreshList);
+  yield* call(refreshAffectedMeshes, activeVolumeTracingId, refreshList);
+  console.log("Finished refreshing segments", refreshList);
+}
+
 export default [setupSavingToServer, watchForNewerAnnotationVersion];

@@ -328,7 +328,6 @@ describe("Proofreading (with mesh actions)", () => {
     await task.toPromise();
   });
 
-  // ------------------------
   it("should load unknown unmapped segment ids of mesh split operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     // Initial mapping should be

@@ -347,7 +347,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   if (needsRebasing) {
     yield* call(diffTracingsAndPrepareRebase);
   }
-  let artifactInfos = SuccessEmptyIncorporateActionsReturnValue.artifactInfos;
+  let artifactInfos = _.cloneDeep(SuccessEmptyIncorporateActionsReturnValue.artifactInfos);
 
   try {
     if (hasNewActionsFromBackend) {
@@ -388,7 +388,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     }
     // only if the backend had updates!
     //if (hasNewActionsFromBackend) {
-    yield* spawn(resolveApplyingUpdateArtifacts, artifactInfos);
+    yield* call(resolveApplyingUpdateArtifacts, artifactInfos);
     //}
     return { successful: true, shouldTerminate: false };
   } catch (exception) {
@@ -841,7 +841,7 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
   if (!isCurrentlySaving) {
     yield* put(updateAuxiliaryAgglomerateMeshVersionAction(activeVolumeTracingId));
   }
-  yield* call(
+  yield* spawn(
     reloadMeshes,
     artifactInfos.agglomerateIdsWithOutdatedMeshes,
     artifactInfos.agglomerateIdsToReloadMeshesFor,
@@ -861,6 +861,7 @@ function* removeOutdatedMeshes(
   console.log("Finished removing outdated meshes", ...Array.from(agglomerateIdsWithOutdatedMeshes));
 }
 
+// Potentially waits until saving is done. Thus, !must be called with spawn!.
 function* reloadMeshes(
   agglomerateIdsWithOutdatedMeshes: Set<number>,
   agglomerateIdsToReloadMeshesFor: Set<number>,

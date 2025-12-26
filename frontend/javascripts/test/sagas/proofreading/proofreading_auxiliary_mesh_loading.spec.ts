@@ -190,7 +190,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           ((action: Action) =>
             action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
         );
-        yield delay(1000);
+        // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1339 was added.
+        yield delay(1);
 
         const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
         expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);

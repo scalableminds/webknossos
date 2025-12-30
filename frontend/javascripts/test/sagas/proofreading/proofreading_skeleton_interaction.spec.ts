@@ -144,6 +144,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
   it("should merge two agglomerate skeletons optimistically, perform the merge proofreading action and incorporate interfering other merge action from backend correctly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
+    // TODOM: skeleton updates must be included as agglomerate tree is loaded
     const injectedMerge = {
       name: "mergeAgglomerate" as const,
       value: {
@@ -197,6 +198,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   it("should merge two agglomerate skeletons if interfering merge makes it an no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
+    // TODOM: skeleton updates must be included as agglomerate tree is loaded
     const injectedMerge = {
       name: "mergeAgglomerate" as const,
       value: {
@@ -263,6 +265,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
   it("should split agglomerate skeleton and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
+    // TODOM: skeleton updates must be included as agglomerate tree is loaded
     const injectedSplit = {
       name: "splitAgglomerate" as const,
       value: {

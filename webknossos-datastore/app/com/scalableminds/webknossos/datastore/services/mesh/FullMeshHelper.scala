@@ -75,16 +75,16 @@ trait FullMeshHelper extends LazyLogging {
   protected def logMeshingDuration(before: Instant, label: String, lengthBytes: Int): Unit =
     Instant.logSince(before, s"Served $lengthBytes-byte STL mesh via $label,", logger)
 
-  def surfaceAreaFromStlBytes(stlBytes: Array[Byte]): Box[Float] = tryo {
+  def surfaceAreaFromStlBytes(stlBytes: Array[Byte]): Box[Double] = tryo {
     val dataBuffer = ByteBuffer.wrap(stlBytes)
     dataBuffer.order(ByteOrder.LITTLE_ENDIAN)
-    val numberOfTriangles = dataBuffer.getInt(80)
+    val numberOfTriangles = java.lang.Integer.toUnsignedLong(dataBuffer.getInt(80))
     val normalOffset = 12
-    var surfaceSumMutable = 0.0f
-    val headerOffset = 84
-    val bytesPerTriangle = 50
-    for (triangleIndex <- 0 until numberOfTriangles) {
-      val triangleVerticesOffset = headerOffset + triangleIndex * bytesPerTriangle + normalOffset
+    var surfaceSumMutable = 0.0
+    val headerOffset = 84L
+    val bytesPerTriangle = 50L
+    for (triangleIndex <- 0L until numberOfTriangles) {
+      val triangleVerticesOffset = (headerOffset + triangleIndex * bytesPerTriangle + normalOffset).toInt
       val v1x = dataBuffer.getFloat(triangleVerticesOffset + 4 * 0)
       val v1y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 1)
       val v1z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 2)
@@ -95,20 +95,20 @@ trait FullMeshHelper extends LazyLogging {
       val v3y = dataBuffer.getFloat(triangleVerticesOffset + 4 * 7)
       val v3z = dataBuffer.getFloat(triangleVerticesOffset + 4 * 8)
 
-      val vec1x = v2x - v1x
-      val vec1y = v2y - v1y
-      val vec1z = v2z - v1z
-      val vec2x = v3x - v1x
-      val vec2y = v3y - v1y
-      val vec2z = v3z - v1z
+      val vec1x = (v2x - v1x).toDouble
+      val vec1y = (v2y - v1y).toDouble
+      val vec1z = (v2z - v1z).toDouble
+      val vec2x = (v3x - v1x).toDouble
+      val vec2y = (v3y - v1y).toDouble
+      val vec2z = (v3z - v1z).toDouble
 
       val crossx = vec1y * vec2z - vec1z * vec2y
       val crossy = vec1z * vec2x - vec1x * vec2z
       val crossz = vec1x * vec2y - vec1y * vec2x
 
-      val magnitude = Math.sqrt(crossx * crossx + crossy * crossy + crossz * crossz).toFloat
+      val magnitude = Math.sqrt(crossx * crossx + crossy * crossy + crossz * crossz)
 
-      surfaceSumMutable = surfaceSumMutable + (magnitude / 2.0f)
+      surfaceSumMutable = surfaceSumMutable + (magnitude / 2.0)
     }
     surfaceSumMutable
   }

@@ -1,7 +1,7 @@
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
 import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
-import { useFetch } from "libs/react_helpers";
+import React from "react";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
@@ -22,8 +22,6 @@ import type { SegmentHierarchyGroup, SegmentHierarchyNode } from "./segments_vie
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
-const CONSOLE_ERROR_MESSAGE =
-  "Segment statistics could not be fetched due to the following reason:";
 
 const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
   const capitalizedUnit = _.capitalize(dataSourceUnit);
@@ -106,12 +104,15 @@ export function SegmentStatisticsModal({
   const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
-  const storeInfoType = {
-    dataset,
-    annotation,
-    tracingId: visibleSegmentationLayer.tracingId,
-    segmentationLayerName: visibleSegmentationLayer.name,
-  };
+  const storeInfoType = React.useMemo(
+    () => ({
+      dataset,
+      annotation,
+      tracingId: visibleSegmentationLayer.tracingId,
+      segmentationLayerName: visibleSegmentationLayer.name,
+    }),
+    [dataset, annotation, visibleSegmentationLayer.tracingId, visibleSegmentationLayer.name],
+  );
   const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
   const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
@@ -125,73 +126,103 @@ export function SegmentStatisticsModal({
   );
   const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);
 
-  const segmentStatisticsObjects = useFetch(
-    async () => {
+  const [statistics, setStatistics] = React.useState<Map<number, Partial<SegmentInfo>>>(new Map());
+  const [loading, setLoading] = React.useState({
+    volumes: true,
+    boundingBoxes: true,
+    surfaceAreas: true,
+  });
+
+  const additionalCoordStringForCsv = getAdditionalCoordinatesAsString(additionalCoordinates);
+
+  const getGroupIdForSegment = React.useCallback(
+    (segment: Segment) => {
+      if (segment.groupId != null) return segment.groupId;
+      const rootGroup = groupTree.find(
+        (node) => node.type === "group" && node.id === -1,
+      ) as SegmentHierarchyGroup | null;
+      if (rootGroup?.children.find((node: SegmentHierarchyNode) => node.id === segment.id)) {
+        return -1;
+      } else {
+        return null;
+      }
+    },
+    [groupTree],
+  );
+
+  const getGroupNameForId = React.useCallback(
+    (groupId: number | null) => {
+      if (groupId == null) return "";
+      if (groupId === -1) return "root";
+      const potentialGroupNode = groupTree.find(
+        (node) => node.type === "group" && node.id === groupId,
+      );
+      return potentialGroupNode?.name == null ? "" : potentialGroupNode.name;
+    },
+    [groupTree],
+  );
+
+  const updateStats = React.useCallback(
+    (id: number, patch: Partial<SegmentInfo>) => {
+      setStatistics((prev) => {
+        const newMap = new Map(prev);
+        const segment = segments.find((s) => s.id === id);
+        const current = newMap.get(id) || {
+          key: id,
+          segmentId: id,
+          segmentName: segment?.name || `Segment ${id}`,
+          additionalCoordinates: additionalCoordStringForCsv,
+          groupId: segment ? getGroupIdForSegment(segment) : null,
+          groupName: segment ? getGroupNameForId(getGroupIdForSegment(segment)) : "",
+        };
+        newMap.set(id, { ...current, ...patch });
+        return newMap;
+      });
+    },
+    [segments, additionalCoordStringForCsv, getGroupIdForSegment, getGroupNameForId],
+  );
+
+  React.useEffect(() => {
+    const fetchStatistics = async () => {
+      const segmentIds = segments.map((s) => s.id);
       await api.tracing.save();
-      const segmentIds = segments.map((segment) => segment.id);
-      const segmentStatisticsObjects = await Promise.all([
-        getSegmentVolumes(
-          storeInfoType,
-          layersFinestMag,
-          segmentIds,
-          additionalCoordinates,
-          mappingName,
-        ),
-        getSegmentBoundingBoxes(
-          storeInfoType,
-          layersFinestMag,
-          segmentIds,
-          additionalCoordinates,
-          mappingName,
-        ),
-        getSegmentSurfaceArea(
-          storeInfoType,
-          layersFinestMag,
-          currentMeshFile?.name,
-          segmentIds,
-          additionalCoordinates,
-          mappingName,
-        ),
-      ]).then(
-        (response) => {
-          const segmentSizes = response[0];
-          const boundingBoxes = response[1];
-          const surfaceAreasInUnit2 = response[2];
-          const statisticsObjects = [];
-          const additionalCoordStringForCsv =
-            getAdditionalCoordinatesAsString(additionalCoordinates);
-          for (let i = 0; i < segments.length; i++) {
-            // Segments in request and their statistics in the response are in the same order
-            const currentSegment = segments[i];
-            const currentBoundingBox = boundingBoxes[i];
-            const surfaceAreaInUnit2 = surfaceAreasInUnit2[i];
-            const boundingBoxInMag1 = getBoundingBoxInMag1(currentBoundingBox, layersFinestMag);
-            const currentSegmentSizeInVx = segmentSizes[i];
-            const volumeInUnit3 = voxelToVolumeInUnit(
-              voxelSize,
-              layersFinestMag,
-              currentSegmentSizeInVx,
-            );
-            const currentGroupId = getGroupIdForSegment(currentSegment);
-            const segmentStateObject: SegmentInfo = {
-              key: currentSegment.id,
-              additionalCoordinates: additionalCoordStringForCsv,
-              segmentId: currentSegment.id,
-              segmentName:
-                currentSegment.name == null ? `Segment ${currentSegment.id}` : currentSegment.name,
-              groupId: currentGroupId,
-              groupName: getGroupNameForId(currentGroupId),
-              volumeInVoxel: currentSegmentSizeInVx,
+
+      // Fetch Volumes
+      getSegmentVolumes(
+        storeInfoType,
+        layersFinestMag,
+        segmentIds,
+        additionalCoordinates,
+        mappingName,
+      )
+        .then((volumes) => {
+          segmentIds.forEach((id, i) => {
+            const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestMag, volumes[i]);
+            updateStats(id, {
+              volumeInVoxel: volumes[i],
               volumeInUnit3,
               formattedSize: formatNumberToVolume(
                 volumeInUnit3,
                 LongUnitToShortUnitMap[voxelSize.unit],
               ),
-              surfaceAreaInUnit2,
-              formattedSurfaceArea: formatNumberToArea(
-                surfaceAreaInUnit2,
-                LongUnitToShortUnitMap[voxelSize.unit],
-              ),
+            });
+          });
+          setLoading((l) => ({ ...l, volumes: false }));
+        })
+        .catch(console.error);
+
+      // Fetch Bounding Boxes
+      getSegmentBoundingBoxes(
+        storeInfoType,
+        layersFinestMag,
+        segmentIds,
+        additionalCoordinates,
+        mappingName,
+      )
+        .then((boundingBoxes) => {
+          segmentIds.forEach((id, i) => {
+            const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxes[i], layersFinestMag);
+            updateStats(id, {
               boundingBoxTopLeft: boundingBoxInMag1.topLeft,
               boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
               boundingBoxPosition: [
@@ -200,62 +231,84 @@ export function SegmentStatisticsModal({
                 boundingBoxInMag1.depth,
               ] as Vector3,
               boundingBoxPositionAsString: `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`,
-            };
-            statisticsObjects.push(segmentStateObject);
-          }
-          return statisticsObjects;
-        },
-        (error) => {
-          console.log(CONSOLE_ERROR_MESSAGE, error);
-          return null;
-        },
-      );
-      return segmentStatisticsObjects;
-    },
-    [],
-    [],
-  );
+            });
+          });
+          setLoading((l) => ({ ...l, boundingBoxes: false }));
+        })
+        .catch(console.error);
+
+      // Fetch Surface Areas
+      getSegmentSurfaceArea(
+        storeInfoType,
+        layersFinestMag,
+        currentMeshFile?.name,
+        segmentIds,
+        additionalCoordinates,
+        mappingName,
+      )
+        .then((surfaceAreas) => {
+          segmentIds.forEach((id, i) => {
+            updateStats(id, {
+              surfaceAreaInUnit2: surfaceAreas[i],
+              formattedSurfaceArea: formatNumberToArea(
+                surfaceAreas[i],
+                LongUnitToShortUnitMap[voxelSize.unit],
+              ),
+            });
+          });
+          setLoading((l) => ({ ...l, surfaceAreas: false }));
+        })
+        .catch(console.error);
+    };
+
+    fetchStatistics();
+  }, [
+    segments,
+    layersFinestMag,
+    additionalCoordinates,
+    mappingName,
+    currentMeshFile?.name,
+    voxelSize,
+    storeInfoType,
+    updateStats,
+  ]);
+
+  const statisticsList = React.useMemo(() => {
+    return segments.map((s) => statistics.get(s.id) as SegmentInfo).filter(Boolean);
+  }, [segments, statistics]);
+
   const columns = [
     { title: "Segment ID", dataIndex: "segmentId", key: "segmentId" },
     { title: "Segment Name", dataIndex: "segmentName", key: "segmentName" },
-    { title: "Volume", dataIndex: "formattedSize", key: "formattedSize" },
-    { title: "Surface Area", dataIndex: "formattedSurfaceArea", key: "formattedSurfaceArea" },
+    {
+      title: "Volume",
+      dataIndex: "formattedSize",
+      key: "formattedSize",
+      render: (text: string) => (loading.volumes ? <Spin size="small" /> : text),
+    },
+    {
+      title: "Surface Area",
+      dataIndex: "formattedSurfaceArea",
+      key: "formattedSurfaceArea",
+      render: (text: string) => (loading.surfaceAreas ? <Spin size="small" /> : text),
+    },
     {
       title: "Bounding Box\nTop Left Position",
       dataIndex: "boundingBoxTopLeftAsString",
       key: "boundingBoxTopLeft",
       width: 150,
+      render: (text: string) => (loading.boundingBoxes ? <Spin size="small" /> : text),
     },
     {
       title: "Bounding Box\nSize in vx",
       dataIndex: "boundingBoxPositionAsString",
       key: "boundingBoxPosition",
       width: 150,
+      render: (text: string) => (loading.boundingBoxes ? <Spin size="small" /> : text),
     },
   ];
 
-  const getGroupIdForSegment = (segment: Segment) => {
-    if (segment.groupId != null) return segment.groupId;
-    const rootGroup = groupTree.find(
-      (node) => node.type === "group" && node.id === -1,
-    ) as SegmentHierarchyGroup | null;
-    if (rootGroup?.children.find((node: SegmentHierarchyNode) => node.id === segment.id)) {
-      return -1;
-    } else {
-      return null;
-    }
-  };
-
-  const getGroupNameForId = (groupId: number | null) => {
-    if (groupId == null) return "";
-    if (groupId === -1) return "root";
-    const potentialGroupNode = groupTree.find(
-      (node) => node.type === "group" && node.id === groupId,
-    );
-    return potentialGroupNode?.name == null ? "" : potentialGroupNode.name;
-  };
-
-  const isErrorCase = segmentStatisticsObjects == null;
+  const isErrorCase = false; // We now handle partial loading and error individually for stats
 
   return (
     <Modal
@@ -266,7 +319,7 @@ export function SegmentStatisticsModal({
       onOk={() =>
         !isErrorCase &&
         exportStatisticsToCSV(
-          segmentStatisticsObjects,
+          statisticsList,
           tracingId || dataset.name,
           parentGroup,
           hasAdditionalCoords,
@@ -276,7 +329,7 @@ export function SegmentStatisticsModal({
       okText="Export to CSV"
       okButtonProps={{ disabled: isErrorCase }}
     >
-      <Spin spinning={segmentStatisticsObjects?.length === 0 && segments.length > 0}>
+      <Spin spinning={statisticsList.length === 0 && segments.length > 0}>
         {isErrorCase ? (
           MODAL_ERROR_MESSAGE
         ) : (
@@ -292,7 +345,7 @@ export function SegmentStatisticsModal({
               />
             )}
             <Table
-              dataSource={segmentStatisticsObjects}
+              dataSource={statisticsList}
               columns={columns}
               style={{ whiteSpace: "pre" }}
               scroll={{ x: "max-content" }}

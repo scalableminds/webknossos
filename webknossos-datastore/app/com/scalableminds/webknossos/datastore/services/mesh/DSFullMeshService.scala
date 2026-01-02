@@ -55,7 +55,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
-  lazy val segmentSurfaceAreaCache: AlfuCache[(ObjectId, String, FullMeshRequest), Float] =
+  lazy val segmentSurfaceAreaCache: AlfuCache[(ObjectId, String, FullMeshRequest), Double] =
     AlfuCache(maxCapacity = 10000)
 
   def clearCache(datasetId: ObjectId, layerNameOpt: Option[String]): Int =

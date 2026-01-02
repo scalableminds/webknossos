@@ -754,7 +754,7 @@ class ConnectomeView extends React.Component<Props, State> {
     return (
       <>
         <Space.Compact
-          className="compact-icons"
+          block
           style={{
             marginBottom: 10,
           }}

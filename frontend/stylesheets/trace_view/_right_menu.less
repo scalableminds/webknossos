@@ -34,22 +34,26 @@
   padding-left: 5px;
   padding-right: 5px;
   border-radius: 2px;
+
   .anticon-edit,
   .anticon-ellipsis {
     // Hide edit and ellipsis icon (unless hovered)
     display: none;
   }
+
   &.is-selected-segment {
     background-color: var(--ant-blue-3);
   }
 
   &:hover {
     background-color: var(--ant-blue-1);
+
     .anticon-edit,
     .anticon-ellipsis {
       display: inline-block;
     }
   }
+
   // If a cell is hovered in the data viewports,
   // it should also be highlighted in the list.
   &.is-hovered-segment {
@@ -77,7 +81,7 @@
   height: inherit;
   display: flex;
   flex-direction: column;
-  
+
   .ant-space-compact:not(.ant-tree .ant-space-compact) {
     // Override <antd.Space> spacing between skeleton tab buttons and name input
     // Do not affect use of <Space> in in the <Tree> elements
@@ -94,6 +98,7 @@
 }
 
 .markdown-small {
+
   h1,
   h2,
   h3,
@@ -103,6 +108,7 @@
     margin-bottom: 0;
     color: var(--ant-color-text);
   }
+
   max-height: 24px;
   overflow: hidden;
 }
@@ -117,9 +123,11 @@
   .ant-input-group-wrapper {
     .ant-input-wrapper {
       color: inherit;
+
       .ant-input {
         color: inherit;
       }
+
       .ant-input-group-addon {
         border-radius: 0;
         border-right: 0;
@@ -128,26 +136,15 @@
   }
 }
 
-.compact-items {
-  button {
-    padding: 4px 8px;
-  }
-}
-.compact-icons {
-  .anticon,
-  i {
-    margin-right: 0px;
-  }
-}
-
 .compact-wrap {
   // Should only be used with antd <Space.Compact>
+  // Allows for wrapping of compact items 
   flex-wrap: wrap;
 
-   button{
+  button {
     // Slightly shift buttons up to prevent double borders when wrapping in flex container occurs
     margin-top: -1px;
-   }
+  }
 
 }
 
@@ -206,23 +203,29 @@
   .ant-table {
     border-bottom: none;
   }
+
   .ant-table-cell {
     padding: 0px 20px !important;
     cursor: pointer;
   }
+
   .ant-table-row:last-child {
     border-bottom: none;
+
     .ant-table-cell {
       border-bottom: none;
     }
   }
+
   .ant-table-row .ant-table-cell:first-child {
     // Hiding the extra checkbox column rendered due to using rowSelection in the table wrapping the bounding boxes.
     display: none;
   }
+
   .ant-table-row .ant-table-cell:nth-child(2) {
     flex: 1 1 !important;
   }
+
   .ant-table-footer {
     background-color: transparent;
     padding: 8px;
@@ -241,10 +244,13 @@
     width: 100%;
   }
 
-  input, .ant-input-affix-wrapper, .ant-input-number {
+  input,
+  .ant-input-affix-wrapper,
+  .ant-input-number {
     &:not(:hover) {
       background: transparent;
     }
+
     border: 0;
     padding: 0;
     box-shadow: none !important;
@@ -252,13 +258,16 @@
     height: 100%;
   }
 
-  .ant-input-status-error, .ant-input-status-warning {
+  .ant-input-status-error,
+  .ant-input-status-warning {
     border: 0 !important;
   }
+
   input.ant-input-status-error,
   .ant-input-status-error input {
     color: var(--ant-color-error);
   }
+
   input.ant-input-status-warning,
   .ant-input-status-warning input {
     color: var(--ant-color-warning);
@@ -270,11 +279,13 @@
 
   .ant-select {
     width: 100%;
+
     .ant-select-selector {
       background: transparent;
       padding-top: 0;
       padding-bottom: 0;
     }
+
     &:not(.ant-select-focused) {
       .ant-select-selection-placeholder {
         // Align the placeholder with the other inputs
@@ -285,18 +296,22 @@
 
 
   // Table
-  th, td {
+  th,
+  td {
     padding: 2px 4px;
     text-align: left;
     color: var(--ant-color-text-base);
   }
+
   th {
     font-weight: normal;
   }
 
-  th, tr:nth-child(even) td {
+  th,
+  tr:nth-child(even) td {
     background-color: var(--compact-table-bg1);
   }
+
   td {
     background-color: var(--compact-table-bg2);
   }
@@ -304,6 +319,7 @@
   td:nth-child(2):not(:last-child) {
     border-right: 0;
   }
+
   td:nth-child(3) {
     border-left: 0;
   }
@@ -327,11 +343,12 @@
   tr td:first-child {
     border-left: 1px solid var(--compact-table-border);
   }
+
   tr:first-child th {
     border-top: solid 1px var(--compact-table-border);
   }
 
-  tr:first-child th:first-child{
+  tr:first-child th:first-child {
     border-top-left-radius: var(--ant-border-radius);
   }
 

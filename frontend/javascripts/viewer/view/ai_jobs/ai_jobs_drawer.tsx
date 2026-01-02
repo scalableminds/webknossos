@@ -55,10 +55,10 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
     <Drawer
       title="Run a WEBKNOSSOS AI Job"
       placement="right"
-      width={1200}
+      size={1200}
       open={isOpen}
       onClose={handleClose}
-      destroyOnClose={true}
+      destroyOnHidden
     >
       <Tabs activeKey={activeKey} items={items} onChange={handleChange} />
     </Drawer>

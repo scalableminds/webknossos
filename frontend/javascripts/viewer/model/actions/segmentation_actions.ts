@@ -11,13 +11,20 @@ export type AdHocMeshInfo = {
 };
 export type LoadAdHocMeshAction = ReturnType<typeof loadAdHocMeshAction>;
 export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAction>;
+export type UpdateAuxiliaryAgglomerateMeshVersionAction = ReturnType<
+  typeof updateAuxiliaryAgglomerateMeshVersionAction
+>;
 
-export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
+export type SegmentationAction =
+  | LoadAdHocMeshAction
+  | LoadPrecomputedMeshAction
+  | UpdateAuxiliaryAgglomerateMeshVersionAction;
 
 export const loadAdHocMeshAction = (
   segmentId: number,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  isProofreadingAuxiliaryMesh: boolean,
   extraInfo?: AdHocMeshInfo,
   layerName?: string,
 ) =>
@@ -28,6 +35,7 @@ export const loadAdHocMeshAction = (
     seedAdditionalCoordinates,
     extraInfo,
     layerName,
+    isProofreadingAuxiliaryMesh,
   }) as const;
 
 export const loadPrecomputedMeshAction = (
@@ -36,6 +44,7 @@ export const loadPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   opacity: number | undefined,
+  isProofreadingAuxiliaryMesh: boolean,
   layerName?: string | undefined,
 ) =>
   ({
@@ -45,5 +54,12 @@ export const loadPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     opacity,
+    layerName,
+    isProofreadingAuxiliaryMesh,
+  }) as const;
+
+export const updateAuxiliaryAgglomerateMeshVersionAction = (layerName: string) =>
+  ({
+    type: "UPDATE_AUXILIARY_AGGLOMERATE_MESH_VERSION_ACTION",
     layerName,
   }) as const;

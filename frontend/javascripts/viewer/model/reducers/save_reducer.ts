@@ -285,6 +285,21 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SNAPSHOT_PROOFREADING_POST_PROCESSING_RELEVANT_INFO": {
+      return update(state, {
+        save: {
+          proofreadingPostProcessingRelevantInfoFromRebasing: {
+            latestVersionBeforeNewestMappingChanges: {
+              $set: state.annotation.version,
+            },
+            activeMappingByLayer: {
+              $set: state.temporaryConfiguration.activeMappingByLayer,
+            },
+          },
+        },
+      });
+    }
+
     default:
       return state;
   }

@@ -23,6 +23,7 @@ trait MeshMappingHelper extends FoxImplicits {
       dataLayer: DataLayer,
       targetMappingName: Option[String],
       editableMappingTracingId: Option[String],
+      editableMappingVersionOpt: Option[Long],
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
       omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
@@ -53,6 +54,7 @@ trait MeshMappingHelper extends FoxImplicits {
           tracingstoreUri <- dsRemoteWebknossosClient.getTracingstoreUri
           segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
                                                                                                     tracingId,
+            editableMappingVersionOpt,
                                                                                                     agglomerateId)
           segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
             Fox.successful(segmentIdsResult.segmentIds)

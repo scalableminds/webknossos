@@ -344,6 +344,7 @@ function updateState(mergerModeState: MergerModeState, skeletonTracing: Skeleton
     skeletonTracing.tracingId,
     mergerModeState.prevTracing.trees,
     skeletonTracing.trees,
+    false,
   );
 
   for (const action of diff) {

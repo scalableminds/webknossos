@@ -14,7 +14,8 @@ import scala.concurrent.ExecutionContext
 case class SegmentStatisticsParameters(mag: Vec3Int,
                                        segmentIds: List[Long],
                                        mappingName: Option[String],
-                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])
+                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                       editableMappingVersion: Option[Long])
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
@@ -22,7 +23,8 @@ case class SegmentStatisticsParametersMeshBased(mag: Vec3Int,
                                                 segmentIds: List[Long],
                                                 mappingName: Option[String],
                                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                                meshFileName: Option[String])
+                                                meshFileName: Option[String],
+                                                tracingVersion: Option[Long])
 object SegmentStatisticsParametersMeshBased {
   implicit val jsonFormat: OFormat[SegmentStatisticsParametersMeshBased] =
     Json.format[SegmentStatisticsParametersMeshBased]

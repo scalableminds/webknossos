@@ -17,7 +17,7 @@
           "id": 3,
           "isVisible": true,
           "metadata": [],
-          "name": "agglomerate 1 (volumeTracingId)",
+          "name": "agglomerate 4 (volumeTracingId)",
           "timestamp": 1494695001688,
           "type": "AGGLOMERATE",
           "updatedId": 3,
@@ -32,9 +32,9 @@
           "id": 4,
           "interpolation": false,
           "position": [
-            1,
-            1,
-            1,
+            4,
+            4,
+            4,
           ],
           "radius": 1,
           "resolution": 1,
@@ -57,34 +57,9 @@
           "id": 5,
           "interpolation": false,
           "position": [
-            2,
-            2,
-            2,
-          ],
-          "radius": 1,
-          "resolution": 1,
-          "rotation": [
-            0,
-            0,
-            0,
-          ],
-          "timestamp": 1494695001688,
-          "treeId": 3,
-          "viewport": 0,
-        },
-      },
-      {
-        "name": "createNode",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "additionalCoordinates": [],
-          "bitDepth": 8,
-          "id": 6,
-          "interpolation": false,
-          "position": [
-            3,
-            3,
-            3,
+            5,
+            5,
+            5,
           ],
           "radius": 1,
           "resolution": 1,
@@ -107,23 +82,14 @@
           "treeId": 3,
         },
       },
-      {
-        "name": "createEdge",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 5,
-          "target": 6,
-          "treeId": 3,
-        },
-      },
     ],
     "authorId": "dummy-user-id",
-    "info": "["LOAD_AGGLOMERATE_SKELETON","ENSURE_HAS_ANNOTATION_MUTEX","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_HAS_NEWEST_VERSION","SET_BUSY_BLOCKING_INFO_ACTION","UPDATE_AUXILIARY_AGGLOMERATE_MESH_VERSION_ACTION","SET_BUSY_BLOCKING_INFO_ACTION","ADD_TREES_AND_GROUPS","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE * 2"]",
+    "info": "["ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","DISALLOW_SAGA_WHILE_BUSY_ACTION","INITIALIZE_EDITABLE_MAPPING","SET_BUSY_BLOCKING_INFO_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","FINISH_MAPPING_INITIALIZATION","LOAD_AGGLOMERATE_SKELETON","ADD_TREES_AND_GROUPS"]",
     "stats": {
       "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
         "branchPointCount": 2,
-        "edgeCount": 3,
-        "nodeCount": 6,
+        "edgeCount": 2,
+        "nodeCount": 5,
         "treeCount": 3,
       },
       "volumeTracingId": {
@@ -135,5 +101,36 @@
     "transactionGroupIndex": 0,
     "transactionId": "dummyRequestId",
     "version": 7,
+  },
+  {
+    "actions": [
+      {
+        "name": "splitAgglomerate",
+        "value": {
+          "actionTracingId": "volumeTracingId",
+          "agglomerateId": 1,
+          "segmentId1": 1,
+          "segmentId2": 2,
+        },
+      },
+    ],
+    "authorId": "dummy-user-id",
+    "info": "["INITIALIZE_EDITABLE_MAPPING","SET_BUSY_BLOCKING_INFO_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","FINISH_MAPPING_INITIALIZATION","LOAD_AGGLOMERATE_SKELETON","ADD_TREES_AND_GROUPS","MIN_CUT_AGGLOMERATE","SET_BUSY_BLOCKING_INFO_ACTION"]",
+    "stats": {
+      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+        "branchPointCount": 2,
+        "edgeCount": 2,
+        "nodeCount": 5,
+        "treeCount": 3,
+      },
+      "volumeTracingId": {
+        "segmentCount": 1,
+      },
+    },
+    "timestamp": 1494695001688,
+    "transactionGroupCount": 1,
+    "transactionGroupIndex": 0,
+    "transactionId": "dummyRequestId",
+    "version": 8,
   },
 ]

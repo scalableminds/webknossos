@@ -108,8 +108,15 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName, opacity } =
-    action;
+  const {
+    segmentId,
+    seedPosition,
+    seedAdditionalCoordinates,
+    meshFileName,
+    layerName,
+    opacity,
+    isProofreadingAuxiliaryMesh,
+  } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -124,6 +131,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   // here before loadPrecomputedMeshForSegmentId is finished, the latter saga
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
+  console.log("Start loading mesh for", segmentId);
   yield* race({
     loadPrecomputedMeshForSegmentId: call(
       loadPrecomputedMeshForSegmentId,
@@ -133,6 +141,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       meshFileName,
       layer,
       opacity,
+      isProofreadingAuxiliaryMesh,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -141,6 +150,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
         otherAction.layerName === layer.name) as ActionPattern,
     ),
   });
+  console.log("Finished loading mesh for", segmentId);
 }
 
 type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;
@@ -152,8 +162,10 @@ function* loadPrecomputedMeshForSegmentId(
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
   opacity: number | undefined,
+  isProofreadingAuxiliaryMesh: boolean,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const mappingName = yield* call(getMappingName, segmentationLayer);
   yield* put(
     addPrecomputedMeshAction(
@@ -164,6 +176,8 @@ function* loadPrecomputedMeshForSegmentId(
       meshFileName,
       mappingName,
       opacity,
+      annotationVersion,
+      isProofreadingAuxiliaryMesh,
     ),
   );
   yield* put(startedLoadingMeshAction(layerName, segmentId));
@@ -200,6 +214,7 @@ function* loadPrecomputedMeshForSegmentId(
       dataset,
       segmentationLayer,
       meshFile,
+      annotationVersion,
     );
     lods = chunkDescriptors.segmentInfo.lods;
     availableChunksMap = chunkDescriptors.availableChunksMap;
@@ -255,6 +270,7 @@ function* _getChunkLoadingDescriptors(
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFileInfo,
+  annotationVersion: number,
 ) {
   const availableChunksMap: ChunksMap = {};
   let loadingOrder: number[] = [];
@@ -294,6 +310,7 @@ function* _getChunkLoadingDescriptors(
     // without a mapping.
     meshFile.mappingName == null ? mappingName : null,
     editableMapping != null && tracing ? tracing.tracingId : null,
+    annotationVersion,
   );
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;

@@ -1191,6 +1191,8 @@ type ReserveUploadInformation = {
   filePaths: Array<string>;
   initialTeams: Array<string>;
   folderId: string | null;
+  isVirtual?: boolean;
+  needsConversion?: boolean;
 };
 
 export function reserveDatasetUpload(

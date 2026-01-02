@@ -327,15 +327,29 @@ export const getIntersectingMagList = (
   dataset: APIDataset,
   groundTruthLayerName: string,
   imageDataLayerName: string,
+  volumeTracingMags?: { mag: Vector3 }[][],
 ) => {
   const colorLayers = getColorLayers(dataset);
   const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
-  const segmentationLayer = getSegmentationLayerByHumanReadableName(
-    dataset,
-    annotation,
-    groundTruthLayerName,
-  );
-  const groundTruthLayerMags = getMagInfo(segmentationLayer.mags).getMagList();
+
+  let groundTruthLayerMags: Vector3[] | undefined;
+
+  if (volumeTracingMags) {
+    const volumeLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
+    const layerIndex = volumeLayers.findIndex((l) => l.name === groundTruthLayerName);
+    if (layerIndex !== -1 && volumeTracingMags[layerIndex]) {
+      groundTruthLayerMags = volumeTracingMags[layerIndex].map((m) => m.mag);
+    }
+  }
+
+  if (!groundTruthLayerMags) {
+    const segmentationLayer = getSegmentationLayerByHumanReadableName(
+      dataset,
+      annotation,
+      groundTruthLayerName,
+    );
+    groundTruthLayerMags = getMagInfo(segmentationLayer.mags).getMagList();
+  }
 
   return groundTruthLayerMags.filter((groundTruthMag) =>
     dataLayerMags.find((mag) => V3.equals(mag, groundTruthMag)),

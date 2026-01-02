@@ -278,7 +278,6 @@ export function* performSplitTreesProofreading(
   expect(mapping1).toEqual(initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-  vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   const agglomerateTrees = yield* loadAgglomerateSkeletons(context, [1], true, true);
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(5);
   const targetNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(6);
@@ -317,7 +316,6 @@ export function* performMinCutWithNodesProofreading(
   expect(mapping1).toEqual(initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-  vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   yield call(loadAgglomerateSkeletonAtPosition, [3, 3, 3]);
   // Wait until skeleton saga has loaded the skeleton.
   yield take("ADD_TREES_AND_GROUPS");

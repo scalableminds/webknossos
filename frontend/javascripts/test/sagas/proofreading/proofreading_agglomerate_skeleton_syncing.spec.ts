@@ -59,7 +59,6 @@ describe("Proofreading (Single User)", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-      vi.mocked(context.mocks.parseProtoTracing).mockRestore();
       const versionBeforeSkeletonLoading = yield select((state) => state.annotation.version);
       yield* fork(loadAgglomerateSkeletons, context, [1], false, true);
       // Test whether
@@ -96,8 +95,6 @@ describe("Proofreading (Single User)", () => {
   });
 
   describe.each([false, true])("With othersMayEdit=%s", (othersMayEdit: boolean) => {
-    // Single user tests ------------------------------------------
-
     it("should merge two agglomerates and update the mapping and agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
       const { api } = context;
       mockInitialBucketAndAgglomerateData(context);
@@ -118,7 +115,6 @@ describe("Proofreading (Single User)", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        vi.mocked(context.mocks.parseProtoTracing).mockRestore();
         yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
@@ -175,7 +171,6 @@ describe("Proofreading (Single User)", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        vi.mocked(context.mocks.parseProtoTracing).mockRestore();
         yield* loadAgglomerateSkeletons(context, [6], true, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
@@ -235,7 +230,6 @@ describe("Proofreading (Single User)", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        vi.mocked(context.mocks.parseProtoTracing).mockRestore();
         yield* loadAgglomerateSkeletons(context, [1], false, othersMayEdit);
 
         // Prepare the server's reply for the upcoming split.
@@ -298,7 +292,6 @@ describe("Proofreading (Single User)", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        vi.mocked(context.mocks.parseProtoTracing).mockRestore();
         yield* loadAgglomerateSkeletons(context, [4], false, othersMayEdit);
 
         // Prepare the server's reply for the upcoming split.
@@ -362,7 +355,6 @@ describe("Proofreading (Single User)", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        vi.mocked(context.mocks.parseProtoTracing).mockRestore();
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
 
         yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
@@ -412,7 +404,6 @@ describe("Proofreading (Single User)", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        vi.mocked(context.mocks.parseProtoTracing).mockRestore();
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
         const agglomerateSkeletonsBefore = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -467,7 +458,6 @@ describe("Proofreading (Single User)", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        vi.mocked(context.mocks.parseProtoTracing).mockRestore();
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
         const agglomerateSkeletonsBefore = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -503,5 +493,221 @@ describe("Proofreading (Single User)", () => {
     });
   });
 
-  // Multi user tests ---------------------------------------------------------------
+  // Multi user tests with injected updates
+  it("should merge two agglomerates, apply injected merge update action included agglomerate skeleton updates and update the mapping and agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
+    // TODOM: Problem: the code fixing the agglomerate skeletons needs to know the agglomerate id before the own update action.
+    // But the proofread saga only knows the state before and after the rebase.
+    // Not the needed in between state after applying the backend updates and before applying the frontend updates.
+    // But, this cannot be done in the save saga, as only after the mapping updates are stored on the server, the
+    // affected agglomerate skeletons can be reloaded to be in the updated version.
+    backendMock.planVersionInjection(10, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      },
+      {
+        name: "moveTreeComponent",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          sourceId: 4,
+          targetId: 3,
+          nodeIds: [7, 8],
+        },
+      },
+      {
+        name: "deleteTree",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          id: 4,
+        },
+      },
+      {
+        name: "createEdge",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          treeId: 3,
+          source: 4,
+          target: 7,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(setActiveCellAction(1));
+      yield makeMappingEditableHelper();
+      const othersMayEdit = true;
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+      yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(proofreadMergeAction([6, 6, 6], 4));
+      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+
+      yield call(() => api.tracing.save());
+
+      const updatedAgglomerateTrees = yield* select((state) =>
+        getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+      );
+      expect(updatedAgglomerateTrees.size()).toBe(2);
+      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(5);
+      const allNodes = Array.from(updatedAgglomerateTrees.getOrThrow(3).nodes.values());
+      const allPositionsSorted = allNodes
+        .map((n) => n.untransformedPosition)
+        .sort((a, b) => a[0] - b[0]);
+      expect(allPositionsSorted).toStrictEqual([
+        [1, 1, 1],
+        [2, 2, 2],
+        [3, 3, 3],
+        [4, 4, 4],
+        [5, 5, 5],
+      ]);
+
+      const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
+      yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should merge two agglomerates, apply injected split update action included agglomerate skeleton updates and update the mapping and agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
+    backendMock.planVersionInjection(10, [
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 2,
+          agglomerateId: 1,
+        },
+      },
+
+      {
+        name: "createTree",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          id: 4,
+          updatedId: 4,
+          color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+          name: "agglomerate 1339 (volumeTracingId)",
+          timestamp: 1494695001688,
+          comments: [],
+          branchPoints: [],
+          groupId: undefined,
+          isVisible: true,
+          type: "AGGLOMERATE",
+          edgesAreVisible: true,
+          metadata: [],
+        },
+      },
+      {
+        name: "moveTreeComponent",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          sourceId: 3,
+          targetId: 4,
+          nodeIds: [5, 6],
+        },
+      },
+      {
+        name: "deleteEdge",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          treeId: 3,
+          source: 4,
+          target: 5,
+        },
+      },
+      {
+        name: "createSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+          name: null,
+          color: null,
+          groupId: null,
+          metadata: [],
+          creationTime: 1494695001688,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(setActiveCellAction(1));
+      yield makeMappingEditableHelper();
+      const othersMayEdit = true;
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+      yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(proofreadMergeAction([6, 6, 6], 4));
+      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+
+      yield call(() => api.tracing.save());
+
+      const updatedAgglomerateTrees = yield* select((state) =>
+        getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+      );
+      expect(updatedAgglomerateTrees.size()).toBe(2);
+      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(5);
+      const allNodes = Array.from(updatedAgglomerateTrees.getOrThrow(3).nodes.values());
+      const allPositionsSorted = allNodes
+        .map((n) => n.untransformedPosition)
+        .sort((a, b) => a[0] - b[0]);
+      expect(allPositionsSorted).toStrictEqual([
+        [1, 1, 1],
+        [2, 2, 2],
+        [3, 3, 3],
+        [4, 4, 4],
+        [5, 5, 5],
+      ]);
+
+      const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
+      yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  // TODOM same with merge
 });

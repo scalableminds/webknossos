@@ -12,7 +12,7 @@ import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { type SkeletonTracing, type WebknossosState, startSaga } from "viewer/store";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   initializeMappingAndTool,
   makeMappingEditableHelper,
@@ -52,7 +52,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield makeMappingEditableHelper();
 
       // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-      vi.mocked(context.mocks.parseProtoTracing).mockRestore();
       yield call(loadAgglomerateSkeletonAtPosition, [1, 1, 1]);
       // Wait until skeleton saga has loaded the skeleton.
       yield take("ADD_TREES_AND_GROUPS");

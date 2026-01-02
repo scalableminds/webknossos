@@ -44,6 +44,9 @@ export type UpdateMappingRebaseInformationAction = ReturnType<
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
 >;
+export type SnapshotProofreadingPostProcessingRelevantInfo = ReturnType<
+  typeof snapshotProofreadingPostProcessingRelevantInfo
+>;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
 
 export type SaveAction =
@@ -68,6 +71,7 @@ export type SaveAction =
   | FinishedRebaseAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
+  | SnapshotProofreadingPostProcessingRelevantInfo
   | ReplaceSaveQueueAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
@@ -263,6 +267,10 @@ export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: st
 export const finishedApplyingMissingUpdatesAction = () =>
   ({
     type: "FINISHED_APPLYING_MISSING_UPDATES",
+  }) as const;
+export const snapshotProofreadingPostProcessingRelevantInfo = () =>
+  ({
+    type: "SNAPSHOT_PROOFREADING_POST_PROCESSING_RELEVANT_INFO",
   }) as const;
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>

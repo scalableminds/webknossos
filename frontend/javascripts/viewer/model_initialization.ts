@@ -121,6 +121,7 @@ import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_
 import {
   setVersionNumberAction,
   snapshotMappingDataForNextRebaseAction,
+  snapshotProofreadingPostProcessingRelevantInfo,
 } from "./model/actions/save_actions";
 import {
   convertBoundingBoxProtoToObject,
@@ -897,6 +898,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
       // Store initial changes of setMappingAction and setMappingEnabledAction in RebaseRelevantAnnotationState.
       Store.dispatch(snapshotMappingDataForNextRebaseAction(layerName));
+      Store.dispatch(snapshotProofreadingPostProcessingRelevantInfo());
 
       if (agglomerateIdsToImport != null) {
         const { annotation } = Store.getState();

@@ -43,6 +43,7 @@ import {
   finishedRebaseAction,
   prepareRebaseAction,
   setVersionNumberAction,
+  snapshotProofreadingPostProcessingRelevantInfo,
 } from "viewer/model/actions/save_actions";
 import { updateAuxiliaryAgglomerateMeshVersionAction } from "viewer/model/actions/segmentation_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
@@ -246,6 +247,7 @@ function* applyNewestMissingUpdateActions(
     if (success) {
       // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
       yield* put(finishedApplyingMissingUpdatesAction());
+      yield* put(snapshotProofreadingPostProcessingRelevantInfo());
       return { success: true, artifactInfos };
     }
   } catch (exc) {
@@ -356,6 +358,10 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
         return { successful: false, shouldTerminate: false };
       }
       artifactInfos = applyingResult.artifactInfos;
+    } else {
+      // If there is are no updates from the backend, store the current version of the mappings as info needed
+      // for proofreading post processing, to keep this info updated. It is needed to auto reload agglomerate skeletons properly.
+      yield* put(snapshotProofreadingPostProcessingRelevantInfo());
     }
     if (needsRebasing) {
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.

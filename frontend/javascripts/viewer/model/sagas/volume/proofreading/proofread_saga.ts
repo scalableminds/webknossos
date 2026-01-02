@@ -1155,6 +1155,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // TODOM: in my test case this is wrong!
     // TODOM: this breaks segment list syncing.! -> maybe removes mesh as well :thinking:
     // yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
+    // TODOM: sourceInfo and targetInfo do not contain the necessary information for reloading.
     yield* call(syncAgglomerateSkeletonsAfterMergeAction, volumeTracingId, sourceInfo, targetInfo);
   }
 

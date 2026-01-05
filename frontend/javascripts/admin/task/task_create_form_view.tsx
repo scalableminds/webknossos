@@ -167,7 +167,7 @@ export function handleTaskCreationResponse(
         <Alert
           showIcon
           type="warning"
-          message="There were warnings during task creation"
+          title="There were warnings during task creation"
           description={warnings.join("\n")}
         />
       </div>

@@ -7,7 +7,8 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, SegmentInt
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -33,6 +34,9 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   private val labelSets = mutable.ListBuffer[mutable.Set[SegmentInteger]]()
   private val labelMaps = mutable.ListBuffer[mutable.HashMap[SegmentInteger, SegmentInteger]]()
   var largestSegmentId: SegmentInteger = SegmentInteger.zeroFromElementClass(elementClass)
+  private val bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(elementClass))
+  private val elementsAreSigned = ElementClass.isSigned(ElementClass.fromProto(elementClass))
+  private lazy val bucketScanner = new NativeBucketScanner()
 
   def addLabelSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {
     val importLabelSet: mutable.Set[SegmentInteger] = scala.collection.mutable.Set()
@@ -100,23 +104,21 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     }
 
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
-    val dataTyped: Array[SegmentInteger] = SegmentIntegerArray.fromByteArray(data, elementClass)
     prepareLabelMaps()
     if (mergedVolume.contains(bucketPosition)) {
       val mutableBucketData = mergedVolume(bucketPosition)
-      dataTyped.zipWithIndex.foreach {
-        case (valueTyped, index) =>
-          if (!valueTyped.isZero) {
-            val byteValueMapped =
-              if (labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)) valueTyped
-              else labelMaps(sourceVolumeIndex)(valueTyped)
-            mutableBucketData(index) = byteValueMapped
-          }
-      }
+      val skipMapping = labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
+      bucketScanner.mergeVolumeBucketInPlace(mutableBucketData,
+                                             data,
+                                             skipMapping,
+                                             Array[Byte](0), // Todo labelMapSrc
+                                             Array[Byte](0), // Todo labelMapDst
+                                             bytesPerElement,
+                                             elementsAreSigned)
       mergedVolume += ((bucketPosition, mutableBucketData))
     } else {
       if (labelMaps.isEmpty) {
-        mergedVolume += ((bucketPosition, dataTyped))
+        mergedVolume += ((bucketPosition, data))
       } else {
         val dataMapped = dataTyped.map { byteValue =>
           if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)

@@ -28,4 +28,24 @@ class NativeBucketScanner() {
                                        existingBBoxBottomRightX: Int,
                                        existingBBoxBottomRightY: Int,
                                        existingBBoxBottomRightZ: Int): Array[Int]
+
+  @native def mergeVolumeBucketInPlace(mutableBucketData: Array[Byte],
+                                       data: Array[Byte],
+                                       skipMapping: Boolean,
+                                       labelMapSrc: Array[Byte],
+                                       labelMapDst: Array[Byte],
+                                       bytesPerElement: Int,
+                                       elementsAreSigned: Boolean): Unit
+
+  /*
+  dataTyped.zipWithIndex.foreach {
+    case (valueTyped, index) =>
+      if (!valueTyped.isZero) {
+        val byteValueMapped =
+          if (skipMapping) valueTyped
+          else labelMaps(sourceVolumeIndex)(valueTyped)
+        mutableBucketData(index) = byteValueMapped
+      }
+  }
+ */
 }

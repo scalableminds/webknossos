@@ -59,7 +59,7 @@ function ChangeUsernameView({
   const validateNameNotEmpty = (_: any, value: string, fieldName: string) => {
     if (!form.isFieldTouched(fieldName)) return Promise.resolve();
     if (value != null && value?.trim().length === 0) {
-      return Promise.reject(new Error("First name cannot be empty or whitespace only"));
+      return Promise.reject(new Error("First and last name cannot be empty or whitespace only"));
     }
     return Promise.resolve();
   };

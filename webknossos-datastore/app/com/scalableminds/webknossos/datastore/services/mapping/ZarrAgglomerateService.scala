@@ -64,35 +64,22 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, elementClass: ElementClass.Value)(
       data: Array[Byte])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] = {
 
-    val t0 = java.time.Instant.now
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val distinctSegmentIds =
       bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned = false, skipZeroes = false)
-    val t1 = java.time.Instant.now
 
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
-      t2 = java.time.Instant.now
       agglomerateIdForDistinctSegmentIds: Array[Long] <- Fox
         .serialCombined(distinctSegmentIds) { segmentId =>
           mapSingleSegment(segmentToAgglomerate, segmentId)
         }
         .map(_.toArray)
-      t3 = java.time.Instant.now
       mappedBytes: Array[Byte] = bucketScanner.applyAgglomerate(data,
                                                                 bytesPerElement,
                                                                 distinctSegmentIds,
                                                                 agglomerateIdForDistinctSegmentIds)
-      t4 = java.time.Instant.now
-    } yield {
-      val d1 = java.time.Duration.between(t0, t1)
-      val d2 = java.time.Duration.between(t1, t2)
-      val d3 = java.time.Duration.between(t2, t3)
-      val d4 = java.time.Duration.between(t3, t4)
-      logger.info(
-        s"scan ${d1.toNanos / 1000} setup ${d2.toNanos / 1000} buildMap ${d3.toNanos / 1000} apply ${d4.toNanos / 1000}")
-      mappedBytes
-    }
+    } yield mappedBytes
   }
 
   def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,

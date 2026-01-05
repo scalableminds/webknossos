@@ -81,6 +81,7 @@ function UserListView() {
   const [activationFilter, setActivationFilter] = useState<ActivationFilterType>(["activated"]);
   const [searchQuery, setSearchQuery] = useState("");
   const [singleSelectedUser, setSingleSelectedUser] = useState<APIUser | null | undefined>(null);
+  const [userToEdit, setUserToEdit] = useState<APIUser | null>(null);
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(null);
   const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
@@ -329,7 +330,7 @@ function UserListView() {
           >
             <ChangeNameView
               onClose={() => setEditNameModalOpen(false)}
-              user={singleSelectedUser}
+              user={userToEdit}
               setEditedUser={(editedUser: APIUser) => {
                 setUsers((users) =>
                   users.map((user) => (editedUser.id === user.id ? editedUser : user)),
@@ -550,9 +551,10 @@ function UserListView() {
                   <>
                     <LinkButton
                       icon={<UserOutlined />}
-                      onClick={() => {
+                      onClick={(event) => {
+                        setUserToEdit(user);
                         setEditNameModalOpen(true);
-                        setSingleSelectedUser(user);
+                        event.stopPropagation();
                       }}
                     >
                       Change Name

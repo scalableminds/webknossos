@@ -4,8 +4,6 @@ import { Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type { APIUser } from "types/api_types";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { Store } from "viewer/singletons";
 
 const FormItem = Form.Item;
 
@@ -46,7 +44,6 @@ function ChangeNameView({
         const updatedUser = await changeName(firstName, lastName);
         if (activeUser?.id === userToEdit?.id) {
           Toast.success(`You successfully changed your name to ${firstName} ${lastName}.`);
-          Store.dispatch(setActiveUserAction(updatedUser));
         } else {
           Toast.success(`You successfully changed the name to ${firstName} ${lastName}.`);
         }

@@ -132,8 +132,14 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
             action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
             !action.value.isBusy) as ActionPattern,
         );
+        yield take(
+          ((action: Action) =>
+            action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
+        );
+        // Wait so that the addedMeshes listener has a 100% chance
+        // to register that mesh with id 1 was added.
+        yield delay(1);
 
-        yield take("FINISHED_LOADING_MESH");
         const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
         expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
         expect(_.sortBy([...removedMeshes])).toEqual([1, 4]);
@@ -190,7 +196,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           ((action: Action) =>
             action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
         );
-        // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1339 was added.
+        // Wait so that the addedMeshes listener has a 100% chance
+        // to register that mesh with id 1339 was added.
         yield delay(1);
 
         const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
@@ -239,7 +246,12 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
       // And now load that merge.
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-      yield take("FINISHED_LOADING_MESH");
+      yield take(
+        ((action: Action) =>
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 4) as ActionPattern,
+      );
+      // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 4 was added.
+      yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
       expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4]);
@@ -303,8 +315,12 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
       // And now load that merge.
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-      yield take("FINISHED_LOADING_MESH");
-      yield take("FINISHED_LOADING_MESH");
+      yield take(
+        ((action: Action) =>
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
+      );
+      // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1 was added.
+      yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
       expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339]);
@@ -361,7 +377,12 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
-      yield take("FINISHED_LOADING_MESH");
+      yield take(
+        ((action: Action) =>
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
+      );
+      // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1 was added.
+      yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
       expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
@@ -432,9 +453,12 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           1, // unmappedId=1 maps to 1
         ),
       );
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      yield take("FINISHED_LOADING_MESH");
-      yield take("FINISHED_LOADING_MESH");
+      yield take(
+        ((action: Action) =>
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
+      );
+      // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1339 was added.
+      yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
       expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
@@ -498,13 +522,16 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
-      yield take("FINISH_MAPPING_INITIALIZATION");
-      yield take("FINISHED_LOADING_MESH");
-      yield take("FINISHED_LOADING_MESH");
+      yield take(
+        ((action: Action) =>
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
+      );
+      // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1339 was added.
+      yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
       expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 4, 1339]); // TODOM: check why 1339 is removed. Maybe due to mesh assembling stuff?
+      expect(_.sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
       expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
@@ -580,13 +607,16 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
       // Loading meshes 1, 1339, 1340.
-      yield take("FINISHED_LOADING_MESH");
-      yield take("FINISHED_LOADING_MESH");
-      yield take("FINISHED_LOADING_MESH");
+      yield take(
+        ((action: Action) =>
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1340) as ActionPattern,
+      );
+      // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1340 was added.
+      yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
       expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 1339, 1340]); // TODOM: check why 1340 is removed. Maybe due to mesh assembling stuff?
+      expect(_.sortBy([...removedMeshes])).toEqual([1, 1339, 1340]);
       expect(_.sortBy([...addedMeshes])).toEqual([1, 1339, 1340]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
@@ -783,6 +813,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   }, 8000);
 
+  // TODOM!!!!!!!
   it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);

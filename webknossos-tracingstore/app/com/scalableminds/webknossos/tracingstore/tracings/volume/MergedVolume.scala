@@ -29,7 +29,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     with ByteUtils
     with VolumeDataZipHelper
     with ProtoGeometryImplicits {
-  private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[SegmentInteger]]
+  private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
   private val labelSets = mutable.ListBuffer[mutable.Set[SegmentInteger]]()
   private val labelMaps = mutable.ListBuffer[mutable.HashMap[SegmentInteger, SegmentInteger]]()
   var largestSegmentId: SegmentInteger = SegmentInteger.zeroFromElementClass(elementClass)

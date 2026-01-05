@@ -64,7 +64,10 @@ function AccountProfileView() {
     {
       title: "Name",
       content: isChangeNameVisible ? (
-        <ChangeNameView onClose={() => setChangeNameVisible(false)} />
+        <ChangeNameView
+          onClose={() => setChangeNameVisible(false)}
+          setEditedUser={(updatedUser) => Store.dispatch(setActiveUserAction(updatedUser))}
+        />
       ) : (
         formatUserName(activeUser, activeUser)
       ),

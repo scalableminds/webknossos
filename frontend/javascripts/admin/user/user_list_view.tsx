@@ -35,6 +35,7 @@ import {
 } from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
+import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -283,6 +284,7 @@ function UserListView() {
 
   const noOtherUsers = users.length < 2;
   const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
+  const mayChangeNameForUsers = features().isWkorgInstance === false;
 
   return (
     <div className="container">
@@ -544,16 +546,20 @@ function UserListView() {
                   <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
                 <br />
-                <LinkButton
-                  icon={<UserOutlined />}
-                  onClick={() => {
-                    setEditNameModalOpen(true);
-                    setSingleSelectedUser(user);
-                  }}
-                >
-                  Change Name
-                </LinkButton>
-                <br />
+                {mayChangeNameForUsers ? (
+                  <>
+                    <LinkButton
+                      icon={<UserOutlined />}
+                      onClick={() => {
+                        setEditNameModalOpen(true);
+                        setSingleSelectedUser(user);
+                      }}
+                    >
+                      Change Name
+                    </LinkButton>
+                    <br />
+                  </>
+                ) : null}
                 {user.isActive ? (
                   activeUser.isAdmin ? (
                     <LinkButton

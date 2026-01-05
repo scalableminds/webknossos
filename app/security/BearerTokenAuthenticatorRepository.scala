@@ -47,19 +47,19 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
 
   def add(authenticator: BearerTokenAuthenticator,
           tokenType: TokenType,
-          deleteOld: Boolean = true): Future[BearerTokenAuthenticator] = {
-    if (deleteOld) {
-      removeByLoginInfoIfPresent(authenticator.loginInfo, tokenType)
-    }
+          deleteOld: Boolean = true): Future[BearerTokenAuthenticator] =
     for {
+      _ <- if (deleteOld) removeByLoginInfoIfPresent(authenticator.loginInfo, tokenType) else Future.successful(())
       _ <- insert(authenticator, tokenType).futureBox
     } yield authenticator
-  }
 
-  private def removeByLoginInfoIfPresent(loginInfo: LoginInfo, tokenType: TokenType): Unit =
+  private def removeByLoginInfoIfPresent(loginInfo: LoginInfo, tokenType: TokenType): Future[Unit] =
     for {
       oldOpt <- findOneByLoginInfo(loginInfo, tokenType)
-      _ = oldOpt.foreach(old => remove(old.id))
+      _ <- oldOpt match {
+        case Some(old) => remove(old.id)
+        case None      => Future.successful(())
+      }
     } yield ()
 
   private def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType): Fox[Unit] =

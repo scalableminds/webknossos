@@ -49,7 +49,7 @@ import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
   <Alert
-    message="Read-only version restore mode active!"
+    title="Read-only version restore mode active!"
     style={{
       padding: "4px 15px",
     }}
@@ -319,6 +319,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     ];
 
     return (
+      // div is for left spacing through CSS
       <div>
         <Dropdown
           key="ai-job-dropdown"
@@ -326,6 +327,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             items: menuItems,
           }}
           disabled={disabled}
+          trigger={["click", "hover"]}
         >
           <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
             AI Analysis

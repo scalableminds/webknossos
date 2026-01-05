@@ -15,12 +15,18 @@ void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, 
     switch (bytesPerElement) {
         case 1:
             *reinterpret_cast<uint8_t *>(currentPos) = static_cast<uint8_t>(segmentId);
+            break;
         case 2:
             *reinterpret_cast<uint16_t *>(currentPos) = static_cast<uint16_t>(segmentId);
+            break;
         case 4:
             *reinterpret_cast<uint32_t *>(currentPos) = static_cast<uint32_t>(segmentId);
+            break;
         case 8:
             *reinterpret_cast<uint64_t *>(currentPos) = static_cast<uint64_t>(segmentId);
+            break;
+        default:
+            throw std::invalid_argument("Cannot write segment value, unsupported bytesPerElement value");
     }
 }
 
@@ -197,7 +203,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
     try {
 
-        std::map<uint64_t, uint16_t> mapping;
+        std::map<uint64_t, uint64_t> mapping;
         for (size_t i = 0; i < mapSize; ++i) {
             mapping[distinctSegmentIds[i]] = agglomerateIdForDistinctSegmentIds[i];
         }
@@ -214,16 +220,22 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
         }
 
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseLongArrayElements(distinctSegmentIdsJavaArray, distinctSegmentIds, 0);
+        env->ReleaseLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, agglomerateIdForDistinctSegmentIds, 0);
         env->ReleaseByteArrayElements(outputJavaArray, outputJBytes, JNI_COMMIT);
 
         return outputJavaArray;
 
     } catch (const std::exception &e) {
-         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
-         throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate: " + std::string(e.what()));
-         return nullptr;
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseLongArrayElements(distinctSegmentIdsJavaArray, distinctSegmentIds, 0);
+        env->ReleaseLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, agglomerateIdForDistinctSegmentIds, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate: " + std::string(e.what()));
+        return nullptr;
     } catch (...) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseLongArrayElements(distinctSegmentIdsJavaArray, distinctSegmentIds, 0);
+        env->ReleaseLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, agglomerateIdForDistinctSegmentIds, 0);
         throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate");
         return nullptr;
     }

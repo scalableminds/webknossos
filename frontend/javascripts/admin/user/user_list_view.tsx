@@ -319,7 +319,15 @@ function UserListView() {
             }}
           />
           <Modal destroyOnHidden title="Edit Name" open={editNameModalOpen} footer={null}>
-            <ChangeNameView onClose={() => setEditNameModalOpen(false)} user={singleSelectedUser} />
+            <ChangeNameView
+              onClose={() => setEditNameModalOpen(false)}
+              user={singleSelectedUser}
+              setEditedUser={(editedUser: APIUser) => {
+                setUsers((users) =>
+                  users.map((user) => (editedUser.id === user.id ? editedUser : user)),
+                );
+              }}
+            />
           </Modal>
         </Space>
         <Search

@@ -51,7 +51,10 @@ import {
   type ToggleSegmentInPartitionAction,
   resetMultiCutToolPartitionsAction,
 } from "viewer/model/actions/proofread_actions";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import {
+  pushSaveQueueTransaction,
+  setPendingProofreadingOperationInfoAction,
+} from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -88,7 +91,13 @@ import {
   splitAgglomerate,
 } from "viewer/model/sagas/volume/update_actions";
 import { Model, Store, api } from "viewer/singletons";
-import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
+import type {
+  ActiveMappingInfo,
+  Mapping,
+  NumberLikeMap,
+  ProofreadingActionInfo,
+  VolumeTracing,
+} from "viewer/store";
 import {
   getAdditionalCoordinatesAsString,
   getCurrentMag,
@@ -306,6 +315,47 @@ function* checkForAgglomerateSkeletonModification(
       { timeout: 10000 },
     );
   }
+}
+
+function* pushPendingProofreadingOperationInfo(
+  volumeTracingId: string,
+  sourceInfo: ProofreadingActionInfo,
+  targetInfo: ProofreadingActionInfo,
+): Saga<void> {
+  // For proper post processing, it is necessary that sourceInfo & targetInfo
+  // have the correct agglomerate id values at the state on which this proofreading action
+  // is applied to. Due to first applying new update actions from the backend, the agglomerate id
+  // info might not be correct which is currently, stored in sourceInfo & targetInfo.
+  // Thus, in case the the saving first applies new missing update actions from the backend, we temporarily put
+  // the source- & targetInfo into the store, so that the save saga can update them after applying new backend actions
+  // and before the mapping changes of this proofreading action are applied.
+  // After saving the info should retrieved via the pop-variation of this function below.
+  yield* put(
+    setPendingProofreadingOperationInfoAction({
+      tracingId: volumeTracingId,
+      sourceInfo,
+      targetInfo,
+    }),
+  );
+}
+
+function* popPendingProofreadingOperationInfo(): Saga<
+  [ProofreadingActionInfo, ProofreadingActionInfo] | null
+> {
+  // See comment above.
+  // After the proofreading update actions were stored on the server, the updated source & targetInfo
+  // needs to retrieved and the PendingProofreadingOperationInfo should be cleared.
+  const pendingProofreadingOperationInfo = yield* select(
+    (state) => state.save.proofreadingPostProcessingInfo,
+  );
+  yield* put(setPendingProofreadingOperationInfoAction(null));
+  if (pendingProofreadingOperationInfo != null) {
+    return [
+      pendingProofreadingOperationInfo.sourceInfo,
+      pendingProofreadingOperationInfo.targetInfo,
+    ];
+  }
+  return null;
 }
 
 function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
@@ -1000,7 +1050,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     console.warn("[Proofreading] Could not gather id infos.");
     return;
   }
-  const [sourceInfo, targetInfo] = idInfos;
+  let [sourceInfo, targetInfo] = idInfos;
   let sourceAgglomerateId = sourceInfo.agglomerateId;
   let targetAgglomerateId = targetInfo.agglomerateId;
   const sourceAgglomerate = volumeTracing.segments.getNullable(Number(sourceAgglomerateId));
@@ -1073,9 +1123,14 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (updateActions.length === 0) {
     return;
   }
+  yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
 
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
+  const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
+  if (proofreadingPostProcessingInfo) {
+    [sourceInfo, targetInfo] = proofreadingPostProcessingInfo;
+  }
 
   if (action.type === "MIN_CUT_AGGLOMERATE" && sourceAgglomerateId !== targetAgglomerateId) {
     const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
@@ -1154,9 +1209,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // Remove the segment that doesn't exist anymore.
     // TODOM: in my test case this is wrong!
     // TODOM: this breaks segment list syncing.! -> maybe removes mesh as well :thinking:
-    // yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
+    // yield* put(removeSegmentAction(targetInfo.agglormateID, volumeTracingId));
     // TODOM: sourceInfo and targetInfo do not contain the necessary information for reloading.
+    // TODOM: figure out what the version was for.
+
     yield* call(syncAgglomerateSkeletonsAfterMergeAction, volumeTracingId, sourceInfo, targetInfo);
+    // TODOM: Maybe another save is needed to store agglomerate updates on the serer?
   }
 
   /* Reload meshes */
@@ -1204,7 +1262,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     },
   ]);
 }
-
+// Naming: PendingProofreadingOperationInfo für store info.
+//
 function* handleProofreadCutFromNeighbors(action: Action) {
   // Actually, action is CutAgglomerateFromNeighborsAction but the
   // takeEveryUnlessBusy wrapper does not understand this.

@@ -460,9 +460,17 @@ export type RebaseRelevantAnnotationState = {
 // before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons.
 // This info is also stored here.
 // TODOM: Naming open to debate.
-export type ProofreadingPostProcessingRelevantInfoFromRebasing = {
-  readonly latestVersionBeforeNewestMappingChanges: number;
-  readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
+
+export type ProofreadingActionInfo = {
+  agglomerateId: number;
+  unmappedId: number;
+  position: Vector3;
+};
+
+export type ProofreadingPostProcessingInfo = {
+  readonly sourceInfo: Readonly<ProofreadingActionInfo>;
+  readonly targetInfo: Readonly<ProofreadingActionInfo>;
+  readonly tracingId: string;
 };
 export type SaveState = {
   readonly isBusy: boolean;
@@ -471,7 +479,7 @@ export type SaveState = {
   readonly progressInfo: ProgressInfo;
   readonly mutexState: AnnotationMutexInformation;
   readonly rebaseRelevantServerAnnotationState: RebaseRelevantAnnotationState;
-  readonly proofreadingPostProcessingRelevantInfoFromRebasing: ProofreadingPostProcessingRelevantInfoFromRebasing;
+  readonly proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | undefined | null;
 };
 export type Flycam = {
   readonly zoomStep: number;

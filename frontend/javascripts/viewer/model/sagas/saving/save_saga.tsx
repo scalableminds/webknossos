@@ -1,8 +1,8 @@
-import { getUpdateActionLog } from "admin/rest_api";
+import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
+import { getAdaptToTypeFunction, sleep } from "libs/utils";
 import _ from "lodash";
 import { type Channel, buffers } from "redux-saga";
 import {
@@ -18,7 +18,7 @@ import {
 } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { SagaIdentifier, type Vector3 } from "viewer/constants";
+import { SagaIdentifier, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
@@ -42,8 +42,8 @@ import {
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
   prepareRebaseAction,
+  setPendingProofreadingOperationInfoAction,
   setVersionNumberAction,
-  snapshotProofreadingPostProcessingRelevantInfo,
 } from "viewer/model/actions/save_actions";
 import { updateAuxiliaryAgglomerateMeshVersionAction } from "viewer/model/actions/segmentation_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
@@ -58,7 +58,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select, take } from "viewer/model/sagas/effect-generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type { NumberLike, SkeletonTracing, VolumeTracing } from "viewer/store";
+import type { NumberLike, NumberLikeMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
@@ -74,6 +74,7 @@ import {
 } from "./rebasing_helpers_sagas";
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
+import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
 
 export function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -231,6 +232,75 @@ const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
   },
 };
 
+// This function updates the agglomerate ids of source- and targetInformation from proofreading actions,
+// to ensure that the post processing of a proofreading interaction by a saga in proofread_saga.tsx has
+// agglomerate id information from the state where the latest backend updates were applied but the own
+// mapping changes are not yet applied. This is needed to have correct information about what agglomerate ids
+// were actually affected by a proofreading action done by the local user. The info correctness is essential
+// to properly reload and synchronize loaded agglomerate skeletons and meshes.
+function* updatePendingProofreadingOperationInfoAction() {
+  const proofreadingPostProcessingInfo = yield* select(
+    (state) => state.save.proofreadingPostProcessingInfo,
+  );
+  if (proofreadingPostProcessingInfo == null) {
+    return;
+  }
+  const { tracingId, sourceInfo, targetInfo } = proofreadingPostProcessingInfo;
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
+  );
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  const sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap | undefined)?.get(
+    adaptToType(sourceInfo.unmappedId),
+  );
+  const targetAgglomerateId = (activeMapping.mapping as NumberLikeMap | undefined)?.get(
+    adaptToType(targetInfo.unmappedId),
+  );
+  if (sourceAgglomerateId != null && targetAgglomerateId !== null) {
+    yield* put(
+      setPendingProofreadingOperationInfoAction({
+        tracingId,
+        sourceInfo: { ...sourceInfo, agglomerateId: Number(sourceAgglomerateId) },
+        targetInfo: { ...targetInfo, agglomerateId: Number(targetAgglomerateId) },
+      }),
+    );
+  } else {
+    // In the rare case where after applying the backend updates the mapping information
+    // for the source and targetInfo is no longer present in the mapping, load this missing info from the backend.
+    const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+    const annotationId = yield* select((state) => state.annotation.annotationId);
+    const annotationVersion = yield* select((state) => state.annotation.version);
+    const agglomerateInfoFromServer = yield* call(
+      getAgglomeratesForSegmentsFromTracingstore,
+      tracingStoreUrl,
+      tracingId,
+      [sourceInfo.unmappedId, targetInfo.unmappedId],
+      annotationId,
+      annotationVersion,
+    );
+    const adaptToType = getAdaptToTypeFunction(agglomerateInfoFromServer);
+    const sourceAgglomerateIdFromServer = (
+      agglomerateInfoFromServer as NumberLikeMap | undefined
+    )?.get(adaptToType(sourceInfo.unmappedId));
+    const targetAgglomerateIdFromServer = (
+      agglomerateInfoFromServer as NumberLikeMap | undefined
+    )?.get(adaptToType(targetInfo.unmappedId));
+    yield* put(
+      setPendingProofreadingOperationInfoAction({
+        tracingId,
+        sourceInfo: {
+          ...sourceInfo,
+          agglomerateId: Number(sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId),
+        },
+        targetInfo: {
+          ...targetInfo,
+          agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
+        },
+      }),
+    );
+  }
+}
+
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
 ): Saga<ApplyingUpdateResults> {
@@ -247,7 +317,7 @@ function* applyNewestMissingUpdateActions(
     if (success) {
       // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
       yield* put(finishedApplyingMissingUpdatesAction());
-      yield* put(snapshotProofreadingPostProcessingRelevantInfo());
+      yield* call(updatePendingProofreadingOperationInfoAction);
       return { success: true, artifactInfos };
     }
   } catch (exc) {
@@ -358,10 +428,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
         return { successful: false, shouldTerminate: false };
       }
       artifactInfos = applyingResult.artifactInfos;
-    } else {
-      // If there is are no updates from the backend, store the current version of the mappings as info needed
-      // for proofreading post processing, to keep this info updated. It is needed to auto reload agglomerate skeletons properly.
-      yield* put(snapshotProofreadingPostProcessingRelevantInfo());
+      // TODOM: move this here yield* call(resolveApplyingUpdateArtifacts, artifactInfos);
     }
     if (needsRebasing) {
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.

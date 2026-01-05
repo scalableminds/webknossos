@@ -8,7 +8,7 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
+import type { ProofreadingPostProcessingInfo, SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 import { areSetsEqual } from "libs/utils";
 import _ from "lodash";
@@ -44,8 +44,8 @@ export type UpdateMappingRebaseInformationAction = ReturnType<
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
 >;
-export type SnapshotProofreadingPostProcessingRelevantInfo = ReturnType<
-  typeof snapshotProofreadingPostProcessingRelevantInfo
+export type SetPendingProofreadingOperationInfoAction = ReturnType<
+  typeof setPendingProofreadingOperationInfoAction
 >;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
 
@@ -71,7 +71,7 @@ export type SaveAction =
   | FinishedRebaseAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
-  | SnapshotProofreadingPostProcessingRelevantInfo
+  | SetPendingProofreadingOperationInfoAction
   | ReplaceSaveQueueAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
@@ -268,9 +268,12 @@ export const finishedApplyingMissingUpdatesAction = () =>
   ({
     type: "FINISHED_APPLYING_MISSING_UPDATES",
   }) as const;
-export const snapshotProofreadingPostProcessingRelevantInfo = () =>
+export const setPendingProofreadingOperationInfoAction = (
+  proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | null | undefined,
+) =>
   ({
-    type: "SNAPSHOT_PROOFREADING_POST_PROCESSING_RELEVANT_INFO",
+    type: "SET_PENDING_PROOFREADING_OPERATION_INFO",
+    proofreadingPostProcessingInfo,
   }) as const;
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>

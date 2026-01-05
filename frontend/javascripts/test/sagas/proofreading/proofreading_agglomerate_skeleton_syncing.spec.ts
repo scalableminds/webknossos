@@ -28,7 +28,7 @@ import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annota
 import { fork } from "typed-redux-saga";
 import type { Action } from "viewer/model/actions/actions";
 
-describe("Proofreading (Single User)", () => {
+describe("Proofreading agglomerate skeleton syncing", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
     WkDevFlags.liveCollab = true;
@@ -549,8 +549,8 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [4, 4, 4] }, tracingId));
-      yield put(setActiveCellAction(1));
+      yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(setActiveCellAction(4));
       yield makeMappingEditableHelper();
       const othersMayEdit = true;
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -559,7 +559,7 @@ describe("Proofreading (Single User)", () => {
       yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([6, 6, 6], 4));
+      yield put(proofreadMergeAction([6, 6, 6], 6));
       // Wait till while proofreading action is finished including agglomerate skeleton refresh
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -569,8 +569,8 @@ describe("Proofreading (Single User)", () => {
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
       );
-      expect(updatedAgglomerateTrees.size()).toBe(2);
-      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(5);
+      expect(updatedAgglomerateTrees.size()).toBe(1);
+      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(7);
       const allNodes = Array.from(updatedAgglomerateTrees.getOrThrow(3).nodes.values());
       const allPositionsSorted = allNodes
         .map((n) => n.untransformedPosition)
@@ -581,11 +581,13 @@ describe("Proofreading (Single User)", () => {
         [3, 3, 3],
         [4, 4, 4],
         [5, 5, 5],
+        [6, 6, 6],
+        [7, 7, 7],
       ]);
 
       const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
-        `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
+        "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );
     });
 
@@ -702,7 +704,7 @@ describe("Proofreading (Single User)", () => {
 
       const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
-        `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
+        "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_split_should_refresh_agglomerate_skeletons.json",
       );
     });
 

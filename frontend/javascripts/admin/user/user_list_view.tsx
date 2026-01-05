@@ -11,7 +11,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import ChangeNameView from "admin/auth/change_name_view";
+import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import { getEditableUsers, updateUser } from "admin/rest_api";
@@ -47,6 +47,8 @@ import { Link } from "react-router-dom";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { Store } from "viewer/singletons";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -328,13 +330,16 @@ function UserListView() {
             footer={null}
             onCancel={() => setEditNameModalOpen(false)}
           >
-            <ChangeNameView
+            <ChangeUsernameView
               onClose={() => setEditNameModalOpen(false)}
               user={userToEdit}
               setEditedUser={(editedUser: APIUser) => {
                 setUsers((users) =>
                   users.map((user) => (editedUser.id === user.id ? editedUser : user)),
                 );
+                if (activeUser.id === editedUser.id) {
+                  Store.dispatch(setActiveUserAction(editedUser));
+                }
               }}
             />
           </Modal>

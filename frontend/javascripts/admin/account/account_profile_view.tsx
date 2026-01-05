@@ -1,6 +1,6 @@
 import { CheckOutlined, DownOutlined, EditOutlined } from "@ant-design/icons";
 import ChangeEmailView from "admin/auth/change_email_view";
-import ChangeNameView from "admin/auth/change_name_view";
+import ChangeUsernameView from "admin/auth/change_username_view";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
 import { Button, Col, Dropdown, Row, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -20,7 +20,7 @@ function AccountProfileView() {
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const { selectedTheme } = activeUser || { selectedTheme: "auto" };
   const [isChangeEmailVisible, setChangeEmailVisible] = useState(false);
-  const [isChangeNameVisible, setChangeNameVisible] = useState(false);
+  const [isChangeNameVisible, setChangeNameViewVisible] = useState(false);
   if (!activeUser) return null;
 
   const role = Utils.isUserAdmin(activeUser)
@@ -64,8 +64,9 @@ function AccountProfileView() {
     {
       title: "Name",
       content: isChangeNameVisible ? (
-        <ChangeNameView
-          onClose={() => setChangeNameVisible(false)}
+        <ChangeUsernameView
+          user={activeUser}
+          onClose={() => setChangeNameViewVisible(false)}
           setEditedUser={(updatedUser) => Store.dispatch(setActiveUserAction(updatedUser))}
         />
       ) : (
@@ -77,7 +78,7 @@ function AccountProfileView() {
           shape="circle"
           icon={<EditOutlined />}
           size="small"
-          onClick={() => setChangeNameVisible(!isChangeNameVisible)}
+          onClick={() => setChangeNameViewVisible(!isChangeNameVisible)}
         />
       ),
     },

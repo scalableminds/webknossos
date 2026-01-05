@@ -10,21 +10,20 @@ const FormItem = Form.Item;
 const FIRST_NAME_FIELD_KEY = "firstName";
 const LAST_NAME_FIELD_KEY = "lastName";
 
-function ChangeNameView({
+function ChangeUsernameView({
   onClose,
   setEditedUser,
-  user,
-}: { onClose: () => void; setEditedUser: (updatedUser: APIUser) => void; user?: APIUser | null }) {
+  user: user,
+}: { onClose: () => void; setEditedUser: (updatedUser: APIUser) => void; user: APIUser | null }) {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
-  const userToEdit = user || activeUser;
 
-  if (userToEdit == null) {
+  if (user == null) {
     throw new Error("No user to edit");
   }
 
   async function changeName(newFirstName: string, newLastName: string) {
-    const newUser = Object.assign({}, userToEdit, {
+    const newUser = Object.assign({}, user, {
       firstName: newFirstName,
       lastName: newLastName,
     });
@@ -32,17 +31,17 @@ function ChangeNameView({
   }
 
   async function onFinish() {
-    if (userToEdit == null) {
+    if (user == null) {
       throw new Error("No user to edit");
     }
     const hasNameBeenChanged =
       form.isFieldTouched(FIRST_NAME_FIELD_KEY) || form.isFieldTouched(LAST_NAME_FIELD_KEY);
     if (hasNameBeenChanged) {
       try {
-        const firstName = form.getFieldValue(FIRST_NAME_FIELD_KEY) || userToEdit.firstName;
-        const lastName = form.getFieldValue(LAST_NAME_FIELD_KEY) || userToEdit.lastName;
+        const firstName = form.getFieldValue(FIRST_NAME_FIELD_KEY) || user.firstName;
+        const lastName = form.getFieldValue(LAST_NAME_FIELD_KEY) || user.lastName;
         const updatedUser = await changeName(firstName, lastName);
-        if (activeUser?.id === userToEdit?.id) {
+        if (activeUser?.id === user?.id) {
           Toast.success(`You successfully changed your name to ${firstName} ${lastName}.`);
         } else {
           Toast.success(`You successfully changed the name to ${firstName} ${lastName}.`);
@@ -82,7 +81,7 @@ function ChangeNameView({
               }}
             />
           }
-          defaultValue={userToEdit.firstName}
+          defaultValue={user.firstName}
           placeholder="First Name"
         />
       </FormItem>
@@ -101,7 +100,7 @@ function ChangeNameView({
               }}
             />
           }
-          defaultValue={userToEdit.lastName}
+          defaultValue={user.lastName}
           placeholder="Last Name"
         />
       </FormItem>
@@ -117,4 +116,4 @@ function ChangeNameView({
   );
 }
 
-export default ChangeNameView;
+export default ChangeUsernameView;

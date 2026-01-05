@@ -287,7 +287,7 @@ function UserListView() {
 
   const noOtherUsers = users.length < 2;
   const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
-  const mayChangeNameForUsers = features().isWkorgInstance === false;
+  const mayChangeNameForUsers = features().isWkorgInstance === false && activeUser.isAdmin;
 
   return (
     <div className="container">

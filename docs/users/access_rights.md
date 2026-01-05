@@ -35,6 +35,7 @@ For more information regarding (public) dataset sharing and access rights (espec
 | Delete datasets of other teams                     	| Yes   	| Yes             	| No           	| No          	|
 | Access all users of own teams                       	| Yes   	| Yes             	| Yes          	| Yes         	|
 | Access all users of other teams                     	| Yes   	| Yes             	| Yes          	| No          	|
+| Change own username                              	| Yes   	| Yes             	| Yes          	| Yes         	|
 | Assign/remove team membership to own teams       	| Yes   	| No              	| Yes          	| No          	|
 | Make other users team manager of own teams   	| Yes   	| No              	| Yes          	| No          	|
 | Make other users team manager of other teams   	| Yes   	| No              	| No           	| No          	|

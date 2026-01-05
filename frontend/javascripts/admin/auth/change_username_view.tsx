@@ -90,6 +90,10 @@ function ChangeUsernameView({
         name={LAST_NAME_FIELD_KEY}
         rules={[
           { validator: (rule, value) => validateNameNotEmpty(rule, value, LAST_NAME_FIELD_KEY) },
+          {
+            pattern: /^[a-zA-ZÀ-ÿ'-]+$/,
+            message: "Name can only contain letters, hyphens and apostrophes",
+          },
         ]}
       >
         <Input

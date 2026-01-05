@@ -63,6 +63,7 @@ export type Params = {
   isOrthogonal: boolean;
   useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
+  isWindows: boolean;
 };
 
 const SHARED_UNIFORM_DECLARATIONS = `

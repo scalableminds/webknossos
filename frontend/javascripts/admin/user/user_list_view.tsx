@@ -318,7 +318,13 @@ function UserListView() {
               setIsInviteModalOpen(visible);
             }}
           />
-          <Modal destroyOnHidden title="Edit Name" open={editNameModalOpen} footer={null}>
+          <Modal
+            destroyOnHidden
+            title="Change Name"
+            open={editNameModalOpen}
+            footer={null}
+            onCancel={() => setEditNameModalOpen(false)}
+          >
             <ChangeNameView
               onClose={() => setEditNameModalOpen(false)}
               user={singleSelectedUser}
@@ -545,7 +551,7 @@ function UserListView() {
                     setSingleSelectedUser(user);
                   }}
                 >
-                  Edit Name
+                  Change Name
                 </LinkButton>
                 <br />
                 {user.isActive ? (

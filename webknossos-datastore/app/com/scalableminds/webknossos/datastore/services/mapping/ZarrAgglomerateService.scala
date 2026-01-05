@@ -16,10 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, E
 import com.scalableminds.webknossos.datastore.services.{DSChunkCacheService, DataConverter}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
-import spire.std.map
 import ucar.ma2.{Array => MultiArray}
 
-import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import javax.inject.Inject
 import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.ExecutionContext
@@ -91,7 +89,8 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       val d2 = java.time.Duration.between(t1, t2)
       val d3 = java.time.Duration.between(t2, t3)
       val d4 = java.time.Duration.between(t3, t4)
-      //logger.info(s"scan ${d1.toNanos / 1000} setup ${d2.toNanos / 1000} buildMap ${d3.toNanos / 1000} apply ${d4.toNanos / 1000}")
+      logger.info(
+        s"scan ${d1.toNanos / 1000} setup ${d2.toNanos / 1000} buildMap ${d3.toNanos / 1000} apply ${d4.toNanos / 1000}")
       mappedBytes
     }
   }

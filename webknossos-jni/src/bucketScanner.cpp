@@ -9,7 +9,39 @@
 #include <stdint.h>
 #include <map>
 
-uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
+void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, const int bytesPerElement, const bool isSigned) {
+    jbyte *currentPos = bucketBytes + (index * bytesPerElement);
+
+    switch (bytesPerElement) {
+        case 1:
+        if (isSigned) {
+            *reinterpret_cast<int8_t *>(currentPos) = static_cast<int8_t>(segmentId);
+        } else {
+            *reinterpret_cast<uint8_t *>(currentPos) = static_cast<uint8_t>(segmentId);
+        }
+        case 2:
+        if (isSigned) {
+            *reinterpret_cast<int16_t *>(currentPos) = static_cast<int16_t>(segmentId);
+        } else {
+            *reinterpret_cast<uint16_t *>(currentPos) = static_cast<uint16_t>(segmentId);
+        }
+        case 4:
+        if (isSigned) {
+            *reinterpret_cast<int32_t *>(currentPos) = static_cast<int32_t>(segmentId);
+        } else {
+            *reinterpret_cast<uint32_t *>(currentPos) = static_cast<uint32_t>(segmentId);
+        }
+        case 8:
+        if (isSigned) {
+            *reinterpret_cast<int64_t *>(currentPos) = static_cast<int64_t>(segmentId);
+        } else {
+            *reinterpret_cast<uint64_t *>(currentPos) = static_cast<uint64_t>(segmentId);
+        }
+    }
+
+}
+
+int64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
     long currentValue;
     switch (bytesPerElement) {
@@ -164,35 +196,44 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
          env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
          throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox: " + std::string(e.what()));
          return nullptr;
-     } catch (...) {
-         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
-         throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
-         return nullptr;
-     }
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
+        return nullptr;
+    }
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyAgglomerate
-  (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jlongArray distinctSegmentIdsJavaArray, jlongArray agglomerateIdForDistinctSegmentIdsJavaArray) {
-  jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-  jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jlongArray distinctSegmentIdsJavaArray, jlongArray agglomerateIdForDistinctSegmentIdsJavaArray) {
+    jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
 
-  jsize mapSize = env -> GetArrayLength(distinctSegmentIdsJavaArray);
-  jlong * distinctSegmentIds = env -> GetLongArrayElements(distinctSegmentIdsJavaArray, NULL);
-  jlong * agglomerateIdForDistinctSegmentIds = env -> GetLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, NULL);
+    jsize mapSize = env -> GetArrayLength(distinctSegmentIdsJavaArray);
+    jlong * distinctSegmentIds = env -> GetLongArrayElements(distinctSegmentIdsJavaArray, NULL);
+    jlong * agglomerateIdForDistinctSegmentIds = env -> GetLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, NULL);
 
-  std::map<uint64_t, uint16_t> mapping;
-  for (size_t i = 0; i < mapSize; ++i) {
-    mapping[distinctSegmentIds[i]] = agglomerateIdForDistinctSegmentIds[i];
-  }
+    std::map<uint64_t, uint16_t> mapping;
+    for (size_t i = 0; i < mapSize; ++i) {
+        mapping[distinctSegmentIds[i]] = agglomerateIdForDistinctSegmentIds[i];
+    }
 
+    const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
 
+    bool isSigned = false; // TODO
 
-  // TODO create output array
+    jbyteArray outputJavaArray = env->NewByteArray(bucketLengthBytes);
+    jbyte *outputJBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
 
-  // TODO iterate over input elements, look up in map, write output (needs to be converted back to bytesPerElement - add writeSegmentIdAtIndex function?)
+    for (size_t i = 0; i < elementCount; ++i) {
+        uint64_t unmappedSegmentId = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
+        uint64_t agglomerateId = mapping[unmappedSegmentId]; // TODO handle lookup miss
+        writeSegmentIdAtIndex(outputJBytes, i, agglomerateId, bytesPerElement, isSigned);
+    }
 
-  // TODO error handling
+    // TODO error handling
 
-  env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
-  return bucketBytesJavaArray;
+    env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+    env->ReleaseByteArrayElements(outputJavaArray, outputJBytes, JNI_COMMIT);
+
+    return outputJavaArray;
 }

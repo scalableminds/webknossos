@@ -202,7 +202,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
     jlong * agglomerateIdForDistinctSegmentIds = env -> GetLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, NULL);
 
     try {
-        if (mapSize != GetArrayLength(agglomerateIdForDistinctSegmentIdsJavaArray)) {
+        if (mapSize != env->GetArrayLength(agglomerateIdForDistinctSegmentIdsJavaArray)) {
             throwRuntimeException(env, "Exception in BucketScanner applyAgglomerate: distinctSegmentIds and agglomerateIdsForDistinctSegmentIds differ in length.");
         }
         std::map<uint64_t, uint64_t> mapping;

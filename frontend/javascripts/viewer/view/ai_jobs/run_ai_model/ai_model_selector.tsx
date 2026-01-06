@@ -194,7 +194,7 @@ export const AiModelSelector: React.FC = () => {
           }}
           renderItem={(item) => (
             <List.Item
-              className="hoverable-list-item"
+              className={"hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")}
               style={{
                 border:
                   selectedModel?.id === item.id ? `1px solid ${ColorWKBlue}` : "1px solid #d9d9d9",

@@ -37,15 +37,4 @@ class NativeBucketScanner() {
                                        bytesPerElement: Int,
                                        elementsAreSigned: Boolean): Unit
 
-  /*
-  dataTyped.zipWithIndex.foreach {
-    case (valueTyped, index) =>
-      if (!valueTyped.isZero) {
-        val byteValueMapped =
-          if (skipMapping) valueTyped
-          else labelMaps(sourceVolumeIndex)(valueTyped)
-        mutableBucketData(index) = byteValueMapped
-      }
-  }
- */
 }

@@ -31,6 +31,14 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
 JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_extendSegmentBoundingBox
   (JNIEnv *, jobject, jbyteArray, jint, jboolean, jint, jlong, jint, jint, jint, jint, jint, jint, jint, jint, jint);
 
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     mergeVolumeBucketInPlace
+ * Signature:  ([B[BZ[B[BIZ)V
+ */
+JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_mergeVolumeBucketInPlace
+  (JNIEnv *, jobject, jbyteArray, jbyteArray, jboolean, jbyteArray, jbyteArray, jint, jboolean);
+
 #ifdef __cplusplus
 }
 #endif

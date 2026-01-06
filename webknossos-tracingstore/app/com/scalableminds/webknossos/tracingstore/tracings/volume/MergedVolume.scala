@@ -120,12 +120,12 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
       if (labelMaps.isEmpty) {
         mergedVolume += ((bucketPosition, data))
       } else {
-        val dataMapped = dataTyped.map { byteValue =>
-          if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
-            byteValue
-          else
-            labelMaps(sourceVolumeIndex)(byteValue)
-        }
+        val labelMap = labelMaps(sourceVolumeIndex)
+        val dataMapped = data /*bucketScanner.mapData(data,
+                                               Array[Byte](0), // Todo labelMapSrc
+                                               Array[Byte](0), // Todo labelMapDst,
+                                               bytesPerElement,
+                                               elementsAreSigned) // TODO re-use applying agglomerate cpp function? */
         mergedVolume += ((bucketPosition, dataMapped))
       }
     }
@@ -134,7 +134,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   def withMergedBuckets(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(mergedVolume.keysIterator) { bucketPosition =>
-        block(bucketPosition, SegmentIntegerArray.toByteArray(mergedVolume(bucketPosition), elementClass))
+        block(bucketPosition, mergedVolume(bucketPosition))
       }
     } yield ()
 

@@ -508,11 +508,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           toggleShowFinished={this.toggleShowFinished}
           getFinishVerb={this.getFinishVerb}
         />
-        {this.state.showFinishedTasks ? (
-          <h3 id="tasksHeadline" className="TestTasksHeadline">
-            My Finished Tasks
-          </h3>
-        ) : null}
+        {this.state.showFinishedTasks ? <h3>My Finished Tasks</h3> : null}
         {this.renderTaskList()}
         <div
           style={{

@@ -223,7 +223,7 @@ function DatasetView({
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <Space.Compact style={{ display: "flex" }}>
+    <Space.Compact>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>

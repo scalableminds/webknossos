@@ -18,7 +18,7 @@ import {
   addTreesAndGroupsAction,
   deleteNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
+import { discardSaveQueueAction } from "viewer/model/actions/save_actions";
 import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
 import { TIMESTAMP } from "test/global_mocks";
 
@@ -58,7 +58,7 @@ describe("Saga Integration Tests", () => {
   });
 
   it("Save actions should not be chunked below the chunk limit (1/3)", () => {
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(discardSaveQueueAction());
     expect(Store.getState().save.queue).toEqual([]);
 
     // This will create 250 trees with one node each. Thus, 500 update actions will
@@ -73,7 +73,7 @@ describe("Saga Integration Tests", () => {
   });
 
   it("Save actions should be chunked above the chunk limit (2/3)", () => {
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(discardSaveQueueAction());
     expect(Store.getState().save.queue).toEqual([]);
 
     const trees = generateDummyTrees(5000, 2);
@@ -90,7 +90,7 @@ describe("Saga Integration Tests", () => {
     const trees = generateDummyTrees(1, nodeCount);
 
     Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(discardSaveQueueAction());
     expect(Store.getState().save.queue).toEqual([]);
     // Delete some node, NOTE that this is not the node in the middle of the tree!
     // The addTreesAndGroupsAction gives new ids to nodes and edges in a non-deterministic way.

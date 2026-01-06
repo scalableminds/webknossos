@@ -1,6 +1,7 @@
 import {
   BarChartOutlined,
   BellOutlined,
+  ExperimentOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
@@ -12,6 +13,7 @@ import {
   Badge,
   Button,
   ConfigProvider,
+  Flex,
   Input,
   type InputRef,
   Layout,
@@ -36,6 +38,7 @@ import {
   switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
+import type { MenuProps } from "antd";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -46,7 +49,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -130,16 +132,10 @@ function UserInitials({
   isMultiMember: boolean;
 }) {
   const { firstName, lastName } = activeUser;
-
   const initialOf = (str: string) => str.slice(0, 1).toUpperCase();
 
   return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-      }}
-    >
+    <div>
       <Avatar
         className="hover-effect-via-opacity"
         style={{
@@ -211,30 +207,12 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       ]
     : [];
 
-  if (features().jobsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/jobs",
-      label: <Link to="/jobs">Processing Jobs</Link>,
-    });
-
   if (isAdmin) {
     adminstrationSubMenuItems.push({
       key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }
-  if (activeUser.isSuperUser) {
-    adminstrationSubMenuItems.push({
-      key: "/aiModels",
-      label: <Link to={"/aiModels"}>AI Models</Link>,
-    });
-  }
-
-  if (features().voxelyticsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/workflows",
-      label: <Link to="/workflows">Voxelytics</Link>,
-    });
 
   if (adminstrationSubMenuItems.length === 0) {
     return null;
@@ -249,6 +227,43 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       collapse,
     ),
     children: adminstrationSubMenuItems,
+  };
+}
+
+export function getAnalysisSubMenu(collapse: boolean) {
+  const analysisSubMenuItems = [];
+
+  if (features().jobsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/jobs",
+      label: <Link to="/jobs">Processing Jobs</Link>,
+    });
+    analysisSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
+
+  if (features().voxelyticsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/workflows",
+      label: <Link to="/workflows">Voxelytics</Link>,
+    });
+  }
+
+  if (analysisSubMenuItems.length === 0) {
+    return null;
+  }
+
+  return {
+    key: "analysisMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle(
+      "Analysis",
+      <ExperimentOutlined className="icon-margin-right" />,
+      collapse,
+    ),
+    children: analysisSubMenuItems,
   };
 }
 
@@ -295,13 +310,12 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
     key: "timeStatisticMenu",
 
     label: (
-      <Link
-        to="/timetracking"
-        style={{
-          fontWeight: 400,
-        }}
-      >
-        {getCollapsibleMenuTitle("Time Tracking", <BarChartOutlined />, collapse)}
+      <Link to="/timetracking">
+        {getCollapsibleMenuTitle(
+          "Time Tracking",
+          <BarChartOutlined className="icon-margin-right" />,
+          collapse,
+        )}
       </Link>
     ),
   };
@@ -313,7 +327,7 @@ function getHelpSubMenu(
   isAuthenticated: boolean,
   isAdminOrManager: boolean,
   collapse: boolean,
-  openHelpModal: MenuClickEventHandler,
+  openHelpModal: MenuProps["onClick"],
 ) {
   const polledVersionString =
     polledVersion != null && polledVersion !== version
@@ -383,7 +397,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "credits",
       label: (
-        <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="https://home.webknossos.org/about-us" rel="noopener noreferrer">
           About & Credits
         </a>
       ),
@@ -470,9 +484,6 @@ function NotificationIcon({
   return (
     <div
       style={{
-        position: "relative",
-        display: "flex",
-        marginRight: 12,
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
       }}
     >
@@ -680,7 +691,6 @@ function AnonymousAvatar() {
         className="hover-effect-via-opacity"
         icon={<UserOutlined />}
         style={{
-          marginLeft: 8,
           marginTop: bannerHeight,
         }}
       />
@@ -704,7 +714,7 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" variant="outlined">
           Locked by unknown user.
         </Tag>
       </Tooltip>
@@ -712,7 +722,7 @@ function AnnotationLockedByUserTag({
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success" className="flex-center-child">
+        <Tag color="success" variant="outlined">
           Locked by you. Reload to edit.
         </Tag>
       </Tooltip>
@@ -725,17 +735,13 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" variant="outlined">
           Locked by {blockingUserName}
         </Tag>
       </Tooltip>
     );
   }
-  return (
-    <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-      {content}
-    </span>
-  );
+  return content;
 }
 
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
@@ -744,9 +750,10 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
     : "";
   const tooltipMessage =
     messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
+
   return (
     <Tooltip title={tooltipMessage}>
-      <Tag color="warning" className="flex-center-child">
+      <Tag color="warning" variant="outlined">
         Locked by {props.annotationOwnerName}
       </Tag>
     </Tooltip>
@@ -758,8 +765,9 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const othersMayEdit = useWkSelector((state) => state.annotation.othersMayEdit);
-  const blockedByUser = useWkSelector((state) => state.annotation.blockedByUser);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
+
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwnerName = useWkSelector((state) =>
     formatUserName(state.activeUser, state.annotation.owner),
@@ -807,11 +815,18 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         <Link
           to="/dashboard"
           style={{
-            fontWeight: 400,
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle("WEBKNOSSOS", <span className="logo" />, collapseAllNavItems)}
+          {getCollapsibleMenuTitle(
+            "WEBKNOSSOS",
+            <img
+              src="/assets/images/logo-icon-only.svg"
+              className="logo icon-margin-right"
+              alt="logo"
+            />,
+            collapseAllNavItems,
+          )}
         </Link>
       ),
     },
@@ -821,6 +836,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   if (_isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
+    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
 
     if (isAdminOrManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
@@ -932,15 +948,9 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginRight: 12,
-          }}
-        >
+        <Flex align="center" justify="flex-end" gap="small">
           {trailingNavItems}
-        </div>
+        </Flex>
       </ConfigProvider>
     </Header>
   );

@@ -7,7 +7,7 @@ import {
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
 import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
@@ -17,6 +17,7 @@ import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
@@ -103,7 +104,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
-import { disableSavingAction, discardSaveQueuesAction } from "viewer/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueueAction } from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -1162,7 +1163,7 @@ class TracingApi {
       false,
       version,
     );
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(discardSaveQueueAction());
     Store.dispatch(wkInitializedAction());
     UrlManager.updateUnthrottled();
   }
@@ -1737,7 +1738,9 @@ class DataApi {
       showLoadingIndicator,
       isMergerModeMapping,
     };
-    Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
+    Store.dispatch(
+      setMappingAction(layerName, "<custom mapping>", "JSON", false, mappingProperties),
+    );
   }
 
   /**
@@ -1806,7 +1809,7 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
+    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType, false));
   }
 
   /**
@@ -2258,7 +2261,7 @@ class DataApi {
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.restrictions.allowUpdate;
+    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates
@@ -2743,8 +2746,8 @@ class DataApi {
    * );
    */
   _createTransformsFromSpecs(specs: Array<TransformSpec>) {
-    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 =>
-      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+    // biome-ignore format: don't format array
+    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1];
     const makeScale = (scale: Vector3, anchor: Vector3) =>
       M4x4.mul(
         M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),
@@ -2755,11 +2758,11 @@ class DataApi {
         M4x4.mul(
           makeTranslation(pos[0], pos[1], pos[2]),
           // biome-ignore format: don't format array
-          new Float32Array([
+          [
             Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
             -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
             0, 0, 1, 0, 0, 0, 0, 1,
-          ]),
+          ],
         ),
         makeTranslation(-pos[0], -pos[1], -pos[2]),
       );

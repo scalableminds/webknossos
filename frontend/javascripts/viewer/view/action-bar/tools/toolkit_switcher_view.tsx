@@ -50,7 +50,7 @@ export default function ToolkitView() {
   };
 
   return (
-    <Dropdown menu={toolkitMenuProps}>
+    <Dropdown menu={toolkitMenuProps} trigger={["click", "hover"]}>
       <Badge
         dot={activeToolkit !== Toolkit.ALL_TOOLS}
         style={{

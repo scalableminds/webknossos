@@ -19,7 +19,13 @@ import { setNavbarHeightAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 
-const INITIAL_DELAY = 5000;
+// INITIAL_DELAY controls the delay with which the info for maintenance and outdated
+// is polled.
+// Previously, this delay value was set to 5000. However, this could to a UI jump
+// which was annoying when one wanted to click something in the same moment.
+// It is now set to 0 to check whether this is enough to fix the above issue.
+// If yes, we can remove the delay altogether.
+const INITIAL_DELAY = 0;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
 const UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAway";
 
@@ -54,7 +60,7 @@ function UpcomingMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: Maint
 
   return (
     <Alert
-      message={
+      title={
         <div>
           Upcoming maintenance: <FormattedDate timestamp={startTime} /> until{" "}
           <FormattedDate timestamp={endTime} format={endDateFormat} />. {message}
@@ -63,10 +69,12 @@ function UpcomingMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: Maint
       type="info"
       banner
       style={BANNER_STYLE}
-      closable
-      onClose={() => {
-        saveUserClosedMaintenanceInfo(maintenanceInfo);
-        setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+      closable={{
+        closeIcon: true,
+        onClose: () => {
+          saveUserClosedMaintenanceInfo(maintenanceInfo);
+          setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+        },
       }}
     />
   );
@@ -77,7 +85,7 @@ function CurrentMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: Mainte
 
   return (
     <Alert
-      message={
+      title={
         <>
           Currently under maintenance, scheduled until <FormattedDate timestamp={endTime} />.{" "}
           {message}
@@ -203,7 +211,7 @@ export function UpgradeVersionBanner() {
   return shouldBannerBeShown ? (
     <Alert
       className="upgrade-banner"
-      message={
+      title={
         <Space size="middle">
           <Space size="small">
             You are using an outdated version of WEBKNOSSOS. Switch to
@@ -228,13 +236,15 @@ export function UpgradeVersionBanner() {
       }
       banner
       style={UPGRADE_BANNER_STYLE}
-      closable
-      onClose={() => {
-        localStorage.setItem(
-          UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
-          dayjs().toISOString(),
-        );
-        forceUpdate();
+      closable={{
+        closeIcon: true,
+        onClose: () => {
+          localStorage.setItem(
+            UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
+            dayjs().toISOString(),
+          );
+          forceUpdate();
+        },
       }}
       type="info"
       showIcon={false}

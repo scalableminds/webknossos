@@ -1,8 +1,6 @@
-version: "2.2"
-
 services:
   webknossos:
-    image: scalableminds/webknossos:${DOCKER_TAG:-25.09.0}
+    image: scalableminds/webknossos:${DOCKER_TAG:-25.12.0}
     ports:
       - "127.0.0.1:9000:9000"
     depends_on:
@@ -56,9 +54,24 @@ services:
     environment:
       PGPASSWORD: postgres
 
+  apply-evolutions:
+    image: scalableminds/webknossos:${DOCKER_TAG:-25.11.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - node
+    command:
+      - tools/postgres/dbtool.js
+      - apply-evolutions
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - PGPASSWORD=postgres
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
+
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__510
+    image: scalableminds/fossildb:master__529
     command:
       - fossildb
       - -c

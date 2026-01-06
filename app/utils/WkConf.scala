@@ -139,6 +139,8 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val neuronInferralCostPerGVxInMillis: Int = get[Int]("features.neuronInferralCostPerGVxInMillis")
     val mitochondriaInferralCostPerGVxInMillis: Int =
       get[Int]("features.mitochondriaInferralCostPerGVxInMillis")
+    val nucleiInferralCostPerGVxInMillis: Int = get[Int]("features.nucleiInferralCostPerGVxInMillis")
+    val instancesInferralCostPerGVxInMillis: Int = get[Int]("features.instancesInferralCostPerGVxInMillis")
     val alignmentCostPerGVxInMillis: Int = get[Int]("features.alignmentCostPerGVxInMillis")
     val costPerCreditInEuro: BigDecimal = get[BigDecimal]("features.costPerCreditInEuro")
     val costPerCreditInDollar: BigDecimal = get[BigDecimal]("features.costPerCreditInDollar")
@@ -184,6 +186,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val pass: String = get[String]("mail.smtp.pass")
     }
 
+    val supportEmail: String = get[String]("mail.supportEmail")
     val defaultSender: String = get[String]("mail.defaultSender")
     def additionalFooter: String = get[String]("mail.additionalFooter")
 

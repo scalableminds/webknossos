@@ -1,74 +1,33 @@
 import Request from "libs/request";
 import { location } from "libs/window";
+import _ from "lodash";
 import type {
   APIAnnotationType,
-  APIEffectiveJobState,
   APIJob,
-  APIJobManualState,
-  APIJobState,
   AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
-import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
+import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
-    id: job.id,
-    datasetId: job.commandArgs.datasetId,
-    owner: job.owner,
-    type: job.command,
-    datasetName: job.commandArgs.dataset_name,
-    datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-    annotationLayerName: job.commandArgs.annotation_layer_name,
-    boundingBox: job.commandArgs.bbox,
-    ndBoundingBox: job.commandArgs.nd_bbox,
-    exportFileName: job.commandArgs.export_file_name,
-    tracingId: job.commandArgs.volume_tracing_id,
-    annotationId: job.commandArgs.annotation_id,
-    annotationType: job.commandArgs.annotation_type,
-    mergeSegments: job.commandArgs.merge_segments,
-    trainingAnnotations: job.commandArgs.training_annotations,
-    state: adaptJobState(job.state, job.manualState),
-    manualState: job.manualState,
-    result: job.returnValue,
-    resultLink: job.resultLink,
-    createdAt: job.created,
-    voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
-    creditCostInMillis: job.creditCost,
-    modelId: job.commandArgs.model_id,
+    ...job,
+    args: _.mapKeys(job.args, (_value, key) => _.camelCase(key)),
   };
 }
 
 export async function getJobs(): Promise<APIJob[]> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
-  return (
-    jobs
-      .map(transformBackendJobToAPIJob)
-      // Newest jobs should be first
-      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
-  );
+  return jobs.map(transformBackendJobToAPIJob);
 }
 
 export async function getJob(jobId: string): Promise<APIJob> {
   const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
   return transformBackendJobToAPIJob(job);
-}
-
-function adaptJobState(
-  celeryState: APIJobState,
-  manualState: APIJobManualState,
-): APIEffectiveJobState {
-  if (manualState) {
-    return manualState;
-  }
-
-  return celeryState || "UNKNOWN";
 }
 
 export async function cancelJob(jobId: string): Promise<APIJob> {
@@ -188,7 +147,7 @@ export function startComputeSegmentIndexFileJob(
   });
 }
 
-export function startNucleiInferralJob(
+export function runPretrainedNucleiInferenceJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
@@ -204,7 +163,7 @@ export function startNucleiInferralJob(
   });
 }
 
-export function startNeuronInferralJob(
+export function runPretrainedNeuronInferenceJob(
   datasetId: string,
   layerName: string,
   bbox: Vector6,
@@ -322,7 +281,7 @@ export function startMaterializingVolumeAnnotationJob(
   );
 }
 
-export function startMitochondriaInferralJob(
+export function runPretrainedMitochondriaInferenceJob(
   datasetId: string,
   layerName: string,
   bbox: Vector6,
@@ -368,7 +327,7 @@ export enum APIAiModelCategory {
   EM_NUCLEI = "em_nuclei",
 }
 
-type AiModelTrainingAnnotationSpecification = {
+export type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
   colorLayerName: string;
   segmentationLayerName: string;
@@ -406,7 +365,7 @@ export function runInstanceModelTraining(params: RunInstanceModelTrainingParamet
   });
 }
 
-export type BaseModelInferenceParameters = {
+export type BaseCustomModelInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
   datasetDirectoryName: string;
@@ -418,21 +377,21 @@ export type BaseModelInferenceParameters = {
   invertColorLayer: boolean;
   // maskAnnotationLayerName?: string | null
 };
-type RunNeuronModelInferenceParameters = BaseModelInferenceParameters;
+type RunCustomNeuronModelInferenceParameters = BaseCustomModelInferenceParameters;
 
-type RunInstanceModelInferenceParameters = BaseModelInferenceParameters & {
+type RunCustomInstanceModelInferenceParameters = BaseCustomModelInferenceParameters & {
   seedGeneratorDistanceThreshold: number;
 };
 
-export function runNeuronModelInferenceWithAiModelJob(params: RunNeuronModelInferenceParameters) {
+export function runCustomNeuronModelInferenceJob(params: RunCustomNeuronModelInferenceParameters) {
   return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronModelInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });
 }
 
-export function runInstanceModelInferenceWithAiModelJob(
-  params: RunInstanceModelInferenceParameters,
+export function runCustomInstanceModelInferenceJob(
+  params: RunCustomInstanceModelInferenceParameters,
 ) {
   return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomInstanceModelInference", {
     method: "POST",

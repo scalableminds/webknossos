@@ -717,7 +717,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const { segmentationLayer, currentConnectomeFile } = this.props;
     if (segmentationLayer == null || currentConnectomeFile == null) return;
     Store.dispatch(
-      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
+      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", false, {
         showLoadingIndicator: true,
       }),
     );
@@ -727,7 +727,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const isConnectomeMappingActive = this.isConnectomeMappingActive();
     return isConnectomeMappingActive ? null : (
       <Alert
-        message={
+        title={
           <>
             The mapping this connectome was computed for is not active.{" "}
             <a href="#" onClick={() => this.activateConnectomeMapping()}>

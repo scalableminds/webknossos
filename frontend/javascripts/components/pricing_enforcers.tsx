@@ -226,7 +226,7 @@ export const PricingEnforcedBlur = ({
         >
           <Alert
             showIcon
-            message={getFeatureNotAvailableInPlanMessage(
+            title={getFeatureNotAvailableInPlanMessage(
               requiredPricingPlan,
               activeOrganization,
               activeUser,

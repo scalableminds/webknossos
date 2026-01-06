@@ -63,7 +63,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
   // would still complete its computation and the result value
   // can still be useful because the next computation
   // might be able to use the memoization result).
-  const channel = yield actionChannel(
+  const channel = yield* actionChannel(
     [
       // These actions *might* affect the values of the parameters
       // that are given to getZoomLevelsFn. If they don't affect the
@@ -100,7 +100,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         ).affineMatrix,
       );
 
-      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
+      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
 
       const zoomLevels = yield* call(
         getZoomLevelsFn,

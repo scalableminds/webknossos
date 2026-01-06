@@ -356,7 +356,7 @@ class VolumeTracingService @Inject()(
           else {
             val mergedVolume = new MergedVolume(tracing.elementClass)
             for {
-              _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip))
+              _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addIdSetFromDataZip(dataZip))
               _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
                 mergedVolume.addFromDataZip(index, dataZip))
               _ <- Fox.fromBool(
@@ -745,7 +745,7 @@ class VolumeTracingService @Inject()(
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val segmentIdMapB =
-      if (indexB >= mergedVolumeStats.labelMaps.length) Map.empty[Long, Long] else mergedVolumeStats.labelMaps(indexB)
+      if (indexB >= mergedVolumeStats.idMaps.length) Map.empty[Long, Long] else mergedVolumeStats.idMaps(indexB)
     val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                                                      tracingB.userBoundingBox,
                                                                                      tracingA.userBoundingBoxes,
@@ -837,7 +837,7 @@ class VolumeTracingService @Inject()(
       val mergedVolume = new MergedVolume(elementClassProto)
 
       volumeLayers.foreach { volumeLayer =>
-        mergedVolume.addLabelSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
+        mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
       }
 
       volumeLayers.zipWithIndex.foreach {
@@ -917,7 +917,7 @@ class VolumeTracingService @Inject()(
         for {
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
           mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
-          _ <- mergedVolume.addLabelSetFromDataZip(zipFile)
+          _ <- mergedVolume.addIdSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)
           _ <- Fox.fromBool(

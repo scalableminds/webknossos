@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io.File
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{ByteUtils, Fox}
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, SegmentInteger, SegmentIntegerArray}
+import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 case class MergedVolumeStats(
     largestSegmentId: Long,
     sortedMagsList: Option[List[Vec3IntProto]], // None means do not touch the mag list
-    labelMaps: List[Map[Long, Long]],
+    idMaps: Seq[Map[Long, Long]],
     createdSegmentIndex: Boolean
 )
 
@@ -31,61 +31,62 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     with VolumeDataZipHelper
     with ProtoGeometryImplicits {
   private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
-  private val labelSets = mutable.ListBuffer[mutable.Set[SegmentInteger]]()
-  private val labelMaps = mutable.ListBuffer[mutable.HashMap[SegmentInteger, SegmentInteger]]()
-  var largestSegmentId: SegmentInteger = SegmentInteger.zeroFromElementClass(elementClass)
+  private val idSets = mutable.ListBuffer[mutable.Set[Long]]()
+  private var idMaps = Seq[(Array[Long], Array[Long])]()
+  var largestSegmentId: Long = 0
   private val bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(elementClass))
   private val elementsAreSigned = ElementClass.isSigned(ElementClass.fromProto(elementClass))
   private lazy val bucketScanner = new NativeBucketScanner()
 
-  def addLabelSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {
-    val importLabelSet: mutable.Set[SegmentInteger] = scala.collection.mutable.Set()
-    val unzipResult = withBucketsFromZip(zipFile) { (_, bytes) =>
-      val dataTyped =
-        SegmentIntegerArray.fromByteArray(bytes, elementClass)
-      val nonZeroData = SegmentIntegerArray.filterNonZero(dataTyped)
-      Fox.successful(importLabelSet ++= nonZeroData)
+  def addIdSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {
+    val importIdSet: mutable.Set[Long] = scala.collection.mutable.Set()
+    val unzipResult = withBucketsFromZip(zipFile) { (_, bucketBytes) =>
+      val bucketSegmentIds =
+        bucketScanner.collectSegmentIds(bucketBytes, bytesPerElement, elementsAreSigned, skipZeroes = true)
+      Fox.successful(importIdSet ++= bucketSegmentIds)
     }
     for {
       _ <- unzipResult
-      _ = addLabelSet(importLabelSet)
+      _ = addIdSet(importIdSet)
     } yield ()
   }
 
-  def addLabelSetFromBucketStream(bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                                  allowedMags: Set[Vec3Int]): Unit = {
-    val labelSet: mutable.Set[SegmentInteger] = scala.collection.mutable.Set()
+  def addIdSetFromBucketStream(bucketStream: Iterator[(BucketPosition, Array[Byte])],
+                               allowedMags: Set[Vec3Int]): Unit = {
+    val idSet: mutable.Set[Long] = scala.collection.mutable.Set()
     bucketStream.foreach {
       case (bucketPosition, data) =>
         if (allowedMags.contains(bucketPosition.mag)) {
-          val dataTyped = SegmentIntegerArray.fromByteArray(data, elementClass)
-          val nonZeroData: Array[SegmentInteger] = SegmentIntegerArray.filterNonZero(dataTyped)
-          labelSet ++= nonZeroData
+          val bucketSegmentIds =
+            bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
+          idSet ++= bucketSegmentIds
         }
     }
-    addLabelSet(labelSet)
+    addIdSet(idSet)
   }
 
-  private def addLabelSet(labelSet: mutable.Set[SegmentInteger]): Unit = labelSets += labelSet
+  private def addIdSet(idSet: mutable.Set[Long]): Unit = idSets += idSet
 
-  private def prepareLabelMaps(): Unit =
-    if (labelSets.isEmpty || (labelSets.length == 1 && initialLargestSegmentId == 0) || labelMaps.nonEmpty) {
+  private def prepareIdMaps(): Unit =
+    if (idSets.isEmpty || (idSets.length == 1 && initialLargestSegmentId == 0) || idMaps.nonEmpty) {
       ()
     } else {
-      var segmentId: SegmentInteger = SegmentInteger.zeroFromElementClass(elementClass)
+      val idMapsBuffer = mutable.ListBuffer[mutable.HashMap[Long, Long]]()
+      var currentSegmentId: Long = 0
       if (initialLargestSegmentId > 0) {
-        labelMaps += mutable.HashMap.empty[SegmentInteger, SegmentInteger]
-        segmentId = SegmentInteger.fromLongWithElementClass(initialLargestSegmentId, elementClass)
+        idMapsBuffer += mutable.HashMap.empty[Long, Long]
+        currentSegmentId = initialLargestSegmentId
       }
-      labelSets.foreach { labelSet =>
-        val labelMap = mutable.HashMap.empty[SegmentInteger, SegmentInteger]
-        labelSet.foreach { label =>
-          segmentId = segmentId.increment
-          labelMap += ((label, segmentId))
+      idSets.foreach { idSet =>
+        val idMap = mutable.HashMap.empty[Long, Long]
+        idSet.foreach { segmentId =>
+          currentSegmentId = currentSegmentId + 1
+          idMap += ((segmentId, currentSegmentId))
         }
-        labelMaps += labelMap
+        idMapsBuffer += idMap
       }
-      largestSegmentId = segmentId
+      largestSegmentId = currentSegmentId
+      idMaps = idMapsBuffer.toSeq.map(_.toArray.unzip)
     }
 
   def addFromBucketStream(sourceVolumeIndex: Int,
@@ -104,22 +105,23 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     }
 
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
-    prepareLabelMaps()
+    prepareIdMaps()
     if (mergedVolume.contains(bucketPosition)) {
       val previousBucketData = mergedVolume(bucketPosition)
-      val skipMapping = labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
+      val skipMapping = idMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
+      val idMap = idMaps(sourceVolumeIndex)
       bucketScanner.mergeVolumeBucketInPlace(previousBucketData,
                                              data,
                                              skipMapping,
-                                             Array[Long](0), // Todo labelMapSrc
-                                             Array[Long](0), // Todo labelMapDst
+                                             idMap._1,
+                                             idMap._2,
                                              bytesPerElement,
                                              elementsAreSigned)
     } else {
-      if (labelMaps.isEmpty) {
+      if (idMaps.isEmpty) {
         mergedVolume += ((bucketPosition, data))
       } else {
-        val labelMap = labelMaps(sourceVolumeIndex)
+        val idMap = idMaps(sourceVolumeIndex)
         val dataMapped = data /*bucketScanner.mapData(data,
                                                Array[Byte](0), // Todo labelMapSrc
                                                Array[Byte](0), // Todo labelMapDst,
@@ -144,19 +146,10 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
 
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
     MergedVolumeStats(
-      largestSegmentId.toLong,
+      largestSegmentId,
       Some(presentMags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
-      labelMapsToLongMaps,
+      Seq.empty, // TODO re-insert id maps,
       createdSegmentIndex
     )
-
-  private def labelMapsToLongMaps =
-    labelMaps.toList.map { segmentIntegerMap =>
-      val longMap = new mutable.HashMap[Long, Long]()
-      segmentIntegerMap.foreach { keyValueTuple =>
-        longMap += ((keyValueTuple._1.toLong, keyValueTuple._2.toLong))
-      }
-      longMap.toMap
-    }
 
 }

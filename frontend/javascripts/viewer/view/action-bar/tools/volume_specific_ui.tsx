@@ -354,6 +354,9 @@ export function QuickSelectSettingsPopover() {
             content={<QuickSelectControls />}
             onOpenChange={(open: boolean) => {
               dispatch(showQuickSelectSettingsAction(open));
+              if (!open) {
+                (document.activeElement as HTMLElement | null)?.blur();
+              }
             }}
           >
             {/* Using ToggleButton here causes issues with the Popover's internal

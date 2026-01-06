@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -27,6 +27,7 @@ object MergedVolumeStats {
 class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Long = 0)
     extends ByteUtils
     with VolumeDataZipHelper
+    with VolumeBucketCompression
     with ProtoGeometryImplicits {
   private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
   private val idSets = mutable.ListBuffer[mutable.Set[Long]]()
@@ -34,6 +35,8 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   var largestSegmentId: Long = 0
   private val bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(elementClass))
   private val elementsAreSigned = ElementClass.isSigned(ElementClass.fromProto(elementClass))
+  private lazy val expectedUncompressedBucketSize: Int =
+    ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
   private lazy val bucketScanner = new NativeBucketScanner()
 
   def addIdSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {
@@ -69,6 +72,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     if (idSets.isEmpty || (idSets.length == 1 && initialLargestSegmentId == 0) || idMaps.nonEmpty) {
       ()
     } else {
+      logger.info("preparing id maps...")
       val idMapsBuffer = mutable.ListBuffer[mutable.HashMap[Long, Long]]()
       var currentSegmentId: Long = 0
       if (initialLargestSegmentId > 0) {
@@ -108,13 +112,16 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
       val previousBucketData = mergedVolume(bucketPosition)
       val skipMapping = idMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
       val idMap = idMaps(sourceVolumeIndex)
-      bucketScanner.mergeVolumeBucketInPlace(previousBucketData,
+      val decompressed = decompressIfNeeded(previousBucketData, expectedUncompressedBucketSize, "")
+      bucketScanner.mergeVolumeBucketInPlace(decompressed,
                                              data,
                                              skipMapping,
                                              idMap._1,
                                              idMap._2,
                                              bytesPerElement,
                                              elementsAreSigned)
+      val compressed = compressVolumeBucket(decompressed, expectedUncompressedBucketSize)
+      mergedVolume.update(bucketPosition, compressed)
     } else {
       if (idMaps.isEmpty) {
         mergedVolume += ((bucketPosition, data))
@@ -128,8 +135,13 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
                                                idMap._2,
                                                bytesPerElement,
                                                elementsAreSigned)
-        mergedVolume += ((bucketPosition, dataMappedMutable))
+        mergedVolume += ((bucketPosition, compressVolumeBucket(dataMappedMutable, expectedUncompressedBucketSize)))
       }
+    }
+    if (mergedVolume.size % 1000 == 0) {
+      val mergedVolumeSize = mergedVolume.values.map(_.length).sum
+      logger.info(
+        s"mergedVolume now holds ${mergedVolume.size} buckets, estimating ${mergedVolume.size.toLong * bytesPerElement * DataLayer.bucketLength * DataLayer.bucketLength * DataLayer.bucketLength} bytes, actual size: $mergedVolumeSize.")
     }
   }
 

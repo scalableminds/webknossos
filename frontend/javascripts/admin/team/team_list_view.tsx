@@ -21,14 +21,30 @@ const { Search } = Input;
 export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   //used by user list page
   const tags = [
-    ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
+    ...(user.isOrganizationOwner
+      ? [
+          [
+            "Organization Owner",
+            "cyan",
+            "Organization owners have access to all teams and datasets.",
+          ],
+        ]
+      : []),
     ...(user.isGuest
       ? [["Guest User", "lime", "Guest users do not count against your organization’s user quota."]]
       : []),
     ...(user.isAdmin
-      ? [["Admin - Access to all Teams", "red"]]
+      ? [["Admin - Access to all Teams", "red", "Admins have access to all teams and datasets."]]
       : [
-          ...(user.isDatasetManager ? [["Dataset Manager - Edit all Datasets", "geekblue"]] : []),
+          ...(user.isDatasetManager
+            ? [
+                [
+                  "Dataset Manager - Edit all Datasets",
+                  "geekblue",
+                  "Dataset managers have access to all datasets.",
+                ],
+              ]
+            : []),
           ...user.teams.map((team) => {
             const roleName = team.isTeamManager ? "Team Manager" : "Member";
             return [`${team.name}: ${roleName}`, stringToColor(roleName)];
@@ -36,23 +52,15 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
         ]),
   ];
 
-  const renderTag = (text: string, color: string) => {
-    return (
-      <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }} variant="outlined">
+  const tagElements = tags.map(([text, color, tooltipText]) => (
+    <Tooltip title={tooltipText} key={`${text}_${user.id}`}>
+      <Tag key={`${text}_${user.id}`} color={color} variant="outlined">
         {text}
       </Tag>
-    );
-  };
+    </Tooltip>
+  ));
 
-  return tags.map(([text, color, tooltipText]) =>
-    tooltipText !== undefined ? (
-      <Tooltip title={tooltipText} key={`${text}_${user.id}`}>
-        {renderTag(text, color)}
-      </Tooltip>
-    ) : (
-      renderTag(text, color)
-    ),
-  );
+  return <Space wrap>{tagElements}</Space>;
 }
 
 export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {

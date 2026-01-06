@@ -323,7 +323,7 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
         dispatch(setActiveUserAction(newUserSync));
       }}
       description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
-      overlayStyle={{ maxWidth: 400 }}
+      styles={{ root: { maxWidth: 400 } }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
     >
       {children}
@@ -345,8 +345,8 @@ export function QuickSelectSettingsPopover() {
 
   return (
     <>
-      <Wrapper>
-        <FastTooltip title="Configure Quick Select" placement="right">
+      <FastTooltip title="Configure Quick Select" placement="right">
+        <Wrapper>
           <Popover
             trigger="click"
             placement="bottom"
@@ -366,8 +366,8 @@ export function QuickSelectSettingsPopover() {
               <SettingOutlined />
             </Button>
           </Popover>
-        </FastTooltip>
-      </Wrapper>
+        </Wrapper>
+      </FastTooltip>
     </>
   );
 }

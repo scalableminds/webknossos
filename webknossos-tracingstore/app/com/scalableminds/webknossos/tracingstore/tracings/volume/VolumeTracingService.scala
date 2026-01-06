@@ -834,7 +834,6 @@ class VolumeTracingService @Inject()(
         }
       }.getOrElse(Set.empty)
 
-      val beforeMerge = Instant.now
       val mergedVolume = new MergedVolume(elementClassProto)
 
       volumeLayers.foreach { volumeLayer =>
@@ -845,7 +844,6 @@ class VolumeTracingService @Inject()(
         case (volumeLayer, sourceVolumeIndex) =>
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
       }
-      Instant.logSince(beforeMerge, "pure volume merging")
       for {
         _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassProto)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",

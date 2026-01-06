@@ -345,32 +345,27 @@ export function QuickSelectSettingsPopover() {
 
   return (
     <>
-      <FastTooltip title="Configure Quick Select" placement="right">
-        <Wrapper>
-          <Popover
-            trigger="click"
-            placement="bottom"
-            open={areQuickSelectSettingsOpen}
-            content={<QuickSelectControls />}
-            onOpenChange={(open: boolean) => {
-              dispatch(showQuickSelectSettingsAction(open));
-              if (!open) {
-                (document.activeElement as HTMLElement | null)?.blur();
-              }
-            }}
+      <Wrapper>
+        <Popover
+          trigger="click"
+          placement="bottom"
+          open={areQuickSelectSettingsOpen}
+          content={<QuickSelectControls />}
+          onOpenChange={(open: boolean) => {
+            dispatch(showQuickSelectSettingsAction(open));
+          }}
+        >
+          <ToggleButton
+            title="Configure Quick Select"
+            tooltipPlacement="right"
+            className="narrow"
+            active={isQuickSelectActive || showNux}
+            style={{ marginLeft: 12, marginRight: 12 }}
           >
-            {/* Using ToggleButton here causes issues with the Popover's internal
-            focus management, so use a normal Button instead. */}
-            <Button
-              className="narrow"
-              type={isQuickSelectActive || showNux ? "primary" : "default"}
-              style={{ marginLeft: 12, marginRight: 12 }}
-            >
-              <SettingOutlined />
-            </Button>
-          </Popover>
-        </Wrapper>
-      </FastTooltip>
+            <SettingOutlined />
+          </ToggleButton>
+        </Popover>
+      </Wrapper>
     </>
   );
 }

@@ -1441,3 +1441,7 @@ export function stringToBoolean(value: string): boolean {
   if (normalized === "true") return true;
   return false;
 }
+
+export function isWindows(): boolean {
+  return navigator.platform.includes("Win");
+}

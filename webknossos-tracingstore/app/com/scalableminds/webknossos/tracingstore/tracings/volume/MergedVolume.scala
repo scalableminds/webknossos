@@ -149,7 +149,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     MergedVolumeStats(
       largestSegmentId,
       Some(presentMags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
-      Seq.empty, // TODO re-insert id maps,
+      idMaps.map(idMap => idMap._1.zip(idMap._2).toMap),
       createdSegmentIndex
     )
 

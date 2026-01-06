@@ -320,9 +320,9 @@ function* checkForAgglomerateSkeletonModification(
 function* pushPendingProofreadingOperationInfo(
   volumeTracingId: string,
   sourceInfo: ProofreadingActionInfo,
-  targetInfo: ProofreadingActionInfo,
+  targetInfo: ProofreadingActionInfo | null = null,
 ): Saga<void> {
-  // For proper post processing, it is necessary that sourceInfo & targetInfo
+  // For proper post processing, it is necessary that sourceInfo & targetInfo (does make sense in splitting operations)
   // have the correct agglomerate id values at the state on which this proofreading action
   // is applied to. Due to first applying new update actions from the backend, the agglomerate id
   // info might not be correct which is currently, stored in sourceInfo & targetInfo.
@@ -340,7 +340,7 @@ function* pushPendingProofreadingOperationInfo(
 }
 
 function* popPendingProofreadingOperationInfo(): Saga<
-  [ProofreadingActionInfo, ProofreadingActionInfo] | null
+  [ProofreadingActionInfo, ProofreadingActionInfo | null] | null
 > {
   // See comment above.
   // After the proofreading update actions were stored on the server, the updated source & targetInfo
@@ -509,7 +509,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   if (!idInfos) {
     return;
   }
-  const [sourceInfo, targetInfo] = idInfos;
+  let [sourceInfo, targetInfo] = idInfos;
   let sourceAgglomerateId = sourceInfo.agglomerateId;
   let targetAgglomerateId = targetInfo.agglomerateId;
 
@@ -574,8 +574,20 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
+  yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
+
   yield* put(pushSaveQueueTransaction(items));
   yield* call(syncWithBackend);
+  const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
+  if (proofreadingPostProcessingInfo) {
+    sourceInfo = { ...sourceInfo, agglomerateId: proofreadingPostProcessingInfo[0].agglomerateId };
+    if (proofreadingPostProcessingInfo[1]) {
+      targetInfo = {
+        ...targetInfo,
+        agglomerateId: proofreadingPostProcessingInfo[1].agglomerateId,
+      };
+    }
+  }
 
   activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
@@ -798,8 +810,17 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     return;
   }
 
+  // Only one info object is needed as the min cut is performed on only one
+  const dummySourceInfo = { agglomerateId, unmappedId: partitions[1][0] };
+
+  yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, dummySourceInfo);
+
   yield* put(pushSaveQueueTransaction(items));
   yield* call(syncWithBackend);
+  const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
+  const agglomerateIdBeforeSplit = proofreadingPostProcessingInfo
+    ? proofreadingPostProcessingInfo[0].agglomerateId
+    : agglomerateId;
 
   yield* put(resetMultiCutToolPartitionsAction());
 
@@ -900,12 +921,12 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
-      agglomerateId: agglomerateId,
+      agglomerateId: agglomerateIdBeforeSplit,
       newAgglomerateId: newAgglomerateIdFromPartition1,
       nodePosition: meshLoadingPositionForPartition1,
     },
     {
-      agglomerateId: agglomerateId,
+      agglomerateId: agglomerateIdBeforeSplit,
       newAgglomerateId: newAgglomerateIdFromPartition2,
       nodePosition: meshLoadingPositionForPartition2,
     },
@@ -1129,7 +1150,13 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* call(syncWithBackend);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
   if (proofreadingPostProcessingInfo) {
-    [sourceInfo, targetInfo] = proofreadingPostProcessingInfo;
+    sourceInfo = { ...sourceInfo, agglomerateId: proofreadingPostProcessingInfo[0].agglomerateId };
+    if (proofreadingPostProcessingInfo[1]) {
+      targetInfo = {
+        ...targetInfo,
+        agglomerateId: proofreadingPostProcessingInfo[1].agglomerateId,
+      };
+    }
   }
 
   if (action.type === "MIN_CUT_AGGLOMERATE" && sourceAgglomerateId !== targetAgglomerateId) {
@@ -1330,8 +1357,16 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     return;
   }
 
+  // Push same info twice as the interface currently, required source & target but cut from all neighbors only has one.
+  yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, idInfos[0], idInfos[0]);
+
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
+
+  const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
+  const targetAgglomerateIdBeforeSplit = proofreadingPostProcessingInfo
+    ? proofreadingPostProcessingInfo[0].agglomerateId
+    : targetAgglomerateId;
 
   // Get active mapping after saving and thus syncing with the backend as this might have changed the mapping.
   const activeMapping = yield* select(
@@ -1400,12 +1435,12 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   /* Reload meshes */
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
-      agglomerateId: idInfos[0].agglomerateId,
+      agglomerateId: targetAgglomerateIdBeforeSplit,
       newAgglomerateId: newTargetAgglomerateId,
       nodePosition: targetPosition,
     },
     ...neighborInfo.neighbors.map((neighbor, idx) => ({
-      agglomerateId: idInfos[0].agglomerateId,
+      agglomerateId: targetAgglomerateIdBeforeSplit,
       newAgglomerateId: newNeighborAgglomerateIds[idx],
       nodePosition: neighbor.position,
     })),
@@ -1603,25 +1638,13 @@ export function* refreshAffectedMeshes(
   const removedIds = new Set();
   const newlyLoadedIds = new Set();
   const meshLoadingEffects = [];
-  const annotationVersion = yield* select((state) => state.annotation.version);
-  const meshInfos =
-    (yield* select((state) => {
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-      return state.localSegmentationData[layerName]?.meshes?.[additionalCoordKey];
-    })) ?? {};
   for (const item of items) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
-    const versionOfNewAgglomerateId = meshInfos[item.newAgglomerateId]?.syncedWithVersion;
-    const versionOfOldAgglomerateId = meshInfos[item.agglomerateId]?.syncedWithVersion;
-    if (!removedIds.has(item.agglomerateId) && versionOfOldAgglomerateId !== annotationVersion) {
+    if (!removedIds.has(item.agglomerateId)) {
       yield* put(removeMeshAction(layerName, Number(item.agglomerateId)));
       removedIds.add(item.agglomerateId);
     }
-    if (
-      !newlyLoadedIds.has(item.newAgglomerateId) &&
-      versionOfNewAgglomerateId !== annotationVersion
-    ) {
+    if (!newlyLoadedIds.has(item.newAgglomerateId)) {
       meshLoadingEffects.push(
         call(
           loadCoarseMesh,

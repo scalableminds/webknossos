@@ -1,8 +1,7 @@
-import { call, put, take } from "redux-saga/effects";
+import { call, put } from "redux-saga/effects";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
-import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   setActiveCellAction,
@@ -19,6 +18,7 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import {
+  loadAgglomerateSkeletons,
   mockEdgesForAgglomerateMinCut,
   performMergeTreesProofreading,
   performMinCutWithNodesProofreading,
@@ -52,12 +52,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield makeMappingEditableHelper();
 
       // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-      yield call(loadAgglomerateSkeletonAtPosition, [1, 1, 1]);
-      // Wait until skeleton saga has loaded the skeleton.
-      yield take("ADD_TREES_AND_GROUPS");
-      yield call(loadAgglomerateSkeletonAtPosition, [4, 4, 4]);
-      // Wait until skeleton saga has loaded the skeleton.
-      yield take("ADD_TREES_AND_GROUPS");
+      // Load agglomerate skeleton for agglomerate id 1.
+      yield call(loadAgglomerateSkeletons, context, [1, 4], false, false);
       const skeletonWithAgglomerateTrees: SkeletonTracing = yield select(
         (state: WebknossosState) => state.annotation.skeleton,
       );

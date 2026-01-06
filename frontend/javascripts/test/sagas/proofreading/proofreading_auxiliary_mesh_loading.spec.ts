@@ -813,7 +813,6 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   }, 8000);
 
-  // TODOM!!!!!!!
   it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);

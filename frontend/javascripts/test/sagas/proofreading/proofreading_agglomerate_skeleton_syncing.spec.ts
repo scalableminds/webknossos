@@ -60,7 +60,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
       const versionBeforeSkeletonLoading = yield select((state) => state.annotation.version);
-      yield* fork(loadAgglomerateSkeletons, context, [1], false, true);
+      yield fork(loadAgglomerateSkeletons, context, [1], false, true);
       // Test whether
       // 1. action to load agglomerate skeleton is dispatched.
       // 2. the annotation mutex is properly fetched and kept.
@@ -115,7 +115,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
+        yield loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction([4, 4, 4], 1));
@@ -171,7 +171,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-        yield* loadAgglomerateSkeletons(context, [6], true, othersMayEdit);
+        yield loadAgglomerateSkeletons(context, [6], true, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction([4, 4, 4], 1));

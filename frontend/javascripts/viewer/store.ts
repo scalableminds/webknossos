@@ -464,12 +464,12 @@ export type RebaseRelevantAnnotationState = {
 export type ProofreadingActionInfo = {
   agglomerateId: number;
   unmappedId: number;
-  position: Vector3;
+  position?: Vector3;
 };
 
 export type ProofreadingPostProcessingInfo = {
   readonly sourceInfo: Readonly<ProofreadingActionInfo>;
-  readonly targetInfo: Readonly<ProofreadingActionInfo>;
+  readonly targetInfo: Readonly<ProofreadingActionInfo> | null;
   readonly tracingId: string;
 };
 export type SaveState = {

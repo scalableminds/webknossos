@@ -231,7 +231,7 @@ export function* performMergeTreesProofreading(
   );
   expect(mapping1).toEqual(initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
-  const agglomerateTrees = yield* loadAgglomerateSkeletons(
+  const agglomerateTrees = yield loadAgglomerateSkeletons(
     context,
     [1, 4],
     shouldSaveAfterLoadingTrees,
@@ -278,7 +278,7 @@ export function* performSplitTreesProofreading(
   expect(mapping1).toEqual(initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-  const agglomerateTrees = yield* loadAgglomerateSkeletons(context, [1], true, true);
+  const agglomerateTrees = yield loadAgglomerateSkeletons(context, [1], true, true);
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(5);
   const targetNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(6);
   yield put(deleteEdgeAction(sourceNode.id, targetNode.id));
@@ -315,10 +315,8 @@ export function* performMinCutWithNodesProofreading(
   );
   expect(mapping1).toEqual(initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
-  // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
-  yield call(loadAgglomerateSkeletonAtPosition, [3, 3, 3]);
-  // Wait until skeleton saga has loaded the skeleton.
-  yield take("ADD_TREES_AND_GROUPS");
+  // Load agglomerate skeleton for agglomerate id 1.
+  yield call(loadAgglomerateSkeletons, context, [1], true, true);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   const skeletonWithAgglomerateTrees: SkeletonTracing = yield select(
     (state: WebknossosState) => state.annotation.skeleton,

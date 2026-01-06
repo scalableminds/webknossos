@@ -757,11 +757,11 @@ export type APIFeatureToggles = {
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
   readonly voxelyticsEnabled: boolean;
-  readonly neuronInferralCostPerGVx: number;
-  readonly mitochondriaInferralCostPerGVx: number;
-  readonly nucleiInferralCostPerGVx: number;
-  readonly instancesInferralCostPerGVx: number;
-  readonly alignmentCostPerGVx: number;
+  readonly neuronInferralCostPerGVxInMillis: number;
+  readonly nucleiInferralCostPerGVxInMillis: number;
+  readonly mitochondriaInferralCostPerGVxInMillis: number;
+  readonly instancesInferralCostPerGVxInMillis: number;
+  readonly alignmentCostPerGVxInMillis: number;
   readonly costPerCreditInEuro: number;
   readonly costPerCreditInDollar: number;
   readonly publicDemoDatasetUrl: string;

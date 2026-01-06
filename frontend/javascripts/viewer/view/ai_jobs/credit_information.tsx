@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type JobCreditCostInfo, getJobCreditCost } from "admin/rest_api";
 import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
 import features from "features";
-import { formatCreditsString, formatVoxels } from "libs/format_utils";
+import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
@@ -116,13 +116,13 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   startButtonTitle,
   areParametersValid,
 }) => {
-  const jobTypeToCreditCostPerGVx: Partial<Record<APIJobCommand, number>> = useMemo(
+  const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
-      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVx,
-      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostPerGVx,
-      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
-      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostPerGVx,
-      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
+      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVxInMillis,
+      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostPerGVxInMillis,
+      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVxInMillis,
+      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostPerGVxInMillis,
+      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostPerGVxInMillis,
       [APIJobCommand.TRAIN_INSTANCE_MODEL]: 0,
       [APIJobCommand.TRAIN_NEURON_MODEL]: 0,
     }),
@@ -130,7 +130,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   );
 
   const organizationCredits = useWkSelector(
-    (state) => state.activeOrganization?.creditBalance || "0",
+    (state) => state.activeOrganization?.creditBalanceInMillis || 0,
   );
 
   const boundingBoxVolume = useMemo(() => {
@@ -161,7 +161,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
     return "-";
   }, [selectedBoundingBox, boundingBoxVolume]);
 
-  const costInCredits = jobCreditCostInfo?.costInCredits;
+  const costInCredits = jobCreditCostInfo?.costInMilliCredits;
 
   return (
     <Card
@@ -179,7 +179,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
         </Col>
         <Col>
           <Title level={2} style={{ margin: 0 }}>
-            {formatCreditsString(organizationCredits)}
+            {formatMilliCreditsString(organizationCredits)}
           </Title>
         </Col>
       </Row>
@@ -206,7 +206,11 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           <Text>Credits per Gigavoxel:</Text>
         </Col>
         <Col>
-          <Text strong>{selectedJobType ? jobTypeToCreditCostPerGVx[selectedJobType] : "-"}</Text>
+          <Text strong>
+            {selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType]
+              ? formatMilliCreditsString(jobTypeToCreditCostPerGVxInMillis[selectedJobType])
+              : "-"}
+          </Text>
         </Col>
       </Row>
       <hr style={{ margin: "24px 0" }} />
@@ -218,7 +222,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           {isFetching && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
-            <Text strong>{costInCredits ? formatCreditsString(costInCredits) : "-"}</Text>
+            <Text strong>{costInCredits ? formatMilliCreditsString(costInCredits) : "-"}</Text>
           )}
         </Col>
       </Row>

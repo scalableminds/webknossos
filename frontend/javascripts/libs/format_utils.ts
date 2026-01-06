@@ -575,9 +575,10 @@ export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
 }
 
 export function formatMilliCreditsString(credits: number): string {
-  const millis = Math.round(credits % 1000);
+  const millis = Math.round(credits % 1000).toString();
+  const paddingZeros = "0".repeat(3 - millis.length);
   const fullCredits = Math.round(credits / 1000);
-  return `${fullCredits}.${millis}`;
+  return `${fullCredits}.${paddingZeros}${millis}`;
 }
 
 export function formatCurrency(amount: number, currency: string): string {

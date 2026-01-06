@@ -1,4 +1,3 @@
-import { CloseCircleOutlined } from "@ant-design/icons";
 import { Collapse, notification } from "antd";
 import _ from "lodash";
 import type React from "react";
@@ -137,10 +136,9 @@ const Toast = {
       toastMessage = message;
     }
 
-    const timeOutInSeconds = 0; // timeout / 1000;
+    const timeOutInSeconds = timeout / 1000;
     const useManualTimeout = !sticky && key != null;
     let toastConfig = {
-      icon: undefined,
       key,
       duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
       title: toastMessage,
@@ -148,14 +146,7 @@ const Toast = {
       className: config.className || "",
       onClose,
       actions: config.customFooter,
-      sticky: true,
     };
-
-    if (type === "error") {
-      toastConfig = Object.assign(toastConfig, {
-        icon: <CloseCircleOutlined style={{ color: "var(--ant-color-error)" }} />,
-      });
-    }
 
     // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
     // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.

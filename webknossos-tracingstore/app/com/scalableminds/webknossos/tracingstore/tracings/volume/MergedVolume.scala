@@ -122,12 +122,15 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
         mergedVolume += ((bucketPosition, data))
       } else {
         val idMap = idMaps(sourceVolumeIndex)
-        val dataMapped = data /*bucketScanner.mapData(data,
-                                               Array[Byte](0), // Todo labelMapSrc
-                                               Array[Byte](0), // Todo labelMapDst,
+        val dataMappedMutable = new Array[Byte](data.length)
+        bucketScanner.mergeVolumeBucketInPlace(dataMappedMutable,
+                                               data,
+                                               skipMapping = false,
+                                               idMap._1,
+                                               idMap._2,
                                                bytesPerElement,
-                                               elementsAreSigned) // TODO re-use applying agglomerate cpp function? */
-        mergedVolume += ((bucketPosition, dataMapped))
+                                               elementsAreSigned)
+        mergedVolume += ((bucketPosition, dataMappedMutable))
       }
     }
   }

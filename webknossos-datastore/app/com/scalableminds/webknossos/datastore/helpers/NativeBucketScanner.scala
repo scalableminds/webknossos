@@ -29,13 +29,13 @@ class NativeBucketScanner() {
                                        existingBBoxBottomRightY: Int,
                                        existingBBoxBottomRightZ: Int): Array[Int]
 
-  @native def mergeVolumeBucket(previousBucketBytes: Array[Byte],
-                                bucketBytesToMergeIn: Array[Byte],
-                                skipMapping: Boolean,
-                                labelMapSrc: Array[Byte],
-                                labelMapDst: Array[Byte],
-                                bytesPerElement: Int,
-                                elementsAreSigned: Boolean): Array[Byte]
+  @native def mergeVolumeBucketInPlace(bucketBytesMutable: Array[Byte],
+                                       incomingBucketBytes: Array[Byte],
+                                       skipMapping: Boolean,
+                                       idMappingSrc: Array[Long],
+                                       idMappingDst: Array[Long],
+                                       bytesPerElement: Int,
+                                       elementsAreSigned: Boolean): Unit
 
   /*
   dataTyped.zipWithIndex.foreach {

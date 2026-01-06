@@ -53,8 +53,8 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   ];
 
   const tagElements = tags.map(([text, color, tooltipText]) => (
-    <Tooltip title={tooltipText} key={`${text}_${user.id}`}>
-      <Tag key={`${text}_${user.id}`} color={color} variant="outlined">
+    <Tooltip title={tooltipText} key={`tooltip-${text}_${user.id}`}>
+      <Tag key={`tag-${text}_${user.id}`} color={color} variant="outlined">
         {text}
       </Tag>
     </Tooltip>

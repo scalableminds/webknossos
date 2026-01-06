@@ -96,21 +96,16 @@ const Toast = {
       <div>
         {title}
         <Collapse
-          className="collapsibleToastDetails"
           bordered={false}
           ghost
           style={{
             marginLeft: -16,
           }}
+          size="small"
           items={[
             {
               key: "toast-panel",
               label: "Show more information",
-              style: {
-                background: "transparent",
-                border: 0,
-                fontSize: 10,
-              },
               children: details,
             },
           ]}
@@ -142,7 +137,7 @@ const Toast = {
       toastMessage = message;
     }
 
-    const timeOutInSeconds = timeout / 1000;
+    const timeOutInSeconds = 0; // timeout / 1000;
     const useManualTimeout = !sticky && key != null;
     let toastConfig = {
       icon: undefined,
@@ -153,11 +148,12 @@ const Toast = {
       className: config.className || "",
       onClose,
       actions: config.customFooter,
+      sticky: true,
     };
 
     if (type === "error") {
       toastConfig = Object.assign(toastConfig, {
-        icon: <CloseCircleOutlined />,
+        icon: <CloseCircleOutlined style={{ color: "var(--ant-color-error)" }} />,
       });
     }
 

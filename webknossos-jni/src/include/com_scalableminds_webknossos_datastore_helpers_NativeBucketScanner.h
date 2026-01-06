@@ -33,10 +33,10 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
 
 /*
  * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
- * Method:     mergeVolumeBucketInPlace
- * Signature:  ([B[BZ[B[BIZ)V
+ * Method:     mergeVolumeBucket
+ * Signature:  ([B[BZ[B[BIZ)[B
  */
-JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_mergeVolumeBucketInPlace
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_mergeVolumeBucket
   (JNIEnv *, jobject, jbyteArray, jbyteArray, jboolean, jbyteArray, jbyteArray, jint, jboolean);
 
 #ifdef __cplusplus

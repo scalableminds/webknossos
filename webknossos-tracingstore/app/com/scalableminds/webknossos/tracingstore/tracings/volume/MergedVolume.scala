@@ -106,16 +106,16 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
     prepareLabelMaps()
     if (mergedVolume.contains(bucketPosition)) {
-      val mutableBucketData = mergedVolume(bucketPosition)
+      val previousBucketData = mergedVolume(bucketPosition)
       val skipMapping = labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
-      bucketScanner.mergeVolumeBucketInPlace(mutableBucketData,
-                                             data,
-                                             skipMapping,
-                                             Array[Byte](0), // Todo labelMapSrc
-                                             Array[Byte](0), // Todo labelMapDst
-                                             bytesPerElement,
-                                             elementsAreSigned)
-      mergedVolume += ((bucketPosition, mutableBucketData))
+      val mergedBucketData = bucketScanner.mergeVolumeBucket(previousBucketData,
+                                                             data,
+                                                             skipMapping,
+                                                             Array[Byte](0), // Todo labelMapSrc
+                                                             Array[Byte](0), // Todo labelMapDst
+                                                             bytesPerElement,
+                                                             elementsAreSigned)
+      mergedVolume += ((bucketPosition, mergedBucketData))
     } else {
       if (labelMaps.isEmpty) {
         mergedVolume += ((bucketPosition, data))

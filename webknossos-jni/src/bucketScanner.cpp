@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <unordered_set>
 #include <stdint.h>
+#include <cstring>
 
 uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
@@ -168,4 +169,62 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
          throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
          return nullptr;
      }
+}
+
+void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, const int bytesPerElement) {
+    jbyte *currentPos = bucketBytes + (index * bytesPerElement);
+
+    // TODO signed variant
+    switch (bytesPerElement) {
+        case 1:
+            *reinterpret_cast<uint8_t *>(currentPos) = static_cast<uint8_t>(segmentId);
+            break;
+        case 2:
+            *reinterpret_cast<uint16_t *>(currentPos) = static_cast<uint16_t>(segmentId);
+            break;
+        case 4:
+            *reinterpret_cast<uint32_t *>(currentPos) = static_cast<uint32_t>(segmentId);
+            break;
+        case 8:
+            *reinterpret_cast<uint64_t *>(currentPos) = static_cast<uint64_t>(segmentId);
+            break;
+        default:
+            throw std::invalid_argument("Cannot write segment value, unsupported bytesPerElement value");
+    }
+}
+
+
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_mergeVolumeBucket
+    (JNIEnv * env, jobject instance, jbyteArray previousBucketBytesJavaArray, jbyteArray incomingBucketBytesJavaArray,
+      jboolean skipMapping, jbyteArray labelMapSrcJavaArray, jbyteArray labelMapDstJavaArray, jint bytesPerElement, jboolean elementsAreSigned) {
+
+    jsize bucketLengthBytes = env -> GetArrayLength(previousBucketBytesJavaArray);
+    jbyte * previousBucketBytes = env -> GetByteArrayElements(previousBucketBytesJavaArray, NULL);
+    jbyte * incomingBucketBytes = env -> GetByteArrayElements(incomingBucketBytesJavaArray, NULL);
+    jsize mapSize = env -> GetArrayLength(labelMapSrcJavaArray);
+    jbyte * labelMapSrc = env -> GetByteArrayElements(labelMapSrcJavaArray, NULL);
+    jbyte * labelMapDst = env -> GetByteArrayElements(labelMapDstJavaArray, NULL);
+
+    const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
+
+    jbyteArray outputJavaArray = env->NewByteArray(bucketLengthBytes);
+    jbyte *outputJBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
+    // TODO also try in-place, saving the memcpy
+    memcpy(outputJBytes, previousBucketBytes, bucketLengthBytes);
+
+    for (size_t i = 0; i < elementCount; ++i) {
+        uint64_t segmentId = segmentIdAtIndex(incomingBucketBytes, i, bytesPerElement, false);
+        if (segmentId == 0) {
+            continue;
+        }
+        writeSegmentIdAtIndex(outputJBytes, i, segmentId, bytesPerElement);
+    }
+
+    env->ReleaseByteArrayElements(previousBucketBytesJavaArray, previousBucketBytes, 0);
+    env->ReleaseByteArrayElements(labelMapSrcJavaArray, labelMapSrc, 0);
+    env->ReleaseByteArrayElements(labelMapDstJavaArray, labelMapDst, 0);
+
+    env->ReleaseByteArrayElements(outputJavaArray, outputJBytes, JNI_COMMIT);
+
+    return outputJavaArray;
 }

@@ -4,7 +4,6 @@ import java.io.File
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
@@ -26,8 +25,7 @@ object MergedVolumeStats {
 }
 
 class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Long = 0)
-    extends DataConverter
-    with ByteUtils
+    extends ByteUtils
     with VolumeDataZipHelper
     with ProtoGeometryImplicits {
   private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]

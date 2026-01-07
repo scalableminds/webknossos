@@ -81,8 +81,9 @@ function getVolumeTracingMags(
   const volumeLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
   const volumeTracingMags: Record<string, { mag: Vector3 }[]> = {};
 
-  volumeServerTracings.forEach((tracing, index) => {
-    const layer = volumeLayers[index];
+  volumeServerTracings.forEach((tracing) => {
+    const layer = volumeLayers.find((l) => l.tracingId === tracing.id);
+
     if (layer) {
       volumeTracingMags[layer.name] = tracing.mags
         ? tracing.mags.map((mag) => ({ mag: Utils.point3ToVector3(mag) }))

@@ -13,27 +13,21 @@ const LAST_NAME_FIELD_KEY = "lastName";
 function ChangeUsernameView({
   onClose,
   setEditedUser,
-  user: user,
-}: { onClose: () => void; setEditedUser: (updatedUser: APIUser) => void; user: APIUser | null }) {
+  user,
+}: { onClose: () => void; setEditedUser: (updatedUser: APIUser) => void; user: APIUser }) {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
 
-  if (user == null) {
-    throw new Error("No user to edit");
-  }
-
   async function changeName(newFirstName: string, newLastName: string) {
-    const newUser = Object.assign({}, user, {
+    const newUser = {
+      ...user,
       firstName: newFirstName,
       lastName: newLastName,
-    });
+    };
     return updateUser(newUser);
   }
 
   async function onFinish() {
-    if (user == null) {
-      throw new Error("No user to edit");
-    }
     const hasNameBeenChanged =
       form.isFieldTouched(FIRST_NAME_FIELD_KEY) || form.isFieldTouched(LAST_NAME_FIELD_KEY);
     if (hasNameBeenChanged) {
@@ -64,6 +58,11 @@ function ChangeUsernameView({
     return Promise.resolve();
   };
 
+  const characterPattern = {
+    pattern: /^[a-zA-ZÀ-ÿ'-]+$/,
+    message: "Name can only contain letters, hyphens and apostrophes",
+  };
+
   return (
     <Form onFinish={onFinish} form={form}>
       <FormItem
@@ -71,6 +70,7 @@ function ChangeUsernameView({
         name={FIRST_NAME_FIELD_KEY}
         rules={[
           { validator: (rule, value) => validateNameNotEmpty(rule, value, FIRST_NAME_FIELD_KEY) },
+          characterPattern,
         ]}
       >
         <Input
@@ -90,10 +90,7 @@ function ChangeUsernameView({
         name={LAST_NAME_FIELD_KEY}
         rules={[
           { validator: (rule, value) => validateNameNotEmpty(rule, value, LAST_NAME_FIELD_KEY) },
-          {
-            pattern: /^[a-zA-ZÀ-ÿ'-]+$/,
-            message: "Name can only contain letters, hyphens and apostrophes",
-          },
+          characterPattern,
         ]}
       >
         <Input

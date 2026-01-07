@@ -323,26 +323,28 @@ function UserListView() {
               setIsInviteModalOpen(visible);
             }}
           />
-          <Modal
-            destroyOnHidden
-            title="Change Name"
-            open={editNameModalOpen}
-            footer={null}
-            onCancel={() => setEditNameModalOpen(false)}
-          >
-            <ChangeUsernameView
-              onClose={() => setEditNameModalOpen(false)}
-              user={userToEdit}
-              setEditedUser={(editedUser: APIUser) => {
-                setUsers((users) =>
-                  users.map((user) => (editedUser.id === user.id ? editedUser : user)),
-                );
-                if (activeUser.id === editedUser.id) {
-                  Store.dispatch(setActiveUserAction(editedUser));
-                }
-              }}
-            />
-          </Modal>
+          {userToEdit != null ? (
+            <Modal
+              destroyOnHidden
+              title="Change Name"
+              open={editNameModalOpen}
+              footer={null}
+              onCancel={() => setEditNameModalOpen(false)}
+            >
+              <ChangeUsernameView
+                onClose={() => setEditNameModalOpen(false)}
+                user={userToEdit}
+                setEditedUser={(editedUser: APIUser) => {
+                  setUsers((users) =>
+                    users.map((user) => (editedUser.id === user.id ? editedUser : user)),
+                  );
+                  if (activeUser.id === editedUser.id) {
+                    Store.dispatch(setActiveUserAction(editedUser));
+                  }
+                }}
+              />
+            </Modal>
+          ) : null}
         </Space>
         <Search
           style={{
@@ -549,25 +551,21 @@ function UserListView() {
             width={175}
             fixed="right"
             render={(__, user: APIUser) => (
-              <span>
+              <Flex vertical align="start">
                 <Link to={`/users/${user.id}/details`}>
                   <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
-                <br />
                 {mayChangeNameForUsers ? (
-                  <>
-                    <LinkButton
-                      icon={<UserOutlined />}
-                      onClick={(event) => {
-                        setUserToEdit(user);
-                        setEditNameModalOpen(true);
-                        event.stopPropagation();
-                      }}
-                    >
-                      Change Name
-                    </LinkButton>
-                    <br />
-                  </>
+                  <LinkButton
+                    icon={<UserOutlined />}
+                    onClick={(event) => {
+                      setUserToEdit(user);
+                      setEditNameModalOpen(true);
+                      event.stopPropagation();
+                    }}
+                  >
+                    Change Name
+                  </LinkButton>
                 ) : null}
                 {user.isActive ? (
                   activeUser.isAdmin ? (
@@ -592,7 +590,7 @@ function UserListView() {
                     Activate User
                   </LinkButton>
                 )}
-              </span>
+              </Flex>
             )}
           />
         </Table>

@@ -356,6 +356,20 @@ CREATE TABLE webknossos.organizations(
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
+CREATE TABLE webknossos.organization_plan_updates(
+  _organization TEXT NOT NULL,
+  description TEXT DEFAULT NULL,
+  pricingPlan webknossos.PRICING_PLANS DEFAULT NULL,
+  paidUntil TIMESTAMPTZ DEFAULT NULL,
+  paidUntilChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
+  includedUsers INTEGER DEFAULT NULL,
+  includedUsersChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
+  includedStorage BIGINT DEFAULT NULL,
+  includedStorageChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT validOrganizationId CHECK (_organization ~* '^[A-Za-z0-9\-_. ]+$')
+);
+
 CREATE TABLE webknossos.organization_usedStorage_mags (
     _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
     layerName TEXT NOT NULL,
@@ -398,7 +412,7 @@ CREATE TABLE webknossos.credit_transactions (
     _organization TEXT NOT NULL,
     _related_transaction TEXT CONSTRAINT _related_transaction_objectId CHECK (_related_transaction ~ '^[0-9a-f]{24}$') DEFAULT NULL,
     _paid_job TEXT CONSTRAINT _paid_job_objectId CHECK (_paid_job ~ '^[0-9a-f]{24}$') DEFAULT NULL,
-    credit_delta DECIMAL(14, 3) NOT NULL,
+    milli_credit_delta INT NOT NULL,
     comment TEXT NOT NULL,
     -- The state of the transaction.
     transaction_state webknossos.credit_transaction_state NOT NULL,
@@ -437,6 +451,13 @@ CREATE TABLE webknossos.user_team_roles(
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   isTeamManager BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_user, _team)
+);
+
+CREATE TABLE webknossos.invite_team_roles(
+  _invite TEXT CONSTRAINT _invite_objectId CHECK (_invite ~ '^[0-9a-f]{24}$') NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
+  isTeamManager BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (_invite, _team)
 );
 
 CREATE TABLE webknossos.user_experiences(
@@ -554,6 +575,7 @@ CREATE TABLE webknossos.jobs(
   retriedBySuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
+  lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -564,6 +586,8 @@ CREATE TABLE webknossos.invites(
   tokenValue Text NOT NULL,
   _organization TEXT NOT NULL,
   autoActivate BOOLEAN NOT NULL,
+  isAdmin BOOLEAN NOT NULL DEFAULT FALSE,
+  isDatasetManager BOOLEAN NOT NULL DEFAULT FALSE,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
@@ -903,6 +927,9 @@ ALTER TABLE webknossos.users
 ALTER TABLE webknossos.user_team_roles
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.invite_team_roles
+  ADD CONSTRAINT invite_ref FOREIGN KEY(_invite) REFERENCES webknossos.invites(_id) ON DELETE CASCADE DEFERRABLE,
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.user_experiences
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.user_datasetConfigurations
@@ -937,6 +964,8 @@ ALTER TABLE webknossos.organization_usedStorage_mags
   ADD CONSTRAINT mags_ref FOREIGN KEY (_dataset, layerName, mag) REFERENCES webknossos.dataset_mags(_dataset, dataLayerName, mag) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.organization_usedStorage_attachments
   ADD CONSTRAINT attachments_ref FOREIGN KEY (_dataset, layerName, name, type) REFERENCES webknossos.dataset_layer_attachments(_dataset, layerName, name, type) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organization_plan_updates
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_coordinateTransformations
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataset_layer_additionalAxes
@@ -1055,14 +1084,14 @@ AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
 CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
-  BEGIN
-    -- Assert that the new balance is non-negative
-    ASSERT (SELECT COALESCE(SUM(credit_delta), 0) + COALESCE(NEW.credit_delta, 0)
+BEGIN
+  -- Assert that the new balance is non-negative
+    ASSERT (SELECT COALESCE(SUM(milli_credit_delta), 0) + COALESCE(NEW.milli_credit_delta, 0)
             FROM webknossos.credit_transactions
             WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
     -- Assertion passed, transaction can go ahead
-    RETURN NEW;
-  END;
+  RETURN NEW;
+END;
 $$ LANGUAGE plpgsql;
 
 
@@ -1097,7 +1126,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL) RETURNS VOID AS $$
+CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_milli_credits_amount INT) RETURNS VOID AS $$
 DECLARE
     organization_id TEXT;
     next_month_first_day DATE;
@@ -1119,7 +1148,7 @@ BEGIN
             INSERT INTO webknossos.credit_transactions
                 (_id, _organization, credit_delta, comment, transaction_state, credit_state, expiration_date)
             VALUES
-                (webknossos.generate_object_id(), organization_id, free_credits_amount,
+                (webknossos.generate_object_id(), organization_id, free_milli_credits_amount,
                  'Free credits for this month', 'Complete', 'Pending', next_month_first_day);
         END IF;
     END LOOP;

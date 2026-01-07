@@ -1,6 +1,7 @@
 import { withoutValues } from "libs/utils";
 import _ from "lodash";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
+import { updateNodePredicate } from "viewer/model/sagas/skeletontracing_saga";
 import type {
   CreateEdgeUpdateAction,
   CreateNodeUpdateAction,
@@ -137,7 +138,7 @@ function compactMovedNodesAndEdges(
         const newNode = tracing.trees.getNullable(newTreeId)?.nodes.getNullable(nodeId);
         const oldNode = prevTracing.trees.getNullable(oldTreeId)?.nodes.getNullable(nodeId);
 
-        if (newNode !== oldNode && newNode != null) {
+        if (newNode != null && (oldNode == null || updateNodePredicate(oldNode, newNode))) {
           compactedActions.push(updateNode(newTreeId, newNode, actionTracingId));
         }
       }

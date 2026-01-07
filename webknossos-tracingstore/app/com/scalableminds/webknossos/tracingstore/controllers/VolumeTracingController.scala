@@ -323,7 +323,8 @@ class VolumeTracingController @Inject()(
                                                             segmentId,
                                                             request.body.mag,
                                                             mappingName,
-                                                            request.body.additionalCoordinates)
+                                                            request.body.additionalCoordinates,
+                                                            request.body.editableMappingVersion)
           }
         } yield Ok(Json.toJson(segmentVolumes))
       }
@@ -342,7 +343,8 @@ class VolumeTracingController @Inject()(
                                                                  segmentId,
                                                                  request.body.mag,
                                                                  mappingName,
-                                                                 request.body.additionalCoordinates)
+                                                                 request.body.additionalCoordinates,
+                                                                 request.body.editableMappingVersion)
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
       }
@@ -362,7 +364,8 @@ class VolumeTracingController @Inject()(
               segmentId = segmentId,
               mappingName = baseMappingName,
               mappingType = baseMappingName.map(_ => "HDF5"),
-              editableMappingTracingId = None,
+              editableMappingTracingId = None, // TODOM: why is this none?
+              editableMappingVersion = request.body.tracingVersion,
               mag = Some(request.body.mag),
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
@@ -393,7 +396,8 @@ class VolumeTracingController @Inject()(
             request.body.mag,
             additionalCoordinates = request.body.additionalCoordinates,
             mappingName = mappingName,
-            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
+            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+            editableMappingVersion = request.body.editableMappingVersion.getOrElse(tracing.version)
           )
           bucketPositionsForCubeSize = bucketPositions.toSeq
             .map(vec3IntFromProto)

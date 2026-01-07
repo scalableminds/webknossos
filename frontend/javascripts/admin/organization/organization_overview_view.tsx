@@ -165,8 +165,8 @@ export function OrganizationOverviewView() {
       key: "credits",
       title: "WEBKNOSSOS Credits",
       content:
-        organization.creditBalanceInMillis != null
-          ? formatMilliCreditsString(organization.creditBalanceInMillis)
+        organization.milliCreditBalance != null
+          ? formatMilliCreditsString(organization.milliCreditBalance)
           : "N/A",
       action: buyMoreCreditsAction,
     },

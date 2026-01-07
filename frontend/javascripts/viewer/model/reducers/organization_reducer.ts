@@ -12,11 +12,11 @@ function OrganizationReducer(state: WebknossosState, action: Action): Webknossos
       });
     }
 
-    case "SET_ACTIVE_ORGANIZATIONS_CREDIT_BALANCE": {
+    case "SET_ACTIVE_ORGANIZATIONS_MILLI_CREDIT_BALANCE": {
       return update(state, {
         activeOrganization: {
-          creditBalanceInMillis: {
-            $set: action.creditBalanceInMillis,
+          milliCreditBalance: {
+            $set: action.milliCreditBalance,
           },
         },
       });

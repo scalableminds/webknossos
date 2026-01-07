@@ -37,7 +37,6 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
 }
 
 export type JobCreditCostInfo = {
-  // The cost is encoded as a string decimal for precision reasons. The front-end should not do any arithmetic with this
   costInMilliCredits: number;
   hasEnoughCredits: boolean;
   // The organizations credits used during calculation whether the organization has enough credits for the job.

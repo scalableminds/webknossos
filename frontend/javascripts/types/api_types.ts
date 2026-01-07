@@ -682,7 +682,7 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
-  readonly creditBalanceInMillis: number | null | undefined;
+  readonly milliCreditBalance: number | null | undefined;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -757,11 +757,11 @@ export type APIFeatureToggles = {
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
   readonly voxelyticsEnabled: boolean;
-  readonly neuronInferralCostPerGVxInMillis: number;
-  readonly nucleiInferralCostPerGVxInMillis: number;
-  readonly mitochondriaInferralCostPerGVxInMillis: number;
-  readonly instancesInferralCostPerGVxInMillis: number;
-  readonly alignmentCostPerGVxInMillis: number;
+  readonly neuronInferralCostInMilliCreditsPerGVx: number;
+  readonly nucleiInferralCostInMilliCreditsPerGVx: number;
+  readonly mitochondriaInferralCostInMilliCreditsPerGVx: number;
+  readonly instancesInferralCostInMilliCreditsPerGVx: number;
+  readonly alignmentCostInMilliCreditsPerGVx: number;
   readonly costPerCreditInEuro: number;
   readonly costPerCreditInDollar: number;
   readonly publicDemoDatasetUrl: string;
@@ -834,7 +834,7 @@ export type APIJob = {
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;
   readonly created: number;
-  readonly creditCostInMillis: number | null | undefined;
+  readonly costInMilliCredits: number | null | undefined;
 };
 
 export type AiModel = {

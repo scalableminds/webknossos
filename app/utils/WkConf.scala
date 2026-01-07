@@ -136,12 +136,12 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
-    val neuronInferralCostPerGVxInMillis: Int = get[Int]("features.neuronInferralCostPerGVxInMillis")
-    val mitochondriaInferralCostPerGVxInMillis: Int =
-      get[Int]("features.mitochondriaInferralCostPerGVxInMillis")
-    val nucleiInferralCostPerGVxInMillis: Int = get[Int]("features.nucleiInferralCostPerGVxInMillis")
-    val instancesInferralCostPerGVxInMillis: Int = get[Int]("features.instancesInferralCostPerGVxInMillis")
-    val alignmentCostPerGVxInMillis: Int = get[Int]("features.alignmentCostPerGVxInMillis")
+    val neuronInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.neuronInferralCostInMilliCreditsPerGVx")
+    val mitochondriaInferralCostInMilliCreditsPerGVx: Int =
+      get[Int]("features.mitochondriaInferralCostInMilliCreditsPerGVx")
+    val nucleiInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.nucleiInferralCostInMilliCreditsPerGVx")
+    val instancesInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.instancesInferralCostInMilliCreditsPerGVx")
+    val alignmentCostInMilliCreditsPerGVx: Int = get[Int]("features.alignmentCostInMilliCreditsPerGVx")
     val costPerCreditInEuro: BigDecimal = get[BigDecimal]("features.costPerCreditInEuro")
     val costPerCreditInDollar: BigDecimal = get[BigDecimal]("features.costPerCreditInDollar")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds

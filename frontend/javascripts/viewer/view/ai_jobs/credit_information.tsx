@@ -106,8 +106,8 @@ async function refreshOrganizationCredits() {
   const organizationId = Store.getState().activeOrganization?.id;
   if (organizationId) {
     const orga = await getOrganization(organizationId);
-    if (orga.creditBalanceInMillis != null) {
-      Store.dispatch(setActiveOrganizationsCreditBalance(orga.creditBalanceInMillis));
+    if (orga.milliCreditBalance != null) {
+      Store.dispatch(setActiveOrganizationsCreditBalance(orga.milliCreditBalance));
     }
   }
 }
@@ -132,11 +132,11 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   const dispatch = useDispatch();
   const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
-      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVxInMillis,
-      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostPerGVxInMillis,
-      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVxInMillis,
-      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostPerGVxInMillis,
-      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostPerGVxInMillis,
+      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostInMilliCreditsPerGVx,
       [APIJobCommand.TRAIN_INSTANCE_MODEL]: 0,
       [APIJobCommand.TRAIN_NEURON_MODEL]: 0,
     }),
@@ -145,10 +145,10 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
 
   useEffect(() => {
     refreshOrganizationCredits();
-  });
+  }, []);
 
-  const organizationCredits = useWkSelector(
-    (state) => state.activeOrganization?.creditBalanceInMillis || 0,
+  const organizationMilliCredits = useWkSelector(
+    (state) => state.activeOrganization?.milliCreditBalance || 0,
   );
 
   const boundingBoxVolume = useMemo(() => {
@@ -203,7 +203,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
         </Col>
         <Col>
           <Title level={2} style={{ margin: 0 }}>
-            {formatMilliCreditsString(organizationCredits)}
+            {formatMilliCreditsString(organizationMilliCredits)}
           </Title>
         </Col>
       </Row>

@@ -83,7 +83,7 @@ case class JobCompactInfo(
     created: Instant,
     started: Option[Instant],
     ended: Option[Instant],
-    creditCostInMillis: Option[Int]
+    costInMilliCredits: Option[Int]
 ) extends JobResultLinks {
 
   protected def effectiveState: JobState = state
@@ -204,7 +204,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             created = row._11,
             started = row._12,
             ended = row._13,
-            creditCostInMillis = row._14.map(_ * -1) // delta is negative, so cost should be positive.
+            costInMilliCredits = row._14.map(_ * -1) // delta is negative, so cost should be positive.
           )
       }
     } yield parsed

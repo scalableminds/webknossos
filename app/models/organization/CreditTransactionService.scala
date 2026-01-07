@@ -17,13 +17,13 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   def hasEnoughCredits(organizationId: String, milliCreditsToSpend: Int)(implicit ctx: DBAccessContext): Fox[Boolean] =
     creditTransactionDAO.getMilliCreditBalance(organizationId).map(balance => balance >= milliCreditsToSpend)
 
-  def reserveCredits(organizationId: String, milliCreditsToSpent: Int, comment: String)(
+  def reserveCredits(organizationId: String, milliCreditsToSpend: Int, comment: String)(
       implicit ctx: DBAccessContext): Fox[CreditTransaction] = {
     val pendingCreditTransaction = CreditTransaction(ObjectId.generate,
                                                      organizationId,
                                                      None,
                                                      None,
-                                                     -milliCreditsToSpent,
+                                                     -milliCreditsToSpend,
                                                      comment,
                                                      CreditTransactionState.Pending,
                                                      CreditState.Pending)

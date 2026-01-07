@@ -216,8 +216,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "job.inferNuclei.notAllowed.onlySuperUsers"
+          _ <- userService.assertIsSuperUser(request.identity) ?~> "job.inferNuclei.notAllowed.onlySuperUsers"
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
@@ -545,11 +544,11 @@ class JobController @Inject()(jobDAO: JobDAO,
       for {
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox
-        jobCostsInCredits <- jobService.calculateJobCostInMilliCredits(boundingBox, jobCommand)
+        jobCostInCredits <- jobService.calculateJobCostInMilliCredits(boundingBox, jobCommand)
         organizationCreditBalance <- creditTransactionDAO.getMilliCreditBalance(request.identity._organization)
-        hasEnoughCredits = jobCostsInCredits <= organizationCreditBalance
+        hasEnoughCredits = jobCostInCredits <= organizationCreditBalance
         js = Json.obj(
-          "costInMilliCredits" -> jobCostsInCredits,
+          "costInMilliCredits" -> jobCostInCredits,
           "hasEnoughCredits" -> hasEnoughCredits,
           "organizationMilliCredits" -> organizationCreditBalance,
         )

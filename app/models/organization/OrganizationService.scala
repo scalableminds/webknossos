@@ -51,7 +51,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
-      creditBalanceInMillisOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+      milliCreditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
         creditTransactionDAO.getMilliCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
@@ -67,7 +67,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
         "ownerName" -> ownerNameOpt,
-        "creditBalanceInMillis" -> creditBalanceInMillisOpt
+        "milliCreditBalance" -> milliCreditBalanceOpt
       ) ++ adminOnlyInfo
   }
 

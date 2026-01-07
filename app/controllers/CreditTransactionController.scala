@@ -42,13 +42,12 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
                  expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
-      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages("organization.notFound",
-                                                                                                organizationId)
+      _ <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages("organization.notFound",
+                                                                                     organizationId)
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)).toFox ?~> s"moneySpent $moneySpent is not a valid decimal"
       _ <- Fox.fromBool(moneySpentInDecimal >= 0) ?~> "moneySpent must be a positive number"
       _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"
       commentNoOptional = comment.getOrElse(s"Adding $creditAmount credits for $moneySpentInDecimal $currency.")
-      _ <- organizationService.assertOrganizationHasPaidPlan(organization)
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString(_).toFox)
       _ <- Fox
         .runOptional(expirationDateOpt)(expirationDate => Fox.fromBool(!expirationDate.isPast)) ?~> "Expiration date must be in the future"

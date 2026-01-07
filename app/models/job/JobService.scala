@@ -41,7 +41,6 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  private val MINIMUM_COST_PER_JOB = 1
   private val ONE_GIGAVOXEL = math.pow(10, 9)
 
   private lazy val Mailer =
@@ -192,7 +191,7 @@ class JobService @Inject()(wkConf: WkConf,
           created = job.created,
           started = job.started,
           ended = job.ended,
-          creditCostInMillis = creditTransactionBox.toOption.map(t => t.milliCreditDelta * -1) // delta is negative, so cost should be positive.
+          costInMilliCredits = creditTransactionBox.toOption.map(t => t.milliCreditDelta * -1) // delta is negative, so cost should be positive.
         )
       )
 
@@ -228,10 +227,10 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> "job.paid.noAdminOrManager"
-      costsInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBox, command)
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInMilliCredits)) ?~> "job.notEnoughCredits"
+      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBox, command)
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
-                                                                   costsInMilliCredits,
+                                                                   costInMilliCredits,
                                                                    creditTransactionComment)
       job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
@@ -261,23 +260,23 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- Fox.fromBool(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  private def getJobCostPerGVx(jobCommand: JobCommand): Fox[Int] =
+  private def getJobCostInMilliCreditsPerGVx(jobCommand: JobCommand): Fox[Int] =
     jobCommand match {
-      case JobCommand.infer_neurons        => Fox.successful(wkConf.Features.neuronInferralCostPerGVxInMillis)
-      case JobCommand.infer_nuclei         => Fox.successful(wkConf.Features.nucleiInferralCostPerGVxInMillis)
-      case JobCommand.infer_mitochondria   => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVxInMillis)
-      case JobCommand.infer_instances      => Fox.successful(wkConf.Features.instancesInferralCostPerGVxInMillis)
+      case JobCommand.infer_neurons        => Fox.successful(wkConf.Features.neuronInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_nuclei         => Fox.successful(wkConf.Features.nucleiInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_mitochondria   => Fox.successful(wkConf.Features.mitochondriaInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_instances      => Fox.successful(wkConf.Features.instancesInferralCostInMilliCreditsPerGVx)
       case JobCommand.train_neuron_model   => Fox.successful(0)
       case JobCommand.train_instance_model => Fox.successful(0)
-      case JobCommand.align_sections       => Fox.successful(wkConf.Features.alignmentCostPerGVxInMillis)
+      case JobCommand.align_sections       => Fox.successful(wkConf.Features.alignmentCostInMilliCreditsPerGVx)
       case _                               => Fox.failure(s"Unsupported job command $jobCommand")
     }
 
   def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
-    getJobCostPerGVx(jobCommand).map(costPerGVx => {
+    getJobCostInMilliCreditsPerGVx(jobCommand).map(costPerGVx => {
       val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
       val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
-      math.max(costInMilliCredits, MINIMUM_COST_PER_JOB)
+      math.max(costInMilliCredits, 1)
     })
 
 }

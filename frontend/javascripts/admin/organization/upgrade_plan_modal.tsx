@@ -319,7 +319,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
   const defaultCostPerCreditInEuro = formatCurrency(features().costPerCreditInEuro, "€");
   const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "$");
-  const [creditCostAsString, setCreditCostsAsString] = useState<string>(
+  const [creditCostAsString, setCreditCostAsString] = useState<string>(
     `${defaultCostPerCreditInEuro}€/${defaultCostPerCreditInDollar}$`,
   );
   const [creditAmount, setCreditAmount] = useState<number | null>(1);
@@ -329,7 +329,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
     }
     const totalCostInEuro = creditAmount * features().costPerCreditInEuro;
     const totalCostInDollar = creditAmount * features().costPerCreditInDollar;
-    setCreditCostsAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
+    setCreditCostAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
   }, [creditAmount]);
 
   const handleOrderCredits = async () => {

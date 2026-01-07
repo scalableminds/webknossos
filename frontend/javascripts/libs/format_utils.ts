@@ -576,8 +576,11 @@ export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
 
 export function formatMilliCreditsString(credits: number): string {
   const millis = Math.round(credits % 1000).toString();
-  const paddingZeros = "0".repeat(3 - millis.length);
   const fullCredits = Math.round(credits / 1000);
+  if (millis === "0") {
+    return fullCredits.toString();
+  }
+  const paddingZeros = "0".repeat(3 - millis.length);
   return `${fullCredits}.${paddingZeros}${millis}`;
 }
 

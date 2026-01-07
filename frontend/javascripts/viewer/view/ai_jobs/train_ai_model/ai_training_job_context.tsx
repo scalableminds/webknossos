@@ -27,7 +27,7 @@ export interface AiTrainingAnnotationSelection {
   groundTruthLayer?: string;
   magnification?: Vector3;
   userBoundingBoxes: UserBoundingBox[];
-  volumeTracingMags?: { mag: Vector3 }[][];
+  volumeTracingMags?: Record<string, { mag: Vector3 }[]>;
 }
 
 interface AiTrainingJobContextType {

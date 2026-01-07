@@ -72,14 +72,24 @@ async function getVolumeServerTracings(annotation: APIAnnotation): Promise<Serve
 
 /**
  * Extracts magnification information from server volume tracings.
- * @returns An array of magnification information.
+ * @returns An object mapping layer names to their magnification information.
  */
-function getVolumeTracingMags(volumeServerTracings: ServerVolumeTracing[]) {
-  return volumeServerTracings.map(({ mags }) =>
-    mags
-      ? mags.map((mag) => ({ mag: Utils.point3ToVector3(mag) }))
-      : [{ mag: [1, 1, 1] as Vector3 }],
-  );
+function getVolumeTracingMags(
+  annotation: APIAnnotation,
+  volumeServerTracings: ServerVolumeTracing[],
+) {
+  const volumeLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
+  const volumeTracingMags: Record<string, { mag: Vector3 }[]> = {};
+
+  volumeServerTracings.forEach((tracing, index) => {
+    const layer = volumeLayers[index];
+    if (layer) {
+      volumeTracingMags[layer.name] = tracing.mags
+        ? tracing.mags.map((mag) => ({ mag: Utils.point3ToVector3(mag) }))
+        : [{ mag: [1, 1, 1] as Vector3 }];
+    }
+  });
+  return volumeTracingMags;
 }
 
 /**
@@ -142,7 +152,7 @@ export async function fetchAnnotationInfo(
   );
 
   const userBoundingBoxes = await getBoundingBoxes(annotation, volumeTracings);
-  const volumeTracingMags = getVolumeTracingMags(volumeServerTracings);
+  const volumeTracingMags = getVolumeTracingMags(annotation, volumeServerTracings);
 
   return {
     annotation,

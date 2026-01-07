@@ -143,7 +143,7 @@ export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   dataset: APIDataset;
   volumeTracings: VolumeTracing[];
   userBoundingBoxes: UserBoundingBox[];
-  volumeTracingMags: { mag: Vector3 }[][];
+  volumeTracingMags: Record<string, { mag: Vector3 }[]>;
 };
 
 export function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(
@@ -327,7 +327,7 @@ export const getIntersectingMagList = (
   dataset: APIDataset,
   groundTruthLayerName: string,
   imageDataLayerName: string,
-  volumeTracingMags?: { mag: Vector3 }[][],
+  volumeTracingMags?: Record<string, { mag: Vector3 }[]>,
 ) => {
   const colorLayers = getColorLayers(dataset);
   const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
@@ -335,10 +335,8 @@ export const getIntersectingMagList = (
   let groundTruthLayerMags: Vector3[] | undefined;
 
   if (volumeTracingMags) {
-    const volumeLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
-    const layerIndex = volumeLayers.findIndex((l) => l.name === groundTruthLayerName);
-    if (layerIndex !== -1 && volumeTracingMags[layerIndex]) {
-      groundTruthLayerMags = volumeTracingMags[layerIndex].map((m) => m.mag);
+    if (volumeTracingMags[groundTruthLayerName]) {
+      groundTruthLayerMags = volumeTracingMags[groundTruthLayerName].map((m) => m.mag);
     }
   }
 

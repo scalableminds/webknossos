@@ -583,60 +583,80 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newGroup = SegmentGroup(name = name.getOrElse(s"Group $groupId"),
-                                groupId = groupId,
-                                children = Seq(),
-                                isExpanded = Some(true))
-    newParentId
+    val newGroup = SegmentGroup(
+      name = name.getOrElse(s"Default Name $groupId"), // TODOM: undo default name - used for debugging
+      groupId = groupId,
+      children = Seq(),
+      isExpanded = Some(true))
+    val updatedGroups = newParentId
       .map(parentId => {
-        val updatedOrNewGroup = this.findGroup(tracing.segmentGroups) match {
-          // Children are kept and moved as well.
-          case Some(group) => group.copy(name = name.getOrElse(group.name))
-          case _           => newGroup
+        val (groupsWithoutMovee, moveeOpt) = this.removeGroup(tracing.segmentGroups)
+        val movee = moveeOpt.getOrElse(newGroup)
+        if (parentId == -1)
+          groupsWithoutMovee :+ movee
+        else {
+          val (updatedGroups, didInsert) = insertUnderParent(groupsWithoutMovee, parentId, movee)
+          if (didInsert) updatedGroups else updatedGroups :+ movee
         }
-        val updatedGroups = updateGroupParent(tracing.segmentGroups, updatedOrNewGroup, parentId)
-        val updatedGroupsWithMaybeRootAppended =
-          if (parentId == -1) updatedGroups.appended(updatedOrNewGroup) else updatedGroups
-        tracing.withSegmentGroups(updatedGroupsWithMaybeRootAppended)
       })
       .getOrElse {
-        val foundGroup = this.findGroup(tracing.segmentGroups)
-        if (foundGroup.isDefined)
-          tracing.withSegmentGroups(this.renameInGroups(tracing.segmentGroups))
-        else
-          tracing.withSegmentGroups(tracing.segmentGroups.appended(newGroup))
+        val (maybeUpdatedGroups, didRename) = this.renameInGroups(tracing.segmentGroups)
+        if (didRename) maybeUpdatedGroups else maybeUpdatedGroups :+ newGroup
+
       }
+    tracing.withSegmentGroups(updatedGroups)
   }
 
-  private def renameInGroups(groups: Seq[SegmentGroup]): Seq[SegmentGroup] =
-    groups.map(
-      g =>
-        if (g.groupId == groupId) g.copy(name = name.getOrElse(g.name), children = renameInGroups(g.children))
-        else g.withChildren(renameInGroups(g.children)))
+  private def renameInGroups(groups: Seq[SegmentGroup]): (Seq[SegmentGroup], Boolean) = {
+    // Fold left saves unnecessary recursive calls upon the renaming is done.
+    // This is stored in the second part of the accumulator.
+    val updated = groups.foldLeft((Vector.empty[SegmentGroup], false)) {
+      // Pass as already renamed.
+      case ((acc, true), g) =>
+        (acc :+ g, true)
+      // Rename group.
+      case ((acc, false), g) if g.groupId == groupId =>
+        val renamed = g.copy(name = name.getOrElse(g.name))
+        (acc :+ renamed, true)
+      // Rename recursively.
+      case ((acc, false), g) =>
+        val (children, done) = renameInGroups(g.children)
+        (acc :+ g.withChildren(children), done)
+    }
+    updated
+  }
 
-  private def findGroup(groups: Seq[SegmentGroup]): Option[SegmentGroup] =
-    groups.collectFirst {
-      case g if g.groupId == groupId => Some(g)
-      case g if g.children.nonEmpty =>
-        findGroup(g.children)
-    }.flatten
+  private def removeGroup(groups: Seq[SegmentGroup]): (Seq[SegmentGroup], Option[SegmentGroup]) =
+    groups.foldLeft((Vector.empty[SegmentGroup], Option.empty[SegmentGroup])) {
+      // Already found → keep remaining nodes unchanged
+      case ((acc, found @ Some(_)), g) =>
+        (acc :+ g, found)
+      // Found at this level → remove it
+      case ((acc, None), g) if g.groupId == this.groupId =>
+        (acc, Some(g))
+      // Search children
+      case ((acc, None), g) =>
+        val (newChildren, found) = removeGroup(g.children)
+        (acc :+ g.withChildren(newChildren), found)
+    }
 
-  private def updateGroupParent(groups: Seq[SegmentGroup],
-                                updatedOrNewGroup: SegmentGroup,
-                                parentId: Int): Seq[SegmentGroup] =
-    groups.collect {
-      // Filter out the group with groupId and append it to the new parent.
-      case SegmentGroup(_, id, _, _, _) if id == this.groupId =>
-        None
-      case SegmentGroup(name, id, children, isExpanded, _) if id == parentId =>
-        Some(
-          SegmentGroup(name,
-                       id,
-                       updateGroupParent(children, updatedOrNewGroup, parentId) ++ Seq(updatedOrNewGroup),
-                       isExpanded))
-      case segmentGroup =>
-        Some(segmentGroup.withChildren(updateGroupParent(segmentGroup.children, updatedOrNewGroup, parentId)))
-    }.flatten
+  private def insertUnderParent(
+      groups: Seq[SegmentGroup],
+      parentId: Int,
+      child: SegmentGroup
+  ): (Seq[SegmentGroup], Boolean) =
+    groups.foldLeft((Vector.empty[SegmentGroup], false)) {
+      // Already inserted → keep remaining nodes unchanged
+      case ((acc, true), g) =>
+        (acc :+ g, true)
+      // Insert here
+      case ((acc, false), g) if g.groupId == parentId =>
+        (acc :+ g.withChildren(g.children :+ child), true)
+      // Search children
+      case ((acc, false), g) =>
+        val (children, inserted) = insertUnderParent(g.children, parentId, child)
+        (acc :+ g.withChildren(children), inserted)
+    }
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =

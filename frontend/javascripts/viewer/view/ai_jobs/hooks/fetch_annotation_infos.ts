@@ -56,10 +56,6 @@ async function resolveAnnotationIds(
  * Fetches volume tracings for a given annotation.
  * @returns A promise that resolves to an array of server volume tracings.
  */
-/**
- * Fetches volume tracings for a given annotation.
- * @returns A promise that resolves to an array of server volume tracings.
- */
 async function getVolumeServerTracings(annotation: APIAnnotation): Promise<ServerVolumeTracing[]> {
   return await Promise.all(
     annotation.annotationLayers

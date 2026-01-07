@@ -1,19 +1,22 @@
 import { CreditCardOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { type JobCreditCostInfo, getJobCreditCost } from "admin/rest_api";
+import { type JobCreditCostInfo, getJobCreditCost, getOrganization } from "admin/rest_api";
 import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { APIJobCommand, type AiModel } from "types/api_types";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
+import { useDispatch } from "react-redux";
+import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
+import { Store } from "viewer/singletons";
 
 const { Title, Text } = Typography;
 
@@ -99,6 +102,16 @@ export const TrainingCreditInformation: React.FC = () => {
   );
 };
 
+async function refreshOrganizationCredits() {
+  const organizationId = Store.getState().activeOrganization?.id;
+  if (organizationId) {
+    const orga = await getOrganization(organizationId);
+    if (orga.creditBalanceInMillis != null) {
+      Store.dispatch(setActiveOrganizationsCreditBalance(orga.creditBalanceInMillis));
+    }
+  }
+}
+
 interface CreditInformationProps {
   selectedModel: AiModel | Partial<AiModel> | null;
   selectedJobType: APIJobCommand | null;
@@ -116,6 +129,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   startButtonTitle,
   areParametersValid,
 }) => {
+  const dispatch = useDispatch();
   const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
       [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVxInMillis,
@@ -128,6 +142,10 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
     }),
     [],
   );
+
+  useEffect(() => {
+    refreshOrganizationCredits();
+  });
 
   const organizationCredits = useWkSelector(
     (state) => state.activeOrganization?.creditBalanceInMillis || 0,
@@ -153,6 +171,12 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
       ),
     enabled: Boolean(selectedBoundingBox && selectedJobType),
   });
+
+  useEffect(() => {
+    if (jobCreditCostInfo?.organizationMilliCredits != null) {
+      dispatch(setActiveOrganizationsCreditBalance(jobCreditCostInfo.organizationMilliCredits));
+    }
+  }, [jobCreditCostInfo?.organizationMilliCredits, dispatch]);
 
   const getBoundingBoxinVoxels = useCallback((): string => {
     if (selectedBoundingBox) {

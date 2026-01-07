@@ -216,6 +216,8 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "job.inferNuclei.notAllowed.onlySuperUsers"
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
@@ -253,11 +255,9 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
@@ -275,12 +275,13 @@ class JobController @Inject()(jobDAO: JobDAO,
             "invert_color_layer" -> invertColorLayer
           )
           creditTransactionComment = s"AI neuron segmentation for dataset ${dataset.name}"
-          jobAsJs <- jobService.submitPaidJob(command,
-                                              commandArgs,
-                                              parsedBoundingBox,
-                                              creditTransactionComment,
-                                              request.identity,
-                                              dataset._dataStore)
+          job <- jobService.submitPaidJob(command,
+                                          commandArgs,
+                                          parsedBoundingBox,
+                                          creditTransactionComment,
+                                          request.identity,
+                                          dataset._dataStore)
+          jobAsJs <- jobService.publicWrites(job)
         } yield Ok(jobAsJs)
       }
     }
@@ -299,11 +300,8 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           command = JobCommand.infer_mitochondria
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
@@ -314,12 +312,13 @@ class JobController @Inject()(jobDAO: JobDAO,
             "bbox" -> bbox,
           )
           creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
-          jobAsJs <- jobService.submitPaidJob(command,
-                                              commandArgs,
-                                              parsedBoundingBox,
-                                              creditTransactionComment,
-                                              request.identity,
-                                              dataset._dataStore)
+          job <- jobService.submitPaidJob(command,
+                                          commandArgs,
+                                          parsedBoundingBox,
+                                          creditTransactionComment,
+                                          request.identity,
+                                          dataset._dataStore)
+          jobAsJs <- jobService.publicWrites(job)
         } yield Ok(jobAsJs)
       }
     }
@@ -352,12 +351,13 @@ class JobController @Inject()(jobDAO: JobDAO,
             "annotation_id" -> annotationId
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
-          jobAsJs <- jobService.submitPaidJob(command,
-                                              commandArgs,
-                                              datasetBoundingBox,
-                                              creditTransactionComment,
-                                              request.identity,
-                                              dataset._dataStore)
+          job <- jobService.submitPaidJob(command,
+                                          commandArgs,
+                                          datasetBoundingBox,
+                                          creditTransactionComment,
+                                          request.identity,
+                                          dataset._dataStore)
+          jobAsJs <- jobService.publicWrites(job)
         } yield Ok(jobAsJs)
       }
     }

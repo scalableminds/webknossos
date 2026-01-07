@@ -576,12 +576,13 @@ export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
 
 export function formatMilliCreditsString(credits: number): string {
   const millis = Math.round(credits % 1000).toString();
-  const fullCredits = Math.round(credits / 1000);
+  const fullCredits = Math.floor(credits / 1000);
   if (millis === "0") {
     return fullCredits.toString();
   }
   const paddingZeros = "0".repeat(3 - millis.length);
-  return `${fullCredits}.${paddingZeros}${millis}`;
+  const millisWithoutTrailingZeros = millis.replace(/0+$/, "");
+  return `${fullCredits}.${paddingZeros}${millisWithoutTrailingZeros}`;
 }
 
 export function formatCurrency(amount: number, currency: string): string {

@@ -43,7 +43,6 @@ class JobService @Inject()(wkConf: WkConf,
 
   private val MINIMUM_COST_PER_JOB = 1
   private val ONE_GIGAVOXEL = math.pow(10, 9)
-  private val SHOULD_DEDUCE_CREDITS = false
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -225,10 +224,11 @@ class JobService @Inject()(wkConf: WkConf,
                     jobBoundingBox: BoundingBox,
                     creditTransactionComment: String,
                     user: User,
-                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsValue] =
+                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
-      costsInMilliCredits <- if (SHOULD_DEDUCE_CREDITS) calculateJobCostInMilliCredits(jobBoundingBox, command)
-      else Fox.successful(0)
+      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+      _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> "job.paid.noAdminOrManager"
+      costsInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBox, command)
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInMilliCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costsInMilliCredits,
@@ -238,11 +238,10 @@ class JobService @Inject()(wkConf: WkConf,
         case _ =>
           creditTransactionService
             .refundTransactionWhenStartingJobFailed(creditTransaction)
-            .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
+            .flatMap(_ => Fox.failure("job.submission.failed"))
       }
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
-      js <- publicWrites(job)
-    } yield js
+    } yield job
 
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {

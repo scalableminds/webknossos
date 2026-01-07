@@ -5,20 +5,18 @@ import { pluralize } from "libs/utils";
 import prettyBytes from "pretty-bytes";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Dropzone, { type DropzoneInputProps } from "react-dropzone";
+import Dropzone, { type DropzoneInputProps, useDropzone } from "react-dropzone";
 import { useDispatch, useSelector } from "react-redux";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 
-function OverlayDropZone({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="nml-upload-zone-overlay">
-      <div className="nml-upload-zone-modal">{children}</div>
-    </div>
-  );
-}
+const OverlayDropZone = ({ children }: { children: React.ReactNode }) => (
+  <div className="nml-upload-zone-overlay">
+    <div className="nml-upload-zone-modal">{children}</div>
+  </div>
+);
 
-function NmlDropArea({
+const NmlDropArea = ({
   isClickAllowed,
   isUpdateAllowed,
   getInputProps,
@@ -26,34 +24,99 @@ function NmlDropArea({
   isClickAllowed: boolean;
   isUpdateAllowed: boolean;
   getInputProps: (props?: DropzoneInputProps) => DropzoneInputProps;
-}) {
-  const clickInput = isClickAllowed ? <input {...getInputProps()} /> : null;
+}) => {
   return (
-    <div
-      style={{
-        textAlign: "center",
-        cursor: "pointer",
-      }}
-    >
-      {clickInput}
+    <div style={{ textAlign: "center", cursor: "pointer" }}>
+      {isClickAllowed && <input {...getInputProps()} />}
       <div>
-        <InboxOutlined
-          style={{
-            fontSize: 180,
-            color: "var(--ant-color-primary)",
-          }}
-        />
+        <InboxOutlined style={{ fontSize: 180, color: "var(--ant-color-primary)" }} />
       </div>
-      {isUpdateAllowed ? (
-        <h5>Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...</h5>
-      ) : (
-        <h5>
-          Drop NML or zip files here to <b>create a new annotation</b>.
-        </h5>
-      )}
+      <h5>
+        {isUpdateAllowed
+          ? `Drop NML or zip files here${isClickAllowed ? " or click to select files" : ""}...`
+          : "Drop NML or zip files here to create a new annotation."}
+      </h5>
     </div>
   );
-}
+};
+
+const ImportModal = ({
+  files,
+  onCancel,
+  onImport,
+  isImporting,
+  isUpdateAllowed,
+  shouldCreateGroup,
+  setShouldCreateGroup,
+}: {
+  files: File[];
+  onCancel: () => void;
+  onImport: () => void;
+  isImporting: boolean;
+  isUpdateAllowed: boolean;
+  shouldCreateGroup: boolean;
+  setShouldCreateGroup: (val: boolean) => void;
+}) => {
+  const newGroupMsg =
+    files.length > 1
+      ? "Create a new tree group for each file."
+      : "Create a new tree group for this file.";
+
+  return (
+    <Modal
+      title={`Import ${files.length} ${pluralize("Annotation", files.length)}`}
+      open={files.length > 0}
+      onCancel={onCancel}
+      footer={
+        <Flex justify="space-between" align="center">
+          <Checkbox
+            disabled={isImporting}
+            onChange={(e) => setShouldCreateGroup(e.target.checked)}
+            checked={shouldCreateGroup}
+          >
+            {newGroupMsg}
+          </Checkbox>
+          <Button key="submit" type="primary" onClick={onImport} disabled={isImporting}>
+            {isUpdateAllowed ? "Import" : "Create New Annotation"}
+          </Button>
+        </Flex>
+      }
+    >
+      <Spin spinning={isImporting}>
+        <List
+          itemLayout="horizontal"
+          dataSource={files}
+          renderItem={(file: File) => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={
+                  <Avatar
+                    size="large"
+                    icon={<FileOutlined />}
+                    style={{ backgroundColor: "var(--ant-color-primary)" }}
+                  />
+                }
+                title={
+                  <span style={{ wordBreak: "break-word" }}>
+                    {file.name}{" "}
+                    <span className="ant-list-item-meta-description">
+                      ({prettyBytes(file.size)})
+                    </span>
+                  </span>
+                }
+                description={
+                  <span>
+                    Last modified: <FormattedDate timestamp={file.lastModified} />
+                  </span>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      </Spin>
+    </Modal>
+  );
+};
 
 export default function NmlUploadZoneContainer({
   children,
@@ -65,7 +128,6 @@ export default function NmlUploadZoneContainer({
   onImport: (files: File[], createGroupForEachFile: boolean) => Promise<void>;
 }) {
   const [files, setFiles] = useState<File[]>([]);
-  const [dropzoneActive, setDropzoneActive] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [createGroupForEachFile, setCreateGroupForEachFile] = useState(true);
   const [createGroupForSingleFile, setCreateGroupForSingleFile] = useState(false);
@@ -80,7 +142,6 @@ export default function NmlUploadZoneContainer({
     dispatch(setDropzoneModalVisibilityAction(false));
   }, [dispatch]);
 
-  // Mounted Ref
   const isMounted = useRef(false);
   useEffect(() => {
     isMounted.current = true;
@@ -89,33 +150,29 @@ export default function NmlUploadZoneContainer({
     };
   }, []);
 
-  const onDragEnter = useCallback((evt: React.DragEvent) => {
-    const dt = evt.dataTransfer;
-
-    if (!dt.types || dt.types.indexOf("Files") === -1) {
-      // The dragged elements are not of type File. This happens when dragging trees or links.
-      return;
-    }
-
-    setDropzoneActive(true);
-  }, []);
-
-  const onDragLeave = useCallback(() => {
-    setDropzoneActive(false);
-  }, []);
-
   const onDrop = useCallback(
     (droppedFiles: File[]) => {
       setFiles(droppedFiles);
-      setDropzoneActive(false);
       hideDropzoneModal();
     },
     [hideDropzoneModal],
   );
 
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    multiple: true,
+    onDragEnter: (evt) => {
+      // Check if dragged item is a file
+      if (!evt.dataTransfer.types || evt.dataTransfer.types.indexOf("Files") === -1) {
+        return;
+      }
+    },
+  });
+
   const importTracingFiles = useCallback(async () => {
     setIsImporting(true);
-
     try {
       await onImport(files, files.length > 1 ? createGroupForEachFile : createGroupForSingleFile);
     } finally {
@@ -126,153 +183,68 @@ export default function NmlUploadZoneContainer({
     }
   }, [files, createGroupForEachFile, createGroupForSingleFile, onImport]);
 
-  const renderNmlList = () => {
-    return (
-      <List
-        itemLayout="horizontal"
-        dataSource={files}
-        renderItem={(file: File) => (
-          <List.Item>
-            <List.Item.Meta
-              avatar={
-                <Avatar
-                  size="large"
-                  icon={<FileOutlined />}
-                  style={{
-                    backgroundColor: "var(--ant-color-primary)",
-                  }}
-                />
-              }
-              title={
-                <span
-                  style={{
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {file.name}{" "}
-                  <span className="ant-list-item-meta-description">({prettyBytes(file.size)})</span>
-                </span>
-              }
-              description={
-                <span>
-                  Last modified: <FormattedDate timestamp={file.lastModified} />
-                </span>
-              }
-            />
-          </List.Item>
-        )}
-      />
-    );
+  const shouldCreateGroup = files.length > 1 ? createGroupForEachFile : createGroupForSingleFile;
+  const setShouldCreateGroup = (val: boolean) => {
+    if (files.length > 1) {
+      setCreateGroupForEachFile(val);
+    } else {
+      setCreateGroupForSingleFile(val);
+    }
   };
 
-  const renderDropzoneModal = () => {
-    return (
-      <Modal open footer={null} onCancel={hideDropzoneModal}>
-        {isUpdateAllowed ? (
-          <Alert
-            title="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
-            style={{
-              marginBottom: 12,
-            }}
-          />
-        ) : null}
-        <Dropzone multiple onDrop={onDrop}>
-          {({ getRootProps, getInputProps }) => (
-            <div {...getRootProps()}>
-              <NmlDropArea
-                isClickAllowed
-                isUpdateAllowed={isUpdateAllowed}
-                getInputProps={getInputProps}
-              />
-            </div>
-          )}
-        </Dropzone>
-      </Modal>
-    );
-  };
-
-  const renderImportModal = () => {
-    const newGroupMsg =
-      files.length > 1
-        ? "Create a new tree group for each file."
-        : "Create a new tree group for this file.";
-
-    return (
-      <Modal
-        title={`Import ${files.length} ${pluralize("Annotation", files.length)}`}
-        open={files.length > 0}
-        onCancel={() => setFiles([])}
-        footer={
-          <Flex justify="space-between">
-            <Checkbox
-              disabled={isImporting}
-              onChange={(e) =>
-                files.length > 1
-                  ? setCreateGroupForEachFile(e.target.checked)
-                  : setCreateGroupForSingleFile(e.target.checked)
-              }
-              checked={files.length > 1 ? createGroupForEachFile : createGroupForSingleFile}
-            >
-              {newGroupMsg}
-            </Checkbox>
-            <Button key="submit" type="primary" onClick={importTracingFiles} disabled={isImporting}>
-              {isUpdateAllowed ? "Import" : "Create New Annotation"}
-            </Button>
-          </Flex>
-        }
-      >
-        <Spin spinning={isImporting}>{renderNmlList()}</Spin>
-      </Modal>
-    );
-  };
-
-  // This react component wraps its children and lays a dropzone over them.
-  // That way, files can be dropped over the entire view.
   return (
-    <Dropzone
-      noClick
-      multiple
-      onDrop={onDrop}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      noKeyboard
+    <div
+      {...getRootProps()}
+      style={{
+        position: "relative",
+        height: `calc(100vh - ${navbarHeight}px)`,
+      }}
+      className="flex-column"
     >
-      {({ getRootProps, getInputProps }) => (
-        <div
-          {...getRootProps()}
-          style={{
-            position: "relative",
-            height: `calc(100vh - ${navbarHeight}px)`,
-          }}
-          className="flex-column"
-        >
-          {
-            // While dragging files over the view, the OverlayDropZone is rendered
-            // which shows a hint to the user that he may drop files here.
-          }
-          {dropzoneActive && !showDropzoneModal ? (
-            <OverlayDropZone>
-              <NmlDropArea
-                isClickAllowed={false}
-                isUpdateAllowed={isUpdateAllowed}
-                getInputProps={getInputProps}
-              />
-            </OverlayDropZone>
-          ) : null}
-          {
-            // If the user explicitly selected the menu option to import NMLs,
-            // we show a proper modal which renders almost the same hint ("You may drag... or click").
-          }
-          {showDropzoneModal ? renderDropzoneModal() : null}
-
-          {
-            // Once, files were dropped, we render the import modal
-          }
-          {renderImportModal()}
-
-          {children}
-        </div>
+      <input {...getInputProps()} />
+      {isDragActive && !showDropzoneModal && (
+        <OverlayDropZone>
+          <NmlDropArea
+            isClickAllowed={false}
+            isUpdateAllowed={isUpdateAllowed}
+            getInputProps={getInputProps}
+          />
+        </OverlayDropZone>
       )}
-    </Dropzone>
+
+      {showDropzoneModal && (
+        <Modal open footer={null} onCancel={hideDropzoneModal}>
+          {isUpdateAllowed && (
+            <Alert
+              title="Did you know that you can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
+              style={{ marginBottom: 12 }}
+            />
+          )}
+          <Dropzone multiple onDrop={onDrop}>
+            {({ getRootProps: getModalRootProps, getInputProps: getModalInputProps }) => (
+              <div {...getModalRootProps()}>
+                <NmlDropArea
+                  isClickAllowed
+                  isUpdateAllowed={isUpdateAllowed}
+                  getInputProps={getModalInputProps}
+                />
+              </div>
+            )}
+          </Dropzone>
+        </Modal>
+      )}
+
+      <ImportModal
+        files={files}
+        onCancel={() => setFiles([])}
+        onImport={importTracingFiles}
+        isImporting={isImporting}
+        isUpdateAllowed={isUpdateAllowed}
+        shouldCreateGroup={shouldCreateGroup}
+        setShouldCreateGroup={setShouldCreateGroup}
+      />
+
+      {children}
+    </div>
   );
 }

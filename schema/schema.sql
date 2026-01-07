@@ -397,14 +397,14 @@ CREATE TABLE webknossos.organization_usedStorage_attachments (
 -- Pending -> The transaction is a payment for a unfinished & not crashed job
 -- Complete -> The transaction is committed and the potential associated job finished successfully or was refunded.
 CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
--- Pending -> The credit_delta is yet to be completed
--- Spent -> The credit_delta is committed as reduced as the associated job finished successfully.
--- Refunded -> The credit_delta is committed as reduced but a new refunding transaction is added as the associated job finished failed.
--- Revoked -> The credit_delta has been fully revoked by a revoking transaction as the credit_delta expired.
--- PartiallyRevoked -> The credit_delta has been partially revoked by a revoking transaction as the credit_delta expired but parts of it were already spent or are pending.
--- Refunding -> Marks credit_delta as a refund for transaction associated with a failed job.
--- Revoking -> The credit_delta of this transaction revokes the credit_delta of another transaction with expired credits.
--- AddCredits -> The credit_delta of this transaction adds adds more credits for the organization.
+-- Pending -> The milli_credit_delta is yet to be completed
+-- Spent -> The milli_credit_delta is committed as reduced as the associated job finished successfully.
+-- Refunded -> The milli_credit_delta is committed as reduced but a new refunding transaction is added as the associated job finished failed.
+-- Revoked -> The milli_credit_delta has been fully revoked by a revoking transaction as the credit_delta expired.
+-- PartiallyRevoked -> The milli_credit_delta has been partially revoked by a revoking transaction as the credit_delta expired but parts of it were already spent or are pending.
+-- Refunding -> Marks milli_credit_delta as a refund for transaction associated with a failed job.
+-- Revoking -> The milli_credit_delta of this transaction revokes the milli_credit_delta of another transaction with expired credits.
+-- AddCredits -> The milli_credit_delta of this transaction adds adds more credits for the organization.
 CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'AddCredits');
 
 CREATE TABLE webknossos.credit_transactions (
@@ -1146,7 +1146,7 @@ BEGIN
         -- Insert free credits only if no record exists for this month
         IF existing_transaction_count = 0 THEN
             INSERT INTO webknossos.credit_transactions
-                (_id, _organization, credit_delta, comment, transaction_state, credit_state, expiration_date)
+                (_id, _organization, milli_credit_delta, comment, transaction_state, credit_state, expiration_date)
             VALUES
                 (webknossos.generate_object_id(), organization_id, free_milli_credits_amount,
                  'Free credits for this month', 'Complete', 'Pending', next_month_first_day);

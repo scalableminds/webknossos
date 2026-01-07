@@ -52,7 +52,7 @@ BEGIN
         -- Insert free credits only if no record exists for this month
         IF existing_transaction_count = 0 THEN
             INSERT INTO webknossos.credit_transactions
-                (_id, _organization, credit_delta, comment, transaction_state, credit_state, expiration_date)
+                (_id, _organization, milli_credit_delta, comment, transaction_state, credit_state, expiration_date)
             VALUES
                 (webknossos.generate_object_id(), organization_id, free_milli_credits_amount,
                  'Free credits for this month', 'Complete', 'Pending', next_month_first_day);

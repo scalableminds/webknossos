@@ -53,6 +53,7 @@ p {
   max-width: 80vw;
 }
 
+// Toast notifications
 .ant-notification-notice {
   iframe {
     border: none;
@@ -62,18 +63,8 @@ p {
     resize: both;
   }
 
+  // Custom error animation for toast notifications
   &.ant-notification-notice-error {
-    background-color: #f2dede;
-    border-color: #ebccd1;
-    color: #a94442;
-
-    .ant-notification-notice-message,
-    .ant-collapse-header,
-    .ant-notification-notice-close,
-    .ant-collapse-content-box {
-      color: #a94442;
-    }
-
     .ant-notification-notice-icon {
       animation-name: alert-wiggle;
       animation-duration: 5s;

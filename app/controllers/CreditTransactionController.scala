@@ -52,12 +52,13 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString(_).toFox)
       _ <- Fox
         .runOptional(expirationDateOpt)(expirationDate => Fox.fromBool(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
+      milliCreditsAmount = creditAmount * 1000
       addCreditsTransaction = CreditTransaction(
         ObjectId.generate,
         organizationId,
         None,
         None,
-        creditAmount,
+        milliCreditsAmount,
         commentNoOptional,
         CreditTransactionState.Complete,
         CreditState.AddCredits,

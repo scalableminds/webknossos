@@ -1,4 +1,4 @@
-import { Tag, Tooltip } from "antd";
+import { Space, Tag, Tooltip } from "antd";
 import { stringToColor } from "libs/format_utils";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
@@ -72,19 +72,23 @@ export function CategorizationSearch({
 
   return (
     <div style={{ marginBottom: 8 }}>
-      <span style={{ marginRight: 6 }}>Only showing {itemName} with these tags:</span>
-      {searchTags.map((tag) => (
-        <Tag
-          key={tag}
-          color={stringToColor(tag)}
-          onClose={() => {
-            removeTag(tag);
-          }}
-          closable
-        >
-          {tag}
-        </Tag>
-      ))}
+      <Space>
+        Only showing {itemName} with these tags:
+        <Space>
+          {searchTags.map((tag) => (
+            <Tag
+              key={tag}
+              color={stringToColor(tag)}
+              onClose={() => {
+                removeTag(tag);
+              }}
+              closable
+            >
+              {tag}
+            </Tag>
+          ))}
+        </Space>
+      </Space>
     </div>
   );
 }

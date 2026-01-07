@@ -411,34 +411,36 @@ function UserListView() {
             dataIndex="experiences"
             key="experiences"
             width={250}
-            render={(experiences: ExperienceMap, user: APIUser) =>
-              _.map(experiences, (value, domain) => (
-                <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
-                  <span
-                    onClick={(evt) => {
-                      evt.stopPropagation();
-                      // If no user is selected, set singleSelectedUser. Otherwise,
-                      // open the modal so that all selected users are edited.
-                      setSingleSelectedUser(selectedUserIds.length > 0 ? null : user);
-                      setDomainToEdit(domain);
-                      setIsExperienceModalOpen(true);
-                    }}
-                  >
-                    {domain} : {value}
-                  </span>
-                  <CopyOutlined
-                    style={{
-                      margin: "0 0 0 5px",
-                    }}
-                    onClick={async (evt) => {
-                      evt.stopPropagation();
-                      await navigator.clipboard.writeText(domain);
-                      Toast.success(`"${domain}" copied to clipboard`);
-                    }}
-                  />
-                </Tag>
-              ))
-            }
+            render={(experiences: ExperienceMap, user: APIUser) => (
+              <Space wrap>
+                {_.map(experiences, (value, domain) => (
+                  <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
+                    <span
+                      onClick={(evt) => {
+                        evt.stopPropagation();
+                        // If no user is selected, set singleSelectedUser. Otherwise,
+                        // open the modal so that all selected users are edited.
+                        setSingleSelectedUser(selectedUserIds.length > 0 ? null : user);
+                        setDomainToEdit(domain);
+                        setIsExperienceModalOpen(true);
+                      }}
+                    >
+                      {domain} : {value}
+                    </span>
+                    <CopyOutlined
+                      style={{
+                        margin: "0 0 0 5px",
+                      }}
+                      onClick={async (evt) => {
+                        evt.stopPropagation();
+                        await navigator.clipboard.writeText(domain);
+                        Toast.success(`"${domain}" copied to clipboard`);
+                      }}
+                    />
+                  </Tag>
+                ))}
+              </Space>
+            )}
           />
           <Column
             title="Teams - Role"

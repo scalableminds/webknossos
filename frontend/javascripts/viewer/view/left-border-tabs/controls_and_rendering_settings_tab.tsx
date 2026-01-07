@@ -14,7 +14,7 @@ import type { APIDataset, APIUser } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ArrayElement } from "types/type_utils";
 import type { ViewMode } from "viewer/constants";
-import Constants, { BLEND_MODES } from "viewer/constants";
+import Constants, { BLEND_MODES, LongUnitToShortUnitMap } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import { getValidZoomRangeForUser } from "viewer/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
@@ -238,11 +238,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   };
 
   render() {
+    const datasetScaleUnit = LongUnitToShortUnitMap[this.props.dataset.dataSource.scale.unit];
+    const moveValueString = `${settingsLabels.moveValue} (${datasetScaleUnit}/s)`;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label={
-          <FastTooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</FastTooltip>
-        }
+        label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
         min={userSettings.moveValue3d.minimum}
         max={userSettings.moveValue3d.maximum}
         step={10}
@@ -252,9 +252,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       />
     ) : (
       <NumberSliderSetting
-        label={
-          <FastTooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</FastTooltip>
-        }
+        label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
         min={userSettings.moveValue.minimum}
         max={userSettings.moveValue.maximum}
         step={10}

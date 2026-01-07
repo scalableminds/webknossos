@@ -62,7 +62,12 @@ import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configur
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ValueOf } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
-import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "viewer/constants";
+import Constants, {
+  ControlModeEnum,
+  IdentityTransform,
+  LongUnitToShortUnitMap,
+  MappingStatusEnum,
+} from "viewer/constants";
 import defaultState from "viewer/default_state";
 import {
   getDefaultValueRangeOfLayer,
@@ -1169,8 +1174,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getSkeletonLayer = () => {
-    const { controlMode, annotation, onChangeRadius, userConfiguration, onChangeShowSkeletons } =
-      this.props;
+    const {
+      controlMode,
+      annotation,
+      onChangeRadius,
+      userConfiguration,
+      onChangeShowSkeletons,
+      dataset,
+    } = this.props;
     const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
     if (isPublicViewMode || annotation.skeleton == null) {
@@ -1182,6 +1193,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
     const { showSkeletons, tracingId } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
+    const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
     return (
       <React.Fragment>
         <div
@@ -1247,7 +1259,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           >
             <LogSliderSetting
-              label="Node Radius"
+              label={`Node Radius (${unit})`}
               min={userSettings.nodeRadius.minimum}
               max={userSettings.nodeRadius.maximum}
               roundTo={0}
@@ -1258,9 +1270,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             <NumberSliderSetting
               label={
-                userConfiguration.overrideNodeRadius
+                (userConfiguration.overrideNodeRadius
                   ? settings.particleSize
-                  : `Min. ${settings.particleSize}`
+                  : `Min. ${settings.particleSize}`) + ` (${unit})`
               }
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
@@ -1280,7 +1292,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               />
             ) : (
               <LogSliderSetting
-                label={settings.clippingDistance}
+                label={settings.clippingDistance + ` (${unit})`}
                 roundTo={3}
                 min={userSettings.clippingDistance.minimum}
                 max={userSettings.clippingDistance.maximum}

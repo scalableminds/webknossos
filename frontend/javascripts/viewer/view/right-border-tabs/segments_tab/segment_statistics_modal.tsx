@@ -283,7 +283,7 @@ export function SegmentStatisticsModal({
           <>
             {hasAdditionalCoords && (
               <Alert
-                message={`These statistics only refer to the current additional ${pluralize(
+                title={`These statistics only refer to the current additional ${pluralize(
                   "coordinate",
                   additionalCoordinates?.length || 0,
                 )} ${additionalCoordinateStringForModal}.`}

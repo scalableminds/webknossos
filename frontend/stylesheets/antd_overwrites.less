@@ -53,6 +53,7 @@ p {
   max-width: 80vw;
 }
 
+// Toast notifications
 .ant-notification-notice {
   iframe {
     border: none;
@@ -62,18 +63,8 @@ p {
     resize: both;
   }
 
+  // Custom error animation for toast notifications
   &.ant-notification-notice-error {
-    background-color: #f2dede;
-    border-color: #ebccd1;
-    color: #a94442;
-
-    .ant-notification-notice-message,
-    .ant-collapse-header,
-    .ant-notification-notice-close,
-    .ant-collapse-content-box {
-      color: #a94442;
-    }
-
     .ant-notification-notice-icon {
       animation-name: alert-wiggle;
       animation-duration: 5s;
@@ -144,10 +135,6 @@ p {
 
 .large-table {
   word-break: break-word;
-}
-
-.ant-table-scroll>.ant-table-body {
-  overflow-x: auto !important;
 }
 
 .ant-table-column-title {
@@ -225,23 +212,14 @@ label.ant-checkbox-wrapper {
 // Custom component `LinkButton` renders a button that looks like a link.
 // Antd’s `button type="link"` only gets us halfway there, though, hence, this:
 .link-button {
-  border: 0;
-  padding: 0;
-  height: initial;
+  border: 0 !important;
+  padding: 0 !important;
+  height: initial !important;
 }
 
 .link-button>.anticon+span,
 .link-button>span+.anticon {
   margin-left: initial;
-}
-
-.hide-checkbox-selection {
-
-  .ant-table-selection,
-  .ant-table-selection-col,
-  .ant-table-selection-column {
-    display: none;
-  }
 }
 
 #segment-list {
@@ -288,7 +266,7 @@ label.ant-checkbox-wrapper {
 
 .ant-table-empty .ant-table-tbody>tr.ant-table-placeholder,
 .ant-list-empty-text {
-  color: var(--ant-color-text-tertiary)
+  color: var(--ant-color-text-tertiary);
 }
 
 .action-bar {
@@ -308,11 +286,6 @@ label.ant-checkbox-wrapper {
 
 .ant-dropdown-menu-item-icon>svg {
   width: 15px;
-}
-
-.ant-message,
-.ant-message * {
-  pointer-events: none;
 }
 
 .ant-radio-button-wrapper-disabled:first-child {

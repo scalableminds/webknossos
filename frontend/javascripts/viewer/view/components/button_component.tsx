@@ -1,7 +1,7 @@
 import { Button, type ButtonProps } from "antd";
 import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
-import _ from "lodash";
-import type React from "react";
+import noop from "lodash/noop";
+import React from "react";
 
 type ButtonComponentProps = ButtonProps & {
   faIcon?: string;
@@ -10,15 +10,22 @@ type ButtonComponentProps = ButtonProps & {
 /*
  * A lightweight wrapper around <Button> to automatically blur the button
  * after it was clicked.
+ *
+ * We use `forwardRef` to pass the ref to the underlying `Button` component.
+ * This is required for Ant Design's `Dropdown` (and other overlay components)
+ * to correctly calculate the position of the popup relative to this trigger.
  */
 
-function ButtonComponent(props: ButtonComponentProps) {
+const ButtonComponent = React.forwardRef<
+  HTMLButtonElement | HTMLAnchorElement,
+  ButtonComponentProps
+>((props, ref) => {
   const {
     children,
     faIcon,
     title,
     tooltipPlacement,
-    onClick = _.noop,
+    onClick = noop,
     onTouchEnd,
     ...restProps
   } = props;
@@ -40,12 +47,12 @@ function ButtonComponent(props: ButtonComponentProps) {
     // Differentiate via children != null, since antd uses a different styling for buttons
     // with a single icon child (.ant-btn-icon-only will be assigned)
     children != null ? (
-      <Button {...restProps} onClick={handleClick} onTouchEnd={handleTouchEnd}>
+      <Button {...restProps} onClick={handleClick} onTouchEnd={handleTouchEnd} ref={ref}>
         {iconEl}
         {children}
       </Button>
     ) : (
-      <Button {...restProps} onClick={handleClick} onTouchEnd={handleTouchEnd}>
+      <Button {...restProps} onClick={handleClick} onTouchEnd={handleTouchEnd} ref={ref}>
         {iconEl}
       </Button>
     );
@@ -56,11 +63,14 @@ function ButtonComponent(props: ButtonComponentProps) {
   ) : (
     button
   );
-}
+});
 
-export function ToggleButton(props: { active: boolean } & ButtonComponentProps) {
+export const ToggleButton = React.forwardRef<
+  HTMLButtonElement | HTMLAnchorElement,
+  { active: boolean } & ButtonComponentProps
+>((props, ref) => {
   const { active, ...restProps } = props;
-  return <ButtonComponent type={active ? "primary" : "default"} {...restProps} />;
-}
+  return <ButtonComponent type={active ? "primary" : "default"} {...restProps} ref={ref} />;
+});
 
 export default ButtonComponent;

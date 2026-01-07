@@ -103,10 +103,6 @@ class BoundingBox {
     };
   }
 
-  clipPositionIntoBoundingBox(position: Vector3): Vector3 {
-    return V3.toArray(V3.max(this.min, V3.min(position, this.max)));
-  }
-
   extend(other: BoundingBox): BoundingBox {
     const newMin = V3.min(this.min, other.min);
     const newMax = V3.max(this.max, other.max);

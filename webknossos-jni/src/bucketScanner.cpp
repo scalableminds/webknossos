@@ -258,3 +258,39 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
         throwRuntimeException(env, "Native Exception in BucketScanner mergeVolumeBucketInPlace");
     }
 }
+
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_deleteSegmentFromBucket
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
+
+    jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+
+
+    try {
+
+        jbyteArray filteredBucketBytesJavaArray = env->NewByteArray(bucketLengthBytes);
+        jbyte* filteredBucketBytes = env->GetByteArrayElements(filteredBucketBytesJavaArray, nullptr);
+
+        const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
+
+        memcpy(filteredBucketBytes, bucketBytes, bucketLengthBytes);
+
+        for (size_t i = 0; i < elementCount; ++i) {
+            if (segmentIdAtIndex(filteredBucketBytes, i, bytesPerElement, isSigned) == segmentId) {
+                writeSegmentIdAtIndex(filteredBucketBytes, i, 0, bytesPerElement, isSigned);
+            }
+        }
+
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(filteredBucketBytesJavaArray, filteredBucketBytes, JNI_COMMIT);
+        return filteredBucketBytesJavaArray;
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucketInPlace: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucketInPlace");
+        return nullptr;
+    }
+}

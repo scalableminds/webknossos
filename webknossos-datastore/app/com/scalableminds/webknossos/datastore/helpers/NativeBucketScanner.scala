@@ -37,4 +37,9 @@ class NativeBucketScanner() {
                                        bytesPerElement: Int,
                                        elementsAreSigned: Boolean): Unit
 
+  @native def deleteSegmentFromBucket(bucketBytes: Array[Byte],
+                                      bytesPerElement: Int,
+                                      isSigned: Boolean,
+                                      segmentId: Long): Array[Byte]
+
 }

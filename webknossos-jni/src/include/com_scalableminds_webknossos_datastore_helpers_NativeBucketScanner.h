@@ -39,6 +39,14 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
 JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_mergeVolumeBucketInPlace
   (JNIEnv *, jobject, jbyteArray, jbyteArray, jboolean, jlongArray, jlongArray, jint, jboolean);
 
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     deleteSegmentFromBucket
+ * Signature:  ([BIZJ)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_deleteSegmentFromBucket
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jlong);
+
 #ifdef __cplusplus
 }
 #endif

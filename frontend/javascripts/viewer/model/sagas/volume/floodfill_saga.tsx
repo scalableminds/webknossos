@@ -1,3 +1,4 @@
+import LinkButton from "components/link_button";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -378,9 +379,7 @@ function* notifyUserAboutResult(
           .
           <br />
           {warningDetails} {Unicode.NonBreakingSpace}
-          <a href="#" style={{ pointerEvents: "auto" }} onClick={() => hideBox?.hideFn()}>
-            Close
-          </a>
+          <LinkButton onClick={() => hideBox?.hideFn()}>Close</LinkButton>
         </>,
         {
           successMessageDelay: 10000,

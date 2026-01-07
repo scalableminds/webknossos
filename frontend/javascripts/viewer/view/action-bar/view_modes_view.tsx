@@ -73,7 +73,7 @@ function ViewModesView() {
   };
 
   return (
-    <Dropdown menu={menuProps} trigger={["click", "hover"]}>
+    <Dropdown menu={menuProps}>
       <Button style={NARROW_BUTTON_STYLE}>
         <Space>{VIEW_MODE_TO_ICON[viewMode]}</Space>
       </Button>

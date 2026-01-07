@@ -48,9 +48,12 @@ const ButtonComponent = React.forwardRef<
   );
 });
 
-export function ToggleButton(props: { active: boolean } & ButtonComponentProps) {
+export const ToggleButton = React.forwardRef<
+  HTMLButtonElement | HTMLAnchorElement,
+  { active: boolean } & ButtonComponentProps
+>((props, ref) => {
   const { active, ...restProps } = props;
-  return <ButtonComponent type={active ? "primary" : "default"} {...restProps} />;
-}
+  return <ButtonComponent type={active ? "primary" : "default"} {...restProps} ref={ref} />;
+});
 
 export default ButtonComponent;

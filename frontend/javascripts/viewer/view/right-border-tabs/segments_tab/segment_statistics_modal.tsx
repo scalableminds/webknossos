@@ -375,24 +375,22 @@ export function SegmentStatisticsModal({
         disabled: isErrorCase || isLoadingVolumes || isLoadingBboxes || isLoadingSurfaceAreas,
       }}
     >
-      <Spin spinning={statisticsList.length === 0 && segments.length > 0}>
-        {hasAdditionalCoords && (
-          <Alert
-            title={`These statistics only refer to the current additional ${pluralize(
-              "coordinate",
-              additionalCoordinates?.length || 0,
-            )} ${additionalCoordinateStringForModal}.`}
-            type="info"
-            showIcon
-          />
-        )}
-        <Table
-          dataSource={statisticsList}
-          columns={columns}
-          style={{ whiteSpace: "pre" }}
-          scroll={{ x: "max-content" }}
+      {hasAdditionalCoords && (
+        <Alert
+          title={`These statistics only refer to the current additional ${pluralize(
+            "coordinate",
+            additionalCoordinates?.length || 0,
+          )} ${additionalCoordinateStringForModal}.`}
+          type="info"
+          showIcon
         />
-      </Spin>
+      )}
+      <Table
+        dataSource={statisticsList}
+        columns={columns}
+        style={{ whiteSpace: "pre" }}
+        scroll={{ x: "max-content" }}
+      />
     </Modal>
   );
 }

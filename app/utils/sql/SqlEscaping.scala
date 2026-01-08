@@ -1,5 +1,7 @@
 package utils.sql
 
+import scala.annotation.tailrec
+
 trait SqlEscaping {
   protected def escapeLiteral(aString: String): String = {
     // Ported from PostgreSQL 9.2.4 source code in src/interfaces/libpq/fe-exec.c
@@ -35,18 +37,30 @@ trait SqlEscaping {
         // Removing the escaped quotes to split at commas not surrounded by quotes
         // Splitting *the original string* at split positions obtained from matching there
         val withoutEscapedQuotes = trimmed.replace("\\\"", "__")
-        val splitPositions: List[Int] =
-          ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".r.findAllMatchIn(withoutEscapedQuotes).map(_.start).toList.sorted
+        val regex = if (withoutEscapedQuotes.contains("\"")) {
+          ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".r
+        } else {
+          // If there are no quotes in the literal, no need for the complex regex, just split at all commas,
+          // this is much faster.
+          ",".r
+        }
+        val splitPositions = regex.findAllMatchIn(withoutEscapedQuotes).map(_.start).toList.sorted
         val split = splitAtPositions(splitPositions, trimmed)
         split.map(unescapeInArrayLiteral)
       }
     }
 
   // Split a string at specified positions. Drop 1 character at every split
-  private def splitAtPositions(positions: List[Int], aString: String): List[String] = positions match {
-    case pos :: remainingPositions =>
-      aString.substring(0, pos) :: splitAtPositions(remainingPositions.map(_ - pos - 1), aString.substring(pos + 1))
-    case Nil => List(aString)
+  private def splitAtPositions(positions: List[Int], aString: String): List[String] = {
+    @tailrec
+    def splitIter(positions: List[Int], aString: String, acc: List[String]): List[String] =
+      positions match {
+        case pos :: remainingPositions =>
+          val (first, rest) = aString.splitAt(pos)
+          splitIter(remainingPositions.map(_ - pos - 1), rest.substring(1), first :: acc)
+        case Nil => acc.reverse :+ aString
+      }
+    splitIter(positions, aString, List.empty)
   }
 
   private def unescapeInArrayLiteral(aString: String): String = {

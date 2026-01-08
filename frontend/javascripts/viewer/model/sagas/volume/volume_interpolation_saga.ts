@@ -33,11 +33,11 @@ import {
 import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { VoxelBuffer2D } from "viewer/model/volumetracing/volumelayer";
+import type { VoxelBuffer2D } from "viewer/model/volumetracing/section_labeling";
 import { Model, api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
-import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import { createSectionLabeler, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -367,16 +367,16 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     targetOffsetW < adaptedInterpolationRange[1];
     targetOffsetW++
   ) {
-    const interpolationLayer = yield* call(
-      createVolumeLayer,
+    const sectionLabeler = yield* call(
+      createSectionLabeler,
       volumeTracing,
       activeViewport,
       labeledMag,
-      relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
+      (thirdDim) => relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
     );
-    interpolationVoxelBuffers[targetOffsetW] = interpolationLayer.createVoxelBuffer2D(
+    interpolationVoxelBuffers[targetOffsetW] = sectionLabeler.createVoxelBuffer2D(
       V2.floor(
-        interpolationLayer.globalCoordToMag2DFloat(
+        sectionLabeler.globalCoordToMag2DFloat(
           V3.add(relevantBoxMag1.min, transpose([0, 0, targetOffsetW])),
         ),
       ),

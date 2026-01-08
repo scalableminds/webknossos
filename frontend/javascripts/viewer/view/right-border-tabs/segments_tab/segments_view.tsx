@@ -258,10 +258,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   setActiveCell(
     segmentId: number,
-    somePosition?: Vector3,
+    somePositionInLayerSpace?: Vector3,
     someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
-    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, somePositionInLayerSpace, someAdditionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {

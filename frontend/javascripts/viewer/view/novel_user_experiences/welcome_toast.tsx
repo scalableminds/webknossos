@@ -6,7 +6,7 @@ import UserLocalStorage from "libs/user_local_storage";
 import defaultsDeep from "lodash/defaultsDeep";
 import { ColorWKBlueZircon, getAntdTheme } from "theme";
 
-const lightThemeWithCyanButton = defaultsDeep(
+const darkThemeWithCyanButton = defaultsDeep(
   { token: { colorPrimary: ColorWKBlueZircon } },
   getAntdTheme("dark"),
 );
@@ -113,5 +113,5 @@ export default function WelcomeToast() {
     // should also *not* appear after a registered user logs out.
     UserLocalStorage.setItem("novelUserExperienceInfos.hasSeenWelcomeToast", "true", false);
   });
-  return <ConfigProvider theme={lightThemeWithCyanButton}>{contextHolder}</ConfigProvider>;
+  return <ConfigProvider theme={darkThemeWithCyanButton}>{contextHolder}</ConfigProvider>;
 }

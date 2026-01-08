@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import models.user.User
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
+import spire.std.map
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -91,7 +92,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       layersAndVoxelSizes <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer)
-      (layers, voxelSize) <- if (composeRequest.layers.forall(_.transformations.isEmpty)) {
+      voxelSizesDiffer = layersAndVoxelSizes.map(_._2).distinct.length > 1
+      (layers, voxelSize) <- if (composeRequest.layers.forall(_.transformations.isEmpty) && (true || voxelSizesDiffer)) {
         adaptLayersAndVoxelSize(layersAndVoxelSizes, None)
       } else {
         Fox.successful(layersAndVoxelSizes.map(_._1), composeRequest.voxelSize)

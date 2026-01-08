@@ -115,7 +115,7 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -148,7 +148,7 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
       jint existingBBoxBottomRightX, jint existingBBoxBottomRightY, jint existingBBoxBottomRightZ) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -196,10 +196,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jlongArray distinctSegmentIdsJavaArray, jlongArray agglomerateIdForDistinctSegmentIdsJavaArray) {
 
     jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
     jsize mapSize = env -> GetArrayLength(distinctSegmentIdsJavaArray);
-    jlong * distinctSegmentIds = env -> GetLongArrayElements(distinctSegmentIdsJavaArray, NULL);
-    jlong * agglomerateIdForDistinctSegmentIds = env -> GetLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, NULL);
+    jlong * distinctSegmentIds = env -> GetLongArrayElements(distinctSegmentIdsJavaArray, nullptr);
+    jlong * agglomerateIdForDistinctSegmentIds = env -> GetLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, nullptr);
 
     try {
         if (mapSize != env->GetArrayLength(agglomerateIdForDistinctSegmentIdsJavaArray)) {

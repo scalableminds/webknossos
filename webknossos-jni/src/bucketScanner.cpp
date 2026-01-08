@@ -46,7 +46,7 @@ jlongArray copyToJLongArray(JNIEnv *env, const std::unordered_set<int64_t> &sour
         targetElements[i] = static_cast<jlong>(*it);
         ++it;
     }
-    env->ReleaseLongArrayElements(target, targetElements, JNI_COMMIT);
+    env->ReleaseLongArrayElements(target, targetElements, 0);
 
     return target;
 }
@@ -78,14 +78,14 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
             }
         }
 
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         return copyToJLongArray(env, uniqueSegmentIds);
     } catch (const std::exception &e) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner collectSegmentIds: " + std::string(e.what()));
         return nullptr;
     } catch (...) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner collectSegmentIds");
         return nullptr;
     }
@@ -106,15 +106,15 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
                 segmentVoxelCount++;
             }
         }
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         return segmentVoxelCount;
 
     } catch (const std::exception &e) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels: " + std::string(e.what()));
         return 0;
     } catch (...) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels");
         return 0;
     }
@@ -156,17 +156,17 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
                 }
             }
         }
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         jintArray resultAsJIntArray = env -> NewIntArray(bbox.size());
-        env -> SetIntArrayRegion(resultAsJIntArray, 0, bbox.size(), reinterpret_cast < const jint * > (bbox.data()));
+        env->SetIntArrayRegion(resultAsJIntArray, 0, bbox.size(), reinterpret_cast < const jint * > (bbox.data()));
 
         return resultAsJIntArray;
     } catch (const std::exception &e) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox: " + std::string(e.what()));
         return nullptr;
     } catch (...) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
         return nullptr;
     }
@@ -240,21 +240,21 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
             writeSegmentIdAtIndex(bucketBytesMutable, i, segmentId, bytesPerElement, elementsAreSigned);
         }
 
-        env->ReleaseByteArrayElements(bucketBytesMutableJavaArray, bucketBytesMutable, JNI_COMMIT);
-        env->ReleaseByteArrayElements(incomingBucketBytesJavaArray, incomingBucketBytes, 0);
-        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, 0);
-        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, 0);
+        env->ReleaseByteArrayElements(bucketBytesMutableJavaArray, bucketBytesMutable, 0);
+        env->ReleaseByteArrayElements(incomingBucketBytesJavaArray, incomingBucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
     } catch (const std::exception &e) {
         env->ReleaseByteArrayElements(bucketBytesMutableJavaArray, bucketBytesMutable, 0);
-        env->ReleaseByteArrayElements(incomingBucketBytesJavaArray, incomingBucketBytes, 0);
-        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, 0);
-        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, 0);
+        env->ReleaseByteArrayElements(incomingBucketBytesJavaArray, incomingBucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner mergeVolumeBucketInPlace: " + std::string(e.what()));
     } catch (...) {
         env->ReleaseByteArrayElements(bucketBytesMutableJavaArray, bucketBytesMutable, 0);
-        env->ReleaseByteArrayElements(incomingBucketBytesJavaArray, incomingBucketBytes, 0);
-        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, 0);
-        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, 0);
+        env->ReleaseByteArrayElements(incomingBucketBytesJavaArray, incomingBucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner mergeVolumeBucketInPlace");
     }
 }
@@ -281,15 +281,15 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
             }
         }
 
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
-        env->ReleaseByteArrayElements(filteredBucketBytesJavaArray, filteredBucketBytes, JNI_COMMIT);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseByteArrayElements(filteredBucketBytesJavaArray, filteredBucketBytes, 0);
         return filteredBucketBytesJavaArray;
     } catch (const std::exception &e) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucketInPlace: " + std::string(e.what()));
         return nullptr;
     } catch (...) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucketInPlace");
         return nullptr;
     }

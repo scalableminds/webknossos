@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   APIAiModelCategory,
   type AiModelTrainingAnnotationSpecification,
-  getUnversionedAnnotationInformation,
   runInstanceModelTraining,
   runNeuronTraining,
 } from "admin/rest_api";
@@ -18,6 +17,7 @@ import type { Vector3 } from "viewer/constants";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
+import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
 import type { AiTrainingTask } from "./ai_training_model_selector";
 
 export interface AiTrainingAnnotationSelection {
@@ -27,6 +27,7 @@ export interface AiTrainingAnnotationSelection {
   groundTruthLayer?: string;
   magnification?: Vector3;
   userBoundingBoxes: UserBoundingBox[];
+  volumeTracingMags?: Record<string, { mag: Vector3 }[]>;
 }
 
 interface AiTrainingJobContextType {
@@ -78,7 +79,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
 
   const { data: initialFullAnnotation } = useQuery({
     queryKey: ["initialAnnotation", currentAnnotation.annotationId],
-    queryFn: () => getUnversionedAnnotationInformation(currentAnnotation.annotationId!),
+    queryFn: async () => fetchAnnotationInfo(currentAnnotation.annotationId!),
     enabled: !!currentAnnotation.annotationId,
   });
 
@@ -91,9 +92,10 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     ) {
       setSelectedAnnotations([
         {
-          annotation: initialFullAnnotation,
+          annotation: initialFullAnnotation.annotation,
           userBoundingBoxes: userBoundingBoxes,
           dataset: currentDataset,
+          volumeTracingMags: initialFullAnnotation.volumeTracingMags,
         },
       ]);
     }

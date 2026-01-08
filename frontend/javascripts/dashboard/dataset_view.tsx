@@ -223,7 +223,7 @@ function DatasetView({
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <Space.Compact style={{ display: "flex" }}>
+    <Space.Compact>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
@@ -320,7 +320,6 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
       </FastTooltip>
       <Dropdown
         menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
-        trigger={["click", "hover"]}
       >
         <Button disabled={context.isChecking}>
           <EllipsisOutlined />

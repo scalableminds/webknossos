@@ -1,4 +1,4 @@
-import { Progress, Tabs, type TabsProps, Tooltip } from "antd";
+import { Flex, Progress, Tabs, type TabsProps, Tooltip } from "antd";
 import { formatNumber } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { JSONTree, type LabelRenderer, type ShouldExpandNodeInitially } from "react-json-tree";
@@ -137,7 +137,7 @@ function TaskView({
         VoxelyticsRunState.FAILED,
         VoxelyticsRunState.STALE,
       ].includes(taskInfo.state) && (
-        <div style={{ display: "flex", flexDirection: "row" }}>
+        <Flex gap="small">
           Chunk Progress:
           <Tooltip
             overlay={
@@ -157,15 +157,7 @@ function TaskView({
               </>
             }
           >
-            <span
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                marginLeft: "1em",
-                marginRight: "3em",
-              }}
-            >
+            <Flex align="center" flex={1} gap="small">
               <Progress
                 percent={
                   ((taskInfo.chunkCounts.complete +
@@ -186,17 +178,17 @@ function TaskView({
                 showInfo={false}
                 style={{ flex: 1 }}
               />
-              <span style={{ fontSize: "0.9em", marginLeft: "1em" }}>
+              <span>
                 {formatNumber(taskInfo.chunkCounts.complete)} /{" "}
                 {formatNumber(taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)}
               </span>
-            </span>
+            </Flex>
           </Tooltip>
           Current Execution ID:&nbsp;
           <span style={{ fontFamily: "monospace" }}>
             {taskInfo.currentExecutionId != null ? taskInfo.currentExecutionId : "-"}
           </span>
-        </div>
+        </Flex>
       )}
       <Tabs defaultActiveKey="1" items={tabs} />
     </div>

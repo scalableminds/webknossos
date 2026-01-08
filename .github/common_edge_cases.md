@@ -9,6 +9,7 @@ Will this also work if
  - The user is logged out and views a public dataset or annotation
  - User uses dark mode / light mode
  - There is no local datastore/tracingstore module (Compare [instructions to test this locally](https://github.com/scalableminds/webknossos/wiki/Set-up-a-standalone-datastore-locally))
+ - An annotation is opened by multiple users at the same time
 
 Consider SQL pitfalls:
  - `x IN ()` statements must never called with empty list

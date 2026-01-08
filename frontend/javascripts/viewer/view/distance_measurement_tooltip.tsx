@@ -129,8 +129,8 @@ export default function DistanceMeasurementTooltip() {
         pointerEvents: isMeasuring ? "none" : "auto",
       }}
     >
-      <DistanceEntry distance={valueInMetricUnit} />
       <DistanceEntry distance={valueInVx} />
+      <DistanceEntry distance={valueInMetricUnit} />
     </div>
   );
 }

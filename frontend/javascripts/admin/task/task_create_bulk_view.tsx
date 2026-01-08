@@ -1,9 +1,10 @@
 import { InboxOutlined } from "@ant-design/icons";
 import { createTasks } from "admin/api/tasks";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
-import { App, Button, Card, Divider, Form, Input, Progress, Spin, Upload } from "antd";
+import { App, Button, Card, Divider, Form, Input, Progress, Spin, Typography, Upload } from "antd";
 import Toast from "libs/toast";
-import _ from "lodash";
+import isString from "lodash/isString";
+import uniq from "lodash/uniq";
 import Messages from "messages";
 import { useState } from "react";
 import type { APITask } from "types/api_types";
@@ -84,9 +85,9 @@ function TaskCreateBulkView() {
     const { boundingBox } = task;
 
     if (
-      !_.isString(task.neededExperience.domain) ||
-      !_.isString(task.taskTypeId) ||
-      !_.isString(task.projectName) ||
+      !isString(task.neededExperience.domain) ||
+      !isString(task.taskTypeId) ||
+      !isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
       Number.isNaN(task.pendingInstances) ||
@@ -253,7 +254,7 @@ function TaskCreateBulkView() {
 
       handleTaskCreationResponse(modal, {
         tasks: taskResponses,
-        warnings: _.uniq(warnings),
+        warnings: uniq(warnings),
       });
     } finally {
       setIsUploading(false);
@@ -269,20 +270,20 @@ function TaskCreateBulkView() {
     >
       <Spin spinning={isUploading}>
         <Card title={<h3>Bulk Create Tasks</h3>}>
-          <p>
-            Specify each new task on a separate line as comma separated values (CSV) in the
-            following format:
-            <br />
-            <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
-            experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ,
-            width, height, depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a>{" "}
-            (optional), baseAnnotationId (optional)
-            <br />
-            If you want to define some (but not all) of the optional values, please list all
-            optional values and use an empty value for the ones you do not want to set (e.g.,
-            someValue,,someOtherValue if you want to omit the second value). If you do not want to
-            define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
-          </p>
+          <Typography.Paragraph>
+            Specify each task on a separate line as comma-separated values (CSV) in the below
+            format. To define a subset of optional values, list all optional columns but leave the
+            fields you want to skip empty (e.g., val1,,val3). To omit the bounding box, use 0, 0, 0,
+            0, 0, 0 for its values.
+          </Typography.Paragraph>
+          <Typography.Paragraph>
+            <Typography.Text code>
+              <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
+              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,
+              minZ, width, height, depth, <a href="/projects">project</a>,{" "}
+              <a href="/scripts">scriptId</a> (optional), baseAnnotationId (optional)
+            </Typography.Text>
+          </Typography.Paragraph>
           <Form onFinish={handleSubmit} layout="vertical" form={form}>
             <FormItem
               name="bulkText"
@@ -300,7 +301,7 @@ function TaskCreateBulkView() {
 
                     const tasks = parseText(value);
                     const invalidTaskIndices = getInvalidTaskIndices(tasks);
-                    return _.isString(value) && invalidTaskIndices.length === 0
+                    return isString(value) && invalidTaskIndices.length === 0
                       ? Promise.resolve()
                       : Promise.reject(
                           new Error(
@@ -314,17 +315,19 @@ function TaskCreateBulkView() {
               ]}
             >
               <TextArea
-                className="input-monospace"
                 placeholder="dataset, datasetId, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                 autoSize={{
                   minRows: 6,
                 }}
-                style={{
-                  fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                styles={{
+                  textarea: {
+                    fontFamily:
+                      'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
+                  },
                 }}
               />
             </FormItem>
-            <Divider>Alternatively Upload a CSV File</Divider>
+            <Divider>Alternatively upload a CSV file</Divider>
             <FormItem
               hasFeedback
               name="csvFile"
@@ -335,6 +338,17 @@ function TaskCreateBulkView() {
                 accept=".csv,.txt"
                 name="csvFile"
                 beforeUpload={(file) => {
+                  const isValidType =
+                    file.type === "text/csv" ||
+                    file.type === "text/plain" ||
+                    /\.(csv|txt)$/i.test(file.name);
+
+                  if (!isValidType) {
+                    Toast.error("Only CSV and TXT files are accepted");
+                    // @ts-ignore
+                    file.status = "error";
+                  }
+
                   form.setFieldsValue({
                     csvFile: [file],
                   });
@@ -344,7 +358,7 @@ function TaskCreateBulkView() {
                 <p className="ant-upload-drag-icon">
                   <InboxOutlined />
                 </p>
-                <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                <p className="ant-upload-text">Click or drag file to this area to upload</p>
                 <p>
                   Upload a CSV file with your task specification in the same format as mentioned
                   above.
@@ -357,7 +371,7 @@ function TaskCreateBulkView() {
               ) : null}
 
               <Button type="primary" htmlType="submit">
-                Create Task
+                Create Tasks
               </Button>
             </FormItem>
           </Form>

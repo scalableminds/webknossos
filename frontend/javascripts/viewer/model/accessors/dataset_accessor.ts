@@ -16,7 +16,7 @@ import type {
   ElementClass,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "viewer/constants";
+import { LongUnitToShortUnitMap, Unicode, type Vector3, type ViewMode } from "viewer/constants";
 import constants, { ViewModeValues, Vector3Indices, MappingStatusEnum } from "viewer/constants";
 import type {
   ActiveMappingInfo,
@@ -30,6 +30,8 @@ import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+
+const { ThinSpace } = Unicode;
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
   return new MagInfo(magnifications.map((magObj) => magObj.mag));
@@ -297,7 +299,7 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
+    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)}${ThinSpace}Vx`;
   }
 
   const extent = getDatasetExtentInUnit(dataset);

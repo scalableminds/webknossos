@@ -393,7 +393,7 @@ export const IdentityTransform = {
 } as const;
 export const EMPTY_OBJECT = {} as const;
 
-const isMac = (() => {
+export const isMac = (() => {
   try {
     // Even though navigator.platform¹ is deprecated, this still
     // seems to be the best mechanism to find out whether the machine is

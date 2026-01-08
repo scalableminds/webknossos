@@ -21,12 +21,13 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Spin, Table, Tag } from "antd";
+import { Button, Card, Col, Flex, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
+import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
 import update from "immutability-helper";
 import { handleGenericError } from "libs/error_handling";
@@ -87,7 +88,7 @@ const persistence = new Persistence<PartialState>(
 );
 
 const READ_ONLY_ICON = (
-  <span className="fa-stack fa-1x">
+  <span className="fa-stack fa-1x" style={{ width: "1em" }}>
     <i className="fas fa-pen fa-stack-1x" />
     <i className="fas fa-slash fa-stack-1x" />
   </span>
@@ -485,11 +486,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       <Row gutter={32} justify="center" style={{ padding: 50 }}>
         <Col span="6">
           <Card
-            bordered={false}
+            variant="borderless"
             cover={
-              <div style={{ display: "flex", justifyContent: "center" }}>
+              <Flex justify="center">
                 <i className="drawing drawing-empty-list-annotations" />
-              </div>
+              </Flex>
             }
             style={{ background: "transparent" }}
           >
@@ -613,7 +614,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return this.getEmptyListPlaceholder();
     }
 
-    const disabledColor = { color: "var(--ant-color-text-disabled)" };
     const columns: ColumnType<APIAnnotationInfo>[] = [
       {
         title: "ID",
@@ -624,12 +624,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <FormattedId id={annotation.id} />
 
             {!this.isAnnotationEditable(annotation) ? (
-              <div style={disabledColor}>{READ_ONLY_ICON} read-only</div>
+              <LinkButton disabled icon={READ_ONLY_ICON}>
+                read-only
+              </LinkButton>
             ) : null}
             {annotation.isLockedByOwner ? (
-              <div style={disabledColor}>
-                <LockOutlined style={{ marginLeft: 8, marginRight: 8 }} /> locked
-              </div>
+              <LinkButton disabled icon={<LockOutlined />}>
+                locked
+              </LinkButton>
             ) : null}
           </>
         ),
@@ -695,7 +697,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Tags",
         dataIndex: "tags",
         render: (tags: Array<string>, annotation: APIAnnotationInfo) => (
-          <div>
+          <Space wrap>
             {tags.map((tag) => (
               <CategorizationLabel
                 key={tag}
@@ -715,7 +717,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
               />
             )}
-          </div>
+          </Space>
         ),
       },
       {
@@ -831,14 +833,10 @@ function TopBar({
   const activeTab = React.useContext(ActiveTabContext);
   const renderingTab = React.useContext(RenderingTabContext);
 
-  const marginRight = {
-    marginRight: 8,
-  };
   const search = (
     <Search
       style={{
         width: 200,
-        float: "right",
       }}
       onSearch={handleOnSearch}
       onChange={handleSearchChanged}
@@ -849,24 +847,19 @@ function TopBar({
   const content = isAdminView ? (
     search
   ) : (
-    <div className="pull-right">
+    <Space>
       <Button
         icon={<UploadOutlined />}
-        style={marginRight}
         onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
       >
         Upload Annotation(s)
       </Button>
-      <Button onClick={toggleShowArchived} style={marginRight}>
+      <Button onClick={toggleShowArchived}>
         Show {shouldShowArchivedAnnotations ? "Open" : "Archived"} Annotations
       </Button>
-      {!shouldShowArchivedAnnotations ? (
-        <Button onClick={archiveAll} style={marginRight}>
-          Archive All
-        </Button>
-      ) : null}
+      {!shouldShowArchivedAnnotations ? <Button onClick={archiveAll}>Archive All</Button> : null}
       {search}
-    </div>
+    </Space>
   );
 
   return (

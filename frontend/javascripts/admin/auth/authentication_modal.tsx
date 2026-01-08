@@ -49,7 +49,7 @@ export default function AuthenticationModal({
   return (
     <Modal title={step} onCancel={onCancel} open={isOpen} footer={null} maskClosable={false}>
       <Alert
-        message={alertMessage}
+        title={alertMessage}
         type="info"
         showIcon
         style={{

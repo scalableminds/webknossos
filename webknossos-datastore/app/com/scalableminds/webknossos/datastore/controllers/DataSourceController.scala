@@ -96,8 +96,8 @@ class DataSourceController @Inject()(
   def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       organizationId
-        .map(id => UserAccessRequest.administrateDataSources(id))
-        .getOrElse(UserAccessRequest.administrateDataSources)) {
+        .map(id => UserAccessRequest.administrateDatasets(id))
+        .getOrElse(UserAccessRequest.administrateDatasets)) {
       for {
         _ <- dataSourceService.checkInbox(verbose = true, organizationId = organizationId)
       } yield Ok
@@ -107,7 +107,7 @@ class DataSourceController @Inject()(
   def reserveUpload(): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDataSources(request.body.organization)) {
+        UserAccessRequest.administrateDatasets(request.body.organization)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
@@ -122,7 +122,7 @@ class DataSourceController @Inject()(
 
   def getUnfinishedUploads(organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationName)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationName)) {
         for {
           unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
           unfinishedUploadsWithUploadIds <- Fox.fromFuture(
@@ -352,7 +352,7 @@ class DataSourceController @Inject()(
 
   def createOrganizationDirectory(organizationId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContextForSyncBlock(
-      UserAccessRequest.administrateDataSources(organizationId)) {
+      UserAccessRequest.administrateDatasets(organizationId)) {
       val newOrganizationDirectory = new File(f"${dataSourceService.dataBaseDir}/$organizationId")
       newOrganizationDirectory.mkdirs()
       if (newOrganizationDirectory.isDirectory)
@@ -402,7 +402,7 @@ class DataSourceController @Inject()(
 
   def reload(organizationId: String, datasetId: ObjectId, layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationId)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationId)) {
         for {
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           _ = clearCachesOfDataSource(datasetId, dataSource, layerName)
@@ -664,7 +664,7 @@ class DataSourceController @Inject()(
   def exploreRemoteDataset(): Action[ExploreRemoteDatasetRequest] =
     Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDataSources(request.body.organizationId)) {
+        UserAccessRequest.administrateDatasets(request.body.organizationId)) {
         val reportMutable = ListBuffer[String]()
         val hasLocalFilesystemRequest =
           request.body.layerParameters.exists(param => new URI(param.remoteUri).getScheme == PathSchemes.schemeFile)

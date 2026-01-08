@@ -346,6 +346,17 @@ class DatasetController @Inject()(userService: UserService,
     } yield Ok(Json.toJson(usersJs))
   }
 
+  def dataSourceForSuperUser(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log() {
+        for {
+          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+        } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
   def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
            sharingToken: Option[String]): Action[AnyContent] =
@@ -592,7 +603,6 @@ class DatasetController @Inject()(userService: UserService,
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
             _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-            _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
             before = Instant.now
             _ = logger.info(
               s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")

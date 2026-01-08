@@ -7,6 +7,43 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.01.0](https://github.com/scalableminds/webknossos/releases/tag/26.01.0) - 2026-01-07
+[Commits](https://github.com/scalableminds/webknossos/compare/25.12.0...26.01.0)
+
+### Highlights
+- Multiple datasets can be deleted at once. This can be done by selecting the datasets in the dashboard and clicking "Delete datasets" in the sidebar. [#9107](https://github.com/scalableminds/webknossos/pull/9107)
+- Added a new "Analysis" menu to the navbar and moved the AI Models, Processing Jobs and Voxelytics pages to it. [#9091](https://github.com/scalableminds/webknossos/pull/9091)
+
+### Added
+- Added the possibility to set teams and roles already when inviting new users. [#9062](https://github.com/scalableminds/webknossos/pull/9062)
+- Added caching to improve performance for segment statistics (volume, area, bounding box) of static segmentation layers. [#9113](https://github.com/scalableminds/webknossos/pull/9113)
+- When a dataset with a pending conversion job is deleted by the user, that job is now cancelled, so the user won’t get a failed job notification and server compute power is saved. [#9116](https://github.com/scalableminds/webknossos/pull/9116)
+- Added support for reading segmentation data compressed with the “compresso” algorithm. [#9126](https://github.com/scalableminds/webknossos/pull/9126)
+- Added explicit units to some layer and annotation settings, such as the node radius or the particle size. [#9127](https://github.com/scalableminds/webknossos/pull/9127)
+- Superusers can now edit organization pricing plans via API. [#9129](https://github.com/scalableminds/webknossos/pull/9129)
+- Added MacOS supported trigger extended keyboard shortcuts with CMD + K [#9161](https://github.com/scalableminds/webknossos/pull/9161)
+
+### Changed
+- Redesigned the UI for starting AI jobs for running and training models and alignment. [#8873](https://github.com/scalableminds/webknossos/pull/8873)
+- Updated ant design UI library from version 5 to version 6. [#9117](https://github.com/scalableminds/webknossos/pull/9117)
+- Reduced the delay with which maintenance and version information is loaded from the server. That information is used to potentially display banners to the user. [#9132](https://github.com/scalableminds/webknossos/pull/9132)
+- Replaced a CSS-in-JS flexbox styles with antd <Flex> components [#9156](https://github.com/scalableminds/webknossos/pull/9156)
+
+### Fixed
+- Fixed rendering issues for extremely anisotropic datasets. [#9114](https://github.com/scalableminds/webknossos/pull/9114)
+- Fixed spacing for various UI elements in many views. [#9117](https://github.com/scalableminds/webknossos/pull/9117)
+- Pressing enter while editing text input during having multi-split enabled in proofreading tool no longer tries to trigger the multi-split. [#9136](https://github.com/scalableminds/webknossos/pull/9136)
+- Fixed spacing and layout of the task creation form. [#9142](https://github.com/scalableminds/webknossos/pull/9142)
+- Fixed that some ad-hoc meshes that touch the dataset layer edges wouldn’t have closing edges there. [#9143](https://github.com/scalableminds/webknossos/pull/9143)
+- Avoid rendering issues and shader crashes when using interpolation on Windows. [#9144](https://github.com/scalableminds/webknossos/pull/9144)
+- Fixed a bug where layer attachment URIs would be incorrect when adding a remote webknossos dataset [#9149](https://github.com/scalableminds/webknossos/pull/9149)
+- Fixed a crash when switching tools with keyboard shortcuts W and Shift + W [#9153](https://github.com/scalableminds/webknossos/pull/9153)
+- Fixed a bug where the password reset flow occasionally wrongly invalidated the new token immediately. [#9162](https://github.com/scalableminds/webknossos/pull/9162)
+- Fixed several issues with tag spacings after Antd v6 update. [#9166](https://github.com/scalableminds/webknossos/pull/9166)
+- Fixed welcome toast design after antd v6 update. [#9174](https://github.com/scalableminds/webknossos/pull/9174)
+- Fixed a rare stack overflow error when parsing large objects from the database. [#9177](https://github.com/scalableminds/webknossos/pull/9177)
+- Fixed floodfill progress notification not being dismissable. [#9178](https://github.com/scalableminds/webknossos/pull/9178)
+
 ## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
 [Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)
 

@@ -202,10 +202,8 @@ class EditableMappingService @Inject()(
       pos <- positionOpt.toFox ?~> "segment id or position is required in editable mapping action"
       mag <- magOpt.toFox ?~> "segment id or mag is required in editable mapping action"
       voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(remoteFallbackLayer, pos, mag)
-      voxelAsLongArray: Array[Long] <- bytesToLongs(voxelAsBytes, remoteFallbackLayer.elementClass)
-      _ <- Fox.fromBool(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
-      voxelAsLong <- voxelAsLongArray.headOption.toFox
-    } yield voxelAsLong
+      segmentIdAtVoxel <- toSegmentId(voxelAsBytes, remoteFallbackLayer.elementClass)
+    } yield segmentIdAtVoxel
 
   def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
       implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
@@ -372,31 +370,36 @@ class EditableMappingService @Inject()(
 
   def mapData(unmappedData: Array[Byte],
               relevantMapping: Map[Long, Long],
-              elementClass: ElementClassProto): Fox[Array[Byte]] =
+              elementClass: ElementClass.Value): Box[Array[Byte]] = {
+    val (idMapSrc, idMapDst) = relevantMapping.toArray.unzip
+    val dataMappedMutable = new Array[Byte](unmappedData.length)
+    // TODO create nicer mapping function that does not work in-place
     for {
-      unmappedDataTyped <- bytesToSegmentInt(unmappedData, elementClass)
-      mappedDataLongs = unmappedDataTyped.map(element => relevantMapping(element.toLong))
-      bytes <- longsToBytes(mappedDataLongs, elementClass)
-    } yield bytes
+      _ <- tryo(
+        nativeBucketScanner.mergeVolumeBucketInPlace(dataMappedMutable,
+                                                     unmappedData,
+                                                     skipMapping = false,
+                                                     idMapSrc,
+                                                     idMapDst,
+                                                     ElementClass.bytesPerElement(elementClass),
+                                                     ElementClass.isSigned(elementClass)))
+    } yield dataMappedMutable
+  }
 
-  private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[Long]] =
+  private def toSegmentId(singleSegmentBytes: Array[Byte], elementClass: ElementClassProto): Fox[Long] =
     for {
       _ <- Fox.fromBool(!elementClass.isuint64)
-      segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
-    } yield segmentIntArray.map(_.toLong)
-
-  private def bytesToSegmentInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[SegmentInteger]] =
-    for {
-      _ <- Fox.fromBool(!elementClass.isuint64)
-      segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
-    } yield segmentIntArray
-
-  private def longsToBytes(longs: Array[Long], elementClass: ElementClassProto): Fox[Array[Byte]] =
-    for {
-      _ <- Fox.fromBool(!elementClass.isuint64)
-      segmentIntArray: Array[SegmentInteger] = longs.map(SegmentInteger.fromLongWithElementClass(_, elementClass))
-      bytes = SegmentIntegerArray.toByteArray(segmentIntArray, elementClass)
-    } yield bytes
+      segmentIds <- tryo(
+        // collectSegmentIds has some overhead not really needed here, but it is negligible as this is not called with a high frequency.
+        nativeBucketScanner.collectSegmentIds(
+          singleSegmentBytes,
+          ElementClass.bytesPerElement(ElementClass.fromProto(elementClass)),
+          ElementClass.isSigned(ElementClass.fromProto(elementClass)),
+          skipZeroes = false
+        )).toFox
+      _ <- Fox.fromBool(segmentIds.length == 1) ?~> s"Expected one, got ${segmentIds.length} segment id values for voxel."
+      segmentId <- segmentIds.headOption.toFox
+    } yield segmentId
 
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(
       implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {

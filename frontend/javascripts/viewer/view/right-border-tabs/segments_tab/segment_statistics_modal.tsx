@@ -21,9 +21,6 @@ import { api } from "viewer/singletons";
 import type { Segment } from "viewer/store";
 import type { SegmentHierarchyGroup, SegmentHierarchyNode } from "./segments_view_helper";
 
-const MODAL_ERROR_MESSAGE =
-  "Segment statistics could not be fetched. Check the console for more details.";
-
 const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
   const capitalizedUnit = capitalize(dataSourceUnit);
   return `segmentId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
@@ -59,7 +56,7 @@ type SegmentInfo = {
 };
 
 const exportStatisticsToCSV = (
-  segmentInformation: Array<SegmentInfo>,
+  segmentInformation: SegmentInfo[],
   tracingIdOrDatasetName: string,
   groupIdToExport: number,
   hasAdditionalCoords: boolean,
@@ -159,7 +156,11 @@ export function SegmentStatisticsModal({
     [groupTree],
   );
 
-  const { data: volumes, isLoading: isLoadingVolumes } = useQuery({
+  const {
+    data: volumes,
+    isLoading: isLoadingVolumes,
+    isError: isErrorVolumes,
+  } = useQuery({
     queryKey: [
       "segmentVolumes",
       segmentIds,
@@ -181,7 +182,11 @@ export function SegmentStatisticsModal({
     gcTime: 0,
   });
 
-  const { data: boundingBoxes, isLoading: isLoadingBboxes } = useQuery({
+  const {
+    data: boundingBoxes,
+    isLoading: isLoadingBboxes,
+    isError: isErrorBboxes,
+  } = useQuery({
     queryKey: [
       "segmentBoundingBoxes",
       segmentIds,
@@ -203,7 +208,11 @@ export function SegmentStatisticsModal({
     gcTime: 0,
   });
 
-  const { data: surfaceAreas, isLoading: isLoadingSurfaceAreas } = useQuery({
+  const {
+    data: surfaceAreas,
+    isLoading: isLoadingSurfaceAreas,
+    isError: isErrorSurfaceAreas,
+  } = useQuery({
     queryKey: [
       "segmentSurfaceAreas",
       segmentIds,
@@ -303,31 +312,47 @@ export function SegmentStatisticsModal({
       title: "Volume",
       dataIndex: "formattedSize",
       key: "formattedSize",
-      render: (text: string) => (isLoadingVolumes ? <Spin size="small" /> : text),
+      render: (text: string) => {
+        if (isLoadingVolumes) return <Spin size="small" />;
+        if (isErrorVolumes) return "n/a";
+        return text;
+      },
     },
     {
       title: "Surface Area",
       dataIndex: "formattedSurfaceArea",
       key: "formattedSurfaceArea",
-      render: (text: string) => (isLoadingSurfaceAreas ? <Spin size="small" /> : text),
+      render: (text: string) => {
+        if (isLoadingSurfaceAreas) return <Spin size="small" />;
+        if (isErrorSurfaceAreas) return "n/a";
+        return text;
+      },
     },
     {
       title: "Bounding Box\nTop Left Position",
       dataIndex: "boundingBoxTopLeftAsString",
       key: "boundingBoxTopLeft",
       width: 150,
-      render: (text: string) => (isLoadingBboxes ? <Spin size="small" /> : text),
+      render: (text: string) => {
+        if (isLoadingBboxes) return <Spin size="small" />;
+        if (isErrorBboxes) return "n/a";
+        return text;
+      },
     },
     {
       title: "Bounding Box\nSize in vx",
       dataIndex: "boundingBoxPositionAsString",
       key: "boundingBoxPosition",
       width: 150,
-      render: (text: string) => (isLoadingBboxes ? <Spin size="small" /> : text),
+      render: (text: string) => {
+        if (isLoadingBboxes) return <Spin size="small" />;
+        if (isErrorBboxes) return "n/a";
+        return text;
+      },
     },
   ];
 
-  const isErrorCase = false; // We now handle partial loading and error individually for stats
+  const isErrorCase = isErrorVolumes || isErrorBboxes || isErrorSurfaceAreas;
 
   return (
     <Modal
@@ -346,31 +371,27 @@ export function SegmentStatisticsModal({
         )
       }
       okText="Export to CSV"
-      okButtonProps={{ disabled: isErrorCase }}
+      okButtonProps={{
+        disabled: isErrorCase || isLoadingVolumes || isLoadingBboxes || isLoadingSurfaceAreas,
+      }}
     >
       <Spin spinning={statisticsList.length === 0 && segments.length > 0}>
-        {isErrorCase ? (
-          MODAL_ERROR_MESSAGE
-        ) : (
-          <>
-            {hasAdditionalCoords && (
-              <Alert
-                title={`These statistics only refer to the current additional ${pluralize(
-                  "coordinate",
-                  additionalCoordinates?.length || 0,
-                )} ${additionalCoordinateStringForModal}.`}
-                type="info"
-                showIcon
-              />
-            )}
-            <Table
-              dataSource={statisticsList}
-              columns={columns}
-              style={{ whiteSpace: "pre" }}
-              scroll={{ x: "max-content" }}
-            />
-          </>
+        {hasAdditionalCoords && (
+          <Alert
+            title={`These statistics only refer to the current additional ${pluralize(
+              "coordinate",
+              additionalCoordinates?.length || 0,
+            )} ${additionalCoordinateStringForModal}.`}
+            type="info"
+            showIcon
+          />
         )}
+        <Table
+          dataSource={statisticsList}
+          columns={columns}
+          style={{ whiteSpace: "pre" }}
+          scroll={{ x: "max-content" }}
+        />
       </Spin>
     </Modal>
   );

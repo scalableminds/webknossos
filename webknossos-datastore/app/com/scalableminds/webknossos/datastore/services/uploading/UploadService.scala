@@ -350,15 +350,16 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkWithinRequestedFileSize(uploadDir: Path, uploadId: String, datasetId: ObjectId): Fox[Unit] =
     for {
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ = totalFileSizeInBytesOpt.foreach { reservedFileSize =>
-        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map { actualFileSize =>
-          if (actualFileSize > reservedFileSize.toLong) {
+      _ <- totalFileSizeInBytesOpt.map { reservedFileSize =>
+        for {
+          actualFileSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox
+          _ <- if (actualFileSize > reservedFileSize.toLong) {
             cleanUpDatasetExceedingSize(uploadDir, uploadId)
             Fox.failure(
-              s"Uploaded dataset $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
-          }
-        }
-      }
+              f"Uploaded dataset $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
+          } else Fox.successful(())
+        } yield ()
+      }.getOrElse(Fox.successful(()))
     } yield ()
 
   private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =

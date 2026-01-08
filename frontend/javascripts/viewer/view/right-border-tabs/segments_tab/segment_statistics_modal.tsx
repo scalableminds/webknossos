@@ -1,10 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
 import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
 import capitalize from "lodash/capitalize";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -46,15 +47,15 @@ type SegmentInfo = {
   segmentName: string;
   groupId: number | undefined | null;
   groupName: string;
-  volumeInUnit3: number;
-  formattedSize: string;
-  volumeInVoxel: number;
-  surfaceAreaInUnit2: number;
-  formattedSurfaceArea: string;
-  boundingBoxTopLeft: Vector3;
-  boundingBoxTopLeftAsString: string;
-  boundingBoxPosition: Vector3;
-  boundingBoxPositionAsString: string;
+  volumeInUnit3: number | undefined;
+  formattedSize: string | undefined;
+  volumeInVoxel: number | undefined;
+  surfaceAreaInUnit2: number | undefined;
+  formattedSurfaceArea: string | undefined;
+  boundingBoxTopLeft: Vector3 | undefined;
+  boundingBoxTopLeftAsString: string | undefined;
+  boundingBoxPosition: Vector3 | undefined;
+  boundingBoxPositionAsString: string | undefined;
 };
 
 const exportStatisticsToCSV = (
@@ -75,8 +76,8 @@ const exportStatisticsToCSV = (
       row.volumeInVoxel,
       row.volumeInUnit3,
       row.surfaceAreaInUnit2,
-      ...row.boundingBoxTopLeft,
-      ...row.boundingBoxPosition,
+      ...(row.boundingBoxTopLeft || []),
+      ...(row.boundingBoxPosition || []),
     ]);
   });
 
@@ -127,12 +128,7 @@ export function SegmentStatisticsModal({
   );
   const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);
 
-  const [statistics, setStatistics] = useState<Map<number, Partial<SegmentInfo>>>(new Map());
-  const [loading, setLoading] = useState({
-    volumes: true,
-    boundingBoxes: true,
-    surfaceAreas: true,
-  });
+  const segmentIds = useMemo(() => segments.map((s) => s.id), [segments]);
 
   const additionalCoordStringForCsv = getAdditionalCoordinatesAsString(additionalCoordinates);
 
@@ -163,120 +159,142 @@ export function SegmentStatisticsModal({
     [groupTree],
   );
 
-  const updateStats = useCallback(
-    (id: number, patch: Partial<SegmentInfo>) => {
-      setStatistics((prev) => {
-        const newMap = new Map(prev);
-        const segment = segments.find((s) => s.id === id);
-        const current = newMap.get(id) || {
-          key: id,
-          segmentId: id,
-          segmentName: segment?.name || `Segment ${id}`,
-          additionalCoordinates: additionalCoordStringForCsv,
-          groupId: segment ? getGroupIdForSegment(segment) : null,
-          groupName: segment ? getGroupNameForId(getGroupIdForSegment(segment)) : "",
-        };
-        newMap.set(id, { ...current, ...patch });
-        return newMap;
-      });
-    },
-    [segments, additionalCoordStringForCsv, getGroupIdForSegment, getGroupNameForId],
-  );
-
-  useEffect(() => {
-    const fetchStatistics = async () => {
-      const segmentIds = segments.map((s) => s.id);
+  const { data: volumes, isLoading: isLoadingVolumes } = useQuery({
+    queryKey: [
+      "segmentVolumes",
+      segmentIds,
+      layersFinestMag,
+      additionalCoordinates,
+      mappingName,
+      storeInfoType,
+    ],
+    queryFn: async () => {
       await api.tracing.save();
-
-      // Fetch Volumes
-      getSegmentVolumes(
+      return getSegmentVolumes(
         storeInfoType,
         layersFinestMag,
         segmentIds,
         additionalCoordinates,
         mappingName,
-      )
-        .then((volumes) => {
-          segmentIds.forEach((id, i) => {
-            const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestMag, volumes[i]);
-            updateStats(id, {
-              volumeInVoxel: volumes[i],
-              volumeInUnit3,
-              formattedSize: formatNumberToVolume(
-                volumeInUnit3,
-                LongUnitToShortUnitMap[voxelSize.unit],
-              ),
-            });
-          });
-          setLoading((l) => ({ ...l, volumes: false }));
-        })
-        .catch(console.error);
+      );
+    },
+    gcTime: 0,
+  });
 
-      // Fetch Bounding Boxes
-      getSegmentBoundingBoxes(
+  const { data: boundingBoxes, isLoading: isLoadingBboxes } = useQuery({
+    queryKey: [
+      "segmentBoundingBoxes",
+      segmentIds,
+      layersFinestMag,
+      additionalCoordinates,
+      mappingName,
+      storeInfoType,
+    ],
+    queryFn: async () => {
+      await api.tracing.save();
+      return getSegmentBoundingBoxes(
         storeInfoType,
         layersFinestMag,
         segmentIds,
         additionalCoordinates,
         mappingName,
-      )
-        .then((boundingBoxes) => {
-          segmentIds.forEach((id, i) => {
-            const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxes[i], layersFinestMag);
-            updateStats(id, {
-              boundingBoxTopLeft: boundingBoxInMag1.topLeft,
-              boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
-              boundingBoxPosition: [
-                boundingBoxInMag1.width,
-                boundingBoxInMag1.height,
-                boundingBoxInMag1.depth,
-              ] as Vector3,
-              boundingBoxPositionAsString: `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`,
-            });
-          });
-          setLoading((l) => ({ ...l, boundingBoxes: false }));
-        })
-        .catch(console.error);
+      );
+    },
+    gcTime: 0,
+  });
 
-      // Fetch Surface Areas
-      getSegmentSurfaceArea(
+  const { data: surfaceAreas, isLoading: isLoadingSurfaceAreas } = useQuery({
+    queryKey: [
+      "segmentSurfaceAreas",
+      segmentIds,
+      layersFinestMag,
+      additionalCoordinates,
+      mappingName,
+      storeInfoType,
+      currentMeshFile?.name,
+    ],
+    queryFn: async () => {
+      await api.tracing.save();
+      return getSegmentSurfaceArea(
         storeInfoType,
         layersFinestMag,
         currentMeshFile?.name,
         segmentIds,
         additionalCoordinates,
         mappingName,
-      )
-        .then((surfaceAreas) => {
-          segmentIds.forEach((id, i) => {
-            updateStats(id, {
-              surfaceAreaInUnit2: surfaceAreas[i],
-              formattedSurfaceArea: formatNumberToArea(
-                surfaceAreas[i],
-                LongUnitToShortUnitMap[voxelSize.unit],
-              ),
-            });
-          });
-          setLoading((l) => ({ ...l, surfaceAreas: false }));
-        })
-        .catch(console.error);
-    };
-
-    fetchStatistics();
-  }, [
-    segments,
-    layersFinestMag,
-    additionalCoordinates,
-    mappingName,
-    currentMeshFile?.name,
-    voxelSize,
-    storeInfoType,
-    updateStats,
-  ]);
+      );
+    },
+    gcTime: 0,
+  });
 
   const statisticsList = useMemo(() => {
-    return segments.map((s) => statistics.get(s.id) as SegmentInfo).filter(Boolean);
-  }, [segments, statistics]);
+    return segments.map((segment, i) => {
+      const currentGroupId = getGroupIdForSegment(segment);
+
+      let volumeStats = {};
+      if (volumes) {
+        const volumeInVoxel = volumes[i];
+        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestMag, volumeInVoxel);
+        volumeStats = {
+          volumeInVoxel,
+          volumeInUnit3,
+          formattedSize: formatNumberToVolume(
+            volumeInUnit3,
+            LongUnitToShortUnitMap[voxelSize.unit],
+          ),
+        };
+      }
+
+      let bboxStats = {};
+      if (boundingBoxes) {
+        const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxes[i], layersFinestMag);
+        bboxStats = {
+          boundingBoxTopLeft: boundingBoxInMag1.topLeft,
+          boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
+          boundingBoxPosition: [
+            boundingBoxInMag1.width,
+            boundingBoxInMag1.height,
+            boundingBoxInMag1.depth,
+          ] as Vector3,
+          boundingBoxPositionAsString: `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`,
+        };
+      }
+
+      let surfaceStats = {};
+      if (surfaceAreas) {
+        const surfaceAreaInUnit2 = surfaceAreas[i];
+        surfaceStats = {
+          surfaceAreaInUnit2,
+          formattedSurfaceArea: formatNumberToArea(
+            surfaceAreaInUnit2,
+            LongUnitToShortUnitMap[voxelSize.unit],
+          ),
+        };
+      }
+
+      return {
+        key: segment.id,
+        additionalCoordinates: additionalCoordStringForCsv,
+        segmentId: segment.id,
+        segmentName: segment.name == null ? `Segment ${segment.id}` : segment.name,
+        groupId: currentGroupId,
+        groupName: getGroupNameForId(currentGroupId),
+        ...volumeStats,
+        ...bboxStats,
+        ...surfaceStats,
+      } as SegmentInfo;
+    });
+  }, [
+    segments,
+    volumes,
+    boundingBoxes,
+    surfaceAreas,
+    getGroupIdForSegment,
+    getGroupNameForId,
+    additionalCoordStringForCsv,
+    voxelSize,
+    layersFinestMag,
+  ]);
 
   const columns = [
     { title: "Segment ID", dataIndex: "segmentId", key: "segmentId" },
@@ -285,27 +303,27 @@ export function SegmentStatisticsModal({
       title: "Volume",
       dataIndex: "formattedSize",
       key: "formattedSize",
-      render: (text: string) => (loading.volumes ? <Spin size="small" /> : text),
+      render: (text: string) => (isLoadingVolumes ? <Spin size="small" /> : text),
     },
     {
       title: "Surface Area",
       dataIndex: "formattedSurfaceArea",
       key: "formattedSurfaceArea",
-      render: (text: string) => (loading.surfaceAreas ? <Spin size="small" /> : text),
+      render: (text: string) => (isLoadingSurfaceAreas ? <Spin size="small" /> : text),
     },
     {
       title: "Bounding Box\nTop Left Position",
       dataIndex: "boundingBoxTopLeftAsString",
       key: "boundingBoxTopLeft",
       width: 150,
-      render: (text: string) => (loading.boundingBoxes ? <Spin size="small" /> : text),
+      render: (text: string) => (isLoadingBboxes ? <Spin size="small" /> : text),
     },
     {
       title: "Bounding Box\nSize in vx",
       dataIndex: "boundingBoxPositionAsString",
       key: "boundingBoxPosition",
       width: 150,
-      render: (text: string) => (loading.boundingBoxes ? <Spin size="small" /> : text),
+      render: (text: string) => (isLoadingBboxes ? <Spin size="small" /> : text),
     },
   ];
 

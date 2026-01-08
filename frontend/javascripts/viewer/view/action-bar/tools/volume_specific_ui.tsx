@@ -445,16 +445,11 @@ export function ProofreadingComponents() {
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
 
   return (
-    <Space.Compact
-      style={{
-        marginLeft: ACTIONBAR_MARGIN_LEFT,
-      }}
-    >
+    <Space.Compact>
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
         className="narrow"
-        style={{ marginLeft: 12 }}
       >
         <ClearOutlined />
       </ButtonComponent>

@@ -353,14 +353,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ = totalFileSizeInBytesOpt.foreach { reservedFileSize =>
         tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map { actualFileSize =>
           if (actualFileSize > reservedFileSize.toLong) {
-            // For the moment, the upload is not rejected, only a slack notification is sent. We’ll add the rejection again once we are certain there are no false positives.
-            val msg =
-              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedFileSize bytes were reserved but $actualFileSize were uploaded according to FileUtils."
-            logger.warn(msg)
-            slackNotificationService.noticeTooLargeUploadRequest(msg)
+            cleanUpDatasetExceedingSize(uploadDir, uploadId)
+            Fox.failure(
+              s"Uploaded dataset $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
           }
         }
       }
+    } yield ()
+
+  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
+    for {
+      datasetId <- getDatasetIdByUploadId(uploadId)
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Exceeded reserved fileSize")
+      _ <- remoteWebknossosClient.deleteDataset(datasetId)
     } yield ()
 
   private def deleteFilesNotReferencedInDataSource(unpackedDir: Path, dataSource: UsableDataSource): Fox[Unit] =

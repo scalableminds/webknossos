@@ -350,17 +350,23 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkWithinRequestedFileSize(uploadDir: Path, uploadId: String, datasetId: ObjectId): Fox[Unit] =
     for {
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ = totalFileSizeInBytesOpt.foreach { reservedFileSize =>
-        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map { actualFileSize =>
-          if (actualFileSize > reservedFileSize.toLong) {
-            // For the moment, the upload is not rejected, only a slack notification is sent. We’ll add the rejection again once we are certain there are no false positives.
-            val msg =
-              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedFileSize bytes were reserved but $actualFileSize were uploaded according to FileUtils."
-            logger.warn(msg)
-            slackNotificationService.noticeTooLargeUploadRequest(msg)
-          }
-        }
-      }
+      _ <- totalFileSizeInBytesOpt.map { reservedFileSize =>
+        for {
+          actualFileSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox
+          _ <- if (actualFileSize > reservedFileSize.toLong) {
+            cleanUpDatasetExceedingSize(uploadDir, uploadId)
+            Fox.failure(
+              f"Uploaded dataset $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
+          } else Fox.successful(())
+        } yield ()
+      }.getOrElse(Fox.successful(()))
+    } yield ()
+
+  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
+    for {
+      datasetId <- getDatasetIdByUploadId(uploadId)
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Exceeded reserved fileSize")
+      _ <- remoteWebknossosClient.deleteDataset(datasetId)
     } yield ()
 
   private def deleteFilesNotReferencedInDataSource(unpackedDir: Path, dataSource: UsableDataSource): Fox[Unit] =

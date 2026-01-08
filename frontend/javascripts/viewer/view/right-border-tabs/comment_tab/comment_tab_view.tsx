@@ -132,7 +132,7 @@ function CommentTabView(props: Props) {
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
-  const activeComment = useWkSelector((_state) => getActiveComment());
+  const activeComment = getActiveComment();
 
   useEffectOnlyOnce(() => {
     // expand all trees by default

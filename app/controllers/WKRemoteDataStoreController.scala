@@ -3,9 +3,8 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
@@ -20,7 +19,6 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   ReserveUploadInformation
 }
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationDAO
 import models.dataset._
 import models.dataset.credential.CredentialDAO
 import models.job.JobDAO
@@ -45,12 +43,10 @@ class WKRemoteDataStoreController @Inject()(
     usedStorageService: UsedStorageService,
     layerToLinkService: LayerToLinkService,
     datasetDAO: DatasetDAO,
-    datasetLayerDAO: DatasetLayerDAO,
     userDAO: UserDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
     credentialDAO: CredentialDAO,
-    annotationDAO: AnnotationDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
@@ -84,8 +80,7 @@ class WKRemoteDataStoreController @Inject()(
             preliminaryDataSource,
             uploadInfo.folderId,
             user,
-            // For the moment, the convert_to_wkw job can only fill the dataset if it is not virtual.
-            isVirtual = uploadInfo.isVirtual.getOrElse(!uploadInfo.needsConversion.getOrElse(false))
+            isVirtual = uploadInfo.isVirtual.getOrElse(true)
           ) ?~> "dataset.upload.creation.failed"
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
@@ -110,13 +105,13 @@ class WKRemoteDataStoreController @Inject()(
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
           unfinishedUploads = datasets.zip(teamIdsPerDataset).map {
             case (d, teamIds) =>
-              new UnfinishedUpload("<filled-in by datastore>",
-                                   d.dataSourceId,
-                                   d.name,
-                                   d.folderId.toString,
-                                   d.created,
-                                   None, // Filled by datastore.
-                                   teamIds.map(_.toString))
+              UnfinishedUpload("<filled-in by datastore>",
+                               d.dataSourceId,
+                               d.name,
+                               d.folderId.toString,
+                               d.created,
+                               None, // Filled by datastore.
+                               teamIds.map(_.toString))
           }
         } yield Ok(Json.toJson(unfinishedUploads))
       }
@@ -131,7 +126,6 @@ class WKRemoteDataStoreController @Inject()(
         for {
           user <- bearerTokenService.userForToken(token)
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
           _ = datasetService.trackNewDataset(dataset,
                                              user,
                                              request.body.needsConversion,
@@ -149,6 +143,7 @@ class WKRemoteDataStoreController @Inject()(
                                         dataSource,
                                         isUsable = true)(GlobalAccessContext)
           }
+          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
         } yield Ok
       }
     }
@@ -157,11 +152,9 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         val okLabel = if (request.body.ok) "ok" else "not ok"
-        logger.debug(s"Status update from data store '$name'. Status $okLabel")
+        logger.debug(s"Status update from data store ‘$name’. Status $okLabel")
         for {
           _ <- dataStoreDAO.updateUrlByName(name, request.body.url)
-          _ <- dataStoreDAO.updateReportUsedStorageEnabledByName(name,
-                                                                 request.body.reportUsedStorageEnabled.getOrElse(false))
         } yield Ok
       }
   }
@@ -195,7 +188,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def updatePaths(name: String, key: String): Action[List[DataSourcePathInfo]] =
+  def updateRealPaths(name: String, key: String): Action[List[DataSourcePathInfo]] =
     Action.async(validateJson[List[DataSourcePathInfo]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
@@ -211,17 +204,7 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          existingDatasetBox <- datasetDAO.findOne(request.body)(GlobalAccessContext).shiftBox
-          _ <- existingDatasetBox match {
-            case Full(dataset) =>
-              for {
-                annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
-                _ = datasetDAO
-                  .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
-                  .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
-              } yield ()
-            case _ => Fox.successful(())
-          }
+          _ <- datasetService.deleteDatasetFromDB(request.body)
         } yield Ok
       }
   }
@@ -239,21 +222,6 @@ class WKRemoteDataStoreController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
             GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
-      }
-    }
-
-  def getPaths(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          layers <- datasetLayerDAO.findAllForDataset(dataset._id)
-          magsAndLinkedMags <- Fox.serialCombined(layers)(l => datasetService.getPathsForDataLayer(dataset._id, l.name))
-          magLinkInfos = magsAndLinkedMags.map(_.map { case (mag, linkedMags) => MagLinkInfo(mag, linkedMags) })
-          layersAndMagLinkInfos = layers.zip(magLinkInfos).map {
-            case (layer, magLinkInfo) => LayerMagLinkInfo(layer.name, magLinkInfo)
-          }
-        } yield Ok(Json.toJson(layersAndMagLinkInfos))
       }
     }
 

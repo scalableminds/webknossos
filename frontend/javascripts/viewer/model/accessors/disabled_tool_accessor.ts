@@ -5,14 +5,13 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
 import type { APIOrganization, APIUser } from "types/api_types";
-import { IdentityTransform } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
+import { IdentityTransform } from "viewer/constants";
 import {
   type AgglomerateState,
   getActiveSegmentationTracing,
@@ -20,6 +19,7 @@ import {
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { AnnotationTool, type AnnotationToolId } from "./tool_accessor";
 
 export type DisabledInfo = {
@@ -91,6 +91,7 @@ const getExplanationForDisabledVolume = (
 const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
   [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
+  [AnnotationTool.VOXEL_PIPETTE.id]: NOT_DISABLED_INFO,
 };
 
 function _getAreaMeasurementToolInfo(isFlycamRotated: boolean) {
@@ -211,7 +212,6 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationTool.ERASE_TRACE.id]: disabledInfo,
     [AnnotationTool.FILL_CELL.id]: disabledInfo,
     [AnnotationTool.QUICK_SELECT.id]: disabledInfo,
-    [AnnotationTool.PICK_CELL.id]: disabledInfo,
     [AnnotationTool.PROOFREAD.id]: {
       isDisabled: isVolumeDisabled,
       explanation: genericDisabledExplanation,
@@ -304,7 +304,7 @@ function _getVolumeDisabledWhenVolumeIsEnabled(
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationTool.PICK_CELL.id]: NOT_DISABLED_INFO,
+    [AnnotationTool.VOXEL_PIPETTE.id]: NOT_DISABLED_INFO,
     [AnnotationTool.QUICK_SELECT.id]: {
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,

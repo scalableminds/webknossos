@@ -73,7 +73,6 @@ WEBKNOSSOS was inspired by [KNOSSOS](https://knossos.app).
 ### Thanks
 * [Browser Stack](https://www.browserstack.com/) for letting us test WEBKNOSSOS on a variety of different devices
   <a href="https://www.browserstack.com/"><img src="https://avatars.githubusercontent.com/u/1119453?s=200&v=4" width=100 alt="Browserstack Logo" align="right"></a>
-* [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 
 # License
 AGPLv3

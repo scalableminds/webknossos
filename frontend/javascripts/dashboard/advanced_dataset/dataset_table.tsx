@@ -1,6 +1,12 @@
-import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import type { DatasetUpdater } from "admin/rest_api";
-import { Dropdown, type MenuProps, Tag, Tooltip } from "antd";
+import { Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
 import type {
   ColumnType,
   FilterValue,
@@ -8,7 +14,7 @@ import type {
   TablePaginationConfig,
 } from "antd/lib/table/interface";
 import classNames from "classnames";
-import FixedExpandableTable from "components/fixed_expandable_table";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import DatasetActionView, {
   getDatasetActionContextMenu,
@@ -22,7 +28,7 @@ import {
   useDatasetDrop,
 } from "dashboard/folders/folder_tree";
 import { diceCoefficient as dice } from "dice-coefficient";
-import { stringToColor } from "libs/format_utils";
+import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
@@ -57,8 +63,7 @@ type Props = {
   subfolders: FolderItem[];
   searchQuery: string;
   searchTags: Array<string>;
-  isUserAdmin: boolean;
-  isUserDatasetManager: boolean;
+  isUserAdminOrDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
   reloadDataset: (datasetId: string) => Promise<void>;
   updateDataset: (datasetId: string, updater: DatasetUpdater) => void;
@@ -123,10 +128,10 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
       <Dropdown
         menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
+        classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        destroyPopupOnHide
+        destroyOnHidden
       >
         <div />
       </Dropdown>
@@ -287,6 +292,32 @@ class DatasetRenderer {
     return DatasetRenderer.getRowKey(this.data);
   }
 
+  renderStorageColumn(): React.ReactNode {
+    if (this.data.usedStorageBytes == null) return null;
+    const formattedBytes = formatCountToDataAmountUnit(this.data.usedStorageBytes, true);
+    return this.data.usedStorageBytes > 0 ? (
+      <FastTooltip title={`${new Intl.NumberFormat().format(this.data.usedStorageBytes)} bytes`}>
+        {formattedBytes}
+      </FastTooltip>
+    ) : (
+      <Tooltip
+        title={
+          <>
+            The storage may be zero because:
+            <ul>
+              <li>The storage hasn't been scanned yet</li>
+              <li>The data is streamed from external sources</li>
+              <li>The data layers are already counted in other (linked) datasets</li>
+              <li>The dataset belongs to another organization</li>
+              <li>The dataset is empty</li>
+            </ul>
+          </>
+        }
+      >
+        {formattedBytes}
+      </Tooltip>
+    );
+  }
   renderTypeColumn(): React.ReactNode {
     return <FileOutlined style={{ fontSize: "18px" }} />;
   }
@@ -388,6 +419,9 @@ class FolderRenderer {
       </>
     );
   }
+  renderStorageColumn(): React.ReactNode {
+    return null;
+  }
   renderCreationDateColumn(): React.ReactNode {
     return null;
   }
@@ -463,7 +497,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       });
 
     const filterByHasLayers = (datasets: APIDatasetCompact[]) =>
-      this.props.isUserAdmin || this.props.isUserDatasetManager
+      this.props.isUserAdminOrDatasetManager
         ? datasets
         : datasets.filter((dataset) => dataset.isActive);
 
@@ -604,7 +638,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
         sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
         render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
       },
-
       {
         width: 200,
         title: "Actions",
@@ -613,6 +646,34 @@ class DatasetTable extends React.PureComponent<Props, State> {
         render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
       },
     ];
+    if (
+      this.props.isUserAdminOrDatasetManager &&
+      context.usedStorageInOrga != null &&
+      context.usedStorageInOrga > 0
+    ) {
+      const datasetStorageSizeColumn = {
+        title: (
+          <Space>
+            Used Storage{" "}
+            <Tooltip title={"Storage used by this dataset within your organization."}>
+              <InfoCircleOutlined />
+            </Tooltip>{" "}
+          </Space>
+        ),
+        key: "storage",
+        width: 200,
+        render: (_: any, rowRenderer: RowRenderer) => {
+          return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
+        },
+        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+          isRecordADataset(rowRenderer.data) && rowRenderer.data.usedStorageBytes
+            ? rowRenderer.data.usedStorageBytes
+            : 0,
+        ),
+        sortOrder: sortedInfo.columnKey === "storage" ? sortedInfo.order : undefined,
+      };
+      columns.splice(2, 0, datasetStorageSizeColumn);
+    }
 
     return (
       <DndProvider backend={HTML5Backend}>
@@ -629,8 +690,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => {}
           }
         />
-        <FixedExpandableTable
-          expandable={{ childrenColumnName: "notUsed" }}
+        <Table
           dataSource={sortedDataSourceRenderers}
           columns={columns}
           rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
@@ -638,10 +698,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
           pagination={{
             defaultPageSize: 50,
           }}
-          className="hide-checkbox-selection"
+          styles={{
+            // hide/offset the first column containing the checkbox for row selection
+            section: { marginLeft: "-36px" },
+          }}
           onChange={this.handleChange}
           locale={{
             emptyText: this.renderEmptyText(),
+          }}
+          scroll={{
+            x: "max-content",
           }}
           summary={(currentPageData) => {
             // Workaround to get to the currently rendered entries (since the ordering
@@ -749,6 +815,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             };
           }}
           rowSelection={{
+            columnWidth: 0,
             selectedRowKeys,
             onSelectNone: () => {
               this.props.onSelectDataset(null);
@@ -801,7 +868,7 @@ export function DatasetTags({
   };
 
   return (
-    <div className="tags-container">
+    <Space>
       {dataset.tags.map((tag) => (
         <CategorizationLabel
           tag={tag}
@@ -819,7 +886,7 @@ export function DatasetTags({
           label="Add Tag"
         />
       ) : null}
-    </div>
+    </Space>
   );
 }
 
@@ -835,6 +902,7 @@ export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDatas
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
           }}
+          variant="outlined"
         >
           {layer.name} - {layer.elementClass}
         </Tag>
@@ -857,7 +925,7 @@ export function TeamTags({
   }
 
   if (permittedTeams.length === 0 && emptyValue != null) {
-    return <Tag>{emptyValue}</Tag>;
+    return <Tag variant="outlined">{emptyValue}</Tag>;
   }
 
   const allowedTeamsById = _.keyBy(dataset.allowedTeams, "id");
@@ -881,6 +949,7 @@ export function TeamTags({
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
               }}
+              variant="outlined"
               color={stringToColor(team.name)}
             >
               {team.name}
@@ -910,7 +979,7 @@ function BreadcrumbsTag({ parts: allParts }: { parts: string[] | null }) {
 
   return (
     <Tooltip title={`This dataset is located in ${formatPath(allParts)}.`}>
-      <Tag style={{ marginTop: "5px" }}>
+      <Tag style={{ marginTop: "5px" }} variant="outlined">
         <FolderOpenOutlined className="icon-margin-right" />
         {formatPath(parts)}
       </Tag>

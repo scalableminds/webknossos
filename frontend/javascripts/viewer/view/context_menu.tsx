@@ -35,7 +35,6 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
-import type { MenuInfo } from "rc-menu/lib/interface";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
@@ -154,6 +153,7 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
@@ -197,7 +197,7 @@ type NoNodeContextMenuProps = Props & {
   infoRows: ItemType[];
 };
 
-const hideContextMenu = (info?: MenuInfo | undefined) => {
+const hideContextMenu = (info?: Parameters<NonNullable<MenuProps["onClick"]>>[0] | undefined) => {
   if (info?.key === "load-stats") {
     return;
   }
@@ -214,7 +214,7 @@ export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProp
     {
       key: "view",
       disabled: true,
-      label: "No actions available.",
+      title: "No actions available.",
     },
   ],
 });
@@ -245,7 +245,7 @@ function measureAndShowLengthBetweenNodes(
     targetNodeId,
   );
   notification.open({
-    message: `The shortest path length between the nodes is ${formatNumberToLength(
+    title: `The shortest path length between the nodes is ${formatNumberToLength(
       lengthInUnit,
       LongUnitToShortUnitMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
@@ -269,7 +269,7 @@ function extractShortestPathAsNewTree(
 function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSizeUnit: UnitLong) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
-    message: messages["tracing.tree_length_notification"](
+    title: messages["tracing.tree_length_notification"](
       treeName,
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
@@ -1055,9 +1055,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
   Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
+  const positionInLayerSpace =
+    globalPosition != null && visibleSegmentationLayer != null
+      ? globalToLayerTransformedPosition(
+          globalPosition,
+          visibleSegmentationLayer.name,
+          "segmentation",
+          Store.getState(),
+        )
+      : null;
 
   const loadPrecomputedMesh = async () => {
-    if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;
+    if (
+      !currentMeshFile ||
+      !visibleSegmentationLayer ||
+      globalPosition == null ||
+      positionInLayerSpace == null
+    )
+      return;
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
     const segmentId = await getSegmentIdForPositionAsync(globalPosition);
@@ -1070,7 +1085,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       loadPrecomputedMeshAction(
         segmentId,
-        globalPosition,
+        positionInLayerSpace,
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
@@ -1156,7 +1171,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   };
 
   const computeMeshAdHoc = () => {
-    if (!visibleSegmentationLayer || globalPosition == null) {
+    if (!visibleSegmentationLayer || globalPosition == null || positionInLayerSpace == null) {
       return;
     }
 
@@ -1167,7 +1182,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, globalPosition, additionalCoordinates));
+    Store.dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
@@ -1409,12 +1424,16 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition !== 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
+          segmentIdAtPosition !== 0 && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
                   Store.dispatch(
-                    setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
+                    setActiveCellAction(
+                      segmentIdAtPosition,
+                      positionInLayerSpace || globalPosition,
+                      additionalCoordinates,
+                    ),
                   );
                 },
                 disabled:
@@ -1437,7 +1456,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           allowUpdate && !disabledVolumeInfo.FILL_CELL.isDisabled
             ? {
                 key: "fill-cell",
-                onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
+                onClick: () =>
+                  handleFloodFillFromGlobalPosition(Store.getState(), globalPosition, viewport),
                 label: "Fill Segment (flood-fill region)",
               }
             : null,
@@ -1601,7 +1621,7 @@ function ContextMenuInner() {
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const dataset = useWkSelector((state) => state.dataset);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const currentMeshFile = useWkSelector((state) =>
@@ -1981,10 +2001,10 @@ function ContextMenuInner() {
 
       <Dropdown
         menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
+        classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        destroyPopupOnHide
+        destroyOnHidden
       >
         <div />
       </Dropdown>

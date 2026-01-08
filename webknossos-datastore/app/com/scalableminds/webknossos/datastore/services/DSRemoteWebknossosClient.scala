@@ -5,12 +5,11 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
@@ -28,7 +27,7 @@ import play.api.libs.json.{Json, OFormat}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class DataStoreStatus(ok: Boolean, url: String, reportUsedStorageEnabled: Option[Boolean] = None)
+case class DataStoreStatus(ok: Boolean, url: String)
 object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
 }
@@ -38,16 +37,20 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: List[MagPathInfo])
+case class DataSourcePathInfo(dataSourceId: DataSourceId,
+                              magPathInfos: Seq[RealPathInfo],
+                              attachmentPathInfos: Seq[RealPathInfo]) {
+  def nonEmpty: Boolean = magPathInfos.nonEmpty || attachmentPathInfos.nonEmpty
+}
 
 object DataSourcePathInfo {
   implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
 }
 
-case class MagPathInfo(layerName: String, mag: Vec3Int, path: UPath, realPath: UPath, hasLocalData: Boolean)
+case class RealPathInfo(path: UPath, realPath: UPath, hasLocalData: Boolean)
 
-object MagPathInfo {
-  implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
+object RealPathInfo {
+  implicit val jsonFormat: OFormat[RealPathInfo] = Json.format[RealPathInfo]
 }
 
 trait RemoteWebknossosClient {
@@ -68,7 +71,6 @@ class DSRemoteWebknossosClient @Inject()(
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name
   private val dataStoreUri: String = config.Http.uri
-  private val reportUsedStorageEnabled: Boolean = config.Datastore.ReportUsedStorage.enabled
 
   private val webknossosUri: String = config.Datastore.WebKnossos.uri
 
@@ -79,7 +81,7 @@ class DSRemoteWebknossosClient @Inject()(
   private def reportStatus(): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
       .addQueryParam("key", dataStoreKey)
-      .patchJson(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
+      .patchJson(DataStoreStatus(ok = true, dataStoreUri))
 
   def reportDataSource(dataSource: DataSource): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
@@ -109,16 +111,11 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSources)
 
-  def reportRealPaths(dataSourcePaths: List[DataSourcePathInfo]): Fox[_] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
+  def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/realpaths")
       .addQueryParam("key", dataStoreKey)
       .silent
       .putJson(dataSourcePaths)
-
-  def fetchPaths(datasetId: ObjectId): Fox[List[LayerMagLinkInfo]] =
-    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/$datasetId/paths")
-      .addQueryParam("key", dataStoreKey)
-      .getWithJsonResponse[List[LayerMagLinkInfo]]
 
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
@@ -213,4 +210,5 @@ class DSRemoteWebknossosClient @Inject()(
           .addQueryParam("datasetDirectoryName", datasetDirectoryName)
           .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
     )
+
 }

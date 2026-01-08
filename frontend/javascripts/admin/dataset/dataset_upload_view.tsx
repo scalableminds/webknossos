@@ -64,7 +64,7 @@ import { type FileWithPath, useDropzone } from "react-dropzone";
 import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
-  APIJobType,
+  APIJobCommand,
   type APIOrganization,
   type APITeam,
   type APIUser,
@@ -111,18 +111,21 @@ type State = {
   unfinishedUploads: UnfinishedUpload[];
 };
 
-function WkwExample() {
+function Zarr3Example() {
   const description = `
-  great_dataset          # Root folder
-  ├─ color               # Dataset layer (e.g., color, segmentation)
-  │  ├─ 1                # Magnification step (1, 2, 4, 8, 16 etc.)
-  │  │  ├─ header.wkw    # Header wkw file
-  │  │  ├─ z0
-  │  │  │  ├─ y0
-  │  │  │  │  ├─ x0.wkw  # Actual data wkw file
-  │  │  │  │  └─ x1.wkw  # Actual data wkw file
-  │  │  │  └─ y1/...
-  │  │  └─ z1/...
+  great_dataset           # Root folder
+  ├─ color                # Dataset layer (e.g., color, segmentation)
+  │  ├─ zarr.json         # Zarr3 metadata (layer)
+  │  ├─ 1                 # Magnification step (1, 2, 4, 8, 16 etc.)
+  │  │  ├─ zarr.json      # Zarr3 metadata (magnication step)
+  │  │  └─ c
+  │  │     └─ 0
+  │  │        ├─ 0
+  │  │        │  ├─ 0
+  │  │        │  │  ├─ 0  # Actual image data shards
+  │  │        │  │  └─ 1
+  │  │        │  └─ 1/...
+  │  │        └─ 1/...
   │  └─ 2/...
   ├─ segmentation/...
   └─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existent)
@@ -186,7 +189,7 @@ type UploadFormFieldTypes = {
 };
 
 export const dataPrivacyInfo = (
-  <Space direction="horizontal" size={4}>
+  <Space orientation="horizontal" size={4}>
     Per default, imported data is private and only visible within your organization.
     <a
       style={{ color: "var(--ant-color-primary)" }}
@@ -630,7 +633,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       Modal.info({
         content: (
           <div>
-            The selected dataset does not seem to be in the WKW or Zarr format. Please convert the
+            The selected dataset does not seem to be in the Zarr or WKW format. Please convert the
             dataset using the{" "}
             <a target="_blank" href="https://docs.webknossos.org/cli" rel="noopener noreferrer">
               webknossos CLI
@@ -682,12 +685,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : this.getDatastoreForUrl(this.state.datastoreUrl);
 
     return (
-      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobCommand.CONVERT_TO_WKW) ||
       false
     );
   };
 
-  onFormValueChange = (changedValues: UploadFormFieldTypes) => {
+  onFormValueChange = (changedValues: Partial<UploadFormFieldTypes>) => {
     if (changedValues.datastoreUrl) {
       this.setState({ datastoreUrl: changedValues.datastoreUrl });
       this.updateUnfinishedUploads();
@@ -719,7 +722,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"
-              message={
+              title={
                 <>
                   Your organization has exceeded the available storage. Uploading new datasets is
                   disabled. Visit the{" "}
@@ -733,7 +736,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
           {unfinishedAndNotSelectedUploads.length > 0 && (
             <Alert
-              message={
+              title={
                 <>
                   Unfinished Dataset Uploads{" "}
                   <Tooltip
@@ -807,7 +810,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           >
             {features().isWkorgInstance && (
               <Alert
-                message={
+                title={
                   <>
                     We are happy to help!
                     <br />
@@ -1178,7 +1181,7 @@ function FileUploadArea({
         >
           {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
             <>
-              Drag and drop your files in WKW format.
+              Drag and drop your files in WEBKNOSSOS format.
               <div
                 style={{
                   textAlign: "left",
@@ -1219,8 +1222,8 @@ function FileUploadArea({
                 The following file formats are supported:
                 <ul>
                   <li>
-                    <Popover content={<WkwExample />} trigger="hover">
-                      WKW dataset
+                    <Popover content={<Zarr3Example />} trigger="hover">
+                      Zarr or WKW dataset
                       <InfoCircleOutlined
                         style={{
                           marginLeft: 4,

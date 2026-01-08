@@ -1,3 +1,4 @@
+import LinkButton from "components/link_button";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -148,14 +149,14 @@ function* getBoundingBoxForFloodFill(
 }
 
 function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
   if (!allowUpdate || disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled) {
     return;
   }
 
-  const { position: positionFloat, planeId } = floodFillAction;
+  const { positionInLayerSpace: positionFloat, planeId } = floodFillAction;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   if (volumeTracing.hasEditableMapping) {
     const message = "Volume modification is not allowed when an editable mapping is active.";
@@ -378,9 +379,7 @@ function* notifyUserAboutResult(
           .
           <br />
           {warningDetails} {Unicode.NonBreakingSpace}
-          <a href="#" style={{ pointerEvents: "auto" }} onClick={() => hideBox?.hideFn()}>
-            Close
-          </a>
+          <LinkButton onClick={() => hideBox?.hideFn()}>Close</LinkButton>
         </>,
         {
           successMessageDelay: 10000,

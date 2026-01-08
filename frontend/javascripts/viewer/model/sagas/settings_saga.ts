@@ -3,7 +3,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
-import { ControlModeEnum } from "viewer/constants";
+import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   type SetViewModeAction,
   type UpdateUserSettingAction,
@@ -16,7 +16,7 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { Toolkit } from "../accessors/tool_accessor";
-import { ensureWkReady } from "./ready_sagas";
+import { ensureWkInitialized } from "./ready_sagas";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -108,7 +108,10 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
 
   if (propertyName === "moveValue" || propertyName === "moveValue3d") {
     const moveValue = yield* select((state) => state.userConfiguration[propertyName]);
-    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    const unit = yield* select(
+      (state) => LongUnitToShortUnitMap[state.dataset.dataSource.scale.unit],
+    );
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue + ` ${unit}/s`;
     Toast.success(moveValueMessage, {
       key: "CHANGED_MOVE_VALUE",
     });
@@ -119,11 +122,11 @@ function* ensureValidToolkit(): Saga<void> {
   /*
    * Default to the ALL_TOOLS toolkit if the annotation/dataset is read-only.
    */
-  yield* call(ensureWkReady);
+  yield* call(ensureWkInitialized);
   const isViewMode = yield* select(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const isReadOnly = yield* select((state) => !state.annotation.restrictions.allowUpdate);
+  const isReadOnly = yield* select((state) => !state.annotation.isUpdatingCurrentlyAllowed);
 
   if (isViewMode || isReadOnly) {
     yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));

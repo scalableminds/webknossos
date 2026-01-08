@@ -7,7 +7,7 @@ import {
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
 import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
@@ -17,6 +17,7 @@ import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
@@ -52,6 +53,7 @@ import {
   getLayerByName,
   getMagInfo,
   getMappingInfo,
+  getMappingInfoOrNull,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
@@ -91,17 +93,18 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { restartSagaAction, wkInitializedAction } from "viewer/model/actions/actions";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
   removeMeshAction,
   updateCurrentMeshFileAction,
+  updateMeshOpacityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
-import { disableSavingAction, discardSaveQueuesAction } from "viewer/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueueAction } from "viewer/model/actions/save_actions";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -1160,8 +1163,8 @@ class TracingApi {
       false,
       version,
     );
-    Store.dispatch(discardSaveQueuesAction());
-    Store.dispatch(wkReadyAction());
+    Store.dispatch(discardSaveQueueAction());
+    Store.dispatch(wkInitializedAction());
     UrlManager.updateUnthrottled();
   }
 
@@ -1516,7 +1519,7 @@ class TracingApi {
 
   /**
    * Returns the active tool which is either
-   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "VOXEL_PIPETTE"
    */
   getAnnotationTool(): AnnotationToolId {
     return Store.getState().uiInformation.activeTool.id;
@@ -1524,7 +1527,7 @@ class TracingApi {
 
   /**
    * Sets the active tool which should be either
-   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "VOXEL_PIPETTE"
    * _Volume tracing only!_
    */
   setAnnotationTool(toolId: AnnotationToolId) {
@@ -1735,7 +1738,9 @@ class DataApi {
       showLoadingIndicator,
       isMergerModeMapping,
     };
-    Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
+    Store.dispatch(
+      setMappingAction(layerName, "<custom mapping>", "JSON", false, mappingProperties),
+    );
   }
 
   /**
@@ -1804,7 +1809,7 @@ class DataApi {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
 
-    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
+    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType, false));
   }
 
   /**
@@ -1863,42 +1868,87 @@ class DataApi {
    */
   async getDataValue(
     layerName: string,
-    position: Vector3,
+    position: Vector3, // in layer space
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
+    respectMapping: boolean = false,
+    channelIndex: number = 0,
   ): Promise<number> {
     let zoomStep;
+    const state = Store.getState();
 
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      const layer = getLayerByName(Store.getState().dataset, layerName);
+      const layer = getLayerByName(state.dataset, layerName);
       const magInfo = getMagInfo(layer.mags);
       zoomStep = magInfo.getFinestMagIndex();
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
-    additionalCoordinates = additionalCoordinates || Store.getState().flycam.additionalCoordinates;
+    additionalCoordinates = additionalCoordinates || state.flycam.additionalCoordinates;
     const bucketAddress = cube.positionToZoomedAddress(position, additionalCoordinates, zoomStep);
     await this.getLoadedBucket(layerName, bucketAddress);
+
+    let mapping = null;
+    if (respectMapping) {
+      const activeMappingInfo = getMappingInfoOrNull(
+        state.temporaryConfiguration.activeMappingByLayer,
+        layerName,
+      );
+      mapping =
+        activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
+          ? activeMappingInfo.mapping
+          : null;
+    }
+
     // Bucket has been loaded by now or was loaded already
-    const dataValue = cube.getDataValue(position, additionalCoordinates, null, zoomStep);
+    const dataValue = cube.getDataValue(
+      position,
+      additionalCoordinates,
+      mapping,
+      zoomStep,
+      channelIndex,
+    );
     return dataValue;
+  }
+
+  /**
+   * Returns the channel count of a layer. Except for RGB layers (which have three channels),
+   * layers always have one channel.
+   *
+   * @example
+   * api.data.getChannelCount("color") === 1; // true
+   * api.data.getChannelCount("uint32_segmentation") === 1; // true
+   * api.data.getChannelCount("rgb-layer") === 3; // true
+   */
+  getChannelCount(layerName: string): number {
+    const state = Store.getState();
+
+    const layer = getLayerByName(state.dataset, layerName);
+    const channelCount = getConstructorForElementClass(layer.elementClass)[1];
+    return channelCount;
   }
 
   /**
    * Returns the magnification that is _currently_ rendered at the given position.
    */
-  getRenderedZoomStepAtPosition(layerName: string, position: Vector3 | null | undefined): number {
-    return this.model.getCurrentlyRenderedZoomStepAtPosition(layerName, position);
+  getRenderedZoomStepAtPosition(
+    layerName: string,
+    positionInLayerSpace: Vector3 | null | undefined,
+  ): number {
+    return this.model.getCurrentlyRenderedZoomStepAtPosition(layerName, positionInLayerSpace);
   }
 
   /**
    * Returns the maginfication that will _ultimately_ be rendered at the given position, once
    * all respective buckets are loaded.
    */
-  getUltimatelyRenderedZoomStepAtPosition(layerName: string, position: Vector3): Promise<number> {
-    return this.model.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
+  getUltimatelyRenderedZoomStepAtPosition(
+    layerName: string,
+    positionInLayerSpace: Vector3,
+  ): Promise<number> {
+    return this.model.getUltimatelyRenderedZoomStepAtPosition(layerName, positionInLayerSpace);
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: BucketAddress): Promise<Bucket> {
@@ -2211,7 +2261,7 @@ class DataApi {
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.restrictions.allowUpdate;
+    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates
@@ -2696,8 +2746,8 @@ class DataApi {
    * );
    */
   _createTransformsFromSpecs(specs: Array<TransformSpec>) {
-    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 =>
-      new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+    // biome-ignore format: don't format array
+    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1];
     const makeScale = (scale: Vector3, anchor: Vector3) =>
       M4x4.mul(
         M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),
@@ -2708,11 +2758,11 @@ class DataApi {
         M4x4.mul(
           makeTranslation(pos[0], pos[1], pos[2]),
           // biome-ignore format: don't format array
-          new Float32Array([
+          [
             Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
             -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
             0, 0, 1, 0, 0, 0, 0, 1,
-          ]),
+          ],
         ),
         makeTranslation(-pos[0], -pos[1], -pos[2]),
       );
@@ -2756,14 +2806,17 @@ class DataApi {
 
   /**
    * Set the RGB color of a segment (and its mesh) for a given segmentation layer. If layerName is not passed,
-   * the currently visible segmentation layer will be used.
+   * the currently visible segmentation layer will be used. If the mesh is loaded, optionally update its opacity.
    *
    * @example
-   * api.data.setSegmentColor(3, [0, 1, 1]);
+   * api.data.setSegmentColor(3, [0, 1, 1], "segmentation", 0.5);
    */
-  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string) {
+  setSegmentColor(segmentId: number, rgbColor: Vector3, layerName?: string, meshOpacity?: number) {
+    const state = Store.getState();
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
-      Store.getState(),
+      state,
       layerName,
     ).name;
 
@@ -2778,6 +2831,23 @@ class DataApi {
         true,
       ),
     );
+
+    if (meshOpacity != null) {
+      if (meshOpacity < 0 || meshOpacity > 1) {
+        throw new Error(`meshOpacity must be between 0 and 1, but got ${meshOpacity}`);
+      }
+      if (
+        state.localSegmentationData[effectiveLayerName]?.meshes?.[additionalCoordKey]?.[
+          segmentId
+        ] != null
+      ) {
+        Store.dispatch(updateMeshOpacityAction(effectiveLayerName, segmentId, meshOpacity));
+      } else {
+        throw new Error(
+          `Mesh for segment ${segmentId} was not found in State.localSegmentationData.`,
+        );
+      }
+    }
   }
 }
 /**

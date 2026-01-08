@@ -52,6 +52,7 @@ import {
   setIsMeasuringAction,
   setLastMeasuredPositionAction,
   setQuickSelectStateAction,
+  setVoxelPipetteTooltipPinnedPositionAction,
 } from "viewer/model/actions/ui_actions";
 import {
   computeQuickSelectForPointAction,
@@ -552,7 +553,7 @@ export class EraseToolController {
         const isControlOrMetaPressed = event.ctrlKey || event.metaKey;
         if (event.shiftKey) {
           if (isControlOrMetaPressed) {
-            VolumeHandlers.handleFloodFill(pos, plane);
+            VolumeHandlers.handleFloodFill(Store.getState(), pos, plane);
           } else {
             VolumeHandlers.handlePickCell(pos);
           }
@@ -583,30 +584,53 @@ export class EraseToolController {
 
   static onToolDeselected() {}
 }
-export class PickCellToolController {
+export class VoxelPipetteToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
-      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        VolumeHandlers.handlePickCell(pos);
+      mouseMove: (
+        _delta: Point2,
+        position: Point2,
+        plane: OrthoView | null | undefined,
+        event: MouseEvent,
+      ) => {
+        MoveHandlers.moveWhenAltIsPressed(_delta, position, plane, event);
+      },
+      leftClick: (position: Point2, plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey) {
+          VolumeHandlers.handlePickCell(position);
+          return;
+        }
+
+        const state = Store.getState();
+        const { pinnedPosition } = state.uiInformation.voxelPipetteToolInfo;
+
+        if (pinnedPosition == null) {
+          const globalPosition = calculateGlobalPos(state, position, plane).floating;
+          Store.dispatch(setVoxelPipetteTooltipPinnedPositionAction(globalPosition));
+        } else {
+          Store.dispatch(setVoxelPipetteTooltipPinnedPositionAction(null));
+        }
       },
     };
+  }
+
+  static onToolDeselected() {
+    Store.dispatch(setVoxelPipetteTooltipPinnedPositionAction(null));
   }
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _userConfiguration: UserConfiguration,
-    _shiftKey: boolean,
+    shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
-      leftClick: "Pick Segment",
+      leftClick: !shiftKey ? "Pin Tooltip" : "Activate Segment ID",
       rightClick: "Context Menu",
     };
   }
-
-  static onToolDeselected() {}
 }
 export class FillCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
@@ -617,7 +641,7 @@ export class FillCellToolController {
         if (shouldPickCell) {
           VolumeHandlers.handlePickCell(pos);
         } else {
-          VolumeHandlers.handleFloodFill(pos, plane);
+          VolumeHandlers.handleFloodFill(Store.getState(), pos, plane);
         }
       },
     };
@@ -1100,10 +1124,10 @@ export class ProofreadToolController {
     } else if (event.ctrlKey || event.metaKey) {
       Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
     } else {
+      VolumeHandlers.handlePickCell(pos);
       Store.dispatch(
         proofreadAtPosition(globalPosition, state.flycam.additionalCoordinates || undefined),
       );
-      VolumeHandlers.handlePickCell(pos);
     }
   }
 
@@ -1172,7 +1196,7 @@ const toolToToolController = {
   [AnnotationTool.ERASE_TRACE.id]: EraseToolController,
   [AnnotationTool.ERASE_BRUSH.id]: EraseToolController,
   [AnnotationTool.FILL_CELL.id]: FillCellToolController,
-  [AnnotationTool.PICK_CELL.id]: PickCellToolController,
+  [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteToolController,
   [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementToolController,
   [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementToolController,
 };

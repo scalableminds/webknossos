@@ -103,12 +103,13 @@ GET           /datasets/:datasetId/layers/:layer/thumbnail                      
 POST          /datasets/:datasetId/layers/:layer/segmentAnythingMask                            controllers.DatasetController.segmentAnythingMask(datasetId: ObjectId, layer: String, intensityMin: Option[Float], intensityMax: Option[Float])
 PUT           /datasets/:datasetId/clearThumbnailCache                                          controllers.DatasetController.removeFromThumbnailCache(datasetId: ObjectId)
 GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
-DELETE        /datasets/:datasetId/deleteOnDisk                                                 controllers.DatasetController.deleteOnDisk(datasetId: ObjectId)
+DELETE        /datasets/:datasetId                                                              controllers.DatasetController.delete(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveAttachmentUploadToPath                                controllers.DatasetController.reserveAttachmentUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishAttachmentUploadToPath                                 controllers.DatasetController.finishAttachmentUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary                           controllers.DatasetController.reserveUploadToPathsForPreliminary(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
+GET           /datasets/:datasetId/dataSourceForSuperUser                                       controllers.DatasetController.dataSourceForSuperUser(datasetId: ObjectId)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 
@@ -125,8 +126,7 @@ DELETE        /folders/:id                                                      
 GET           /datastores                                                                       controllers.DataStoreController.list()
 PUT           /datastores/:name/datasource                                                      controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
 PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String, organizationId: Option[String])
-PUT           /datastores/:name/datasources/paths                                               controllers.WKRemoteDataStoreController.updatePaths(name: String, key: String)
-GET           /datastores/:name/datasources/:datasetId/paths                                    controllers.WKRemoteDataStoreController.getPaths(name: String, key: String, datasetId: ObjectId)
+PUT           /datastores/:name/datasources/realpaths                                           controllers.WKRemoteDataStoreController.updateRealPaths(name: String, key: String)
 GET           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)
 PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
@@ -174,6 +174,7 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId)
+DELETE        /annotations/:id/mutex                                                            controllers.AnnotationController.releaseMutex(id: ObjectId)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)
@@ -255,6 +256,8 @@ POST          /pricing/requestUsers                                             
 POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
 POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
+POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan
+GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService()
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()

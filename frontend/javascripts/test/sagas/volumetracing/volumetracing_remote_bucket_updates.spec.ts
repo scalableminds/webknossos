@@ -54,25 +54,28 @@ describe("Volume Tracing with remote updates", () => {
         createBucketResponseFunction({ volumeTracingId: "uint16", color: "uint8" }, newCellId, 5),
       );
 
-      yield tryToIncorporateActions([
-        {
-          version: 1,
-          value: [
-            {
-              name: "updateBucket",
-              value: {
-                actionTracingId: "volumeTracingId",
-                actionTimestamp: 0,
-                position,
-                additionalCoordinates: undefined,
-                mag: [1, 1, 1],
-                cubeSize: 1024,
-                base64Data: undefined, // The server will not send this, either.
+      yield tryToIncorporateActions(
+        [
+          {
+            version: 1,
+            value: [
+              {
+                name: "updateBucket",
+                value: {
+                  actionTracingId: "volumeTracingId",
+                  actionTimestamp: 0,
+                  position,
+                  additionalCoordinates: undefined,
+                  mag: [1, 1, 1],
+                  cubeSize: 1024,
+                  base64Data: undefined, // The server will not send this, either.
+                },
               },
-            },
-          ],
-        },
-      ]);
+            ],
+          },
+        ],
+        false,
+      );
 
       expect(yield call(() => api.data.getDataValue(volumeTracingLayerName, position))).toBe(
         newCellId,

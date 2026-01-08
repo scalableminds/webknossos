@@ -259,11 +259,11 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentWillUnmount() {
-    if (!Store.getState().uiInformation.isWkReady) {
+    if (!Store.getState().uiInformation.isWkInitialized) {
       // Because inner componentWillUnmount's are executed before
-      // outer componentWillUnmount's, we have to check isWkReady
+      // outer componentWillUnmount's, we have to check isWkInitialized
       // here.
-      // If isWkReady is false, this indicates that the WK viewer
+      // If isWkInitialized is false, this indicates that the WK viewer
       // was already torn down. In that case, the store was reset
       // and the scene controller destroyed. Executing the below
       // code would crash.
@@ -717,7 +717,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const { segmentationLayer, currentConnectomeFile } = this.props;
     if (segmentationLayer == null || currentConnectomeFile == null) return;
     Store.dispatch(
-      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
+      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", false, {
         showLoadingIndicator: true,
       }),
     );
@@ -727,7 +727,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const isConnectomeMappingActive = this.isConnectomeMappingActive();
     return isConnectomeMappingActive ? null : (
       <Alert
-        message={
+        title={
           <>
             The mapping this connectome was computed for is not active.{" "}
             <a href="#" onClick={() => this.activateConnectomeMapping()}>
@@ -754,7 +754,7 @@ class ConnectomeView extends React.Component<Props, State> {
     return (
       <>
         <Space.Compact
-          className="compact-icons"
+          block
           style={{
             marginBottom: 10,
           }}

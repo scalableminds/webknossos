@@ -11,7 +11,7 @@ import {
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { getActiveSegmentationTracingLayer } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  ensureTracingsWereDiffedToSaveQueueAction,
+  dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   saveNowAction,
 } from "viewer/model/actions/save_actions";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -21,9 +21,6 @@ import type DataLayer from "viewer/model/data_layer";
 import { getTotalSaveQueueLength } from "viewer/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
-
-import Deferred from "libs/async/deferred";
-import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
 const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
@@ -167,18 +164,18 @@ export class WebKnossosModel {
 
   getCurrentlyRenderedZoomStepAtPosition(
     layerName: string,
-    position: Vector3 | null | undefined,
+    positionInLayerSpace: Vector3 | null | undefined,
   ): number {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
 
     const zoomStep = getActiveMagIndexForLayer(state, layerName);
-    if (position == null) return zoomStep;
+    if (positionInLayerSpace == null) return zoomStep;
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, which magnifications are loaded and other settings,
     // the currently rendered zoom step has to be determined.
     const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(
-      position,
+      positionInLayerSpace,
       additionalCoordinates,
       zoomStep,
     );
@@ -187,7 +184,7 @@ export class WebKnossosModel {
 
   async getUltimatelyRenderedZoomStepAtPosition(
     layerName: string,
-    position: Vector3,
+    positionInLayerSpace: Vector3,
   ): Promise<number> {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
@@ -196,63 +193,11 @@ export class WebKnossosModel {
     // Depending on the zoom value, the available magnifications and other settings,
     // the ultimately rendered zoom step has to be determined.
     const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
-      position,
+      positionInLayerSpace,
       additionalCoordinates,
       zoomStep,
     );
     return renderedZoomStep;
-  }
-
-  getHoveredCellId(globalMousePosition: Vector3 | null | undefined):
-    | {
-        id: number;
-        isMapped: boolean;
-        unmappedId: number;
-      }
-    | null
-    | undefined {
-    // Returns
-    // - id (which might be mapped)
-    // - isMapped (specifies whether id is mapped)
-    // - unmappedId (equal to id if isMapped is false)
-    const segmentationLayer = this.getVisibleSegmentationLayer();
-
-    if (!segmentationLayer || !globalMousePosition) {
-      return null;
-    }
-
-    const segmentationLayerName = segmentationLayer.name;
-    const { cube } = segmentationLayer;
-    const renderedZoomStepForMousePosition = this.getCurrentlyRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      globalMousePosition,
-    );
-
-    const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
-      const state = Store.getState();
-      const additionalCoordinates = state.flycam.additionalCoordinates;
-      const posInLayerSpace = globalToLayerTransformedPosition(
-        pos,
-        segmentationLayer.name,
-        "segmentation",
-        state,
-      );
-      const id = cube.getDataValue(posInLayerSpace, additionalCoordinates, null, usableZoomStep);
-      return {
-        // Note that this id can be an unmapped id even when
-        // a mapping is active, if it is a HDF5 mapping that is partially loaded
-        // and no entry exists yet for the input id.
-        id: cube.mapId(id),
-        unmappedId: id,
-      };
-    };
-
-    const { id, unmappedId } = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
-    return {
-      id,
-      isMapped: cube.isMappingEnabled(),
-      unmappedId,
-    };
   }
 
   getCubeByLayerName(name: string): DataCube {
@@ -358,31 +303,22 @@ export class WebKnossosModel {
     // That way, we can be sure that the diffing sagas have processed all user actions
     // up until the time of where waitForDifferResponses was invoked.
     async function waitForDifferResponses() {
+      console.log("waitForDifferResponses");
       const { annotation } = Store.getState();
-      // All skeleton and volume tracings should respond to the dispatched action.
-      const tracingIds = new Set(
-        _.compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
-      );
-      const reportedTracingIds = new Set();
-      const deferred = new Deferred();
-      function callback(tracingId: string) {
-        reportedTracingIds.add(tracingId);
-        if (Utils.areSetsEqual(tracingIds, reportedTracingIds)) {
-          deferred.resolve(null);
-        }
-      }
-
-      if (tracingIds.size > 0) {
-        Store.dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
-        await deferred.promise();
-      }
+      await dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
       return true;
     }
 
-    while ((await waitForDifferResponses()) && !this.stateSaved()) {
+    while (
+      // Wait while rebasing is in progress.
+      Store.getState().save.rebaseRelevantServerAnnotationState.isRebasing ||
+      // If no rebasing is in progress enforce diffed state to save queue.
+      ((await waitForDifferResponses()) && !this.stateSaved())
+    ) {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
+      console.log("stuck in ensureSavedState loop");
       if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction());
       }

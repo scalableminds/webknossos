@@ -16,8 +16,8 @@ import type {
   ElementClass,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "viewer/constants";
-import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "viewer/constants";
+import { LongUnitToShortUnitMap, Unicode, type Vector3, type ViewMode } from "viewer/constants";
+import constants, { ViewModeValues, Vector3Indices, MappingStatusEnum } from "viewer/constants";
 import type {
   ActiveMappingInfo,
   BoundingBoxObject,
@@ -30,6 +30,8 @@ import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+
+const { ThinSpace } = Unicode;
 
 function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
   return new MagInfo(magnifications.map((magObj) => magObj.mag));
@@ -244,7 +246,7 @@ export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
   for (const dataLayer of layers) {
     const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
 
-    for (const i of Vector3Indicies) {
+    for (const i of Vector3Indices) {
       min[i] = Math.min(min[i], layerBox.min[i]);
       max[i] = Math.max(max[i], layerBox.max[i]);
     }
@@ -297,7 +299,7 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
+    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)}${ThinSpace}Vx`;
   }
 
   const extent = getDatasetExtentInUnit(dataset);
@@ -541,6 +543,24 @@ function _getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter((dataLayer) => isColorLayer(dataset, dataLayer.name));
 }
 export const getColorLayers = memoizeOne(_getColorLayers);
+
+function _getOrderedColorLayers(dataset: APIDataset, colorLayerOrder: string[]) {
+  const colorLayers = getColorLayers(dataset);
+
+  // Sort based on the provided order, keeping unlisted layers at the end
+  const ordered = [...colorLayers].sort((a, b) => {
+    const indexA = colorLayerOrder.indexOf(a.name);
+    const indexB = colorLayerOrder.indexOf(b.name);
+
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  return ordered;
+}
+export const getOrderedColorLayers = memoizeOne(_getOrderedColorLayers);
 
 function _getEnabledLayers(
   dataset: APIDataset,

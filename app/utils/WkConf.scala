@@ -128,6 +128,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val clientSecret: String = get[String]("singleSignOn.openIdConnect.clientSecret")
       val scope: String = get[String]("singleSignOn.openIdConnect.scope")
       val verboseLoggingEnabled: Boolean = get[Boolean]("singleSignOn.openIdConnect.verboseLoggingEnabled")
+      val logoutRedirectUrl = getOptional[String]("singleSignOn.openIdConnect.logoutRedirectUrl")
     }
   }
 
@@ -183,6 +184,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val pass: String = get[String]("mail.smtp.pass")
     }
 
+    val supportEmail: String = get[String]("mail.supportEmail")
     val defaultSender: String = get[String]("mail.defaultSender")
     def additionalFooter: String = get[String]("mail.additionalFooter")
 
@@ -223,6 +225,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
 
   object Jobs {
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
+    val workerLivenessReReportInterval: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessReReportInterval")
     val monthlyFreeCredits: Int = get[Int]("jobs.monthlyFreeCredits")
   }
 

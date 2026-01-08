@@ -6,7 +6,7 @@ import window, { document } from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "viewer/constants";
-import constants from "viewer/constants";
+import constants, { isMac } from "viewer/constants";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -25,7 +25,7 @@ type MouseButton = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
-  (arg0: number, isOriginalEvent: boolean): void;
+  (arg0: number, isOriginalEvent: boolean, event: KeyboardEvent): void;
   delayed?: boolean;
   lastTime?: number | null | undefined;
   customAdditionalDelayFn?: () => number;
@@ -68,7 +68,7 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 // This keyboard hook directly passes a keycombo and callback
 // to the underlying KeyboadJS library to do its dirty work.
 // Pressing a button will only fire an event once.
-const EXTENDED_COMMAND_KEYS = "ctrl + k";
+const EXTENDED_COMMAND_KEYS = isMac ? "command + k" : "ctrl + k";
 const EXTENDED_COMMAND_DURATION = 3000;
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
@@ -260,7 +260,7 @@ export class InputKeyboard {
           return;
         }
 
-        callback(1, true);
+        callback(1, true, event);
         // reset lastTime
         callback.lastTime = null;
         callback.delayed = true;
@@ -268,7 +268,7 @@ export class InputKeyboard {
         this.keyPressedCount++;
 
         if (this.keyPressedCount === 1) {
-          this.buttonLoop();
+          this.buttonLoop(event);
         }
 
         const totalDelay =
@@ -306,7 +306,7 @@ export class InputKeyboard {
 
   // In order to continuously fire callbacks we have to loop
   // through all the buttons that a marked as "pressed".
-  buttonLoop() {
+  buttonLoop(originalEvent: KeyboardEvent) {
     if (!this.isStarted) {
       return;
     }
@@ -321,11 +321,11 @@ export class InputKeyboard {
           const lastTime = callback.lastTime || curTime - 1000 / constants.FPS;
           const elapsed = curTime - lastTime;
           callback.lastTime = curTime;
-          callback((elapsed / 1000) * constants.FPS, false);
+          callback((elapsed / 1000) * constants.FPS, false, originalEvent);
         }
       }
 
-      setTimeout(() => this.buttonLoop(), KEYBOARD_BUTTON_LOOP_INTERVAL);
+      setTimeout(() => this.buttonLoop(originalEvent), KEYBOARD_BUTTON_LOOP_INTERVAL);
     }
   }
 

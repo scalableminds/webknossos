@@ -18,28 +18,35 @@
   position: absolute;
   width: 100%;
 }
+
 .inputcatcher-border {
   border-style: solid;
   border-width: 2px;
   opacity: 0.85;
   width: 100%;
   height: 100%;
+
   &:hover {
     opacity: 1;
   }
+
   &.PLANE_XY {
     border-color: var(--color-xy-viewport);
   }
+
   &.PLANE_YZ {
     border-color: var(--color-yz-viewport);
   }
+
   &.PLANE_XZ {
     border-color: var(--color-xz-viewport);
   }
+
   &.TDView {
     border-color: white;
   }
 }
+
 .inputcatcher {
   z-index: 20;
   float: left;
@@ -51,6 +58,7 @@
 #inputcatcher_TDView {
   position: relative;
 }
+
 #TDViewControls {
   display: flex;
   justify-content: end;
@@ -60,19 +68,23 @@
     vertical-align: baseline;
     padding-left: 10px;
     padding-right: 10px;
-    & > .colored-dot {
+
+    &>.colored-dot {
       display: inline-block;
       width: 10px;
       height: 10px;
       border-radius: 50%;
       margin-right: 5px;
     }
+
     &:nth-child(2) .colored-dot {
       background-color: var(--color-xy-viewport);
     }
+
     &:nth-child(3) .colored-dot {
       background-color: var(--color-yz-viewport);
     }
+
     &:nth-child(4) .colored-dot {
       background-color: var(--color-xz-viewport);
     }
@@ -80,6 +92,7 @@
 }
 
 .cell-id-table {
+
   td,
   th {
     padding: 5px;
@@ -95,19 +108,23 @@
   & .ant-layout {
     overflow: initial;
   }
+
   .ant-layout-content {
     overflow: initial;
   }
+
   .ant-layout-sider {
     overflow-x: hidden;
     overflow-y: auto;
   }
+
   .ant-layout-has-sider {
     overflow-y: auto;
     overflow-x: auto;
     flex: 1 1 auto;
   }
 }
+
 .tracing-settings-menu {
   width: @left-menu-width;
   font-size: 14px;
@@ -117,6 +134,7 @@
   font-feature-settings: "tnum";
   padding: 16px;
   padding-top: 10px;
+
   .ant-collapse-content {
     color: unset;
   }
@@ -145,6 +163,7 @@
     line-height: 22px;
     white-space: nowrap;
   }
+
   .keyboard-key-icon-small {
     line-height: 30px;
   }
@@ -160,7 +179,7 @@
     position: static !important;
   }
 
-  > div {
+  >div {
     // Fixes too wide context menu
     width: unset !important;
     // Ensures that the context menu is correctly trapped
@@ -173,20 +192,23 @@
   }
 }
 
-.measurement-tooltip {
+.cursor-tooltip {
   position: absolute;
   width: fit-content;
   pointer-events: all;
-  border-radius: 6px 6px 6px 0px;
+  border-radius: 6px 0px 6px 6px;
   padding: 2px 4px;
-  font-size: 14;
+  font-size: 14px;
   overflow: hidden;
 
-  :after {
+  /* Arrow pointing UP and RIGHT */
+  &:after {
     content: "";
     position: absolute;
-    top: 48px;
-    left: -6px;
+    top: -6px;
+    /* Position above tooltip */
+    right: -6px;
+    /* On the far right */
     height: 12px;
     width: 12px;
     transform: rotate(45deg);
@@ -214,20 +236,24 @@
       background-color: transparent;
     }
   }
+
   .version-entry {
     padding: 3px;
+
     &:hover:not(.active-version-entry) {
       background-color: var(--ant-blue-1);
     }
   }
+
   .version-entry-indented {
     padding-left: 40px;
   }
+
   .active-version-entry {
     background-color: var(--ant-blue-2);
   }
 
-  .close-button > i {
+  .close-button>i {
     margin-right: 0px;
   }
 }
@@ -335,7 +361,6 @@ img.keyboard-mouse-icon:first-child {
   .navbar-separator {
     height: 100%;
     margin-left: 2px;
-    margin-right: 10px;
     border-left: 1px #666879 solid;
   }
 
@@ -352,16 +377,16 @@ img.keyboard-mouse-icon:first-child {
   .ant-input,
   .ant-input-number,
   .ant-radio-button-wrapper,
-  .ant-select > .ant-select-selector{
+  .ant-select>.ant-select-selector {
     color: @dark-fg !important;
 
     &.upgrade-banner-button {
-        background-color: var(--ant-button-primary-color) !important;
-        color: var(--ant-color-primary) !important;
-        border-color: var(--ant-button-primary-color);
-        display: flex;
-        align-items: center;
-      }
+      background-color: var(--ant-button-primary-color) !important;
+      color: var(--ant-color-primary) !important;
+      border-color: var(--ant-button-primary-color);
+      display: flex;
+      align-items: center;
+    }
 
     &:hover {
       z-index: 1 !important;
@@ -395,26 +420,30 @@ img.keyboard-mouse-icon:first-child {
     color: @dark-fg;
     background-color: inherit;
   }
+
   .left-border-button.footer-button {
     left: 8px;
   }
+
   .right-border-button.footer-button {
     right: 8px;
   }
 
   .upgrade-banner {
     .upgrade-banner-wk-link {
-      margin-inline: -2; 
-      color: var(--ant-color-text-primary); 
+      margin-inline: -2;
+      color: var(--ant-color-text-primary);
       font-weight: bold;
 
       &:hover {
         color: var(--color-blue-zircon);
       }
     }
-    
+
     .ant-alert-close-icon {
-      .anticon, .anticon-close {
+
+      .anticon,
+      .anticon-close {
         color: var(--ant-color-text-primary);
       }
     }
@@ -431,6 +460,7 @@ img.keyboard-mouse-icon:first-child {
   // into the top navbar.
   z-index: 999;
   color: var(--ant-color-text-secondary);
+
   i {
     font-size: 15px !important;
     margin: 0;
@@ -447,6 +477,7 @@ img.keyboard-mouse-icon:first-child {
 }
 
 .no-hover-highlighting {
+
   &:hover,
   &:focus,
   &:active {
@@ -471,12 +502,15 @@ img.keyboard-mouse-icon:first-child {
 .icon-sidebar-show-left-bright {
   background-image: url(/assets/images/icon-sidebar-show-left-bright.svg);
 }
+
 .icon-sidebar-show-left-dark {
   background-image: url(/assets/images/icon-sidebar-show-left-dark.svg);
 }
+
 .icon-sidebar-show-right-bright {
   background-image: url(/assets/images/icon-sidebar-show-right-bright.svg);
 }
+
 .icon-sidebar-show-right-dark {
   background-image: url(/assets/images/icon-sidebar-show-right-dark.svg);
 }
@@ -484,12 +518,15 @@ img.keyboard-mouse-icon:first-child {
 .icon-sidebar-hide-left-bright {
   background-image: url(/assets/images/icon-sidebar-hide-left-bright.svg);
 }
+
 .icon-sidebar-hide-left-dark {
   background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);
 }
+
 .icon-sidebar-hide-right-bright {
   background-image: url(/assets/images/icon-sidebar-hide-right-bright.svg);
 }
+
 .icon-sidebar-hide-right-dark {
   background-image: url(/assets/images/icon-sidebar-hide-right-dark.svg);
 }
@@ -536,13 +573,14 @@ img.keyboard-mouse-icon:first-child {
   z-index: 110;
 }
 
-.segment-list-context-menu-overlay,.bbox-list-context-menu-overlay {
+.segment-list-context-menu-overlay,
+.bbox-list-context-menu-overlay {
   // The parent has a padding of 10px on all sides which we need to subtract here.
   width: calc(100% - 20px) !important;
   height: calc(100% - 20px) !important;
 }
 
-.tree-list-context-menu-overlay{
+.tree-list-context-menu-overlay {
   width: calc(100% - 20px) !important;
   height: calc(100% - var(--navbar-height) - var(--footer-height) - 30px) !important;
 }

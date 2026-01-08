@@ -27,11 +27,15 @@ import {
   ConfigProvider,
   Divider,
   Empty,
+  type GetRef,
   type MenuProps,
   Modal,
   Popover,
   Select,
+  Space,
+  type Tree,
   type TreeProps,
+  Typography,
 } from "antd";
 import type { ItemType } from "antd/lib/menu/interface";
 import type { DataNode } from "antd/lib/tree";
@@ -43,13 +47,12 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
-import type RcTree from "rc-tree";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_types";
+import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
@@ -58,6 +61,7 @@ import {
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { layerToGlobalTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -192,7 +196,7 @@ const mapStateToProps = (state: WebknossosState) => {
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
-      state.annotation.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
+      state.annotation.isUpdatingCurrentlyAllowed && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:
@@ -254,10 +258,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   setActiveCell(
     segmentId: number,
-    somePosition?: Vector3,
+    somePositionInLayerSpace?: Vector3,
     someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
-    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, somePositionInLayerSpace, someAdditionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {
@@ -418,7 +422,7 @@ class SegmentsView extends React.Component<Props, State> {
     contextMenuPosition: null,
     menu: null,
   };
-  tree: React.RefObject<RcTree>;
+  tree: React.RefObject<GetRef<typeof Tree>>;
 
   constructor(props: Props) {
     super(props);
@@ -433,7 +437,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_MESH_FILE,
+        APIJobCommand.COMPUTE_MESH_FILE,
       )
     ) {
       this.pollJobData();
@@ -678,7 +682,8 @@ class SegmentsView extends React.Component<Props, State> {
     const jobs = this.props.activeUser != null ? await getJobs() : [];
     const oldActiveJobId = this.state.activeMeshJobId;
     const meshJobsForDataset = jobs.filter(
-      (job) => job.type === "compute_mesh_file" && job.datasetName === this.props.datasetName,
+      (job) =>
+        job.command === "compute_mesh_file" && job.args.datasetName === this.props.datasetName,
     );
     const activeJob =
       oldActiveJobId != null ? meshJobsForDataset.find((job) => job.id === oldActiveJobId) : null;
@@ -706,7 +711,6 @@ class SegmentsView extends React.Component<Props, State> {
         }
 
         case "STARTED":
-        case "UNKNOWN":
         case "PENDING": {
           break;
         }
@@ -758,7 +762,7 @@ class SegmentsView extends React.Component<Props, State> {
 
     if (
       !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_MESH_FILE,
+        APIJobCommand.COMPUTE_MESH_FILE,
       )
     ) {
       title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
@@ -807,7 +811,13 @@ class SegmentsView extends React.Component<Props, State> {
       );
       return;
     }
-    this.props.setPosition(segment.somePosition);
+    const transformedPosition = layerToGlobalTransformedPosition(
+      segment.somePosition,
+      visibleSegmentationLayer.name,
+      "segmentation",
+      Store.getState(),
+    );
+    this.props.setPosition(transformedPosition);
     const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
     if (segmentAdditionalCoordinates != null) {
       this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
@@ -896,15 +906,14 @@ class SegmentsView extends React.Component<Props, State> {
     return (
       <div>
         <FastTooltip title="The higher the quality, the more computational resources are required">
-          <div>Quality for Ad-Hoc Mesh Computation:</div>
+          <Typography.Paragraph>
+            Select the quality for Ad-Hoc Mesh Computation:
+          </Typography.Paragraph>
         </FastTooltip>
         <Select
-          size="small"
-          style={{
-            width: 220,
-          }}
           value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
           onChange={this.handleQualityChangeForAdHocGeneration}
+          popupMatchSelectWidth={false}
         >
           {magInfo
             .getMagsWithIndices()
@@ -985,21 +994,16 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMeshesHeader = () => (
-    <>
+    <Space.Compact>
       <FastTooltip title="Select a mesh file from which precomputed meshes will be loaded.">
         <ConfigProvider
           renderEmpty={renderEmptyMeshFileSelect}
           theme={{ cssVar: { key: "antd-app-theme" } }}
         >
           <Select
-            style={{
-              width: 180,
-              display: "inline-block",
-            }}
             placeholder="Select a mesh file"
             value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
             onChange={this.handleMeshFileSelected}
-            size="small"
             loading={this.props.availableMeshFiles == null}
             popupMatchSelectWidth={false}
           >
@@ -1017,42 +1021,32 @@ class SegmentsView extends React.Component<Props, State> {
           </Select>
         </ConfigProvider>
       </FastTooltip>
-      <FastTooltip title="Refresh list of available Mesh files">
-        <ReloadOutlined
-          key="refresh"
-          onClick={() =>
-            Store.dispatch(
-              maybeFetchMeshFilesAction(
-                this.props.visibleSegmentationLayer,
-                this.props.dataset,
-                true,
-              ),
-            )
-          }
-          style={{
-            marginLeft: 8,
-          }}
-          className="icon-margin-right"
-        >
-          Reload from Server
-        </ReloadOutlined>
-      </FastTooltip>
-      <FastTooltip title="Add a precomputed mesh file">
-        <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
-          <PlusOutlined className="icon-margin-right" />
-        </Popover>
-      </FastTooltip>
+      <ButtonComponent
+        title="Refresh list of available Mesh files"
+        icon={<ReloadOutlined />}
+        onClick={() =>
+          Store.dispatch(
+            maybeFetchMeshFilesAction(
+              this.props.visibleSegmentationLayer,
+              this.props.dataset,
+              true,
+            ),
+          )
+        }
+      />
+      <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
+        <ButtonComponent title="Add a precomputed mesh file" icon={<PlusOutlined />} />
+      </Popover>
       {this.state.activeMeshJobId != null ? (
-        <FastTooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
-          <LoadingOutlined className="icon-margin-right" />
-        </FastTooltip>
+        <ButtonComponent
+          title='A mesh file is currently being computed. See "Processing Jobs" for more information.'
+          icon={<LoadingOutlined />}
+        />
       ) : null}
-      <FastTooltip title="Configure ad-hoc mesh computation">
-        <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
-          <SettingOutlined />
-        </Popover>
-      </FastTooltip>
-    </>
+      <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
+        <ButtonComponent title="Configure ad-hoc mesh computation" icon={<SettingOutlined />} />
+      </Popover>
+    </Space.Compact>
   );
 
   getToastForMissingPositions = (groupId: number | null) => {
@@ -1089,13 +1083,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
-    const title = "Reset Segment Color";
     return {
       key: "resetGroupColor",
       icon: <i className="fas fa-undo" />,
       label: (
         <div
-          title={title}
           onClick={() => {
             if (getVisibleSegmentationLayer == null) {
               return;
@@ -1104,7 +1096,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.hideContextMenu();
           }}
         >
-          Reset Segment Color
+          Reset Segment Colors
         </div>
       ),
     };
@@ -1785,6 +1777,7 @@ class SegmentsView extends React.Component<Props, State> {
               disabled: true,
             },
             this.getSetGroupColorMenuItem(id),
+            this.getResetGroupColorMenuItem(id),
             this.getShowSegmentStatistics(id),
             this.getLoadMeshesFromFileMenuItem(id),
             this.getComputeMeshesAdHocMenuItem(id),
@@ -1860,7 +1853,7 @@ class SegmentsView extends React.Component<Props, State> {
             ).map((node) => node.key);
             return (
               <React.Fragment>
-                <div style={{ flex: 0, display: "flex" }}>
+                <Space.Compact>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
@@ -1870,15 +1863,12 @@ class SegmentsView extends React.Component<Props, State> {
                     onSelectAllMatches={this.handleSelectAllMatchingSegments}
                   >
                     <ButtonComponent
-                      size="small"
                       title="Open the search via CTRL + Shift + F"
-                      style={{ marginRight: 8 }}
-                    >
-                      <SearchOutlined />
-                    </ButtonComponent>
+                      icon={<SearchOutlined />}
+                    />
                   </AdvancedSearchPopover>
                   {this.getMeshesHeader()}
-                </div>
+                </Space.Compact>
                 <div style={{ flex: 1 }}>
                   {isSegmentHierarchyEmpty ? (
                     <Empty

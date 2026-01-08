@@ -52,6 +52,7 @@ organization.creditOrder.notPositive=You cannot order a negative number of WEBKN
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 
 user.notFound=User not found
+user.superUserOnly=This feature is currently only available for superusers.
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.
 user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.
@@ -121,6 +122,7 @@ dataset.upload.finishFailed=Failed to finalize upload for dataset {0}.
 dataset.upload.moveToTarget.failed=Failed to move uploaded dataset to target directory.
 dataset.upload.moreBytesThanReserved=The uploaded dataset contains more bytes than originally reserved. Please make sure to reserve the correct amount of bytes.
 dataset.upload.creation.failed=Failed to create dataset.
+dataset.upload.disallowedPaths=Cannot upload a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.
 dataset.reserveUploadToPaths.noLayers=Cannot reserve upload for dataset with no layers.
 dataset.uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 dataset.explore.failed.readFile=Failed to read remote file
@@ -137,6 +139,8 @@ dataVault.getPath.failed=Failed to get remote path
 dataSource.notFound=Datasource not found on datastore server. Might still be initializing.
 dataSource.add.pathsNotAllowed=Cannot directly add a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.
 dataSource.update.newExplicitPaths=Cannot update a dataset with new explicit paths. To add mags or layers, please use the compose functionality.
+
+agglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
@@ -266,7 +270,9 @@ annotation.getNewestVersion.failed=Could not get the newest version information 
 annotation.idForTracing.failed=Could not find the annotation id for this tracing id.
 annotation.editableMapping.getAgglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
 annotation.editableMapping.getAgglomerateIdsForSegments.failed=Could not look up agglomerate ids for requested segments.
-annotation.duplicate.failed=Failed to duplicate annotation
+annotation.duplicate.failed=Failed to duplicate annotation.
+annotation.mutex.failed=Failed to acquire annotation editing mutex.
+annotation.mutex.release.failed=Failed to release annotation editing mutex.
 annotation.upload.editableMappingIncompleteInformation=Could not store editable mapping, either file or baseMappingName is missing.
 
 mesh.file.listChunks.failed=Failed to load chunk list for segment {0} from mesh file “{1}”

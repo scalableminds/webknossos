@@ -40,7 +40,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${dataset._id}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
-      .addQueryParam("mag", mag.toMagLiteral())
+      .addQueryParam("mag", mag.toMagLiteral(allowScalar = false))
       .addQueryParam("x", mag1BoundingBox.topLeft.x)
       .addQueryParam("y", mag1BoundingBox.topLeft.y)
       .addQueryParam("z", mag1BoundingBox.topLeft.z)
@@ -124,6 +124,18 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId/deleteOnDisk")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .delete()
+    } yield ()
+
+  lazy val getBaseDirAbsolute: Fox[String] =
+    rpc(s"${dataStore.url}/data/datasets/baseDirAbsolute")
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .getWithJsonResponse[String]
+
+  def deletePaths(paths: Seq[UPath]): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/deletePaths")
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .deleteJson(paths)
     } yield ()
 
 }

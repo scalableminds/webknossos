@@ -1,8 +1,8 @@
-import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import type { Matrix4x4 } from "mjs";
 import { type Euler, MathUtils, Matrix4, Object3D } from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
@@ -31,7 +31,7 @@ import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
 import * as scaleInfo from "viewer/model/scaleinfo";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "viewer/store";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import {
@@ -44,7 +44,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -197,8 +197,8 @@ export function _getMaximumZoomForAllMags(
 }
 
 // Only exported for testing.
-export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
-  const scaleMatrix = getMatrixScale(scale);
+export const _getDummyFlycamMatrix = memoizeOne((voxelSize: VoxelSize) => {
+  const scaleMatrix = getBaseVoxelFactorsInUnit(voxelSize);
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 
@@ -400,14 +400,14 @@ export const getActiveMagIndicesForLayers = reuseInstanceOnEquality(_getActiveMa
 
 /*
   Note that the return value indicates which mag can be rendered theoretically for the given layer
-   (ignoring which mags actually exist). This means the return mag index might not exist for the given layer.
+   (ignoring which mags actually exist). This means the returned mag index might not exist for the given layer.
  */
 export function getActiveMagIndexForLayer(state: WebknossosState, layerName: string): number {
   return getActiveMagIndicesForLayers(state)[layerName];
 }
 
 /*
-  Returns the mag that is supposed to be rendered for the given layer. The return mag
+  Returns the mag that is supposed to be rendered for the given layer. The returned mag
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */
@@ -422,6 +422,24 @@ export function getCurrentMag(
     return null;
   }
   return magInfo.getMagByIndex(existingMagIndex);
+}
+
+/*
+  Returns the mag index that is supposed to be rendered for the given layer. The returned mag
+  is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
+  because no appropriate mag exists.
+ */
+export function getCurrentMagIndex(
+  state: WebknossosState,
+  layerName: string,
+): number | null | undefined {
+  const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).mags);
+  const magIndex = getActiveMagIndexForLayer(state, layerName);
+  const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(magIndex);
+  if (existingMagIndex == null) {
+    return null;
+  }
+  return existingMagIndex;
 }
 
 function _getValidZoomRangeForUser(state: WebknossosState): [number, number] {

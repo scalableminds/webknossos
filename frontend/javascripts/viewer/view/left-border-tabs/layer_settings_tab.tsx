@@ -48,7 +48,7 @@ import {
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
-  APIJobType,
+  APIJobCommand,
   type APISkeletonLayer,
   AnnotationLayerEnum,
   type AnnotationLayerType,
@@ -62,7 +62,12 @@ import {
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3 } from "viewer/constants";
-import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "viewer/constants";
+import Constants, {
+  ControlModeEnum,
+  IdentityTransform,
+  LongUnitToShortUnitMap,
+  MappingStatusEnum,
+} from "viewer/constants";
 import defaultState from "viewer/default_state";
 import {
   getDefaultValueRangeOfLayer,
@@ -124,7 +129,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/ai_job_modals/materialize_volume_annotation_modal";
+import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
   ColorSetting,
@@ -709,7 +714,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : null,
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
+        APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
       )
         ? {
             label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
@@ -1169,8 +1174,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getSkeletonLayer = () => {
-    const { controlMode, annotation, onChangeRadius, userConfiguration, onChangeShowSkeletons } =
-      this.props;
+    const {
+      controlMode,
+      annotation,
+      onChangeRadius,
+      userConfiguration,
+      onChangeShowSkeletons,
+      dataset,
+    } = this.props;
     const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
     if (isPublicViewMode || annotation.skeleton == null) {
@@ -1182,6 +1193,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
     const { showSkeletons, tracingId } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
+    const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
     return (
       <React.Fragment>
         <div
@@ -1247,7 +1259,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           >
             <LogSliderSetting
-              label="Node Radius"
+              label={`Node Radius (${unit})`}
               min={userSettings.nodeRadius.minimum}
               max={userSettings.nodeRadius.maximum}
               roundTo={0}
@@ -1258,9 +1270,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             <NumberSliderSetting
               label={
-                userConfiguration.overrideNodeRadius
+                (userConfiguration.overrideNodeRadius
                   ? settings.particleSize
-                  : `Min. ${settings.particleSize}`
+                  : `Min. ${settings.particleSize}`) + ` (${unit})`
               }
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
@@ -1280,7 +1292,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               />
             ) : (
               <LogSliderSetting
-                label={settings.clippingDistance}
+                label={settings.clippingDistance + ` (${unit})`}
                 roundTo={3}
                 min={userSettings.clippingDistance.minimum}
                 max={userSettings.clippingDistance.maximum}
@@ -1518,7 +1530,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 
-        {this.props.annotation.restrictions.allowUpdate &&
+        {this.props.annotation.isUpdatingCurrentlyAllowed &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
@@ -1531,7 +1543,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.annotation.restrictions.allowUpdate && canBeMadeHybrid ? (
+        {this.props.annotation.isUpdatingCurrentlyAllowed && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.addSkeletonAnnotationLayer}

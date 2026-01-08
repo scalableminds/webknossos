@@ -1,3 +1,4 @@
+import type { Matrix4x4 } from "mjs";
 import { Euler, Matrix4 } from "three";
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -46,11 +47,11 @@ export type Rect = {
   height: number;
 };
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
-export const Vector2Indicies = [0, 1] as const;
-export const Vector3Indicies = [0, 1, 2] as const;
-export const Vector4Indicies = [0, 1, 2, 3] as const;
-export const Vector5Indicies = [0, 1, 2, 3, 4] as const;
-export const Vector6Indicies = [0, 1, 2, 3, 4, 5] as const;
+export const Vector2Indices = [0, 1] as const;
+export const Vector3Indices = [0, 1, 2] as const;
+export const Vector4Indices = [0, 1, 2, 3] as const;
+export const Vector5Indices = [0, 1, 2, 3, 4] as const;
+export const Vector6Indices = [0, 1, 2, 3, 4, 5] as const;
 export enum OrthoViews {
   PLANE_XY = "PLANE_XY",
   PLANE_YZ = "PLANE_YZ",
@@ -282,9 +283,10 @@ export const Unicode = {
   MultiplicationSymbol: "×",
 };
 // A LabeledVoxelsMap maps from a bucket address
-// to a 2D slice of labeled voxels. These labeled voxels
-// are stored in a Uint8Array in a binary way (which cell
-// id the voxels should be changed to is not encoded).
+// to a 2D slice of labeled voxels within a bucket.
+// These labeled voxels are stored in a Uint8Array in a binary way (which
+// segment id the voxels should be changed to is not encoded).
+// The array should have BUCKET_WIDTH**2 entries.
 export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 
 // LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
@@ -348,7 +350,7 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
-};
+} as const;
 export default Constants;
 
 export type TypedArray =
@@ -383,7 +385,7 @@ export enum BLEND_MODES {
   Cover = "Cover",
 }
 
-export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+export const Identity4x4: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 export const IdentityTransform = {
   type: "affine",
   affineMatrix: Identity4x4,
@@ -391,7 +393,7 @@ export const IdentityTransform = {
 } as const;
 export const EMPTY_OBJECT = {} as const;
 
-const isMac = (() => {
+export const isMac = (() => {
   try {
     // Even though navigator.platform¹ is deprecated, this still
     // seems to be the best mechanism to find out whether the machine is
@@ -507,4 +509,13 @@ export enum AnnotationStateFilterEnum {
   ALL = "All",
   ACTIVE = "Active",
   FINISHED_OR_ARCHIVED = "Finished",
+}
+
+export enum PerformanceMarkEnum {
+  TRACING_VIEW_LOAD = "tracing_view_load_start",
+  SHADER_COMPILE = "shader_compile_start",
+}
+
+export enum SagaIdentifier {
+  SAVE_SAGA = "save_saga",
 }

@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext
 
 class BinaryDataService(val dataBaseDir: Path,
                         val agglomerateServiceOpt: Option[AgglomerateService],
-                        remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                        dataVaultServiceOpt: Option[DataVaultService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
                         datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -82,7 +82,7 @@ class BinaryDataService(val dataBaseDir: Path,
               r.cuboid.topLeft.toBucket.copy(additionalCoordinates = r.settings.additionalCoordinates),
               r.settings.version))
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
-          dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
+          dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
           dataSourceId,
           s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
@@ -195,10 +195,10 @@ class BinaryDataService(val dataBaseDir: Path,
       val dataSourceId = request.dataSourceIdOrVolumeDummy
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
-          request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
+          request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
       datasetErrorLoggingService.withErrorLogging(
         dataSourceId,
-        s"loading bucket for layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
+        s"loading bucket for ${request.dataSourceId} layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
         bucketProvider.load(readInstruction)
       )
     } else Fox.empty
@@ -216,13 +216,13 @@ class BinaryDataService(val dataBaseDir: Path,
 
     rs.reverse.foreach {
       case (bucket, data) =>
-        val xMin = math.max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag)
-        val yMin = math.max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag)
-        val zMin = math.max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag)
+        val xMin = math.max(0, math.max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag))
+        val yMin = math.max(0, math.max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag))
+        val zMin = math.max(0, math.max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag))
 
-        val xMax = math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength)
-        val yMax = math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength)
-        val zMax = math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength)
+        val xMax = math.max(0, math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength))
+        val yMax = math.max(0, math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength))
+        val zMax = math.max(0, math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength))
 
         for {
           z <- zMin until zMax

@@ -1,10 +1,10 @@
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
 import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
-import React from "react";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import _ from "lodash";
+import capitalize from "lodash/capitalize";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -24,7 +24,7 @@ const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
 
 const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) => {
-  const capitalizedUnit = _.capitalize(dataSourceUnit);
+  const capitalizedUnit = capitalize(dataSourceUnit);
   return `segmentId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${capitalizedUnit}3,surfaceAreaIn${capitalizedUnit}2,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
 };
 
@@ -102,9 +102,10 @@ export function SegmentStatisticsModal({
   const magInfo = getMagInfo(visibleSegmentationLayer.mags);
   const layersFinestMag = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
+
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
-  const storeInfoType = React.useMemo(
+  const storeInfoType = useMemo(
     () => ({
       dataset,
       annotation,
@@ -126,8 +127,8 @@ export function SegmentStatisticsModal({
   );
   const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);
 
-  const [statistics, setStatistics] = React.useState<Map<number, Partial<SegmentInfo>>>(new Map());
-  const [loading, setLoading] = React.useState({
+  const [statistics, setStatistics] = useState<Map<number, Partial<SegmentInfo>>>(new Map());
+  const [loading, setLoading] = useState({
     volumes: true,
     boundingBoxes: true,
     surfaceAreas: true,
@@ -135,7 +136,7 @@ export function SegmentStatisticsModal({
 
   const additionalCoordStringForCsv = getAdditionalCoordinatesAsString(additionalCoordinates);
 
-  const getGroupIdForSegment = React.useCallback(
+  const getGroupIdForSegment = useCallback(
     (segment: Segment) => {
       if (segment.groupId != null) return segment.groupId;
       const rootGroup = groupTree.find(
@@ -150,7 +151,7 @@ export function SegmentStatisticsModal({
     [groupTree],
   );
 
-  const getGroupNameForId = React.useCallback(
+  const getGroupNameForId = useCallback(
     (groupId: number | null) => {
       if (groupId == null) return "";
       if (groupId === -1) return "root";
@@ -162,7 +163,7 @@ export function SegmentStatisticsModal({
     [groupTree],
   );
 
-  const updateStats = React.useCallback(
+  const updateStats = useCallback(
     (id: number, patch: Partial<SegmentInfo>) => {
       setStatistics((prev) => {
         const newMap = new Map(prev);
@@ -182,7 +183,7 @@ export function SegmentStatisticsModal({
     [segments, additionalCoordStringForCsv, getGroupIdForSegment, getGroupNameForId],
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchStatistics = async () => {
       const segmentIds = segments.map((s) => s.id);
       await api.tracing.save();
@@ -273,7 +274,7 @@ export function SegmentStatisticsModal({
     updateStats,
   ]);
 
-  const statisticsList = React.useMemo(() => {
+  const statisticsList = useMemo(() => {
     return segments.map((s) => statistics.get(s.id) as SegmentInfo).filter(Boolean);
   }, [segments, statistics]);
 

@@ -25,8 +25,9 @@ import { TreeTypeEnum } from "viewer/constants";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { fork } from "typed-redux-saga";
+import { actionChannel, fork } from "typed-redux-saga";
 import type { Action } from "viewer/model/actions/actions";
+import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 
 describe("Proofreading agglomerate skeleton syncing", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -60,23 +61,25 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
       const versionBeforeSkeletonLoading = yield select((state) => state.annotation.version);
-      yield fork(loadAgglomerateSkeletons, context, [1], false, true);
+
+      const loadAgglomerateChannel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
+      const ensureHasAnnotationMutexChannel = yield* actionChannel("ENSURE_HAS_ANNOTATION_MUTEX");
+      const ensureHasNewestVersionChannel = yield* actionChannel("ENSURE_HAS_NEWEST_VERSION");
+      const saveNowChannel = yield* actionChannel("SAVE_NOW");
+
+      // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+      vi.mocked(context.mocks.parseProtoTracing).mockRestore();
+      yield call(loadAgglomerateSkeletonAtPosition, [1, 1, 1]);
+
       // Test whether
       // 1. action to load agglomerate skeleton is dispatched.
       // 2. the annotation mutex is properly fetched and kept.
       // 3. The latest changes including the loading of thee agglomerate skeleton are stored in the backend.
-      yield take(
-        ((action: Action) =>
-          action.type === "LOAD_AGGLOMERATE_SKELETON" &&
-          action.agglomerateId === 1) as ActionPattern,
-      );
-      yield take("ENSURE_HAS_ANNOTATION_MUTEX");
-      yield take(
-        ((action: Action) =>
-          action.type === "SET_IS_MUTEX_ACQUIRED" && action.isMutexAcquired) as ActionPattern,
-      );
-      yield take("ENSURE_HAS_NEWEST_VERSION");
-      yield take("SAVE_NOW");
+      // Check whether the actions are dispatched via action channels to avoid race condition.
+      yield take(loadAgglomerateChannel);
+      yield take(ensureHasAnnotationMutexChannel);
+      yield take(ensureHasNewestVersionChannel);
+      yield take(saveNowChannel);
       yield take(
         ((action: Action) =>
           action.type === "SET_IS_MUTEX_ACQUIRED" && !action.isMutexAcquired) as ActionPattern,

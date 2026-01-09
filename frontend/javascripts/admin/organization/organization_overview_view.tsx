@@ -106,17 +106,14 @@ export function OrganizationOverviewView() {
     );
   }
   const buyMoreCreditsAction = (
-    <Tooltip title="Disabled during testing phase" key="buyMoreCreditsAction">
-      <Button
-        type="default"
-        shape="circle"
-        icon={<PlusOutlined />}
-        size="small"
-        key="buyMoreCreditsAction"
-        onClick={UpgradePricingPlanModal.orderWebknossosCredits}
-        disabled
-      />
-    </Tooltip>
+    <Button
+      type="default"
+      shape="circle"
+      icon={<PlusOutlined />}
+      size="small"
+      key="buyMoreCreditsAction"
+      onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+    />
   );
 
   const orgaStats: (SettingsCardProps & { key: Key })[] = [

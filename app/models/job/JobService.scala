@@ -276,7 +276,7 @@ class JobService @Inject()(wkConf: WkConf,
     getJobCostInMilliCreditsPerGVx(jobCommand).map(costPerGVx => {
       val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
       val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
-      math.max(costInMilliCredits, 1)
+      math.max(costInMilliCredits, 0)
     })
 
 }

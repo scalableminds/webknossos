@@ -5,6 +5,7 @@ import _ from "lodash";
 import messages from "messages";
 import type { APIUser } from "types/api_types";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
+
 // Note that if you set this value to true for debugging airbrake reporting,
 // you also need to set the values for projectID and projectKey in application.conf
 const LOG_LOCAL_ERRORS = false;
@@ -20,6 +21,7 @@ const BLACKLISTED_ERROR_MESSAGES = [
   "Uncaught TypeError: Cannot read property 'path' of null",
   "WebGLContextLost",
 ];
+
 type ErrorHandlingOptions = {
   throwAssertions: boolean;
 };

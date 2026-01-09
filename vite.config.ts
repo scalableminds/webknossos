@@ -31,24 +31,31 @@ export default defineConfig({
     Inspect(),
     wasm(),
     visualizer({
-      open: true,
+      open: false,
       template: "flamegraph",
     }),
     viteProtobufPlugin({
       protoDir: "webknossos-datastore/proto", // Your proto directory
     }),
   ],
+  worker: {
+    plugins: () => [
+      // Exclude React plugins from worker builds
+    ],
+  },
   optimizeDeps: {
     exclude: ["three-mesh-bvh"],
   },
   build: {
     copyPublicDir: false,
     outDir: "public",
+    emptyOutDir: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunk for all node_modules
-          vendor: [/node_modules/],
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
         },
       },
     },

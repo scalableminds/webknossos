@@ -4,16 +4,14 @@ import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 import Inspect from "vite-plugin-inspect";
-import analyzer from "vite-bundle-analyzer";
-import { visualizer } from "rollup-plugin-visualizer";
 
 import path from "node:path";
 
 // https://vite.dev/config/
 export default defineConfig({
+  publicDir: "frontend/assets",
   resolve: {
     alias: {
-      "/assets": path.resolve(__dirname, "public"),
       libs: path.resolve(__dirname, "frontend/javascripts/libs"),
       viewer: path.resolve(__dirname, "frontend/javascripts/viewer"),
       admin: path.resolve(__dirname, "frontend/javascripts/admin"),
@@ -23,6 +21,8 @@ export default defineConfig({
       messages: path.resolve(__dirname, "frontend/javascripts/messages.tsx"),
       app: path.resolve(__dirname, "frontend/javascripts/app.ts"),
       theme: path.resolve(__dirname, "frontend/javascripts/theme.tsx"),
+      "/images": path.resolve(__dirname, "frontend/images"),
+      "/wasm": path.resolve(__dirname, "frontend/wasm"),
     },
   },
   plugins: [
@@ -30,24 +30,15 @@ export default defineConfig({
     tsconfigPaths(),
     Inspect(),
     wasm(),
-    visualizer({
-      open: false,
-      template: "flamegraph",
-    }),
     viteProtobufPlugin({
       protoDir: "webknossos-datastore/proto", // Your proto directory
     }),
   ],
-  worker: {
-    plugins: () => [
-      // Exclude React plugins from worker builds
-    ],
-  },
   optimizeDeps: {
     exclude: ["three-mesh-bvh"],
   },
   build: {
-    copyPublicDir: false,
+    copyPublicDir: true,
     outDir: "public",
     emptyOutDir: false,
     rollupOptions: {

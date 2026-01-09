@@ -47,7 +47,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*(worker.js).*$")) {
       Some(assetWithCsp(request))
-    } else if (request.uri.matches("^(/assets/).*$")) {
+    } else if (request.uri.matches("^(/assets/|/images/|/wasm/).*$")) {
       Some(asset(request))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isWkorgInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
@@ -62,8 +62,6 @@ class RequestHandler @Inject()(webCommands: WebCommands,
   }
 
   private def asset(requestHeader: RequestHeader) = {
-    val path = requestHeader.path.replaceFirst("^(/assets/)", "")
-    assets.at(path = "/public", file = path)
+    assets.at(path = "/public", file = requestHeader.path)
   }
-
 }

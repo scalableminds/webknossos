@@ -6,7 +6,7 @@ import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.CspHeaders
 import com.scalableminds.util.tools.Fox
-import models.user.{MultiUserDAO, Theme}
+import models.user.MultiUserDAO
 import opengraph.OpenGraphService
 import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig

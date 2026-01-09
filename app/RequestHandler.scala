@@ -61,7 +61,6 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     addCspHeader(asset(requestHeader))
   }
 
-  private def asset(requestHeader: RequestHeader) = {
+  private def asset(requestHeader: RequestHeader) =
     assets.at(path = "/public", file = requestHeader.path)
-  }
 }

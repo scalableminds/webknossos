@@ -237,7 +237,7 @@ export function ChangeBrushSizePopover() {
           }}
         >
           <img
-            src="/assets/images/brush-size-icon.svg"
+            src="/images/brush-size-icon.svg"
             alt="Brush Size"
             style={{
               width: 20,

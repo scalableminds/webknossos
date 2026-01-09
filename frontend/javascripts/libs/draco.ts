@@ -21,7 +21,7 @@ export function getDracoLoader(): CustomDRACOLoader {
   // @ts-ignore
   _dracoLoader = new CustomDRACOLoader();
 
-  _dracoLoader.setDecoderPath("/assets/wasm/");
+  _dracoLoader.setDecoderPath("/wasm/");
   _dracoLoader.setDecoderConfig({ type: "wasm" });
   _dracoLoader.preload();
   // The loader could theoretically be disposed like this:

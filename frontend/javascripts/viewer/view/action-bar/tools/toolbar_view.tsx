@@ -54,7 +54,7 @@ function CreateNewBoundingBoxButton() {
       title="Create a new bounding box centered around the current position."
     >
       <img
-        src="/assets/images/new-bounding-box.svg"
+        src="/images/new-bounding-box.svg"
         alt="New Bounding Box Icon"
         style={IMG_STYLE_FOR_SPACEY_ICONS}
       />
@@ -256,7 +256,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationTool.LINE_MEASUREMENT.id}
       >
-        <img src="/assets/images/line-measurement.svg" alt="Measurement Tool Icon" />
+        <img src="/images/line-measurement.svg" alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         disabledTitle={explanation}
@@ -268,7 +268,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         disabled={isDisabled}
       >
         <img
-          src="/assets/images/area-measurement.svg"
+          src="/images/area-measurement.svg"
           alt="Measurement Tool Icon"
           style={IMG_STYLE_FOR_SPACEY_ICONS}
         />

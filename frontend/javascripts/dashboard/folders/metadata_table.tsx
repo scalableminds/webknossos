@@ -84,7 +84,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
     <Tag variant="outlined">
       <div className="flex-center-child empty-metadata-placeholder">
         <img
-          src="/assets/images/metadata-teaser.svg"
+          src="/images/metadata-teaser.svg"
           alt="Metadata preview"
           style={{ width: "60%", marginBottom: 16 }}
         />

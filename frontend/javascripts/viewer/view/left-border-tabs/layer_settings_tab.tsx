@@ -284,7 +284,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
         }
       >
         <img
-          src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
+          src={`/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
           alt="Transformed Layer Icon"
           style={style}
           onClick={isDisabled ? () => {} : toggleLayerTransforms}

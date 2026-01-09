@@ -17,7 +17,7 @@ export default function BrainSpinner({ message, isLoading = true }: Props) {
       <div className="brain-loading-container">
         <div className="brain-loading-content">
           <img
-            src="/assets/images/brain.svg"
+            src="/images/brain.svg"
             alt=""
             style={{
               width: "100%",

@@ -11,7 +11,7 @@ let lastActionName: string | null = null;
 let lastActionCount: number = 0;
 
 const actionBlacklist = [
-  "ADD_TO_LAYER",
+  "ADD_TO_CONTOUR_LIST",
   "MOVE_FLYCAM",
   "MOVE_FLYCAM_ABSOLUTE",
   "MOVE_FLYCAM_ORTHO",

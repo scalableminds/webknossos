@@ -110,6 +110,10 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       job <- jobDAO.findOne(id)
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
+      _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
+        creditTransactionService
+          .refundTransactionForJob(job._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+      }
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }

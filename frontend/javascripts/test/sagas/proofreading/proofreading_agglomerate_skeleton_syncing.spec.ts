@@ -25,7 +25,7 @@ import { TreeTypeEnum } from "viewer/constants";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { actionChannel, fork } from "typed-redux-saga";
+import { actionChannel } from "typed-redux-saga";
 import type { Action } from "viewer/model/actions/actions";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 

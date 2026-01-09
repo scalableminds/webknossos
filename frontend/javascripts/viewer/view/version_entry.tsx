@@ -47,6 +47,7 @@ import type {
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
+  MergeSegmentsUpdateAction,
   MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
   ServerUpdateAction,
@@ -390,6 +391,20 @@ const descriptionFns: Record<
     return {
       description: `Updated metadata of segment with id: ${action.value.id}`,
       icon: <EditOutlined />,
+    };
+  },
+  mergeSegments: (
+    firstAction: AsServerAction<MergeSegmentsUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Merged segment with id ${firstAction.value.targetId} into segment ${firstAction.value.sourceId} from the segments list of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
     };
   },
   deleteSegment: (

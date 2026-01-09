@@ -15,11 +15,12 @@ import {
   getVisibleSegments,
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
-import type {
-  ClickSegmentAction,
-  RemoveSegmentAction,
-  SetSegmentsAction,
-  UpdateSegmentAction,
+import {
+  removeSegmentAction,
+  type ClickSegmentAction,
+  type RemoveSegmentAction,
+  type SetSegmentsAction,
+  type UpdateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import {
   applyUserStateToGroups,
@@ -192,6 +193,7 @@ export function serverVolumeToClientVolumeTracing(
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
     proofreadingMarkerPosition: undefined,
+    segmentJournal: [],
   };
   return volumeTracing;
 }
@@ -320,6 +322,17 @@ function VolumeTracingReducer(
 
     case "UPDATE_SEGMENT": {
       return handleUpdateSegment(state, action);
+    }
+
+    case "MERGE_SEGMENTS": {
+      const newState = handleRemoveSegment(
+        state,
+        removeSegmentAction(action.targetId, action.layerName),
+      );
+      // todop: adapt journal?
+      // can we always append to the segment journal?
+
+      return newState;
     }
 
     case "REMOVE_SEGMENT": {
@@ -524,6 +537,14 @@ function VolumeTracingReducer(
     case "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER": {
       const { actions } = action;
       return applyVolumeUpdateActionsFromServer(actions, state, VolumeTracingReducer);
+    }
+
+    case "APPEND_TO_SEGMENT_JOURNAL": {
+      const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
+
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        segmentJournal: volumeTracing.segmentJournal.concat([{ ...action.entry, entryIndex }]),
+      });
     }
 
     default:

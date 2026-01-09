@@ -70,6 +70,7 @@ const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   updateLargestSegmentId: true,
   updateSegmentPartial: true,
   createSegment: true,
+  mergeSegments: true,
   deleteSegment: true,
   upsertSegmentGroup: true,
   deleteSegmentGroup: true,

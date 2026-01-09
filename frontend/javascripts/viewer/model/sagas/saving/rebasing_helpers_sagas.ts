@@ -13,6 +13,7 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
+import { APIUpdateActionBatch } from "types/api_types";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,
@@ -147,7 +148,12 @@ export function* addMissingSegmentsToLoadedMappings(
 // up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
 // is first loaded and then the save queue update actions are remapped to update their agglomerate id infos
 // to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
-export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
+export function* updateSaveQueueEntriesToStateAfterRebase(
+  // appliedBackendUpdateActions contains the backend actions that were used to forward the local state
+  // during rebase. These actions can be used as additional information to adapt the local, pending
+  // save queue entries to the rebase.
+  appliedBackendUpdateActions: APIUpdateActionBatch[],
+): Saga<
   | {
       success: false;
       updatedSaveQueue: undefined;
@@ -285,6 +291,48 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
                 return null;
               }
               return action;
+            }
+            case "mergeSegments": {
+              const mergeActions = appliedBackendUpdateActions
+                .flatMap((batch) => batch.value)
+                .filter((action) => action.name === "mergeSegments");
+
+              // After partialMapping is constructed, it contains the information
+              // how segment ids were changed by the most recent backend actions. A key-value pair
+              // denotes that segment $key was mapped to $value (potentially, as a result of
+              // multiple update actions)
+              // Keys that don't exist in partialMapping denote an identity mapping (i.e., key === value).
+              const partialMapping = new Map<number, number>();
+              for (const mergeAction of mergeActions) {
+                // sourceId "swallows" targetId (i.e., targetId will be overwritten
+                // with sourceId)
+                const { sourceId, targetId } = mergeAction.value;
+                if (partialMapping.get(targetId) == null) {
+                  // targetId wasn't mapped yet. Do that now.
+                  partialMapping.set(targetId, sourceId);
+                }
+                // Iterate through all entries to see whether the value
+                // needs to be adapted.
+                for (const [key, value] of partialMapping.entries()) {
+                  if (value === targetId) {
+                    partialMapping.set(key, sourceId);
+                  }
+                }
+              }
+
+              const newSourceId =
+                partialMapping.get(action.value.sourceId) ?? action.value.sourceId;
+              const newTargetId =
+                partialMapping.get(action.value.targetId) ?? action.value.targetId;
+
+              return {
+                ...action,
+                value: {
+                  ...action.value,
+                  sourceId: newSourceId,
+                  targetId: newTargetId,
+                },
+              };
             }
 
             default:

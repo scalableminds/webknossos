@@ -6,7 +6,13 @@ import type { AdditionalCoordinate } from "types/api_types";
 import type { ContourMode, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
-import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "viewer/store";
+import type {
+  NumberLike,
+  Segment,
+  SegmentGroup,
+  SegmentMap,
+  SegmentJournalEntry,
+} from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import type { ApplicableVolumeUpdateAction } from "../sagas/volume/update_actions";
 
@@ -46,6 +52,7 @@ export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAct
 export type SetSelectedSegmentsOrGroupAction = ReturnType<typeof setSelectedSegmentsOrGroupAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
+export type MergeSegmentsAction = ReturnType<typeof mergeSegmentsAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
@@ -66,6 +73,7 @@ export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSel
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
+export type AppendToSegmentJournalAction = ReturnType<typeof appendToSegmentJournalAction>;
 
 export type BatchableUpdateSegmentAction =
   | UpdateSegmentAction
@@ -100,6 +108,7 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
+  | MergeSegmentsAction
   | RemoveSegmentAction
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
@@ -118,6 +127,7 @@ export type VolumeTracingAction =
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
+  | AppendToSegmentJournalAction
   | SetVolumeBucketDataHasChangedAction
   | BatchUpdateGroupsAndSegmentsAction
   | ApplyVolumeUpdateActionsFromServerAction;
@@ -291,6 +301,21 @@ export const updateSegmentAction = (
     createsNewUndoState,
   } as const;
 };
+
+export const mergeSegmentsAction = (
+  sourceId: NumberLike,
+  targetId: NumberLike,
+  layerName: string,
+  timestamp: number = Date.now(),
+) =>
+  ({
+    type: "MERGE_SEGMENTS",
+    // TODO: Proper 64 bit support (#6921)
+    sourceId: Number(sourceId),
+    targetId: Number(targetId),
+    layerName,
+    timestamp,
+  }) as const;
 
 export const removeSegmentAction = (
   segmentId: NumberLike,
@@ -484,6 +509,12 @@ export const batchUpdateGroupsAndSegmentsAction = (actions: BatchableUpdateSegme
 export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) as const;
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
+
+export const appendToSegmentJournalAction = (entry: Omit<SegmentJournalEntry, "entryIndex">) =>
+  ({
+    type: "APPEND_TO_SEGMENT_JOURNAL",
+    entry,
+  }) as const;
 
 export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   ({

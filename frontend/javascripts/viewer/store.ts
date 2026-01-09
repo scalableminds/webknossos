@@ -204,6 +204,13 @@ export type LabelAction = {
   plane: OrthoViewWithoutTD; // plane that was labeled
 };
 
+export type SegmentJournalEntry = {
+  entryIndex: number;
+  type: "MERGE_SEGMENTS";
+  sourceId: number;
+  targetId: number; // will be swallowed by source
+};
+
 export type VolumeTracing = TracingBase & {
   readonly type: "volume";
   // Note that there are also SegmentMaps in `state.localSegmentationData`
@@ -230,6 +237,7 @@ export type VolumeTracing = TracingBase & {
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
   readonly hideUnregisteredSegments: boolean;
+  readonly segmentJournal: Array<SegmentJournalEntry>; // should always be sorted with ascending entryIndex
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

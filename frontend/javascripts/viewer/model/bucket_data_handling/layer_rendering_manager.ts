@@ -357,7 +357,17 @@ export default class LayerRenderingManager {
         Store.getState(),
         this.name,
       );
-      for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
+      // todop: passing [] as the segment journals doesn't make optimal use of caching (the
+      // diffing will always run twice per change).
+      // beware: passing/ the journal will create the need to also properly handle the
+      // mergeSegments action.
+      for (const updateAction of cachedDiffSegmentLists(
+        this.name,
+        prevSegments,
+        newSegments,
+        [],
+        [],
+      )) {
         if (
           updateAction.name === "updateSegment" ||
           updateAction.name === "createSegment" ||

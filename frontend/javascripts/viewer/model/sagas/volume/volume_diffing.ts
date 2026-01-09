@@ -25,6 +25,7 @@ import {
   updateSegmentPartialVolumeAction,
   updateSegmentVisibilityVolumeAction,
   upsertSegmentGroupUpdateAction,
+  mergeSegmentsVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
 import {
   type Segment,
@@ -32,6 +33,7 @@ import {
   type SegmentMap,
   SegmentPropertiesWithoutUserState,
   type VolumeTracing,
+  type SegmentJournalEntry,
 } from "viewer/store";
 
 export function* diffVolumeTracing(
@@ -60,6 +62,8 @@ export function* diffVolumeTracing(
       volumeTracing.tracingId,
       prevVolumeTracing.segments,
       volumeTracing.segments,
+      prevVolumeTracing.segmentJournal,
+      volumeTracing.segmentJournal,
     )) {
       yield action;
     }
@@ -92,14 +96,30 @@ export function* diffVolumeTracing(
 }
 
 export const cachedDiffSegmentLists = memoizeOne(
-  (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
-    Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
+  (
+    tracingId: string,
+    prevSegments: SegmentMap,
+    newSegments: SegmentMap,
+    prevSegmentJournal: Array<SegmentJournalEntry>,
+    segmentJournal: Array<SegmentJournalEntry>,
+  ) =>
+    Array.from(
+      uncachedDiffSegmentLists(
+        tracingId,
+        prevSegments,
+        newSegments,
+        prevSegmentJournal,
+        segmentJournal,
+      ),
+    ),
 );
 
 function* uncachedDiffSegmentLists(
   tracingId: string,
   prevSegments: SegmentMap,
   newSegments: SegmentMap,
+  prevSegmentJournal: Array<SegmentJournalEntry>,
+  segmentJournal: Array<SegmentJournalEntry>,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   const {
     onlyA: deletedSegmentIds,
@@ -107,8 +127,37 @@ function* uncachedDiffSegmentLists(
     changed: bothSegmentIds,
   } = diffDiffableMaps(prevSegments, newSegments);
 
+  const prevLatestJournalEntryIndex = prevSegmentJournal.at(-1)?.entryIndex;
+  const journalDiff =
+    prevLatestJournalEntryIndex == null
+      ? segmentJournal
+      : (() => {
+          const splitIndex = _.sortedIndexBy<{ entryIndex: number }>(
+            segmentJournal,
+            { entryIndex: prevLatestJournalEntryIndex },
+            "entryIndex",
+          );
+
+          return segmentJournal.slice(splitIndex + 1);
+        })();
+
+  const segmentJournalByRemovedId = _.groupBy(
+    journalDiff.filter((entry) => entry.type === "MERGE_SEGMENTS"),
+    (entry) => entry.targetId,
+  );
+
   for (const segmentId of deletedSegmentIds) {
-    yield deleteSegmentVolumeAction(segmentId, tracingId);
+    if (segmentJournalByRemovedId[segmentId]?.length === 1) {
+      const mergeJournalEntry = segmentJournalByRemovedId[segmentId][0];
+      // todop: what about the source segment that got its name changed potentially?
+      yield mergeSegmentsVolumeAction(
+        mergeJournalEntry.sourceId,
+        mergeJournalEntry.targetId,
+        tracingId,
+      );
+    } else {
+      yield deleteSegmentVolumeAction(segmentId, tracingId);
+    }
   }
 
   for (const segmentId of addedSegmentIds) {

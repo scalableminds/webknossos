@@ -7,6 +7,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
+  mergeSegmentsAction,
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
@@ -97,6 +98,12 @@ function applySingleAction(
       return VolumeTracingReducer(
         state,
         updateSegmentAction(id, { metadata: newMetadata }, actionTracingId, Date.now(), false),
+      );
+    }
+    case "mergeSegments": {
+      return VolumeTracingReducer(
+        state,
+        mergeSegmentsAction(ua.value.sourceId, ua.value.targetId, ua.value.actionTracingId),
       );
     }
     case "deleteSegment": {

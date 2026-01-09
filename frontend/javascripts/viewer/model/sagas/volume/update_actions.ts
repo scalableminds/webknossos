@@ -53,6 +53,7 @@ export type UpdateSegmentVisibilityVolumeAction = ReturnType<
 export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
   typeof updateSegmentGroupVisibilityVolumeAction
 >;
+export type MergeSegmentsUpdateAction = ReturnType<typeof mergeSegmentsVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -155,6 +156,7 @@ export type ApplicableVolumeUpdateAction =
   | UpsertSegmentGroupUpdateAction
   | DeleteSegmentGroupUpdateAction
   | CreateSegmentUpdateAction
+  | MergeSegmentsUpdateAction
   | DeleteSegmentUpdateAction
   | AddUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
@@ -204,6 +206,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpsertSegmentGroupUpdateAction
   | DeleteSegmentGroupUpdateAction
   | UpdateSegmentVisibilityVolumeAction
+  | MergeSegmentsUpdateAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
@@ -885,6 +888,21 @@ export function updateSegmentVisibilityVolumeAction(
   } as const;
 }
 
+export function mergeSegmentsVolumeAction(
+  sourceId: number,
+  targetId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "mergeSegments",
+    value: {
+      actionTracingId,
+      sourceId,
+      targetId, // is "swallowed" by source
+    },
+  } as const;
+}
+
 export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegment",
@@ -1095,8 +1113,8 @@ export function splitAgglomerate(
   } as const;
 }
 export function mergeAgglomerate(
-  segmentId1: NumberLike,
-  segmentId2: NumberLike,
+  segmentId1: NumberLike, // source
+  segmentId2: NumberLike, // target (will be "swallowed" by source)
   agglomerateId1: NumberLike,
   agglomerateId2: NumberLike,
   actionTracingId: string,

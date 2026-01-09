@@ -83,7 +83,7 @@ case class JobCompactInfo(
     created: Instant,
     started: Option[Instant],
     ended: Option[Instant],
-    creditCost: Option[scala.math.BigDecimal]
+    costInMilliCredits: Option[Int]
 ) extends JobResultLinks {
 
   protected def effectiveState: JobState = state
@@ -162,7 +162,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       rows <- run(
         q"""
           SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
-                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.credit_delta
+                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.milli_credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
@@ -182,7 +182,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                  Instant,
                  Option[Instant],
                  Option[Instant],
-                 Option[scala.math.BigDecimal])])
+                 Option[Int])])
       parsed <- Fox.serialCombined(rows) { row =>
         for {
           command <- JobCommand.fromString(row._2).toFox
@@ -204,7 +204,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             created = row._11,
             started = row._12,
             ended = row._13,
-            creditCost = row._14.map(_ * -1) // delta is negative, so cost should be positive.
+            costInMilliCredits = row._14.map(_ * -1) // delta is negative, so cost should be positive.
           )
       }
     } yield parsed

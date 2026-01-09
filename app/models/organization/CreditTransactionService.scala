@@ -14,31 +14,24 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     extends FoxImplicits
     with LazyLogging {
 
-  def hasEnoughCredits(organizationId: String, creditsToSpend: BigDecimal)(
-      implicit ctx: DBAccessContext): Fox[Boolean] =
-    creditTransactionDAO.getCreditBalance(organizationId).map(balance => balance >= creditsToSpend)
+  def hasEnoughCredits(organizationId: String, milliCreditsToSpend: Int)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    creditTransactionDAO.getMilliCreditBalance(organizationId).map(balance => balance >= milliCreditsToSpend)
 
-  def reserveCredits(organizationId: String, creditsToSpent: BigDecimal, comment: String)(
-      implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+  def reserveCredits(organizationId: String, milliCreditsToSpend: Int, comment: String)(
+      implicit ctx: DBAccessContext): Fox[CreditTransaction] = {
+    val pendingCreditTransaction = CreditTransaction(ObjectId.generate,
+                                                     organizationId,
+                                                     None,
+                                                     None,
+                                                     -milliCreditsToSpend,
+                                                     comment,
+                                                     CreditTransactionState.Pending,
+                                                     CreditState.Pending)
     for {
-      _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
-      pendingCreditTransaction = CreditTransaction(ObjectId.generate,
-                                                   organizationId,
-                                                   None,
-                                                   None,
-                                                   -creditsToSpent,
-                                                   comment,
-                                                   CreditTransactionState.Pending,
-                                                   CreditState.Pending)
       _ <- creditTransactionDAO.insertNewPendingTransaction(pendingCreditTransaction)
       insertedTransaction <- creditTransactionDAO.findOne(pendingCreditTransaction._id)
     } yield insertedTransaction
-
-  def insertCreditTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- organizationService.assertOrganizationHasPaidPlan(creditTransaction._organization)
-      _ <- creditTransactionDAO.insertTransaction(creditTransaction)
-    } yield ()
+  }
 
   def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -46,7 +39,6 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       _ <- transactionBox match {
         case Full(transaction) =>
           for {
-            _ <- organizationService.assertOrganizationHasPaidPlan(transaction._organization)
             _ <- creditTransactionDAO.commitTransaction(transaction._id)
           } yield ()
         case Empty      => Fox.successful(()) // Assume transaction-less Job
@@ -61,23 +53,17 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       _ <- transactionBox match {
         case Full(transaction) =>
           for {
-            _ <- refundTransaction(transaction)
+            _ <- creditTransactionDAO.refundTransaction(transaction._id)
           } yield ()
         case Empty      => Fox.successful(()) // Assume transaction-less Job
         case f: Failure => f.toFox
       }
     } yield ()
 
-  private def refundTransaction(creditTransaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- organizationService.assertOrganizationHasPaidPlan(creditTransaction._organization)
-      _ <- creditTransactionDAO.refundTransaction(creditTransaction._id)
-    } yield ()
-
   // This method is explicitly named this way to warn that this method should only be called when starting a job has failed.
   // Else refunding should be done via jobId.
   def refundTransactionWhenStartingJobFailed(creditTransaction: CreditTransaction)(
-      implicit ctx: DBAccessContext): Fox[Unit] = refundTransaction(creditTransaction)
+      implicit ctx: DBAccessContext): Fox[Unit] = creditTransactionDAO.refundTransaction(creditTransaction._id)
 
   def addJobIdToTransaction(creditTransaction: CreditTransaction, jobId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -93,7 +79,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         "organization_id" -> transaction._organization,
         "relatedTransaction" -> transaction._relatedTransaction,
         "paidJobId" -> transaction._paidJob,
-        "creditChange" -> transaction.creditDelta,
+        "creditChange" -> transaction.milliCreditDelta,
         "comment" -> transaction.comment,
         "transactionState" -> transaction.transactionState,
         "creditState" -> transaction.creditState,

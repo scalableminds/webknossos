@@ -1,15 +1,18 @@
 import { CreditCardOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { type JobCreditCostInfo, getJobCreditCost } from "admin/rest_api";
+import { type JobCreditCostInfo, getJobCreditCost, getOrganization } from "admin/rest_api";
 import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
 import features from "features";
-import { formatCreditsString, formatVoxels } from "libs/format_utils";
+import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useDispatch } from "react-redux";
 import { APIJobCommand, type AiModel } from "types/api_types";
+import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { Store } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
@@ -99,6 +102,16 @@ export const TrainingCreditInformation: React.FC = () => {
   );
 };
 
+async function refreshOrganizationCredits() {
+  const organizationId = Store.getState().activeOrganization?.id;
+  if (organizationId) {
+    const orga = await getOrganization(organizationId);
+    if (orga.milliCreditBalance != null) {
+      Store.dispatch(setActiveOrganizationsCreditBalance(orga.milliCreditBalance));
+    }
+  }
+}
+
 interface CreditInformationProps {
   selectedModel: AiModel | Partial<AiModel> | null;
   selectedJobType: APIJobCommand | null;
@@ -116,21 +129,26 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   startButtonTitle,
   areParametersValid,
 }) => {
-  const jobTypeToCreditCostPerGVx: Partial<Record<APIJobCommand, number>> = useMemo(
+  const dispatch = useDispatch();
+  const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
-      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVx,
-      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostPerGVx,
-      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
-      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostPerGVx,
-      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
+      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostInMilliCreditsPerGVx,
       [APIJobCommand.TRAIN_INSTANCE_MODEL]: 0,
       [APIJobCommand.TRAIN_NEURON_MODEL]: 0,
     }),
     [],
   );
 
-  const organizationCredits = useWkSelector(
-    (state) => state.activeOrganization?.creditBalance || "0",
+  useEffect(() => {
+    refreshOrganizationCredits();
+  }, []);
+
+  const organizationMilliCredits = useWkSelector(
+    (state) => state.activeOrganization?.milliCreditBalance || 0,
   );
 
   const boundingBoxVolume = useMemo(() => {
@@ -154,6 +172,12 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
     enabled: Boolean(selectedBoundingBox && selectedJobType),
   });
 
+  useEffect(() => {
+    if (jobCreditCostInfo?.organizationMilliCredits != null) {
+      dispatch(setActiveOrganizationsCreditBalance(jobCreditCostInfo.organizationMilliCredits));
+    }
+  }, [jobCreditCostInfo?.organizationMilliCredits, dispatch]);
+
   const getBoundingBoxinVoxels = useCallback((): string => {
     if (selectedBoundingBox) {
       return formatVoxels(boundingBoxVolume);
@@ -161,7 +185,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
     return "-";
   }, [selectedBoundingBox, boundingBoxVolume]);
 
-  const costInCredits = jobCreditCostInfo?.costInCredits;
+  const costInCredits = jobCreditCostInfo?.costInMilliCredits;
 
   return (
     <Card
@@ -179,7 +203,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
         </Col>
         <Col>
           <Title level={2} style={{ margin: 0 }}>
-            {formatCreditsString(organizationCredits)}
+            {formatMilliCreditsString(organizationMilliCredits)}
           </Title>
         </Col>
       </Row>
@@ -206,7 +230,11 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           <Text>Credits per Gigavoxel:</Text>
         </Col>
         <Col>
-          <Text strong>{selectedJobType ? jobTypeToCreditCostPerGVx[selectedJobType] : "-"}</Text>
+          <Text strong>
+            {selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType]
+              ? formatMilliCreditsString(jobTypeToCreditCostPerGVxInMillis[selectedJobType])
+              : "-"}
+          </Text>
         </Col>
       </Row>
       <hr style={{ margin: "24px 0" }} />
@@ -218,7 +246,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           {isFetching && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
-            <Text strong>{costInCredits ? formatCreditsString(costInCredits) : "-"}</Text>
+            <Text strong>{costInCredits ? formatMilliCreditsString(costInCredits) : "-"}</Text>
           )}
         </Col>
       </Row>

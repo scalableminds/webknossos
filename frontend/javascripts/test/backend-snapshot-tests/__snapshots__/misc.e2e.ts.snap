@@ -59,7 +59,7 @@ exports[`Misc APIs (E2E)  > datastores() 1`] = `
 
 exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
 {
-  "alignmentCostPerGVx": 0.5,
+  "alignmentCostInMilliCreditsPerGVx": 500,
   "allowDeleteDatasets": true,
   "bucketSaveWarningThreshold": 1000,
   "costPerCreditInDollar": 5.75,
@@ -71,12 +71,12 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "exportTiffMaxEdgeLengthVx": 8192,
   "exportTiffMaxVolumeMVx": 1024,
   "hideNavbarLogin": false,
-  "instancesInferralCostPerGVx": 0.5,
+  "instancesInferralCostInMilliCreditsPerGVx": 500,
   "isWkorgInstance": false,
   "jobsEnabled": false,
-  "mitochondriaInferralCostPerGVx": 0.5,
-  "neuronInferralCostPerGVx": 1,
-  "nucleiInferralCostPerGVx": 0.5,
+  "mitochondriaInferralCostInMilliCreditsPerGVx": 500,
+  "neuronInferralCostInMilliCreditsPerGVx": 1000,
+  "nucleiInferralCostInMilliCreditsPerGVx": 500,
   "openIdConnectEnabled": false,
   "optInTabs": [
     "ConnectomeView",

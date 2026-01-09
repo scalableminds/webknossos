@@ -21,7 +21,6 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.math.BigDecimal.RoundingMode
 
 class JobService @Inject()(wkConf: WkConf,
                            actorSystem: ActorSystem,
@@ -42,9 +41,7 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
-  private val ONE_GIGAVOXEL = BigDecimal(math.pow(10, 9))
-  private val SHOULD_DEDUCE_CREDITS = false
+  private val ONE_GIGAVOXEL = math.pow(10, 9)
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -194,7 +191,7 @@ class JobService @Inject()(wkConf: WkConf,
           created = job.created,
           started = job.started,
           ended = job.ended,
-          creditCost = creditTransactionBox.toOption.map(t => t.creditDelta * -1) // delta is negative, so cost should be positive.
+          costInMilliCredits = creditTransactionBox.toOption.map(t => t.milliCreditDelta * -1) // delta is negative, so cost should be positive.
         )
       )
 
@@ -226,24 +223,24 @@ class JobService @Inject()(wkConf: WkConf,
                     jobBoundingBox: BoundingBox,
                     creditTransactionComment: String,
                     user: User,
-                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsValue] =
+                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
-      costsInCredits <- if (SHOULD_DEDUCE_CREDITS) calculateJobCostInCredits(jobBoundingBox, command)
-      else Fox.successful(BigDecimal(0))
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
+      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+      _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> "job.paid.noAdminOrManager"
+      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBox, command)
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
-                                                                   costsInCredits,
+                                                                   costInMilliCredits,
                                                                    creditTransactionComment)
       job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
         case _ =>
           creditTransactionService
             .refundTransactionWhenStartingJobFailed(creditTransaction)
-            .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
+            .flatMap(_ => Fox.failure("job.submission.failed"))
       }
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
-      js <- publicWrites(job)
-    } yield js
+    } yield job
 
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {
@@ -263,24 +260,23 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- Fox.fromBool(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  private def getJobCostPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
+  private def getJobCostInMilliCreditsPerGVx(jobCommand: JobCommand): Fox[Int] =
     jobCommand match {
-      case JobCommand.infer_neurons        => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
-      case JobCommand.infer_nuclei         => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
-      case JobCommand.infer_mitochondria   => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
-      case JobCommand.infer_instances      => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
-      case JobCommand.train_neuron_model   => Fox.successful(BigDecimal(0))
-      case JobCommand.train_instance_model => Fox.successful(BigDecimal(0))
-      case JobCommand.align_sections       => Fox.successful(wkConf.Features.alignmentCostPerGVx)
+      case JobCommand.infer_neurons        => Fox.successful(wkConf.Features.neuronInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_nuclei         => Fox.successful(wkConf.Features.nucleiInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_mitochondria   => Fox.successful(wkConf.Features.mitochondriaInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_instances      => Fox.successful(wkConf.Features.instancesInferralCostInMilliCreditsPerGVx)
+      case JobCommand.train_neuron_model   => Fox.successful(0)
+      case JobCommand.train_instance_model => Fox.successful(0)
+      case JobCommand.align_sections       => Fox.successful(wkConf.Features.alignmentCostInMilliCreditsPerGVx)
       case _                               => Fox.failure(s"Unsupported job command $jobCommand")
     }
 
-  def calculateJobCostInCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
-    getJobCostPerGVx(jobCommand).map(costPerGVx => {
-      val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
-      val costInCredits = volumeInGVx * costPerGVx
-      if (costInCredits < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB
-      else costInCredits.setScale(3, RoundingMode.HALF_UP)
+  def calculateJobCostInMilliCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[Int] =
+    getJobCostInMilliCreditsPerGVx(jobCommand).map(costPerGVx => {
+      val volumeInGVx = boundingBoxInTargetMag.volume / ONE_GIGAVOXEL
+      val costInMilliCredits = math.ceil(volumeInGVx * costPerGVx).toInt
+      math.max(costInMilliCredits, 0)
     })
 
 }

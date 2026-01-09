@@ -1,5 +1,8 @@
-import handleStatus from "libs/handle_http_status";
-import { expose } from "./comlink_wrapper";
+import * as Comlink from "comlink";
+
+// Imports in WebWorkers need to be relative
+import handleStatus from "../../libs/handle_http_status";
+import "./init_comlink";
 
 // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'RequestOptions'.
 function fetchBufferViaWebworker(url: RequestInfo, options?: RequestOptions): Promise<ArrayBuffer> {
@@ -8,4 +11,4 @@ function fetchBufferViaWebworker(url: RequestInfo, options?: RequestOptions): Pr
     .then((response) => response.arrayBuffer());
 }
 
-export default expose(fetchBufferViaWebworker);
+export default Comlink.expose(fetchBufferViaWebworker);

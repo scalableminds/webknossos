@@ -4,7 +4,7 @@ const oldDocument = typeof document === "undefined" ? undefined : document;
 const oldWindow = typeof window === "undefined" ? undefined : window;
 let mockedWindow = false;
 
-if (!global.window) {
+if (import.meta.env.MODE === "test" && !global.window) {
   global.window = {
     // @ts-expect-error ts-migrate(2740) FIXME: Type '{ protocol: string; }' is missing the follow... Remove this comment to see the full error message
     location: {
@@ -20,7 +20,7 @@ if (!global.window) {
   mockedWindow = true;
 }
 
-const Hammer = require("hammerjs");
+import Hammer from "hammerjs";
 
 if (mockedWindow) {
   // Reset to old values, otherwise other libs may not detect a test environment

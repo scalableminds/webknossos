@@ -1,7 +1,7 @@
 import type { BufferGeometry } from "three";
 import type { MeshBVH } from "three-mesh-bvh";
 // @ts-ignore
-import { GenerateMeshBVHWorker } from "three-mesh-bvh/src/workers/GenerateMeshBVHWorker";
+import { GenerateMeshBVHWorker } from "three-mesh-bvh/worker";
 
 const bvhWorker = new GenerateMeshBVHWorker();
 const bvhQueue: Array<{

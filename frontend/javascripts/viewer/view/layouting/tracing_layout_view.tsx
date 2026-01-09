@@ -346,7 +346,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
           isUpdateAllowed={isUpdateTracingAllowed}
         >
-          <TabTitle title={this.getTabTitle()} />
+          {/* <TabTitle title={this.getTabTitle()} /> */}
           <WebKnossosController
             initialMaybeCompoundType={this.props.initialMaybeCompoundType}
             initialCommandType={this.props.initialCommandType}

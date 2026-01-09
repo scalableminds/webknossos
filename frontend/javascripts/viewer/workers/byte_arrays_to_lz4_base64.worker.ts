@@ -1,5 +1,6 @@
 import Base64 from "base64-js";
-import { expose } from "./comlink_wrapper";
+import * as Comlink from "comlink";
+import "./init_comlink";
 import { default as lz4wasm } from "./lz4_wasm_wrapper";
 
 function compressLz4Block(data: Uint8Array): Uint8Array {
@@ -19,4 +20,4 @@ export function byteArraysToLz4Base64(byteArrays: Uint8Array[]): string[] {
 
   return base64Strings;
 }
-export default expose(byteArraysToLz4Base64);
+export default Comlink.expose(byteArraysToLz4Base64);

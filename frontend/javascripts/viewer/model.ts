@@ -23,7 +23,7 @@ import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
 import { initialize } from "./model_initialization";
 
-const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
+const WAIT_AFTER_SAVE_TRIGGER = import.meta.env.MODE === "test" ? 50 : 500;
 
 // TODO: This class should be moved into the store and sagas.
 export class WebKnossosModel {

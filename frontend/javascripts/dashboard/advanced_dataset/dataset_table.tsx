@@ -187,10 +187,10 @@ class DragPreviewProvider {
     // row).
     this.lightIcon = null;
     this.darkIcon = null;
-    this.convertImageURLtoDataURL("/assets/images/file-light.png").then((dataURL) => {
+    this.convertImageURLtoDataURL("/images/file-light.png").then((dataURL) => {
       this.lightIcon = dataURL;
     });
-    this.convertImageURLtoDataURL("/assets/images/file-dark.png").then((dataURL) => {
+    this.convertImageURLtoDataURL("/images/file-dark.png").then((dataURL) => {
       this.darkIcon = dataURL;
     });
   }
@@ -327,7 +327,7 @@ class DatasetRenderer {
       : null;
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
-      : "/assets/images/inactive-dataset-thumbnail.svg";
+      : "/images/inactive-dataset-thumbnail.svg";
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
 
     return (
@@ -408,7 +408,7 @@ class FolderRenderer {
     return (
       <>
         <img
-          src={"/assets/images/folder-thumbnail.svg"}
+          src={"/images/folder-thumbnail.svg"}
           className="dataset-table-thumbnail icon-thumbnail"
           style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
           alt=""

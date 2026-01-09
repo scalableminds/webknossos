@@ -125,7 +125,7 @@ const segmentationBanner = (
   <div
     className="crosslink-box"
     style={{
-      background: "url(/assets/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
+      background: "url(/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
       height: 500,
       backgroundSize: "110%",
       padding: 0,
@@ -173,7 +173,7 @@ const alignBanner = (
       Are you looking for dataset alignment or stitching?
     </h4>
     <img
-      src="/assets/images/vx/alignment-schema.png"
+      src="/images/vx/alignment-schema.png"
       alt="Schematic Alignment"
       style={{
         width: "100%",
@@ -202,7 +202,7 @@ const manualAnnotationBanner = (
   <div
     className="crosslink-box"
     style={{
-      background: "url(/assets/images/vx/manual-annotations-vertical.png)",
+      background: "url(/images/vx/manual-annotations-vertical.png)",
       height: 500,
       backgroundSize: "110%",
       padding: 0,

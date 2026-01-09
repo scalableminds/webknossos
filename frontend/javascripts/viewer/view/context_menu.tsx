@@ -296,7 +296,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left.svg"
+            src="/images/icon-statusbar-mouse-left.svg"
             alt="Mouse Left Click"
             style={mouseIconStyle}
           />
@@ -307,7 +307,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-right.svg"
+            src="/images/icon-statusbar-mouse-right.svg"
             alt="Mouse Right Click"
             style={mouseIconStyle}
           />
@@ -318,7 +318,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-wheel.svg"
+            src="/images/icon-statusbar-mouse-wheel.svg"
             alt="Mouse Wheel"
             style={mouseIconStyle}
           />

@@ -6,7 +6,7 @@ import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.CspHeaders
 import com.scalableminds.util.tools.Fox
-import models.user.{MultiUserDAO, Theme}
+import models.user.MultiUserDAO
 import opengraph.OpenGraphService
 import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig
@@ -20,7 +20,8 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
                                             sil: Silhouette[WkEnv],
                                             val cspConfig: CSPConfig,
                                             multiUserDAO: MultiUserDAO,
-                                            openGraphService: OpenGraphService)(implicit ec: ExecutionContext)
+                                            openGraphService: OpenGraphService,
+                                            assets: controllers.Assets)(implicit ec: ExecutionContext)
     extends Controller
     with CspHeaders {
 
@@ -35,19 +36,8 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
           request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
-
-      } yield
-        addCspHeader(
-          Ok(
-            views.html.main(
-              conf,
-              multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString,
-              openGraphTags.title,
-              openGraphTags.description,
-              openGraphTags.image
-            )
-          )
-        )
+        result <- Fox.fromFuture(assets.at("/public", "index.html").apply(request).map(addCspHeader))
+      } yield result
     }
   }
 

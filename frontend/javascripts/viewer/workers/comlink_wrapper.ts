@@ -2,6 +2,7 @@ import {
   requestOptionsTransferHandler,
   throwTransferHandlerWithResponseSupport,
 } from "viewer/workers/headers_transfer_handler";
+import * as Comlink from "comlink";
 
 function importComlink() {
   const isNodeContext = typeof process !== "undefined" && process.title !== "browser";
@@ -10,13 +11,11 @@ function importComlink() {
     // Comlink should only be imported in a browser context, since it makes use of functionality
     // which does not exist in node
 
-    const { wrap, transferHandlers, expose: _expose, transfer: _transfer } = require("comlink");
-
     return {
-      wrap,
-      transferHandlers,
-      _expose,
-      _transfer,
+      wrap: Comlink.wrap,
+      transferHandlers: Comlink.transferHandlers,
+      _expose: Comlink.expose,
+      _transfer: Comlink.transfer,
     };
   } else {
     return {

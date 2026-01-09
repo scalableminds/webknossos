@@ -288,7 +288,7 @@ const descriptionFns: Record<
     action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
   ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
-    icon: <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
+    icon: <img src="/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (
     action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,

@@ -20,21 +20,21 @@ const creditsFooter = () => (
             <img
               className="img-responsive"
               alt="Max Planck Gesellschaft logo"
-              src="/assets/images/Max-Planck-Gesellschaft.svg"
+              src="/images/Max-Planck-Gesellschaft.svg"
             />
           </a>
           <a href="https://www.brain.mpg.de/connectomics">
             <img
               className="img-responsive"
               alt="Max Planck Institute for Brain Research logo"
-              src="/assets/images/MPI-brain-research.svg"
+              src="/images/MPI-brain-research.svg"
             />
           </a>
           <a href="https://scalableminds.com">
             <img
               className="img-responsive"
               alt="scalable minds logo"
-              src="/assets/images/scalableminds_logo.svg"
+              src="/images/scalableminds_logo.svg"
             />
           </a>
         </Typography.Paragraph>

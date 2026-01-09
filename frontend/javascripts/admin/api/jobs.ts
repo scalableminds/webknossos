@@ -54,6 +54,7 @@ export async function getJobCreditCost(
   });
   return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
 }
+
 export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",

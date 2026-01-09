@@ -79,7 +79,7 @@ export function SkeletonSpecificButtons() {
         >
           <img
             style={IMG_STYLE_FOR_SPACEY_ICONS}
-            src="/assets/images/soma-clicking-icon.svg"
+            src="/images/soma-clicking-icon.svg"
             alt="Single Node Tree Mode"
           />
         </ToggleButton>
@@ -97,7 +97,7 @@ export function SkeletonSpecificButtons() {
         >
           <img
             style={IMG_STYLE_FOR_SPACEY_ICONS}
-            src="/assets/images/merger-mode-icon.svg"
+            src="/images/merger-mode-icon.svg"
             alt="Merger Mode"
           />
         </ToggleButton>

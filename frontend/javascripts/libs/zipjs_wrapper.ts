@@ -3,12 +3,12 @@ import type * as ZipType from "@zip.js/zip.js";
 class TransFormStream {}
 
 // Mock zip.js and TransformStream during tests
-if (!global.window) {
+if (import.meta.env.MODE === "test") {
   // @ts-expect-error
   global.TransformStream = TransFormStream;
 }
 
-const Zip = require("@zip.js/zip.js") as typeof ZipType;
+import * as Zip from "@zip.js/zip.js";
 
 Zip.configure({
   // Avoid that zip.js dynamically creates a web worker using new Blob(...) which would violate the CSP,

@@ -167,7 +167,7 @@ export function OverwriteModeSwitch({
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
         <img
-          src="/assets/images/overwrite-all.svg"
+          src="/images/overwrite-all.svg"
           alt="Overwrite All Icon"
           style={IMG_STYLE_FOR_SPACEY_ICONS}
         />
@@ -177,7 +177,7 @@ export function OverwriteModeSwitch({
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
         <img
-          src="/assets/images/overwrite-empty.svg"
+          src="/images/overwrite-empty.svg"
           alt="Overwrite Empty Icon"
           style={IMG_STYLE_FOR_SPACEY_ICONS}
         />
@@ -295,7 +295,7 @@ export function CreateSegmentButton() {
         }}
         title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
-        <img src="/assets/images/new-cell.svg" alt="New Segment Icon" />
+        <img src="/images/new-cell.svg" alt="New Segment Icon" />
       </ButtonComponent>
     </Badge>
   );
@@ -401,7 +401,7 @@ export function FloodFillSettings() {
         }
       >
         <img
-          src="/assets/images/icon-restrict-floodfill-to-bbox.svg"
+          src="/images/icon-restrict-floodfill-to-bbox.svg"
           alt="Restrict floodfill"
           style={IMG_STYLE_FOR_SPACEY_ICONS}
         />

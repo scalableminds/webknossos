@@ -24,13 +24,16 @@ import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas
 import { updateBucket } from "viewer/model/sagas/volume/update_actions";
 import type { DataLayerType, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
-import ByteArraysToLz4Base64Worker from "viewer/workers/byte_arrays_to_lz4_base64.worker";
-import { createWorker } from "viewer/workers/comlink_wrapper";
-import DecodeFourBitWorker from "viewer/workers/decode_four_bit.worker";
+import * as Comlink from "comlink";
+import "viewer/workers/init_comlink";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
 
-const decodeFourBit = createWorker(DecodeFourBitWorker);
+const decodeFourBit = Comlink.wrap(
+  new Worker(new URL("../../workers/decode_four_bit.worker.ts", import.meta.url), {
+    type: "module",
+  }),
+) as any;
 
 // For 32-bit buckets with 32^3 voxels, a COMPRESSION_BATCH_SIZE of
 // 128 corresponds to 16.8 MB that are sent to a webworker in one
@@ -38,7 +41,12 @@ const decodeFourBit = createWorker(DecodeFourBitWorker);
 const COMPRESSION_BATCH_SIZE = 128;
 const COMPRESSION_WORKER_COUNT = 2;
 const compressionPool = new WebworkerPool(
-  () => createWorker(ByteArraysToLz4Base64Worker),
+  () =>
+    Comlink.wrap(
+      new Worker(new URL("../../workers/byte_arrays_to_lz4_base64.worker.ts", import.meta.url), {
+        type: "module",
+      }),
+    ) as unknown as (byteArrays: Uint8Array[]) => Promise<string[]>,
   COMPRESSION_WORKER_COUNT,
 );
 

@@ -20,7 +20,7 @@ export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTr
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 export type CreateCellAction = ReturnType<typeof createCellAction>;
 type StartEditingAction = ReturnType<typeof startEditingAction>;
-type AddToLayerAction = ReturnType<typeof addToLayerAction>;
+type AddToContourListAction = ReturnType<typeof addToContourListAction>;
 export type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
@@ -91,7 +91,7 @@ export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
   | StartEditingAction
-  | AddToLayerAction
+  | AddToContourListAction
   | FloodFillAction
   | PerformMinCutAction
   | FinishEditingAction
@@ -184,23 +184,27 @@ export const createCellAction = (activeCellId: number, largestSegmentId: number)
   } as const;
 };
 
-export const startEditingAction = (position: Vector3, planeId: OrthoView) =>
+export const startEditingAction = (positionInLayerSpace: Vector3, planeId: OrthoView) =>
   ({
     type: "START_EDITING",
-    position,
+    positionInLayerSpace,
     planeId,
   }) as const;
 
-export const addToLayerAction = (position: Vector3) =>
+export const addToContourListAction = (positionInLayerSpace: Vector3) =>
   ({
-    type: "ADD_TO_LAYER",
-    position,
+    type: "ADD_TO_CONTOUR_LIST",
+    positionInLayerSpace,
   }) as const;
 
-export const floodFillAction = (position: Vector3, planeId: OrthoView, callback?: () => void) =>
+export const floodFillAction = (
+  positionInLayerSpace: Vector3,
+  planeId: OrthoView,
+  callback?: () => void,
+) =>
   ({
     type: "FLOOD_FILL",
-    position,
+    positionInLayerSpace,
     planeId,
     callback,
   }) as const;
@@ -438,11 +442,11 @@ export const setLargestSegmentIdAction = (segmentId: number) =>
 
 export const dispatchFloodfillAsync = async (
   dispatch: Dispatch<any>,
-  position: Vector3,
+  positionInLayerSpace: Vector3,
   planeId: OrthoView,
 ): Promise<void> => {
   const readyDeferred = new Deferred();
-  const action = floodFillAction(position, planeId, () => readyDeferred.resolve(null));
+  const action = floodFillAction(positionInLayerSpace, planeId, () => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };

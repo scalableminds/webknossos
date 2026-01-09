@@ -3,7 +3,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
-import type { ContourMode, OrthoView, OverwriteMode } from "viewer/constants";
+import type { ContourMode, OverwriteMode } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -62,12 +62,13 @@ import {
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
-import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
+import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
+import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
 import { Model, api } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
-import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { type BooleanBox, createSectionLabeler, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
@@ -211,45 +212,47 @@ export function* editVolumeLayerAsync(): Saga<never> {
       updateSegmentAction(
         activeCellId,
         {
-          anchorPosition: startEditingAction.position,
+          anchorPosition: startEditingAction.positionInLayerSpace,
           additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
     );
     const { zoomStep: labeledZoomStep, mag: labeledMag } = maybeLabeledMagWithZoomStep;
-    const currentLayer = yield* call(
-      createVolumeLayer,
+
+    const currentSectionLabeler = yield* call(
+      createSectionLabeler,
       volumeTracing,
       startEditingAction.planeId,
       labeledMag,
+      (thirdDim) => startEditingAction.positionInLayerSpace[thirdDim],
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
     if (isBrushTool(activeTool)) {
       yield* call(
         labelWithVoxelBuffer2D,
-        currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
+        currentSectionLabeler.getCircleVoxelBuffer2D(startEditingAction.positionInLayerSpace),
         contourTracingMode,
         overwriteMode,
         labeledZoomStep,
-        initialViewport,
+        currentSectionLabeler.getPlane(),
         wroteVoxelsBox,
       );
     }
 
-    let lastPosition = startEditingAction.position;
-    const channel = yield* actionChannel(["ADD_TO_LAYER", "FINISH_EDITING"]);
+    let lastPosition = startEditingAction.positionInLayerSpace;
+    const channel = yield* actionChannel(["ADD_TO_CONTOUR_LIST", "FINISH_EDITING"]);
 
     while (true) {
       const currentAction = yield* take(channel);
-      const { addToLayerAction, finishEditingAction } = {
-        addToLayerAction: currentAction.type === "ADD_TO_LAYER" ? currentAction : null,
+      const { addToContourListAction, finishEditingAction } = {
+        addToContourListAction: currentAction.type === "ADD_TO_CONTOUR_LIST" ? currentAction : null,
         finishEditingAction: currentAction.type === "FINISH_EDITING" ? currentAction : null,
       };
       if (finishEditingAction) break;
 
-      if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
+      if (!addToContourListAction || addToContourListAction.type !== "ADD_TO_CONTOUR_LIST") {
         throw new Error("Unexpected action. Satisfy typescript.");
       }
 
@@ -260,7 +263,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
         continue;
       }
 
-      if (V3.equals(lastPosition, addToLayerAction.position)) {
+      if (V3.equals(lastPosition, addToContourListAction.positionInLayerSpace)) {
         // The voxel position did not change since the last action (the mouse moved
         // within a voxel). There is no need to do anything.
         continue;
@@ -269,13 +272,13 @@ export function* editVolumeLayerAsync(): Saga<never> {
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
         // it's only performed when drawing (not when erasing).
-        currentLayer.addContour(addToLayerAction.position);
+        currentSectionLabeler.updateArea(addToContourListAction.positionInLayerSpace);
       }
 
       if (isBrushTool(activeTool)) {
-        const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
+        const rectangleVoxelBuffer2D = currentSectionLabeler.getRectangleVoxelBuffer2D(
           lastPosition,
-          addToLayerAction.position,
+          addToContourListAction.positionInLayerSpace,
         );
 
         if (rectangleVoxelBuffer2D) {
@@ -285,33 +288,32 @@ export function* editVolumeLayerAsync(): Saga<never> {
             contourTracingMode,
             overwriteMode,
             labeledZoomStep,
-            activeViewport,
+            currentSectionLabeler.getPlane(),
             wroteVoxelsBox,
           );
         }
 
         yield* call(
           labelWithVoxelBuffer2D,
-          currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
+          currentSectionLabeler.getCircleVoxelBuffer2D(addToContourListAction.positionInLayerSpace),
           contourTracingMode,
           overwriteMode,
           labeledZoomStep,
-          activeViewport,
+          currentSectionLabeler.getPlane(),
           wroteVoxelsBox,
         );
       }
 
-      lastPosition = addToLayerAction.position;
+      lastPosition = addToContourListAction.positionInLayerSpace;
     }
 
     yield* call(
-      finishLayer,
-      currentLayer,
+      finishSectionLabeler,
+      currentSectionLabeler,
       activeTool,
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
-      initialViewport,
       wroteVoxelsBox,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
@@ -342,32 +344,31 @@ export function* editVolumeLayerAsync(): Saga<never> {
   }
 }
 
-export function* finishLayer(
-  layer: VolumeLayer,
+export function* finishSectionLabeler(
+  sectionLabeler: SectionLabeler | TransformedSectionLabeler,
   activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
-  activeViewport: OrthoView,
   wroteVoxelsBox: BooleanBox,
 ): Saga<void> {
-  if (layer == null || layer.isEmpty()) {
+  if (sectionLabeler == null || sectionLabeler.isEmpty()) {
     return;
   }
 
   if (isVolumeDrawingTool(activeTool)) {
     yield* call(
       labelWithVoxelBuffer2D,
-      layer.getFillingVoxelBuffer2D(activeTool),
+      sectionLabeler.getFillingVoxelBuffer2D(activeTool),
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
-      activeViewport,
+      sectionLabeler.getPlane(),
       wroteVoxelsBox,
     );
   }
 
-  yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
+  yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
 }
 
 export function* ensureToolIsAllowedInMag(): Saga<void> {
@@ -520,7 +521,7 @@ function* maintainContourGeometry(): Saga<void> {
   const { contour } = SceneController;
 
   while (true) {
-    yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
+    yield* take(["ADD_TO_CONTOUR_LIST", "RESET_CONTOUR"]);
     const isTraceToolActive = yield* select((state) => isTraceTool(state.uiInformation.activeTool));
     const volumeTracing = yield* select(getActiveSegmentationTracing);
 

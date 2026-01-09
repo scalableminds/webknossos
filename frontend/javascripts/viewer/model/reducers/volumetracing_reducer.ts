@@ -30,7 +30,7 @@ import {
 } from "viewer/model/reducers/reducer_helpers";
 import {
   type VolumeTracingReducerAction,
-  addToLayerReducer,
+  addToContourListReducer,
   createCellReducer,
   getSegmentUpdateInfo,
   hideBrushReducer,
@@ -75,6 +75,8 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     const oldSegment = segments.getNullable(segmentId);
 
     const newSegment: Writable<Segment> = {
+      anchorPosition: null,
+      additionalCoordinates: null,
       id: segmentId,
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
@@ -446,8 +448,8 @@ function VolumeTracingReducer(
       return updateDirectionReducer(state, volumeTracing, action.centroid);
     }
 
-    case "ADD_TO_LAYER": {
-      return addToLayerReducer(state, volumeTracing, action.position);
+    case "ADD_TO_CONTOUR_LIST": {
+      return addToContourListReducer(state, volumeTracing, action.positionInLayerSpace);
     }
 
     case "RESET_CONTOUR": {

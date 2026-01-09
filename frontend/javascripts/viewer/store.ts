@@ -176,8 +176,8 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly anchorPosition?: Vector3 | null;
-  readonly additionalCoordinates?: AdditionalCoordinate[] | null;
+  readonly anchorPosition: Vector3 | null | undefined; // in layer space
+  readonly additionalCoordinates: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -228,7 +228,7 @@ export type VolumeTracing = TracingBase & {
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
-  // Stores points of the currently drawn region in global coordinates
+  // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;

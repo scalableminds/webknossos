@@ -23,7 +23,7 @@ import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,
@@ -164,7 +164,6 @@ import {
   zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
-import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
@@ -186,6 +185,7 @@ import Store from "viewer/store";
 import {
   MISSING_GROUP_ID,
   callDeep,
+  createGroupHelper,
   createGroupToSegmentsMap,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -649,13 +649,11 @@ class TracingApi {
    */
   registerSegment(
     segmentId: number,
-    somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+    anchorPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
   /**
@@ -800,8 +798,8 @@ class TracingApi {
    *   3,
    *   {
    *     name: "A name",
-   *     somePosition: [1, 2, 3],
-   *     someAdditionalCoordinates: [],
+   *     anchorPosition: [1, 2, 3],
+   *     additionalCoordinates: [],
    *     color: [1, 2, 3],
    *     groupId: 1,
    *   },
@@ -856,10 +854,6 @@ class TracingApi {
     parentGroupId: number = MISSING_GROUP_ID,
     volumeLayerName?: string,
   ): number {
-    if (parentGroupId == null) {
-      // Guard against explicitly passed null or undefined.
-      parentGroupId = MISSING_GROUP_ID;
-    }
     const volumeTracing = volumeLayerName
       ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
@@ -867,23 +861,12 @@ class TracingApi {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
     const { segmentGroups } = volumeTracing;
-
-    const newSegmentGroups = _.cloneDeep(segmentGroups);
-    const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
-    const newGroup = {
-      name: name || `Group ${newGroupId}`,
-      groupId: newGroupId,
-      children: [],
-      isExpanded: false,
-    };
-
-    if (parentGroupId === MISSING_GROUP_ID) {
-      newSegmentGroups.push(newGroup);
-    } else {
-      callDeep(newSegmentGroups, parentGroupId, (item) => {
-        item.children.push(newGroup);
-      });
-    }
+    const { newSegmentGroups, newGroupId } = createGroupHelper(
+      segmentGroups,
+      name,
+      null,
+      parentGroupId,
+    );
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
 
@@ -2345,8 +2328,8 @@ class DataApi {
       updateSegmentAction(
         segmentId,
         {
-          somePosition: globalPositionsMag1[0],
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: globalPositionsMag1[0],
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -3040,6 +3023,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
+
 export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),

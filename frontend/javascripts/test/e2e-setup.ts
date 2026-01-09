@@ -3,7 +3,7 @@ import _ from "lodash";
 import deepForEach from "deep-for-each";
 import fs from "node:fs";
 import shell from "shelljs";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import { vi } from "vitest";
 import { JSDOM } from "jsdom";
 

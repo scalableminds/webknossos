@@ -544,11 +544,11 @@ class JobController @Inject()(jobDAO: JobDAO,
       for {
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox
-        jobCostInCredits <- jobService.calculateJobCostInMilliCredits(boundingBox, jobCommand)
+        jobCostInMilliCredits <- jobService.calculateJobCostInMilliCredits(boundingBox, jobCommand)
         organizationCreditBalance <- creditTransactionDAO.getMilliCreditBalance(request.identity._organization)
-        hasEnoughCredits = jobCostInCredits <= organizationCreditBalance
+        hasEnoughCredits = jobCostInMilliCredits <= organizationCreditBalance
         js = Json.obj(
-          "costInMilliCredits" -> jobCostInCredits,
+          "costInMilliCredits" -> jobCostInMilliCredits,
           "hasEnoughCredits" -> hasEnoughCredits,
           "organizationMilliCredits" -> organizationCreditBalance,
         )

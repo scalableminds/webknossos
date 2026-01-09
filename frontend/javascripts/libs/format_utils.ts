@@ -580,9 +580,9 @@ export function formatMilliCreditsString(credits: number): string {
   if (millis === "0") {
     return fullCredits.toString();
   }
-  const paddingZeros = "0".repeat(3 - millis.length);
-  const millisWithoutTrailingZeros = millis.replace(/0+$/, "");
-  return `${fullCredits}.${paddingZeros}${millisWithoutTrailingZeros}`;
+  const paddedMillis = millis.padStart(3, "0");
+  const paddedMillisWithoutTrailingZeros = paddedMillis.replace(/0+$/, "");
+  return `${fullCredits}.${paddedMillisWithoutTrailingZeros}`;
 }
 
 export function formatCurrency(amount: number, currency: string): string {

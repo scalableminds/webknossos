@@ -40,6 +40,7 @@ export default function BoundingBoxTab() {
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const dispatch = useDispatch();
 
@@ -228,7 +229,7 @@ export default function BoundingBoxTab() {
                 showHeader={false}
                 className="bounding-box-table"
                 rowSelection={{
-                  selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
+                  selectedRowKeys,
                   getCheckboxProps: () => ({ disabled: true }),
                 }}
                 footer={() => maybeAddBoundingBoxButton}
@@ -236,10 +237,14 @@ export default function BoundingBoxTab() {
                 scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
                 onRow={(bb) => ({
-                  onClick: () => {
+                  onClick: (event) => {
                     hideContextMenu();
-                    handleGoToBoundingBox(bb.id);
-                    dispatch(setActiveUserBoundingBoxId(bb.id));
+                    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                      setSelectedRowKeys([...selectedRowKeys, bb.id]);
+                    } else {
+                      handleGoToBoundingBox(bb.id);
+                      dispatch(setActiveUserBoundingBoxId(bb.id));
+                    }
                   },
                 })}
               />

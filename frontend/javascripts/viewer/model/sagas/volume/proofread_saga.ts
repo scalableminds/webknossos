@@ -75,7 +75,6 @@ import {
   disallowSagaWhileBusyAction,
 } from "viewer/model/actions/ui_actions";
 import {
-  appendToSegmentJournalAction,
   clickSegmentAction,
   initializeEditableMappingAction,
   mergeSegmentsAction,

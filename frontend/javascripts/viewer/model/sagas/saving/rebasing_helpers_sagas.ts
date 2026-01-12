@@ -2,6 +2,7 @@ import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { getAdaptToTypeFunction } from "libs/utils";
 import _ from "lodash";
 import { call, put } from "typed-redux-saga";
+import type { APIUpdateActionBatch } from "types/api_types";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -13,7 +14,6 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
-import { APIUpdateActionBatch } from "types/api_types";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,

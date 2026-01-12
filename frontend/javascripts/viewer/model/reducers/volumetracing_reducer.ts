@@ -16,11 +16,11 @@ import {
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  removeSegmentAction,
   type ClickSegmentAction,
   type RemoveSegmentAction,
   type SetSegmentsAction,
   type UpdateSegmentAction,
+  removeSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import {
   applyUserStateToGroups,

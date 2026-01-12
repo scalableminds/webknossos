@@ -16,6 +16,7 @@ import {
   createSegmentVolumeAction,
   deleteSegmentGroupUpdateAction,
   deleteSegmentVolumeAction,
+  mergeSegmentsVolumeAction,
   removeFallbackLayer,
   updateActiveSegmentId,
   updateLargestSegmentId,
@@ -25,15 +26,14 @@ import {
   updateSegmentPartialVolumeAction,
   updateSegmentVisibilityVolumeAction,
   upsertSegmentGroupUpdateAction,
-  mergeSegmentsVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
 import {
   type Segment,
   type SegmentGroup,
+  type SegmentJournalEntry,
   type SegmentMap,
   SegmentPropertiesWithoutUserState,
   type VolumeTracing,
-  type SegmentJournalEntry,
 } from "viewer/store";
 
 export function* diffVolumeTracing(

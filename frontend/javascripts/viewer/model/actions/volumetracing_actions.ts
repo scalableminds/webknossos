@@ -10,8 +10,8 @@ import type {
   NumberLike,
   Segment,
   SegmentGroup,
-  SegmentMap,
   SegmentJournalEntry,
+  SegmentMap,
 } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import type { ApplicableVolumeUpdateAction } from "../sagas/volume/update_actions";

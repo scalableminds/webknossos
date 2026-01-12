@@ -31,6 +31,14 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
 JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_extendSegmentBoundingBox
   (JNIEnv *, jobject, jbyteArray, jint, jboolean, jint, jlong, jint, jint, jint, jint, jint, jint, jint, jint, jint);
 
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     applyAgglomerate
+ * Signature:  ([BI[J[J)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyAgglomerate
+  (JNIEnv *, jobject, jbyteArray, jint, jlongArray, jlongArray);
+
 #ifdef __cplusplus
 }
 #endif

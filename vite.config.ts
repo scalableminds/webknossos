@@ -3,12 +3,12 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
-import inject from "@rollup/plugin-inject";
 
 import path from "node:path";
 
 // https://vite.dev/config/
-export default defineConfig({
+
+export const viteConfig = {
   publicDir: "frontend/assets",
   resolve: {
     alias: {
@@ -63,4 +63,6 @@ export default defineConfig({
   define: {
     global: "globalThis",
   },
-});
+};
+
+export default defineConfig(viteConfig);

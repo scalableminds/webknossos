@@ -1,6 +1,6 @@
 import * as Comlink from "comlink";
 import "./init_comlink";
-import lz4 from "./lz4_wasm_wrapper";
+import * as lz4 from "lz4-wasm";
 
 function compressLz4Block(
   data: Uint8Array<ArrayBuffer>,

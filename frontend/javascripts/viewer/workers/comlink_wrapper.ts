@@ -35,26 +35,30 @@ const { wrap, transferHandlers, _expose, _transfer } = importComlink();
 transferHandlers.set("requestOptions", requestOptionsTransferHandler);
 // Overwrite the default throw handler with ours that supports responses.
 transferHandlers.set("throw", throwTransferHandlerWithResponseSupport);
-// Worker modules export bare functions, but webpack turns these into Worker classes which need to be
-// instantiated first.
-// To ensure that code always executes the necessary instantiation, we cheat a bit with the typing in the following code.
-// In reality, `expose` receives a function and returns it again. However, we tell flow that it wraps the function, so that
-// unwrapping becomes necessary.
-// The unwrapping has to be done with `createWorker` which in fact instantiates the worker class.
-// As a result, we have some cheated types in the following two functions, but gain type safety for all usages of web worker modules.
+// Worker modules export bare functions. In the browser (Vite), we use the web workers
+// to instantiate them. In Node (Vitest), we dynamically import the worker module
+// and execute the function directly.
+// To gain type safety for all usages of web worker modules, we cheat a bit with the typing.
+// In reality, `expose` receives a function and returns it again. However, we tell TypeScript
+// that it wraps the function, so that unwrapping becomes necessary.
+// The unwrapping is done with `createWorker` which either instantiates the web worker module
+// or returns the dynamically imported function.
 type UseCreateWorkerToUseMe<T> = {
   readonly _wrapped: T;
 };
-export function createWorker<T extends (...args: any) => any>(
-  pathToWorker: UseCreateWorkerToUseMe<T>,
+export function createWorker<T extends (...args: any[]) => any>(
+  pathToWorker: string,
 ): (...params: Parameters<T>) => Promise<ReturnType<T>> {
   if (wrap == null) {
-    // In a node context (e.g., when executing tests), we don't create web workers which is why
-    // we can simply return the input function here.
-    return import(pathToWorker);
+    // In a node context (e.g., when executing tests), we don't create web workers.
+    // Instead, we dynamically import the worker and return its default export.
+    return (async (...params: Parameters<T>) => {
+      const workerModule = await import(`./${pathToWorker}`);
+      return workerModule.default(...params);
+    }) as any;
   }
 
-  // this URL is relative to <roo>/frontend/javascripts/viewer/workers
+  // this URL is relative to <root>/frontend/javascripts/viewer/workers
   const url = new URL(pathToWorker, import.meta.url);
   return wrap(new Worker(url, { type: "module" }));
 }
@@ -64,9 +68,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   }
 
   // In a node context (e.g., when executing tests), we don't create web workers.
-  // Therefore, we simply return the passed function with the only change that
-  // we are wrapping the return value in a promise. That way, the worker and non-worker
-  // versions both return promises.
+  // Therefore, we simply return the passed function.
   // @ts-ignore
   return fn;
 }

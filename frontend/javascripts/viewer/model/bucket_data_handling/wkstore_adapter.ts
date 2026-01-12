@@ -1,5 +1,4 @@
 import { doWithToken } from "admin/rest_api";
-import * as Comlink from "comlink";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import { parseMaybe } from "libs/utils";
@@ -29,11 +28,7 @@ import { createWorker } from "viewer/workers/comlink_wrapper";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
 
-const decodeFourBit = Comlink.wrap(
-  new Worker(new URL("../../workers/decode_four_bit.worker.ts", import.meta.url), {
-    type: "module",
-  }),
-) as any;
+const decodeFourBit = createWorker("decode_four_bit.worker.ts");
 
 // For 32-bit buckets with 32^3 voxels, a COMPRESSION_BATCH_SIZE of
 // 128 corresponds to 16.8 MB that are sent to a webworker in one

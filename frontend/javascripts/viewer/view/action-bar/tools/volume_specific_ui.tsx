@@ -390,7 +390,6 @@ export function FloodFillSettings() {
 
       <ButtonComponent
         style={{
-          opacity: isRestrictedToBoundingBox ? 1 : 0.5,
           marginLeft: ACTIONBAR_MARGIN_LEFT,
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}

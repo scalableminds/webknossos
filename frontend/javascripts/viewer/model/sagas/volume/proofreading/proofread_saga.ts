@@ -79,6 +79,7 @@ import {
 } from "viewer/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
+  removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
   updateSegmentAction,
@@ -668,8 +669,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     );
   } else {
     // A merge happened. Remove the segment that doesn't exist anymore.
-    // TODOM: undo
-    // yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
+    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
   const pack = (agglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
@@ -849,12 +849,13 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   // communication with the backend).
   const currentVersion = Store.getState().annotation.version;
 
+  const autoUpdateAgglomerateSkeletons = true;
   const splitMappingInfo = yield* splitAgglomerateInMapping(
     activeMapping,
     agglomerateId,
     volumeTracingId,
     currentVersion,
-    true,
+    autoUpdateAgglomerateSkeletons,
     additionalUnmappedSegmentsToReRequest,
   );
   if (splitMappingInfo == null) {
@@ -1196,12 +1197,13 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     console.log("start updating the mapping after a min-cut");
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
+    const autoUpdateAgglomerateSkeletons = true;
     const splitMappingInfo = yield* splitAgglomerateInMapping(
       activeMapping,
       sourceAgglomerateId,
       volumeTracingId,
       annotationVersion,
-      true,
+      autoUpdateAgglomerateSkeletons,
     );
 
     if (splitMappingInfo == null) {
@@ -1226,6 +1228,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         },
       ),
     );
+
     // Now the agglomerate Ids have changed again, thus, reload them.
     yield* call(reloadMappingAndAggloIds);
 
@@ -1234,14 +1237,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
-    // TODOM: in my test case this is wrong!
-    // TODOM: this breaks segment list syncing.! -> maybe removes mesh as well :thinking:
-    // yield* put(removeSegmentAction(targetInfo.agglormateID, volumeTracingId));
-    // TODOM: sourceInfo and targetInfo do not contain the necessary information for reloading.
-    // TODOM: figure out what the version was for.
+    yield* put(removeSegmentAction(targetInfo.agglomerateId, volumeTracingId));
 
-    yield* call(syncAgglomerateSkeletonsAfterMergeAction, volumeTracingId, sourceInfo, targetInfo);
-    // TODOM: Maybe another save is needed to store agglomerate updates on the serer?
+    yield* call(syncAgglomerateSkeletonsAfterMergeAction, sourceInfo, targetInfo, volumeTracingId);
   }
 
   /* Reload meshes */
@@ -1382,12 +1380,13 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   const newAnnotationVersion = yield* select((state) => state.annotation.version);
   // Now that the changes are saved, we can split the mapping locally (because it requires
   // communication with the back-end).
+  const autoUpdateAgglomerateSkeletons = true;
   const splitMappingInfo = yield* splitAgglomerateInMapping(
     activeMapping,
     targetAgglomerateId,
     volumeTracingId,
     newAnnotationVersion,
-    true,
+    autoUpdateAgglomerateSkeletons,
   );
 
   if (splitMappingInfo == null) {
@@ -1800,10 +1799,9 @@ export function* splitAgglomerateInMapping(
   if (syncAgglomerateSkeletons && activeMapping.mappingName) {
     yield* call(
       syncAgglomerateSkeletonsAfterSplitAction,
-      Array.from(oldAgglomerateIds),
       Array.from(newAgglomerateIds),
+      Array.from(oldAgglomerateIds),
       volumeTracingId,
-      activeMapping.mappingName,
     );
   }
 

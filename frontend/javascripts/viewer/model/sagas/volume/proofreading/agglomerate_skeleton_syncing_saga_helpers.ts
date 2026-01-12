@@ -157,15 +157,16 @@ function deepDiffSkeletonTracings(
 }
 
 export function* syncAgglomerateSkeletonsAfterMergeAction(
-  tracingId: string,
   sourceInfo: ProofreadingActionInfo,
   targetInfo: ProofreadingActionInfo,
+  tracingId: string,
 ): Saga<void> {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
+  const skeletonTracing = yield* select((state) => state.annotation.skeleton);
   const { mappingName } = activeMapping;
-  if (mappingName == null) {
+  if (!skeletonTracing || mappingName == null) {
     return;
   }
   const tracingWithOldAggloTrees = yield* call(
@@ -190,7 +191,7 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
   );
   const assignedTreeIds = maybeSourceAgglomerateTree
     ? [maybeSourceAgglomerateTree.treeId]
-    : [getMaximumTreeId(tracingWithOldAggloTrees.trees) + 1];
+    : [getMaximumTreeId(skeletonTracing.trees) + 1];
 
   const updatedAgglomerateSkeleton = yield* call(
     getAllAgglomerateTreesFromServerAndRemap,
@@ -224,12 +225,16 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
 }
 
 export function* syncAgglomerateSkeletonsAfterSplitAction(
-  oldAgglomerateIds: number[],
   newAgglomerateIds: number[],
+  oldAgglomerateIds: number[],
   tracingId: string,
-  mappingName: string,
 ): Saga<void> {
-  if (mappingName == null) {
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
+  );
+  const skeletonTracing = yield* select((state) => state.annotation.skeleton);
+  const { mappingName } = activeMapping;
+  if (!skeletonTracing || mappingName == null) {
     return;
   }
   const tracingWithOldAggloTrees = yield* call(
@@ -242,7 +247,7 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
   }
   const positionToIdMap = createPositionToIdMap(tracingWithOldAggloTrees.trees.values());
 
-  let newTreeId = getMaximumTreeId(tracingWithOldAggloTrees.trees) + 1;
+  let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
 
   const assignedTreeIds = newAgglomerateIds
     .map((id) => getAgglomerateTreeIfExists(id, mappingName, tracingWithOldAggloTrees.trees))

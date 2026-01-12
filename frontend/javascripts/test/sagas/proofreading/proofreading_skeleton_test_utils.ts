@@ -277,7 +277,7 @@ export function* performSplitTreesProofreading(
   );
   expect(mapping1).toEqual(initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
-  // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+
   const agglomerateTrees = yield loadAgglomerateSkeletons(context, [1], true, true);
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(5);
   const targetNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(6);

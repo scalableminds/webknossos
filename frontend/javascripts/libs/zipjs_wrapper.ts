@@ -1,5 +1,3 @@
-import type * as ZipType from "@zip.js/zip.js";
-
 class TransFormStream {}
 
 // Mock zip.js and TransformStream during tests

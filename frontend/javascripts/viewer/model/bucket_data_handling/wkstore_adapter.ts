@@ -1,4 +1,5 @@
 import { doWithToken } from "admin/rest_api";
+import * as Comlink from "comlink";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import { parseMaybe } from "libs/utils";
@@ -24,7 +25,6 @@ import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas
 import { updateBucket } from "viewer/model/sagas/volume/update_actions";
 import type { DataLayerType, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
-import * as Comlink from "comlink";
 import "viewer/workers/init_comlink";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";

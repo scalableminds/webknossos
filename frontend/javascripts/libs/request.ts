@@ -1,8 +1,8 @@
+import * as Comlink from "comlink";
 import handleStatus from "libs/handle_http_status";
 import _ from "lodash";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
-import * as Comlink from "comlink";
 import "viewer/workers/init_comlink";
 import { handleError } from "./handle_request_error_helper";
 

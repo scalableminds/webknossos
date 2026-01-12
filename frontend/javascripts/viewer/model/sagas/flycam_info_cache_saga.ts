@@ -1,3 +1,4 @@
+import * as Comlink from "comlink";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
@@ -9,7 +10,6 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { call, select, take } from "viewer/model/sagas/effect-generators";
 import type { WebknossosState } from "viewer/store";
 import type { LoadingStrategy } from "viewer/store";
-import * as Comlink from "comlink";
 import "viewer/workers/init_comlink";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {

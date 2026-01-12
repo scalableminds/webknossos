@@ -5,7 +5,7 @@
  * Created by AI Agent 
  */
 
-declare module 'saxophone' {
+declare module '@pirxpilot/saxophone' {
     import { Writable } from 'stream';
   
     /**

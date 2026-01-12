@@ -1,4 +1,5 @@
 import app from "app";
+import * as Comlink from "comlink";
 import type UpdatableTexture from "libs/UpdatableTexture";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
@@ -23,7 +24,6 @@ import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store, { type PlaneRects, type SegmentMap } from "viewer/store";
-import * as Comlink from "comlink";
 import "viewer/workers/init_comlink";
 import {
   getTransformsForLayer,

@@ -1,8 +1,8 @@
+import * as Comlink from "comlink";
 import {
   requestOptionsTransferHandler,
   throwTransferHandlerWithResponseSupport,
 } from "viewer/workers/headers_transfer_handler";
-import * as Comlink from "comlink";
 
 function importComlink() {
   const isNodeContext = typeof process !== "undefined" && process.title !== "browser";

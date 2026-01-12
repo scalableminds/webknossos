@@ -1,6 +1,7 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
+import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
+import { getUsers } from "admin/rest_api";
 import { Button, Col, Row, Spin, Typography } from "antd";
 import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";

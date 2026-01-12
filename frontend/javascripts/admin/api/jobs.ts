@@ -1,4 +1,3 @@
-import { getOrganization } from "admin/rest_api";
 import Request from "libs/request";
 import { location } from "libs/window";
 import _ from "lodash";
@@ -14,6 +13,7 @@ import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organi
 import { Store } from "viewer/singletons";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
+import { getOrganization } from "./organization";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {

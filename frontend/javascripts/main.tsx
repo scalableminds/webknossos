@@ -8,7 +8,7 @@ import UnthrottledStore, { startSaga } from "viewer/store";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { checkAnyOrganizationExists, getActiveUser, getOrganization } from "admin/rest_api";
+import { getActiveUser } from "admin/rest_api";
 import ErrorBoundary from "components/error_boundary";
 import { RootForFastTooltips } from "components/fast_tooltip";
 import { load as loadFeatureToggles } from "features";
@@ -27,6 +27,7 @@ import { setModel, setStore } from "viewer/singletons";
 import Store from "viewer/throttled_store";
 
 import "../stylesheets/main.less";
+import { checkAnyOrganizationExists, getOrganization } from "admin/api/organization";
 import { CheckCertificateModal } from "components/check_certificate_modal";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";

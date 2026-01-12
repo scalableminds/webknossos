@@ -24,7 +24,7 @@ import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store, { type PlaneRects, type SegmentMap } from "viewer/store";
-import "viewer/workers/init_comlink";
+import { createWorker } from "viewer/workers/comlink_wrapper";
 import {
   getTransformsForLayer,
   invertAndTranspose,
@@ -42,11 +42,7 @@ const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
 const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
 
-const asyncBucketPickRaw = Comlink.wrap(
-  new Worker(new URL("../../workers/async_bucket_picker.worker.ts", import.meta.url), {
-    type: "module",
-  }),
-) as any;
+const asyncBucketPickRaw = createWorker("async_bucket_picker.worker.ts");
 
 const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
   _.isEqual(oldArgs, newArgs),

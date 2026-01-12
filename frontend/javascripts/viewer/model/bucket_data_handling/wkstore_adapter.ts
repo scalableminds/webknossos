@@ -25,7 +25,7 @@ import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas
 import { updateBucket } from "viewer/model/sagas/volume/update_actions";
 import type { DataLayerType, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
-import "viewer/workers/init_comlink";
+import { createWorker } from "viewer/workers/comlink_wrapper";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
 
@@ -42,11 +42,9 @@ const COMPRESSION_BATCH_SIZE = 128;
 const COMPRESSION_WORKER_COUNT = 2;
 const compressionPool = new WebworkerPool(
   () =>
-    Comlink.wrap(
-      new Worker(new URL("../../workers/byte_arrays_to_lz4_base64.worker.ts", import.meta.url), {
-        type: "module",
-      }),
-    ) as unknown as (byteArrays: Uint8Array[]) => Promise<string[]>,
+    createWorker("byte_arrays_to_lz4_base64.worker.ts") as unknown as (
+      byteArrays: Uint8Array[],
+    ) => Promise<string[]>,
   COMPRESSION_WORKER_COUNT,
 );
 

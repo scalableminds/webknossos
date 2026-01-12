@@ -1,6 +1,5 @@
-import * as Comlink from "comlink";
-import "./init_comlink";
 import * as lz4 from "lz4-wasm";
+import { expose } from "./comlink_wrapper";
 
 function compressLz4Block(
   data: Uint8Array<ArrayBuffer>,
@@ -13,4 +12,4 @@ function compressLz4Block(
   return lz4.decompress(data) as Uint8Array<ArrayBuffer>;
 }
 
-export default Comlink.expose(compressLz4Block);
+export default expose(compressLz4Block);

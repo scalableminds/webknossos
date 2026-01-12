@@ -1,13 +1,8 @@
-import * as Comlink from "comlink";
 import type { BucketDataArray, ElementClass } from "types/api_types";
-import "viewer/workers/init_comlink";
+import { createWorker } from "viewer/workers/comlink_wrapper";
 import { uint8ToTypedBuffer } from "./typed_buffer";
 
-const _byteArrayToLz4Array = Comlink.wrap(
-  new Worker(new URL("../../workers/byte_array_lz4_compression.worker.ts", import.meta.url), {
-    type: "module",
-  }),
-) as any;
+const _byteArrayToLz4Array = createWorker("byte_array_lz4_compression.worker.ts");
 
 export const decompressToTypedArray = async (
   compressedData: Uint8Array<ArrayBuffer>,

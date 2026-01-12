@@ -1,11 +1,8 @@
-import * as Comlink from "comlink";
 import type { Matrix4x4 } from "mjs";
-
-// Imports in WebWorkers need to be relative
-import "./init_comlink";
-import type { OrthoViewRects, Vector3, ViewMode } from "../../viewer/constants";
-import { _getMaximumZoomForAllMags } from "../../viewer/model/accessors/flycam_accessor";
-import type { LoadingStrategy } from "../../viewer/store";
+import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
+import { _getMaximumZoomForAllMags } from "viewer/model/accessors/flycam_accessor";
+import type { LoadingStrategy } from "viewer/store";
+import { expose } from "./comlink_wrapper";
 
 function asyncGetMaximumZoomForAllMags(
   viewMode: ViewMode,
@@ -29,4 +26,4 @@ function asyncGetMaximumZoomForAllMags(
   );
 }
 
-export default Comlink.expose(asyncGetMaximumZoomForAllMags);
+export default expose(asyncGetMaximumZoomForAllMags);

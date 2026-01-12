@@ -1,26 +1,13 @@
-import * as Comlink from "comlink";
 import handleStatus from "libs/handle_http_status";
 import _ from "lodash";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
-import "viewer/workers/init_comlink";
+import { createWorker } from "viewer/workers/comlink_wrapper";
 import { handleError } from "./handle_request_error_helper";
 
-const fetchBufferViaWorker = Comlink.wrap(
-  new Worker(new URL("../viewer/workers/fetch_buffer.worker.ts", import.meta.url), {
-    type: "module",
-  }),
-) as any;
-const fetchBufferWithHeaders = Comlink.wrap(
-  new Worker(new URL("../viewer/workers/fetch_buffer_with_headers.worker.ts", import.meta.url), {
-    type: "module",
-  }),
-) as any;
-const compress = Comlink.wrap(
-  new Worker(new URL("../viewer/workers/compress.worker.ts", import.meta.url), {
-    type: "module",
-  }),
-) as any;
+const fetchBufferViaWorker = createWorker("fetch_buffer.worker.ts");
+const fetchBufferWithHeaders = createWorker("fetch_buffer_with_headers.worker.ts");
+const compress = createWorker("compress.worker.ts");
 
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 

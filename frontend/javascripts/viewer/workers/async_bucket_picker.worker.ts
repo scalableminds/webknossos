@@ -1,15 +1,11 @@
-import * as Comlink from "comlink";
-import "./init_comlink";
-
 import PriorityQueue from "js-priority-queue";
 import type { Matrix4x4 } from "libs/mjs";
-
-// Imports in WebWorkers need to be relative
-import type { Vector3, Vector4, ViewMode } from "../../viewer/constants";
-import constants from "../../viewer/constants";
-import determineBucketsForFlight from "../../viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForOblique from "../../viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import type { LoadingStrategy, PlaneRects } from "../../viewer/store";
+import type { Vector3, Vector4, ViewMode } from "viewer/constants";
+import constants from "viewer/constants";
+import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
+import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import type { LoadingStrategy, PlaneRects } from "viewer/store";
+import { expose } from "./comlink_wrapper";
 
 type PriorityItem = {
   bucketAddress: Vector4;
@@ -100,4 +96,4 @@ function pick(
   return dequeueToArrayBuffer(bucketQueue);
 }
 
-export default Comlink.expose(pick);
+export default expose(pick);

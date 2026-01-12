@@ -1,6 +1,5 @@
-import * as Comlink from "comlink";
 import handleStatus from "libs/handle_http_status";
-import "./init_comlink";
+import { expose, transfer } from "./comlink_wrapper";
 
 function fetchBufferWithHeaders(
   url: RequestInfo,
@@ -22,7 +21,7 @@ function fetchBufferWithHeaders(
         headerObject[key] = value;
       }
 
-      return Comlink.transfer(
+      return transfer(
         {
           buffer,
           headers: headerObject,
@@ -32,4 +31,4 @@ function fetchBufferWithHeaders(
     });
 }
 
-export default Comlink.expose(fetchBufferWithHeaders);
+export default expose(fetchBufferWithHeaders);

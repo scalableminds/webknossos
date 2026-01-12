@@ -1,4 +1,3 @@
-import * as Comlink from "comlink";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
@@ -10,7 +9,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { call, select, take } from "viewer/model/sagas/effect-generators";
 import type { WebknossosState } from "viewer/store";
 import type { LoadingStrategy } from "viewer/store";
-import "viewer/workers/init_comlink";
+import { createWorker } from "viewer/workers/comlink_wrapper";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
   getTransformsForLayer,
@@ -22,14 +21,7 @@ import type { Action } from "../actions/actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 
-const asyncGetMaximumZoomForAllMags = Comlink.wrap(
-  new Worker(
-    new URL("../../workers/async_get_maximum_zoom_for_all_mags.worker.ts", import.meta.url),
-    {
-      type: "module",
-    },
-  ),
-) as any;
+const asyncGetMaximumZoomForAllMags = createWorker("async_get_maximum_zoom_for_all_mags.worker.ts");
 
 const getComputeFunction = _.memoize((_layerName: string) => {
   // The argument _layerName is not used in this function, but

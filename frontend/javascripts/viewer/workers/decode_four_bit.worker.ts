@@ -1,5 +1,4 @@
-import * as Comlink from "comlink";
-import "./init_comlink";
+import { expose } from "./comlink_wrapper";
 
 // This function receives and returns ArrayBuffer, since that can be transferred without
 // copying to/out of the webworker
@@ -20,4 +19,4 @@ function decodeFourBit(buffer: ArrayBuffer): ArrayBuffer {
   return newColors.buffer;
 }
 
-export default Comlink.expose(decodeFourBit);
+export default expose(decodeFourBit);

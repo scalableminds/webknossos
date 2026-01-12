@@ -29,13 +29,19 @@ class NativeBucketScanner() {
                                        existingBBoxBottomRightY: Int,
                                        existingBBoxBottomRightZ: Int): Array[Int]
 
+  @native def applySegmentIdMapping(bucketBytes: Array[Byte],
+                                    bytesPerElement: Int,
+                                    isSigned: Boolean,
+                                    idMappingSrc: Array[Long],
+                                    idMappingDst: Array[Long]): Array[Byte]
+
   @native def mergeVolumeBucketInPlace(bucketBytesMutable: Array[Byte],
                                        incomingBucketBytes: Array[Byte],
                                        skipMapping: Boolean,
                                        idMappingSrc: Array[Long],
                                        idMappingDst: Array[Long],
                                        bytesPerElement: Int,
-                                       elementsAreSigned: Boolean): Unit
+                                       isSigned: Boolean): Unit
 
   @native def deleteSegmentFromBucket(bucketBytes: Array[Byte],
                                       bytesPerElement: Int,

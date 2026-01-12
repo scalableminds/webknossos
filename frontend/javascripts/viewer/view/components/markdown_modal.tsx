@@ -1,6 +1,7 @@
 import { Alert, Button, Col, Input, Modal, Row } from "antd";
 import Markdown from "libs/markdown_adapter";
-import * as React from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 
 function getFirstLine(comment: string) {
   const newLineIndex = comment.indexOf("\n");
@@ -28,7 +29,11 @@ export function MarkdownModal({
   onChange: (newValue: string) => void;
 }) {
   const placeholderText = placeholder ? placeholder : `Add ${label}`;
-  const [currentValue, setCurrentValue] = React.useState(source);
+  const [currentValue, setCurrentValue] = useState(source);
+
+  useEffect(() => {
+    setCurrentValue(source);
+  }, [source]);
 
   const onConfirm = () => {
     onChange(currentValue);
@@ -44,20 +49,21 @@ export function MarkdownModal({
   return (
     <Modal
       key="comment-markdown-modal"
-      title={<span>{`Edit ${label}`}</span>}
+      title={`Edit ${label}`}
       open={isOpen}
       onCancel={onOk}
       closable={true}
       width={700}
       footer={[
-        <Button key="back" onClick={onConfirm}>
-          Ok
+        <Button type="primary" key="back" onClick={onConfirm}>
+          OK
         </Button>,
       ]}
+      destroyOnHidden
     >
       <Alert
         title={
-          <React.Fragment>
+          <Fragment>
             In addition to using{" "}
             <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
               Markdown
@@ -65,7 +71,7 @@ export function MarkdownModal({
             for formatting, you can also create links to nodes and positions by using hashtags. For
             example, <code>#123</code> links to node 123, while <code>#(1,2,3)</code> points to the
             position 1,2,3.
-          </React.Fragment>
+          </Fragment>
         }
         type="info"
         style={{
@@ -75,7 +81,7 @@ export function MarkdownModal({
       <Row gutter={16}>
         <Col span={12}>
           <Input.TextArea
-            defaultValue={currentValue}
+            value={currentValue}
             placeholder={placeholderText}
             onChange={setCurrentValueFromEvent}
             rows={5}

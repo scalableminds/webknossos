@@ -33,6 +33,14 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
 
 /*
  * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     applySegmentIdMapping
+ * Signature:  ([BIZ[J[J)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applySegmentIdMapping
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jlongArray, jlongArray);
+
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
  * Method:     mergeVolumeBucketInPlace
  * Signature:  ([B[BZ[J[JIZ)V
  */

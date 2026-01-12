@@ -10,7 +10,7 @@
 #include <map>
 #include <cstring>
 
-uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
+int64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
     long currentValue;
     switch (bytesPerElement) {
@@ -34,6 +34,39 @@ uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerEl
         throw std::invalid_argument("Cannot read segment value, unsupported bytesPerElement value");
     }
     return currentValue;
+}
+
+void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, const int bytesPerElement, const int isSigned) {
+    jbyte *currentPos = bucketBytes + (index * bytesPerElement);
+
+    switch (bytesPerElement) {
+        case 1:
+            if (isSigned)
+                *reinterpret_cast<int8_t *>(currentPos) = static_cast<int8_t>(segmentId);
+            else
+                *reinterpret_cast<uint8_t *>(currentPos) = static_cast<uint8_t>(segmentId);
+            break;
+        case 2:
+            if (isSigned)
+                *reinterpret_cast<int16_t *>(currentPos) = static_cast<int16_t>(segmentId);
+            else
+                *reinterpret_cast<uint16_t *>(currentPos) = static_cast<uint16_t>(segmentId);
+            break;
+        case 4:
+            if (isSigned)
+                *reinterpret_cast<int32_t *>(currentPos) = static_cast<int32_t>(segmentId);
+            else
+                *reinterpret_cast<uint32_t *>(currentPos) = static_cast<uint32_t>(segmentId);
+            break;
+        case 8:
+            if (isSigned)
+                *reinterpret_cast<int64_t *>(currentPos) = static_cast<int64_t>(segmentId);
+            else
+                *reinterpret_cast<uint64_t *>(currentPos) = static_cast<uint64_t>(segmentId);
+            break;
+        default:
+            throw std::invalid_argument("Cannot write segment value, unsupported bytesPerElement value");
+    }
 }
 
 jlongArray copyToJLongArray(JNIEnv *env, const std::unordered_set<int64_t> &source) {
@@ -95,7 +128,7 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -120,7 +153,6 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
     }
 }
 
-
 JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_extendSegmentBoundingBox
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jint bucketLength, jlong segmentId,
       jint bucketTopLeftX, jint bucketTopLeftY, jint bucketTopLeftZ,
@@ -128,7 +160,7 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
       jint existingBBoxBottomRightX, jint existingBBoxBottomRightY, jint existingBBoxBottomRightZ) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -172,42 +204,60 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
     }
 }
 
-void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, const int bytesPerElement, const int isSigned) {
-    jbyte *currentPos = bucketBytes + (index * bytesPerElement);
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applySegmentIdMapping
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlongArray idMappingSrcJavaArray, jlongArray idMappingDstJavaArray) {
 
-    switch (bytesPerElement) {
-        case 1:
-            if (isSigned)
-                *reinterpret_cast<int8_t *>(currentPos) = static_cast<int8_t>(segmentId);
-            else
-                *reinterpret_cast<uint8_t *>(currentPos) = static_cast<uint8_t>(segmentId);
-            break;
-        case 2:
-            if (isSigned)
-                *reinterpret_cast<int16_t *>(currentPos) = static_cast<int16_t>(segmentId);
-            else
-                *reinterpret_cast<uint16_t *>(currentPos) = static_cast<uint16_t>(segmentId);
-            break;
-        case 4:
-            if (isSigned)
-                *reinterpret_cast<int32_t *>(currentPos) = static_cast<int32_t>(segmentId);
-            else
-                *reinterpret_cast<uint32_t *>(currentPos) = static_cast<uint32_t>(segmentId);
-            break;
-        case 8:
-            if (isSigned)
-                *reinterpret_cast<int64_t *>(currentPos) = static_cast<int64_t>(segmentId);
-            else
-                *reinterpret_cast<uint64_t *>(currentPos) = static_cast<uint64_t>(segmentId);
-            break;
-        default:
-            throw std::invalid_argument("Cannot write segment value, unsupported bytesPerElement value");
+    jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    jsize mapSize = env -> GetArrayLength(idMappingSrcJavaArray);
+    jlong * idMappingSrc = env -> GetLongArrayElements(idMappingSrcJavaArray, nullptr);
+    jlong * idMappingDst = env -> GetLongArrayElements(idMappingDstJavaArray, nullptr);
+
+    try {
+        if (mapSize != env->GetArrayLength(idMappingDstJavaArray)) {
+            throwRuntimeException(env, "Exception in BucketScanner applyIdMapping: idMappingSrc and idMappingDst differ in length.");
+        }
+        std::map<uint64_t, uint64_t> mapping;
+        for (size_t i = 0; i < mapSize; ++i) {
+            mapping[idMappingSrc[i]] = idMappingDst[i];
+        }
+
+        const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
+
+        jbyteArray outputJavaArray = env->NewByteArray(bucketLengthBytes);
+        jbyte *outputJBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
+
+        for (size_t i = 0; i < elementCount; ++i) {
+            uint64_t unmappedSegmentId = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
+            uint64_t mappedSegmentId = mapping[unmappedSegmentId];
+            writeSegmentIdAtIndex(outputJBytes, i, mappedSegmentId, bytesPerElement, isSigned);
+        }
+
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
+        env->ReleaseByteArrayElements(outputJavaArray, outputJBytes, 0);
+
+        return outputJavaArray;
+
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
+        env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate");
+        return nullptr;
     }
 }
 
 JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_mergeVolumeBucketInPlace
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesMutableJavaArray, jbyteArray incomingBucketBytesJavaArray, jboolean skipMapping,
-     jlongArray idMappingSrcJavaArray, jlongArray idMappingDstJavaArray, jint bytesPerElement, jboolean elementsAreSigned) {
+     jlongArray idMappingSrcJavaArray, jlongArray idMappingDstJavaArray, jint bytesPerElement, jboolean isSigned) {
 
     jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesMutableJavaArray);
     jbyte * bucketBytesMutable = env -> GetByteArrayElements(bucketBytesMutableJavaArray, NULL);
@@ -230,14 +280,14 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
         }
 
         for (size_t i = 0; i < elementCount; ++i) {
-            int64_t segmentId = segmentIdAtIndex(incomingBucketBytes, i, bytesPerElement, elementsAreSigned);
+            int64_t segmentId = segmentIdAtIndex(incomingBucketBytes, i, bytesPerElement, isSigned);
             if (segmentId == 0) {
                 continue;
             }
             if (!skipMapping) {
                 segmentId = mapping[segmentId];
             }
-            writeSegmentIdAtIndex(bucketBytesMutable, i, segmentId, bytesPerElement, elementsAreSigned);
+            writeSegmentIdAtIndex(bucketBytesMutable, i, segmentId, bytesPerElement, isSigned);
         }
 
         env->ReleaseByteArrayElements(bucketBytesMutableJavaArray, bucketBytesMutable, 0);
@@ -264,7 +314,6 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
     jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
     jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-
 
     try {
 

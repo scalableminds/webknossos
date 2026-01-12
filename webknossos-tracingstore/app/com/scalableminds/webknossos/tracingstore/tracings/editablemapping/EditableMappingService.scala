@@ -372,18 +372,12 @@ class EditableMappingService @Inject()(
               relevantMapping: Map[Long, Long],
               elementClass: ElementClass.Value): Box[Array[Byte]] = {
     val (idMapSrc, idMapDst) = relevantMapping.toArray.unzip
-    val dataMappedMutable = new Array[Byte](unmappedData.length)
-    // TODO create nicer mapping function that does not work in-place
-    for {
-      _ <- tryo(
-        nativeBucketScanner.mergeVolumeBucketInPlace(dataMappedMutable,
-                                                     unmappedData,
-                                                     skipMapping = false,
-                                                     idMapSrc,
-                                                     idMapDst,
-                                                     ElementClass.bytesPerElement(elementClass),
-                                                     ElementClass.isSigned(elementClass)))
-    } yield dataMappedMutable
+    tryo(
+      nativeBucketScanner.applySegmentIdMapping(unmappedData,
+                                                ElementClass.bytesPerElement(elementClass),
+                                                ElementClass.isSigned(elementClass),
+                                                idMapSrc,
+                                                idMapDst))
   }
 
   private def toSegmentId(singleSegmentBytes: Array[Byte], elementClass: ElementClassProto): Fox[Long] =

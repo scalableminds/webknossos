@@ -72,8 +72,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "concurrently \"yarn dev\" \"yarn start-backend\"",
+    "start": "concurrently \"yarn dev\" \"yarn start-backend\" \"yarn start-fossildb\"",
     "start-backend": "sbt \"run 9001\" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g -Dlogger.file=conf/logback-dev.xml",
+    "start-fossildb": "fossildb/run.sh > fossildb/logs",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
     "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",

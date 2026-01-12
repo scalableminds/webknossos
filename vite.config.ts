@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
+import inject from "@rollup/plugin-inject";
 
 import path from "node:path";
 
@@ -47,13 +48,6 @@ export default defineConfig({
       },
     },
   },
-  // worker: {
-  //   rollupOptions: {
-  //     output: {
-  //       banner: "const window = {};",
-  //     },
-  //   },
-  // },
   server: {
     port: 9000,
     cors: true,
@@ -64,6 +58,7 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    hmr: false,
   },
   define: {
     global: "globalThis",

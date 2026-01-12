@@ -111,3 +111,4 @@ metals.sbt
 !.yarn/sdks
 !.yarn/versions
 tools/**/.yarn/*
+public/index.html

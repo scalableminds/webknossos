@@ -1,3 +1,4 @@
+import { getOrganization } from "admin/rest_api";
 import Request from "libs/request";
 import { location } from "libs/window";
 import _ from "lodash";
@@ -63,6 +64,16 @@ export async function getJobCreditCostAndUpdateOrgaCredits(
   const jobCreditCostInfo = await getJobCreditCost(command, boundingBoxInMag);
   Store.dispatch(setActiveOrganizationsCreditBalance(jobCreditCostInfo.organizationMilliCredits));
   return jobCreditCostInfo;
+}
+
+export async function refreshOrganizationCredits() {
+  const organizationId = Store.getState().activeOrganization?.id;
+  if (organizationId) {
+    const orga = await getOrganization(organizationId);
+    if (orga.milliCreditBalance != null) {
+      Store.dispatch(setActiveOrganizationsCreditBalance(orga.milliCreditBalance));
+    }
+  }
 }
 
 export async function retryJob(jobId: string): Promise<APIJob> {

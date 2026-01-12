@@ -207,7 +207,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
         </Col>
         <Col>
           <Text strong>
-            {selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType]
+            {selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType] != null
               ? formatMilliCreditsString(jobTypeToCreditCostPerGVxInMillis[selectedJobType])
               : "-"}
           </Text>
@@ -222,7 +222,9 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           {isFetching && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
-            <Text strong>{costInCredits ? formatMilliCreditsString(costInCredits) : "-"}</Text>
+            <Text strong>
+              {costInCredits != null ? formatMilliCreditsString(costInCredits) : "-"}
+            </Text>
           )}
         </Col>
       </Row>

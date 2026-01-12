@@ -139,7 +139,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
       {volumeExceeded && (
         <Alert
           type="error"
-          message={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
+          title={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
             features().exportTiffMaxVolumeMVx
           } Megavoxels.`}
         />
@@ -147,7 +147,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
       {edgeLengthExceeded && (
         <Alert
           type="error"
-          message={`An edge length of the selected bounding box (${shape.join(
+          title={`An edge length of the selected bounding box (${shape.join(
             ", ",
           )}) is too large. Tiff export is only supported for boxes with edges smaller than ${
             features().exportTiffMaxEdgeLengthVx
@@ -715,7 +715,7 @@ function _DownloadModalView({
       />
       {moreInfoHint}
       <Checkbox
-        style={{ position: "absolute", bottom: -62 }}
+        style={{ position: "absolute", bottom: -38 }}
         checked={keepWindowOpen}
         onChange={handleKeepWindowOpenChecked}
         disabled={activeTabKey === "export" && !features().jobsEnabled}

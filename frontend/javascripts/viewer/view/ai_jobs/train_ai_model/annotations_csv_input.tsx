@@ -22,6 +22,7 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
         annotation: item.annotation,
         dataset: item.dataset,
         userBoundingBoxes: item.userBoundingBoxes,
+        volumeTracingMags: item.volumeTracingMags,
       }));
 
       setSelectedAnnotations((prev) => {
@@ -61,10 +62,14 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
           validateTrigger={["onChange", "onBlur"]}
         >
           <Input.TextArea
-            className="input-monospace"
             placeholder="Enter a annotation/task ID or WEBKNOSSOS URL"
             autoSize={{ minRows: 6 }}
-            style={{ fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace' }}
+            styles={{
+              textarea: {
+                fontFamily:
+                  'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
+              },
+            }}
           />
         </Form.Item>
         <Space style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>

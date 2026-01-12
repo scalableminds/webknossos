@@ -6,8 +6,18 @@ import {
   InfoCircleOutlined,
   SearchOutlined,
   ShrinkOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
 } from "@ant-design/icons";
-import { Tree as AntdTree, Dropdown, type GetRef, Space, Tooltip, type TreeProps } from "antd";
+import {
+  Tree as AntdTree,
+  Dropdown,
+  type GetRef,
+  type MenuProps,
+  Space,
+  Tooltip,
+  type TreeProps,
+} from "antd";
 import type { EventDataNode } from "antd/es/tree";
 import useLifecycle from "beautiful-react-hooks/useLifecycle";
 import { InputKeyboard } from "libs/input";
@@ -17,7 +27,7 @@ import { compareBy, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import type { MenuProps } from "rc-menu";
+
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -122,7 +132,7 @@ function CommentTabView(props: Props) {
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
-  const activeComment = useWkSelector((_state) => getActiveComment());
+  const activeComment = getActiveComment();
 
   useEffectOnlyOnce(() => {
     // expand all trees by default
@@ -324,13 +334,6 @@ function CommentTabView(props: Props) {
     );
   }
 
-  function renderSortIcon() {
-    const sortAsc = isSortedAscending;
-    const sortNumeric = sortBy === SortByEnum.ID;
-    const iconClass = `fas fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "down" : "up"}`;
-    return <i className={iconClass} />;
-  }
-
   function getSortDropdown(): MenuProps {
     return {
       selectedKeys: [sortBy],
@@ -450,7 +453,7 @@ function CommentTabView(props: Props) {
           return (
             <React.Fragment>
               {renderMarkdownModal()}
-              <Space.Compact className="compact-items compact-icons">
+              <Space.Compact block>
                 <AdvancedSearchPopover
                   onSelect={(comment) => {
                     setActiveNode(comment.nodeId);
@@ -502,9 +505,13 @@ function CommentTabView(props: Props) {
                   icon={<ArrowRightOutlined />}
                 />
                 <Dropdown menu={getSortDropdown()} trigger={["click"]}>
-                  <ButtonComponent title="Sort" onClick={toggleSortingDirection}>
-                    {renderSortIcon()}
-                  </ButtonComponent>
+                  <ButtonComponent
+                    title="Sort"
+                    onClick={toggleSortingDirection}
+                    icon={
+                      isSortedAscending ? <SortAscendingOutlined /> : <SortDescendingOutlined />
+                    }
+                  />
                 </Dropdown>
                 <ButtonComponent
                   onClick={toggleExpandAllTrees}

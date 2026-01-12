@@ -143,7 +143,7 @@ export default class AdvancedSearchPopover<
           title="Search"
           trigger="click"
           placement="left"
-          overlayClassName="search-input-popover"
+          classNames={{ root: "search-input-popover" }}
           open={isVisible}
           onOpenChange={(newVisibility) =>
             newVisibility ? this.openSearchPopover() : this.closeSearchPopover()
@@ -159,7 +159,6 @@ export default class AdvancedSearchPopover<
                   style={{
                     width: 450,
                   }}
-                  className="compact-items compact-icons"
                 >
                   <Input
                     style={{
@@ -182,50 +181,26 @@ export default class AdvancedSearchPopover<
                         areAllMatchesSelected: false,
                       })
                     }
-                    addonAfter={
-                      <div
-                        style={{
-                          minWidth: 25,
-                          color: areAllMatchesSelected
-                            ? "var(--ant-color-text-disabled)"
-                            : undefined,
-                        }}
-                      >
-                        {areAllMatchesSelected
-                          ? "all"
-                          : `${currentPosition + 1}/${numberOfAvailableOptions}`}
-                      </div>
-                    }
                     ref={this.autoFocus}
                     autoFocus
                   />
+                  <ButtonComponent disabled>
+                    {areAllMatchesSelected
+                      ? "all"
+                      : `${currentPosition + 1}/${numberOfAvailableOptions}`}
+                  </ButtonComponent>
                   <Tooltip title="Previous (shift+enter)">
-                    <ButtonComponent
-                      style={{
-                        width: 40,
-                      }}
-                      onClick={this.selectPreviousOption}
-                      disabled={hasNoResults}
-                    >
+                    <ButtonComponent onClick={this.selectPreviousOption} disabled={hasNoResults}>
                       <UpOutlined />
                     </ButtonComponent>
                   </Tooltip>
                   <Tooltip title="Next (enter)">
-                    <ButtonComponent
-                      style={{
-                        width: 40,
-                      }}
-                      onClick={this.selectNextOption}
-                      disabled={hasNoResults}
-                    >
+                    <ButtonComponent onClick={this.selectNextOption} disabled={hasNoResults}>
                       <DownOutlined />
                     </ButtonComponent>
                   </Tooltip>
                   <Tooltip title="Select all matches (except groups)">
                     <ButtonComponent
-                      style={{
-                        width: 40,
-                      }}
                       type={areAllMatchesSelected ? "primary" : "default"}
                       onClick={
                         this.props.onSelectAllMatches != null

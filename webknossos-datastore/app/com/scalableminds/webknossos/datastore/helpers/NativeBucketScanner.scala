@@ -28,4 +28,9 @@ class NativeBucketScanner() {
                                        existingBBoxBottomRightX: Int,
                                        existingBBoxBottomRightY: Int,
                                        existingBBoxBottomRightZ: Int): Array[Int]
+
+  @native def applyAgglomerate(bucketBytes: Array[Byte],
+                               bytesPerElement: Int,
+                               distinctSegmentIds: Array[Long],
+                               agglomerateIdForDistinctSegmentIds: Array[Long]): Array[Byte]
 }

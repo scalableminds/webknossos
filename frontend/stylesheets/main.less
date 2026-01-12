@@ -60,12 +60,9 @@ body {
 
 .ant-layout-header {
   .logo {
-    background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
-    padding-left: 46px;
-    height: 48px;
-    float: left;
-    margin-top: 1px;
-    background-size: 24px 24px;
+    width: 30px;
+    height: 30px;
+    margin-top: -2px;
   }
 
   .ant-menu-item .logo {
@@ -364,66 +361,6 @@ button.narrow {
   border-radius: 3px;
 }
 
-.webknossos-welcome-toast {
-  // small notification in the bottom right corner when you are viewing a dataset and you are not logged in
-  background-color: var(--color-wk-blue);
-
-  .logo {
-    background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
-    filter: brightness(4);
-    width: 74px;
-    height: 45px;
-    background-size: 45px 45px;
-    display: inline-block;
-  }
-
-  .ant-notification-notice-message {
-    padding-left: 40px;
-    margin-top: 20px;
-    margin-bottom: 30px !important;
-    color: white !important;
-    font-size: 24px;
-  }
-
-  .ant-notification-notice-description {
-    font-size: 16px;
-    line-height: 21px;
-    color: white !important;
-    margin-inline-start: 24px !important;
-
-    p {
-      margin-bottom: 30px;
-      margin-inline-end: 60px;
-    }
-
-    .drawing-welcome-guy {
-      position: relative;
-
-      &:before {
-        width: 53px;
-        height: 100px;
-        display: block;
-        position: absolute;
-        top: -5px;
-        right: 0px;
-        content: " ";
-        transform: translate(15%, -104%);
-        background-image: url(/assets/images/drawings/waving-person.svg);
-        background-repeat: no-repeat;
-        background-size: cover;
-      }
-    }
-
-    .ant-btn-background-ghost:hover {
-      color: #bbb;
-      border-color: #bbb;
-    }
-  }
-
-  .ant-notification-notice-close {
-    color: white;
-  }
-}
 
 .no-borders {
 

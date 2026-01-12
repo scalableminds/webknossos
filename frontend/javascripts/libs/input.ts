@@ -6,8 +6,7 @@ import window, { document } from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "viewer/constants";
-import constants from "viewer/constants";
-
+import constants, { isMac } from "viewer/constants";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -71,7 +70,7 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 // This keyboard hook directly passes a keycombo and callback
 // to the underlying KeyboadJS library to do its dirty work.
 // Pressing a button will only fire an event once.
-const EXTENDED_COMMAND_KEYS = "ctrl + k";
+const EXTENDED_COMMAND_KEYS = isMac ? "command + k" : "ctrl + k";
 const EXTENDED_COMMAND_DURATION = 3000;
 
 export class InputKeyboardNoLoop {

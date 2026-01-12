@@ -6,6 +6,14 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.01.0](https://github.com/scalableminds/webknossos/releases/tag/26.01.0) - 2026-01-07
+[Commits](https://github.com/scalableminds/webknossos/compare/25.12.0...26.01.0)
+
+### Postgres Evolutions
+- [146-invite-roles.sql](schema/evolutions/146-invite-roles.sql)
+- [148-job-last-retry.sql](schema/evolutions/148-job-last-retry.sql)
+- [147-organization-plan-updates.sql](schema/evolutions/147-organization-plan-updates.sql)
+
 ## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
 [Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)
 

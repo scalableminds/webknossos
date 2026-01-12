@@ -1,4 +1,4 @@
-import { Button, Card, Col, Row } from "antd";
+import { Button, Card, Col, Flex, Row } from "antd";
 import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues } from "libs/utils";
 import * as Utils from "libs/utils";
@@ -99,7 +99,10 @@ function DatasetFolderViewInner(props: Props) {
   const renderNoDatasetsPlaceHolder = () => {
     const openPublicDatasetCard = (
       <Col span={7}>
-        <Card bordered={false} cover={<i className="drawing drawing-empty-list-public-gallery" />}>
+        <Card
+          variant="borderless"
+          cover={<i className="drawing drawing-empty-list-public-gallery" />}
+        >
           <Card.Meta
             title="Open a Demo Dataset"
             description={
@@ -118,11 +121,11 @@ function DatasetFolderViewInner(props: Props) {
     const uploadPlaceholderCard = (
       <Col span={7}>
         <Card
-          bordered={false}
+          variant="borderless"
           cover={
-            <div style={{ display: "flex", justifyContent: "center" }}>
+            <Flex justify="center">
               <i className="drawing drawing-empty-list-dataset-upload" />
-            </div>
+            </Flex>
           }
           style={{ background: "transparent" }}
         >
@@ -157,15 +160,10 @@ function DatasetFolderViewInner(props: Props) {
 
     const adminHeader =
       Utils.isUserAdminOrDatasetManager(props.user) || Utils.isUserTeamManager(props.user) ? (
-        <div
-          className="pull-right"
-          style={{
-            display: "flex",
-          }}
-        >
+        <>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
-        </div>
+        </>
       ) : null;
 
     return (

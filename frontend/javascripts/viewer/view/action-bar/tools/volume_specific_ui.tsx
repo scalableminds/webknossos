@@ -7,6 +7,7 @@ import {
 } from "@ant-design/icons";
 import {
   Badge,
+  Button,
   Dropdown,
   type MenuProps,
   Popconfirm,
@@ -15,7 +16,8 @@ import {
   type RadioChangeEvent,
   Space,
 } from "antd";
-import React, { useCallback, useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 
 import { usePrevious } from "libs/react_hooks";
@@ -46,7 +48,6 @@ import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_
 
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import FastTooltip from "components/fast_tooltip";
-import type { MenuInfo } from "rc-menu/lib/interface";
 import { clearProofreadingByProducts } from "viewer/model/actions/proofread_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
@@ -112,8 +113,8 @@ export function OverwriteModeSwitch({
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
   const overwriteMode = useWkSelector((state) => state.userConfiguration.overwriteMode);
-  const previousIsControlOrMetaPressed = usePrevious(isControlOrMetaPressed);
-  const previousIsShiftPressed = usePrevious(isShiftPressed);
+  const [previousIsControlOrMetaPressed] = usePrevious(isControlOrMetaPressed);
+  const [previousIsShiftPressed] = usePrevious(isShiftPressed);
   // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
   useEffect(() => {
     // There are four possible states:
@@ -204,7 +205,7 @@ export function VolumeInterpolationButton() {
   );
 
   const menu: MenuProps = {
-    onClick: (e: MenuInfo) => {
+    onClick: (e) => {
       dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
       onInterpolateClick(null);
     },
@@ -222,31 +223,23 @@ export function VolumeInterpolationButton() {
     ],
   };
 
-  const buttonsRender = useCallback(
-    ([leftButton, rightButton]: React.ReactNode[]) => [
-      <FastTooltip title={tooltipTitle} key="leftButton">
-        {React.cloneElement(leftButton as React.ReactElement<any, string>, {
-          disabled: isDisabled,
-        })}
-      </FastTooltip>,
-      rightButton,
-    ],
-    [tooltipTitle, isDisabled],
-  );
-
   return (
     // Without the outer div, the Dropdown can eat up all the remaining horizontal space,
     // moving sibling elements to the far right.
     <div>
-      <Dropdown.Button
-        icon={<DownOutlined />}
-        menu={menu}
-        onClick={onInterpolateClick}
-        style={{ padding: "0 5px 0 6px" }}
-        buttonsRender={buttonsRender}
-      >
-        {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
-      </Dropdown.Button>
+      <Space.Compact>
+        <FastTooltip title={tooltipTitle}>
+          <Button
+            icon={INTERPOLATION_ICON[interpolationMode]}
+            onClick={onInterpolateClick}
+            disabled={isDisabled}
+            style={{ padding: "0 5px 0 6px" }}
+          />
+        </FastTooltip>
+        <Dropdown menu={menu}>
+          <Button icon={<DownOutlined />} disabled={isDisabled} />
+        </Dropdown>
+      </Space.Compact>
     </div>
   );
 }
@@ -330,7 +323,7 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
         dispatch(setActiveUserAction(newUserSync));
       }}
       description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
-      overlayStyle={{ maxWidth: 400 }}
+      styles={{ root: { maxWidth: 400 } }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
     >
       {children}

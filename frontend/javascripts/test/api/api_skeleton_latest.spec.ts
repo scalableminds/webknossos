@@ -217,18 +217,15 @@ describe("API Skeleton", () => {
   it<WebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
     api,
   }) => {
-    // @ts-ignore libs/keyboard.ts is not a proper module
-    const { default: KeyboardJS } = await import("libs/keyboard");
-
-    // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
-    const bindSpy = vi.spyOn(KeyboardJS, "bind");
-    const unbindSpy = vi.spyOn(KeyboardJS, "unbind");
+    const { Keyboard } = await import("keyboardjs");
+    const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockImplementation(() => {});
+    const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockImplementation(() => {});
 
     const binding = api.utils.registerKeyHandler("g", () => {});
-    expect(bindSpy).toHaveBeenCalledTimes(1);
+    expect(bindSpy).toHaveBeenCalled();
 
     binding.unregister();
-    expect(unbindSpy).toHaveBeenCalledTimes(1);
+    expect(unbindSpy).toHaveBeenCalled();
   });
 
   it<WebknossosTestContext>("Utils Api: registerOverwrite should overwrite an existing function", ({

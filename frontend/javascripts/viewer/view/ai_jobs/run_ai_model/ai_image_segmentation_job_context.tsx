@@ -1,5 +1,6 @@
 import {
   type BaseCustomModelInferenceParameters,
+  getOrganization,
   runCustomInstanceModelInferenceJob,
   runCustomNeuronModelInferenceJob,
   runPretrainedMitochondriaInferenceJob,
@@ -22,8 +23,9 @@ import {
   getTaskBoundingBoxes,
   getUserBoundingBoxesFromState,
 } from "viewer/model/accessors/tracing_accessor";
+import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
-import { Model } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 
@@ -57,6 +59,16 @@ interface RunAiModelJobContextType {
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   handleStartAnalysis: () => void;
   areParametersValid: boolean;
+}
+
+async function refreshOrganizationCredits() {
+  const organizationId = Store.getState().activeOrganization?.id;
+  if (organizationId) {
+    const orga = await getOrganization(organizationId);
+    if (orga.milliCreditBalance != null) {
+      Store.dispatch(setActiveOrganizationsCreditBalance(orga.milliCreditBalance));
+    }
+  }
 }
 
 const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>(undefined);
@@ -117,6 +129,12 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       setSelectedLayer(colorLayers[0]);
     }
   }, [colorLayers]);
+
+  // Auto-update the organization credit's information once an RunAiModelJobContext is created to
+  // ensure most recent information about the organizations credits is displayed during ai job selection.
+  useEffect(() => {
+    refreshOrganizationCredits();
+  }, []);
 
   const areParametersValid = every([
     selectedModel,

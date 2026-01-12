@@ -9,6 +9,8 @@ import type {
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
+import { Store } from "viewer/singletons";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
 
@@ -53,6 +55,16 @@ export async function getJobCreditCost(
   });
   return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
 }
+
+export async function getJobCreditCostAndUpdateOrgaCredits(
+  command: string,
+  boundingBoxInMag: Vector6,
+): Promise<JobCreditCostInfo> {
+  const jobCreditCostInfo = await getJobCreditCost(command, boundingBoxInMag);
+  Store.dispatch(setActiveOrganizationsCreditBalance(jobCreditCostInfo.organizationMilliCredits));
+  return jobCreditCostInfo;
+}
+
 export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",

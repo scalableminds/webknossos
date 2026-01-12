@@ -5,7 +5,7 @@ import { coalesce } from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import Saxophone from "saxophone";
+import Saxophone from "@pirxpilot/saxophone";
 import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";

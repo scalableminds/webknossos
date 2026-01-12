@@ -3,7 +3,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
-import Inspect from "vite-plugin-inspect";
 
 import path from "node:path";
 
@@ -21,14 +20,11 @@ export default defineConfig({
       messages: path.resolve(__dirname, "frontend/javascripts/messages.tsx"),
       app: path.resolve(__dirname, "frontend/javascripts/app.ts"),
       theme: path.resolve(__dirname, "frontend/javascripts/theme.tsx"),
-      "/images": path.resolve(__dirname, "frontend/images"),
-      "/wasm": path.resolve(__dirname, "frontend/wasm"),
     },
   },
   plugins: [
     react({ skipFastRefresh: true, fastRefresh: false }),
     tsconfigPaths(),
-    Inspect(),
     wasm(),
     viteProtobufPlugin({
       protoDir: "webknossos-datastore/proto", // Your proto directory
@@ -51,6 +47,13 @@ export default defineConfig({
       },
     },
   },
+  // worker: {
+  //   rollupOptions: {
+  //     output: {
+  //       banner: "const window = {};",
+  //     },
+  //   },
+  // },
   server: {
     port: 9000,
     cors: true,

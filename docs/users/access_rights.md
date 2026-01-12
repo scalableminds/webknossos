@@ -50,4 +50,4 @@ For more information regarding (public) dataset sharing and access rights (espec
 | Get tasks again after canceling an instance     	| Yes   	| No              	| Yes          	| No          	|
 | Access to wK Statistics Menu  	| Yes   	| No              	| Yes          	| No          	|
 
-¹Only available on self-hosted instances, not on webknossos.org.
+¹Not available on webknossos.org.

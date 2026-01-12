@@ -270,6 +270,15 @@ describe("Update Action Application for VolumeTracing", () => {
               },
             });
           }
+          // Currently, the segment journal cannot be reconstructed by diffing two arbitrary states (see example).
+          // Therefore, we ignore the journal in the following assertion.
+          // Example:
+          // The segmentJournal currently only contains MERGE_SEGMENTS entries. Consider, the following states:
+          // state A: no segments
+          // state B: segment 1 and 2
+          // state C: segment 1 (because 2 was merged into 1)
+          // When diffing C with A, no deletion is detected (because only segment 1 was added in the diff). Therefore,
+          // no merge will be detected (even though the merge journal also contains a MERGE_SEGMENTS operation).
           reappliedNewState = withClearedSegmentJournal(reappliedNewState);
           state3 = withClearedSegmentJournal(state3);
 

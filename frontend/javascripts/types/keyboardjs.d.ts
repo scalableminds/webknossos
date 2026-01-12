@@ -1,3 +1,6 @@
+// Based on keyboardjs version 2.7.0
+// https://github.com/RobertWHurst/KeyboardJS/blob/v2.7.0/lib/keyboard.js
+
 declare module "keyboardjs" {
   export interface Handler {
     (event: KeyboardEvent): void;

@@ -75,8 +75,6 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     const oldSegment = segments.getNullable(segmentId);
 
     const newSegment: Writable<Segment> = {
-      anchorPosition: null,
-      additionalCoordinates: null,
       id: segmentId,
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
@@ -331,6 +329,25 @@ function VolumeTracingReducer(
         state,
         removeSegmentAction(action.targetId, action.layerName),
       );
+
+      const volumeTracing = getVolumeTracingFromAction(newState, action);
+      if (volumeTracing) {
+        const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
+
+        return updateVolumeTracing(newState, volumeTracing.tracingId, {
+          segmentJournal: volumeTracing.segmentJournal.concat([
+            {
+              type: "MERGE_SEGMENTS",
+              sourceId: action.sourceId,
+              targetId: action.targetId,
+              entryIndex,
+            },
+          ]),
+        });
+      } else {
+        Utils.ColoredLogger.logRed("no volume tracing?");
+      }
+
       // todop: adapt journal?
       // can we always append to the segment journal?
 
@@ -542,11 +559,13 @@ function VolumeTracingReducer(
     }
 
     case "APPEND_TO_SEGMENT_JOURNAL": {
-      const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
+      // todop: delete this because we directly do this in the mergeSegments handling?
+      return state;
+      // const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
-      return updateVolumeTracing(state, volumeTracing.tracingId, {
-        segmentJournal: volumeTracing.segmentJournal.concat([{ ...action.entry, entryIndex }]),
-      });
+      // return updateVolumeTracing(state, volumeTracing.tracingId, {
+      //   segmentJournal: volumeTracing.segmentJournal.concat([{ ...action.entry, entryIndex }]),
+      // });
     }
 
     default:

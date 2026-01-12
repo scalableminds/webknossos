@@ -1,5 +1,9 @@
 import { call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import {
+  type WebknossosTestContext,
+  setupWebknossosForTesting,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,
@@ -133,18 +137,19 @@ describe("Proofreading (Single User)", () => {
 
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
-      expect(mergeSaveActionBatch).toEqual([
-        {
-          name: "splitAgglomerate",
-          value: {
-            actionTracingId: "volumeTracingId",
-            agglomerateId: 1,
-            segmentId1: 1,
-            segmentId2: 2,
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+      expect(receivedUpdateActions.slice(-1)).toEqual([
+        [
+          {
+            name: "splitAgglomerate",
+            value: {
+              actionTracingId: "volumeTracingId",
+              agglomerateId: 1,
+              segmentId1: 1,
+              segmentId2: 2,
+            },
           },
-        },
+        ],
       ]);
     });
 

@@ -36,6 +36,20 @@ const enforceVolumeTracing = (state: WebknossosState) => {
   return tracing;
 };
 
+function withClearedSegmentJournal(state: WebknossosState): WebknossosState {
+  return update(state, {
+    annotation: {
+      volumes: {
+        [0]: {
+          segmentJournal: {
+            $set: [],
+          },
+        },
+      },
+    },
+  });
+}
+
 const initialState: WebknossosState = update(defaultVolumeState, {
   annotation: {
     restrictions: {
@@ -159,6 +173,7 @@ describe("Update Action Application for VolumeTracing", () => {
       },
       tracingId,
     ),
+    VolumeTracingActions.mergeSegmentsAction(3, 2, tracingId),
     VolumeTracingActions.removeSegmentAction(3, tracingId),
     VolumeTracingActions.setLargestSegmentIdAction(10000),
     VolumeTracingActions.setSegmentGroupsAction(
@@ -202,7 +217,7 @@ describe("Update Action Application for VolumeTracing", () => {
           ]);
 
           const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
-          const state3 = applyActions(
+          let state3 = applyActions(
             state2WithActiveCell,
             actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
           );
@@ -255,6 +270,8 @@ describe("Update Action Application for VolumeTracing", () => {
               },
             });
           }
+          reappliedNewState = withClearedSegmentJournal(reappliedNewState);
+          state3 = withClearedSegmentJournal(state3);
 
           expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
         });

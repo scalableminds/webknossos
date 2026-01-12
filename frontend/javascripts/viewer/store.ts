@@ -176,8 +176,8 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly anchorPosition: Vector3 | null | undefined; // in layer space
-  readonly additionalCoordinates: AdditionalCoordinate[] | undefined | null;
+  readonly anchorPosition?: Vector3 | null | undefined; // in layer space
+  readonly additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
@@ -237,7 +237,7 @@ export type VolumeTracing = TracingBase & {
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
   readonly hideUnregisteredSegments: boolean;
-  readonly segmentJournal: Array<SegmentJournalEntry>; // should always be sorted with ascending entryIndex
+  readonly segmentJournal: Array<SegmentJournalEntry>; // should always be stored with ascending entryIndex
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

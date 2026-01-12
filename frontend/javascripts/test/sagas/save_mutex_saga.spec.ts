@@ -409,43 +409,42 @@ describe("Save Mutex Saga", () => {
   });
 
   const ToolsAllowedInProofreadingModeWithoutLiveCollabSupport = [
-    AnnotationTool.SKELETON,
-    AnnotationTool.BOUNDING_BOX,
+    { tool: AnnotationTool.SKELETON },
+    { tool: AnnotationTool.BOUNDING_BOX },
   ];
-
   describe.each(ToolsAllowedInProofreadingModeWithoutLiveCollabSupport)(
-    "[With AnnotationTool=%s]:",
+    "[With AnnotationTool=$tool.id]:",
     (annotationToolWithoutLiveCollabSupport) => {
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = false and liveCollab enabled should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
+      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = false and liveCollab enabled should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.tool.id}.`, async (context: WebknossosTestContext) => {
         WkDevFlags.liveCollab = true;
         await setupWebknossosForTestingWithRestrictions(context, false, true, true);
         mockInitialBucketAndAgglomerateData(context);
         // Give mutex saga time to potentially acquire the mutex. This should not happen!
         await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
+        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport.tool));
         await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
       });
 
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
+      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.tool.id}.`, async (context: WebknossosTestContext) => {
         WkDevFlags.liveCollab = true;
         await setupWebknossosForTestingWithRestrictions(context, true, true, true);
         mockInitialBucketAndAgglomerateData(context);
         // Give mutex saga time to potentially acquire the mutex. This should not happen!
         await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
+        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport.tool));
         await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
       });
 
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should no longer try to continuously acquire the mutex when switching from ${annotationToolWithoutLiveCollabSupport.id} to Move Tool.`, async (context: WebknossosTestContext) => {
+      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should no longer try to continuously acquire the mutex when switching from ${annotationToolWithoutLiveCollabSupport.tool.id} to Move Tool.`, async (context: WebknossosTestContext) => {
         WkDevFlags.liveCollab = true;
         await setupWebknossosForTestingWithRestrictions(context, true, true, true);
         mockInitialBucketAndAgglomerateData(context);
         // Switch to tool without live collab support.
-        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
+        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport.tool));
         await sleep(100);
         expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
         expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();

@@ -1,12 +1,13 @@
+import { Keyboard, us } from "keyboardjs";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
-import { Keyboard, us } from "libs/keyboard";
 import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
+
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -20,6 +21,7 @@ import constants, { isMac } from "viewer/constants";
 
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
+
 export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
 type MouseButton = string;
@@ -31,7 +33,6 @@ type KeyboardLoopHandler = {
   lastTime?: number | null | undefined;
   customAdditionalDelayFn?: () => number;
 };
-type KeyboardBindingBase = [KeyboardKey, KeyboardHandler, KeyboardHandler]; // New type
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler, boolean];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler, boolean];
 type KeyBindingMap = Record<KeyboardKey, KeyboardHandler>;
@@ -45,7 +46,7 @@ export type MouseHandler =
   | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
 type HammerJsEvent = {
   center: Point2;
-  pointers: Array<Record<string, any>>;
+  pointers: Record<string, any>[];
   scale: number;
   srcEvent: MouseEvent;
 };
@@ -75,7 +76,7 @@ const EXTENDED_COMMAND_DURATION = 3000;
 
 export class InputKeyboardNoLoop {
   keyboard: Keyboard;
-  bindings: Array<KeyboardBindingPress> = [];
+  bindings: KeyboardBindingPress[] = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
   hasExtendedBindings: boolean = false;
@@ -210,7 +211,7 @@ export class InputKeyboardNoLoop {
     this.isStarted = false;
 
     for (const binding of this.bindings) {
-      this.keyboard.unbind(...(binding.slice(0, 3) as KeyboardBindingBase));
+      this.keyboard.unbind(...binding);
     }
     if (this.hasExtendedBindings) {
       document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
@@ -224,7 +225,7 @@ export class InputKeyboard {
   keyboard: Keyboard;
   keyCallbackMap: KeyBindingLoopMap = {};
   keyPressedCount: number = 0;
-  bindings: Array<KeyboardBindingDownUp> = [];
+  bindings: KeyboardBindingDownUp[] = [];
   isStarted: boolean = true;
   delay: number = 0;
   supportInputElements: boolean = false;
@@ -357,7 +358,7 @@ export class InputKeyboard {
     this.isStarted = false;
 
     for (const binding of this.bindings) {
-      this.keyboard.unbind(...(binding.slice(0, 3) as KeyboardBindingBase));
+      this.keyboard.unbind(...binding);
     }
   }
 }
@@ -452,7 +453,7 @@ export class InputMouse {
   position: Point2 | null | undefined = null;
   triggeredByTouch: boolean = false;
   delegatedEvents: {
-    string?: (...args: Array<any>) => any;
+    string?: (...args: any[]) => any;
   };
 
   ignoreScrollingWhileDragging: boolean;

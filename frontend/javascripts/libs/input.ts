@@ -1,4 +1,5 @@
-import { Keyboard, us } from "keyboardjs";
+import { Keyboard } from "keyboardjs";
+import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
 import * as Utils from "libs/utils";
@@ -97,6 +98,7 @@ export class InputKeyboardNoLoop {
       window.navigator?.userAgent,
     );
     this.keyboard.setLocale("us", us);
+    this.keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
 
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -132,12 +134,12 @@ export class InputKeyboardNoLoop {
     const isInExtendedMode = this.keyboard.getContext() === "extended";
     if (isInExtendedMode) {
       this.cancelExtendedModeTimeout();
-      this.keyboard.setContext("global");
+      this.keyboard.setContext("default");
       return;
     }
     this.keyboard.setContext("extended");
     this.cancelExtendedModeTimeoutId = setTimeout(() => {
-      this.keyboard.setContext("global");
+      this.keyboard.setContext("default");
     }, EXTENDED_COMMAND_DURATION);
   };
 
@@ -179,7 +181,7 @@ export class InputKeyboardNoLoop {
 
         if (isInExtendedMode) {
           this.cancelExtendedModeTimeout();
-          this.keyboard.setContext("global");
+          this.keyboard.setContext("default");
         }
 
         if (!event.repeat) {
@@ -200,7 +202,7 @@ export class InputKeyboardNoLoop {
         this.keyboard.bind(...binding);
       });
     } else {
-      this.keyboard.withContext("global", () => {
+      this.keyboard.withContext("default", () => {
         this.keyboard.bind(...binding);
       });
     }
@@ -211,7 +213,8 @@ export class InputKeyboardNoLoop {
     this.isStarted = false;
 
     for (const binding of this.bindings) {
-      this.keyboard.unbind(...binding);
+      const [keyCombo, pressHandler, releaseHandler] = binding;
+      this.keyboard.unbind(keyCombo, pressHandler, releaseHandler);
     }
     if (this.hasExtendedBindings) {
       document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
@@ -244,6 +247,7 @@ export class InputKeyboard {
       window.navigator?.userAgent,
     );
     this.keyboard.setLocale("us", us);
+    this.keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
 
     if (options) {
       this.delay = options.delay != null ? options.delay : this.delay;
@@ -323,7 +327,7 @@ export class InputKeyboard {
       },
       false, // Added false as the fourth element
     ];
-    this.keyboard.withContext("global", () => {
+    this.keyboard.withContext("default", () => {
       this.keyboard.bind(...binding);
     });
     this.bindings.push(binding);
@@ -358,7 +362,8 @@ export class InputKeyboard {
     this.isStarted = false;
 
     for (const binding of this.bindings) {
-      this.keyboard.unbind(...binding);
+      const [keyCombo, pressHandler, releaseHandler] = binding;
+      this.keyboard.unbind(keyCombo, pressHandler, releaseHandler);
     }
   }
 }

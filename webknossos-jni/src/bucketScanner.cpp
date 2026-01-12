@@ -215,9 +215,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
     try {
         if (mapSize != env->GetArrayLength(idMappingDstJavaArray)) {
-            throwRuntimeException(env, "Exception in BucketScanner applyIdMapping: idMappingSrc and idMappingDst differ in length.");
+            throwRuntimeException(env, "Exception in BucketScanner applySegmentIdMapping: idMappingSrc and idMappingDst differ in length.");
+            return nullptr;
         }
-        std::map<uint64_t, uint64_t> mapping;
+        std::map<int64_t, int64_t> mapping;
         for (size_t i = 0; i < mapSize; ++i) {
             mapping[idMappingSrc[i]] = idMappingDst[i];
         }
@@ -228,8 +229,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
         jbyte *outputJBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
 
         for (size_t i = 0; i < elementCount; ++i) {
-            uint64_t unmappedSegmentId = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
-            uint64_t mappedSegmentId = mapping[unmappedSegmentId];
+            int64_t unmappedSegmentId = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
+            int64_t mappedSegmentId = mapping[unmappedSegmentId];
             writeSegmentIdAtIndex(outputJBytes, i, mappedSegmentId, bytesPerElement, isSigned);
         }
 
@@ -244,13 +245,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
         env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
-        throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate: " + std::string(e.what()));
+        throwRuntimeException(env, "Native Exception in BucketScanner applySegmentIdMapping: " + std::string(e.what()));
         return nullptr;
     } catch (...) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         env->ReleaseLongArrayElements(idMappingSrcJavaArray, idMappingSrc, JNI_ABORT);
         env->ReleaseLongArrayElements(idMappingDstJavaArray, idMappingDst, JNI_ABORT);
-        throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate");
+        throwRuntimeException(env, "Native Exception in BucketScanner applySegmentIdMapping");
         return nullptr;
     }
 }
@@ -269,7 +270,8 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
     try {
         const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
         if (mapSize != env->GetArrayLength(idMappingDstJavaArray)) {
-            throwRuntimeException(env, "Exception in BucketScanner applyAgglomerate: idMappingSrc and idMappingDst differ in length.");
+            throwRuntimeException(env, "Exception in BucketScanner mergeVolumeBucketInPlace: idMappingSrc and idMappingDst differ in length.");
+            return;
         }
 
         std::map<int64_t, int64_t> mapping;

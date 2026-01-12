@@ -67,7 +67,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val isSigned = ElementClass.isSigned(elementClass)
     val distinctSegmentIds =
-      bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned = false, skipZeroes = false)
+      bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned, skipZeroes = false)
 
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)

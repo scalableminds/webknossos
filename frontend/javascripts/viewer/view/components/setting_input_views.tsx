@@ -8,7 +8,9 @@ import {
   ScanOutlined,
 } from "@ant-design/icons";
 import {
+  Button,
   Col,
+  Flex,
   Input,
   InputNumber,
   type MenuProps,
@@ -387,6 +389,7 @@ type UserBoundingBoxInputProps = {
 };
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
+const RIGHT_COL_SPAN = 2;
 
 export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
@@ -571,7 +574,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           marginBottom: 10,
         }}
       >
-        <Col span={5}>
+        <Col span={3}>
           <Switch
             size="small"
             onChange={onVisibilityChange}
@@ -585,6 +588,17 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           />
         </Col>
 
+        <Col span={2}>
+          <Flex justify="space-around">
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
+              <ColorSetting
+                value={Utils.rgbToHex(upscaledColor)}
+                onChange={handleColorChange}
+                disabled={disabled}
+              />
+            </FastTooltip>
+          </Flex>
+        </Col>
         <Col span={SETTING_RIGHT_SPAN}>
           <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
             <span>
@@ -604,13 +618,16 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             </span>
           </FastTooltip>
         </Col>
-        <Col span={2}>
-          <div
-            onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-            onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-          >
-            <EllipsisOutlined style={marginLeftStyle} />
-          </div>
+        <Col span={RIGHT_COL_SPAN}>
+          <FastTooltip title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}>
+            <Button
+              onClick={onDelete}
+              disabled={disabled}
+              icon={<DeleteOutlined />}
+              type="text"
+              size="small"
+            />
+          </FastTooltip>
         </Col>
       </Row>
       <Row
@@ -642,15 +659,13 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             />
           </FastTooltip>
         </Col>
-        <Col span={2}>
-          <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-            <ColorSetting
-              value={Utils.rgbToHex(upscaledColor)}
-              onChange={handleColorChange}
-              style={marginLeftStyle}
-              disabled={disabled}
-            />
-          </FastTooltip>
+        <Col span={RIGHT_COL_SPAN}>
+          <div
+            onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+            onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+          >
+            <EllipsisOutlined style={marginLeftStyle} />
+          </div>
         </Col>
       </Row>
     </div>

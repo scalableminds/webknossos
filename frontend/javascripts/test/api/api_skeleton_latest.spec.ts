@@ -218,8 +218,8 @@ describe("API Skeleton", () => {
     api,
   }) => {
     const { Keyboard } = await import("keyboardjs");
-    const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockImplementation(() => {});
-    const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockImplementation(() => {});
+    const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockReturnThis();
+    const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockReturnThis();
 
     const binding = api.utils.registerKeyHandler("g", () => {});
     expect(bindSpy).toHaveBeenCalled();

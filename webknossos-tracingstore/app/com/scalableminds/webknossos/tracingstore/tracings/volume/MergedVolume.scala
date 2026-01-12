@@ -72,7 +72,6 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     if (idSets.isEmpty || (idSets.length == 1 && initialLargestSegmentId == 0) || idMaps.nonEmpty) {
       ()
     } else {
-      logger.info("preparing id maps...")
       val idMapsBuffer = mutable.ListBuffer[mutable.HashMap[Long, Long]]()
       var currentSegmentId: Long = 0
       if (initialLargestSegmentId > 0) {
@@ -131,11 +130,6 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
           bucketScanner.applySegmentIdMapping(data, bytesPerElement, elementsAreSigned, idMap._1, idMap._2)
         mergedVolume += ((bucketPosition, compressVolumeBucket(dataMapped, expectedUncompressedBucketSize)))
       }
-    }
-    if (mergedVolume.size % 1000 == 0) {
-      val mergedVolumeSize = mergedVolume.values.map(_.length).sum
-      logger.info(
-        s"mergedVolume now holds ${mergedVolume.size} buckets, estimating ${mergedVolume.size.toLong * bytesPerElement * DataLayer.bucketLength * DataLayer.bucketLength * DataLayer.bucketLength} bytes, actual size: $mergedVolumeSize.")
     }
   }
 

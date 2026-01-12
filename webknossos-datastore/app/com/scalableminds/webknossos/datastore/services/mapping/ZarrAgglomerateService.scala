@@ -77,10 +77,10 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
         }
         .map(_.toArray)
       mappedBytes: Array[Byte] = bucketScanner.applySegmentIdMapping(data,
-                                                              bytesPerElement,
-                                                              isSigned,
-                                                              distinctSegmentIds,
-                                                              agglomerateIdForDistinctSegmentIds)
+                                                                     bytesPerElement,
+                                                                     isSigned,
+                                                                     distinctSegmentIds,
+                                                                     agglomerateIdForDistinctSegmentIds)
     } yield mappedBytes
   }
 

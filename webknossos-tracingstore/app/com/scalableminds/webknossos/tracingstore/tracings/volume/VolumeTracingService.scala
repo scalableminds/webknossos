@@ -812,8 +812,6 @@ class VolumeTracingService @Inject()(
     val elementClassProto =
       volumeLayers.headOption.map(_.tracing.elementClass).getOrElse(ElementClassProto.uint8)
 
-    logger.info("Determining magSets...")
-
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
     volumeLayers.foreach { volumeLayer =>
       val magSet = new mutable.HashSet[Vec3Int]()
@@ -839,17 +837,11 @@ class VolumeTracingService @Inject()(
         }
       }.getOrElse(Set.empty)
 
-      logger.info("Initializing MergedVolume")
-
       val mergedVolume = new MergedVolume(elementClassProto)
-
-      logger.info("Gathering id sets...")
 
       volumeLayers.foreach { volumeLayer =>
         mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
       }
-
-      logger.info("adding buckets...")
 
       volumeLayers.zipWithIndex.foreach {
         case (volumeLayer, sourceVolumeIndex) =>
@@ -882,7 +874,6 @@ class VolumeTracingService @Inject()(
           toTemporaryStore = toTemporaryStore
         )
         volumeBucketPutBuffer = new FossilDBPutBuffer(volumeDataStore, Some(newVersion))
-        _ = logger.info("writing out merged buckets, building segment index...")
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
             _ <- saveBucket(

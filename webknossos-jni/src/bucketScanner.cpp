@@ -10,32 +10,6 @@
 #include <map>
 #include <cstring>
 
-int64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
-    jbyte *currentPos = bucketBytes + (index * bytesPerElement);
-    long currentValue;
-    switch (bytesPerElement) {
-    case 1:
-        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int8_t *>(currentPos))
-                                : static_cast<int64_t>(*reinterpret_cast<uint8_t *>(currentPos));
-        break;
-    case 2:
-        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int16_t *>(currentPos))
-                                : static_cast<int64_t>(*reinterpret_cast<uint16_t *>(currentPos));
-        break;
-    case 4:
-        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int32_t *>(currentPos))
-                                : static_cast<int64_t>(*reinterpret_cast<uint32_t *>(currentPos));
-        break;
-    case 8:
-        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int64_t *>(currentPos))
-                                : static_cast<int64_t>(*reinterpret_cast<uint64_t *>(currentPos));
-        break;
-    default:
-        throw std::invalid_argument("Cannot read segment value, unsupported bytesPerElement value");
-    }
-    return currentValue;
-}
-
 void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, const int bytesPerElement, const int isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
 
@@ -67,6 +41,32 @@ void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, 
         default:
             throw std::invalid_argument("Cannot write segment value, unsupported bytesPerElement value");
     }
+}
+
+int64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
+    jbyte *currentPos = bucketBytes + (index * bytesPerElement);
+    long currentValue;
+    switch (bytesPerElement) {
+    case 1:
+        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int8_t *>(currentPos))
+                                : static_cast<int64_t>(*reinterpret_cast<uint8_t *>(currentPos));
+        break;
+    case 2:
+        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int16_t *>(currentPos))
+                                : static_cast<int64_t>(*reinterpret_cast<uint16_t *>(currentPos));
+        break;
+    case 4:
+        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int32_t *>(currentPos))
+                                : static_cast<int64_t>(*reinterpret_cast<uint32_t *>(currentPos));
+        break;
+    case 8:
+        currentValue = isSigned ? static_cast<int64_t>(*reinterpret_cast<int64_t *>(currentPos))
+                                : static_cast<int64_t>(*reinterpret_cast<uint64_t *>(currentPos));
+        break;
+    default:
+        throw std::invalid_argument("Cannot read segment value, unsupported bytesPerElement value");
+    }
+    return currentValue;
 }
 
 jlongArray copyToJLongArray(JNIEnv *env, const std::unordered_set<int64_t> &source) {
@@ -127,8 +127,8 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_countSegmentVoxels
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
-    jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    jsize inputLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -159,8 +159,8 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
       jint existingBBoxTopLeftX, jint existingBBoxTopLeftY, jint existingBBoxTopLeftZ,
       jint existingBBoxBottomRightX, jint existingBBoxBottomRightY, jint existingBBoxBottomRightZ) {
 
-    jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    jsize inputLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -189,7 +189,7 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
             }
         }
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
-        jintArray resultAsJIntArray = env -> NewIntArray(bbox.size());
+        jintArray resultAsJIntArray = env->NewIntArray(bbox.size());
         env->SetIntArrayRegion(resultAsJIntArray, 0, bbox.size(), reinterpret_cast < const jint * > (bbox.data()));
 
         return resultAsJIntArray;
@@ -207,11 +207,11 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applySegmentIdMapping
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlongArray idMappingSrcJavaArray, jlongArray idMappingDstJavaArray) {
 
-    jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
-    jsize mapSize = env -> GetArrayLength(idMappingSrcJavaArray);
-    jlong * idMappingSrc = env -> GetLongArrayElements(idMappingSrcJavaArray, nullptr);
-    jlong * idMappingDst = env -> GetLongArrayElements(idMappingDstJavaArray, nullptr);
+    jsize bucketLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    jsize mapSize = env->GetArrayLength(idMappingSrcJavaArray);
+    jlong * idMappingSrc = env->GetLongArrayElements(idMappingSrcJavaArray, nullptr);
+    jlong * idMappingDst = env->GetLongArrayElements(idMappingDstJavaArray, nullptr);
 
     try {
         if (mapSize != env->GetArrayLength(idMappingDstJavaArray)) {
@@ -259,12 +259,12 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesMutableJavaArray, jbyteArray incomingBucketBytesJavaArray, jboolean skipMapping,
      jlongArray idMappingSrcJavaArray, jlongArray idMappingDstJavaArray, jint bytesPerElement, jboolean isSigned) {
 
-    jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesMutableJavaArray);
-    jbyte * bucketBytesMutable = env -> GetByteArrayElements(bucketBytesMutableJavaArray, NULL);
-    jbyte * incomingBucketBytes = env -> GetByteArrayElements(incomingBucketBytesJavaArray, NULL);
-    jsize mapSize = env -> GetArrayLength(idMappingSrcJavaArray);
-    jlong * idMappingSrc = env -> GetLongArrayElements(idMappingSrcJavaArray, NULL);
-    jlong * idMappingDst = env -> GetLongArrayElements(idMappingDstJavaArray, NULL);
+    jsize bucketLengthBytes = env->GetArrayLength(bucketBytesMutableJavaArray);
+    jbyte * bucketBytesMutable = env->GetByteArrayElements(bucketBytesMutableJavaArray, NULL);
+    jbyte * incomingBucketBytes = env->GetByteArrayElements(incomingBucketBytesJavaArray, NULL);
+    jsize mapSize = env->GetArrayLength(idMappingSrcJavaArray);
+    jlong * idMappingSrc = env->GetLongArrayElements(idMappingSrcJavaArray, NULL);
+    jlong * idMappingDst = env->GetLongArrayElements(idMappingDstJavaArray, NULL);
 
     try {
         const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
@@ -312,8 +312,8 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
 JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_deleteSegmentFromBucket
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
-    jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jsize bucketLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, NULL);
 
     try {
 

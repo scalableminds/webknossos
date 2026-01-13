@@ -5,7 +5,7 @@ import { coalesce } from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import Saxophone from "saxophone";
+import { SAXParser } from "sax-ts";
 import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -680,7 +680,7 @@ function _parseEntities<T>(
     }
   }
 
-  return Saxophone.parseEntities(obj[key]);
+  return obj[key];
 }
 
 function connectedComponentsOfTree(tree: MutableTree): Array<number[]> {
@@ -832,8 +832,7 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
     height: _parseInt(attr, "height"),
     depth: _parseInt(attr, "depth"),
   };
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
-  return boundingBoxObject;
+  return boundingBoxObject as BoundingBoxObject;
 }
 
 function parseMetadataEntry(attr: Record<any, any>): MetadataEntryProto {
@@ -870,7 +869,7 @@ export function parseNml(nmlString: string): Promise<{
   datasetName: string | null | undefined;
 }> {
   return new Promise((resolve, reject) => {
-    const parser = new Saxophone();
+    const parser = new SAXParser(true, {});
     const trees: MutableTreeMap = new MutableTreeMap();
     const treeGroups: TreeGroup[] = [];
     const existingNodeIds = new Set();
@@ -887,328 +886,328 @@ export function parseNml(nmlString: string): Promise<{
     const userBoundingBoxes: UserBoundingBox[] = [];
     let datasetName: string | null = null;
 
-    parser
-      .on("tagopen", (node: Record<string, string>) => {
-        const attr = Saxophone.parseAttrs(node.attrs);
+    parser.onopentag = (node: any) => {
+      const attr = node.attributes as Record<string, string>;
 
-        switch (node.name) {
-          case "experiment": {
-            datasetName = attr.name;
-            break;
-          }
-
-          case "thing": {
-            const groupId = _parseInt(attr, "groupId", { defaultValue: -1 });
-
-            currentTree = {
-              treeId: _parseInt(attr, "id"),
-              color: _parseColor(attr, DEFAULT_COLOR),
-              // In Knossos NMLs, there is usually a tree comment instead of a name
-              name:
-                _parseEntities(attr, "name", { defaultValue: "" }) ||
-                _parseEntities(attr, "comment", { defaultValue: "" }),
-              comments: [],
-              nodes: new DiffableMap(),
-              branchPoints: [],
-              timestamp: Date.now(),
-              edges: new EdgeCollection(),
-              isVisible: _parseFloat(attr, "color.a") !== 0,
-              groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
-              type: _parseTreeType(attr, "type", { defaultValue: TreeTypeEnum.DEFAULT }),
-              edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
-              metadata: [],
-            };
-
-            if (trees.getNullable(currentTree.treeId) != null)
-              throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
-            trees.mutableSet(currentTree.treeId, currentTree);
-
-            break;
-          }
-
-          case "node": {
-            const nodeId = _parseInt<never>(attr, "id");
-
-            currentNode = {
-              id: nodeId,
-              untransformedPosition: [
-                Math.trunc(_parseFloat(attr, "x")),
-                Math.trunc(_parseFloat(attr, "y")),
-                Math.trunc(_parseFloat(attr, "z")),
-              ] as Vector3,
-              // Parse additional coordinates, like additionalCoordinate-t="10"
-              additionalCoordinates: Object.keys(attr)
-                .map((key) => [key, parseAdditionalCoordinateKey(key)])
-                .filter(([_key, name]) => name != null)
-                .map(([key, name]) => ({
-                  name,
-                  value: _parseFloat(attr, key, { defaultValue: 0 }),
-                })) as AdditionalCoordinate[],
-              rotation: [
-                _parseFloat(attr, "rotX", { defaultValue: DEFAULT_ROTATION[0] }),
-                _parseFloat(attr, "rotY", { defaultValue: DEFAULT_ROTATION[1] }),
-                _parseFloat(attr, "rotZ", { defaultValue: DEFAULT_ROTATION[2] }),
-              ] as Vector3,
-              interpolation: _parseBool(attr, "interpolation", {
-                defaultValue: DEFAULT_INTERPOLATION,
-              }),
-              bitDepth: _parseInt(attr, "bitDepth", { defaultValue: DEFAULT_BITDEPTH }),
-              viewport: _parseInt(attr, "inVp", { defaultValue: DEFAULT_VIEWPORT }),
-              mag: _parseInt(attr, "inMag", { defaultValue: DEFAULT_MAG }),
-              radius: _parseFloat(attr, "radius", { defaultValue: Constants.DEFAULT_NODE_RADIUS }),
-              timestamp: _parseTimestamp(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
-            };
-            if (currentTree == null)
-              throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
-            if (existingNodeIds.has(currentNode.id))
-              throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
-            nodeIdToTreeId[nodeId] = currentTree.treeId;
-            currentTree.nodes.mutableSet(currentNode.id, currentNode);
-            existingNodeIds.add(currentNode.id);
-
-            if (node.isSelfClosing) {
-              currentNode = null;
-            }
-            break;
-          }
-
-          case "metadataEntry": {
-            if (currentTree == null) {
-              throw new NmlParseError(messages["nml.metadata_entry_outside_tree"]);
-            }
-            if (currentNode == null) {
-              currentTree.metadata.push(parseMetadataEntry(attr));
-            } else {
-              // TODO: Also support MetadataEntryProto in nodes. See #7483
-            }
-            break;
-          }
-
-          case "edge": {
-            const currentEdge = {
-              source: _parseInt<number>(attr, "source"),
-              target: _parseInt<number>(attr, "target"),
-            };
-            const edgeHash = getEdgeHash(currentEdge.source, currentEdge.target);
-            if (currentTree == null)
-              throw new NmlParseError(
-                `${messages["nml.edge_outside_tree"]} ${JSON.stringify(currentEdge)}`,
-              );
-            if (
-              !(
-                currentTree.nodes.has(currentEdge.source) &&
-                currentTree.nodes.has(currentEdge.target)
-              )
-            )
-              throw new NmlParseError(
-                `${messages["nml.edge_with_invalid_node"]} ${JSON.stringify(currentEdge)}`,
-              );
-            if (currentEdge.source === currentEdge.target)
-              throw new NmlParseError(
-                `${messages["nml.edge_with_same_source_target"]} ${JSON.stringify(currentEdge)}`,
-              );
-            if (existingEdges.has(edgeHash))
-              throw new NmlParseError(
-                `${messages["nml.duplicate_edge"]} ${JSON.stringify(currentEdge)}`,
-              );
-            currentTree.edges.addEdge(currentEdge, true);
-            existingEdges.add(edgeHash);
-            break;
-          }
-
-          case "comment": {
-            const currentComment = {
-              nodeId: _parseInt<never>(attr, "node"),
-              content: _parseEntities<never>(attr, "content"),
-            };
-            const tree = trees.getNullable(nodeIdToTreeId[currentComment.nodeId]);
-            if (tree == null)
-              throw new NmlParseError(
-                `${messages["nml.comment_without_tree"]} ${currentComment.nodeId}`,
-              );
-            tree.comments.push(currentComment);
-            break;
-          }
-
-          case "branchpoint": {
-            const currentBranchpoint = {
-              nodeId: _parseInt<never>(attr, "id"),
-              timestamp: _parseInt(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
-            };
-            const tree = trees.getNullable(nodeIdToTreeId[currentBranchpoint.nodeId]);
-            if (tree == null)
-              throw new NmlParseError(
-                `${messages["nml.branchpoint_without_tree"]} ${currentBranchpoint.nodeId}`,
-              );
-            tree.branchPoints.push(currentBranchpoint);
-            break;
-          }
-
-          case "group": {
-            if (isParsingVolumeTag) {
-              return;
-            }
-            const newGroup = {
-              groupId: _parseInt<never>(attr, "id"),
-              name: _parseEntities<never>(attr, "name"),
-              isExpanded: _parseBool(attr, "isExpanded", { defaultValue: true }),
-              children: [],
-            };
-            if (existingTreeGroupIds.has(newGroup.groupId)) {
-              throw new NmlParseError(`${messages["nml.duplicate_group_id"]} ${newGroup.groupId}`);
-            }
-
-            if (currentTreeGroup != null) {
-              currentTreeGroup.children.push(newGroup);
-            } else {
-              treeGroups.push(newGroup);
-            }
-
-            existingTreeGroupIds.add(newGroup.groupId);
-
-            if (!node.isSelfClosing) {
-              // If the xml tag is self-closing, there won't be a separate tagclose event!
-              treeGroupIdToParent[newGroup.groupId] = currentTreeGroup;
-              currentTreeGroup = newGroup;
-            }
-
-            break;
-          }
-
-          case "userBoundingBox": {
-            const parsedUserBoundingBoxId = _parseInt(attr, "id", { defaultValue: 0 });
-
-            const userBoundingBoxId = getUnusedUserBoundingBoxId(
-              userBoundingBoxes,
-              parsedUserBoundingBoxId,
-            );
-            const boundingBoxObject = parseBoundingBoxObject(attr);
-            const userBoundingBox = {
-              boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
-              color: _parseColor(attr, DEFAULT_COLOR),
-              id: userBoundingBoxId,
-              isVisible: _parseBool(attr, "isVisible", {
-                defaultValue: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
-              }),
-              name: _parseEntities(attr, "name", {
-                defaultValue: `user bounding box ${userBoundingBoxId}`,
-              }),
-            };
-            userBoundingBoxes.push(userBoundingBox);
-            break;
-          }
-
-          case "taskBoundingBox": {
-            const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
-            const boundingBoxObject = parseBoundingBoxObject(attr);
-            const userBoundingBox = {
-              boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
-              color: TASK_BOUNDING_BOX_COLOR,
-              id: userBoundingBoxId,
-              isVisible: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
-              name: "task bounding box",
-            };
-            userBoundingBoxes.push(userBoundingBox);
-            break;
-          }
-
-          case "volume": {
-            isParsingVolumeTag = true;
-            containedVolumes = true;
-            break;
-          }
-
-          default:
-            break;
+      switch (node.name) {
+        case "experiment": {
+          datasetName = attr.name;
+          break;
         }
-      })
-      .on("tagclose", (node: Record<string, string>) => {
-        switch (node.name) {
-          case "thing": {
-            if (currentTree != null) {
-              if (currentTree.nodes.size() > 0) {
-                const timestamp = min(currentTree.nodes.values().map((n) => n.timestamp)) ?? 0;
 
-                trees.mutableSet(currentTree.treeId, { ...currentTree, timestamp });
-              }
-            }
+        case "thing": {
+          const groupId = _parseInt(attr, "groupId", { defaultValue: -1 });
 
-            currentTree = null;
-            break;
-          }
+          currentTree = {
+            treeId: _parseInt(attr, "id"),
+            color: _parseColor(attr, DEFAULT_COLOR),
+            // In Knossos NMLs, there is usually a tree comment instead of a name
+            name:
+              _parseEntities(attr, "name", { defaultValue: "" }) ||
+              _parseEntities(attr, "comment", { defaultValue: "" }),
+            comments: [],
+            nodes: new DiffableMap(),
+            branchPoints: [],
+            timestamp: Date.now(),
+            edges: new EdgeCollection(),
+            isVisible: _parseFloat(attr, "color.a") !== 0,
+            groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
+            type: _parseTreeType(attr, "type", { defaultValue: TreeTypeEnum.DEFAULT }),
+            edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
+            metadata: [],
+          };
 
-          case "node": {
+          if (trees.getNullable(currentTree.treeId) != null)
+            throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
+          trees.mutableSet(currentTree.treeId, currentTree);
+
+          break;
+        }
+
+        case "node": {
+          const nodeId = _parseInt<never>(attr, "id");
+
+          currentNode = {
+            id: nodeId,
+            untransformedPosition: [
+              Math.trunc(_parseFloat(attr, "x")),
+              Math.trunc(_parseFloat(attr, "y")),
+              Math.trunc(_parseFloat(attr, "z")),
+            ] as Vector3,
+            // Parse additional coordinates, like additionalCoordinate-t="10"
+            additionalCoordinates: Object.keys(attr)
+              .map((key) => [key, parseAdditionalCoordinateKey(key)])
+              .filter(([_key, name]) => name != null)
+              .map(([key, name]) => ({
+                name,
+                value: _parseFloat(attr, key, { defaultValue: 0 }),
+              })) as AdditionalCoordinate[],
+            rotation: [
+              _parseFloat(attr, "rotX", { defaultValue: DEFAULT_ROTATION[0] }),
+              _parseFloat(attr, "rotY", { defaultValue: DEFAULT_ROTATION[1] }),
+              _parseFloat(attr, "rotZ", { defaultValue: DEFAULT_ROTATION[2] }),
+            ] as Vector3,
+            interpolation: _parseBool(attr, "interpolation", {
+              defaultValue: DEFAULT_INTERPOLATION,
+            }),
+            bitDepth: _parseInt(attr, "bitDepth", { defaultValue: DEFAULT_BITDEPTH }),
+            viewport: _parseInt(attr, "inVp", { defaultValue: DEFAULT_VIEWPORT }),
+            mag: _parseInt(attr, "inMag", { defaultValue: DEFAULT_MAG }),
+            radius: _parseFloat(attr, "radius", { defaultValue: Constants.DEFAULT_NODE_RADIUS }),
+            timestamp: _parseTimestamp(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
+          };
+          if (currentTree == null)
+            throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
+          if (existingNodeIds.has(currentNode.id))
+            throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
+          nodeIdToTreeId[nodeId] = currentTree.treeId;
+          currentTree.nodes.mutableSet(currentNode.id, currentNode);
+          existingNodeIds.add(currentNode.id);
+
+          if (node.isSelfClosing) {
             currentNode = null;
-            break;
           }
-
-          case "group": {
-            if (!isParsingVolumeTag) {
-              if (currentTreeGroup != null) {
-                currentTreeGroup = treeGroupIdToParent[currentTreeGroup.groupId];
-              }
-            }
-
-            break;
-          }
-
-          case "groups": {
-            if (!isParsingVolumeTag) {
-              for (const tree of trees.values()) {
-                if (tree.groupId != null && !existingTreeGroupIds.has(tree.groupId)) {
-                  throw new NmlParseError(
-                    `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
-                  );
-                }
-              }
-            }
-
-            break;
-          }
-
-          case "volume": {
-            isParsingVolumeTag = false;
-            break;
-          }
-
-          default:
-            break;
+          break;
         }
-      })
-      .on("finish", () => {
-        // Split potentially unconnected trees
-        let maxTreeId = getMaximumTreeId(trees);
 
-        trees
-          .values()
-          // Materialize the trees before iterating over them
-          // because we are also deleting from the collection.
-          .toArray()
-          .forEach((tree) => {
-            const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
+        case "metadataEntry": {
+          if (currentTree == null) {
+            throw new NmlParseError(messages["nml.metadata_entry_outside_tree"]);
+          }
+          if (currentNode == null) {
+            currentTree.metadata.push(parseMetadataEntry(attr));
+          } else {
+            // TODO: Also support MetadataEntryProto in nodes. See #7483
+          }
+          break;
+        }
 
-            const newTreesSize = _.size(newTrees);
+        case "edge": {
+          const currentEdge = {
+            source: _parseInt<number>(attr, "source"),
+            target: _parseInt<number>(attr, "target"),
+          };
+          const edgeHash = getEdgeHash(currentEdge.source, currentEdge.target);
+          if (currentTree == null)
+            throw new NmlParseError(
+              `${messages["nml.edge_outside_tree"]} ${JSON.stringify(currentEdge)}`,
+            );
+          if (
+            !(
+              currentTree.nodes.has(currentEdge.source) && currentTree.nodes.has(currentEdge.target)
+            )
+          )
+            throw new NmlParseError(
+              `${messages["nml.edge_with_invalid_node"]} ${JSON.stringify(currentEdge)}`,
+            );
+          if (currentEdge.source === currentEdge.target)
+            throw new NmlParseError(
+              `${messages["nml.edge_with_same_source_target"]} ${JSON.stringify(currentEdge)}`,
+            );
+          if (existingEdges.has(edgeHash))
+            throw new NmlParseError(
+              `${messages["nml.duplicate_edge"]} ${JSON.stringify(currentEdge)}`,
+            );
+          currentTree.edges.addEdge(currentEdge, true);
+          existingEdges.add(edgeHash);
+          break;
+        }
 
-            if (newTreesSize > 1) {
-              trees.mutableDelete(tree.treeId);
+        case "comment": {
+          const currentComment = {
+            nodeId: _parseInt<never>(attr, "node"),
+            content: _parseEntities<never>(attr, "content"),
+          };
+          const tree = trees.getNullable(nodeIdToTreeId[currentComment.nodeId]);
+          if (tree == null)
+            throw new NmlParseError(
+              `${messages["nml.comment_without_tree"]} ${currentComment.nodeId}`,
+            );
+          tree.comments.push(currentComment);
+          break;
+        }
 
-              for (const newTree of newTrees) {
-                trees.mutableSet(newTree.treeId, newTree);
-              }
+        case "branchpoint": {
+          const currentBranchpoint = {
+            nodeId: _parseInt<never>(attr, "id"),
+            timestamp: _parseInt(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
+          };
+          const tree = trees.getNullable(nodeIdToTreeId[currentBranchpoint.nodeId]);
+          if (tree == null)
+            throw new NmlParseError(
+              `${messages["nml.branchpoint_without_tree"]} ${currentBranchpoint.nodeId}`,
+            );
+          tree.branchPoints.push(currentBranchpoint);
+          break;
+        }
 
-              maxTreeId += newTreesSize;
+        case "group": {
+          if (isParsingVolumeTag) {
+            return;
+          }
+          const newGroup = {
+            groupId: _parseInt<never>(attr, "id"),
+            name: _parseEntities<never>(attr, "name"),
+            isExpanded: _parseBool(attr, "isExpanded", { defaultValue: true }),
+            children: [],
+          };
+          if (existingTreeGroupIds.has(newGroup.groupId)) {
+            throw new NmlParseError(`${messages["nml.duplicate_group_id"]} ${newGroup.groupId}`);
+          }
+
+          if (currentTreeGroup != null) {
+            currentTreeGroup.children.push(newGroup);
+          } else {
+            treeGroups.push(newGroup);
+          }
+
+          existingTreeGroupIds.add(newGroup.groupId);
+
+          if (!node.isSelfClosing) {
+            // If the xml tag is self-closing, there won't be a separate tagclose event!
+            treeGroupIdToParent[newGroup.groupId] = currentTreeGroup;
+            currentTreeGroup = newGroup;
+          }
+
+          break;
+        }
+
+        case "userBoundingBox": {
+          const parsedUserBoundingBoxId = _parseInt(attr, "id", { defaultValue: 0 });
+
+          const userBoundingBoxId = getUnusedUserBoundingBoxId(
+            userBoundingBoxes,
+            parsedUserBoundingBoxId,
+          );
+          const boundingBoxObject = parseBoundingBoxObject(attr);
+          const userBoundingBox = {
+            boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+            color: _parseColor(attr, DEFAULT_COLOR),
+            id: userBoundingBoxId,
+            isVisible: _parseBool(attr, "isVisible", {
+              defaultValue: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
+            }),
+            name: _parseEntities(attr, "name", {
+              defaultValue: `user bounding box ${userBoundingBoxId}`,
+            }),
+          };
+          userBoundingBoxes.push(userBoundingBox);
+          break;
+        }
+
+        case "taskBoundingBox": {
+          const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
+          const boundingBoxObject = parseBoundingBoxObject(attr);
+          const userBoundingBox = {
+            boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+            color: TASK_BOUNDING_BOX_COLOR,
+            id: userBoundingBoxId,
+            isVisible: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
+            name: "task bounding box",
+          };
+          userBoundingBoxes.push(userBoundingBox);
+          break;
+        }
+
+        case "volume": {
+          isParsingVolumeTag = true;
+          containedVolumes = true;
+          break;
+        }
+
+        default:
+          break;
+      }
+    };
+
+    parser.onclosetag = (tagName: string) => {
+      switch (tagName) {
+        case "thing": {
+          if (currentTree != null) {
+            if (currentTree.nodes.size() > 0) {
+              const timestamp = min(currentTree.nodes.values().map((n) => n.timestamp)) ?? 0;
+
+              trees.mutableSet(currentTree.treeId, { ...currentTree, timestamp });
             }
-          });
+          }
 
-        resolve({
-          trees,
-          treeGroups,
-          datasetName,
-          userBoundingBoxes,
-          containedVolumes,
+          currentTree = null;
+          break;
+        }
+
+        case "node": {
+          currentNode = null;
+          break;
+        }
+
+        case "group": {
+          if (!isParsingVolumeTag) {
+            if (currentTreeGroup != null) {
+              currentTreeGroup = treeGroupIdToParent[currentTreeGroup.groupId];
+            }
+          }
+
+          break;
+        }
+
+        case "groups": {
+          if (!isParsingVolumeTag) {
+            for (const tree of trees.values()) {
+              if (tree.groupId != null && !existingTreeGroupIds.has(tree.groupId)) {
+                throw new NmlParseError(
+                  `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
+                );
+              }
+            }
+          }
+
+          break;
+        }
+
+        case "volume": {
+          isParsingVolumeTag = false;
+          break;
+        }
+
+        default:
+          break;
+      }
+    };
+
+    parser.onend = () => {
+      // Split potentially unconnected trees
+      let maxTreeId = getMaximumTreeId(trees);
+
+      trees
+        .values()
+        // Materialize the trees before iterating over them
+        // because we are also deleting from the collection.
+        .toArray()
+        .forEach((tree) => {
+          const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
+
+          const newTreesSize = _.size(newTrees);
+
+          if (newTreesSize > 1) {
+            trees.mutableDelete(tree.treeId);
+
+            for (const newTree of newTrees) {
+              trees.mutableSet(newTree.treeId, newTree);
+            }
+
+            maxTreeId += newTreesSize;
+          }
         });
-      })
-      .on("error", reject);
-    parser.parse(nmlString);
+
+      resolve({
+        trees,
+        treeGroups,
+        datasetName,
+        userBoundingBoxes,
+        containedVolumes,
+      });
+    };
+    parser.onerror = reject;
+    parser.write(nmlString).close();
   });
 }

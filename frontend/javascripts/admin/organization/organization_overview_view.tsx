@@ -1,8 +1,9 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { getPricingPlanStatus, getUsers, updateOrganization } from "admin/rest_api";
-import { Button, Col, Row, Spin, Tooltip, Typography } from "antd";
-import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
+import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
+import { getUsers } from "admin/rest_api";
+import { Button, Col, Row, Spin, Typography } from "antd";
+import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { type Key, useEffect, useState } from "react";
@@ -106,17 +107,14 @@ export function OrganizationOverviewView() {
     );
   }
   const buyMoreCreditsAction = (
-    <Tooltip title="Disabled during testing phase" key="buyMoreCreditsAction">
-      <Button
-        type="default"
-        shape="circle"
-        icon={<PlusOutlined />}
-        size="small"
-        key="buyMoreCreditsAction"
-        onClick={UpgradePricingPlanModal.orderWebknossosCredits}
-        disabled
-      />
-    </Tooltip>
+    <Button
+      type="default"
+      shape="circle"
+      icon={<PlusOutlined />}
+      size="small"
+      key="buyMoreCreditsAction"
+      onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+    />
   );
 
   const orgaStats: (SettingsCardProps & { key: Key })[] = [
@@ -165,8 +163,8 @@ export function OrganizationOverviewView() {
       key: "credits",
       title: "WEBKNOSSOS Credits",
       content:
-        organization.creditBalance != null
-          ? formatCreditsString(organization.creditBalance)
+        organization.milliCreditBalance != null
+          ? formatMilliCreditsString(organization.milliCreditBalance)
           : "N/A",
       action: buyMoreCreditsAction,
     },

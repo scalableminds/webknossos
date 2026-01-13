@@ -1,0 +1,136 @@
+[
+  {
+    "actions": [
+      {
+        "name": "createTree",
+        "value": {
+          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          "branchPoints": [],
+          "color": [
+            0.6784313725490196,
+            0.1411764705882353,
+            0.050980392156862744,
+          ],
+          "comments": [],
+          "edgesAreVisible": true,
+          "groupId": undefined,
+          "id": 3,
+          "isVisible": true,
+          "metadata": [],
+          "name": "agglomerate 4 (volumeTracingId)",
+          "timestamp": 1494695001688,
+          "type": "AGGLOMERATE",
+          "updatedId": 3,
+        },
+      },
+      {
+        "name": "createNode",
+        "value": {
+          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          "additionalCoordinates": [],
+          "bitDepth": 8,
+          "id": 4,
+          "interpolation": false,
+          "position": [
+            4,
+            4,
+            4,
+          ],
+          "radius": 1,
+          "resolution": 1,
+          "rotation": [
+            0,
+            0,
+            0,
+          ],
+          "timestamp": 1494695001688,
+          "treeId": 3,
+          "viewport": 0,
+        },
+      },
+      {
+        "name": "createNode",
+        "value": {
+          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          "additionalCoordinates": [],
+          "bitDepth": 8,
+          "id": 5,
+          "interpolation": false,
+          "position": [
+            5,
+            5,
+            5,
+          ],
+          "radius": 1,
+          "resolution": 1,
+          "rotation": [
+            0,
+            0,
+            0,
+          ],
+          "timestamp": 1494695001688,
+          "treeId": 3,
+          "viewport": 0,
+        },
+      },
+      {
+        "name": "createEdge",
+        "value": {
+          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          "source": 4,
+          "target": 5,
+          "treeId": 3,
+        },
+      },
+    ],
+    "authorId": "dummy-user-id",
+    "info": "["ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","DISALLOW_SAGA_WHILE_BUSY_ACTION","INITIALIZE_EDITABLE_MAPPING","SET_BUSY_BLOCKING_INFO_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","FINISH_MAPPING_INITIALIZATION","LOAD_AGGLOMERATE_SKELETON","ADD_TREES_AND_GROUPS"]",
+    "stats": {
+      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+        "branchPointCount": 2,
+        "edgeCount": 2,
+        "nodeCount": 5,
+        "treeCount": 3,
+      },
+      "volumeTracingId": {
+        "segmentCount": 1,
+      },
+    },
+    "timestamp": 1494695001688,
+    "transactionGroupCount": 1,
+    "transactionGroupIndex": 0,
+    "transactionId": "dummyRequestId",
+    "version": 7,
+  },
+  {
+    "actions": [
+      {
+        "name": "splitAgglomerate",
+        "value": {
+          "actionTracingId": "volumeTracingId",
+          "agglomerateId": 1,
+          "segmentId1": 1,
+          "segmentId2": 2,
+        },
+      },
+    ],
+    "authorId": "dummy-user-id",
+    "info": "["SET_BUSY_BLOCKING_INFO_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","FINISH_MAPPING_INITIALIZATION","LOAD_AGGLOMERATE_SKELETON","ADD_TREES_AND_GROUPS","MIN_CUT_AGGLOMERATE","SET_BUSY_BLOCKING_INFO_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO"]",
+    "stats": {
+      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+        "branchPointCount": 2,
+        "edgeCount": 2,
+        "nodeCount": 5,
+        "treeCount": 3,
+      },
+      "volumeTracingId": {
+        "segmentCount": 1,
+      },
+    },
+    "timestamp": 1494695001688,
+    "transactionGroupCount": 1,
+    "transactionGroupIndex": 0,
+    "transactionId": "dummyRequestId",
+    "version": 8,
+  },
+]

@@ -3,13 +3,15 @@ import { type WebknossosTestContext, setupWebknossosForTesting } from "test/help
 import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateWithPositionAction,
+  minCutPartitionsAction,
   proofreadMergeAction,
+  toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
@@ -18,7 +20,9 @@ import {
   initializeMappingAndTool,
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
+  mockEdgesForPartitionedAgglomerateMinCut,
   mockInitialBucketAndAgglomerateData,
+  simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
 import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
@@ -28,6 +32,8 @@ import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annota
 import { actionChannel } from "typed-redux-saga";
 import type { Action } from "viewer/model/actions/actions";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 
 describe("Proofreading agglomerate skeleton syncing", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -1053,6 +1059,204 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_merge_and_splitting_from_all_neighbors.json",
       );
     });
+    await task.toPromise();
+  });
+
+  it("should split agglomerate via partitioned min-cut, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+    // Initial mapping should be
+    // [[1, 1],
+    //  [2, 1],
+    //  [3, 1],
+    //  [4, 4],
+    //  [5, 4],
+    //  [6, 6],
+    //  [7, 6],
+    //  [1337, 1],
+    //  [1338, 1]]
+    // Thus, there should be the following circle of edges: 1-2-3-1337-1338-1.
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [
+      [1, 1338],
+      [3, 1337],
+    ]);
+
+    // Mapping after interference should be
+    // [[1, 1339],
+    //  [2, 1],
+    //  [3, 1339],
+    //  [4, 4],
+    //  [5, 4],
+    //  [6, 6],
+    //  [7, 6],
+    //  [1337, 1339],
+    //  [1338, 1339]]
+    // Contains two circles now but only one is split by the min-cut request.
+    // Inject splitting agglomerate 1 between segments 1 <-> 2 <-> 3 including agglomerate skeleton update & create segment.
+    // Update also contains skeleton & segment list updates.
+    backendMock.planVersionInjection(10, [
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 2,
+          agglomerateId: 1,
+        },
+      },
+      {
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 2,
+          segmentId2: 3,
+          agglomerateId: 1,
+        },
+      },
+
+      {
+        name: "createTree",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          id: 6,
+          updatedId: 6,
+          color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+          name: "agglomerate 1339 (volumeTracingId)",
+          timestamp: 1494695001688,
+          comments: [],
+          branchPoints: [],
+          groupId: undefined,
+          isVisible: true,
+          type: "AGGLOMERATE",
+          edgesAreVisible: true,
+          metadata: [],
+        },
+      },
+      {
+        name: "moveTreeComponent",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          sourceId: 3,
+          targetId: 6,
+          nodeIds: [4, 6, 7, 8],
+        },
+      },
+      {
+        name: "deleteEdge",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          treeId: 3,
+          source: 4,
+          target: 5,
+        },
+      },
+      {
+        name: "deleteEdge",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          treeId: 3,
+          source: 5,
+          target: 6,
+        },
+      },
+      {
+        name: "createSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          id: 1339,
+          anchorPosition: [1, 1, 1],
+          name: null,
+          color: null,
+          groupId: null,
+          metadata: [],
+          creationTime: 1494695001688,
+        },
+      },
+      {
+        name: "updateSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          id: 1,
+          anchorPosition: [2, 2, 2],
+          additionalCoordinates: undefined,
+          name: null,
+          color: null,
+          groupId: null,
+          metadata: [],
+          creationTime: 1494695001688,
+        },
+      },
+    ]);
+
+    // Prepare the server's reply for the upcoming split between 1337 & 1338 edge.
+    vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+      Promise.resolve([
+        {
+          position1: [1337, 1337, 1337],
+          position2: [1338, 1338, 1338],
+          segmentId1: 1337,
+          segmentId2: 1338,
+        },
+      ]),
+    );
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task(): Saga<void> {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Set up the split-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1339, { somePosition: [1337, 1337, 1337] }, tracingId));
+      yield put(setActiveCellAction(1339, undefined, null, 1337));
+
+      yield makeMappingEditableHelper();
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, true);
+
+      //Activate Multi-split tool
+      yield put(updateUserSettingAction("isMultiSplitActive", true));
+      // Select partition 1
+      yield put(toggleSegmentInPartitionAction(1, 1, 1339));
+      yield put(toggleSegmentInPartitionAction(1337, 1, 1339));
+      // Select partition 2
+      yield put(toggleSegmentInPartitionAction(1338, 2, 1339));
+      yield put(toggleSegmentInPartitionAction(3, 2, 1339));
+      // Execute the actual merge and wait for the finished mapping.
+      const version = yield select((state) => state.annotation.version);
+      console.log(version);
+      yield put(minCutPartitionsAction());
+      yield take(
+        ((action: Action) =>
+          action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
+      );
+
+      const agglomerateSkeletons = yield* select((state) =>
+        getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+      );
+      expect(agglomerateSkeletons.size()).toBe(5);
+      const agglomerateSkeletonOne = agglomerateSkeletons.getOrThrow(3);
+      const agglomerateSkeletonFour = agglomerateSkeletons.getOrThrow(4);
+      const agglomerateSkeletonSix = agglomerateSkeletons.getOrThrow(5);
+      const agglomerateSkeleton1339 = agglomerateSkeletons.getOrThrow(6);
+      const agglomerateSkeleton1340 = agglomerateSkeletons.getOrThrow(7);
+      yield expect(agglomerateSkeletonOne).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1_after_injected_split_and_partitioned_min_cut.json",
+      );
+      yield expect(agglomerateSkeletonFour).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_4_after_injected_split_and_partitioned_min_cut.json",
+      );
+      yield expect(agglomerateSkeletonSix).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_6_after_injected_split_and_partitioned_min_cut.json",
+      );
+      yield expect(agglomerateSkeleton1339).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1339_after_injected_split_and_partitioned_min_cut.json",
+      );
+      yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_split_and_partitioned_min_cut.json",
+      );
+    });
+
     await task.toPromise();
   });
 });

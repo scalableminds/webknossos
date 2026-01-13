@@ -300,12 +300,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case None               => None
       }
     }
+    // TODO new layers?
     existingDataSource.copy(
       dataLayers = updatedLayers,
       scale = updates.scale
     )
   }
 
+  // TODO missing mags should be deleted
   private def applyLayerUpdates(existingLayer: StaticLayer, layerUpdates: StaticLayer): StaticLayer =
     /*
   Taken from the new layer are only those properties:

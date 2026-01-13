@@ -817,12 +817,15 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             """.as[DataSourceMagRow])
     } yield storageRelevantMags.toList
 
+  // TODO for non-virtual, block updating mags while there exist any with uploadToPathIsPending? or just skip those?
+  // how to adapt the duplicate constraint?
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
-    val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
+    val clearQuery =
+      q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.mags.map { mag =>
-        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
-            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId, uploadToPathIsPending)
+            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId}, ${false})
            """.asUpdate
       }
     }
@@ -929,6 +932,33 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         row.channelindex,
         row.credentialid
       )
+
+  def insertPending(datasetId: ObjectId,
+                    layerName: String,
+                    mag: Vec3Int,
+                    axisOrder: Option[AxisOrder],
+                    channelIndex: Option[Int],
+                    path: UPath): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending)
+          VALUES($datasetId, $layerName, $mag, $path, ${axisOrder.map(Json.toJson(_))}, $channelIndex, ${true})
+         """.asUpdate)
+    } yield ()
+
+  def finishUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""UPDATE webknossos.dataset_mags
+           SET uploadToPathIsPending = ${false}
+           WHERE _dataset = $datasetId
+           AND layerName = $layerName
+           AND mag = $mag
+           AND NOT uploadToPathIsPending""".asUpdate
+      )
+    } yield ()
+
+  // TODO check other queries, how should pending interact with them?
 
 }
 

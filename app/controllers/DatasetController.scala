@@ -651,7 +651,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName)
+        _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName, request.body.mag)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
             updatedDataSource <- datasetService.usableDataSourceFor(dataset)

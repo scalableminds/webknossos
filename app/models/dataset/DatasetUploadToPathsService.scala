@@ -1,6 +1,7 @@
 package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -31,6 +32,7 @@ import models.organization.OrganizationDAO
 import models.user.User
 import play.api.i18n.MessagesProvider
 import utils.WkConf
+import security.RandomIDGenerator
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -214,6 +216,9 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
 
+  private def generateMagPath(mag: Vec3Int, layerPath: UPath): UPath =
+    layerPath / f"${mag.toMagLiteral(allowScalar = true)}__${RandomIDGenerator.generateBlocking(12)}"
+
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
       implicit ec: ExecutionContext,
       mp: MessagesProvider): Fox[UPath] =
@@ -251,12 +256,12 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
       newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
-      magPath = generateMagPath(parameters, datasetPath / parameters.layerName)
+      magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)
       _ <- datasetMagsDAO.insertPending(dataset._id,
                                         parameters.layerName,
-                                        parameters.attachmentName,
-                                        parameters.attachmentType,
-                                        parameters.attachmentDataformat,
+                                        parameters.mag,
+                                        parameters.axisOrder,
+                                        parameters.channelIndex,
                                         magPath)
     } yield magPath
 }

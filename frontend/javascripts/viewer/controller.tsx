@@ -9,7 +9,7 @@ import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { BlockerFunction } from "react-router-dom";
 import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
@@ -52,9 +52,8 @@ type State = {
   organizationToSwitchTo: APIOrganization | null | undefined;
 };
 
-class Controller extends React.PureComponent<PropsWithRouter, State> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
-  keyboardNoLoop: InputKeyboardNoLoop;
+class Controller extends PureComponent<PropsWithRouter, State> {
+  keyboardNoLoop?: InputKeyboardNoLoop;
   _isMounted: boolean = false;
   state: State = {
     gotUnhandledError: false,
@@ -87,6 +86,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     this._isMounted = false;
+    this.keyboardNoLoop?.destroy();
     Store.dispatch(setIsInAnnotationViewAction(false));
     this.props.setBlocking({
       shouldBlock: false,

@@ -9,8 +9,8 @@ import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIScript, APIUser } from "types/api_types";
 
@@ -70,7 +70,7 @@ function ScriptListView() {
 
   function renderPlaceholder() {
     return isLoading ? null : (
-      <React.Fragment>
+      <Fragment>
         {"There are no scripts. You can "}
         <Link to="/scripts/create">add a script</Link>
         {
@@ -82,7 +82,7 @@ function ScriptListView() {
           Frontend API Documentation
         </Link>
         {" for more information."}
-      </React.Fragment>
+      </Fragment>
     );
   }
 

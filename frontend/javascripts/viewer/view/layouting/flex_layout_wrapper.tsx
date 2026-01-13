@@ -8,7 +8,8 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { BorderTabType, OrthoView } from "viewer/constants";
@@ -70,7 +71,7 @@ type State = {
 const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
 type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
-class FlexLayoutWrapper extends React.PureComponent<Props, State> {
+class FlexLayoutWrapper extends PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
   // This variable stores the border open status that should be active, when no main tab is maximized.
   // It is used to compare with the actual border open status that is stored in the store.
@@ -575,7 +576,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   render() {
     const { model } = this.state;
     return (
-      <React.Fragment>
+      <Fragment>
         <div className="flex-layout-container">
           <FlexLayout.Layout
             model={model}
@@ -592,7 +593,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
           <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
           <Statusbar />
         </Footer>
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

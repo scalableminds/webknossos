@@ -22,8 +22,8 @@ import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { APITaskType } from "types/api_types";
 
@@ -88,11 +88,11 @@ function TaskTypeListView() {
 
   function renderPlaceholder() {
     return isLoading ? null : (
-      <React.Fragment>
+      <Fragment>
         {"There are no task types. You can "}
         <Link to="/taskTypes/create">add a task type</Link>
         {" in order to configure certain properties, such as a description, for classes of tasks."}
-      </React.Fragment>
+      </Fragment>
     );
   }
 

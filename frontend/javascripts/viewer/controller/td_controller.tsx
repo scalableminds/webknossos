@@ -3,7 +3,7 @@ import { V3 } from "libs/mjs";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import * as React from "react";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
@@ -101,7 +101,7 @@ function maybeGetActiveNodeFromProps(props: Props) {
     : INVALID_ACTIVE_NODE_ID;
 }
 
-class TDController extends React.PureComponent<Props> {
+class TDController extends PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
   oldUnitPos!: Vector3;

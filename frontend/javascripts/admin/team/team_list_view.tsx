@@ -10,8 +10,8 @@ import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import EditTeamModalView from "./edit_team_modal_view";
 
@@ -179,11 +179,11 @@ function TeamListView() {
 
   function renderPlaceholder() {
     const teamMessage = (
-      <React.Fragment>
+      <Fragment>
         {"You can "}
         <a onClick={() => setIsTeamCreationModalVisible(true)}>add a team</a>
         {" to control access to specific datasets and manage which users can be assigned to tasks."}
-      </React.Fragment>
+      </Fragment>
     );
     return isLoading ? null : (
       <Alert title="Add more teams" description={teamMessage} type="info" showIcon />

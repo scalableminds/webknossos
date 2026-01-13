@@ -37,7 +37,8 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { PureComponent, useContext } from "react";
 import { Link } from "react-router-dom";
 import {
   type APIAnnotationInfo,
@@ -98,7 +99,7 @@ function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 
-class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   state: State = {
     shouldShowArchivedAnnotations: false,
     archivedModeState: {
@@ -830,8 +831,8 @@ function TopBar({
   shouldShowArchivedAnnotations: boolean;
   archiveAll: () => void;
 }) {
-  const activeTab = React.useContext(ActiveTabContext);
-  const renderingTab = React.useContext(RenderingTabContext);
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   const search = (
     <Search

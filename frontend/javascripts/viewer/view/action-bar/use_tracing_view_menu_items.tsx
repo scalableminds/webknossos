@@ -20,7 +20,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
-import * as React from "react";
+import { useMemo } from "react";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import { disableSavingAction } from "viewer/model/actions/save_actions";
@@ -147,7 +147,7 @@ export const useTracingViewMenuItems = (
     annotationOwner,
   } = props;
 
-  return React.useMemo(() => {
+  return useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";

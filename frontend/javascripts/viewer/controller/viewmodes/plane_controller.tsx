@@ -3,7 +3,8 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
 import _ from "lodash";
-import * as React from "react";
+import type React from "react";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { OrthoView, OrthoViewMap } from "viewer/constants";
@@ -291,7 +292,7 @@ function createDelayAwareMoveHandler(
   return fn;
 }
 
-class PlaneController extends React.PureComponent<Props> {
+class PlaneController extends PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Plane Controller: Responsible for Plane Modes

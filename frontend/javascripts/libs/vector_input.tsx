@@ -1,7 +1,8 @@
 import type { InputProps } from "antd";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import * as React from "react";
+import type React from "react";
+import { PureComponent } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import InputComponent from "viewer/view/components/input_component";
@@ -23,7 +24,7 @@ type State = {
   text: string;
 }; // Accepts both a string or a VectorX as input and always outputs a valid VectorX
 
-abstract class BaseVector<T extends number[]> extends React.PureComponent<BaseProps<T>, State> {
+abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>, State> {
   abstract get defaultValue(): T;
   static defaultProps = {
     value: "",
@@ -223,7 +224,7 @@ const emptyBoundingBox = {
   depth: 0,
 };
 
-export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps> {
+export class BoundingBoxInput extends PureComponent<BoundingBoxInputProps> {
   static defaultProps = {
     value: emptyBoundingBox,
     onChange: () => {},

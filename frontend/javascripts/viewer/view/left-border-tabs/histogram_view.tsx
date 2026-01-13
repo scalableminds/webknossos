@@ -4,7 +4,7 @@ import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
 import * as _ from "lodash";
-import * as React from "react";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_types";
@@ -96,7 +96,7 @@ const DUMMY_HISTOGRAM_DATA = [
   },
 ];
 
-class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
+class Histogram extends PureComponent<HistogramProps, HistogramState> {
   canvasRef: HTMLCanvasElement | null | undefined;
 
   constructor(props: HistogramProps) {

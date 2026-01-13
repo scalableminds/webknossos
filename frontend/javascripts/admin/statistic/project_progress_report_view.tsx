@@ -7,8 +7,7 @@ import StackedBarChart, { colors } from "components/stacked_bar_chart";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { APIProjectProgressReport, APITeam } from "types/api_types";
 import TeamSelectionForm from "./team_selection_form";
 const { Column, ColumnGroup } = Table;
@@ -47,7 +46,7 @@ function ProjectProgressReportView() {
     }
   }
   // biome-ignore lint/correctness/useExhaustiveDependencies(fetchData):
-  React.useEffect(() => {
+  useEffect(() => {
     fetchData(team);
   }, [team]);
 

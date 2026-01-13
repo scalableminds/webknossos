@@ -1035,11 +1035,15 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 export function getDataset(
   datasetId: string,
   sharingToken?: string | null | undefined,
+  includeZeroMagLayers?: boolean | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
     params.set("sharingToken", String(sharingToken));
+  }
+  if (includeZeroMagLayers != null) {
+    params.set("includeZeroMagLayers", includeZeroMagLayers);
   }
 
   return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);

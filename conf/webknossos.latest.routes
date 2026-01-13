@@ -110,8 +110,8 @@ POST          /datasets/:datasetId/reserveMagUploadToPath                       
 POST          /datasets/:datasetId/finishMagUploadToPath                                        controllers.DatasetController.finishMagUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary                           controllers.DatasetController.reserveUploadToPathsForPreliminary(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
-GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
-GET           /datasets/:datasetId/dataSourceForSuperUser                                       controllers.DatasetController.dataSourceForSuperUser(datasetId: ObjectId)
+GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String], includeZeroMagLayers: Option[Boolean])
+GET           /datasets/:datasetId/dataSourceForSuperUser                                       controllers.DatasetController.dataSourceForSuperUser(datasetId: ObjectId, includeZeroMagLayers: Option[Boolean])
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 

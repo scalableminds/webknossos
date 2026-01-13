@@ -95,7 +95,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
-      let fetchedDataset = await getDataset(datasetId);
+      let fetchedDataset = await getDataset(datasetId, null, true);
       const dataSource = fetchedDataset.dataSource;
 
       setSavedDataSourceOnServer(dataSource);

@@ -362,20 +362,21 @@ class DatasetController @Inject()(userService: UserService,
     } yield Ok(Json.toJson(usersJs))
   }
 
-  def dataSourceForSuperUser(datasetId: ObjectId): Action[AnyContent] =
+  def dataSourceForSuperUser(datasetId: ObjectId, includeZeroMagLayers: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log() {
         for {
           _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+          dataSource <- datasetService.dataSourceFor(dataset, includeZeroMagLayers.getOrElse(false)) ?~> "dataset.list.fetchDataSourceFailed"
         } yield Ok(Json.toJson(dataSource))
       }
     }
 
   def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
-           sharingToken: Option[String]): Action[AnyContent] =
+           sharingToken: Option[String],
+           includeZeroMagLayers: Option[Boolean]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -386,7 +387,11 @@ class DatasetController @Inject()(userService: UserService,
             datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
-          js <- datasetService.publicWrites(dataset, request.identity, Some(organization), Some(dataStore))
+          js <- datasetService.publicWrites(dataset,
+                                            request.identity,
+                                            Some(organization),
+                                            Some(dataStore),
+                                            includeZeroMagLayers = includeZeroMagLayers.getOrElse(false))
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataset))
             if (dataset.isPublic) {

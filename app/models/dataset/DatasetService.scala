@@ -313,7 +313,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     )
   }
 
-  // TODO missing mags should be deleted
   private def applyLayerUpdates(existingLayer: StaticLayer, layerUpdates: StaticLayer): StaticLayer =
     /*
   Taken from the new layer are only those properties:
@@ -411,13 +410,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
     } yield usableDataSource
 
-  def dataSourceFor(dataset: Dataset): Fox[DataSource] = {
+  def dataSourceFor(dataset: Dataset, includeZeroMagLayers: Boolean = false): Fox[DataSource] = {
     val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     if (dataset.isUsable)
       for {
         voxelSize <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoVoxelSize"
         dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
+        dataLayersFiltered = if (includeZeroMagLayers) dataLayers else dataLayers.filter(_.mags.nonEmpty)
+      } yield UsableDataSource(dataSourceId, dataLayersFiltered, voxelSize)
     else
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
   }
@@ -619,8 +619,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                    requestingUserOpt: Option[User],
                    organization: Option[Organization] = None,
                    dataStore: Option[DataStore] = None,
-                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
-      implicit ctx: DBAccessContext): Fox[JsObject] =
+                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None,
+                   includeZeroMagLayers: Boolean = false)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       organization <- Fox.fillOption(organization) {
         organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
@@ -636,7 +636,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isEditable <- isEditableBy(dataset, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
-      dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+      dataSource <- dataSourceFor(dataset, includeZeroMagLayers) ?~> "dataset.list.fetchDataSourceFailed"
       usedStorageBytes <- if (requestingUserOpt.exists(u => u._organization == dataset._organization))
         organizationDAO.getUsedStorageForDataset(dataset._id)
       else Fox.successful(0L)

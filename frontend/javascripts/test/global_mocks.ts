@@ -16,6 +16,27 @@ vi.mock("libs/toast", () => ({
   showToastOnce: vi.fn(),
 }));
 
+vi.mock("hammerjs", () => {
+  const HammerMock = vi.fn().mockImplementation(() => ({
+    on: vi.fn(),
+    off: vi.fn(),
+    get: vi.fn().mockReturnValue({
+      set: vi.fn(),
+    }),
+    set: vi.fn(),
+    destroy: vi.fn(),
+  }));
+
+  // @ts-ignore
+  HammerMock.TouchInput = vi.fn();
+  // @ts-ignore
+  HammerMock.DIRECTION_ALL = 30;
+
+  return {
+    default: HammerMock,
+  };
+});
+
 vi.mock("libs/user_local_storage", () => ({
   default: {
     getItem: vi.fn(),

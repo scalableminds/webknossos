@@ -50,6 +50,7 @@ public/docs
 public/docs/frontend-api
 public/test-bundle
 public/assets
+
 src/main/scala/rebel.xml
 target/
 temp-webknossos-schema**
@@ -112,3 +113,5 @@ metals.sbt
 !.yarn/versions
 tools/**/.yarn/*
 public/index.html
+
+tsconfig.tsbuildinfo

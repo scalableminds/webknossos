@@ -1,7 +1,7 @@
+import Hammer from "hammerjs";
 import { Keyboard } from "keyboardjs";
 import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
-import Hammer from "libs/hammerjs_wrapper";
 import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
 import _ from "lodash";

@@ -45,12 +45,6 @@ export type MouseHandler =
   | ((deltaYorX: number, modifier: ModifierKeys | null | undefined) => void)
   | ((position: Point2, id: string, event: MouseEvent, isTouch: boolean) => void)
   | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
-type HammerJsEvent = {
-  center: Point2;
-  pointers: Record<string, any>[];
-  scale: number;
-  srcEvent: MouseEvent;
-};
 
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
@@ -447,7 +441,7 @@ let isDragging = false;
 export class InputMouse {
   emitter: Emitter;
   targetId: string;
-  hammerManager: typeof Hammer;
+  hammerManager: HammerManager;
   id: string;
   leftMouseButton: InputMouseButton;
   middleMouseButton: InputMouseButton;
@@ -525,11 +519,11 @@ export class InputMouse {
     this.hammerManager.get("pinch").set({
       enable: true,
     });
-    this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
-    this.hammerManager.on("panmove", (evt: HammerJsEvent) => this.mouseMove(evt.srcEvent));
-    this.hammerManager.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
-    this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
-    this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
+    this.hammerManager.on("panstart", (evt) => this.mouseDown(evt.srcEvent as MouseEvent));
+    this.hammerManager.on("panmove", (evt) => this.mouseMove(evt.srcEvent as MouseEvent));
+    this.hammerManager.on("panend", (evt) => this.mouseUp(evt.srcEvent as MouseEvent));
+    this.hammerManager.on("pinchstart", (evt) => this.pinchStart(evt));
+    this.hammerManager.on("pinch", (evt) => this.pinch(evt));
     this.hammerManager.on("pinchend", () => this.pinchEnd());
 
     for (const [eventName, eventHandler] of Object.entries(initialBindings)) {
@@ -657,7 +651,7 @@ export class InputMouse {
     return false;
   }
 
-  pinchStart = (evt: HammerJsEvent) => {
+  pinchStart = (evt: HammerInput) => {
     this.lastScale = evt.scale;
     // Save position so we can zoom to the pinch start position
     // Calculate gesture center ourself as there is a bug in the HammerJS calculation
@@ -667,7 +661,7 @@ export class InputMouse {
     });
   };
 
-  pinch = (evt: HammerJsEvent): void => {
+  pinch = (evt: HammerInput): void => {
     // Abort pinch gesture if another finger is added to the gesture
     if (evt.pointers.length > 2) this.pinchEnd();
 

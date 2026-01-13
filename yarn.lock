@@ -3834,6 +3834,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/hammerjs@npm:^2.0.46":
+  version: 2.0.46
+  resolution: "@types/hammerjs@npm:2.0.46"
+  checksum: 10c0/f3c1cb20dc2f0523f7b8c76065078544d50d8ae9b0edc1f62fed657210ed814266ff2dfa835d2c157a075991001eec3b64c88bf92e3e6e895c0db78d05711d06
+  languageName: node
+  linkType: hard
+
 "@types/hast@npm:^2.0.0":
   version: 2.3.5
   resolution: "@types/hast@npm:2.3.5"
@@ -13509,6 +13516,7 @@ __metadata:
     "@types/cwise": "npm:^1.0.4"
     "@types/dagre": "npm:^0.7.48"
     "@types/file-saver": "npm:^2.0.5"
+    "@types/hammerjs": "npm:^2.0.46"
     "@types/jsdom": "npm:^21.1.7"
     "@types/lodash": "npm:^4.17.4"
     "@types/lz-string": "npm:^1.3.34"

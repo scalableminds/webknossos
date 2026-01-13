@@ -5,6 +5,8 @@ import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_action
 import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "viewer/store";
 import { vi, describe, it, expect, beforeEach } from "vitest";
+import { Keyboard } from "keyboardjs";
+
 import {
   OrthoBaseRotations,
   OrthoViewToNumber,
@@ -217,7 +219,6 @@ describe("API Skeleton", () => {
   it<WebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
     api,
   }) => {
-    const { Keyboard } = await import("keyboardjs");
     const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockReturnThis();
     const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockReturnThis();
 

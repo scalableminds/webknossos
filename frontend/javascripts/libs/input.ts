@@ -325,7 +325,7 @@ export class InputKeyboard {
           delayTimeoutId = null;
         }
       },
-      false, // Added false as the fourth element
+      false, // preventRepeatByDefault
     ];
     this.keyboard.withContext("default", () => {
       this.keyboard.bind(...binding);

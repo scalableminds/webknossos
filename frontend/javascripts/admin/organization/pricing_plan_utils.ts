@@ -90,6 +90,10 @@ export function isFeatureAllowedByPricingPlan(
   return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
 }
 
+export function hasSomePaidPlan(organization: APIOrganization | null) {
+  return isFeatureAllowedByPricingPlan(organization, PricingPlanEnum.Team);
+}
+
 export function getFeatureNotAvailableInPlanMessage(
   requiredPricingPlan: PricingPlanEnum,
   organization: APIOrganization | null,

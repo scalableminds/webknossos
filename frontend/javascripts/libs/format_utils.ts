@@ -574,10 +574,15 @@ export function formatWkLibsNdBBox(ndBBox: WkLibsNdBoundingBox): string {
     : bboxString;
 }
 
-export function formatCreditsString(credits: string): string {
-  return credits
-    .replace(/(\.\d*?[1-9])0+$/g, "$1") // Remove trailing zeros after decimal
-    .replace(/\.0*$/g, ""); // Remove the decimal point if no digits remain
+export function formatMilliCreditsString(credits: number): string {
+  const millis = Math.round(credits % 1000).toString();
+  const fullCredits = Math.floor(credits / 1000);
+  if (millis === "0") {
+    return fullCredits.toString();
+  }
+  const paddedMillis = millis.padStart(3, "0");
+  const paddedMillisWithoutTrailingZeros = paddedMillis.replace(/0+$/, "");
+  return `${fullCredits}.${paddedMillisWithoutTrailingZeros}`;
 }
 
 export function formatCurrency(amount: number, currency: string): string {

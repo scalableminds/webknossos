@@ -779,7 +779,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
     for {
       rows <- run(
-        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
+        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId, uploadToPathIsPending
        FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName"""
           .as[DatasetMagsRow])
       magLocators <- Fox.combined(rows.map(parseMagLocator))

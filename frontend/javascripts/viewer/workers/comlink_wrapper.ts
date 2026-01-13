@@ -66,7 +66,7 @@ export function createWorker<T extends (...args: any[]) => any>(
 }
 export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   if (_expose != null) {
-    _expose(fn, self);
+    _expose(fn);
   }
 
   // In a node context (e.g., when executing tests), we don't create web workers.

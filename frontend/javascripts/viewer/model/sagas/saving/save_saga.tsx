@@ -45,7 +45,6 @@ import {
   setPendingProofreadingOperationInfoAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
-import { updateAuxiliaryAgglomerateMeshVersionAction } from "viewer/model/actions/segmentation_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import {
@@ -851,10 +850,6 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
     activeVolumeTracingId,
   );
 
-  const isCurrentlySaving = yield* select((state) => state.save.isBusy);
-  if (!isCurrentlySaving) {
-    yield* put(updateAuxiliaryAgglomerateMeshVersionAction(activeVolumeTracingId));
-  }
   yield* spawn(
     reloadMeshes,
     artifactInfos.agglomerateIdsWithOutdatedMeshes,
@@ -881,13 +876,6 @@ function* reloadMeshes(
   agglomerateIdsToReloadMeshesFor: Set<number>,
   activeVolumeTracingId: string,
 ) {
-  const isCurrentlySaving = yield* select((state) => state.save.isBusy);
-  if (isCurrentlySaving) {
-    // If we are currently saving, the server first needs all unsaved changes before the meshes can be properly reloaded.
-    // Thus wait till saving is done.
-    // TODOM: yield* take("DONE_SAVING");
-    yield* put(updateAuxiliaryAgglomerateMeshVersionAction(activeVolumeTracingId));
-  }
   const someAgglomerateIdToRemove = agglomerateIdsWithOutdatedMeshes.values().next()?.value || 0;
   // construct refreshAffectedMeshes parameters.
   // As all outdated meshes were already removed, someAgglomerateIdToRemove can be used in every refresh list item.

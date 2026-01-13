@@ -372,7 +372,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         opacity,
-        annotationVersion,
         isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
@@ -385,7 +384,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         mappingName,
         mappingType,
-        syncedWithVersion: annotationVersion,
         isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
@@ -422,7 +420,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         opacity,
-        annotationVersion,
         isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
@@ -435,7 +432,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         meshFileName,
         mappingName,
-        syncedWithVersion: annotationVersion,
         isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
@@ -506,53 +502,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         },
       });
       return updatedKey;
-    }
-
-    case "UPDATE_AUXILIARY_AGGLOMERATE_MESH_VERSION_ACTION": {
-      const { layerName } = action;
-      const version = state.annotation.version;
-      const meshInfoForAdditionalCoordinatesToUpdate =
-        state.localSegmentationData[layerName].meshes;
-      if (!meshInfoForAdditionalCoordinatesToUpdate) {
-        return state;
-      }
-
-      let updatedMeshInfo = meshInfoForAdditionalCoordinatesToUpdate;
-      for (const additionalCoordsKey of Object.keys(meshInfoForAdditionalCoordinatesToUpdate)) {
-        const meshesInfo = meshInfoForAdditionalCoordinatesToUpdate[additionalCoordsKey];
-        if (!meshesInfo) {
-          continue;
-        }
-        for (const meshSegmentId of Object.keys(meshesInfo)) {
-          // Casting to any because meshSegmentId is a string but number is required by typing.
-          const meshInfo = meshesInfo[meshSegmentId as any];
-          if (meshInfo?.isProofreadingAuxiliaryMesh) {
-            updatedMeshInfo = update(updatedMeshInfo, {
-              [additionalCoordsKey]: {
-                [meshSegmentId]: {
-                  syncedWithVersion: { $set: version },
-                },
-              },
-            });
-          }
-        }
-      }
-
-      /*const updatedMeshData = _.mapValues(
-        meshInfoForAdditionalCoordinatesToUpdate,
-        (meshInfoForAdditionalCoordinates) =>
-          meshInfoForAdditionalCoordinates
-            ? _.mapValues(meshInfoForAdditionalCoordinates, (meshInfo) =>
-                meshInfo?.isProofreadingAuxiliaryMesh
-                  ? { ...meshInfo, syncedWithVersion: version }
-                  : meshInfo,
-              )
-            : meshInfoForAdditionalCoordinates,
-      ) as LocalMeshesInfo;*/
-
-      return updateKey2(state, "localSegmentationData", layerName, {
-        meshes: updatedMeshInfo,
-      });
     }
 
     case "UPDATE_MESH_FILE_LIST": {

@@ -331,7 +331,6 @@ function* loadFullAdHocMesh(
 ): Saga<void> {
   let isInitialRequest = true;
   const { mappingName, mappingType, opacity } = meshExtraInfo;
-  const annotationVersion = yield* select((state) => state.annotation.version);
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, magInfo);
   yield* put(
     addAdHocMeshAction(
@@ -342,7 +341,6 @@ function* loadFullAdHocMesh(
       mappingName,
       mappingType,
       opacity,
-      annotationVersion,
       isProofreadingAuxiliaryMesh,
     ),
   );

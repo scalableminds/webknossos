@@ -11,14 +11,8 @@ export type AdHocMeshInfo = {
 };
 export type LoadAdHocMeshAction = ReturnType<typeof loadAdHocMeshAction>;
 export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAction>;
-export type UpdateAuxiliaryAgglomerateMeshVersionAction = ReturnType<
-  typeof updateAuxiliaryAgglomerateMeshVersionAction
->;
 
-export type SegmentationAction =
-  | LoadAdHocMeshAction
-  | LoadPrecomputedMeshAction
-  | UpdateAuxiliaryAgglomerateMeshVersionAction;
+export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
 
 export const loadAdHocMeshAction = (
   segmentId: number,
@@ -56,10 +50,4 @@ export const loadPrecomputedMeshAction = (
     opacity,
     layerName,
     isProofreadingAuxiliaryMesh,
-  }) as const;
-
-export const updateAuxiliaryAgglomerateMeshVersionAction = (layerName: string) =>
-  ({
-    type: "UPDATE_AUXILIARY_AGGLOMERATE_MESH_VERSION_ACTION",
-    layerName,
   }) as const;

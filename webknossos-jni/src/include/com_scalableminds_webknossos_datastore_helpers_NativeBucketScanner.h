@@ -33,11 +33,27 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
 
 /*
  * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
- * Method:     applyAgglomerate
- * Signature:  ([BI[J[J)[B
+ * Method:     applySegmentIdMapping
+ * Signature:  ([BIZ[J[J)[B
  */
-JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyAgglomerate
-  (JNIEnv *, jobject, jbyteArray, jint, jlongArray, jlongArray);
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applySegmentIdMapping
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jlongArray, jlongArray);
+
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     mergeVolumeBucketInPlace
+ * Signature:  ([B[BZ[J[JIZ)V
+ */
+JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_mergeVolumeBucketInPlace
+  (JNIEnv *, jobject, jbyteArray, jbyteArray, jboolean, jlongArray, jlongArray, jint, jboolean);
+
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     deleteSegmentFromBucket
+ * Signature:  ([BIZJ)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_deleteSegmentFromBucket
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jlong);
 
 #ifdef __cplusplus
 }

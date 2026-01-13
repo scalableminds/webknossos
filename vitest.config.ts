@@ -1,4 +1,3 @@
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 import viteConfig from "./vite.config";
 
@@ -11,7 +10,7 @@ export const config = {
   ...viteConfig,
   test: {
     globals: true,
-    setupFiles: ["@vitest/web-worker", "./frontend/javascripts/test/global_mocks.ts"],
+    setupFiles: ["./frontend/javascripts/test/global_mocks.ts"],
     include: [
       "If you see this, you should use another yarn test-* script or call vitest with the --config option",
     ],

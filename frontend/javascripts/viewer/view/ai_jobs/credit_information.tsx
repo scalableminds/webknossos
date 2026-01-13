@@ -1,9 +1,9 @@
 import { CreditCardOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { type JobCreditCostInfo, getJobCreditCost } from "admin/rest_api";
+import { type JobCreditCostInfo, getJobCreditCostAndUpdateOrgaCredits } from "admin/rest_api";
 import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
 import features from "features";
-import { formatCreditsString, formatVoxels } from "libs/format_utils";
+import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
@@ -116,21 +116,21 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
   startButtonTitle,
   areParametersValid,
 }) => {
-  const jobTypeToCreditCostPerGVx: Partial<Record<APIJobCommand, number>> = useMemo(
+  const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
-      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostPerGVx,
-      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostPerGVx,
-      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostPerGVx,
-      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostPerGVx,
-      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostPerGVx,
+      [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostInMilliCreditsPerGVx,
       [APIJobCommand.TRAIN_INSTANCE_MODEL]: 0,
       [APIJobCommand.TRAIN_NEURON_MODEL]: 0,
     }),
     [],
   );
 
-  const organizationCredits = useWkSelector(
-    (state) => state.activeOrganization?.creditBalance || "0",
+  const organizationMilliCredits = useWkSelector(
+    (state) => state.activeOrganization?.milliCreditBalance || 0,
   );
 
   const boundingBoxVolume = useMemo(() => {
@@ -147,7 +147,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
       selectedBoundingBox?.boundingBox ?? "no-bb",
     ],
     queryFn: async () =>
-      await getJobCreditCost(
+      await getJobCreditCostAndUpdateOrgaCredits(
         selectedJobType!,
         computeArrayFromBoundingBox(selectedBoundingBox!.boundingBox),
       ),
@@ -161,7 +161,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
     return "-";
   }, [selectedBoundingBox, boundingBoxVolume]);
 
-  const costInCredits = jobCreditCostInfo?.costInCredits;
+  const costInCredits = jobCreditCostInfo?.costInMilliCredits;
 
   return (
     <Card
@@ -179,7 +179,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
         </Col>
         <Col>
           <Title level={2} style={{ margin: 0 }}>
-            {formatCreditsString(organizationCredits)}
+            {formatMilliCreditsString(organizationMilliCredits)}
           </Title>
         </Col>
       </Row>
@@ -206,7 +206,11 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           <Text>Credits per Gigavoxel:</Text>
         </Col>
         <Col>
-          <Text strong>{selectedJobType ? jobTypeToCreditCostPerGVx[selectedJobType] : "-"}</Text>
+          <Text strong>
+            {selectedJobType && jobTypeToCreditCostPerGVxInMillis[selectedJobType] != null
+              ? formatMilliCreditsString(jobTypeToCreditCostPerGVxInMillis[selectedJobType])
+              : "-"}
+          </Text>
         </Col>
       </Row>
       <hr style={{ margin: "24px 0" }} />
@@ -218,7 +222,9 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           {isFetching && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
-            <Text strong>{costInCredits ? formatCreditsString(costInCredits) : "-"}</Text>
+            <Text strong>
+              {costInCredits != null ? formatMilliCreditsString(costInCredits) : "-"}
+            </Text>
           )}
         </Col>
       </Row>

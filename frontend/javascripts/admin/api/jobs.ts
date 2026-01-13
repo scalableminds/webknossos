@@ -9,8 +9,11 @@ import type {
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
+import { Store } from "viewer/singletons";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
+import { getOrganization } from "./organization";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
@@ -37,11 +40,10 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
 }
 
 export type JobCreditCostInfo = {
-  // The cost is encoded as a string decimal for precision reasons. The front-end should not do any arithmetic with this
-  costInCredits: string;
+  costInMilliCredits: number;
   hasEnoughCredits: boolean;
   // The organizations credits used during calculation whether the organization has enough credits for the job.
-  organizationCredits: string;
+  organizationMilliCredits: number;
 };
 
 export async function getJobCreditCost(
@@ -53,6 +55,25 @@ export async function getJobCreditCost(
     boundingBoxInMag: boundingBoxInMag.join(","),
   });
   return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
+}
+
+export async function getJobCreditCostAndUpdateOrgaCredits(
+  command: string,
+  boundingBoxInMag: Vector6,
+): Promise<JobCreditCostInfo> {
+  const jobCreditCostInfo = await getJobCreditCost(command, boundingBoxInMag);
+  Store.dispatch(setActiveOrganizationsCreditBalance(jobCreditCostInfo.organizationMilliCredits));
+  return jobCreditCostInfo;
+}
+
+export async function refreshOrganizationCredits() {
+  const organizationId = Store.getState().activeOrganization?.id;
+  if (organizationId) {
+    const orga = await getOrganization(organizationId);
+    if (orga.milliCreditBalance != null) {
+      Store.dispatch(setActiveOrganizationsCreditBalance(orga.milliCreditBalance));
+    }
+  }
 }
 
 export async function retryJob(jobId: string): Promise<APIJob> {

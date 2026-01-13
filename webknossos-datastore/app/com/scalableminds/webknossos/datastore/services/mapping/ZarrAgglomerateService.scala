@@ -65,8 +65,9 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       data: Array[Byte])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] = {
 
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
+    val isSigned = ElementClass.isSigned(elementClass)
     val distinctSegmentIds =
-      bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned = false, skipZeroes = false)
+      bucketScanner.collectSegmentIds(data, bytesPerElement, isSigned, skipZeroes = false)
 
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
@@ -75,10 +76,11 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
           mapSingleSegment(segmentToAgglomerate, segmentId)
         }
         .map(_.toArray)
-      mappedBytes: Array[Byte] = bucketScanner.applyAgglomerate(data,
-                                                                bytesPerElement,
-                                                                distinctSegmentIds,
-                                                                agglomerateIdForDistinctSegmentIds)
+      mappedBytes: Array[Byte] = bucketScanner.applySegmentIdMapping(data,
+                                                                     bytesPerElement,
+                                                                     isSigned,
+                                                                     distinctSegmentIds,
+                                                                     agglomerateIdForDistinctSegmentIds)
     } yield mappedBytes
   }
 

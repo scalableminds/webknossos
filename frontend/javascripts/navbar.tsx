@@ -28,14 +28,13 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
-  getUsersOrganizations,
   logoutUser,
   sendAnalyticsEvent,
-  switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
 import type { MenuProps } from "antd";

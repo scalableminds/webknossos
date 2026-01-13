@@ -24,7 +24,8 @@ import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIden
 import controllers.{
   ReserveAttachmentUploadToPathRequest,
   ReserveDatasetUploadToPathsForPreliminaryRequest,
-  ReserveDatasetUploadToPathsRequest
+  ReserveDatasetUploadToPathsRequest,
+  ReserveMagUploadToPathRequest
 }
 import models.organization.OrganizationDAO
 import models.user.User
@@ -40,6 +41,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                             dataStoreDAO: DataStoreDAO,
                                             layerToLinkService: LayerToLinkService,
                                             datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                            datasetMagsDAO: DatasetMagsDAO,
                                             conf: WkConf)
     extends FoxImplicits
     with DataSourceValidation {
@@ -239,4 +241,22 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                                     parameters.attachmentDataformat,
                                                     attachmentPath)
     } yield attachmentPath
+
+  def reserveMagUploadToPath(dataset: Dataset, parameters: ReserveMagUploadToPathRequest)(
+      implicit ec: ExecutionContext,
+      mp: MessagesProvider): Fox[UPath] =
+    for {
+      _ <- datasetService.usableDataSourceFor(dataset)
+      // TODO delete existing if selected
+      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
+      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
+      magPath = generateMagPath(parameters, datasetPath / parameters.layerName)
+      _ <- datasetMagsDAO.insertPending(dataset._id,
+                                        parameters.layerName,
+                                        parameters.attachmentName,
+                                        parameters.attachmentType,
+                                        parameters.attachmentDataformat,
+                                        magPath)
+    } yield magPath
 }

@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJsonHelper}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -81,6 +82,20 @@ object ReserveDatasetUploadToPathsForPreliminaryRequest {
     Json.format[ReserveDatasetUploadToPathsForPreliminaryRequest]
 }
 
+case class ReserveMagUploadToPathRequest(
+    layerName: String,
+    mag: Vec3Int,
+    axisOrder: Option[AxisOrder],
+    channelIndex: Option[Int],
+    pathPrefix: Option[UPath],
+    overwritePending: Boolean
+)
+
+object ReserveMagUploadToPathRequest {
+  implicit val jsonFormat: OFormat[ReserveMagUploadToPathRequest] =
+    Json.format[ReserveMagUploadToPathRequest]
+}
+
 case class ReserveAttachmentUploadToPathRequest(
     layerName: String,
     attachmentName: String,
@@ -141,6 +156,7 @@ class DatasetController @Inject()(userService: UserService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   usedStorageService: UsedStorageService,
                                   conf: WkConf,
+                                  datasetMagsDAO: DatasetMagsDAO,
                                   slackNotificationService: SlackNotificationService,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
@@ -618,6 +634,32 @@ class DatasetController @Inject()(userService: UserService,
       for {
         (_, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
+    }
+
+  def reserveMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
+    sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        attachmentPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
+
+      } yield Ok(Json.toJson(attachmentPath))
+    }
+
+  def finishMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
+    sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName)
+        _ <- Fox.runIf(!dataset.isVirtual) {
+          for {
+            updatedDataSource <- datasetService.usableDataSourceFor(dataset)
+            dataStoreClient <- datasetService.clientFor(dataset)
+            _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
+          } yield ()
+        }
+      } yield Ok
     }
 
   def reserveAttachmentUploadToPath(datasetId: ObjectId): Action[ReserveAttachmentUploadToPathRequest] =

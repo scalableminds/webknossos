@@ -215,8 +215,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
     try {
         if (mapSize != env->GetArrayLength(idMappingDstJavaArray)) {
-            throwRuntimeException(env, "Exception in BucketScanner applySegmentIdMapping: idMappingSrc and idMappingDst differ in length.");
-            return nullptr;
+            throw std::invalid_argument("idMappingSrc and idMappingDst must have same length.");
         }
         std::map<int64_t, int64_t> mapping;
         for (size_t i = 0; i < mapSize; ++i) {
@@ -269,9 +268,12 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
 
     try {
         const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
+
         if (mapSize != env->GetArrayLength(idMappingDstJavaArray)) {
-            throwRuntimeException(env, "Exception in BucketScanner mergeVolumeBucketInPlace: idMappingSrc and idMappingDst differ in length.");
-            return;
+            throw std::invalid_argument("idMappingSrc and idMappingDst must have same length.");
+        }
+        if (bucketLengthBytes != env->GetArrayLength(incomingBucketBytesJavaArray)) {
+            throw std::invalid_argument("bucketBytesMutable and incomingBucketBytes must have same length.");
         }
 
         std::map<int64_t, int64_t> mapping;

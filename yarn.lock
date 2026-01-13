@@ -9106,6 +9106,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"keyboardjs@npm:^2.7.0":
+  version: 2.7.0
+  resolution: "keyboardjs@npm:2.7.0"
+  checksum: 10c0/0e9ff96cc22c9f947e1ea1506832aea19ec17591e288ff7b26b8fc7b11e4f2625335e4fafb1c7b8aae219e435147f0676e5f4fca12d1cfc66fc200155db123dc
+  languageName: node
+  linkType: hard
+
 "kind-of@npm:^3.0.2":
   version: 3.2.2
   resolution: "kind-of@npm:3.2.2"
@@ -14828,6 +14835,7 @@ __metadata:
     jsdom: "npm:^26.1.0"
     json-loader: "npm:^0.5.7"
     jsonschema: "npm:^1.2.4"
+    keyboardjs: "npm:^2.7.0"
     less: "npm:^4.0.0"
     less-loader: "npm:^10.2.0"
     lodash: "npm:^4.17.21"

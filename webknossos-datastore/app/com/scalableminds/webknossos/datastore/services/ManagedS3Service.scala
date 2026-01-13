@@ -11,7 +11,9 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3AccessKeyCredential
 }
 import com.typesafe.scalalogging.LazyLogging
+import scala.jdk.DurationConverters._
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.{
@@ -26,6 +28,7 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager
 import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 import scala.jdk.CollectionConverters._
 import scala.jdk.FutureConverters._
 
@@ -87,6 +90,7 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
     tryo(
       S3AsyncClient
         .builder()
+        .httpClientBuilder(NettyNioAsyncHttpClient.builder().connectionAcquisitionTimeout((2 minutes).toJava))
         .credentialsProvider(credential.toCredentialsProvider)
         .crossRegionAccessEnabled(true)
         .forcePathStyle(true)
@@ -98,7 +102,7 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
 
   lazy val s3UploadTransferManagerBox: Box[S3TransferManager] = for {
     client <- s3UploadClientBox
-  } yield S3TransferManager.builder().s3Client(client).build()
+  } yield S3TransferManager.builder().transferDirectoryMaxConcurrency(30).s3Client(client).build()
 
   def deletePaths(paths: Seq[UPath])(implicit ec: ExecutionContext): Fox[Unit] = {
     val pathsByBucket: Map[Option[String], Seq[UPath]] = paths.groupBy(S3UriUtils.hostBucketFromUpath)

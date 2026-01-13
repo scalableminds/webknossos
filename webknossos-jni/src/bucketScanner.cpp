@@ -7,8 +7,30 @@
 #include <stdexcept>
 #include <unordered_set>
 #include <stdint.h>
+#include <map>
 
-uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
+void writeSegmentIdAtIndex(jbyte *bucketBytes, size_t index, int64_t segmentId, const int bytesPerElement) {
+    jbyte *currentPos = bucketBytes + (index * bytesPerElement);
+
+    switch (bytesPerElement) {
+        case 1:
+            *reinterpret_cast<uint8_t *>(currentPos) = static_cast<uint8_t>(segmentId);
+            break;
+        case 2:
+            *reinterpret_cast<uint16_t *>(currentPos) = static_cast<uint16_t>(segmentId);
+            break;
+        case 4:
+            *reinterpret_cast<uint32_t *>(currentPos) = static_cast<uint32_t>(segmentId);
+            break;
+        case 8:
+            *reinterpret_cast<uint64_t *>(currentPos) = static_cast<uint64_t>(segmentId);
+            break;
+        default:
+            throw std::invalid_argument("Cannot write segment value, unsupported bytesPerElement value");
+    }
+}
+
+int64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
     long currentValue;
     switch (bytesPerElement) {
@@ -44,7 +66,7 @@ jlongArray copyToJLongArray(JNIEnv *env, const std::unordered_set<int64_t> &sour
         targetElements[i] = static_cast<jlong>(*it);
         ++it;
     }
-    env->ReleaseLongArrayElements(target, targetElements, JNI_COMMIT);
+    env->ReleaseLongArrayElements(target, targetElements, 0);
 
     return target;
 }
@@ -76,14 +98,14 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
             }
         }
 
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         return copyToJLongArray(env, uniqueSegmentIds);
     } catch (const std::exception &e) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner collectSegmentIds: " + std::string(e.what()));
         return nullptr;
     } catch (...) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner collectSegmentIds");
         return nullptr;
     }
@@ -93,7 +115,7 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -104,15 +126,15 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
                 segmentVoxelCount++;
             }
         }
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         return segmentVoxelCount;
 
     } catch (const std::exception &e) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels: " + std::string(e.what()));
         return 0;
     } catch (...) {
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels");
         return 0;
     }
@@ -126,7 +148,7 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
       jint existingBBoxBottomRightX, jint existingBBoxBottomRightY, jint existingBBoxBottomRightZ) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
@@ -154,18 +176,70 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
                 }
             }
         }
-        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
         jintArray resultAsJIntArray = env -> NewIntArray(bbox.size());
         env -> SetIntArrayRegion(resultAsJIntArray, 0, bbox.size(), reinterpret_cast < const jint * > (bbox.data()));
 
         return resultAsJIntArray;
     } catch (const std::exception &e) {
-         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
          throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox: " + std::string(e.what()));
          return nullptr;
-     } catch (...) {
-         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
-         throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
-         return nullptr;
-     }
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
+        return nullptr;
+    }
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_applyAgglomerate
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jlongArray distinctSegmentIdsJavaArray, jlongArray agglomerateIdForDistinctSegmentIdsJavaArray) {
+
+    jsize bucketLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    jsize mapSize = env -> GetArrayLength(distinctSegmentIdsJavaArray);
+    jlong * distinctSegmentIds = env -> GetLongArrayElements(distinctSegmentIdsJavaArray, nullptr);
+    jlong * agglomerateIdForDistinctSegmentIds = env -> GetLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, nullptr);
+
+    try {
+        if (mapSize != env->GetArrayLength(agglomerateIdForDistinctSegmentIdsJavaArray)) {
+            throwRuntimeException(env, "Exception in BucketScanner applyAgglomerate: distinctSegmentIds and agglomerateIdsForDistinctSegmentIds differ in length.");
+        }
+        std::map<uint64_t, uint64_t> mapping;
+        for (size_t i = 0; i < mapSize; ++i) {
+            mapping[distinctSegmentIds[i]] = agglomerateIdForDistinctSegmentIds[i];
+        }
+
+        const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
+
+        jbyteArray outputJavaArray = env->NewByteArray(bucketLengthBytes);
+        jbyte *outputJBytes = env->GetByteArrayElements(outputJavaArray, nullptr);
+
+        for (size_t i = 0; i < elementCount; ++i) {
+            uint64_t unmappedSegmentId = segmentIdAtIndex(bucketBytes, i, bytesPerElement, false);
+            uint64_t agglomerateId = mapping[unmappedSegmentId];
+            writeSegmentIdAtIndex(outputJBytes, i, agglomerateId, bytesPerElement);
+        }
+
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(distinctSegmentIdsJavaArray, distinctSegmentIds, JNI_ABORT);
+        env->ReleaseLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, agglomerateIdForDistinctSegmentIds, JNI_ABORT);
+        env->ReleaseByteArrayElements(outputJavaArray, outputJBytes, 0);
+
+        return outputJavaArray;
+
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(distinctSegmentIdsJavaArray, distinctSegmentIds, JNI_ABORT);
+        env->ReleaseLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, agglomerateIdForDistinctSegmentIds, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
+        env->ReleaseLongArrayElements(distinctSegmentIdsJavaArray, distinctSegmentIds, JNI_ABORT);
+        env->ReleaseLongArrayElements(agglomerateIdForDistinctSegmentIdsJavaArray, agglomerateIdForDistinctSegmentIds, JNI_ABORT);
+        throwRuntimeException(env, "Native Exception in BucketScanner applyAgglomerate");
+        return nullptr;
+    }
+
 }

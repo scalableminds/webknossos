@@ -124,7 +124,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
-        yield put(proofreadMergeAction([4, 4, 4], 1));
+        yield put(proofreadMergeAction([4, 4, 4], 4));
         // Wait till while proofreading action is finished including agglomerate skeleton refresh
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished

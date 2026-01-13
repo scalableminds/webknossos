@@ -277,11 +277,13 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context, false);
+      // Enforce storing pending skeleton & segment updates before asserting.
+      yield call(() => context.api.tracing.save());
       const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
       expect(injectedMergeRequest.actions).toEqual([injectedSplit]);
       expect(injectedMergeRequest.version).toEqual(8);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.slice(4)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_simple.json",
       );
@@ -325,6 +327,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context, false);
+      yield call(() => context.api.tracing.save());
       const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(8);
@@ -491,7 +494,75 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         agglomerateId2: 4,
       },
     };
-    backendMock.planVersionInjection(8, [injectedMerge]);
+    backendMock.planVersionInjection(8, [
+      injectedMerge,
+
+      {
+        name: "createNode",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          id: 7,
+          additionalCoordinates: [],
+          rotation: [0, 0, 0],
+          bitDepth: 8,
+          viewport: 0,
+          radius: 1,
+          timestamp: 1494695001688,
+          interpolation: false,
+          position: [4, 4, 4],
+          treeId: 3,
+          resolution: 1,
+        },
+      },
+      {
+        name: "createNode",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          id: 8,
+          additionalCoordinates: [],
+          rotation: [0, 0, 0],
+          bitDepth: 8,
+          viewport: 0,
+          radius: 1,
+          timestamp: 1494695001688,
+          interpolation: false,
+          position: [5, 5, 5],
+          treeId: 3,
+          resolution: 1,
+        },
+      },
+      {
+        name: "createEdge",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          treeId: 3,
+          source: 6,
+          target: 7,
+        },
+      },
+      {
+        name: "createEdge",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          treeId: 3,
+          source: 7,
+          target: 8,
+        },
+      },
+      {
+        name: "createSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          id: 1,
+          anchorPosition: [3, 3, 3],
+          name: null,
+          color: null,
+          groupId: null,
+          metadata: [],
+          creationTime: 1494695001688,
+        },
+      },
+    ]);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -499,7 +570,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     const task = startSaga(function* task() {
       yield performMinCutWithNodesProofreading(context, false);
       const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
-      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
+      expect(injectedMergeRequest.actions[0]).toEqual(injectedMerge);
       expect(injectedMergeRequest.version).toEqual(8);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
         context.receivedDataPerSaveRequest.slice(4);

@@ -38,6 +38,7 @@ import {
   getMeshInfoForSegment,
   getSegmentName,
   getSegmentsForLayer,
+  getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
@@ -652,19 +653,46 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     call(getDataValue, targetNodePosition, newMapping),
   ]);
 
+  let updatedSkeletonTracing = yield* select((state) => state.annotation.skeleton);
+  if (!updatedSkeletonTracing) {
+    console.warn(
+      "Could not reload skeleton tracing to update the tree names after proofreading action via agglomerate trees.",
+    );
+    updatedSkeletonTracing = skeletonTracing;
+  }
+  const updatedSourceTree =
+    findTreeByNodeId(updatedSkeletonTracing.trees, sourceNodeId) ?? sourceTree;
+  const updatedTargetTree =
+    findTreeByNodeId(updatedSkeletonTracing.trees, targetNodeId) ?? targetTree;
+
   /* Rename agglomerate skeleton(s) according to their new id and mapping name */
   yield* put(
     setTreeNameAction(
       getTreeNameForAgglomerateSkeleton(newSourceAgglomerateId, volumeTracing.mappingName),
-      sourceTree.treeId,
+      updatedSourceTree.treeId,
     ),
   );
-  if (sourceTree !== targetTree) {
-    // A split happened, because the new trees are not identical.
+
+  if (updatedSourceTree.treeId !== updatedTargetTree.treeId) {
+    // A split between the trees was done. Create a segment for the new tree and update its name.
     yield* put(
       setTreeNameAction(
         getTreeNameForAgglomerateSkeleton(newTargetAgglomerateId, volumeTracing.mappingName),
-        targetTree.treeId,
+        updatedTargetTree.treeId,
+      ),
+    );
+    const newSegmentName =
+      (yield* select(
+        (state) =>
+          getVolumeTracingById(state.annotation, volumeTracingId).segments.getNullable(
+            sourceInfo.agglomerateId,
+          )?.name,
+      )) ?? `Agglomerate ${newTargetAgglomerateId}`;
+    yield* put(
+      updateSegmentAction(
+        Number(newTargetAgglomerateId),
+        { name: newSegmentName },
+        volumeTracingId,
       ),
     );
   } else {

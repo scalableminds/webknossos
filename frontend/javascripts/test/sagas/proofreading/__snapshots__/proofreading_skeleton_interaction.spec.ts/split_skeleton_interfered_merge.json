@@ -77,7 +77,7 @@
         },
       ],
       "authorId": "dummy-user-id",
-      "info": "["SET_VERSION_NUMBER","SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","DELETE_EDGE","SET_BUSY_BLOCKING_INFO_ACTION"]",
+      "info": "["SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","DELETE_EDGE","SET_BUSY_BLOCKING_INFO_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO"]",
       "stats": {
         "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
           "branchPointCount": 2,
@@ -94,47 +94,6 @@
       "transactionGroupIndex": 0,
       "transactionId": "dummyRequestId",
       "version": 10,
-    },
-  ],
-  [
-    {
-      "actions": [
-        {
-          "name": "createSegment",
-          "value": {
-            "actionTracingId": "volumeTracingId",
-            "anchorPosition": [
-              0,
-              0,
-              0,
-            ],
-            "color": null,
-            "creationTime": 1494695001688,
-            "groupId": null,
-            "id": 1339,
-            "metadata": [],
-            "name": null,
-          },
-        },
-      ],
-      "authorId": "dummy-user-id",
-      "info": "["SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","UPDATE_MESH_FILE_LIST","UPDATE_CURRENT_MESH_FILE","LOAD_PRECOMPUTED_MESH_ACTION","REMOVE_MESH","ADD_PRECOMPUTED_MESH","UPDATE_SEGMENT","STARTED_LOADING_MESH","MAYBE_FETCH_MESH_FILES"]",
-      "stats": {
-        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-          "branchPointCount": 2,
-          "edgeCount": 2,
-          "nodeCount": 6,
-          "treeCount": 4,
-        },
-        "volumeTracingId": {
-          "segmentCount": 2,
-        },
-      },
-      "timestamp": 1494695001688,
-      "transactionGroupCount": 1,
-      "transactionGroupIndex": 0,
-      "transactionId": "dummyRequestId",
-      "version": 11,
     },
   ],
   [
@@ -164,7 +123,42 @@
         },
       ],
       "authorId": "dummy-user-id",
-      "info": "["DONE_SAVING","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME * 2"]",
+      "info": "["SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE * 2","DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME * 2"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 2,
+          "nodeCount": 6,
+          "treeCount": 4,
+        },
+        "volumeTracingId": {
+          "segmentCount": 1,
+        },
+      },
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 11,
+    },
+    {
+      "actions": [
+        {
+          "name": "createSegment",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "anchorPosition": undefined,
+            "color": null,
+            "creationTime": 1494695001688,
+            "groupId": null,
+            "id": 1339,
+            "metadata": [],
+            "name": "Agglomerate 1339",
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE * 2","DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME * 2","UPDATE_SEGMENT"]",
       "stats": {
         "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
           "branchPointCount": 2,
@@ -204,7 +198,7 @@
         },
       ],
       "authorId": "dummy-user-id",
-      "info": "["SET_TREE_NAME * 2","REMOVE_MESH","MAYBE_FETCH_MESH_FILES * 2","SET_BUSY_BLOCKING_INFO_ACTION","LOAD_PRECOMPUTED_MESH_ACTION","REMOVE_MESH","ADD_PRECOMPUTED_MESH","UPDATE_SEGMENT","STARTED_LOADING_MESH","MAYBE_FETCH_MESH_FILES"]",
+      "info": "["SET_BUSY_BLOCKING_INFO_ACTION","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","UPDATE_MESH_FILE_LIST","UPDATE_CURRENT_MESH_FILE","LOAD_PRECOMPUTED_MESH_ACTION","REMOVE_MESH","ADD_PRECOMPUTED_MESH","UPDATE_SEGMENT","STARTED_LOADING_MESH","MAYBE_FETCH_MESH_FILES"]",
       "stats": {
         "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
           "branchPointCount": 2,
@@ -221,6 +215,46 @@
       "transactionGroupIndex": 0,
       "transactionId": "dummyRequestId",
       "version": 13,
+    },
+    {
+      "actions": [
+        {
+          "name": "updateSegment",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "additionalCoordinates": undefined,
+            "anchorPosition": [
+              3,
+              3,
+              3,
+            ],
+            "color": null,
+            "creationTime": 1494695001688,
+            "groupId": null,
+            "id": 1339,
+            "metadata": [],
+            "name": "Agglomerate 1339",
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["MAYBE_FETCH_MESH_FILES","SAVE_NOW","SET_SAVE_BUSY","ENSURE_HAS_ANNOTATION_MUTEX","LOAD_PRECOMPUTED_MESH_ACTION","REMOVE_MESH","ADD_PRECOMPUTED_MESH","UPDATE_SEGMENT","STARTED_LOADING_MESH","MAYBE_FETCH_MESH_FILES"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 2,
+          "nodeCount": 6,
+          "treeCount": 4,
+        },
+        "volumeTracingId": {
+          "segmentCount": 2,
+        },
+      },
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 14,
     },
   ],
 ]

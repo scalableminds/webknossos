@@ -1,12 +1,14 @@
+import { Keyboard } from "keyboardjs";
+import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
-import { Keyboard, us } from "libs/keyboard";
 import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
+
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -20,6 +22,7 @@ import constants, { isMac } from "viewer/constants";
 
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
+
 export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
 type MouseButton = string;
@@ -31,7 +34,6 @@ type KeyboardLoopHandler = {
   lastTime?: number | null | undefined;
   customAdditionalDelayFn?: () => number;
 };
-type KeyboardBindingBase = [KeyboardKey, KeyboardHandler, KeyboardHandler]; // New type
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler, boolean];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler, boolean];
 type KeyBindingMap = Record<KeyboardKey, KeyboardHandler>;
@@ -45,7 +47,7 @@ export type MouseHandler =
   | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
 type HammerJsEvent = {
   center: Point2;
-  pointers: Array<Record<string, any>>;
+  pointers: Record<string, any>[];
   scale: number;
   srcEvent: MouseEvent;
 };
@@ -75,7 +77,7 @@ const EXTENDED_COMMAND_DURATION = 3000;
 
 export class InputKeyboardNoLoop {
   keyboard: Keyboard;
-  bindings: Array<KeyboardBindingPress> = [];
+  bindings: KeyboardBindingPress[] = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
   hasExtendedBindings: boolean = false;
@@ -96,6 +98,7 @@ export class InputKeyboardNoLoop {
       window.navigator?.userAgent,
     );
     this.keyboard.setLocale("us", us);
+    this.keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
 
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -131,12 +134,12 @@ export class InputKeyboardNoLoop {
     const isInExtendedMode = this.keyboard.getContext() === "extended";
     if (isInExtendedMode) {
       this.cancelExtendedModeTimeout();
-      this.keyboard.setContext("global");
+      this.keyboard.setContext("default");
       return;
     }
     this.keyboard.setContext("extended");
     this.cancelExtendedModeTimeoutId = setTimeout(() => {
-      this.keyboard.setContext("global");
+      this.keyboard.setContext("default");
     }, EXTENDED_COMMAND_DURATION);
   };
 
@@ -178,7 +181,7 @@ export class InputKeyboardNoLoop {
 
         if (isInExtendedMode) {
           this.cancelExtendedModeTimeout();
-          this.keyboard.setContext("global");
+          this.keyboard.setContext("default");
         }
 
         if (!event.repeat) {
@@ -199,7 +202,7 @@ export class InputKeyboardNoLoop {
         this.keyboard.bind(...binding);
       });
     } else {
-      this.keyboard.withContext("global", () => {
+      this.keyboard.withContext("default", () => {
         this.keyboard.bind(...binding);
       });
     }
@@ -210,7 +213,8 @@ export class InputKeyboardNoLoop {
     this.isStarted = false;
 
     for (const binding of this.bindings) {
-      this.keyboard.unbind(...(binding.slice(0, 3) as KeyboardBindingBase));
+      const [keyCombo, pressHandler, releaseHandler] = binding;
+      this.keyboard.unbind(keyCombo, pressHandler, releaseHandler);
     }
     if (this.hasExtendedBindings) {
       document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
@@ -224,7 +228,7 @@ export class InputKeyboard {
   keyboard: Keyboard;
   keyCallbackMap: KeyBindingLoopMap = {};
   keyPressedCount: number = 0;
-  bindings: Array<KeyboardBindingDownUp> = [];
+  bindings: KeyboardBindingDownUp[] = [];
   isStarted: boolean = true;
   delay: number = 0;
   supportInputElements: boolean = false;
@@ -243,6 +247,7 @@ export class InputKeyboard {
       window.navigator?.userAgent,
     );
     this.keyboard.setLocale("us", us);
+    this.keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
 
     if (options) {
       this.delay = options.delay != null ? options.delay : this.delay;
@@ -320,9 +325,9 @@ export class InputKeyboard {
           delayTimeoutId = null;
         }
       },
-      false, // Added false as the fourth element
+      false, // preventRepeatByDefault
     ];
-    this.keyboard.withContext("global", () => {
+    this.keyboard.withContext("default", () => {
       this.keyboard.bind(...binding);
     });
     this.bindings.push(binding);
@@ -357,7 +362,8 @@ export class InputKeyboard {
     this.isStarted = false;
 
     for (const binding of this.bindings) {
-      this.keyboard.unbind(...(binding.slice(0, 3) as KeyboardBindingBase));
+      const [keyCombo, pressHandler, releaseHandler] = binding;
+      this.keyboard.unbind(keyCombo, pressHandler, releaseHandler);
     }
   }
 }
@@ -452,7 +458,7 @@ export class InputMouse {
   position: Point2 | null | undefined = null;
   triggeredByTouch: boolean = false;
   delegatedEvents: {
-    string?: (...args: Array<any>) => any;
+    string?: (...args: any[]) => any;
   };
 
   ignoreScrollingWhileDragging: boolean;

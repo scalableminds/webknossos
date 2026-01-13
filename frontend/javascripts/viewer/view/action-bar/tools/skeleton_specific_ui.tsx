@@ -17,7 +17,11 @@ import ButtonComponent, { ToggleButton } from "viewer/view/components/button_com
 
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { APIJobCommand } from "types/api_types";
-import { IMG_STYLE_FOR_SPACEY_ICONS, NARROW_BUTTON_STYLE } from "./tool_helpers";
+import {
+  ACTIONBAR_MARGIN_LEFT,
+  IMG_STYLE_FOR_SPACEY_ICONS,
+  NARROW_BUTTON_STYLE,
+} from "./tool_helpers";
 
 export function SkeletonSpecificButtons() {
   const dispatch = useDispatch();
@@ -66,7 +70,7 @@ export function SkeletonSpecificButtons() {
   return (
     <Space.Compact
       style={{
-        marginLeft: 10,
+        marginLeft: ACTIONBAR_MARGIN_LEFT,
       }}
     >
       <CreateTreeButton />

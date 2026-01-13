@@ -26,6 +26,7 @@ import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
 import {
+  ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,
   NARROW_BUTTON_STYLE,
   RadioButtonWithTooltip,
@@ -119,8 +120,11 @@ export default function ToolbarView() {
         <FastTooltip
           title={`Some tools behave differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
         >
-          <Tag style={{ marginLeft: 12 }} color="orange">
-            <InfoCircleOutlined style={{ marginRight: 4 }} />
+          <Tag
+            icon={<InfoCircleOutlined />}
+            style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
+            color="orange"
+          >
             Split Workflow
           </Tag>
         </FastTooltip>
@@ -173,21 +177,13 @@ function ToolSpecificSettings({
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (
-        <Space.Compact
-          style={{
-            marginLeft: 10,
-          }}
-        >
+        <Space.Compact>
           <CreateNewBoundingBoxButton />
         </Space.Compact>
       ) : null}
 
       {showCreateCellButton || showChangeBrushSizeButton ? (
-        <Space.Compact
-          style={{
-            marginLeft: 12,
-          }}
-        >
+        <Space.Compact>
           {showCreateCellButton ? <CreateSegmentButton /> : null}
           {showChangeBrushSizeButton ? <ChangeBrushSizePopover /> : null}
         </Space.Compact>
@@ -200,13 +196,12 @@ function ToolSpecificSettings({
       />
 
       {adaptedActiveTool === AnnotationTool.QUICK_SELECT && (
-        <>
+        <div>
           <ToggleButton
             active={!isQuickSelectHeuristic}
             style={{
               ...NARROW_BUTTON_STYLE,
               opacity: isQuickSelectHeuristic ? 0.5 : 1,
-              marginLeft: 12,
             }}
             onClick={toggleQuickSelectStrategy}
             disabled={!isAISelectAvailable}
@@ -216,7 +211,7 @@ function ToolSpecificSettings({
           </ToggleButton>
 
           <QuickSelectSettingsPopover />
-        </>
+        </div>
       )}
 
       {adaptedActiveTool.hasOverwriteCapabilities ? <VolumeInterpolationButton /> : null}
@@ -244,13 +239,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
     dispatch(setToolAction(AnnotationTool[value]));
   };
   return (
-    <Radio.Group
-      value={activeTool.id}
-      onChange={handleSetMeasurementTool}
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <Radio.Group value={activeTool.id} onChange={handleSetMeasurementTool}>
       <RadioButtonWithTooltip
         title="Measure distances with connected lines by using Left Click."
         style={NARROW_BUTTON_STYLE}

@@ -50,6 +50,8 @@ public/docs
 public/docs/frontend-api
 public/test-bundle
 public/assets
+public/images
+public/wasm
 
 src/main/scala/rebel.xml
 target/

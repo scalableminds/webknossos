@@ -260,11 +260,11 @@ JNIEXPORT void JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nativ
      jlongArray idMappingSrcJavaArray, jlongArray idMappingDstJavaArray, jint bytesPerElement, jboolean isSigned) {
 
     jsize bucketLengthBytes = env->GetArrayLength(bucketBytesMutableJavaArray);
-    jbyte * bucketBytesMutable = env->GetByteArrayElements(bucketBytesMutableJavaArray, NULL);
-    jbyte * incomingBucketBytes = env->GetByteArrayElements(incomingBucketBytesJavaArray, NULL);
+    jbyte * bucketBytesMutable = env->GetByteArrayElements(bucketBytesMutableJavaArray, nullptr);
+    jbyte * incomingBucketBytes = env->GetByteArrayElements(incomingBucketBytesJavaArray, nullptr);
     jsize mapSize = env->GetArrayLength(idMappingSrcJavaArray);
-    jlong * idMappingSrc = env->GetLongArrayElements(idMappingSrcJavaArray, NULL);
-    jlong * idMappingDst = env->GetLongArrayElements(idMappingDstJavaArray, NULL);
+    jlong * idMappingSrc = env->GetLongArrayElements(idMappingSrcJavaArray, nullptr);
+    jlong * idMappingDst = env->GetLongArrayElements(idMappingDstJavaArray, nullptr);
 
     try {
         const size_t elementCount = getElementCount(bucketLengthBytes, bytesPerElement);
@@ -317,7 +317,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
     jsize bucketLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, NULL);
+    jbyte * bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
 
     try {
 
@@ -339,11 +339,11 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
         return filteredBucketBytesJavaArray;
     } catch (const std::exception &e) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
-        throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucketInPlace: " + std::string(e.what()));
+        throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucket: " + std::string(e.what()));
         return nullptr;
     } catch (...) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, JNI_ABORT);
-        throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucketInPlace");
+        throwRuntimeException(env, "Native Exception in BucketScanner deleteSegmentFromBucket");
         return nullptr;
     }
 }

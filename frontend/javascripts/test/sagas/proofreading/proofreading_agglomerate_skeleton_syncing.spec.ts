@@ -19,7 +19,6 @@ import {
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
-  prepareGetNeighborsForAgglomerateNode,
 } from "./proofreading_test_utils";
 import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
@@ -447,7 +446,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
     it("should auto update agglomerate skeletons after splitting from all neighbors", async (context: WebknossosTestContext) => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
-      prepareGetNeighborsForAgglomerateNode(context.mocks, 4, true);
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
@@ -481,9 +479,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield put(setActiveCellAction(2));
 
         // Execute the actual merge and wait for the finished mapping.
-        // TODOM: split from all neighbors should support auto skeleton reloading.
-        const version = yield select((state) => state.annotation.version);
-        console.log(version);
         yield put(
           cutAgglomerateFromNeighborsAction(
             [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
@@ -728,7 +723,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     await task.toPromise();
   });
 
-  // TODOM same with merge
   it("should split an agglomerate, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
@@ -919,8 +913,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       // Execute the split and wait for the finished mapping.
-      const version = yield select((state) => state.annotation.version);
-      console.log(version);
       yield put(minCutAgglomerateWithPositionAction([3, 3, 3], 3, 1));
       // Wait till while proofreading action is finished including agglomerate skeleton refresh.
       yield take(
@@ -953,6 +945,112 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
       yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_split_and_split.json",
+      );
+    });
+    await task.toPromise();
+  });
+
+  it("should split an agglomerate from all neighbors, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
+    backendMock.planVersionInjection(10, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      },
+      {
+        name: "moveTreeComponent",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          sourceId: 4,
+          targetId: 3,
+          nodeIds: [7, 8],
+        },
+      },
+      {
+        name: "deleteTree",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          id: 4,
+        },
+      },
+      {
+        name: "createEdge",
+        value: {
+          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+          treeId: 3,
+          source: 4,
+          target: 7,
+        },
+      },
+    ]);
+
+    // Prepare the server's reply for the upcoming split from all neighbors request.
+    vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
+      Promise.resolve({
+        segmentId: 2,
+        neighbors: [
+          {
+            segmentId: 1,
+            position: [1, 1, 1] as Vector3,
+          },
+          {
+            segmentId: 3,
+            position: [3, 3, 3] as Vector3,
+          },
+        ],
+      }),
+    );
+
+    const task = startSaga(function* () {
+      const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Activate segment 2, setup editable mapping, make it shared and load agglomerate skeletons.
+      yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+      yield put(setActiveCellAction(2));
+      yield makeMappingEditableHelper();
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, true);
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        cutAgglomerateFromNeighborsAction(
+          [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
+        ),
+      );
+      yield take(
+        ((action: Action) =>
+          action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
+      );
+
+      const agglomerateSkeletons = yield* select((state) =>
+        getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+      );
+      expect(agglomerateSkeletons.size()).toBe(4);
+      const agglomerateSkeletonOne = agglomerateSkeletons.getOrThrow(3);
+      const agglomerateSkeletonSix = agglomerateSkeletons.getOrThrow(5);
+      const agglomerateSkeleton1339 = agglomerateSkeletons.getOrThrow(6);
+      const agglomerateSkeleton1340 = agglomerateSkeletons.getOrThrow(7);
+      yield expect(agglomerateSkeletonOne).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1_after_injected_merge_and_splitting_from_all_neighbors.json",
+      );
+      yield expect(agglomerateSkeletonSix).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_6_after_injected_merge_and_splitting_from_all_neighbors.json",
+      );
+      yield expect(agglomerateSkeleton1339).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1339_after_injected_merge_and_splitting_from_all_neighbors.json",
+      );
+      yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_merge_and_splitting_from_all_neighbors.json",
       );
     });
     await task.toPromise();

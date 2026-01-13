@@ -1,6 +1,6 @@
-import type { Plugin } from "vite";
-import protobuf from "protobufjs";
 import path from "node:path";
+import protobuf from "protobufjs";
+import type { Plugin } from "vite";
 
 interface ProtobufPluginOptions {
   /**
@@ -17,7 +17,7 @@ export default function viteProtobufPlugin(options: ProtobufPluginOptions = {}):
     name: "vite-plugin-protobuf",
 
     // Handle .proto file imports
-    async transform(code, id) {
+    async transform(_code, id) {
       // Check if this is a .proto file
       if (!id.endsWith(".proto")) {
         return null;

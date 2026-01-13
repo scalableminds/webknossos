@@ -1,10 +1,11 @@
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import viteProtobufPlugin from "./vite-plugin-protobuf";
+import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 
 import path from "node:path";
+import { viteProxyErrorHandler } from "./frontend/vite/vite-proxy-error-handler";
 
 // https://vite.dev/config/
 
@@ -35,12 +36,16 @@ export const viteConfig = {
     exclude: ["three-mesh-bvh"],
   },
   build: {
-    copyPublicDir: true,
-    outDir: "public",
+    copyPublicDir: true, // copy all frontend/assets (images, etc.) to public/assets
+    outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: false,
+    sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes("node_modules/html2canvas")) {
+            return "html2canvas";
+          }
           if (id.includes("node_modules")) {
             return "vendor";
           }

@@ -17,7 +17,7 @@ import type { useAppProps } from "antd/es/app/context";
 import type { ItemType, SubMenuType } from "antd/es/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { sleep } from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
 import { useMemo } from "react";
@@ -87,7 +87,7 @@ const handleChangeLockedStateOfAnnotation = async (
     Toast.success(
       isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],
     );
-    await Utils.sleep(250);
+    await sleep(250);
     location.reload();
   } catch (error: any) {
     const verb = isLocked ? "lock" : "unlock";

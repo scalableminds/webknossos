@@ -24,7 +24,7 @@ import { formatNumber } from "libs/format_utils";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import Toast, { guardedWithErrorToast } from "libs/toast";
-import * as Utils from "libs/utils";
+import { isUserAdminOrDatasetManager } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useState } from "react";
@@ -51,7 +51,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const [isLoading, setIsLoading] = useState(false);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
+  const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);
   const [form] = Form.useForm();
   const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);
 

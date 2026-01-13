@@ -31,7 +31,7 @@ import { diceCoefficient as dice } from "dice-coefficient";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
-import * as Utils from "libs/utils";
+import { compareBy, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import type React from "react";
 import { Fragment, PureComponent, useContext, useRef } from "react";
@@ -624,7 +624,7 @@ class DatasetTable extends PureComponent<Props, State> {
         title: "Name",
         dataIndex: "name",
         key: "name",
-        sorter: Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
+        sorter: localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
         sortOrder: sortedInfo.columnKey === "name" ? sortedInfo.order : undefined,
         render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
@@ -633,7 +633,7 @@ class DatasetTable extends PureComponent<Props, State> {
         title: "Creation Date",
         dataIndex: "created",
         key: "created",
-        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+        sorter: compareBy<RowRenderer>((rowRenderer) =>
           isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
         ),
         sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
@@ -666,7 +666,7 @@ class DatasetTable extends PureComponent<Props, State> {
         render: (_: any, rowRenderer: RowRenderer) => {
           return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
         },
-        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+        sorter: compareBy<RowRenderer>((rowRenderer) =>
           isRecordADataset(rowRenderer.data) && rowRenderer.data.usedStorageBytes
             ? rowRenderer.data.usedStorageBytes
             : 0,

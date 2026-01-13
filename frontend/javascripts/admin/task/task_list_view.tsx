@@ -34,7 +34,13 @@ import { handleGenericError } from "libs/error_handling";
 import { formatSeconds, formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  getUrlParamValue,
+  hasUrlParam,
+  localeCompareBy,
+} from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type React from "react";
@@ -71,7 +77,7 @@ function TaskListView({ initialFieldValues }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const selectedUserIdForAssignment = useRef<string | null>(null);
   const [isAnonymousTaskLinkModalOpen, setIsAnonymousTaskLinkModalOpen] = useState(
-    Utils.hasUrlParam("showAnonymousLinks"),
+    hasUrlParam("showAnonymousLinks"),
   );
 
   useEffect(() => {
@@ -163,7 +169,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function getFilteredTasks() {
-    return Utils.filterWithSearchQueryAND(
+    return filterWithSearchQueryAND(
       tasks,
       [
         "team",
@@ -190,7 +196,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function getAnonymousTaskLinkModal() {
-    const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
+    const anonymousTaskId = getUrlParamValue("showAnonymousLinks");
 
     if (!isAnonymousTaskLinkModalOpen) {
       return null;
@@ -250,7 +256,7 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "ID",
       dataIndex: "id",
       key: "id",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.id),
+      sorter: localeCompareBy<APITask>((task) => task.id),
       render: (id: string) => <FormattedId id={id} />,
       width: 120,
     },
@@ -259,7 +265,7 @@ function TaskListView({ initialFieldValues }: Props) {
       dataIndex: "projectName",
       key: "projectName",
       width: 130,
-      sorter: Utils.localeCompareBy<APITask>((task) => task.projectName),
+      sorter: localeCompareBy<APITask>((task) => task.projectName),
       render: (projectName: string) => <a href={`/projects#${projectName}`}>{projectName}</a>,
     },
     {
@@ -267,7 +273,7 @@ function TaskListView({ initialFieldValues }: Props) {
       dataIndex: "type",
       key: "type",
       width: 200,
-      sorter: Utils.localeCompareBy<APITask>((task) => task.type.summary),
+      sorter: localeCompareBy<APITask>((task) => task.type.summary),
       render: (taskType: APITaskType) => (
         <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
       ),
@@ -276,7 +282,7 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "Dataset",
       dataIndex: "datasetName",
       key: "datasetName",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.datasetName),
+      sorter: localeCompareBy<APITask>((task) => task.datasetName),
     },
     {
       title: "Stats",
@@ -337,7 +343,7 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "Experience",
       dataIndex: "neededExperience",
       key: "neededExperience",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.neededExperience.domain),
+      sorter: localeCompareBy<APITask>((task) => task.neededExperience.domain),
       width: 250,
       render: (neededExperience: APITask["neededExperience"]) =>
         neededExperience.domain !== "" || neededExperience.value > 0 ? (
@@ -351,7 +357,7 @@ function TaskListView({ initialFieldValues }: Props) {
       dataIndex: "created",
       key: "created",
       width: 200,
-      sorter: Utils.compareBy<APITask>((task) => task.created),
+      sorter: compareBy<APITask>((task) => task.created),
       render: (created: APITask["created"]) => <FormattedDate timestamp={created} />,
       defaultSortOrder: "descend",
     },

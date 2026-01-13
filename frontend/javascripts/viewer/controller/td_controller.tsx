@@ -1,7 +1,7 @@
 import { InputMouse } from "libs/input";
 import { V3 } from "libs/mjs";
 import TrackballControls from "libs/trackball_controls";
-import * as Utils from "libs/utils";
+import { clamp, waitForElementWithId } from "libs/utils";
 import _ from "lodash";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -146,7 +146,7 @@ class TDController extends PureComponent<Props> {
   initMouse(): void {
     const tdView = OrthoViews.TDView;
     const inputcatcherId = `inputcatcher_${tdView}`;
-    Utils.waitForElementWithId(inputcatcherId).then((view) => {
+    waitForElementWithId(inputcatcherId).then((view) => {
       if (!this.isStarted) {
         return;
       }
@@ -191,7 +191,7 @@ class TDController extends PureComponent<Props> {
         : null;
     const controls = {
       leftDownMove: (delta: Point2) => this.moveTDView(delta),
-      scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
+      scroll: (value: number) => this.zoomTDView(clamp(-1, value, 1), true),
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
         // Fix the rotation target of the TrackballControls

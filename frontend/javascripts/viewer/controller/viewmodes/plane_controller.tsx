@@ -1,6 +1,6 @@
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { isNoElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
 import _ from "lodash";
 import type React from "react";
@@ -333,7 +333,7 @@ class PlaneController extends PureComponent<Props> {
     // See: https://github.com/scalableminds/webknossos/issues/3475
     OrthoViewValuesWithoutTDView.forEach((id) => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
-      Utils.waitForElementWithId(inputcatcherId).then((el) => {
+      waitForElementWithId(inputcatcherId).then((el) => {
         if (!document.body.contains(el)) {
           console.error("el is not attached anymore");
         }
@@ -436,7 +436,7 @@ class PlaneController extends PureComponent<Props> {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        Utils.isNoElementFocussed()
+        isNoElementFocused()
       ) {
         event.preventDefault();
       }

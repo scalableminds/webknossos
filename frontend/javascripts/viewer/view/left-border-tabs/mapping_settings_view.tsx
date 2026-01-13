@@ -1,6 +1,6 @@
 import { Select } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import * as Utils from "libs/utils";
+import { localeCompareBy } from "libs/utils";
 import messages from "messages";
 import React from "react";
 import { connect } from "react-redux";
@@ -165,7 +165,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
       const elements = optionStrings
         .slice()
-        .sort(Utils.localeCompareBy((optionString) => optionString))
+        .sort(localeCompareBy((optionString) => optionString))
         .map((optionString) => (
           <Option
             key={packMappingNameAndCategory(optionString, category)}

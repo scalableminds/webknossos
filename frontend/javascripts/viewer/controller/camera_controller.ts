@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
+import { waitForElementWithId } from "libs/utils";
 import _ from "lodash";
 import { PureComponent } from "react";
 import {
@@ -110,7 +110,7 @@ class CameraController extends PureComponent<Props> {
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
-    Utils.waitForElementWithId(tdId).then(() => {
+    waitForElementWithId(tdId).then(() => {
       this.props.setTargetAndFixPosition();
       Store.dispatch(
         setTDCameraWithoutTimeTrackingAction({

@@ -25,7 +25,7 @@ import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy } from "libs/utils";
 import messages from "messages";
 import { PureComponent, useContext } from "react";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
@@ -413,7 +413,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy<APITaskWithAnnotation>(
+      compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),

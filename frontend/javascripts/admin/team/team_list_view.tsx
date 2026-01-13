@@ -7,7 +7,7 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type React from "react";
@@ -219,7 +219,7 @@ function TeamListView() {
       <Spin spinning={isLoading} size="large">
         {teams.length <= 1 ? renderPlaceholder() : null}
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(teams, ["name"], searchQuery)}
+          dataSource={filterWithSearchQueryAND(teams, ["name"], searchQuery)}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
@@ -236,7 +236,7 @@ function TeamListView() {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy<APITeam>((team) => team.name)}
+            sorter={localeCompareBy<APITeam>((team) => team.name)}
           />
           <Column
             title="Actions"

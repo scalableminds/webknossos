@@ -7,7 +7,7 @@ import { Alert, Button, Form, Modal, Select, Spin, Tooltip } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { animationFrame, sleep } from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
 import type React from "react";
@@ -88,7 +88,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
     Toast.success(messages["tracing.merged_with_redirect"]);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-    await Utils.sleep(1500);
+    await sleep(1500);
     location.href = redirectUrl;
   }
 
@@ -179,7 +179,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
     // Wait for an animation frame (but not longer than a second) so that the loading
     // animation is kicked off
-    await Utils.animationFrame(1000);
+    await animationFrame(1000);
     this.props.addTreesAndGroupsAction(createMutableTreeMapFromTreeArray(trees), treeGroups);
     this.setState({
       isUploading: false,

@@ -1,11 +1,11 @@
 import type { InputProps } from "antd";
-import * as Utils from "libs/utils";
 import _ from "lodash";
 import type React from "react";
 import { PureComponent } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import InputComponent from "viewer/view/components/input_component";
+import { stringToNumberArray } from "./utils";
 
 const CHARACTER_WIDTH_PX = 8;
 
@@ -64,7 +64,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
 
     if (this.state.isValid) {
       if (this.props.changeOnlyOnBlur) {
-        const vector = Utils.stringToNumberArray(this.state.text) as any as T;
+        const vector = stringToNumberArray(this.state.text) as any as T;
         this.props.onChange(vector);
       } else {
         this.setState({
@@ -109,7 +109,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
     const isValidInput = this.props.allowDecimals
       ? /^[\d\s,.]*$/g.test(text)
       : /^[\d\s,]*$/g.test(text);
-    const value = Utils.stringToNumberArray(text);
+    const value = stringToNumberArray(text);
     const isValidFormat = value.length === this.defaultValue.length;
 
     if (isValidFormat && isValidInput && !this.props.changeOnlyOnBlur) {
@@ -131,7 +131,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
 
     event.preventDefault();
     const { selectionStart, value } = event.target as HTMLInputElement;
-    const vec = Utils.stringToNumberArray(value) as T;
+    const vec = stringToNumberArray(value) as T;
 
     // Count commas before the selection to obtain the index of the current element
     const vectorIndex = Array.from((value as string).slice(0, selectionStart || 0)).filter(

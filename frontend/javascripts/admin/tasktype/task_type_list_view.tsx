@@ -19,7 +19,7 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type React from "react";
@@ -120,7 +120,7 @@ function TaskTypeListView() {
 
       <Spin spinning={isLoading} size="large">
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(
+          dataSource={filterWithSearchQueryAND(
             taskTypes,
             ["id", "teamName", "summary", "description", "settings"],
             searchQuery,
@@ -145,7 +145,7 @@ function TaskTypeListView() {
             dataIndex="id"
             key="id"
             width={120}
-            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.id)}
+            sorter={localeCompareBy<APITaskType>((taskType) => taskType.id)}
             render={(id) => <FormattedId id={id} />}
           />
           <Column
@@ -153,20 +153,20 @@ function TaskTypeListView() {
             dataIndex="teamName"
             key="team"
             width={230}
-            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.teamName)}
+            sorter={localeCompareBy<APITaskType>((taskType) => taskType.teamName)}
           />
           <Column
             title="Summary"
             dataIndex="summary"
             key="summary"
             width={230}
-            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.summary)}
+            sorter={localeCompareBy<APITaskType>((taskType) => taskType.summary)}
           />
           <Column
             title="Description"
             dataIndex="description"
             key="description"
-            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.description)}
+            sorter={localeCompareBy<APITaskType>((taskType) => taskType.description)}
             render={(description) => (
               <div className="task-type-description short">
                 <Markdown>{description}</Markdown>

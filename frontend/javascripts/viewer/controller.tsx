@@ -3,7 +3,7 @@ import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/
 import { fetchGistContent } from "libs/gist";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { getUrlParamValue, hasUrlParam, isNoElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
@@ -96,9 +96,9 @@ class Controller extends PureComponent<PropsWithRouter, State> {
   tryFetchingModel() {
     this.props.setControllerStatus("loading");
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
-    const version = Utils.hasUrlParam("showVersionRestore")
-      ? Utils.hasUrlParam("version")
-        ? Number.parseInt(Utils.getUrlParamValue("version"))
+    const version = hasUrlParam("showVersionRestore")
+      ? hasUrlParam("version")
+        ? Number.parseInt(getUrlParamValue("version"))
         : 1
       : undefined;
     Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, version)
@@ -214,7 +214,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        Utils.isNoElementFocussed()
+        isNoElementFocused()
       ) {
         event.preventDefault();
       }

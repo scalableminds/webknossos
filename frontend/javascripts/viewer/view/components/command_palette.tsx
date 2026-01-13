@@ -1,8 +1,7 @@
 import { updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
-import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
-import * as Utils from "libs/utils";
+import { capitalize, getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { useMemo } from "react";
@@ -131,7 +130,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
-    const statisticsCommands = Utils.isUserAdminOrManager(activeUser)
+    const statisticsCommands = isUserAdminOrManager(activeUser)
       ? [
           {
             path: "/reports/projectProgress",

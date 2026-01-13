@@ -18,6 +18,10 @@ import {
   pitchFlycamAction,
   yawFlycamAction,
   rollFlycamAction,
+  setDirectionAction,
+  moveFlycamOrthoAction,
+  movePlaneFlycamOrthoAction,
+  setAdditionalCoordinatesAction,
 } from "viewer/model/actions/flycam_actions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
 import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";

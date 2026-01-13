@@ -231,7 +231,7 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
           }}
           step={value / 10}
           precision={precision ?? 2}
-          value={roundTo != null ? roundTo(value, roundToDigit) : value}
+          value={roundToDigit != null ? roundTo(value, roundToDigit) : value}
           onChange={onChangeInput}
           disabled={disabled}
           size="small"

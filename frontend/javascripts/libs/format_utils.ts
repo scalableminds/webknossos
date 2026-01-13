@@ -16,7 +16,7 @@ import { Unicode } from "viewer/constants";
 import type { Duration } from "dayjs/plugin/duration";
 import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_types";
 import type { BoundingBoxObject } from "viewer/store";
-import { map3, roundTo } from "./utils";
+import { hexToRgb, map3, roundTo } from "./utils";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -105,19 +105,18 @@ function getFactorToNextSmallestCommonUnit(
 }
 
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
-const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
+const COLOR_MAP_ANTD = Object.keys(presetPalettes);
 export function stringToColor(string: string): string {
   const hash = hashString(string, COLOR_MAP.length);
   return COLOR_MAP[hash];
 }
-export function stringToAntdColorPreset(string: string): string {
+export function stringToAntdColorPreset(string: string): keyof typeof presetPalettes {
   const hash = hashString(string, COLOR_MAP_ANTD.length);
   return COLOR_MAP_ANTD[hash];
 }
 export function stringToAntdColorPresetRgb(string: string): Vector3 {
   const presetString = stringToAntdColorPreset(string);
   // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
   return hexToRgb(presetPalettes[presetString].primary);
 }
 

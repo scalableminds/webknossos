@@ -139,17 +139,15 @@ describe("Proofreading (Single User)", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.slice(-1)).toEqual([
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              agglomerateId: 1,
-              segmentId1: 1,
-              segmentId2: 2,
-            },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 1,
+            segmentId2: 2,
           },
-        ],
+        },
       ]);
     });
 

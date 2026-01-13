@@ -105,7 +105,7 @@ export interface WebknossosTestContext extends BaseTestContext {
 }
 
 export function getFlattenedUpdateActions(context: WebknossosTestContext) {
-  return _.flatten(
+  return _.flattenDeep(
     context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
       saveQueueEntries.map((entry) => entry.actions),
     ),

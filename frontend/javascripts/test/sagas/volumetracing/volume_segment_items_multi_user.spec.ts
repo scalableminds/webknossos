@@ -324,27 +324,23 @@ describe("Collaborative editing of segment items", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      expect(receivedUpdateActions.at(-2)).toMatchObject([
-        {
-          name: "updateSegmentPartial",
-          value: {
-            actionTracingId: tracingId,
-            id: segmentId,
-            color: updateSegmentProps1.color,
-          },
+      expect(receivedUpdateActions.at(-2)).toMatchObject({
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: tracingId,
+          id: segmentId,
+          color: updateSegmentProps1.color,
         },
-      ]);
-      expect(receivedUpdateActions.at(-1)).toMatchObject([
-        {
-          name: "updateSegmentPartial",
-          value: {
-            actionTracingId: tracingId,
-            id: segmentId,
-            name: updateSegmentProps2.name,
-            groupId: updateSegmentProps2.groupId,
-          },
+      });
+      expect(receivedUpdateActions.at(-1)).toMatchObject({
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: tracingId,
+          id: segmentId,
+          name: updateSegmentProps2.name,
+          groupId: updateSegmentProps2.groupId,
         },
-      ]);
+      });
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
 
       expect(finalSegment).toMatchObject({
@@ -540,22 +536,18 @@ describe("Collaborative editing of segment items", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      expect(receivedUpdateActions.at(-2)).toMatchObject([
-        {
-          name: "updateSegmentPartial",
-          value: {
-            ...updateSegmentProps2,
-          },
+      expect(receivedUpdateActions.at(-2)).toMatchObject({
+        name: "updateSegmentPartial",
+        value: {
+          ...updateSegmentProps2,
         },
-      ]);
-      expect(receivedUpdateActions.at(-1)).toMatchObject([
-        {
-          name: "updateSegmentPartial",
-          value: {
-            ...updateSegmentProps3,
-          },
+      });
+      expect(receivedUpdateActions.at(-1)).toMatchObject({
+        name: "updateSegmentPartial",
+        value: {
+          ...updateSegmentProps3,
         },
-      ]);
+      });
       const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
       expect(finalSegment).toMatchObject(expectedShape);
     });

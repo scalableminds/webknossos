@@ -377,35 +377,31 @@ describe("Proofreading (with mesh actions)", () => {
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
       expect(receivedUpdateActions.slice(-2)).toEqual([
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              // Different to test above:
-              agglomerateId: 4, // !Changed! due to interfered merge update action version 7. Would be aggloId 6,
-              // but the merge made it a 4, because the split operation is after the injected version 7.
-              segmentId1: 1337,
-              segmentId2: 1338,
-            },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            // Different to test above:
+            agglomerateId: 4, // !Changed! due to interfered merge update action version 7. Would be aggloId 6,
+            // but the merge made it a 4, because the split operation is after the injected version 7.
+            segmentId1: 1337,
+            segmentId2: 1338,
           },
-        ],
-        [
-          {
-            name: "createSegment",
-            value: {
-              actionTracingId: "volumeTracingId",
-              additionalCoordinates: undefined,
-              anchorPosition: [1337, 1337, 1337],
-              color: null,
-              creationTime: 1494695001688,
-              groupId: null,
-              id: 4,
-              metadata: [],
-              name: null,
-            },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [1337, 1337, 1337],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 4,
+            metadata: [],
+            name: null,
           },
-        ],
+        },
       ]);
       yield delay(400);
       const finalMapping = yield select(
@@ -553,44 +549,40 @@ describe("Proofreading (with mesh actions)", () => {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.slice(-2)).toEqual([
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              agglomerateId: 1,
-              segmentId1: 1,
-              segmentId2: 1338,
-            },
+      expect(receivedUpdateActions.slice(-3)).toEqual([
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 1,
+            segmentId2: 1338,
           },
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              agglomerateId: 1,
-              segmentId1: 3,
-              segmentId2: 1337,
-            },
+        },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 3,
+            segmentId2: 1337,
           },
-        ],
-        [
-          {
-            name: "createSegment",
-            value: {
-              actionTracingId: "volumeTracingId",
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
 
-              additionalCoordinates: undefined,
-              anchorPosition: [1, 1, 1],
-              color: null,
-              creationTime: 1494695001688,
-              groupId: null,
-              id: 1,
-              metadata: [],
-              name: null,
-            },
+            additionalCoordinates: undefined,
+            anchorPosition: [1, 1, 1],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1,
+            metadata: [],
+            name: null,
           },
-        ],
+        },
       ]);
       const finalMapping = yield select(
         (state) =>
@@ -679,43 +671,39 @@ describe("Proofreading (with mesh actions)", () => {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      expect(receivedUpdateActions.slice(-2)).toEqual([
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              agglomerateId: 1,
-              segmentId1: 1,
-              segmentId2: 1338,
-            },
+      expect(receivedUpdateActions.slice(-3)).toEqual([
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 1,
+            segmentId2: 1338,
           },
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              agglomerateId: 1,
-              segmentId1: 3,
-              segmentId2: 1337,
-            },
+        },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId: 1,
+            segmentId1: 3,
+            segmentId2: 1337,
           },
-        ],
-        [
-          {
-            name: "createSegment",
-            value: {
-              actionTracingId: "volumeTracingId",
-              additionalCoordinates: undefined,
-              anchorPosition: [1, 1, 1],
-              color: null,
-              creationTime: 1494695001688,
-              groupId: null,
-              id: 1,
-              metadata: [],
-              name: null,
-            },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [1, 1, 1],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1,
+            metadata: [],
+            name: null,
           },
-        ],
+        },
       ]);
       const finalMapping = yield select(
         (state) =>

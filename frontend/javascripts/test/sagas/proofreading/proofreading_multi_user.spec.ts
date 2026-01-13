@@ -23,6 +23,7 @@ import { type NumberLike, startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   expectedMappingAfterMerge,
+  expectedMappingAfterMerge2,
   expectedMappingAfterMergeRebase,
   initialMapping,
 } from "./proofreading_fixtures";
@@ -59,7 +60,7 @@ describe("Proofreading (Multi User)", () => {
       {1337, 1338}
 
       - Backend merges segments 5 and 6
-      - Frontend merges 4 and 1
+      - Frontend merges 1 and 4
 
       The resulting mapping will be:
       {6 <- 5 <- 4 -> 1 -> 2 -> 3}
@@ -132,7 +133,6 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
-          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -171,6 +171,139 @@ describe("Proofreading (Multi User)", () => {
 
       const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
       expect(segment6AfterSaving).toBeUndefined();
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("(II) should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+    /*
+      Initial Mapping:
+      {1 -> 2 -> 3}
+      {4 -> 5}
+      {6 -> 7}
+      {1337, 1338}
+
+      - Frontend merges segments 5 and 6
+      - Backend merges 1 and 4
+
+      The resulting mapping will be:
+      {6 <- 5 <- 4 -> 1 -> 2 -> 3}
+      {1337, 1338}
+     */
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planVersionInjection(5, [
+      {
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 4,
+          anchorPosition: [4, 4, 4],
+          additionalCoordinates: undefined,
+          name: "",
+          color: [1, 2, 3],
+          groupId: null,
+          metadata: [],
+          creationTime: 0,
+        },
+      },
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: 1,
+          targetId: 4,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(5, { anchorPosition: [5, 5, 5] }, tracingId));
+      // yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
+      yield put(setActiveCellAction(5));
+
+      yield call(createEditableMapping);
+
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialMapping);
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        proofreadMergeAction(
+          [6, 6, 6], // At this position is: unmappedId=6 / mappedId=6
+        ),
+      );
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      const mappingAfterOptimisticUpdate = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge2);
+      yield call(() => api.tracing.save()); // Also pulls newest version from backend.
+
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+      expect(receivedUpdateActions.slice(-2)).toEqual([
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1,
+            targetId: 4,
+          },
+        },
+        {
+          name: "mergeAgglomerate",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            segmentId1: 5,
+            segmentId2: 6,
+            agglomerateId1: 1,
+            agglomerateId2: 6,
+          },
+        },
+      ]);
+      const finalMapping = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+
+      expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
+
+      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
+      expect(segment6AfterSaving).toBeUndefined();
+
+      const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4);
+      expect(segment4AfterSaving).toBeUndefined();
     });
 
     await task.toPromise();
@@ -240,7 +373,6 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
-          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -257,28 +389,24 @@ describe("Proofreading (Multi User)", () => {
       yield call(() => api.tracing.save());
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.at(-2)).toEqual([
-        {
-          name: "mergeAgglomerate",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 1,
-            segmentId2: 4,
-            agglomerateId1: 1339,
-            agglomerateId2: 4,
-          },
+      expect(receivedUpdateActions.at(-2)).toEqual({
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1339,
+          agglomerateId2: 4,
         },
-      ]);
+      });
 
-      expect(receivedUpdateActions.at(-1)).toMatchObject([
-        {
-          name: "createSegment",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            id: 1339,
-          },
+      expect(receivedUpdateActions.at(-1)).toMatchObject({
+        name: "createSegment",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 1339,
         },
-      ]);
+      });
 
       const finalMapping = yield select(
         (state) =>
@@ -579,7 +707,6 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
-          3, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -690,7 +817,6 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
-          4, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -868,7 +994,6 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
-          4, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -965,7 +1090,6 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
-          1, // Target segment: unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");

@@ -518,7 +518,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     });
   });
 
-  // Multi user tests with injected updates
+  // --------- Multi user tests with injected updates ---------
+
   it("should merge two agglomerates, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);

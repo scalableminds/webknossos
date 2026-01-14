@@ -42,7 +42,7 @@ export function getMeshfileChunksForSegment(
   // editableMappingTracingId should be the tracing id, not the editable mapping id.
   // If this is set, it is assumed that the request is about an editable mapping.
   editableMappingTracingId: string | null | undefined,
-  editableMappingVersion: number | undefined | null, // TODO: add to callee
+  editableMappingVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
   return doWithToken((token) => {
     const params = new URLSearchParams();

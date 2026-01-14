@@ -478,8 +478,9 @@ export function diffDiffableMaps<K extends number, V>(
   onlyA: Array<K>;
   onlyB: Array<K>;
 } {
-  const areDifferent = (valueA: V | undefined, valueB: V | undefined) =>
-    useDeepEqualityCheck ? !_.isEqual(valueA, valueB) : valueA !== valueB;
+  const areDifferent = useDeepEqualityCheck
+    ? (valueA: V | undefined, valueB: V | undefined) => !_.isEqual(valueA, valueB)
+    : (valueA: V | undefined, valueB: V | undefined) => valueA !== valueB;
 
   // For the edge case that one of the maps is empty, we will consider them dependent, anyway
   const areDiffsDependent = mapA.getId() === mapB.getId() || mapA.size() === 0 || mapB.size() === 0;

@@ -456,9 +456,10 @@ export type RebaseRelevantAnnotationState = {
   readonly isRebasing: boolean;
 };
 
-// Additionally, the proofreading sagas sometimes need knowledge of the mapping info last stored in the backend,
-// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons.
-// This info is also stored here.
+// Additionally, the proofreading sagas need knowledge of the mapping info last stored in the backend,
+// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons
+// as part of the post processing of a proofreading interaction.
+// This info is also stored in ProofreadingPostProcessingInfo.
 // TODOM: Naming open to debate.
 
 export type ProofreadingActionInfo = {

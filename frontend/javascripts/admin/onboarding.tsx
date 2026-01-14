@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxIncludedUsersInPersonalPlan } from "admin/organization/pricing_plan_utils";
-import { getDatastores, getEditableTeams, sendInvitesForOrganization } from "admin/rest_api";
+import { getDatastores, getEditableTeams } from "admin/rest_api";
 import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
@@ -32,6 +32,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { APITeamMembership } from "types/api_types";
 import Store from "viewer/store";
+import { sendInvitesForOrganization } from "./api/organization";
 import { PERMISSIONS, PermissionsAndTeamsComponent } from "./user/permissions_and_teams_modal_view";
 
 const FormItem = Form.Item;

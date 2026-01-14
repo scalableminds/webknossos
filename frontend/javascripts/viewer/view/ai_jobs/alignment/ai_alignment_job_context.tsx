@@ -1,4 +1,4 @@
-import { startAlignSectionsJob } from "admin/rest_api";
+import { refreshOrganizationCredits, startAlignSectionsJob } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
@@ -44,6 +44,12 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
       setNewDatasetName(`${dataset.name}_${selectedTask.name?.replace(/\s/g, "_")}`);
     }
   }, [dataset, selectedTask]);
+
+  // Auto-update the organization credit's information once an AlignmentJobContext is created to
+  // ensure most recent information about the organizations credits is displayed during alignment job selection.
+  useEffect(() => {
+    refreshOrganizationCredits();
+  }, []);
 
   const areParametersValid = useMemo(
     () => Boolean(selectedTask?.jobType && newDatasetName),

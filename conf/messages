@@ -131,6 +131,8 @@ dataset.explore.autoAdd.failed=Failed to automatically import the explored datas
 dataset.additionalCoordinates.different=Additional coordinates differ in merged units.
 dataset.metadata.duplicateKeys=Metadata keys must be unique.
 dataset.boundingBox.unset=This dataset has no bounding box. Please make sure this dataset is imported correctly.
+dataset.reserveMagUploadToPath.notVirtual=Adding mags to existing datasets is only allowed for virtual datasets.
+dataset.reserveMagUploadToPath.exists=This mag is already pending.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system

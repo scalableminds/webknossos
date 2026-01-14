@@ -1043,7 +1043,7 @@ export function getDataset(
     params.set("sharingToken", String(sharingToken));
   }
   if (includeZeroMagLayers != null) {
-    params.set("includeZeroMagLayers", includeZeroMagLayers);
+    params.set("includeZeroMagLayers", includeZeroMagLayers.toString());
   }
 
   return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
@@ -1061,7 +1061,7 @@ export async function getDatasetLegacy(
     sharingToken,
     options,
   );
-  return getDataset(datasetId, sharingToken, options);
+  return getDataset(datasetId, sharingToken, null, options);
 }
 
 export type DatasetUpdater = {

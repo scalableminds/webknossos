@@ -781,7 +781,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     for {
       rows <- run(
         q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId, uploadToPathIsPending
-       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName"""
+       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName AND NOT uploadToPathIsPending"""
           .as[DatasetMagsRow])
       magLocators <- Fox.combined(rows.map(parseMagLocator))
     } yield magLocators
@@ -818,8 +818,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             """.as[DataSourceMagRow])
     } yield storageRelevantMags.toList
 
-  // TODO for non-virtual, block updating mags while there exist any with uploadToPathIsPending? or just skip those?
-  // how to adapt the duplicate constraint?
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
       q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
@@ -959,7 +957,28 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     } yield ()
 
-  // TODO check other queries, how should pending interact with them?
+  def findPendingMagLocatorPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[UPath] =
+    for {
+      rows <- run(q"""SELECT path
+            FROM webknossos.dataset_mags
+            WHERE _dataset = $datasetId
+            AND layerName = $layerName
+            AND mag = $mag
+            AND uploadToPathIsPending
+            AND path IS NOT NULL
+            """.as[String])
+      first <- rows.headOption.toFox
+      firstAsUpath <- UPath.fromString(first).toFox
+    } yield firstAsUpath
+
+  def deletePendingMagLocator(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.dataset_mags
+                   WHERE _dataset = $datasetId
+                   AND layerName = $layerName
+                   AND mag = $mag
+                   AND uploadToPathIsPending""".asUpdate)
+    } yield ()
 
 }
 

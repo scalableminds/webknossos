@@ -3,7 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, TextUtils}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat.LayerAttachmentDataformat
@@ -252,7 +252,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       mp: MessagesProvider): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
-      // TODO delete existing if selected
+      _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
       uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
       newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
@@ -264,4 +264,25 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                         parameters.channelIndex,
                                         magPath)
     } yield magPath
+
+  private def handleExistingPendingMagIfExists(dataset: Dataset,
+                                               layerName: String,
+                                               mag: Vec3Int,
+                                               overwritePending: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      existingMagLocatorPathBox <- datasetMagsDAO.findPendingMagLocatorPath(dataset._id, layerName, mag).shiftBox
+      _ <- existingMagLocatorPathBox match {
+        case Full(existingMagLocatorPath) =>
+          if (overwritePending) {
+            for {
+              client <- datasetService.clientFor(dataset)(GlobalAccessContext)
+              _ <- client.deletePaths(Seq(existingMagLocatorPath))
+              _ <- datasetMagsDAO.deletePendingMagLocator(dataset._id, layerName, mag)
+            } yield ()
+          } else Fox.failure("dataset.reserveMagUploadToPath.exists")
+        case Empty      => Fox.successful(())
+        case f: Failure => f.toFox
+      }
+    } yield ()
+
 }

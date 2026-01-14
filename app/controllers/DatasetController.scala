@@ -432,8 +432,11 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
-        _ <- Fox.runOptional(request.body.dataSource)(dataSourceUpdates =>
-          datasetService.updateDataSourceFromUserChanges(dataset, dataSourceUpdates, request.body.layerRenamings.getOrElse(Seq.empty)))
+        _ <- Fox.runOptional(request.body.dataSource)(
+          dataSourceUpdates =>
+            datasetService.updateDataSourceFromUserChanges(dataset,
+                                                           dataSourceUpdates,
+                                                           request.body.layerRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
@@ -651,9 +654,9 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reservemagUploadToPath.notVirtual"
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         attachmentPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
-
       } yield Ok(Json.toJson(attachmentPath))
     }
 

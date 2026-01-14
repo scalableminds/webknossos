@@ -553,7 +553,7 @@ export class EraseToolController {
         const isControlOrMetaPressed = event.ctrlKey || event.metaKey;
         if (event.shiftKey) {
           if (isControlOrMetaPressed) {
-            VolumeHandlers.handleFloodFill(pos, plane);
+            VolumeHandlers.handleFloodFill(Store.getState(), pos, plane);
           } else {
             VolumeHandlers.handlePickCell(pos);
           }
@@ -641,7 +641,7 @@ export class FillCellToolController {
         if (shouldPickCell) {
           VolumeHandlers.handlePickCell(pos);
         } else {
-          VolumeHandlers.handleFloodFill(pos, plane);
+          VolumeHandlers.handleFloodFill(Store.getState(), pos, plane);
         }
       },
     };

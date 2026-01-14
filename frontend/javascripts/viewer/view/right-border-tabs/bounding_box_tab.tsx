@@ -177,7 +177,11 @@ export default function BoundingBoxTab() {
     event.stopPropagation(); // Prevent that the bounding box gets activated when the context menu is opened.
 
     const [x, y] = getContextMenuPositionFromEvent(event, CONTEXT_MENU_CLASS);
-    showContextMenuAt(x, y, menu);
+    if (selectedRowKeys.length > 1) {
+      return showContextMenuAt(x, y, multiSelectContextMenu);
+    } else {
+      showContextMenuAt(x, y, menu);
+    }
   };
 
   const showContextMenuAt = useCallback((xPos: number, yPos: number, menu: MenuProps) => {
@@ -195,6 +199,22 @@ export default function BoundingBoxTab() {
     setContextMenuPosition(null);
     setMenu(null);
   }, []);
+
+  const multiSelectContextMenu = {
+    items: [
+      {
+        key: "delete-selected-bboxes",
+        label: `Delete ${selectedRowKeys.length} selected bounding boxes`,
+        disabled: !allowUpdate,
+        onClick: () => {
+          selectedRowKeys.forEach((id) => {
+            deleteBoundingBox(Number(id));
+          });
+          setSelectedRowKeys([]);
+        },
+      },
+    ],
+  };
 
   return (
     <div

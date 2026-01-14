@@ -117,6 +117,7 @@ export function stringToAntdColorPreset(string: string): keyof typeof presetPale
 export function stringToAntdColorPresetRgb(string: string): Vector3 {
   const presetString = stringToAntdColorPreset(string);
   // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
+  // @ts-ignore
   return hexToRgb(presetPalettes[presetString].primary);
 }
 

@@ -1221,6 +1221,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated. Therefore, we reload them.
   yield* call(reloadMappingAndAggloIds);
 
+  annotationVersion = yield* select((state) => state.annotation.version);
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
     // Now that the changes are saved, we can split the local mapping (because it requires

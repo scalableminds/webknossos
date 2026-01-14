@@ -155,7 +155,6 @@ export default function* proofreadRootSaga(): Saga<void> {
   );
   yield* takeEveryUnlessBusy(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
-    // TODO: fiddly to keep in sync with agglomerate skeletons.
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
     PROOFREADING_BUSY_REASON,
   );
@@ -1222,10 +1221,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated. Therefore, we reload them.
   yield* call(reloadMappingAndAggloIds);
 
-  annotationVersion = yield* select((state) => state.annotation.version);
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
-    // Now that the changes are saved, we can split the mapping locally (because it requires
+    // Now that the changes are saved, we can split the local mapping (because it requires
     // communication with the back-end).
     const autoUpdateAgglomerateSkeletons = true;
     const splitMappingInfo = yield* splitAgglomerateInMapping(
@@ -1241,9 +1239,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
     const { splitMapping } = splitMappingInfo;
-    // Split agglomerate id -> vielen agglomerate ids
-
-    // TODO: based on the split mapping, skeletons should be reloaded!
 
     console.log("dispatch setMappingAction in proofreading saga");
     yield* put(

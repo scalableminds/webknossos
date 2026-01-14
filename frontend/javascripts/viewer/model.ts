@@ -1,4 +1,4 @@
-import { isDatasetAccessibleBySwitching } from "admin/rest_api";
+import { isDatasetAccessibleBySwitching } from "admin/api/organization";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { APICompoundType } from "types/api_types";

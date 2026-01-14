@@ -13,6 +13,7 @@ import {
   Badge,
   Button,
   ConfigProvider,
+  Flex,
   Input,
   type InputRef,
   Layout,
@@ -27,14 +28,13 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
-  getUsersOrganizations,
   logoutUser,
   sendAnalyticsEvent,
-  switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
 import type { MenuProps } from "antd";
@@ -131,16 +131,10 @@ function UserInitials({
   isMultiMember: boolean;
 }) {
   const { firstName, lastName } = activeUser;
-
   const initialOf = (str: string) => str.slice(0, 1).toUpperCase();
 
   return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-      }}
-    >
+    <div>
       <Avatar
         className="hover-effect-via-opacity"
         style={{
@@ -315,13 +309,12 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
     key: "timeStatisticMenu",
 
     label: (
-      <Link
-        to="/timetracking"
-        style={{
-          fontWeight: 400,
-        }}
-      >
-        {getCollapsibleMenuTitle("Time Tracking", <BarChartOutlined />, collapse)}
+      <Link to="/timetracking">
+        {getCollapsibleMenuTitle(
+          "Time Tracking",
+          <BarChartOutlined className="icon-margin-right" />,
+          collapse,
+        )}
       </Link>
     ),
   };
@@ -490,9 +483,6 @@ function NotificationIcon({
   return (
     <div
       style={{
-        position: "relative",
-        display: "flex",
-        marginRight: 12,
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
       }}
     >
@@ -700,7 +690,6 @@ function AnonymousAvatar() {
         className="hover-effect-via-opacity"
         icon={<UserOutlined />}
         style={{
-          marginLeft: 8,
           marginTop: bannerHeight,
         }}
       />
@@ -724,7 +713,7 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" className="flex-center-child" variant="outlined">
+        <Tag color="warning" variant="outlined">
           Locked by unknown user.
         </Tag>
       </Tooltip>
@@ -732,7 +721,7 @@ function AnnotationLockedByUserTag({
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success" className="flex-center-child" variant="outlined">
+        <Tag color="success" variant="outlined">
           Locked by you. Reload to edit.
         </Tag>
       </Tooltip>
@@ -745,17 +734,13 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning" className="flex-center-child" variant="outlined">
+        <Tag color="warning" variant="outlined">
           Locked by {blockingUserName}
         </Tag>
       </Tooltip>
     );
   }
-  return (
-    <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-      {content}
-    </span>
-  );
+  return content;
 }
 
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
@@ -764,9 +749,10 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
     : "";
   const tooltipMessage =
     messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
+
   return (
     <Tooltip title={tooltipMessage}>
-      <Tag color="warning" className="flex-center-child" variant="outlined">
+      <Tag color="warning" variant="outlined">
         Locked by {props.annotationOwnerName}
       </Tag>
     </Tooltip>
@@ -828,11 +814,18 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         <Link
           to="/dashboard"
           style={{
-            fontWeight: 400,
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle("WEBKNOSSOS", <span className="logo" />, collapseAllNavItems)}
+          {getCollapsibleMenuTitle(
+            "WEBKNOSSOS",
+            <img
+              src="/assets/images/logo-icon-only.svg"
+              className="logo icon-margin-right"
+              alt="logo"
+            />,
+            collapseAllNavItems,
+          )}
         </Link>
       ),
     },
@@ -954,15 +947,9 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginRight: 12,
-          }}
-        >
+        <Flex align="center" justify="flex-end" gap="small">
           {trailingNavItems}
-        </div>
+        </Flex>
       </ConfigProvider>
     </Header>
   );

@@ -8,12 +8,13 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
@@ -191,6 +192,8 @@ class VolumeTracingService @Inject()(
       Fox.failure("getMappingNameUnlessEditable called on volumeTracing with editableMapping!")
     else Fox.successful(tracing.mappingName)
 
+  private lazy val bucketScanner = new NativeBucketScanner()
+
   private def deleteSegmentData(tracingId: String,
                                 annotationId: ObjectId,
                                 volumeTracing: VolumeTracing,
@@ -228,21 +231,21 @@ class VolumeTracingService @Inject()(
               .map(_ * mag * DataLayer.bucketLength)
               .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, additionalCoordinates))
               .toList
+            bytesPerElement = ElementClass.bytesPerElement(ElementClass.fromProto(volumeTracing.elementClass))
+            isSigned = ElementClass.isSigned(ElementClass.fromProto(volumeTracing.elementClass))
             _ <- Fox.serialCombined(bucketPositions) {
               bucketPosition =>
                 for {
-                  data <- loadBucket(volumeLayer, bucketPosition)
-                  typedData = SegmentIntegerArray.fromByteArray(data, volumeTracing.elementClass)
-                  filteredData = typedData.map(elem =>
-                    if (elem.toLong == a.id) SegmentInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
-                  filteredBytes = SegmentIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
-                  _ <- saveBucket(volumeLayer, bucketPosition, filteredBytes, version)
+                  bucketBytes <- loadBucket(volumeLayer, bucketPosition)
+                  filteredBucketBytes <- tryo(
+                    bucketScanner.deleteSegmentFromBucket(bucketBytes, bytesPerElement, isSigned, a.id)).toFox
+                  _ <- saveBucket(volumeLayer, bucketPosition, filteredBucketBytes, version)
                   _ <- updateSegmentIndex(
                     volumeLayer,
                     segmentIndexBuffer,
                     bucketPosition,
-                    filteredBytes,
-                    Full(data),
+                    filteredBucketBytes,
+                    Full(bucketBytes),
                     editableMappingTracingId(volumeTracing, tracingId)
                   )
                 } yield ()
@@ -357,14 +360,14 @@ class VolumeTracingService @Inject()(
           else {
             val mergedVolume = new MergedVolume(tracing.elementClass)
             for {
-              _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip))
+              _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addIdSetFromDataZip(dataZip))
               _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
                 mergedVolume.addFromDataZip(index, dataZip))
               _ <- Fox.fromBool(
                 ElementClass
-                  .largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> Messages(
+                  .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, tracing.elementClass)) ?~> Messages(
                 "annotation.volume.largestSegmentIdExceedsRange",
-                mergedVolume.largestSegmentId.toLong,
+                mergedVolume.largestSegmentId,
                 tracing.elementClass)
               destinationVolumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
               fallbackLayer <- getFallbackLayer(annotationId, tracing)
@@ -746,7 +749,7 @@ class VolumeTracingService @Inject()(
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val segmentIdMapB =
-      if (indexB >= mergedVolumeStats.labelMaps.length) Map.empty[Long, Long] else mergedVolumeStats.labelMaps(indexB)
+      if (indexB >= mergedVolumeStats.idMaps.length) Map.empty[Long, Long] else mergedVolumeStats.idMaps(indexB)
     val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                                                      tracingB.userBoundingBox,
                                                                                      tracingA.userBoundingBoxes,
@@ -838,7 +841,7 @@ class VolumeTracingService @Inject()(
       val mergedVolume = new MergedVolume(elementClassProto)
 
       volumeLayers.foreach { volumeLayer =>
-        mergedVolume.addLabelSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
+        mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
       }
 
       volumeLayers.zipWithIndex.foreach {
@@ -846,10 +849,9 @@ class VolumeTracingService @Inject()(
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
       }
       for {
-        _ <- Fox.fromBool(
-          ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
+        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassProto)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",
-          mergedVolume.largestSegmentId.toLong,
+          mergedVolume.largestSegmentId,
           elementClassProto)
         mergedAdditionalAxes <- AdditionalAxis
           .mergeAndAssertSameAdditionalAxes(
@@ -918,14 +920,12 @@ class VolumeTracingService @Inject()(
         for {
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
           mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
-          _ <- mergedVolume.addLabelSetFromDataZip(zipFile)
+          _ <- mergedVolume.addIdSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)
-          _ <- Fox.fromBool(
-            ElementClass
-              .largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> Messages(
+          _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, tracing.elementClass)) ?~> Messages(
             "annotation.volume.largestSegmentIdExceedsRange",
-            mergedVolume.largestSegmentId.toLong,
+            mergedVolume.largestSegmentId,
             tracing.elementClass)
           fallbackLayer <- getFallbackLayer(annotationId, tracing)
           mappingName <- getMappingNameUnlessEditable(tracing)
@@ -961,7 +961,7 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-        } yield mergedVolume.largestSegmentId.toLong
+        } yield mergedVolume.largestSegmentId
       }
     }
 

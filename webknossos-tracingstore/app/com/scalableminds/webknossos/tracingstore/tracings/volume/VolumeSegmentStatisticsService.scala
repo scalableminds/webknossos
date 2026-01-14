@@ -43,14 +43,14 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       getDataForBucketPositions(annotationId, tracingId)
     )
 
-  def getSegmentBoundingBox(annotationId: ObjectId,
-                            tracingId: String,
-                            segmentId: Long,
-                            mag: Vec3Int,
-                            mappingName: Option[String],
-                            additionalCoordinates: Option[Seq[AdditionalCoordinate]], editableMappingVersion: Option[Long])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[BoundingBox] =
+  def getSegmentBoundingBox(
+      annotationId: ObjectId,
+      tracingId: String,
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      editableMappingVersion: Option[Long])(implicit ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(
       segmentId,
       mag,

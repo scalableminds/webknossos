@@ -52,10 +52,11 @@ trait MeshMappingHelper extends FoxImplicits {
         // use the mappingName (here the editable mapping’s base mapping) to look it up from file.
         for {
           tracingstoreUri <- dsRemoteWebknossosClient.getTracingstoreUri
-          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
-                                                                                                    tracingId,
+          segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(
+            tracingstoreUri,
+            tracingId,
             editableMappingVersionOpt,
-                                                                                                    agglomerateId)
+            agglomerateId)
           segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
             Fox.successful(segmentIdsResult.segmentIds)
           else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.

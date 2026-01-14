@@ -176,7 +176,6 @@ function* loadPrecomputedMeshForSegmentId(
       meshFileName,
       mappingName,
       opacity,
-      annotationVersion,
       isProofreadingAuxiliaryMesh,
     ),
   );

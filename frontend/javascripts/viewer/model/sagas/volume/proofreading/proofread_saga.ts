@@ -660,6 +660,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     );
     updatedSkeletonTracing = skeletonTracing;
   }
+
+  // Reload sourceTree & targetTree as applying newest actions from the backend might have modified the skeleton.
   const updatedSourceTree =
     findTreeByNodeId(updatedSkeletonTracing.trees, sourceNodeId) ?? sourceTree;
   const updatedTargetTree =

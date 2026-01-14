@@ -11,7 +11,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { Saga, select } from "viewer/model/sagas/effect-generators";
+import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
@@ -20,9 +20,7 @@ import {
   initializeMappingAndTool,
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
-  mockEdgesForPartitionedAgglomerateMinCut,
   mockInitialBucketAndAgglomerateData,
-  simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
 import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
@@ -32,7 +30,6 @@ import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annota
 import { actionChannel } from "typed-redux-saga";
 import type { Action } from "viewer/model/actions/actions";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 
 describe("Proofreading agglomerate skeleton syncing", () => {

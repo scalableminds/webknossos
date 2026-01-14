@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   APIAiModelCategory,
   type AiModelTrainingAnnotationSpecification,
+  refreshOrganizationCredits,
   runInstanceModelTraining,
   runNeuronTraining,
 } from "admin/rest_api";
@@ -100,6 +101,12 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       ]);
     }
   }, [initialFullAnnotation, userBoundingBoxes, currentDataset, selectedAnnotations.length]);
+
+  // Auto-update the organization credit's information once an AiTrainingJobContext is created to
+  // ensure most recent information about the organizations credits is displayed during ai training selection.
+  useEffect(() => {
+    refreshOrganizationCredits();
+  }, []);
 
   const handleSelectionChange = useCallback(
     (

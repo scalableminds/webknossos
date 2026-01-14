@@ -1,9 +1,6 @@
+import { cachedGetPricingPlanStatus } from "admin/api/organization";
 import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
-import {
-  cachedGetPricingPlanStatus,
-  getUser,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
+import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";

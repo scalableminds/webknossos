@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(148);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(149);
 COMMIT TRANSACTION;
 
 
@@ -397,14 +397,14 @@ CREATE TABLE webknossos.organization_usedStorage_attachments (
 -- Pending -> The transaction is a payment for a unfinished & not crashed job
 -- Complete -> The transaction is committed and the potential associated job finished successfully or was refunded.
 CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
--- Pending -> The credit_delta is yet to be completed
--- Spent -> The credit_delta is committed as reduced as the associated job finished successfully.
--- Refunded -> The credit_delta is committed as reduced but a new refunding transaction is added as the associated job finished failed.
--- Revoked -> The credit_delta has been fully revoked by a revoking transaction as the credit_delta expired.
--- PartiallyRevoked -> The credit_delta has been partially revoked by a revoking transaction as the credit_delta expired but parts of it were already spent or are pending.
--- Refunding -> Marks credit_delta as a refund for transaction associated with a failed job.
--- Revoking -> The credit_delta of this transaction revokes the credit_delta of another transaction with expired credits.
--- AddCredits -> The credit_delta of this transaction adds adds more credits for the organization.
+-- Pending -> The milli_credit_delta is yet to be completed
+-- Spent -> The milli_credit_delta is committed as reduced as the associated job finished successfully.
+-- Refunded -> The milli_credit_delta is committed as reduced but a new refunding transaction is added as the associated job finished failed.
+-- Revoked -> The milli_credit_delta has been fully revoked by a revoking transaction as the credit_delta expired.
+-- PartiallyRevoked -> The milli_credit_delta has been partially revoked by a revoking transaction as the credit_delta expired but parts of it were already spent or are pending.
+-- Refunding -> Marks milli_credit_delta as a refund for transaction associated with a failed job.
+-- Revoking -> The milli_credit_delta of this transaction revokes the milli_credit_delta of another transaction with expired credits.
+-- AddCredits -> The milli_credit_delta of this transaction adds adds more credits for the organization.
 CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'AddCredits');
 
 CREATE TABLE webknossos.credit_transactions (
@@ -412,7 +412,7 @@ CREATE TABLE webknossos.credit_transactions (
     _organization TEXT NOT NULL,
     _related_transaction TEXT CONSTRAINT _related_transaction_objectId CHECK (_related_transaction ~ '^[0-9a-f]{24}$') DEFAULT NULL,
     _paid_job TEXT CONSTRAINT _paid_job_objectId CHECK (_paid_job ~ '^[0-9a-f]{24}$') DEFAULT NULL,
-    credit_delta DECIMAL(14, 3) NOT NULL,
+    milli_credit_delta INT NOT NULL,
     comment TEXT NOT NULL,
     -- The state of the transaction.
     transaction_state webknossos.credit_transaction_state NOT NULL,
@@ -1084,14 +1084,14 @@ AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
 CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
-  BEGIN
-    -- Assert that the new balance is non-negative
-    ASSERT (SELECT COALESCE(SUM(credit_delta), 0) + COALESCE(NEW.credit_delta, 0)
-            FROM webknossos.credit_transactions
+BEGIN
+  -- Assert that the new balance is non-negative
+    ASSERT (SELECT COALESCE(SUM(milli_credit_delta), 0) + COALESCE(NEW.milli_credit_delta, 0)
+            FROM webknossos.credit_transactions_
             WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
     -- Assertion passed, transaction can go ahead
-    RETURN NEW;
-  END;
+  RETURN NEW;
+END;
 $$ LANGUAGE plpgsql;
 
 
@@ -1126,7 +1126,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL) RETURNS VOID AS $$
+CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_milli_credits_amount INT) RETURNS VOID AS $$
 DECLARE
     organization_id TEXT;
     next_month_first_day DATE;
@@ -1146,9 +1146,9 @@ BEGIN
         -- Insert free credits only if no record exists for this month
         IF existing_transaction_count = 0 THEN
             INSERT INTO webknossos.credit_transactions
-                (_id, _organization, credit_delta, comment, transaction_state, credit_state, expiration_date)
+                (_id, _organization, milli_credit_delta, comment, transaction_state, credit_state, expiration_date)
             VALUES
-                (webknossos.generate_object_id(), organization_id, free_credits_amount,
+                (webknossos.generate_object_id(), organization_id, free_milli_credits_amount,
                  'Free credits for this month', 'Complete', 'Pending', next_month_first_day);
         END IF;
     END LOOP;

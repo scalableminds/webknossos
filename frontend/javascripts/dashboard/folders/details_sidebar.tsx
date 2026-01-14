@@ -7,7 +7,8 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteDatasetOnDisk, getOrganization } from "admin/rest_api";
+import { getOrganization } from "admin/api/organization";
+import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";

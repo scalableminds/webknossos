@@ -35,7 +35,7 @@ import {
 
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 
-import { getOrganization } from "admin/rest_api";
+import { getOrganization } from "admin/api/organization";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";

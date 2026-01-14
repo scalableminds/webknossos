@@ -1,7 +1,8 @@
 import * as webauthn from "@github/webauthn-json";
-import { getActiveUser, getOrganization } from "admin/rest_api";
+import { getActiveUser } from "admin/rest_api";
 import Request from "libs/request";
 import type { APIOrganization, APIUser } from "types/api_types";
+import { getOrganization } from "./organization";
 
 export type WebAuthnKeyDescriptor = {
   id: string;

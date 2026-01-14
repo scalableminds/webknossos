@@ -1,3 +1,4 @@
+import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { Drawer, Tabs } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
@@ -10,7 +11,7 @@ import { AiModelTrainingJob } from "./train_ai_model/ai_training_job";
 
 export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   const dispatch = useDispatch();
-  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
+  const orgaHasSomePaidPlan = useWkSelector((state) => hasSomePaidPlan(state.activeOrganization));
   const ai_job_drawer_state = useWkSelector((state) => state.uiInformation.aIJobDrawerState);
 
   const handleChange = useCallback(
@@ -30,7 +31,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
       key: "open_ai_inference",
       children: <AiImageSegmentationJob />,
     },
-    ...(isSuperUser
+    ...(orgaHasSomePaidPlan
       ? [
           {
             label: "Train Segmentation Model",
@@ -47,7 +48,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   ];
 
   const activeKey =
-    !isSuperUser && ai_job_drawer_state === "open_ai_training"
+    !orgaHasSomePaidPlan && ai_job_drawer_state === "open_ai_training"
       ? "open_ai_inference"
       : ai_job_drawer_state;
 
@@ -55,10 +56,10 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
     <Drawer
       title="Run a WEBKNOSSOS AI Job"
       placement="right"
-      width={1200}
+      size={1200}
       open={isOpen}
       onClose={handleClose}
-      destroyOnClose={true}
+      destroyOnHidden
     >
       <Tabs activeKey={activeKey} items={items} onChange={handleChange} />
     </Drawer>

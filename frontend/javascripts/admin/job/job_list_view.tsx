@@ -19,7 +19,7 @@ import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
+import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -525,8 +525,10 @@ function JobListView() {
           />
           <Column
             title="Cost in Credits"
-            key="creditCost"
-            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
+            key="costInMilliCredits"
+            render={(job: APIJob) =>
+              job.costInMilliCredits ? formatMilliCreditsString(job.costInMilliCredits) : "-"
+            }
           />
           <Column
             title="Date"

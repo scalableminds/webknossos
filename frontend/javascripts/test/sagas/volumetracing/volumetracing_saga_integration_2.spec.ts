@@ -17,7 +17,7 @@ import Store from "viewer/store";
 import { V3 } from "libs/mjs";
 import {
   setActiveCellAction,
-  addToLayerAction,
+  addToContourListAction,
   dispatchFloodfillAsync,
   startEditingAction,
   finishEditingAction,
@@ -62,7 +62,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
@@ -152,7 +152,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
 
@@ -316,7 +316,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
@@ -389,7 +389,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId);
@@ -464,12 +464,12 @@ describe("Volume Tracing", () => {
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Brush with ${newCellId + 1}
     Store.dispatch(setActiveCellAction(newCellId + 1));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     if (assertBeforeUndo) {
@@ -525,18 +525,18 @@ describe("Volume Tracing", () => {
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Brush with ${newCellId + 1}
     Store.dispatch(setActiveCellAction(newCellId + 1));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Erase everything
     Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
     Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Undo erasure
     await dispatchUndoAsync(Store.dispatch);
@@ -603,15 +603,15 @@ describe("Volume Tracing", () => {
     Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     Store.dispatch(setActiveCellAction(newCellId + 1));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     Store.dispatch(setActiveCellAction(newCellId + 2));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     await dispatchUndoAsync(Store.dispatch);

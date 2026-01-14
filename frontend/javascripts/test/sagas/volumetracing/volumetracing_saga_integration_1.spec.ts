@@ -21,7 +21,7 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
   setActiveCellAction,
-  addToLayerAction,
+  addToContourListAction,
   startEditingAction,
   finishEditingAction,
   setContourTracingModeAction,
@@ -69,12 +69,12 @@ describe("Volume Tracing", () => {
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Brush with ${newCellId + 1}
     Store.dispatch(setActiveCellAction(newCellId + 1));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     expect(
@@ -129,7 +129,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     await api.tracing.save();
 
@@ -183,7 +183,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setPositionAction([0, 0, 0]));
     Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     await api.tracing.save();
@@ -233,7 +233,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setPositionAction([0, 0, 0]));
     Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     if (loadBeforeUndo) {
@@ -279,7 +279,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setPositionAction([0, 0, 0]));
     Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {

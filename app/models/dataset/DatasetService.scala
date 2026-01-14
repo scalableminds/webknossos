@@ -3,7 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
@@ -24,6 +24,7 @@ import models.team._
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import controllers.LayerRenaming
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
@@ -269,14 +270,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       }
     }).flatten
 
-  def updateDataSourceFromUserChanges(dataset: Dataset, dataSourceUpdates: UsableDataSource)(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Unit] =
+  def updateDataSourceFromUserChanges(
+      dataset: Dataset,
+      dataSourceUpdates: UsableDataSource,
+      layerRenamings: Seq[LayerRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
     for {
-      existingDataSource <- usableDataSourceFor(dataset)
+      existingDataSource <- usableDataSourceFor(dataset, includeZeroMagLayers = true)
       datasetId = dataset._id
       dataStoreClient <- clientFor(dataset)
-      updatedDataSource = applyDataSourceUpdates(existingDataSource, dataSourceUpdates)
+      updatedDataSource <- applyDataSourceUpdates(existingDataSource, dataSourceUpdates, layerRenamings).toFox
       isChanged = updatedDataSource.hashCode() != existingDataSource.hashCode()
       _ <- if (isChanged) {
         logger.info(s"Updating dataSource of $datasetId")
@@ -299,19 +301,45 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   private def applyDataSourceUpdates(existingDataSource: UsableDataSource,
-                                     updates: UsableDataSource): UsableDataSource = {
-    val updatedLayers = existingDataSource.dataLayers.flatMap { existingLayer =>
+                                     updates: UsableDataSource,
+                                     layerRenamings: Seq[LayerRenaming]): Box[UsableDataSource] = {
+    val existingDataSourceWithRenamedLayers = applyLayerRenamings(existingDataSource, layerRenamings)
+    val updatedLayers = existingDataSourceWithRenamedLayers.dataLayers.flatMap { existingLayer =>
       val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
       layerUpdatesOpt match {
         case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
         case None               => None
       }
     }
-    existingDataSource.copy(
-      dataLayers = updatedLayers,
-      scale = updates.scale
-    )
+    for {
+      addedLayers <- findNewLayers(existingDataSourceWithRenamedLayers, updates)
+    } yield
+      existingDataSource.copy(
+        dataLayers = updatedLayers ++ addedLayers,
+        scale = updates.scale
+      )
   }
+
+  private def findNewLayers(existingDataSoruce: UsableDataSource, updates: UsableDataSource): Box[Seq[StaticLayer]] = {
+    val newLayers = updates.dataLayers.filter(layer => !existingDataSoruce.dataLayers.exists(_.name == layer.name))
+    val noneHaveMags = newLayers.forall(_.mags.isEmpty)
+    for {
+      _ <- Box.fromBool(noneHaveMags) ?~ "New layers may not have mags. Add empty layers instead and then add mags."
+    } yield newLayers
+  }
+
+  private def applyLayerRenamings(existingDataSource: UsableDataSource,
+                                  layerRenamings: Seq[LayerRenaming]): UsableDataSource =
+    if (layerRenamings.isEmpty) existingDataSource
+    else {
+      val renamingMap: Map[String, String] = layerRenamings.map(renaming => (renaming.oldName, renaming.newName)).toMap
+      val layersRenamed = existingDataSource.dataLayers.map { layer =>
+        if (renamingMap.contains(layer.name))
+          layer.mapped(name = renamingMap(layer.name))
+        else layer
+      }
+      existingDataSource.copy(dataLayers = layersRenamed)
+    }
 
   private def applyLayerUpdates(existingLayer: StaticLayer, layerUpdates: StaticLayer): StaticLayer =
     /*
@@ -404,9 +432,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def usableDataSourceFor(dataset: Dataset)(implicit mp: MessagesProvider): Fox[UsableDataSource] =
+  def usableDataSourceFor(dataset: Dataset, includeZeroMagLayers: Boolean = true)(
+      implicit mp: MessagesProvider): Fox[UsableDataSource] =
     for {
-      dataSource <- dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+      dataSource <- dataSourceFor(dataset, includeZeroMagLayers) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
     } yield usableDataSource
 

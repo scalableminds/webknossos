@@ -50,8 +50,14 @@ case class DatasetUpdateParameters(
     tags: Option[List[String]],
     metadata: Option[JsArray],
     folderId: Option[ObjectId],
-    dataSource: Option[UsableDataSource]
+    dataSource: Option[UsableDataSource],
+    layerRenamings: Option[Seq[LayerRenaming]]
 )
+
+case class LayerRenaming(oldName: String, newName: String)
+object LayerRenaming {
+  implicit val jsonFormat: OFormat[LayerRenaming] = Json.format[LayerRenaming]
+}
 
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
@@ -427,7 +433,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource)(dataSourceUpdates =>
-          datasetService.updateDataSourceFromUserChanges(dataset, dataSourceUpdates))
+          datasetService.updateDataSourceFromUserChanges(dataset, dataSourceUpdates, request.body.layerRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))

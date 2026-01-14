@@ -18,6 +18,7 @@ export const loadAdHocMeshAction = (
   segmentId: number,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  isProofreadingAuxiliaryMesh: boolean,
   extraInfo?: AdHocMeshInfo,
   layerName?: string,
 ) =>
@@ -28,6 +29,7 @@ export const loadAdHocMeshAction = (
     seedAdditionalCoordinates,
     extraInfo,
     layerName,
+    isProofreadingAuxiliaryMesh,
   }) as const;
 
 export const loadPrecomputedMeshAction = (
@@ -36,6 +38,7 @@ export const loadPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   opacity: number | undefined,
+  isProofreadingAuxiliaryMesh: boolean,
   layerName?: string | undefined,
 ) =>
   ({
@@ -46,4 +49,5 @@ export const loadPrecomputedMeshAction = (
     meshFileName,
     opacity,
     layerName,
+    isProofreadingAuxiliaryMesh,
   }) as const;

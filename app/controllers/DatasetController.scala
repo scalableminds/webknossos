@@ -656,8 +656,8 @@ class DatasetController @Inject()(userService: UserService,
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reservemagUploadToPath.notVirtual"
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        attachmentPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
-      } yield Ok(Json.toJson(attachmentPath))
+        magPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
+      } yield Ok(Json.toJson(magPath))
     }
 
   def finishMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =

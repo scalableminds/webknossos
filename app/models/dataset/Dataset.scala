@@ -951,9 +951,9 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         q"""UPDATE webknossos.dataset_mags
            SET uploadToPathIsPending = ${false}
            WHERE _dataset = $datasetId
-           AND layerName = $layerName
-           AND mag = $mag
-           AND NOT uploadToPathIsPending""".asUpdate
+           AND dataLayerName = $layerName
+           AND mag = $mag::webknossos.VECTOR3
+           AND uploadToPathIsPending""".asUpdate
       )
     } yield ()
 
@@ -962,8 +962,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       rows <- run(q"""SELECT path
             FROM webknossos.dataset_mags
             WHERE _dataset = $datasetId
-            AND layerName = $layerName
-            AND mag = $mag
+            AND dataLayerName = $layerName
+            AND mag = $mag::webknossos.VECTOR3
             AND uploadToPathIsPending
             AND path IS NOT NULL
             """.as[String])
@@ -975,8 +975,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     for {
       _ <- run(q"""DELETE FROM webknossos.dataset_mags
                    WHERE _dataset = $datasetId
-                   AND layerName = $layerName
-                   AND mag = $mag
+                   AND dataLayerName = $layerName
+                   AND mag = $mag::webknossos.VECTOR3
                    AND uploadToPathIsPending""".asUpdate)
     } yield ()
 

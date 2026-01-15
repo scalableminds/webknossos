@@ -172,9 +172,7 @@ export default function BoundingBoxTab() {
   const maybeAddBoundingBoxButton = allowUpdate ? (
     <div style={{ textAlign: "center" }}>
       <FastTooltip title="Click to add another bounding box.">
-        <Button size="small" onClick={addNewBoundingBox}>
-          <PlusOutlined size={18} />
-        </Button>
+        <Button size="small" onClick={addNewBoundingBox} icon={<PlusOutlined />} />
       </FastTooltip>
     </div>
   ) : null;
@@ -266,11 +264,11 @@ export default function BoundingBoxTab() {
                   onClick: (event) => {
                     hideContextMenu();
                     if (event.shiftKey || event.ctrlKey || event.metaKey) {
-                      if (selectedRowKeys.includes(bb.id)) {
-                        setSelectedRowKeys(selectedRowKeys.filter((key) => key !== bb.id));
-                      } else {
-                        setSelectedRowKeys([...selectedRowKeys, bb.id]);
-                      }
+                      setSelectedRowKeys((prev) =>
+                        prev.includes(bb.id)
+                          ? prev.filter((key) => key !== bb.id)
+                          : [...prev, bb.id],
+                      );
                     } else {
                       handleGoToBoundingBox(bb.id);
                       dispatch(setActiveUserBoundingBoxId(bb.id));

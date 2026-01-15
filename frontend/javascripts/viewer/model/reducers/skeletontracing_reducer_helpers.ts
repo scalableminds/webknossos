@@ -21,7 +21,6 @@ import {
   getActiveTreeGroup,
   getSkeletonTracing,
   getTree,
-  mapGroups,
   mapGroupsToGenerator,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -43,6 +42,7 @@ import {
 } from "viewer/model/types/tree_types";
 import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
+import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {

@@ -43,7 +43,6 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -728,3 +727,6 @@ function _getActiveMagInfo(state: WebknossosState) {
 }
 
 export const getActiveMagInfo = reuseInstanceOnEquality(_getActiveMagInfo);
+export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
+  return M4x4.rotate(angle, axis, currentMatrix, []);
+}

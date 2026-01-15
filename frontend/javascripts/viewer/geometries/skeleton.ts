@@ -1,4 +1,4 @@
-import * as Utils from "libs/utils";
+import { diffArrays } from "libs/utils";
 import _ from "lodash";
 import {
   BufferAttribute,
@@ -428,7 +428,7 @@ class Skeleton {
           ) => {
             const oldIds = oldElements.map((el) => el.nodeId);
             const newIds = newElements.map((el) => el.nodeId);
-            const { onlyA: deletedIds, onlyB: createdIds } = Utils.diffArrays(oldIds, newIds);
+            const { onlyA: deletedIds, onlyB: createdIds } = diffArrays(oldIds, newIds);
             createdIds.forEach((id) => callback(id, true));
             deletedIds.forEach((id) => callback(id, false));
           };

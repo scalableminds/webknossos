@@ -16,7 +16,7 @@ import {
 } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { point3ToVector3 } from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -515,7 +515,7 @@ function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
 
 function initializeAdditionalCoordinates(dataset: StoreDataset) {
   const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(dataset);
-  const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
+  const initialAdditionalCoordinates = Object.values(unifiedAdditionalCoordinates).map(
     ({ name, bounds }) => ({
       name,
       value: Math.floor((bounds[1] - bounds[0]) / 2),
@@ -705,10 +705,10 @@ function determineDefaultState(
   }
 
   if (userState) {
-    position = Utils.point3ToVector3(userState.editPosition);
+    position = point3ToVector3(userState.editPosition);
     additionalCoordinates = userState.editPositionAdditionalCoordinates;
   } else if (someTracing != null) {
-    position = Utils.point3ToVector3(someTracing.editPosition);
+    position = point3ToVector3(someTracing.editPosition);
     additionalCoordinates = someTracing.editPositionAdditionalCoordinates;
   }
 
@@ -732,9 +732,9 @@ function determineDefaultState(
 
   let rotation = datasetConfiguration.rotation;
   if (userState != null) {
-    rotation = Utils.point3ToVector3(userState.editRotation);
+    rotation = point3ToVector3(userState.editRotation);
   } else if (someTracing != null) {
-    rotation = Utils.point3ToVector3(someTracing.editRotation);
+    rotation = point3ToVector3(someTracing.editRotation);
   }
 
   if (urlStateRotation != null) {

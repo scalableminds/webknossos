@@ -2,7 +2,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { getAvailableTasksReport } from "admin/rest_api";
 import { Card, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import { handleGenericError } from "libs/error_handling";
-import * as Utils from "libs/utils";
+import { compareBy, localeCompareBy } from "libs/utils";
 import { useState } from "react";
 import type { APIAvailableTasksReport } from "types/api_types";
 import TeamSelectionForm from "./team_selection_form";
@@ -78,14 +78,14 @@ function AvailableTasksReportView() {
           <Column
             title="User"
             dataIndex="user"
-            sorter={Utils.localeCompareBy<APIAvailableTasksReport>((task) => task.user)}
+            sorter={localeCompareBy<APIAvailableTasksReport>((task) => task.user)}
             width={200}
           />
           <Column
             title="# Available Tasks"
             dataIndex="totalAvailableTasks"
             defaultSortOrder="ascend"
-            sorter={Utils.compareBy<APIAvailableTasksReport>((task) => task.totalAvailableTasks)}
+            sorter={compareBy<APIAvailableTasksReport>((task) => task.totalAvailableTasks)}
             width={150}
           />
           <Column

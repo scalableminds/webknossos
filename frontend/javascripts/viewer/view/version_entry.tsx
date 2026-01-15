@@ -16,11 +16,12 @@ import {
 } from "@ant-design/icons";
 import { Avatar, Button, List } from "antd";
 import _ from "lodash";
-import * as React from "react";
+import type React from "react";
 
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
 import { useWkSelector } from "libs/react_hooks";
+import { Fragment } from "react";
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import type {
@@ -635,16 +636,16 @@ export default function VersionEntry({
     >
       <List.Item.Meta
         title={
-          <React.Fragment>
+          <Fragment>
             Version {version} (
             {lastTimestamp != null && <FormattedDate timestamp={lastTimestamp} format="HH:mm" />})
-          </React.Fragment>
+          </Fragment>
         }
         /* @ts-expect-error ts-migrate(2322) FIXME: Type '{ title: Element; onClick: () => Promise<voi... Remove this comment to see the full error message */
         onClick={() => onPreviewVersion(version)}
         avatar={<Avatar size="small" icon={icon} />}
         description={
-          <React.Fragment>
+          <Fragment>
             {isNewest ? (
               <>
                 <i>Newest version</i> <br />
@@ -652,7 +653,7 @@ export default function VersionEntry({
             ) : null}
             {description}
             <div>Authored by {authorName}</div>
-          </React.Fragment>
+          </Fragment>
         }
       />
     </List.Item>

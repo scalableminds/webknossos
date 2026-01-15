@@ -1,8 +1,8 @@
 import { call, type Saga } from "viewer/model/sagas/effect-generators";
 import { runSaga } from "redux-saga";
 import processTaskWithPool from "libs/async/task_pool";
-import * as Utils from "libs/utils";
 import { describe, it, expect } from "vitest";
+import { sleep } from "libs/utils";
 
 /*eslint func-names: ["warn", "always", { "generators": "never" }]*/
 type Tasks = Array<() => Saga<void>>;
@@ -12,7 +12,7 @@ describe("Task Pool", () => {
     const protocol: number[] = [];
     const tasks: Tasks = [
       function* () {
-        yield* call(Utils.sleep, 100);
+        yield* call(sleep, 100);
         protocol.push(1);
       },
     ];
@@ -31,11 +31,11 @@ describe("Task Pool", () => {
     const protocol: number[] = [];
     const tasks: Tasks = [
       function* () {
-        yield* call(Utils.sleep, 10);
+        yield* call(sleep, 10);
         throw new Error("Some Error");
       },
       function* () {
-        yield* call(Utils.sleep, 300);
+        yield* call(sleep, 300);
         protocol.push(1);
       },
     ];
@@ -52,15 +52,15 @@ describe("Task Pool", () => {
     const protocol: number[] = [];
     const tasks: Tasks = [
       function* () {
-        yield* call(Utils.sleep, 300);
+        yield* call(sleep, 300);
         protocol.push(1);
       },
       function* () {
-        yield* call(Utils.sleep, 200);
+        yield* call(sleep, 200);
         protocol.push(2);
       },
       function* () {
-        yield* call(Utils.sleep, 100);
+        yield* call(sleep, 100);
         protocol.push(3);
       },
     ];
@@ -72,16 +72,16 @@ describe("Task Pool", () => {
     const protocol: number[] = [];
     const tasks: Tasks = [
       function* () {
-        yield* call(Utils.sleep, 10);
+        yield* call(sleep, 10);
         protocol.push(2);
       },
       function* () {
         protocol.push(1);
-        yield* call(Utils.sleep, 500);
+        yield* call(sleep, 500);
         protocol.push(4);
       },
       function* () {
-        yield* call(Utils.sleep, 10);
+        yield* call(sleep, 10);
         protocol.push(3);
       },
     ];
@@ -93,16 +93,16 @@ describe("Task Pool", () => {
     const protocol: number[] = [];
     const tasks: Tasks = [
       function* () {
-        yield* call(Utils.sleep, 10);
+        yield* call(sleep, 10);
         protocol.push(2);
       },
       function* () {
         protocol.push(1);
-        yield* call(Utils.sleep, 500);
+        yield* call(sleep, 500);
         protocol.push(4);
       },
       function* () {
-        yield* call(Utils.sleep, 100);
+        yield* call(sleep, 100);
         protocol.push(3);
       },
     ];

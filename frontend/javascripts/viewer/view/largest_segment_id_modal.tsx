@@ -3,7 +3,7 @@ import { useWkSelector } from "libs/react_hooks";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { mayUserEditDataset } from "libs/utils";
-import * as React from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
@@ -52,7 +52,7 @@ export default function EnterLargestSegmentIdModal({
   segmentationLayer: APISegmentationLayer;
   destroy: (...args: Array<any>) => any;
 }) {
-  const [largestSegmentId, setLargestSegmentId] = React.useState<number | null>(0);
+  const [largestSegmentId, setLargestSegmentId] = useState<number | null>(0);
   const activeUser = useWkSelector((state) => state.activeUser);
   const dataset = useWkSelector((state) => state.dataset);
   const activeCellId =

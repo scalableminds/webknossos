@@ -3,7 +3,7 @@ import { Space, Tooltip } from "antd";
 import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import type * as React from "react";
 import { OrthoViews, OrthoViewsToName } from "viewer/constants";
-import * as MoveHandlers from "viewer/controller/combinations/move_handlers";
+import { moveW } from "viewer/controller/combinations/move_handlers";
 import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_accessor";
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
@@ -11,9 +11,9 @@ import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persis
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
-  MoveHandlers.moveW(getMoveOffset(Store.getState(), timeFactor), isFirst);
+  moveW(getMoveOffset(Store.getState(), timeFactor), isFirst);
 const moveBackward = (timeFactor: number, isFirst: boolean) =>
-  MoveHandlers.moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
+  moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
 
 const moveForwardArbitrary = (timeFactor: number) =>
   Store.dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)]));

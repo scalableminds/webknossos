@@ -1,5 +1,5 @@
 import { isDatasetAccessibleBySwitching } from "admin/api/organization";
-import * as Utils from "libs/utils";
+import { sleep } from "libs/utils";
 import _ from "lodash";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -77,7 +77,7 @@ export class WebKnossosModel {
   }
 
   getAllLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers);
+    return Object.values(this.dataLayers);
   }
 
   getColorLayers(): Array<DataLayer> {
@@ -88,14 +88,14 @@ export class WebKnossosModel {
   }
 
   getSegmentationLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers).filter(
+    return Object.values(this.dataLayers).filter(
       (dataLayer) =>
         getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
     );
   }
 
   getSegmentationTracingLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers).filter((dataLayer) => {
+    return Object.values(this.dataLayers).filter((dataLayer) => {
       const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
       return layer.category === "segmentation" && layer.tracingId != null;
     });
@@ -254,24 +254,26 @@ export class WebKnossosModel {
   getLongestPushQueueWaitTime() {
     return (
       _.max(
-        Utils.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
+        Object.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
       ) || 0
     );
   }
 
   getPushQueueStats = () => {
     const compressingBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) =>
+      Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.pushQueue.getCompressingBucketCount(),
       ),
     );
 
     const waitingForCompressionBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingBucketCount()),
+      Object.values(this.dataLayers).map((dataLayer) =>
+        dataLayer.pushQueue.getPendingBucketCount(),
+      ),
     );
 
     const outstandingBucketDownloadCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) =>
+      Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.cube.temporalBucketManager.getCount(),
       ),
     );
@@ -323,7 +325,7 @@ export class WebKnossosModel {
         Store.dispatch(saveNowAction());
       }
 
-      await Utils.sleep(WAIT_AFTER_SAVE_TRIGGER);
+      await sleep(WAIT_AFTER_SAVE_TRIGGER);
     }
   };
 

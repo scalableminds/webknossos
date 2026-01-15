@@ -3,8 +3,9 @@ import { Alert, Col, InputNumber, Row, Spin } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
-import * as _ from "lodash";
-import * as React from "react";
+import debounce from "lodash/debounce";
+import range from "lodash/range";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_types";
@@ -90,13 +91,13 @@ const DUMMY_HISTOGRAM_DATA = [
   // message will be rendered.
   {
     numberOfElements: 255,
-    elementCounts: _.range(255).map((idx) => Math.exp(-0.5 * ((idx - 128) / 30) ** 2)),
+    elementCounts: range(255).map((idx) => Math.exp(-0.5 * ((idx - 128) / 30) ** 2)),
     min: 0,
     max: 255,
   },
 ];
 
-class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
+class Histogram extends PureComponent<HistogramProps, HistogramState> {
   canvasRef: HTMLCanvasElement | null | undefined;
 
   constructor(props: HistogramProps) {
@@ -245,12 +246,12 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       : roundTo(value, this.getPrecision()).toString();
   };
 
-  updateMinimumDebounced = _.debounce(
+  updateMinimumDebounced = debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
     500,
   );
 
-  updateMaximumDebounced = _.debounce(
+  updateMaximumDebounced = debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "max", value),
     500,
   );

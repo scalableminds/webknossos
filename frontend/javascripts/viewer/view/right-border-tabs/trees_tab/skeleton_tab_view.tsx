@@ -20,7 +20,7 @@ import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -198,7 +198,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();
         const nmlFileEntry = entries.find((entry: Entry) =>
-          Utils.isFileExtensionEqualTo(entry.filename, "nml"),
+          isFileExtensionEqualTo(entry.filename, "nml"),
         );
 
         if (nmlFileEntry == null) {
@@ -213,7 +213,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const nmlImportActions = await tryParsingFileAsNml(nmlFile, false);
 
         const dataFileEntry = entries.find((entry: Entry) =>
-          Utils.isFileExtensionEqualTo(entry.filename, "zip"),
+          isFileExtensionEqualTo(entry.filename, "zip"),
         );
 
         if (dataFileEntry) {
@@ -259,7 +259,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
-    const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
+    const { successes: importActionsWithDatasetNames, errors } = await promiseAllWithErrors(
       files.map(async (file) => {
         const ext = (_.last(file.name.split(".")) || "").toLowerCase();
 
@@ -544,7 +544,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       isDownloadingNML: true,
     });
     // Wait 1 second for the Modal to render
-    const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
+    const [buildInfo] = await Promise.all([getBuildInfo(), sleep(1000)]);
     const state = Store.getState();
     const nml = serializeToNml(
       state,

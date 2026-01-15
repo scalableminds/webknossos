@@ -6,11 +6,11 @@ import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIScript, APIUser } from "types/api_types";
 
@@ -70,7 +70,7 @@ function ScriptListView() {
 
   function renderPlaceholder() {
     return isLoading ? null : (
-      <React.Fragment>
+      <Fragment>
         {"There are no scripts. You can "}
         <Link to="/scripts/create">add a script</Link>
         {
@@ -82,7 +82,7 @@ function ScriptListView() {
           Frontend API Documentation
         </Link>
         {" for more information."}
-      </React.Fragment>
+      </Fragment>
     );
   }
 
@@ -108,7 +108,7 @@ function ScriptListView() {
 
       <Spin spinning={isLoading} size="large">
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(
+          dataSource={filterWithSearchQueryAND(
             scripts,
             ["name", "id", "owner", "gist"],
             searchQuery,
@@ -133,14 +133,14 @@ function ScriptListView() {
             dataIndex="id"
             render={(id) => <FormattedId id={id} />}
             key="id"
-            sorter={Utils.localeCompareBy<APIScript>((script) => script.id)}
+            sorter={localeCompareBy<APIScript>((script) => script.id)}
             width={150}
           />
           <Column
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy<APIScript>((script) => script.name)}
+            sorter={localeCompareBy<APIScript>((script) => script.name)}
             width={250}
           />
 
@@ -148,14 +148,14 @@ function ScriptListView() {
             title="Owner"
             dataIndex="owner"
             key="owner"
-            sorter={Utils.localeCompareBy<APIScript>((script) => script.owner.lastName)}
+            sorter={localeCompareBy<APIScript>((script) => script.owner.lastName)}
             render={(owner: APIUser) => `${owner.firstName} ${owner.lastName}`}
           />
           <Column
             title="Gist URL"
             dataIndex="gist"
             key="gist"
-            sorter={Utils.localeCompareBy<APIScript>((script) => script.gist)}
+            sorter={localeCompareBy<APIScript>((script) => script.gist)}
             render={(gist: string) => (
               <a href={gist} target="_blank" rel="noopener noreferrer">
                 {gist}

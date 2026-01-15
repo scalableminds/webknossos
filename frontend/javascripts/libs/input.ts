@@ -2,12 +2,12 @@ import Hammer from "hammerjs";
 import { Keyboard } from "keyboardjs";
 import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
-import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
+import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -163,7 +163,7 @@ export class InputKeyboardNoLoop {
           return;
         }
 
-        if (!this.supportInputElements && !Utils.isNoElementFocussed()) {
+        if (!this.supportInputElements && !isNoElementFocused()) {
           return;
         }
 
@@ -263,7 +263,7 @@ export class InputKeyboard {
           return;
         }
 
-        if (!Utils.isNoElementFocussed()) {
+        if (!this.supportInputElements && !isNoElementFocused()) {
           return;
         }
 
@@ -474,27 +474,12 @@ export class InputMouse {
     document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "mousedown",
-        targetSelector,
-        this.mouseDown,
-      ),
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "mouseover",
-        targetSelector,
-        this.mouseOver,
-      ),
-      ...Utils.addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "touchstart",
-        targetSelector,
-        this.mouseOver,
-      ),
-      ...Utils.addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
-      ...Utils.addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
+      ...addEventListenerWithDelegation(document, "mousedown", targetSelector, this.mouseDown),
+      ...addEventListenerWithDelegation(document, "mouseover", targetSelector, this.mouseOver),
+      ...addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
+      ...addEventListenerWithDelegation(document, "touchstart", targetSelector, this.mouseOver),
+      ...addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
+      ...addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
         passive: false,
       }),
     };

@@ -368,7 +368,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
 }
 
 type UserBoundingBoxInputProps = {
-  key: number;
+  bboxId: number;
   value: Vector6;
   name: string;
   color: Vector3;
@@ -398,7 +398,7 @@ const RIGHT_COL_SPAN = 2;
 
 export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
-    key: bboxId,
+    bboxId,
     value: propValue,
     name: propName,
     color,

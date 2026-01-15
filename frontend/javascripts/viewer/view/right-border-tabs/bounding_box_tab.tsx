@@ -41,7 +41,7 @@ export default function BoundingBoxTab() {
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const dispatch = useDispatch();
 
@@ -60,6 +60,14 @@ export default function BoundingBoxTab() {
     dispatch(deleteUserBoundingBoxAction(id));
     hideContextMenu();
     setSelectedRowKeys((prevSelectedRowKeys) => prevSelectedRowKeys.filter((key) => key !== id));
+  };
+
+  const deleteSelectedBoundingBoxes = () => {
+    selectedRowKeys.forEach((bboxId) => {
+      dispatch(deleteUserBoundingBoxAction(bboxId));
+    });
+    setSelectedRowKeys([]);
+    hideContextMenu();
   };
 
   const setBoundingBoxVisibility = (id: number, isVisible: boolean) =>
@@ -138,6 +146,7 @@ export default function BoundingBoxTab() {
       render: (_id: number, bb: UserBoundingBox) => (
         <UserBoundingBoxInput
           key={bb.id}
+          bboxId={bb.id}
           value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
           color={bb.color}
           name={bb.name}
@@ -208,12 +217,7 @@ export default function BoundingBoxTab() {
         key: "delete-selected-bboxes",
         label: `Delete ${selectedRowKeys.length} selected bounding boxes`,
         disabled: !allowUpdate,
-        onClick: () => {
-          selectedRowKeys.forEach((id) => {
-            deleteBoundingBox(Number(id));
-          });
-          setSelectedRowKeys([]);
-        },
+        onClick: deleteSelectedBoundingBoxes,
       },
     ],
   };
@@ -262,7 +266,11 @@ export default function BoundingBoxTab() {
                   onClick: (event) => {
                     hideContextMenu();
                     if (event.shiftKey || event.ctrlKey || event.metaKey) {
-                      setSelectedRowKeys([...selectedRowKeys, bb.id]);
+                      if (selectedRowKeys.includes(bb.id)) {
+                        setSelectedRowKeys(selectedRowKeys.filter((key) => key !== bb.id));
+                      } else {
+                        setSelectedRowKeys([...selectedRowKeys, bb.id]);
+                      }
                     } else {
                       handleGoToBoundingBox(bb.id);
                       dispatch(setActiveUserBoundingBoxId(bb.id));

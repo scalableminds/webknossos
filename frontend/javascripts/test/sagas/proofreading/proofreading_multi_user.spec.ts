@@ -37,6 +37,16 @@ import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { ColoredLogger } from "libs/utils";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 
+function* expectMapping(
+  tracingId: string,
+  initialExpectedMapping: Map<number, number>,
+): Saga<void> {
+  const mapping0 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(initialExpectedMapping);
+}
+
 function* prepareEditableMapping(
   context: WebknossosTestContext,
   tracingId: string,
@@ -46,10 +56,7 @@ function* prepareEditableMapping(
 ): Saga<void> {
   initialExpectedMapping = initialExpectedMapping ?? initialMapping;
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialExpectedMapping);
+  yield* expectMapping(tracingId, initialExpectedMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
 
   // Set up the merge-related segment partners. Normally, this would happen
@@ -61,12 +68,7 @@ function* prepareEditableMapping(
   yield call(createEditableMapping);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialExpectedMapping);
-
-  ColoredLogger.logRed("finish prepareEditableMapping");
+  yield* expectMapping(tracingId, initialExpectedMapping);
 }
 
 describe("Proofreading (Multi User)", () => {
@@ -148,12 +150,7 @@ describe("Proofreading (Multi User)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mappingAfterOptimisticUpdate = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
+      yield* expectMapping(tracingId, expectedMappingAfterMerge);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
@@ -170,12 +167,7 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
+      yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
       const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4);
       expect(segment4AfterSaving).toBeUndefined();
@@ -254,12 +246,8 @@ describe("Proofreading (Multi User)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mappingAfterOptimisticUpdate = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
+      yield* expectMapping(tracingId, expectedMappingAfterMerge2);
 
-      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge2);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
@@ -283,12 +271,8 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
 
-      expect(finalMapping).toEqual(expectedMappingAfterMergeRebase);
+      yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
       const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
       expect(segment6AfterSaving).toBeUndefined();
@@ -349,12 +333,7 @@ describe("Proofreading (Multi User)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mappingAfterOptimisticUpdate = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
+      yield* expectMapping(tracingId, expectedMappingAfterMerge);
 
       // Wait until proofreading saga is done
       yield call(waitUntilNotBusy);
@@ -380,12 +359,8 @@ describe("Proofreading (Multi User)", () => {
         },
       });
 
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 1339],
           [2, 1339],
@@ -445,11 +420,7 @@ describe("Proofreading (Multi User)", () => {
     tracingId: string,
   ): Generator<any, void, any> {
     yield call(initializeMappingAndTool, context, tracingId);
-    const mapping0 = yield select(
-      (state) =>
-        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-    );
-    expect(mapping0).toEqual(initialMapping);
+    yield* expectMapping(tracingId, initialMapping);
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
@@ -458,11 +429,8 @@ describe("Proofreading (Multi User)", () => {
 
     yield call(createEditableMapping);
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-    const mapping1 = yield select(
-      (state) =>
-        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-    );
-    expect(mapping1).toEqual(initialMapping);
+    yield* expectMapping(tracingId, initialMapping);
+
     yield put(setOthersMayEditForAnnotationAction(true));
 
     // Execute the actual merge and wait for the finished mapping.
@@ -525,12 +493,8 @@ describe("Proofreading (Multi User)", () => {
         },
       ]);
       yield take("FINISH_MAPPING_INITIALIZATION");
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 1],
           [2, 1339],
@@ -597,12 +561,8 @@ describe("Proofreading (Multi User)", () => {
         },
       ]);
       yield take("FINISH_MAPPING_INITIALIZATION");
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
+      yield* expectMapping(
+        tracingId,
         // A new edge from 4 to 2 was created and one between 2 and 3 was removed.
         // -> agglomerate 1 was merged into agglomerate 4 and then segment 3 was cut off from it due to the remove from allneighbours.
         // But as answer to the edges to remove was on version before the merge, the newly added edge afterwards is not included in the edges that need to be removed to completely isolate the segment 2.
@@ -679,12 +639,8 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 1],
           [2, 1339],
@@ -755,12 +711,8 @@ describe("Proofreading (Multi User)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mappingAfterOptimisticUpdate = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(mappingAfterOptimisticUpdate).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 4],
           [2, 4],
@@ -788,12 +740,8 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 1337],
           [2, 1337],
@@ -913,12 +861,8 @@ describe("Proofreading (Multi User)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mappingAfterOptimisticUpdate = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(mappingAfterOptimisticUpdate).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 4],
           [2, 4],
@@ -947,12 +891,8 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 1339],
           [2, 1339],
@@ -1018,12 +958,8 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
-      expect(finalMapping).toEqual(
+      yield* expectMapping(
+        tracingId,
         new Map([
           [1, 1],
           [2, 1],

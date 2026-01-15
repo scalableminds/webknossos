@@ -5,7 +5,6 @@ import {
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   cutAgglomerateFromNeighborsAction,
@@ -15,7 +14,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { type Saga, select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";

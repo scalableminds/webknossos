@@ -269,7 +269,7 @@ export class InputKeyboard {
           return;
         }
 
-        if (!isNoElementFocused()) {
+        if (!this.supportInputElements && !isNoElementFocused()) {
           return;
         }
 

@@ -8,7 +8,7 @@ import window from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
+import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
@@ -80,7 +80,7 @@ type State = {
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
-class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
+class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
   lastTouchTimeStamp: number | null = null;
 
   static getDerivedStateFromError() {
@@ -336,7 +336,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     };
 
     return (
-      <React.Fragment>
+      <Fragment>
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
@@ -406,14 +406,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 )}
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
-                  <React.Fragment>
+                  <Fragment>
                     <FlexLayoutWrapper
                       onLayoutChange={this.onLayoutChange}
                       layoutKey={layoutType}
                       layoutName={activeLayoutName}
                     />
                     <WelcomeToast />
-                  </React.Fragment>
+                  </Fragment>
                 ) : null}
               </div>
               <AiJobsDrawer isOpen={this.props.aiJobDrawerState !== "invisible"} />
@@ -426,7 +426,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             </Layout>
           </Layout>
         </NmlUploadZoneContainer>
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

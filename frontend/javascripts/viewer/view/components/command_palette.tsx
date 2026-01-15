@@ -3,8 +3,7 @@ import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
-import * as Utils from "libs/utils";
+import { capitalize, getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -245,7 +244,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
-    const statisticsCommands = Utils.isUserAdminOrManager(activeUser)
+    const statisticsCommands = isUserAdminOrManager(activeUser)
       ? [
           {
             path: "/reports/projectProgress",

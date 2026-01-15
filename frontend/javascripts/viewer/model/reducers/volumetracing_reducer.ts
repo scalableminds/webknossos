@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
-import * as Utils from "libs/utils";
+import { colorObjectToRGBArray, floor3, mapEntriesToMap, point3ToVector3 } from "libs/utils";
 import type { APIUserBase, AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
@@ -74,7 +74,7 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     let somePosition;
     let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
     if (segment.somePosition) {
-      somePosition = Utils.floor3(segment.somePosition);
+      somePosition = floor3(segment.somePosition);
       someAdditionalCoordinates = segment.someAdditionalCoordinates;
     } else if (oldSegment != null) {
       somePosition = oldSegment.somePosition;
@@ -159,7 +159,7 @@ export function serverVolumeToClientVolumeTracing(
   );
   const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
   const segmentVisibilityMap: Record<number, boolean> = userState
-    ? Utils.mapEntriesToMap(userState.segmentVisibilities)
+    ? mapEntriesToMap(userState.segmentVisibilities)
     : {};
 
   const volumeTracing = {
@@ -171,10 +171,10 @@ export function serverVolumeToClientVolumeTracing(
           ...segment,
           id: segment.segmentId,
           somePosition: segment.anchorPosition
-            ? Utils.point3ToVector3(segment.anchorPosition)
+            ? point3ToVector3(segment.anchorPosition)
             : undefined,
           someAdditionalCoordinates: segment.additionalCoordinates,
-          color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
+          color: segment.color != null ? colorObjectToRGBArray(segment.color) : null,
           isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
         };
         return [segment.segmentId, clientSegment];

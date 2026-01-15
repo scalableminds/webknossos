@@ -5,7 +5,7 @@ import HighlightableRow from "components/highlightable_row";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import { useState } from "react";
 import type { APIUser, ExperienceDomainList } from "types/api_types";
@@ -45,7 +45,7 @@ function ExperienceModalView({
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(initialDomainToEdit);
 
   function sortEntries(entries: TableEntry[]): TableEntry[] {
-    return entries.sort(Utils.localeCompareBy((entry) => entry.domain.toLowerCase()));
+    return entries.sort(localeCompareBy((entry) => entry.domain.toLowerCase()));
   }
 
   function getTableEntries(users: APIUser[]): TableEntry[] {
@@ -113,11 +113,10 @@ function ExperienceModalView({
           delete newExperiences[domain];
         }
       });
-      const orderedExperiences = {};
+      const orderedExperiences: typeof newExperiences = {};
       Object.keys(newExperiences)
-        .sort(Utils.localeCompareBy((domain) => domain.toLowerCase()))
+        .sort(localeCompareBy((domain) => domain.toLowerCase()))
         .forEach((key) => {
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           orderedExperiences[key] = newExperiences[key];
         });
       const newUser = { ...user, experiences: orderedExperiences };

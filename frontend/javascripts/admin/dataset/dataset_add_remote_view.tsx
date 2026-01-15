@@ -11,7 +11,7 @@ import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components"
 import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { computeHash } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -89,7 +89,7 @@ function DatasetAddRemoteView(props: Props) {
     if (url === "") return "";
     let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
     const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
-    const urlHash = Utils.computeHash(url);
+    const urlHash = computeHash(url);
     return defaultName + "-" + urlHash;
   };
 

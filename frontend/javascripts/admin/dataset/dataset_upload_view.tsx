@@ -53,7 +53,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
@@ -549,7 +549,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     for (const file of files) {
       fileNames.push(file.name);
-      const fileExtension = Utils.getFileExtension(file.name);
+      const fileExtension = getFileExtension(file.name);
       fileExtensions.push(fileExtension);
       sendAnalyticsEvent("add_files_to_upload", {
         fileExtension,
@@ -562,7 +562,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           await reader.close();
           for (const entry of entries) {
             fileNames.push(entry.filename);
-            fileExtensions.push(Utils.getFileExtension(entry.filename));
+            fileExtensions.push(getFileExtension(entry.filename));
           }
         } catch (e) {
           console.error(e);
@@ -699,7 +699,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   render() {
     const { activeUser, withoutCard, datastores } = this.props;
-    const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
+    const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(this.props.activeUser);
 
     const { needsConversion, unfinishedUploadToContinue } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
@@ -943,7 +943,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path || "", "zip"))
+                      files.filter((file) => isFileExtensionEqualTo(file.path || "", "zip"))
                         .length <= 1,
                     "You cannot upload more than one archive.",
                   ),
@@ -952,7 +952,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
                       files.filter((file) =>
-                        Utils.isFileExtensionEqualTo(file.path, ["tar", "rar", "gz"]),
+                        isFileExtensionEqualTo(file.path, ["tar", "rar", "gz"]),
                       ).length === 0,
                     "Tar, tar.gz and rar archives are not supported currently. Please use zip archives.",
                   ),
@@ -961,7 +961,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
                       files.filter((file) =>
-                        Utils.isFileExtensionEqualTo(file.path, ["ply", "stl", "obj"]),
+                        isFileExtensionEqualTo(file.path, ["ply", "stl", "obj"]),
                       ).length === 0,
                     "PLY, STL and OBJ files are not supported. Please upload image files instead of 3D geometries.",
                   ),
@@ -969,23 +969,23 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["nml"]))
-                        .length === 0,
+                      files.filter((file) => isFileExtensionEqualTo(file.path, ["nml"])).length ===
+                      0,
                     "An NML file is an annotation of a dataset and not an independent dataset. Please upload the NML file into the Annotations page in the dashboard or into an open dataset.",
                   ),
                 },
                 {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["mrc"]))
-                        .length === 0,
+                      files.filter((file) => isFileExtensionEqualTo(file.path, ["mrc"])).length ===
+                      0,
                     "MRC files are not supported currently.",
                   ),
                 },
                 {
                   validator: syncValidator((files: FileWithPath[]) => {
                     const archives = files.filter((file) =>
-                      Utils.isFileExtensionEqualTo(file.path, "zip"),
+                      isFileExtensionEqualTo(file.path, "zip"),
                     );
                     // Either there are no archives, or all files are archives
                     return archives.length === 0 || archives.length === files.length;
@@ -1007,10 +1007,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator((files: FileWithPath[]) => {
                     const wkwFiles = files.filter((file) =>
-                      Utils.isFileExtensionEqualTo(file.path, "wkw"),
+                      isFileExtensionEqualTo(file.path, "wkw"),
                     );
                     const imageFiles = files.filter((file) =>
-                      Utils.isFileExtensionEqualTo(file.path, [
+                      isFileExtensionEqualTo(file.path, [
                         "tif",
                         "tiff",
                         "jpg",

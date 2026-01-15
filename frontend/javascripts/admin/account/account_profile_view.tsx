@@ -4,7 +4,8 @@ import ChangeUsernameView from "admin/auth/change_username_view";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
 import { Button, Col, Dropdown, Row, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
+
+import { isUserAdmin, isUserTeamManager } from "libs/utils";
 import { useState } from "react";
 import { getSystemColorTheme } from "theme";
 import type { APIUserTheme } from "types/api_types";
@@ -23,9 +24,9 @@ function AccountProfileView() {
   const [isChangeNameVisible, setChangeNameViewVisible] = useState(false);
   if (!activeUser) return null;
 
-  const role = Utils.isUserAdmin(activeUser)
+  const role = isUserAdmin(activeUser)
     ? "Administrator"
-    : Utils.isUserTeamManager(activeUser)
+    : isUserTeamManager(activeUser)
       ? "Team Manager"
       : "User";
 

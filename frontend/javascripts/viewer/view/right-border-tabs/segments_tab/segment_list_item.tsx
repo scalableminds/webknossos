@@ -21,7 +21,7 @@ import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { take3 } from "libs/utils";
 import type { APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
@@ -496,7 +496,7 @@ function _SegmentListItem({
                   createsNewUndoState,
                 );
               }}
-              rgb={Utils.take3(segmentColorRGBA)}
+              rgb={take3(segmentColorRGBA)}
             />
           ),
         },

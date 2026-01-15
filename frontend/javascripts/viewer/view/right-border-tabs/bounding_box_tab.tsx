@@ -1,5 +1,6 @@
-import { PlusSquareOutlined } from "@ant-design/icons";
-import { type MenuProps, Table, Tooltip, Typography } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { Button, type MenuProps, Table, Typography } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -40,6 +41,7 @@ export default function BoundingBoxTab() {
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
   const dispatch = useDispatch();
 
@@ -56,6 +58,15 @@ export default function BoundingBoxTab() {
 
   const deleteBoundingBox = (id: number) => {
     dispatch(deleteUserBoundingBoxAction(id));
+    hideContextMenu();
+    setSelectedRowKeys((prevSelectedRowKeys) => prevSelectedRowKeys.filter((key) => key !== id));
+  };
+
+  const deleteSelectedBoundingBoxes = () => {
+    selectedRowKeys.forEach((bboxId) => {
+      dispatch(deleteUserBoundingBoxAction(bboxId));
+    });
+    setSelectedRowKeys([]);
     hideContextMenu();
   };
 
@@ -135,6 +146,7 @@ export default function BoundingBoxTab() {
       render: (_id: number, bb: UserBoundingBox) => (
         <UserBoundingBoxInput
           key={bb.id}
+          bboxId={bb.id}
           value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
           color={bb.color}
           name={bb.name}
@@ -150,7 +162,7 @@ export default function BoundingBoxTab() {
           disabled={!allowUpdate}
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}
-          onOpenContextMenu={onOpenContextMenu}
+          onOpenContextMenu={(menu, event) => onOpenContextMenu(menu, event, bb.id)}
           onHideContextMenu={hideContextMenu}
         />
       ),
@@ -158,25 +170,27 @@ export default function BoundingBoxTab() {
   ];
 
   const maybeAddBoundingBoxButton = allowUpdate ? (
-    <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
-      <Tooltip title="Click to add another bounding box.">
-        <PlusSquareOutlined
-          onClick={addNewBoundingBox}
-          style={{
-            cursor: "pointer",
-            marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
-          }}
-        />
-      </Tooltip>
+    <div style={{ textAlign: "center" }}>
+      <FastTooltip title="Click to add another bounding box.">
+        <Button size="small" onClick={addNewBoundingBox} icon={<PlusOutlined />} />
+      </FastTooltip>
     </div>
   ) : null;
 
-  const onOpenContextMenu = (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
+  const onOpenContextMenu = (
+    menu: MenuProps,
+    event: React.MouseEvent<HTMLDivElement>,
+    bboxId: number,
+  ) => {
     event.preventDefault();
     event.stopPropagation(); // Prevent that the bounding box gets activated when the context menu is opened.
 
     const [x, y] = getContextMenuPositionFromEvent(event, CONTEXT_MENU_CLASS);
-    showContextMenuAt(x, y, menu);
+    if (selectedRowKeys.length > 1 && selectedRowKeys.includes(bboxId)) {
+      return showContextMenuAt(x, y, multiSelectContextMenu);
+    } else {
+      showContextMenuAt(x, y, menu);
+    }
   };
 
   const showContextMenuAt = useCallback((xPos: number, yPos: number, menu: MenuProps) => {
@@ -194,6 +208,17 @@ export default function BoundingBoxTab() {
     setContextMenuPosition(null);
     setMenu(null);
   }, []);
+
+  const multiSelectContextMenu = {
+    items: [
+      {
+        key: "delete-selected-bboxes",
+        label: `Delete ${selectedRowKeys.length} selected bounding boxes`,
+        disabled: !allowUpdate,
+        onClick: deleteSelectedBoundingBoxes,
+      },
+    ],
+  };
 
   return (
     <div
@@ -228,7 +253,7 @@ export default function BoundingBoxTab() {
                 showHeader={false}
                 className="bounding-box-table"
                 rowSelection={{
-                  selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
+                  selectedRowKeys,
                   getCheckboxProps: () => ({ disabled: true }),
                 }}
                 footer={() => maybeAddBoundingBoxButton}
@@ -236,10 +261,18 @@ export default function BoundingBoxTab() {
                 scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
                 onRow={(bb) => ({
-                  onClick: () => {
+                  onClick: (event) => {
                     hideContextMenu();
-                    handleGoToBoundingBox(bb.id);
-                    dispatch(setActiveUserBoundingBoxId(bb.id));
+                    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                      setSelectedRowKeys((prev) =>
+                        prev.includes(bb.id)
+                          ? prev.filter((key) => key !== bb.id)
+                          : [...prev, bb.id],
+                      );
+                    } else {
+                      handleGoToBoundingBox(bb.id);
+                      dispatch(setActiveUserBoundingBoxId(bb.id));
+                    }
                   },
                 })}
               />

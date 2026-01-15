@@ -104,7 +104,7 @@ import type {
 } from "viewer/store";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
-import { doWithToken } from "./api/token";
+import { doWithToken, refreshToken } from "./api/token";
 
 export * from "./api/token";
 export * from "./api/jobs";
@@ -1164,22 +1164,41 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     return `${uploadId}/${file.path || file.name}`;
   };
 
-  return doWithToken(
-    (token) =>
-      // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
-      new ResumableJS({
-        testChunks: true,
-        target: `${datastoreUrl}/data/datasets?token=${token}`,
-        chunkSize: 10 * 1024 * 1024, // 10MB
-        permanentErrors: [400, 403, 404, 409, 415, 500, 501],
-        simultaneousUploads: 3,
-        chunkRetryInterval: 2000,
-        maxChunkRetries: undefined,
-        xhrTimeout: 10 * 60 * 1000, // 10m
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
-        generateUniqueIdentifier,
-      }),
-  );
+  return doWithToken(async (initialToken) => {
+    let activeToken = initialToken;
+    const handleInvalidToken = async () => {
+      const newToken = await refreshToken();
+      activeToken = newToken;
+    };
+
+    const resumable = new ResumableJS({
+      testChunks: true,
+      target: `${datastoreUrl}/data/datasets`,
+      query: function () {
+        return {
+          token: activeToken,
+        };
+      },
+      chunkSize: 10 * 1024 * 1024, // 10MB
+      permanentErrors: [400, 403, 404, 409, 415, 500, 501],
+      simultaneousUploads: 3,
+      chunkRetryInterval: 2000,
+      maxChunkRetries: undefined,
+      xhrTimeout: 10 * 60 * 1000, // 10m
+
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
+      generateUniqueIdentifier,
+    });
+
+    resumable.on("fileError", function (file, message) {
+      console.log("fileError with message", message);
+      handleInvalidToken().then(() => {
+        file.retry();
+      });
+    });
+
+    return resumable;
+  });
 }
 type ReserveUploadInformation = {
   uploadId: string;

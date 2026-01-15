@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(149);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(150);
 COMMIT TRANSACTION;
 
 
@@ -194,6 +194,7 @@ CREATE TABLE webknossos.dataset_mags(
   axisOrder JSONB CONSTRAINT axisOrder_requiredKeys CHECK (axisOrder ? 'x' AND axisOrder ? 'y'),
   channelIndex INT,
   credentialId TEXT,
+  uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

@@ -461,6 +461,7 @@ export async function setupWebknossosForTesting(
     async (
       _datasetId: string,
       _sharingToken?: string | null | undefined,
+      _includeZeroMagLayers?: boolean | null | undefined,
       _options: RequestOptions = {},
     ) => {
       return _.cloneDeep(dataset);

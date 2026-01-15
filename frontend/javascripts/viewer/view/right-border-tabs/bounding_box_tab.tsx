@@ -58,6 +58,7 @@ export default function BoundingBoxTab() {
   const deleteBoundingBox = (id: number) => {
     dispatch(deleteUserBoundingBoxAction(id));
     hideContextMenu();
+    setSelectedRowKeys((prevSelectedRowKeys) => prevSelectedRowKeys.filter((key) => key !== id));
   };
 
   const setBoundingBoxVisibility = (id: number, isVisible: boolean) =>

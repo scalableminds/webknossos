@@ -1074,8 +1074,8 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  segmentId1: NumberLike,
-  segmentId2: NumberLike,
+  segmentId1: NumberLike, // will keep its agglomerate id
+  segmentId2: NumberLike, // will get a new agglomerate id
   agglomerateId: NumberLike,
   actionTracingId: string,
 ): {

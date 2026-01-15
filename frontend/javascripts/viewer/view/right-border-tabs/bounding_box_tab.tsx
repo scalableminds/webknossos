@@ -1,5 +1,6 @@
-import { PlusSquareOutlined } from "@ant-design/icons";
-import { type MenuProps, Table, Tooltip, Typography } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { Button, type MenuProps, Table, Typography } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -160,16 +161,12 @@ export default function BoundingBoxTab() {
   ];
 
   const maybeAddBoundingBoxButton = allowUpdate ? (
-    <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
-      <Tooltip title="Click to add another bounding box.">
-        <PlusSquareOutlined
-          onClick={addNewBoundingBox}
-          style={{
-            cursor: "pointer",
-            marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
-          }}
-        />
-      </Tooltip>
+    <div style={{ textAlign: "center" }}>
+      <FastTooltip title="Click to add another bounding box.">
+        <Button size="small" onClick={addNewBoundingBox}>
+          <PlusOutlined size={18} />
+        </Button>
+      </FastTooltip>
     </div>
   ) : null;
 

@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { getAdministrationSubMenu } from "navbar";
+import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useNavigate } from "react-router-dom";
@@ -245,6 +245,14 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
+    const analysisSubMenu = getAnalysisSubMenu(true);
+    const analysisCommands =
+      analysisSubMenu != null
+        ? analysisSubMenu.children.map((entry) => {
+            return { name: getLabelForPath(entry.key), path: entry.key };
+          })
+        : [];
+
     const statisticsCommands = Utils.isUserAdminOrManager(activeUser)
       ? [
           {
@@ -258,7 +266,12 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         ]
       : [];
 
-    const navigationEntries = [...basicNavigationEntries, ...adminCommands, ...statisticsCommands];
+    const navigationEntries = [
+      ...basicNavigationEntries,
+      ...adminCommands,
+      ...analysisCommands,
+      ...statisticsCommands,
+    ];
 
     navigationEntries.forEach((entry) => {
       commands.push({

@@ -228,13 +228,9 @@ class UserService @Inject()(conf: WkConf,
         _ <- multiUserDAO.updateEmail(user._multiUser, email)
         _ = logger.info(s"Email of MultiUser ${user._multiUser} changed from $oldEmail to $email")
       } yield ())
-      _ <- userDAO.updateValues(user._id,
-                                firstName,
-                                lastName,
-                                isAdmin,
-                                isDatasetManager,
-                                isDeactivated = !activated,
-                                lastTaskTypeId)
+      _ <- userDAO.updateValues(user._id, isAdmin, isDatasetManager, isDeactivated = !activated, lastTaskTypeId)
+      _ <- Fox.runIf(firstName != user.firstName || lastName != user.lastName)(
+        userDAO.updateNameByMultiUser(user._multiUser, firstName, lastName))
       _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
       _ = removeUserFromCache(user._id)

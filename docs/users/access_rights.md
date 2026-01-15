@@ -35,6 +35,8 @@ For more information regarding (public) dataset sharing and access rights (espec
 | Delete datasets of other teams                     	| Yes   	| Yes             	| No           	| No          	|
 | Access all users of own teams                       	| Yes   	| Yes             	| Yes          	| Yes         	|
 | Access all users of other teams                     	| Yes   	| Yes             	| Yes          	| No          	|
+| Change own username                              	| Yes   	| Yes             	| Yes          	| Yes         	|
+| Change other users' username¹                    	| Yes   	| No              	| No           	| No          	|
 | Assign/remove team membership to own teams       	| Yes   	| No              	| Yes          	| No          	|
 | Make other users team manager of own teams   	| Yes   	| No              	| Yes          	| No          	|
 | Make other users team manager of other teams   	| Yes   	| No              	| No           	| No          	|
@@ -47,3 +49,5 @@ For more information regarding (public) dataset sharing and access rights (espec
 | Set team access permissions for datasets    	| Yes   	| Yes              	| Yes          	| No          	|
 | Get tasks again after canceling an instance     	| Yes   	| No              	| Yes          	| No          	|
 | Access to wK Statistics Menu  	| Yes   	| No              	| Yes          	| No          	|
+
+¹Not available on webknossos.org.

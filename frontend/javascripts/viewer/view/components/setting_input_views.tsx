@@ -368,6 +368,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
 }
 
 type UserBoundingBoxInputProps = {
+  key: number;
   value: Vector6;
   name: string;
   color: Vector3;
@@ -384,7 +385,11 @@ type UserBoundingBoxInputProps = {
   isLockedByOwner: boolean;
   isOwner: boolean;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-  onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
+  onOpenContextMenu: (
+    menu: MenuProps,
+    event: React.MouseEvent<HTMLDivElement>,
+    bboxId: number,
+  ) => void;
   onHideContextMenu?: () => void;
 };
 
@@ -393,6 +398,7 @@ const RIGHT_COL_SPAN = 2;
 
 export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
+    key: bboxId,
     value: propValue,
     name: propName,
     color,
@@ -565,7 +571,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
 
   return (
     <div
-      onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+      onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
       onClick={onHideContextMenu}
     >
       <Row
@@ -661,8 +667,8 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         </Col>
         <Col span={RIGHT_COL_SPAN}>
           <div
-            onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-            onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+            onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
+            onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
           >
             <EllipsisOutlined style={marginLeftStyle} />
           </div>

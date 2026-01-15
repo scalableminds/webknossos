@@ -151,7 +151,7 @@ export default function BoundingBoxTab() {
           disabled={!allowUpdate}
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}
-          onOpenContextMenu={onOpenContextMenu}
+          onOpenContextMenu={(menu, event) => onOpenContextMenu(menu, event, bb.id)}
           onHideContextMenu={hideContextMenu}
         />
       ),
@@ -172,12 +172,16 @@ export default function BoundingBoxTab() {
     </div>
   ) : null;
 
-  const onOpenContextMenu = (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
+  const onOpenContextMenu = (
+    menu: MenuProps,
+    event: React.MouseEvent<HTMLDivElement>,
+    bboxId: number,
+  ) => {
     event.preventDefault();
     event.stopPropagation(); // Prevent that the bounding box gets activated when the context menu is opened.
 
     const [x, y] = getContextMenuPositionFromEvent(event, CONTEXT_MENU_CLASS);
-    if (selectedRowKeys.length > 1) {
+    if (selectedRowKeys.length > 1 && selectedRowKeys.includes(bboxId)) {
       return showContextMenuAt(x, y, multiSelectContextMenu);
     } else {
       showContextMenuAt(x, y, menu);

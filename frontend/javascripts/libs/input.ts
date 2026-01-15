@@ -224,7 +224,6 @@ export class InputKeyboardNoLoop {
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
 export class InputKeyboard {
-  keyboard: Keyboard;
   keyCallbackMap: KeyBindingLoopMap = {};
   keyPressedCount: number = 0;
   bindings: KeyboardBindingDownUp[] = [];

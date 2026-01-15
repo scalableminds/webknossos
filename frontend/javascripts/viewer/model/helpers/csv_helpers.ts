@@ -3,6 +3,28 @@ import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
+export function getTreesAsCSV(annotationId: string, tracing: SkeletonTracing) {
+  const visibleTrees = tracing.trees
+    .values()
+    .filter((tree) => tree.isVisible)
+    .toArray();
+  const csvHeader = "annotationId,treeId,name,groupId,colorRGB,numberOfNodes,numberOfEdges";
+
+  const csvLines = visibleTrees.map((tree) => {
+    const row = [
+      annotationId,
+      tree.treeId,
+      tree.name,
+      tree.groupId,
+      tree.color,
+      tree.nodes.size(),
+      tree.edges.size(),
+    ];
+    return transformToCSVRow(row);
+  });
+  return [csvHeader, ...csvLines].join("\n");
+}
+
 export function getTreeNodesAsCSV(
   state: WebknossosState,
   tracing: SkeletonTracing,

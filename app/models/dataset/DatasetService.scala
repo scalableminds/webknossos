@@ -285,16 +285,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         for {
           _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
           _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
-          _ <- datasetDAO.updateDataSource(datasetId,
-                                           dataset._dataStore,
-                                           updatedDataSource.hashCode(),
-                                           updatedDataSource,
-                                           isUsable = true)(GlobalAccessContext)
           datastoreClient <- clientFor(dataset)
           removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
           pathsUsedOnlyByThisDataset <- if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
           else Fox.successful(List.empty)
           pathsToDelete = removedPaths.intersect(pathsUsedOnlyByThisDataset)
+          _ <- datasetDAO.updateDataSource(datasetId,
+                                           dataset._dataStore,
+                                           updatedDataSource.hashCode(),
+                                           updatedDataSource,
+                                           isUsable = true)(GlobalAccessContext)
           _ <- datastoreClient.deletePaths(pathsToDelete)
         } yield ()
       } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
@@ -432,7 +432,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def usableDataSourceFor(dataset: Dataset, includeZeroMagLayers: Boolean = true)(
+  def usableDataSourceFor(dataset: Dataset, includeZeroMagLayers: Boolean = false)(
       implicit mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       dataSource <- dataSourceFor(dataset, includeZeroMagLayers) ?~> "dataSource.notFound" ~> NOT_FOUND

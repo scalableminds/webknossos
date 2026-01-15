@@ -40,7 +40,7 @@ import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/globals";
 import { Unicode } from "viewer/constants";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import {
@@ -332,7 +332,7 @@ class DatasetRenderer {
 
     return (
       <>
-        <Link to={`/datasets/${getReadableURLPart(this.data)}/view`} title="View Dataset">
+        <Link to={getViewDatasetURL(this.data)} title="View Dataset">
           <img
             src={imgSrc}
             className={`dataset-table-thumbnail ${iconClassName}`}
@@ -342,7 +342,7 @@ class DatasetRenderer {
         </Link>
         <div className="dataset-table-name-container">
           <Link
-            to={`/datasets/${getReadableURLPart(this.data)}/view`}
+            to={getViewDatasetURL(this.data)}
             title="View Dataset"
             className="incognito-link dataset-table-name"
           >
@@ -807,7 +807,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               },
               onDoubleClick: () => {
                 if (isADataset) {
-                  window.location.href = `/datasets/${getReadableURLPart(data)}/view`;
+                  window.location.href = getViewDatasetURL(data);
                 } else {
                   context.setActiveFolderId(data.key);
                 }

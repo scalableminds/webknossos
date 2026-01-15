@@ -43,7 +43,7 @@ object RunNeuronModelTrainingParameters {
 case class RunInstanceModelTrainingParameters(trainingAnnotations: List[TrainingAnnotationSpecification],
                                               name: String,
                                               aiModelCategory: Option[AiModelCategory],
-                                              maxDistanceNm: Option[Double],
+                                              instanceDiameterNm: Option[Double],
                                               comment: Option[String],
                                               workflowYaml: Option[String])
 
@@ -220,7 +220,7 @@ class AiModelController @Inject()(
           "organization_id" -> organization._id,
           "model_id" -> modelId,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "max_distance_nm" -> request.body.maxDistanceNm
+          "instance_diameter_nm" -> request.body.instanceDiameterNm
         )
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)

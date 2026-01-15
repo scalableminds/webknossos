@@ -31,6 +31,7 @@ import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -350,4 +351,14 @@ export function mockInitialBucketAndAgglomerateData(
   );
 
   return backendMock;
+}
+
+export function* expectMapping(
+  tracingId: string,
+  initialExpectedMapping: Map<number, number>,
+): Saga<void> {
+  const mapping0 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(initialExpectedMapping);
 }

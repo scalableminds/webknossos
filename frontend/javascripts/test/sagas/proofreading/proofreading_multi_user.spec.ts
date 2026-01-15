@@ -28,6 +28,7 @@ import {
   initialMapping,
 } from "./proofreading_fixtures";
 import {
+  expectMapping,
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
@@ -36,16 +37,6 @@ import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { ColoredLogger } from "libs/utils";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
-
-function* expectMapping(
-  tracingId: string,
-  initialExpectedMapping: Map<number, number>,
-): Saga<void> {
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialExpectedMapping);
-}
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,

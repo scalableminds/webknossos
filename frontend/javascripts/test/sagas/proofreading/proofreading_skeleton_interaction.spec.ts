@@ -26,6 +26,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";
 import {
+  expectMapping,
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
@@ -37,10 +38,7 @@ function* performMergeTreesProofreading(
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
@@ -50,10 +48,7 @@ function* performMergeTreesProofreading(
   yield call(createEditableMapping);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -83,11 +78,7 @@ function* performMergeTreesProofreading(
 
   yield take("FINISH_MAPPING_INITIALIZATION");
 
-  const mappingAfterOptimisticUpdate = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-
-  expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
+  yield* expectMapping(tracingId, expectedMappingAfterMerge);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 }
 
@@ -96,10 +87,7 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
@@ -109,10 +97,8 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
   yield call(createEditableMapping);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
+
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -146,10 +132,7 @@ function* performMinCutWithNodesProofreading(
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
@@ -159,10 +142,7 @@ function* performMinCutWithNodesProofreading(
   yield call(createEditableMapping);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();

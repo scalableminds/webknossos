@@ -4,20 +4,14 @@ import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import capitalize from "lodash/capitalize";
 import differenceWith from "lodash/differenceWith";
-import every from "lodash/every";
-import filter from "lodash/filter";
-import findIndex from "lodash/findIndex";
 import flattenDeep from "lodash/flattenDeep";
 import fromPairs from "lodash/fromPairs";
 import isEqual from "lodash/isEqual";
 import last from "lodash/last";
-import map from "lodash/map";
 import max from "lodash/max";
 import min from "lodash/min";
 import once from "lodash/once";
 import reduce from "lodash/reduce";
-import repeat from "lodash/repeat";
-import some from "lodash/some";
 import toPairs from "lodash/toPairs";
 import uniq from "lodash/uniq";
 import zipObject from "lodash/zipObject";
@@ -219,7 +213,7 @@ export function roundTo(value: number, digits: number): number {
 }
 
 function intToHex(int: number, digits: number = 6): string {
-  return (repeat("0", digits) + int.toString(16)).slice(-digits);
+  return ("0".repeat(digits) + int.toString(16)).slice(-digits);
 }
 
 export function rgbToInt(color: Vector3): number {
@@ -477,7 +471,7 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
 }
 
 export function isUserTeamManager(user: APIUser): boolean {
-  return findIndex(user.teams, (team) => team.isTeamManager) >= 0;
+  return user.teams.findIndex((team) => team.isTeamManager) >= 0;
 }
 
 export function isUserAdmin(user: APIUser): boolean {
@@ -691,21 +685,21 @@ export function filterWithSearchQueryAND<
   if (searchQuery === "") {
     return collection;
   } else {
-    const words = map(searchQuery.split(" "), (element) =>
-      element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
-    );
+    const words = searchQuery
+      .split(" ")
+      .map((element) => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
 
-    const uniques = filter(uniq(words), (element) => element !== "");
+    const uniques = uniq(words).filter((element) => element !== "");
 
     const patterns = uniques.map((pattern) => new RegExp(pattern, "igm"));
     return collection.filter((model) =>
-      every(patterns, (pattern) =>
-        some(properties, (fieldName) => {
+      patterns.every((pattern) =>
+        properties.some((fieldName) => {
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
 
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
             const recursiveValues = getRecursiveValues(value);
-            return some(recursiveValues, (v) => v?.toString().match(pattern));
+            return recursiveValues.some((v) => v?.toString().match(pattern));
           } else {
             return false;
           }
@@ -1192,7 +1186,7 @@ export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
 }
 
 export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
-  return every(a.map((v, i) => Math.abs(v - b[i]) < epsilon));
+  return a.every((v, i) => Math.abs(v - b[i]) < epsilon);
 }
 
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {

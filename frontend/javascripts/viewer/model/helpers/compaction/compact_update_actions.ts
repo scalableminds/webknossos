@@ -1,5 +1,4 @@
 import { withoutValues } from "libs/utils";
-import filter from "lodash/filter";
 
 import groupBy from "lodash/groupBy";
 import keyBy from "lodash/keyBy";
@@ -173,8 +172,7 @@ function compactDeletedTrees(updateActions: Array<UpdateActionWithoutIsolationRe
   const deletedTreeIds = updateActions
     .filter((ua) => ua.name === "deleteTree")
     .map((ua) => (ua as DeleteTreeUpdateAction).value.id);
-  return filter(
-    updateActions,
+  return updateActions.filter(
     (ua) =>
       !(
         (ua.name === "deleteNode" || ua.name === "deleteEdge") &&

@@ -1,6 +1,6 @@
 import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import findIndex from "lodash/findIndex";
+
 import first from "lodash/first";
 import last from "lodash/last";
 import max from "lodash/max";
@@ -387,8 +387,7 @@ function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: st
 
     // Linearly search for the mag index, for which the zoomFactor
     // is acceptable.
-    const zoomStep = findIndex(
-      maximumZoomSteps,
+    const zoomStep = maximumZoomSteps.findIndex(
       (maximumZoomStep) => state.flycam.zoomStep <= maximumZoomStep,
     );
 

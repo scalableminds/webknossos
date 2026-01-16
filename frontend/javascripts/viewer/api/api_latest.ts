@@ -12,8 +12,7 @@ import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
-import * as Utils from "libs/utils";
-import { coalesce, mod } from "libs/utils";
+import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -378,7 +377,7 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
-    const globalPosition = { rounded: Utils.map3(Math.round, position), floating: position };
+    const globalPosition = { rounded: map3(Math.round, position), floating: position };
     assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(
@@ -1104,7 +1103,7 @@ class TracingApi {
       }
     } catch (err) {
       console.error(err);
-      await Utils.sleep(2000);
+      await sleep(2000);
       location.href = "/dashboard";
     } finally {
       this.isFinishing = false;
@@ -1413,7 +1412,7 @@ class TracingApi {
     if (rotation == null) {
       rotation = curRotation;
     } else {
-      rotation = Utils.map3(MathUtils.degToRad, rotation);
+      rotation = map3(MathUtils.degToRad, rotation);
     }
     const endQuaternion = new Quaternion().setFromEuler(new Euler(...rotation, "XYZ"));
 
@@ -1448,7 +1447,7 @@ class TracingApi {
           t,
         );
         const interpolatedEuler = new Euler().setFromQuaternion(interpolatedQuaternion, "XYZ");
-        const interpolatedEulerInDegree = Utils.map3(MathUtils.radToDeg, [
+        const interpolatedEulerInDegree = map3(MathUtils.radToDeg, [
           interpolatedEuler.x,
           interpolatedEuler.y,
           interpolatedEuler.z,
@@ -1643,7 +1642,7 @@ class DataApi {
   ): Promise<void> {
     const truePredicate = () => true;
     await Promise.all(
-      Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
+      Object.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
             await Model.ensureSavedState();
@@ -1664,7 +1663,7 @@ class DataApi {
       await Model.ensureSavedState();
     }
 
-    Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
+    Object.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
       dataLayer.cube.removeAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });

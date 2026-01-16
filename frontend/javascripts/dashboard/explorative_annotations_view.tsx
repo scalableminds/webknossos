@@ -34,10 +34,11 @@ import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { PureComponent, useContext } from "react";
 import { Link } from "react-router-dom";
 import {
   type APIAnnotationInfo,
@@ -98,7 +99,7 @@ function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 
-class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   state: State = {
     shouldShowArchivedAnnotations: false,
     archivedModeState: {
@@ -529,7 +530,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
-    const filteredAnnotations = Utils.filterWithSearchQueryAND(
+    const filteredAnnotations = filterWithSearchQueryAND(
       this.getCurrentAnnotations(),
       ["id", "name", "modified", "tags", "owner"],
       this.state.searchQuery,
@@ -564,7 +565,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   renderTable() {
     const filteredAndSortedAnnotations = this._getSearchFilteredAnnotations().sort(
-      Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
+      compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
       if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
@@ -635,13 +636,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             ) : null}
           </>
         ),
-        sorter: Utils.localeCompareBy((annotation) => annotation.id),
+        sorter: localeCompareBy((annotation) => annotation.id),
       },
       {
         title: "Name",
         width: 280,
         dataIndex: "name",
-        sorter: Utils.localeCompareBy((annotation) => annotation.name),
+        sorter: localeCompareBy((annotation) => annotation.name),
         render: (_name: string, annotation: APIAnnotationInfo) =>
           this.renderNameWithDescription(annotation),
       },
@@ -654,7 +655,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         onFilter: (value: React.Key | boolean, annotation: APIAnnotationInfo) =>
           (annotation.owner != null && annotation.owner.id === value.toString()) ||
           annotation.teams.some((team) => team.id === value),
-        sorter: Utils.localeCompareBy((annotation) => annotation.owner?.firstName || ""),
+        sorter: localeCompareBy((annotation) => annotation.owner?.firstName || ""),
         render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
           const ownerName = owner != null ? renderOwner(owner) : null;
           const teamTags = annotation.teams.map((t) => (
@@ -724,7 +725,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Modification Date",
         dataIndex: "modified",
         width: 200,
-        sorter: Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
+        sorter: compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
         render: (modified) => <FormattedDate timestamp={modified} />,
       },
       {
@@ -830,8 +831,8 @@ function TopBar({
   shouldShowArchivedAnnotations: boolean;
   archiveAll: () => void;
 }) {
-  const activeTab = React.useContext(ActiveTabContext);
-  const renderingTab = React.useContext(RenderingTabContext);
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   const search = (
     <Search

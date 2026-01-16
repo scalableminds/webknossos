@@ -1,14 +1,15 @@
-import * as React from "react";
+import type React from "react";
+import { Suspense, lazy } from "react";
 
 export default function loadable<Props>(
   loader: () => Promise<{ default: React.ComponentType<Props> }>,
 ) {
-  const InternalComponent = React.lazy(loader) as any;
+  const InternalComponent = lazy(loader) as any;
   return function AsyncComponent(props: Props) {
     return (
-      <React.Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
+      <Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
         <InternalComponent {...props} />
-      </React.Suspense>
+      </Suspense>
     );
   };
 }

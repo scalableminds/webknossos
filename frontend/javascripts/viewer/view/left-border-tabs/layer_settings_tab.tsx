@@ -32,7 +32,7 @@ import ErrorHandling from "libs/error_handling";
 import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { isUserAdminOrDatasetManager, isUserAdminOrManager, rgbToHex } from "libs/utils";
 import _ from "lodash";
 import {
   type RecommendedConfiguration,
@@ -871,7 +871,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }
           min={0.01}
           max={10}
-          roundTo={3}
+          roundToDigit={3}
           value={layerConfiguration.gammaCorrectionValue}
           onChange={_.partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
           defaultValue={defaultSettings.gammaCorrectionValue}
@@ -887,7 +887,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Col>
           <Col span={SETTING_MIDDLE_SPAN}>
             <ColorSetting
-              value={Utils.rgbToHex(layerConfiguration.color)}
+              value={rgbToHex(layerConfiguration.color)}
               onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
               style={{
                 marginLeft: 6,
@@ -1262,7 +1262,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               label={`Node Radius (${unit})`}
               min={userSettings.nodeRadius.minimum}
               max={userSettings.nodeRadius.maximum}
-              roundTo={0}
+              roundToDigit={0}
               value={activeNodeRadius}
               onChange={onChangeRadius}
               disabled={userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
@@ -1293,7 +1293,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ) : (
               <LogSliderSetting
                 label={settings.clippingDistance + ` (${unit})`}
-                roundTo={3}
+                roundToDigit={3}
                 min={userSettings.clippingDistance.minimum}
                 max={userSettings.clippingDistance.maximum}
                 value={userConfiguration.clippingDistance}
@@ -1599,8 +1599,8 @@ const mapStateToProps = (state: WebknossosState) => ({
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
-    state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
-  isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
+    state.activeUser != null ? isUserAdminOrDatasetManager(state.activeUser) : false,
+  isAdminOrManager: state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
 });
 

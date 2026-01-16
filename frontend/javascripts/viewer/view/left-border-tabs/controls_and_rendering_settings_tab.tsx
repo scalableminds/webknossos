@@ -89,7 +89,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           <React.Fragment>
             <LogSliderSetting
               label={<FastTooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</FastTooltip>}
-              roundTo={3}
+              roundToDigit={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
@@ -168,7 +168,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           <React.Fragment>
             <LogSliderSetting
               label={<FastTooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</FastTooltip>}
-              roundTo={3}
+              roundToDigit={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}

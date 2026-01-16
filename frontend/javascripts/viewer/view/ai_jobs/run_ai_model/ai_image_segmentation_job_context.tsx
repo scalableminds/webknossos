@@ -1,5 +1,6 @@
 import {
   type BaseCustomModelInferenceParameters,
+  refreshOrganizationCredits,
   runCustomInstanceModelInferenceJob,
   runCustomNeuronModelInferenceJob,
   runPretrainedMitochondriaInferenceJob,
@@ -117,6 +118,12 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       setSelectedLayer(colorLayers[0]);
     }
   }, [colorLayers]);
+
+  // Auto-update the organization credit's information once an RunAiModelJobContext is created to
+  // ensure most recent information about the organizations credits is displayed during ai job selection.
+  useEffect(() => {
+    refreshOrganizationCredits();
+  }, []);
 
   const areParametersValid = every([
     selectedModel,

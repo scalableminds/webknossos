@@ -1,7 +1,7 @@
 import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { getRandomColor } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import { call, put } from "typed-redux-saga";
@@ -260,7 +260,7 @@ function* performMinCut(action: Action): Saga<void> {
         )}), seedB=(${nodes[1].untransformedPosition.join(
           ",",
         )}), timestamp=${new Date().getTime()})`,
-        color: Utils.getRandomColor(),
+        color: getRandomColor(),
         isVisible: true,
       }),
     );

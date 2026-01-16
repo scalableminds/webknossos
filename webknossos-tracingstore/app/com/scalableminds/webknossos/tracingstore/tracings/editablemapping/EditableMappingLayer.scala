@@ -36,13 +36,12 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
+    val editableMappingService = layer.editableMappingService
+    // The layer version is always current because EditableMappingBucketProvider is not cached across versions.
+    // This is different from volumeTracingVersion, because we need a non-optional version here so the caching
+    // in editableMappingService works properly.
+    val version = layer.version
     for {
-      elementClassProto <- ElementClass.toProto(layer.elementClass).toFox
-      editableMappingService = layer.editableMappingService
-      // The layer version is always current because EditableMappingBucketProvider is not cached across versions.
-      // This is different from volumeTracingVersion, because we need a non-optional version here so the caching
-      // in editableMappingService works properly.
-      version = layer.version
       _ <- Fox.fromBool(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- editableMappingService.remoteFallbackLayerForVolumeTracing(layer.tracing,
                                                                                         layer.annotationId)
@@ -66,7 +65,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
                                                                                      version,
                                                                                      layer.tracingId,
                                                                                      remoteFallbackLayer)(tc)
-      mappedData <- editableMappingService.mapData(unmappedData, relevantMapping, elementClassProto)
+      mappedData <- editableMappingService.mapData(unmappedData, relevantMapping, layer.elementClass).toFox
     } yield mappedData
   }
 }

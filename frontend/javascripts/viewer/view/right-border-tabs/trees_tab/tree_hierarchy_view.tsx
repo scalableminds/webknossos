@@ -1,7 +1,7 @@
 import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
-import * as Utils from "libs/utils";
+import { pluralize } from "libs/utils";
 import _ from "lodash";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -430,7 +430,7 @@ const DetailsForSelection = memo(
     } else if (selectedTreeIds.length > 1) {
       return (
         <div>
-          {selectedTreeIds.length} {Utils.pluralize("Tree", selectedTreeIds.length)} selected.{" "}
+          {selectedTreeIds.length} {pluralize("Tree", selectedTreeIds.length)} selected.{" "}
         </div>
       );
     } else if (activeGroupId != null) {

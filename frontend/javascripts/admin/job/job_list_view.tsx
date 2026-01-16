@@ -19,17 +19,17 @@ import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
+import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy, filterWithSearchQueryAND, localeCompareBy, pluralize } from "libs/utils";
 import _ from "lodash";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { type APIJob, APIJobCommand } from "types/api_types";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -166,7 +166,10 @@ function JobListView() {
   function getLinkToDataset(job: APIJob) {
     // prefer updated link over legacy link.
     if (job.args.datasetId != null)
-      return `/datasets/${getReadableURLPart({ name: job.args.datasetName || "unknown_name", id: job.args.datasetId })}/view`;
+      return getViewDatasetURL({
+        name: job.args.datasetName || "unknown_name",
+        id: job.args.datasetId,
+      });
     if (
       job.organizationId != null &&
       (job.args.datasetName != null || job.args.datasetDirectoryName != null)
@@ -316,7 +319,7 @@ function JobListView() {
           : "instance model";
       return (
         <span>
-          {`Train ${modelName} on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {`Train ${modelName} on ${numberOfTrainingAnnotations} ${pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(modal, job.args.trainingAnnotations)}
         </span>
       );
@@ -487,7 +490,7 @@ function JobListView() {
       </Flex>
       <Spin spinning={isLoading} size="large">
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(
+          dataSource={filterWithSearchQueryAND(
             jobs || [],
             [(job) => job.args.datasetName || ""],
             searchQuery,
@@ -506,13 +509,13 @@ function JobListView() {
             key="id"
             width={120}
             render={(id) => <FormattedId id={id} />}
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
+            sorter={localeCompareBy<APIJob>((job) => job.id)}
           />
           <Column title="Description" key="datasetName" render={renderDescription} />
           <Column
             title="Owner"
             key="owner"
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.ownerLastName)}
+            sorter={localeCompareBy<APIJob>((job) => job.ownerLastName)}
             render={(job: APIJob) => (
               <>
                 <div>{`${job.ownerLastName}, ${job.ownerFirstName}`}</div>
@@ -522,15 +525,17 @@ function JobListView() {
           />
           <Column
             title="Cost in Credits"
-            key="creditCost"
-            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
+            key="costInMilliCredits"
+            render={(job: APIJob) =>
+              job.costInMilliCredits ? formatMilliCreditsString(job.costInMilliCredits) : "-"
+            }
           />
           <Column
             title="Date"
             key="createdAt"
             width={190}
             render={(job) => <FormattedDate timestamp={job.created} />}
-            sorter={Utils.compareBy<APIJob>((job) => job.created)}
+            sorter={compareBy<APIJob>((job) => job.created)}
             defaultSortOrder="descend"
           />
           {isCurrentUserSuperUser ? (
@@ -541,7 +546,7 @@ function JobListView() {
             key="state"
             width={120}
             render={renderState}
-            sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
+            sorter={localeCompareBy<APIJob>((job) => job.state)}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

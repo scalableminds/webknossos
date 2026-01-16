@@ -3830,6 +3830,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/trusted-types@npm:^2.0.7":
+  version: 2.0.7
+  resolution: "@types/trusted-types@npm:2.0.7"
+  checksum: 10c0/4c4855f10de7c6c135e0d32ce462419d8abbbc33713b31d294596c0cc34ae1fa6112a2f9da729c8f7a20707782b0d69da3b1f8df6645b0366d08825ca1522e0c
+  languageName: node
+  linkType: hard
+
 "@types/unist@npm:*, @types/unist@npm:^2, @types/unist@npm:^2.0.0":
   version: 2.0.7
   resolution: "@types/unist@npm:2.0.7"
@@ -6298,6 +6305,18 @@ __metadata:
   version: 0.1.2
   resolution: "dom-walk@npm:0.1.2"
   checksum: 10c0/4d2ad9062a9423d890f8577aa202b597a6b85f9489bdde656b9443901b8b322b289655c3affefc58ec2e41931e0828dfee0a1d2db6829a607d76def5901fc5a9
+  languageName: node
+  linkType: hard
+
+"dompurify@npm:^3.3.0":
+  version: 3.3.0
+  resolution: "dompurify@npm:3.3.0"
+  dependencies:
+    "@types/trusted-types": "npm:^2.0.7"
+  dependenciesMeta:
+    "@types/trusted-types":
+      optional: true
+  checksum: 10c0/66b1787b0bc8250d8f58e13284cf7f5f6bb400a0a55515e7a2a030316a4bb0d8306fdb669c17ed86ed58ff7e53c62b5da4488c2f261d11c58870fe01b8fcc486
   languageName: node
   linkType: hard
 
@@ -9103,6 +9122,13 @@ __metadata:
   version: 1.1.0
   resolution: "keyboard-key@npm:1.1.0"
   checksum: 10c0/57f53960472200a521b0845b48c3d56b76078aa161532bc24e2c9382ab154ce35ec0bbf26bb557b8582ae42e173da2f3b8d4125d8754e6e963887b8bdb6e97a1
+  languageName: node
+  linkType: hard
+
+"keyboardjs@npm:^2.7.0":
+  version: 2.7.0
+  resolution: "keyboardjs@npm:2.7.0"
+  checksum: 10c0/0e9ff96cc22c9f947e1ea1506832aea19ec17591e288ff7b26b8fc7b11e4f2625335e4fafb1c7b8aae219e435147f0676e5f4fca12d1cfc66fc200155db123dc
   languageName: node
   linkType: hard
 
@@ -12117,15 +12143,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"readable-stream@npm:^4.0.0":
-  version: 4.1.0
-  resolution: "readable-stream@npm:4.1.0"
-  dependencies:
-    abort-controller: "npm:^3.0.0"
-  checksum: 10c0/dfd418ee3d2c237e433a8b661340cf62b1ab7cb62fb6487f919a59b987fa6fb985856a34eb7c0c42a226bf157f65db143bebda78e2bf50961b35c85a8003cf83
-  languageName: node
-  linkType: hard
-
 "readable-stream@npm:~1.0.17, readable-stream@npm:~1.0.27-1":
   version: 1.0.34
   resolution: "readable-stream@npm:1.0.34"
@@ -12664,6 +12681,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sax-ts@npm:^1.2.13":
+  version: 1.2.13
+  resolution: "sax-ts@npm:1.2.13"
+  checksum: 10c0/e6a7e1aa8ebbeafa274f44a6e8934226e40e13699d2b56d7d97c092956d4d47049db8ef1affa23902e98bd0d99797d08016f4fe83a9024c3cd72b7c9bb00339c
+  languageName: node
+  linkType: hard
+
 "sax@npm:>=0.6.0, sax@npm:^1.2.4":
   version: 1.2.4
   resolution: "sax@npm:1.2.4"
@@ -12677,16 +12701,6 @@ __metadata:
   dependencies:
     xmlchars: "npm:^2.2.0"
   checksum: 10c0/3847b839f060ef3476eb8623d099aa502ad658f5c40fd60c105ebce86d244389b0d76fcae30f4d0c728d7705ceb2f7e9b34bb54717b6a7dbedaf5dad2d9a4b74
-  languageName: node
-  linkType: hard
-
-"saxophone@npm:^0.8.0":
-  version: 0.8.0
-  resolution: "saxophone@npm:0.8.0"
-  dependencies:
-    readable-stream: "npm:^4.0.0"
-    string_decoder: "npm:^1.3.0"
-  checksum: 10c0/d16773a488e7af432693560dca1112894fb5f35a3092e64dbb516d88fe0299e89f48c7cf5f4c92888aff36c69205b73a468828a84d90d61a06f4d89e4470237e
   languageName: node
   linkType: hard
 
@@ -13380,7 +13394,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"string_decoder@npm:^1.1.1, string_decoder@npm:^1.3.0":
+"string_decoder@npm:^1.1.1":
   version: 1.3.0
   resolution: "string_decoder@npm:1.3.0"
   dependencies:
@@ -14824,6 +14838,7 @@ __metadata:
     dice-coefficient: "npm:^2.1.0"
     distance-transform: "npm:^1.0.2"
     documentation: "npm:^14.0.2"
+    dompurify: "npm:^3.3.0"
     dpdm: "npm:^3.14.0"
     esbuild: "npm:^0.25"
     esbuild-loader: "npm:^4.1.0"
@@ -14840,6 +14855,7 @@ __metadata:
     jsdom: "npm:^26.1.0"
     json-loader: "npm:^0.5.7"
     jsonschema: "npm:^1.2.4"
+    keyboardjs: "npm:^2.7.0"
     less: "npm:^4.0.0"
     less-loader: "npm:^10.2.0"
     lodash: "npm:^4.17.21"
@@ -14884,7 +14900,7 @@ __metadata:
     redux-mock-store: "npm:^1.2.2"
     redux-saga: "npm:^1.3.0"
     resumablejs: "npm:^1.1.0"
-    saxophone: "npm:^0.8.0"
+    sax-ts: "npm:^1.2.13"
     shelljs: "npm:^0.8.5"
     three: "npm:^0.169.0"
     three-mesh-bvh: "npm:^0.9.0"

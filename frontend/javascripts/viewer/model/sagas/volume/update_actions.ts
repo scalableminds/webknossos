@@ -1,4 +1,4 @@
-import * as Utils from "libs/utils";
+import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
@@ -696,7 +696,7 @@ function _updateUserBoundingBoxHelper(
   const { boundingBox, ...rest } = updatedProps;
   const updatedPropsForServer =
     boundingBox != null
-      ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
+      ? { ...rest, boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox) }
       : (updatedProps as Omit<PartialBoundingBoxWithoutVisibility, "boundingBox">);
   return {
     boundingBoxId,

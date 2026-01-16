@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
-import * as Utils from "libs/utils";
+import { colorObjectToRGBArray, floor3, mapEntriesToMap, point3ToVector3 } from "libs/utils";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
@@ -89,7 +89,7 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
     };
 
     if (newSegment.anchorPosition) {
-      newSegment.anchorPosition = Utils.floor3(newSegment.anchorPosition);
+      newSegment.anchorPosition = floor3(newSegment.anchorPosition);
     } else {
       // UPDATE_SEGMENT was called for a non-existing segment without providing
       // a position. This is necessary to define custom colors for segments
@@ -153,7 +153,7 @@ export function serverVolumeToClientVolumeTracing(
   );
   const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
   const segmentVisibilityMap: Record<number, boolean> = userState
-    ? Utils.mapEntriesToMap(userState.segmentVisibilities)
+    ? mapEntriesToMap(userState.segmentVisibilities)
     : {};
 
   const volumeTracing = {
@@ -165,10 +165,10 @@ export function serverVolumeToClientVolumeTracing(
           ...segment,
           id: segment.segmentId,
           anchorPosition: segment.anchorPosition
-            ? Utils.point3ToVector3(segment.anchorPosition)
+            ? point3ToVector3(segment.anchorPosition)
             : undefined,
           additionalCoordinates: segment.additionalCoordinates,
-          color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
+          color: segment.color != null ? colorObjectToRGBArray(segment.color) : null,
           isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
           groupId: segment.groupId ?? null,
         };

@@ -1,9 +1,9 @@
 import app from "app";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 
+import { rgbToInt } from "libs/utils";
 import {
   BoxGeometry,
   BufferGeometry,
@@ -542,7 +542,7 @@ class SceneController {
       const bbCube = new Cube({
         min,
         max,
-        color: Utils.rgbToInt(bbColor),
+        color: rgbToInt(bbColor),
         showCrossSections: true,
         id,
         isHighlighted: this.highlightedBBoxId === id,

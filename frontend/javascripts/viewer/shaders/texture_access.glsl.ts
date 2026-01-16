@@ -70,7 +70,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
               return dtype_normalizer * vec4(val);
             <% }%>
         <% } else { %>
-          <% _.range(0, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
+          <% range(0, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
           <%= textureIndex > 0 ? "else" : "" %> if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
             val = texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0);
             <% if (elementClass.endsWith("int16")) { %>

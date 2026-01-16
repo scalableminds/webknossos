@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import { waitForElementWithId } from "libs/utils";
-import values from "lodash/values";
+
 import { PureComponent } from "react";
 import {
   Euler,
@@ -103,7 +103,7 @@ class CameraController extends PureComponent<Props> {
     );
     const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
-    for (const cam of values(this.props.cameras)) {
+    for (const cam of Object.values(this.props.cameras)) {
       cam.near = 0;
       cam.far = far;
     }

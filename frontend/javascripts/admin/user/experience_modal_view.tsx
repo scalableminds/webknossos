@@ -7,7 +7,6 @@ import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { localeCompareBy } from "libs/utils";
 import fromPairs from "lodash/fromPairs";
-import map from "lodash/map";
 import max from "lodash/max";
 import min from "lodash/min";
 import union from "lodash/union";
@@ -55,7 +54,7 @@ function ExperienceModalView({
   function getTableEntries(users: APIUser[]): TableEntry[] {
     if (users.length <= 1) {
       return sortEntries(
-        map(users[0].experiences, (value, domain) => ({
+        Object.entries(users[0].experiences).map(([domain, value]) => ({
           domain,
           value,
           lowestValue: -1,

@@ -2,6 +2,7 @@ import { Chalk } from "chalk";
 import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
+import capitalize from "lodash/capitalize";
 import differenceWith from "lodash/differenceWith";
 import every from "lodash/every";
 import filter from "lodash/filter";
@@ -215,10 +216,6 @@ export function zeroPad(num: number, zeros: number = 0): string {
 export function roundTo(value: number, digits: number): number {
   const digitMultiplier = Math.pow(10, digits);
   return Math.round(value * digitMultiplier) / digitMultiplier;
-}
-
-export function capitalize(str: string): string {
-  return str[0].toUpperCase() + str.slice(1);
 }
 
 function intToHex(int: number, digits: number = 6): string {

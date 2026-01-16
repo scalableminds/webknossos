@@ -17,7 +17,6 @@ import window, { location } from "libs/window";
 import cloneDeep from "lodash/cloneDeep";
 import groupBy from "lodash/groupBy";
 import isNumber from "lodash/isNumber";
-import map from "lodash/map";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
@@ -1586,7 +1585,7 @@ class DataApi {
    * Returns the names of all available layers of the current tracing.
    */
   getLayerNames(): Array<string> {
-    return map(this.model.dataLayers, "name");
+    return Object.values(this.model.dataLayers).map((layer) => layer.name);
   }
 
   /**

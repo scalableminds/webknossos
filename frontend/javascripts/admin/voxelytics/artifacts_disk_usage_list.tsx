@@ -1,5 +1,5 @@
 import { Table } from "antd";
-import flatten from "lodash/flatten";
+
 import type React from "react";
 
 import type { ColumnsType } from "antd/lib/table";
@@ -29,11 +29,10 @@ export default function DiskUsageList({
     taskGroup: VoxelyticsTaskConfigWithHierarchy,
   ): Array<ArtifactTableEntry> {
     if (taskGroup.isMetaTask) {
-      return flatten(
-        taskGroup.subtasks
-          .map(taskToTableEntry)
-          .filter((artifactTableEntry) => artifactTableEntry != null),
-      );
+      return taskGroup.subtasks
+        .map(taskToTableEntry)
+        .filter((artifactTableEntry) => artifactTableEntry != null)
+        .flat();
     }
     if (!artifacts[taskGroup.taskName]) {
       return [];
@@ -49,7 +48,7 @@ export default function DiskUsageList({
     }));
   }
 
-  const dataSource = flatten(tasksWithHierarchy.map(taskToTableEntry));
+  const dataSource = tasksWithHierarchy.flatMap(taskToTableEntry);
 
   const columns: ColumnsType<ArtifactTableEntry> = [
     {

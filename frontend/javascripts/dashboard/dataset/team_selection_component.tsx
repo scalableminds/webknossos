@@ -3,7 +3,7 @@ import { Select } from "antd";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import Toast from "libs/toast";
 import compact from "lodash/compact";
-import flatten from "lodash/flatten";
+
 import unionBy from "lodash/unionBy";
 import { useCallback, useEffect, useState } from "react";
 import type { APITeam } from "types/api_types";
@@ -28,12 +28,12 @@ function TeamSelectionComponent({
   disabled,
 }: TeamSelectionComponentProps) {
   const [possibleTeams, setPossibleTeams] = useState<APITeam[]>([]);
-  const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? flatten([value]) : []);
+  const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? [value].flat() : []);
   const [isFetchingData, setIsFetchingData] = useState(false);
 
   // Sync selectedTeams with value
   useEffect(() => {
-    setSelectedTeams(value ? flatten([value]) : []);
+    setSelectedTeams(value ? [value].flat() : []);
   }, [value]);
 
   // Fetch teams on mount

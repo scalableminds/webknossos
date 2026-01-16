@@ -13,7 +13,32 @@ import {
   initialSkeletonTracing,
 } from "test/fixtures/hybridtracing_object";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
-import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
+import {
+  addTreesAndGroupsAction,
+  createBranchPointAction,
+  createCommentAction,
+  createNodeAction,
+  createTreeAction,
+  deleteBranchPointAction,
+  deleteBranchpointByIdAction,
+  deleteCommentAction,
+  deleteEdgeAction,
+  deleteNodeAction,
+  deleteTreeAction,
+  deleteTreesAction,
+  mergeTreesAction,
+  selectNextTreeAction,
+  setActiveNodeAction,
+  setActiveTreeAction,
+  setNodeRadiusAction,
+  setTreeColorIndexAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+  setTreeNameAction,
+  shuffleTreeColorAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import { max } from "viewer/model/helpers/iterator_utils";
 import {
   type Node,
@@ -55,7 +80,7 @@ const applyActions = chainReduce(SkeletonTracingReducer);
 
 describe("SkeletonTracing", () => {
   it("should add a new node", () => {
-    const action = SkeletonTracingActions.createNodeAction(position, null, rotation, viewport, mag);
+    const action = createNodeAction(position, null, rotation, viewport, mag);
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -92,17 +117,11 @@ describe("SkeletonTracing", () => {
   });
 
   it("should add a several nodes", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
     // create three nodes
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, createNode);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -127,19 +146,13 @@ describe("SkeletonTracing", () => {
   });
 
   it("should add nodes to a different tree", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createTree = createTreeAction();
     // add a node to initial tree, then create a second tree and add two nodes
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createTreeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createTree);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, createNode);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -163,16 +176,15 @@ describe("SkeletonTracing", () => {
   });
 
   it("shouldn't delete the tree if 'delete node' is initiated for an empty tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
-    const newStateA = SkeletonTracingReducer(initialState, createTreeAction);
-    const newStateB = SkeletonTracingReducer(newStateA, deleteNodeAction);
+    const createTree = createTreeAction();
+    const deleteNode = deleteNodeAction();
+    const newStateA = SkeletonTracingReducer(initialState, createTree);
+    const newStateB = SkeletonTracingReducer(newStateA, deleteNode);
 
     expect(newStateA).toEqual(newStateB);
   });
 
   it("should delete the tree if 'delete node as user' is initiated for an empty tree", () => {
-    const { createTreeAction } = SkeletonTracingActions;
     const newState = applyActions(initialStateWithActiveTreeId2, [
       createTreeAction(),
       (currentState: WebknossosState) => deleteNodeAsUserAction(currentState),
@@ -182,19 +194,12 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a node from a tree", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-
-    const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const deleteNode = deleteNodeAction();
     // Add two nodes, then delete one
-    const newState = SkeletonTracingReducer(initialState, createNodeAction);
-    const newStateA = SkeletonTracingReducer(newState, createNodeAction);
-    const newStateB = SkeletonTracingReducer(newStateA, deleteNodeAction);
+    const newState = SkeletonTracingReducer(initialState, createNode);
+    const newStateA = SkeletonTracingReducer(newState, createNode);
+    const newStateB = SkeletonTracingReducer(newStateA, deleteNode);
 
     expect(newStateB).not.toBe(newState);
     expect(newStateB).not.toBe(newStateA);
@@ -205,22 +210,16 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete respective comments and branchpoints when deleting a node from a tree", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
-    const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const deleteNode = deleteNodeAction();
+    const createComment = createCommentAction("foo");
+    const createBranchPoint = createBranchPointAction();
 
     // Add a node, comment, and branchpoint, then delete the node again
-    const newState = SkeletonTracingReducer(initialState, createNodeAction);
-    const newStateA = SkeletonTracingReducer(newState, createCommentAction);
-    const newStateB = SkeletonTracingReducer(newStateA, createBranchPointAction);
-    const newStateC = SkeletonTracingReducer(newStateB, deleteNodeAction);
+    const newState = SkeletonTracingReducer(initialState, createNode);
+    const newStateA = SkeletonTracingReducer(newState, createComment);
+    const newStateB = SkeletonTracingReducer(newStateA, createBranchPoint);
+    const newStateC = SkeletonTracingReducer(newStateB, deleteNode);
 
     // Workaround, because the diffable map creates a new chunk but doesn't delete it again
     const nodes = enforceSkeletonTracing(newStateC.annotation).trees.getOrThrow(1).nodes;
@@ -231,28 +230,14 @@ describe("SkeletonTracing", () => {
   });
 
   it("should not delete tree when last node is deleted from the tree", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const deleteNode = deleteNodeAction();
 
     // Create tree, add two nodes, then delete them again so that the tree is removed, as well
-    const emptyTreeState = SkeletonTracingReducer(
-      initialState,
-      SkeletonTracingActions.createTreeAction(),
-    );
+    const emptyTreeState = SkeletonTracingReducer(initialState, createTreeAction());
 
     const emptySkeletonTracing = enforceSkeletonTracing(emptyTreeState.annotation);
-    const newState = applyActions(emptyTreeState, [
-      createNodeAction,
-      createNodeAction,
-      deleteNodeAction,
-      deleteNodeAction,
-    ]);
+    const newState = applyActions(emptyTreeState, [createNode, createNode, deleteNode, deleteNode]);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(emptySkeletonTracing.trees.values().map((tree) => tree.nodes.size())).toEqual(
@@ -365,12 +350,12 @@ describe("SkeletonTracing", () => {
         },
       },
     });
-    const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
-    const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+    const setActiveNode = setActiveNodeAction(1);
+    const deleteNode = deleteNodeAction();
 
     // Delete the second node
-    const state0 = SkeletonTracingReducer(state, setActiveNodeAction);
-    const state1 = SkeletonTracingReducer(state0, deleteNodeAction);
+    const state0 = SkeletonTracingReducer(state, setActiveNode);
+    const state1 = SkeletonTracingReducer(state0, deleteNode);
     const newTrees = enforceSkeletonTracing(state1.annotation).trees;
 
     expect(newTrees.size()).toBe(4);
@@ -384,53 +369,31 @@ describe("SkeletonTracing", () => {
   });
 
   it("should not delete an edge if the two nodes are not neighbors", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 3);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const deleteEdge = deleteEdgeAction(0, 3);
     // Create a couple of nodes
-    const newState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-    ]);
+    const newState = applyActions(initialState, [createNode, createNode, createNode, createNode]);
 
-    const newStateA = SkeletonTracingReducer(newState, deleteEdgeAction);
+    const newStateA = SkeletonTracingReducer(newState, deleteEdge);
     expect(newState).toEqual(newStateA);
   });
 
   it("should not delete an edge if the both nodes are identical", () => {
-    const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 0);
-    const newStateA = SkeletonTracingReducer(initialState, deleteEdgeAction);
+    const deleteEdge = deleteEdgeAction(0, 0);
+    const newStateA = SkeletonTracingReducer(initialState, deleteEdge);
 
     expect(initialState).toEqual(newStateA);
   });
 
   it("should not delete any edge if the two nodes are in different trees", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 2);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createTree = createTreeAction();
+    const deleteEdge = deleteEdgeAction(0, 2);
 
     // Create a couple of nodes
-    const newState = applyActions(initialState, [
-      createNodeAction,
-      createTreeAction,
-      createNodeAction,
-      createNodeAction,
-    ]);
+    const newState = applyActions(initialState, [createNode, createTree, createNode, createNode]);
 
-    const newStateA = SkeletonTracingReducer(newState, deleteEdgeAction);
+    const newStateA = SkeletonTracingReducer(newState, deleteEdge);
     expect(newState).toEqual(newStateA);
   });
 
@@ -540,10 +503,10 @@ describe("SkeletonTracing", () => {
       },
     });
 
-    const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
-    const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(1, 2);
-    const state0 = SkeletonTracingReducer(state, setActiveNodeAction);
-    const state1 = SkeletonTracingReducer(state0, deleteEdgeAction);
+    const setActiveNode = setActiveNodeAction(1);
+    const deleteEdge = deleteEdgeAction(1, 2);
+    const state0 = SkeletonTracingReducer(state, setActiveNode);
+    const state1 = SkeletonTracingReducer(state0, deleteEdge);
 
     const newTrees = enforceSkeletonTracing(state1.annotation).trees;
     expect(newTrees.size()).toBe(3);
@@ -561,19 +524,13 @@ describe("SkeletonTracing", () => {
   });
 
   it("should set a new active node", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const setActiveNode = setActiveNodeAction(1);
 
     // Create two nodes, then set first one active
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, setActiveNodeAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, setActiveNode);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -582,23 +539,17 @@ describe("SkeletonTracing", () => {
   });
 
   it("should set a new active node in a different tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
+    const createTree = createTreeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const setActiveNode = setActiveNodeAction(1);
 
     // Create one node in the first tree, then set create second tree with two nodes
     // Then set first node of second tree active
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createTreeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, setActiveNodeAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createTree);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, setActiveNode);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -608,18 +559,12 @@ describe("SkeletonTracing", () => {
 
   it("should set a new node radius", () => {
     const newRadius = 10;
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(newRadius);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const setNodeRadius = setNodeRadiusAction(newRadius);
 
     // Create a node and change its radius
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, setNodeRadiusAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, setNodeRadius);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -627,18 +572,12 @@ describe("SkeletonTracing", () => {
   });
 
   it("should create a branchpoint", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction();
 
     // create a single node and then set it as branchpoint
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -651,31 +590,24 @@ describe("SkeletonTracing", () => {
   });
 
   it("shouldn't create a branchpoint in an empty tree", () => {
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const createBranchPoint = createBranchPointAction();
 
     // create a branchpoint in a tree without any nodes
-    const newState = SkeletonTracingReducer(initialState, createBranchPointAction);
-    expect(newState).toBe(initialState);
+    const newState = SkeletonTracingReducer(initialState, createBranchPoint);
     expect(newState).toBe(initialState);
   });
 
   it("shouldn't create a branchpoint without the correct permissions", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction();
 
     // create a node and set a branch point in tracing without the correct permissions
     const startState = update(initialState, {
       annotation: { restrictions: { branchPointsAllowed: { $set: false } } },
     });
 
-    let newState = SkeletonTracingReducer(startState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    let newState = SkeletonTracingReducer(startState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -683,20 +615,14 @@ describe("SkeletonTracing", () => {
   });
 
   it("shouldn't create more branchpoints than nodes", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction();
 
     // create one node and set it as branchpoint three times
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -709,21 +635,15 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a branchpoint", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
-    const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction();
+    const deleteBranchPoint = deleteBranchPointAction();
 
     // create one node and set it as branchpoint, create a second node and jump back to branchpoint
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -734,23 +654,17 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete specific selected branchpoint", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction();
 
     // create one node and set it as branchpoint, create a second node and jump back to branchpoint
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
 
-    const deleteBranchpointByIdAction = SkeletonTracingActions.deleteBranchpointByIdAction(1, 1);
-    newState = SkeletonTracingReducer(newState, deleteBranchpointByIdAction);
+    const deleteBranchpointById = deleteBranchpointByIdAction(1, 1);
+    newState = SkeletonTracingReducer(newState, deleteBranchpointById);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -762,24 +676,18 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete several branchpoints", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
-    const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction();
+    const deleteBranchPoint = deleteBranchPointAction();
 
     // create two nodes and set them both as branchpoint
     // then delete them both and jump back to first node
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -790,23 +698,17 @@ describe("SkeletonTracing", () => {
   });
 
   it("shouldn't delete more branchpoints than available", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
-    const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction();
+    const deleteBranchPoint = deleteBranchPointAction();
 
     // create two nodes and set them both as branchpoint
     // then delete them both and jump back to first node
-    let newState = SkeletonTracingReducer(initialState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -817,23 +719,17 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a branchpoint from a different tree", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
-    const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createTree = createTreeAction();
+    const createBranchPoint = createBranchPointAction();
+    const deleteBranchPoint = deleteBranchPointAction();
 
     // create a new tree, add a node, set it as branchpoint twice then delete the branchpoint
-    let newState = SkeletonTracingReducer(initialState, createTreeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createTree);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -842,25 +738,19 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a branchpoint from another tree than the active one", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
-    const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createTree = createTreeAction();
+    const createBranchPoint = createBranchPointAction();
+    const deleteBranchPoint = deleteBranchPointAction();
 
     // create a new tree, add a node, set it as branchpoint
-    let newState = SkeletonTracingReducer(initialState, createTreeAction);
-    newState = SkeletonTracingReducer(newState, createNodeAction);
-    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    let newState = SkeletonTracingReducer(initialState, createTree);
+    newState = SkeletonTracingReducer(newState, createNode);
+    newState = SkeletonTracingReducer(newState, createBranchPoint);
 
     // create another tree, delete the original branchpoint
-    newState = SkeletonTracingReducer(newState, createTreeAction);
-    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+    newState = SkeletonTracingReducer(newState, createTree);
+    newState = SkeletonTracingReducer(newState, deleteBranchPoint);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -872,8 +762,8 @@ describe("SkeletonTracing", () => {
   });
 
   it("should add a new tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const newState = SkeletonTracingReducer(initialState, createTreeAction);
+    const createTree = createTreeAction();
+    const newState = SkeletonTracingReducer(initialState, createTree);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -891,13 +781,9 @@ describe("SkeletonTracing", () => {
   });
 
   it("should add a several new trees", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const createTree = createTreeAction();
     // create three trees
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      createTreeAction,
-      createTreeAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, createTree, createTree]);
 
     expect(newState).not.toBe(initialState);
 
@@ -909,30 +795,22 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a new tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
+    const createTree = createTreeAction();
+    const deleteTree = deleteTreeAction();
 
     // create a tree and delete it again
-    const newState = applyActions(initialStateWithActiveTreeId2, [
-      createTreeAction,
-      deleteTreeAction,
-    ]);
+    const newState = applyActions(initialStateWithActiveTreeId2, [createTree, deleteTree]);
 
     expect(newState).not.toBe(initialStateWithActiveTreeId2);
     expect(newState).toEqual(initialStateWithActiveTreeId2);
   });
 
   it("should delete several trees", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
+    const createTree = createTreeAction();
+    const deleteTree = deleteTreeAction();
 
     // create trees and delete them
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      deleteTreeAction,
-      deleteTreeAction,
-      deleteTreeAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, deleteTree, deleteTree, deleteTree]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -941,14 +819,10 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete several trees at once", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const deleteTreesAction = SkeletonTracingActions.deleteTreesAction([1, 2, 3, 4]);
+    const createTree = createTreeAction();
+    const deleteTrees = deleteTreesAction([1, 2, 3, 4]);
     // create trees and delete them
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      createTreeAction,
-      deleteTreesAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, createTree, deleteTrees]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -957,9 +831,9 @@ describe("SkeletonTracing", () => {
   });
 
   it("should set a new active tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(2);
-    const newState = applyActions(initialState, [createTreeAction, setActiveTreeAction]);
+    const createTree = createTreeAction();
+    const setActiveTree = setActiveTreeAction(2);
+    const newState = applyActions(initialState, [createTree, setActiveTree]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -968,23 +842,17 @@ describe("SkeletonTracing", () => {
   });
 
   it("should set a different active tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(3);
+    const createTree = createTreeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const setActiveTree = setActiveTreeAction(3);
 
     // create a second tree with two nodes and set it active
     const newState = applyActions(initialState, [
-      createTreeAction,
-      createNodeAction,
-      createNodeAction,
-      createTreeAction,
-      setActiveTreeAction,
+      createTree,
+      createNode,
+      createNode,
+      createTree,
+      setActiveTree,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -994,31 +862,25 @@ describe("SkeletonTracing", () => {
   });
 
   it("shouldn't set a new active tree for unknown tree ids", () => {
-    const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(10);
-    const newState = SkeletonTracingReducer(initialState, setActiveTreeAction);
+    const setActiveTree = setActiveTreeAction(10);
+    const newState = SkeletonTracingReducer(initialState, setActiveTree);
 
     expect(newState).toBe(initialState);
   });
 
   it("should merge two trees", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
+    const createTree = createTreeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const mergeTrees = mergeTreesAction(3, 1);
 
     // create a node in first tree, then create a second tree with three nodes and merge them
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createTreeAction,
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      mergeTreesAction,
+      createNode,
+      createTree,
+      createNode,
+      createNode,
+      createNode,
+      mergeTrees,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1042,49 +904,33 @@ describe("SkeletonTracing", () => {
   });
 
   it("shouldn't merge the same tree", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const mergeTrees = mergeTreesAction(1, 3);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-    ]);
+    const testState = applyActions(initialState, [createNode, createNode, createNode]);
 
-    const newState = SkeletonTracingReducer(testState, mergeTreesAction);
+    const newState = SkeletonTracingReducer(testState, mergeTrees);
     expect(newState).toBe(testState);
   });
 
   it("should merge two trees with comments and branchPoints", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
-    const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const createTree = createTreeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const mergeTrees = mergeTreesAction(3, 1);
+    const createComment = createCommentAction("foo");
+    const createBranchPoint = createBranchPointAction();
 
     // create a node in first tree, then create a second tree with three nodes and merge them
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createCommentAction,
-      createBranchPointAction,
-      createTreeAction,
-      createNodeAction,
-      createNodeAction,
-      createCommentAction,
-      createNodeAction,
-      mergeTreesAction,
+      createNode,
+      createComment,
+      createBranchPoint,
+      createTree,
+      createNode,
+      createNode,
+      createComment,
+      createNode,
+      mergeTrees,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1187,19 +1033,13 @@ describe("SkeletonTracing", () => {
       },
     });
 
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
 
     // Create a new agglomerate tree with 3 nodes; then add two nodes to the first tree of type default.
     const newState = applyActions(initialStateWithAgglomerateNodes, [
       // Add two more nodes to tree with id 1.
-      createNodeAction, // For tree 1,
-      createNodeAction, // For tree 1,
+      createNode, // For tree 1,
+      createNode, // For tree 1,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1209,54 +1049,46 @@ describe("SkeletonTracing", () => {
     expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(3);
 
     // Trying to merge those trees should fail as they have a different type.
-    const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(5, 2);
-    const stateAfterMerge = SkeletonTracingReducer(newState, mergeTreesAction);
+    const mergeTrees = mergeTreesAction(5, 2);
+    const stateAfterMerge = SkeletonTracingReducer(newState, mergeTrees);
     expect(stateAfterMerge).toBe(newState);
   });
 
   it("should rename the active tree", () => {
     const newName = "SuperTestName";
-    const setTreeNameAction = SkeletonTracingActions.setTreeNameAction(newName);
-    const newState = SkeletonTracingReducer(initialState, setTreeNameAction);
+    const setTreeName = setTreeNameAction(newName);
+    const newState = SkeletonTracingReducer(initialState, setTreeName);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe(newName);
   });
 
   it("should rename the active tree to a default name", () => {
-    const setTreeNameAction = SkeletonTracingActions.setTreeNameAction();
-    const newState = SkeletonTracingReducer(initialState, setTreeNameAction);
+    const setTreeName = setTreeNameAction();
+    const newState = SkeletonTracingReducer(initialState, setTreeName);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.getOrThrow(1).name).toBe("Tree001");
   });
 
   it("should increase the activeTreeId", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(1);
-    const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
+    const createTree = createTreeAction();
+    const setActiveTree = setActiveTreeAction(1);
+    const selectNextTree = selectNextTreeAction();
 
     // create a second tree, set first tree active then increase activeTreeId
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      setActiveTreeAction,
-      selectNextTreeAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, setActiveTree, selectNextTree]);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(2);
   });
 
   it("should decrease the activeTreeId", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
+    const createTree = createTreeAction();
+    const selectNextTree = selectNextTreeAction(false);
 
     // create a second tree then decrease activeTreeId
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      selectNextTreeAction,
-      selectNextTreeAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, selectNextTree, selectNextTree]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1264,15 +1096,15 @@ describe("SkeletonTracing", () => {
   });
 
   it("should wrap around when decreasing the activeTreeId below 1", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
+    const createTree = createTreeAction();
+    const selectNextTree = selectNextTreeAction(false);
 
     // create a second tree then decrease activeTreeId twice
     const newState = applyActions(initialState, [
-      createTreeAction,
-      selectNextTreeAction,
-      selectNextTreeAction,
-      selectNextTreeAction,
+      createTree,
+      selectNextTree,
+      selectNextTree,
+      selectNextTree,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1281,18 +1113,18 @@ describe("SkeletonTracing", () => {
   });
 
   it("should be able to select next tree when tree ids are not consecutive", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(3);
-    const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
+    const createTree = createTreeAction();
+    const deleteTree = deleteTreeAction(3);
+    const selectNextTree = selectNextTreeAction();
 
     // create a second tree then decrease activeTreeId twice
     const newState = applyActions(initialState, [
-      createTreeAction,
-      createTreeAction,
-      deleteTreeAction,
-      selectNextTreeAction,
-      selectNextTreeAction,
-      selectNextTreeAction,
+      createTree,
+      createTree,
+      deleteTree,
+      selectNextTree,
+      selectNextTree,
+      selectNextTree,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1301,8 +1133,8 @@ describe("SkeletonTracing", () => {
   });
 
   it("should shuffle the color of a specified tree", () => {
-    const shuffleTreeColorAction = SkeletonTracingActions.shuffleTreeColorAction(1);
-    const newState = SkeletonTracingReducer(initialState, shuffleTreeColorAction);
+    const shuffleTreeColor = shuffleTreeColorAction(1);
+    const newState = SkeletonTracingReducer(initialState, shuffleTreeColor);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1311,17 +1143,11 @@ describe("SkeletonTracing", () => {
 
   it("should create a comment for the active node", () => {
     const commentText = "Wow such test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createComment = createCommentAction(commentText);
 
     // create a single node with a comment
-    const newState = applyActions(initialState, [createNodeAction, createCommentAction]);
+    const newState = applyActions(initialState, [createNode, createComment]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1332,8 +1158,8 @@ describe("SkeletonTracing", () => {
 
   it("shouldn't create a comments if there is no active node", () => {
     const commentText = "Wow such test comment";
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
-    const newState = SkeletonTracingReducer(initialState, createCommentAction);
+    const createComment = createCommentAction(commentText);
+    const newState = SkeletonTracingReducer(initialState, createComment);
     expect(newState).toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1342,21 +1168,15 @@ describe("SkeletonTracing", () => {
 
   it("shouldn't create more than one comment for the active node", () => {
     const commentText = "Wow such test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createComment = createCommentAction(commentText);
 
     // create a node and add the same comment three times
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createCommentAction,
-      createCommentAction,
-      createCommentAction,
+      createNode,
+      createComment,
+      createComment,
+      createComment,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1367,20 +1187,14 @@ describe("SkeletonTracing", () => {
   it("should create comments for several nodes", () => {
     const commentText1 = "Wow such test comment";
     const commentText2 = "Amaze test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
 
     // create two nodes with a different comment each
     const newState = applyActions(initialState, [
-      createNodeAction,
-      SkeletonTracingActions.createCommentAction(commentText1),
-      createNodeAction,
-      SkeletonTracingActions.createCommentAction(commentText2),
+      createNode,
+      createCommentAction(commentText1),
+      createNode,
+      createCommentAction(commentText2),
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1394,20 +1208,10 @@ describe("SkeletonTracing", () => {
 
   it("should create comments for a different tree", () => {
     const commentText = "Wow such test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      createNodeAction,
-      createCommentAction,
-    ]);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createComment = createCommentAction(commentText);
+    const createTree = createTreeAction();
+    const newState = applyActions(initialState, [createTree, createNode, createComment]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1418,22 +1222,12 @@ describe("SkeletonTracing", () => {
 
   it("should delete a comment for a node", () => {
     const commentText = "Wow such test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
-    const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createComment = createCommentAction(commentText);
+    const deleteComment = deleteCommentAction();
 
     // create a node with a comment, then delete it
-    const newState = applyActions(initialState, [
-      createNodeAction,
-      createCommentAction,
-      deleteCommentAction,
-    ]);
+    const newState = applyActions(initialState, [createNode, createComment, deleteComment]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1442,23 +1236,17 @@ describe("SkeletonTracing", () => {
 
   it("should only delete the comment for the active node", () => {
     const commentText = "Wow such test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
-    const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createComment = createCommentAction(commentText);
+    const deleteComment = deleteCommentAction();
 
     // create two nodes with a comment each and delete the comment for the last node
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createCommentAction,
-      createNodeAction,
-      createCommentAction,
-      deleteCommentAction,
+      createNode,
+      createComment,
+      createNode,
+      createComment,
+      deleteComment,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1469,22 +1257,11 @@ describe("SkeletonTracing", () => {
   });
 
   it("should add a node in a specified tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-      3,
-    );
+    const createTree = createTreeAction();
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
 
     // create a few trees and add a node to a specific one
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      createTreeAction,
-      createNodeAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, createTree, createNode]);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
 
@@ -1494,22 +1271,11 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a specified node (1/2)", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2, 1);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const deleteNode = deleteNodeAction(2, 1);
 
     // create three nodes and delete a specific one
-    const newState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      deleteNodeAction,
-    ]);
+    const newState = applyActions(initialState, [createNode, createNode, createNode, deleteNode]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1522,22 +1288,11 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a specified node (2/2)", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const deleteNode = deleteNodeAction(2);
 
     // create three nodes and delete a specific one
-    const newState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      deleteNodeAction,
-    ]);
+    const newState = applyActions(initialState, [createNode, createNode, createNode, deleteNode]);
 
     expect(newState).not.toBe(initialState);
 
@@ -1551,21 +1306,15 @@ describe("SkeletonTracing", () => {
   });
 
   it("should create a branchpoint for a specified node (1/2)", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction(2, 1);
 
     // create some nodes and then set a specific one as branchpoint
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      createBranchPointAction,
+      createNode,
+      createNode,
+      createNode,
+      createBranchPoint,
     ]);
     expect(newState).not.toBe(initialState);
 
@@ -1575,21 +1324,15 @@ describe("SkeletonTracing", () => {
   });
 
   it("should create a branchpoint for a specified node (2/2)", () => {
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createBranchPoint = createBranchPointAction(2, 1);
 
     // create some nodes and then set a specific one as branchpoint
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      createBranchPointAction,
+      createNode,
+      createNode,
+      createNode,
+      createBranchPoint,
     ]);
 
     expect(newState).not.toBe(initialState);
@@ -1599,15 +1342,11 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a specified tree", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(2);
+    const createTree = createTreeAction();
+    const deleteTree = deleteTreeAction(2);
 
     // create some trees and delete a specific one
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      createTreeAction,
-      deleteTreeAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, createTree, deleteTree]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1618,14 +1357,10 @@ describe("SkeletonTracing", () => {
 
   it("should rename a specified tree", () => {
     const newName = "SuperTestName";
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const setTreeNameAction = SkeletonTracingActions.setTreeNameAction(newName, 2);
+    const createTree = createTreeAction();
+    const setTreeName = setTreeNameAction(newName, 2);
 
-    const newState = applyActions(initialState, [
-      createTreeAction,
-      createTreeAction,
-      setTreeNameAction,
-    ]);
+    const newState = applyActions(initialState, [createTree, createTree, setTreeName]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1636,21 +1371,15 @@ describe("SkeletonTracing", () => {
 
   it("should create a comment for a specified node", () => {
     const commentText = "Wow such test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText, 2);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createComment = createCommentAction(commentText, 2);
 
     // create a few nodes and adds one comment
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createNodeAction,
-      createNodeAction,
-      createCommentAction,
+      createNode,
+      createNode,
+      createNode,
+      createComment,
     ]);
 
     expect(newState).not.toBe(initialState);
@@ -1662,25 +1391,19 @@ describe("SkeletonTracing", () => {
 
   it("should delete a comment for a specified node (1/2)", () => {
     const commentText = "Wow such test comment";
-    const createNodeAction = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
-    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
-    const deleteCommentAction = SkeletonTracingActions.deleteCommentAction(2);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createComment = createCommentAction(commentText);
+    const deleteComment = deleteCommentAction(2);
 
     // create nodes with comments, then delete a specific comment
     const newState = applyActions(initialState, [
-      createNodeAction,
-      createCommentAction,
-      createNodeAction,
-      createCommentAction,
-      createNodeAction,
-      createCommentAction,
-      deleteCommentAction,
+      createNode,
+      createComment,
+      createNode,
+      createComment,
+      createNode,
+      createComment,
+      deleteComment,
     ]);
 
     expect(newState).not.toBe(initialState);
@@ -1692,10 +1415,7 @@ describe("SkeletonTracing", () => {
 
   it("should change the color of a specified tree", () => {
     const colorIndex = 10;
-    const newState = SkeletonTracingReducer(
-      initialState,
-      SkeletonTracingActions.setTreeColorIndexAction(1, colorIndex),
-    );
+    const newState = SkeletonTracingReducer(initialState, setTreeColorIndexAction(1, colorIndex));
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1703,13 +1423,10 @@ describe("SkeletonTracing", () => {
   });
 
   it("should toggle inactive trees", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const stateWithFourTrees = applyActions(initialState, [createTreeAction, createTreeAction]);
+    const createTree = createTreeAction();
+    const stateWithFourTrees = applyActions(initialState, [createTree, createTree]);
 
-    const toggledState = SkeletonTracingReducer(
-      stateWithFourTrees,
-      SkeletonTracingActions.toggleInactiveTreesAction(),
-    );
+    const toggledState = SkeletonTracingReducer(stateWithFourTrees, toggleInactiveTreesAction());
 
     let trees = enforceSkeletonTracing(toggledState.annotation).trees;
     expect(trees.getOrThrow(1).isVisible).toBe(false);
@@ -1717,10 +1434,7 @@ describe("SkeletonTracing", () => {
     expect(trees.getOrThrow(3).isVisible).toBe(false);
     expect(trees.getOrThrow(4).isVisible).toBe(true);
 
-    const retoggledState = SkeletonTracingReducer(
-      toggledState,
-      SkeletonTracingActions.toggleInactiveTreesAction(),
-    );
+    const retoggledState = SkeletonTracingReducer(toggledState, toggleInactiveTreesAction());
     trees = enforceSkeletonTracing(retoggledState.annotation).trees;
 
     expect(trees.getOrThrow(1).isVisible).toBe(true);
@@ -1730,13 +1444,10 @@ describe("SkeletonTracing", () => {
   });
 
   it("should toggle all trees", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const stateWithFourTrees = applyActions(initialState, [createTreeAction, createTreeAction]);
+    const createTree = createTreeAction();
+    const stateWithFourTrees = applyActions(initialState, [createTree, createTree]);
 
-    const toggledState = SkeletonTracingReducer(
-      stateWithFourTrees,
-      SkeletonTracingActions.toggleAllTreesAction(),
-    );
+    const toggledState = SkeletonTracingReducer(stateWithFourTrees, toggleAllTreesAction());
 
     let trees = enforceSkeletonTracing(toggledState.annotation).trees;
     expect(trees.getOrThrow(1).isVisible).toBe(false);
@@ -1744,10 +1455,7 @@ describe("SkeletonTracing", () => {
     expect(trees.getOrThrow(3).isVisible).toBe(false);
     expect(trees.getOrThrow(4).isVisible).toBe(false);
 
-    const retoggledState = SkeletonTracingReducer(
-      toggledState,
-      SkeletonTracingActions.toggleInactiveTreesAction(),
-    );
+    const retoggledState = SkeletonTracingReducer(toggledState, toggleInactiveTreesAction());
     trees = enforceSkeletonTracing(retoggledState.annotation).trees;
 
     expect(trees.getOrThrow(1).isVisible).toBe(true);
@@ -1757,24 +1465,19 @@ describe("SkeletonTracing", () => {
   });
 
   it("should toggle inactive trees when a group is active", () => {
-    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const createTree = createTreeAction();
     const stateWithFourTrees = applyActions(initialState, [
-      createTreeAction,
-      createTreeAction,
+      createTree,
+      createTree,
 
-      SkeletonTracingActions.setTreeGroupsAction([
-        { groupId: 1, name: "Some Group", children: [] },
-      ]),
+      setTreeGroupsAction([{ groupId: 1, name: "Some Group", children: [] }]),
 
-      SkeletonTracingActions.setTreeGroupAction(1, 1),
-      SkeletonTracingActions.setTreeGroupAction(1, 2),
-      SkeletonTracingActions.setTreeGroupAction(1, 3),
+      setTreeGroupAction(1, 1),
+      setTreeGroupAction(1, 2),
+      setTreeGroupAction(1, 3),
     ]);
 
-    const toggledState = SkeletonTracingReducer(
-      stateWithFourTrees,
-      SkeletonTracingActions.toggleInactiveTreesAction(),
-    );
+    const toggledState = SkeletonTracingReducer(stateWithFourTrees, toggleInactiveTreesAction());
 
     let trees = enforceSkeletonTracing(toggledState.annotation).trees;
     expect(trees.getOrThrow(1).isVisible).toBe(false);
@@ -1782,10 +1485,7 @@ describe("SkeletonTracing", () => {
     expect(trees.getOrThrow(3).isVisible).toBe(false);
     expect(trees.getOrThrow(4).isVisible).toBe(true);
 
-    const retoggledState = SkeletonTracingReducer(
-      toggledState,
-      SkeletonTracingActions.toggleInactiveTreesAction(),
-    );
+    const retoggledState = SkeletonTracingReducer(toggledState, toggleInactiveTreesAction());
     trees = enforceSkeletonTracing(retoggledState.annotation).trees;
 
     expect(trees.getOrThrow(1).isVisible).toBe(true);
@@ -1803,9 +1503,9 @@ describe("SkeletonTracing", () => {
       // Id-relabeling is only done if the skeleton is not empty.
       // Therefore, delete the two existing trees so that the new tree will
       // be added without id-relabeling.
-      SkeletonTracingActions.deleteTreeAction(1),
-      SkeletonTracingActions.deleteTreeAction(2),
-      SkeletonTracingActions.addTreesAndGroupsAction(
+      deleteTreeAction(1),
+      deleteTreeAction(2),
+      addTreesAndGroupsAction(
         new MutableTreeMap([[4, { ...initialTreeOne, treeId: 4 }]]),
         [],
         treeIdCallback,
@@ -1825,7 +1525,7 @@ describe("SkeletonTracing", () => {
     const treeIdCallback = (_ids: number[]) => (ids = _ids);
 
     const state = applyActions(initialState, [
-      SkeletonTracingActions.addTreesAndGroupsAction(
+      addTreesAndGroupsAction(
         new MutableTreeMap([[8_000_000, { ...initialTreeOne, treeId: 8_000_000 }]]),
         [],
         treeIdCallback,

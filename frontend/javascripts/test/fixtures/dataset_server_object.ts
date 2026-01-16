@@ -112,7 +112,7 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
     tags: [],
     folderId: "66f3c82466010002752e972c",
     metadata: [],
-    logoUrl: "/assets/images/logo.svg",
+    logoUrl: "/images/logo.svg",
     lastUsedByUser: 1727268949322,
     sortingKey: 1727252521746,
     publication: null,

@@ -10,6 +10,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { getActiveUser } from "admin/rest_api";
 import ErrorBoundary from "components/error_boundary";
+import { FailedToLoadView } from "components/failed_to_load_view";
 import { RootForFastTooltips } from "components/fast_tooltip";
 import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
@@ -88,6 +89,7 @@ async function loadOrganization() {
     Store.dispatch(setActiveOrganizationAction(organization));
   }
 }
+
 document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({
     throwAssertions: false,
@@ -95,6 +97,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   message.config({ top: 30 });
   checkBrowserFeatures();
   const containerElement = document.getElementById("main-container");
+
+  if (!containerElement) {
+    return;
+  }
+
+  const react_root = createRoot(containerElement);
 
   try {
     await Promise.all([
@@ -107,21 +115,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadHasOrganizations(),
     ]);
     await loadOrganization();
-  } catch (e) {
-    console.error("Failed to load WEBKNOSSOS due to the following error", e);
-    if (containerElement) {
-      const react_root = createRoot(containerElement);
-      react_root.render(
-        <p style={{ margin: 20, marginTop: -20 }}>
-          Failed to load WEBKNOSSOS. Please try again or check the console for details.
-        </p>,
-      );
-    }
-    return;
-  }
+    sessionStorage.removeItem("wk_load_retries"); // auto reload while backend is still compiling/starting
 
-  if (containerElement) {
-    const react_root = createRoot(containerElement);
     react_root.render(
       <ErrorBoundary>
         {/* @ts-ignore */}
@@ -131,9 +126,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             persistOptions={{ persister: localStoragePersister }}
           >
             {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
-        certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
-        The fix is inspired by:
-        https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
+          certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
+          The fix is inspired by:
+          https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
               <GlobalThemeProvider>
                 <RootForFastTooltips />
@@ -148,5 +143,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         </Provider>
       </ErrorBoundary>,
     );
+  } catch (e) {
+    console.error("Failed to load WEBKNOSSOS due to the following error", e);
+    react_root.render(<FailedToLoadView />);
   }
 });

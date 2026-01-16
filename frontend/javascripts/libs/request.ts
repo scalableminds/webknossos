@@ -3,14 +3,11 @@ import _ from "lodash";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
 import { createWorker } from "viewer/workers/comlink_wrapper";
-import CompressWorker from "viewer/workers/compress.worker";
-import FetchBufferWorker from "viewer/workers/fetch_buffer.worker";
-import FetchBufferWithHeadersWorker from "viewer/workers/fetch_buffer_with_headers.worker";
 import { handleError } from "./handle_request_error_helper";
 
-const fetchBufferViaWorker = createWorker(FetchBufferWorker);
-const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
-const compress = createWorker(CompressWorker);
+const fetchBufferViaWorker = createWorker("fetch_buffer.worker.ts");
+const fetchBufferWithHeaders = createWorker("fetch_buffer_with_headers.worker.ts");
+const compress = createWorker("compress.worker.ts");
 
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
@@ -259,7 +256,7 @@ class Request {
       }
     }
 
-    fetchPromise = fetchPromise.catch((error) =>
+    fetchPromise = fetchPromise.catch((error: any) =>
       handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error),
     );
 

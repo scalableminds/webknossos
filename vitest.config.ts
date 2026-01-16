@@ -1,5 +1,5 @@
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
+import viteConfig from "./vite.config";
 
 // This config object is intentionally left under-specified (see config.test.include).
 // Other vitest_*.config.ts import this config. Vitest should always be called with
@@ -7,6 +7,7 @@ import { defineConfig } from "vitest/config";
 // accidentally executed (e.g., if the user executes `yarn vitest`) which would drop
 // the current database content.
 export const config = {
+  ...viteConfig,
   test: {
     globals: true,
     setupFiles: ["./frontend/javascripts/test/global_mocks.ts"],
@@ -21,7 +22,13 @@ export const config = {
       reportOnFailure: true,
     },
   },
-  plugins: [tsconfigPaths()],
+  resolve: {
+    ...viteConfig.resolve,
+    alias: {
+      ...viteConfig.resolve?.alias,
+      "lz4-wasm": "lz4-wasm-nodejs",
+    },
+  },
 };
 
 export default defineConfig(config);

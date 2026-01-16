@@ -43,7 +43,7 @@ export default function PresentModernControls() {
         (e.g., a node or segment) to see available actions.
       </p>
       <img
-        src="/assets/images/novel_user_experiences/01-context-menu.png"
+        src="/images/novel_user_experiences/01-context-menu.png"
         alt="Context Menu showing actions for nodes and segments"
         style={{
           margin: "24px auto",

@@ -183,7 +183,7 @@ export function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
       value={AnnotationTool.TRACE.id}
     >
       <img
-        src="/assets/images/lasso.svg"
+        src="/images/lasso.svg"
         alt="Trace Tool Icon"
         style={{
           marginRight: 4,
@@ -295,7 +295,7 @@ export function QuickSelectTool(_props: ToolButtonProps) {
       value={AnnotationTool.QUICK_SELECT.id}
     >
       <img
-        src="/assets/images/quick-select-tool.svg"
+        src="/images/quick-select-tool.svg"
         alt="Quick Select Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled ? 0.5 : 1,
@@ -321,7 +321,7 @@ export function BoundingBoxTool(_props: ToolButtonProps) {
       value={AnnotationTool.BOUNDING_BOX.id}
     >
       <img
-        src="/assets/images/bounding-box.svg"
+        src="/images/bounding-box.svg"
         alt="Bounding Box Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled ? 0.5 : 1,

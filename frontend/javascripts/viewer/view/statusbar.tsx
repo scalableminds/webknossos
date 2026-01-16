@@ -85,7 +85,7 @@ function ZoomShortcut() {
       +
       <img
         className="keyboard-mouse-icon"
-        src="/assets/images/icon-statusbar-mouse-wheel.svg"
+        src="/images/icon-statusbar-mouse-wheel.svg"
         alt="Mouse Wheel"
       />
       Zoom in/out
@@ -99,7 +99,7 @@ function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescr
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-left.svg"
+          src="/images/icon-statusbar-mouse-left.svg"
           alt="Mouse Left Click"
         />
         {actionDescriptor.leftClick}
@@ -110,7 +110,7 @@ function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescr
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+          src="/images/icon-statusbar-mouse-left-drag.svg"
           alt="Mouse Left Drag"
         />
         {actionDescriptor.leftDrag}
@@ -130,7 +130,7 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right.svg"
+          src="/images/icon-statusbar-mouse-right.svg"
           alt="Mouse Right Click"
         />
         {actionDescriptor.rightClick}
@@ -141,7 +141,7 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
+          src="/images/icon-statusbar-mouse-right-drag.svg"
           alt="Mouse Right Drag"
         />
         {actionDescriptor.rightDrag}
@@ -217,7 +217,7 @@ function ShortcutsInfo() {
           >
             <img
               className="keyboard-mouse-icon"
-              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+              src="/images/icon-statusbar-mouse-left-drag.svg"
               alt="Mouse Left Drag"
             />
             Move
@@ -351,7 +351,7 @@ function ShortcutsInfo() {
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-wheel.svg"
+          src="/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
         />
         {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
@@ -359,7 +359,7 @@ function ShortcutsInfo() {
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
+          src="/images/icon-statusbar-mouse-right-drag.svg"
           alt="Mouse Right"
         />
         Rotate 3D View
@@ -554,7 +554,7 @@ function MagnificationInfo() {
   return (
     <span className="info-element">
       <img
-        src="/assets/images/icon-statusbar-downsampling.svg"
+        src="/images/icon-statusbar-downsampling.svg"
         className="mag-status-bar-icon"
         alt="Magnification"
       />{" "}

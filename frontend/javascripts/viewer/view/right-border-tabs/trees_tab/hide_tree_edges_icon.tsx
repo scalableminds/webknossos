@@ -11,8 +11,8 @@ export function HideTreeEdgesIcon({
   const isDarkTheme = useWkSelector((state) => state.uiInformation.theme === "dark");
 
   const imageUrl = isDarkTheme
-    ? 'url("/assets/images/icon-hide-skeleton-edges-light.svg")'
-    : 'url("/assets/images/icon-hide-skeleton-edges-dark.svg")';
+    ? 'url("/images/icon-hide-skeleton-edges-light.svg")'
+    : 'url("/images/icon-hide-skeleton-edges-dark.svg")';
   const iconStyle: CSSProperties = {
     width: "1em",
     height: "1em",

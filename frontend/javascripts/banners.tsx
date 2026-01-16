@@ -8,7 +8,7 @@ import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import { parseCTimeDefaultDate, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import first from "lodash/first";
 import type React from "react";
 import { useCallback, useEffect, useReducer, useState } from "react";
@@ -34,6 +34,15 @@ const BANNER_STYLE: React.CSSProperties = {
   left: 0,
   height: constants.BANNER_HEIGHT,
 };
+
+// Parses dates in format "Thu Jan 1 00:00:00 1970 +0000".
+function parseCTimeDefaultDate(dateString: string) {
+  const commitDateWithoutWeekday = dateString.replace(
+    /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
+    "",
+  );
+  return dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
+}
 
 function setNavbarHeight(newNavbarHeight: number) {
   Store.dispatch(setNavbarHeightAction(newNavbarHeight));

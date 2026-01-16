@@ -1,4 +1,4 @@
-import clamp from "lodash/clamp";
+import { clamp } from "libs/utils";
 import range from "lodash/range";
 import type { ElementClass } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";

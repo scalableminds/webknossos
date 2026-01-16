@@ -1,5 +1,4 @@
 import { V3 } from "libs/mjs";
-import { values } from "libs/utils";
 import min from "lodash/min";
 import pick from "lodash/pick";
 import { Euler, Matrix4, Scene, Vector3 as ThreeVector3 } from "three";
@@ -344,7 +343,9 @@ export function createSkeletonNode(
     enabledColorLayers.map((l) => l.name),
   );
   const finestMagIdx =
-    min(values(activeMagIndicesOfEnabledColorLayers)) || min(values(activeMagIndices)) || 0;
+    min(Object.values(activeMagIndicesOfEnabledColorLayers)) ||
+    min(Object.values(activeMagIndices)) ||
+    0;
 
   Store.dispatch(
     createNodeAction(
@@ -412,7 +413,7 @@ export function maybeGetNodeIdFromPosition(
   const { skeletons } = SceneController;
 
   // Unfortunately, we cannot import the Skeleton class here to set the correct type, due to cyclic dependencies
-  const skeletonsWhichSupportPicking = values(skeletons).filter(
+  const skeletonsWhichSupportPicking = Object.values(skeletons).filter(
     (skeleton) => skeleton.supportsPicking,
   );
 

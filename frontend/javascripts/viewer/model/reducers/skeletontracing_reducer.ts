@@ -2,8 +2,7 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
-import { zeroPad } from "libs/utils";
-import clamp from "lodash/clamp";
+import { clamp } from "libs/utils";
 import identity from "lodash/identity";
 import orderBy from "lodash/orderBy";
 import type { MetadataEntryProto } from "types/api_types";
@@ -1146,7 +1145,7 @@ function SkeletonTracingReducer(
         return state;
       }
 
-      const defaultName = `Tree${zeroPad(tree.treeId, 3)}`;
+      const defaultName = `Tree${tree.treeId.toString().padStart(3, "0")}`;
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         name: action.name || defaultName,

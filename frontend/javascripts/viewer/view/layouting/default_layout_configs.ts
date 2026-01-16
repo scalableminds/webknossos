@@ -1,4 +1,4 @@
-import { entries, getIsInIframe, keys } from "libs/utils";
+import { getIsInIframe } from "libs/utils";
 /*
  * This file defines:
  *  - the main tabs which can be arranged in WK Core
@@ -110,16 +110,16 @@ export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode 
 }
 const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 
-entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
+Object.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
 const OrthoViewports = {} as Record<keyof typeof OrthoViews, TabNode>;
-keys(OrthoViews).forEach((viewportId) => {
+(Object.keys(OrthoViews) as Array<keyof typeof OrthoViews>).forEach((viewportId) => {
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const ArbitraryViewports = {} as Record<keyof typeof ArbitraryViews, TabNode>;
-keys(ArbitraryViews).forEach((viewportId) => {
+(Object.keys(ArbitraryViews) as Array<keyof typeof ArbitraryViews>).forEach((viewportId) => {
   const name = ArbitraryViewsToName[viewportId];
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });

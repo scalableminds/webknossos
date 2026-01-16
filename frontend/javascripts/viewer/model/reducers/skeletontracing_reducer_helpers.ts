@@ -2,7 +2,7 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import { colorObjectToRGBArray, point3ToVector3, zeroPad } from "libs/utils";
+import { colorObjectToRGBArray, point3ToVector3 } from "libs/utils";
 import compact from "lodash/compact";
 import first from "lodash/first";
 import isEmpty from "lodash/isEmpty";
@@ -70,7 +70,7 @@ export function generateTreeName(state: WebknossosState, timestamp: number, tree
     prefix = `task_${state.task.id}_${user}_`;
   }
 
-  return `${prefix}${zeroPad(treeId, 3)}`;
+  return `${prefix}${treeId.toString().padStart(3, "0")}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));

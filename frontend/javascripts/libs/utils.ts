@@ -1,5 +1,4 @@
 import { Chalk } from "chalk";
-import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import capitalize from "lodash/capitalize";
@@ -27,18 +26,6 @@ type UrlParams = Record<string, string>;
 // http://javascript.about.com/od/problemsolving/a/modulobug.htm
 export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
-}
-
-export function keys<T extends string>(o: Record<T, any>): T[] {
-  return Object.keys(o) as Array<keyof typeof o>;
-}
-
-export function values<T>(o: { [s: string]: T } | ArrayLike<T>): T[] {
-  return Object.values(o);
-}
-
-export function entries<T>(o: { [s: string]: T } | ArrayLike<T>): [string, T][] {
-  return Object.entries(o);
 }
 
 export function map2<A, B>(fn: (arg0: A, arg1: 0 | 1) => B, tuple: [A, A]): [B, B] {
@@ -194,16 +181,6 @@ export function jsonStringify(json: Record<string, any>) {
 
 export function clamp(min: number, value: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-export function zeroPad(num: number, zeros: number = 0): string {
-  let paddedNum = `${num.toString()}`;
-
-  while (paddedNum.length < zeros) {
-    paddedNum = `0${paddedNum}`;
-  }
-
-  return paddedNum;
 }
 
 export function roundTo(value: number, digits: number): number {
@@ -570,15 +547,6 @@ export function isFileExtensionEqualTo(
   }
 
   return passedExtension === extensionOrExtensions;
-}
-
-// Parses dates in format "Thu Jan 1 00:00:00 1970 +0000".
-export function parseCTimeDefaultDate(dateString: string) {
-  const commitDateWithoutWeekday = dateString.replace(
-    /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
-    "",
-  );
-  return dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
 }
 
 // Only use this function if you really need a busy wait (useful

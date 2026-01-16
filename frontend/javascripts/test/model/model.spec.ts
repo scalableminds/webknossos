@@ -1,5 +1,4 @@
 import cloneDeep from "lodash/cloneDeep";
-import clone from "lodash/clone";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ControlModeEnum } from "viewer/constants";
 import {
@@ -55,7 +54,7 @@ describe("Model Initialization", () => {
     location.href = `http://localhost:9000/datasets/${DATASET.name}-${DATASET.id}/view`;
     location.pathname = `/datasets/${DATASET.name}-${DATASET.id}/view`;
 
-    const datasetObject = clone(DATASET);
+    const datasetObject = cloneDeep(DATASET);
 
     // @ts-expect-error still delete dataLayers on the cloned object.
     delete datasetObject.dataSource.dataLayers;

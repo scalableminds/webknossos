@@ -34,7 +34,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
     // sampler2D textures[dataTextureCountPerLayer]
     // as a function parameter properly
 
-    <% _.each(layerNamesWithSegmentation, (name) => { %>
+    <% each(layerNamesWithSegmentation, (name) => { %>
       vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
         // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
         // here which checks for each case individually. The else-if-branches are constructed via
@@ -88,7 +88,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
     vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
       if (localLayerIndex == 0.0) {
         return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
-      } <% _.each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
+      } <% each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
         else if (localLayerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
           return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
         }

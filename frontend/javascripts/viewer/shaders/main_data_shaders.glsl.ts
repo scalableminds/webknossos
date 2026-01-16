@@ -224,7 +224,7 @@ void main() {
   }
   vec4 data_color = vec4(0.0);
 
-  <each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     uint <%= segmentationName %>_id_low = 0u;
     uint <%= segmentationName %>_id_high = 0u;
     uint <%= segmentationName %>_unmapped_id_low = 0u;
@@ -263,7 +263,7 @@ void main() {
 
   // Get Color Value(s)
   vec3 color_value  = vec3(0.0);
-  <each(orderedColorLayerNames, function(name, layerIndex) { %>
+  <% each(orderedColorLayerNames, function(name, layerIndex) { %>
     <% const color_layer_index = colorLayerNames.indexOf(name); %>
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
@@ -469,7 +469,7 @@ ${compileShader(
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
-<% _.each(layerNamesWithSegmentation, function(name) {
+<% each(layerNamesWithSegmentation, function(name) {
   if (tpsTransformPerLayer[name] != null) { %>
   <%= generateTpsInitialization(tpsTransformPerLayer, name) %>
   <%= generateCalculateTpsOffsetFunction(name) %>

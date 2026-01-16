@@ -1,6 +1,8 @@
 import ThreeDMap from "libs/ThreeDMap";
 import { M4x4, V3 } from "libs/mjs";
-import _ from "lodash";
+import flatten from "lodash/flatten";
+import range from "lodash/range";
+import uniqBy from "lodash/uniqBy";
 import type { Matrix4x4 } from "mjs";
 import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
@@ -15,7 +17,7 @@ import { MAX_ZOOM_STEP_DIFF, getPriorityWeightForZoomStepDiff } from "../loading
 // in this use case (only one mag at a time is gathered).
 const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 ** 16 * y + z;
 
-const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition);
+const makeBucketsUnique = (buckets: Vector3[]) => uniqBy(buckets, hashPosition);
 
 const ALPHA = Math.PI / 2;
 
@@ -127,8 +129,8 @@ function addNecessaryBucketsToPriorityQueueOblique(
     const zDiff = 10;
     const scanLinesPoints = M4x4.transformVectorsAffine(
       queryMatrix,
-      _.flatten(
-        _.range(steps + 1).map((idx) => [
+      flatten(
+        range(steps + 1).map((idx) => [
           // Cast lines at z=-10
           [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
           [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],

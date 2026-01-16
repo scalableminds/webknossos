@@ -29,7 +29,6 @@ export const config = {
       "lz4-wasm": "lz4-wasm-nodejs",
     },
   },
-  // plugins: [tsconfigPaths()],
 };
 
 export default defineConfig(config);

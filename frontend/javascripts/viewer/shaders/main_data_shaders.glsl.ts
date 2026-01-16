@@ -1,7 +1,7 @@
 import type TPS3D from "libs/thin_plate_spline";
-import range from "lodash/range";
 import each from "lodash/each";
 import mapValues from "lodash/mapValues";
+import range from "lodash/range";
 import template from "lodash/template";
 import type { ElementClass } from "types/api_types";
 import type { Vector3 } from "viewer/constants";

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import {
   tokenUserA,
   tokenUserD,
@@ -21,7 +21,7 @@ describe("Project API (E2E)", () => {
   });
 
   it("getProjects()", async ({ expect }) => {
-    const projects = _.sortBy(await api.getProjects(), (p) => p.name);
+    const projects = sortBy(await api.getProjects(), (p) => p.name);
 
     writeTypeCheckingFile(projects, "project", "APIProject", {
       isArray: true,
@@ -31,20 +31,20 @@ describe("Project API (E2E)", () => {
   });
 
   it("getProjectsWithStatus()", async ({ expect }) => {
-    const projects = _.sortBy(await api.getProjectsWithStatus(), (p) => p.name);
+    const projects = sortBy(await api.getProjectsWithStatus(), (p) => p.name);
 
     expect(replaceVolatileValues(projects)).toMatchSnapshot();
   });
 
   it("getProject(projectId: string)", async ({ expect }) => {
-    const projectId = _.sortBy(await api.getProjects(), (p) => p.name)[0].id;
+    const projectId = sortBy(await api.getProjects(), (p) => p.name)[0].id;
 
     const project = await api.getProject(projectId);
     expect(replaceVolatileValues(project)).toMatchSnapshot();
   });
 
   it("createProject and deleteProject", async ({ expect }) => {
-    const team = _.sortBy(await api.getTeams(), (aTeam) => aTeam.name)[0];
+    const team = sortBy(await api.getTeams(), (aTeam) => aTeam.name)[0];
 
     const activeUser = await api.getActiveUser();
     const projectName = "test-new-project";

@@ -46,7 +46,11 @@ import { SimpleRow } from "dashboard/folders/metadata_table";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
-import _, { isNumber, memoize } from "lodash";
+import difference from "lodash/difference";
+import flatten from "lodash/flatten";
+import isNumber from "lodash/isNumber";
+import memoize from "lodash/memoize";
+import sortBy from "lodash/sortBy";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -374,7 +378,7 @@ function constructTreeData(
   groupToSegmentsMap: Record<number, Segment[]>,
 ): SegmentHierarchyNode[] {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
-  return _.sortBy(groups, "groupId").map((group) => {
+  return sortBy(groups, "groupId").map((group) => {
     const { groupId } = group;
     const segments = groupToSegmentsMap[groupId] || [];
     const treeNode: SegmentHierarchyNode = {
@@ -384,7 +388,7 @@ function constructTreeData(
       id: groupId,
       type: "group",
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
-        _.sortBy(segments, "id").map(
+        sortBy(segments, "id").map(
           (segment): SegmentHierarchyNode => ({
             ...segment,
             title: segment.name || "",
@@ -544,7 +548,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   collapseGroups = (groupsToCollapse: string[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const newExpandedGroups = _.difference(this.getExpandedGroupKeys(), groupsToCollapse);
+    const newExpandedGroups = difference(this.getExpandedGroupKeys(), groupsToCollapse);
     const expandedGroupSet = new Set(newExpandedGroups);
     Store.dispatch(
       setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer.name),
@@ -1674,7 +1678,7 @@ class SegmentsView extends React.Component<Props, State> {
   getMultiSelectMenu = (): MenuProps => {
     const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
     return {
-      items: _.flatten([
+      items: flatten([
         this.getLoadMeshesFromFileMenuItem(null),
         this.getComputeMeshesAdHocMenuItem(null),
         doSelectedSegmentsHaveAnyMeshes ? this.maybeGetShowOrHideMeshesMenuItems(null) : null,
@@ -1747,7 +1751,7 @@ class SegmentsView extends React.Component<Props, State> {
       const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         const getMenu = (): MenuProps => ({
-          items: _.flatten([
+          items: flatten([
             {
               key: "create",
               onClick: () => {
@@ -2056,7 +2060,7 @@ class SegmentsView extends React.Component<Props, State> {
                 />
                 <SimpleRow
                   label="Segment Count (all children)"
-                  value={_.sum(
+                  value={sum(
                     groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
                   )}
                 />

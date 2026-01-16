@@ -11,7 +11,6 @@ import last from "lodash/last";
 import max from "lodash/max";
 import min from "lodash/min";
 import once from "lodash/once";
-import reduce from "lodash/reduce";
 import toPairs from "lodash/toPairs";
 import uniq from "lodash/uniq";
 import zipObject from "lodash/zipObject";
@@ -977,23 +976,19 @@ export function chunkIntoTimeWindows<T>(
 ): Array<Array<T>> {
   let chunkIndex = 0;
   let chunkTime = 0;
-  return reduce(
-    elements,
-    (chunks: Array<Array<T>>, element: T, index: number) => {
-      const elementTime = mapToTimeFn(element);
-      if (index === 0) chunkTime = elementTime;
+  return elements.reduce((chunks: Array<Array<T>>, element: T, index: number) => {
+    const elementTime = mapToTimeFn(element);
+    if (index === 0) chunkTime = elementTime;
 
-      if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
-        chunkIndex++;
-        chunkTime = elementTime;
-      }
+    if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
+      chunkIndex++;
+      chunkTime = elementTime;
+    }
 
-      if (chunks[chunkIndex] == null) chunks.push([]);
-      chunks[chunkIndex].push(element);
-      return chunks;
-    },
-    [],
-  );
+    if (chunks[chunkIndex] == null) chunks.push([]);
+    chunks[chunkIndex].push(element);
+    return chunks;
+  }, []);
 }
 
 // chunkDynamically takes an array of input elements and splits these

@@ -1258,7 +1258,7 @@ describe("SkeletonTracing", () => {
 
   it("should add a node in a specified tree", () => {
     const createTree = createTreeAction();
-    const createNode = createNodeAction(position, null, rotation, viewport, mag);
+    const createNode = createNodeAction(position, null, rotation, viewport, mag, 3);
 
     // create a few trees and add a node to a specific one
     const newState = applyActions(initialState, [createTree, createTree, createNode]);

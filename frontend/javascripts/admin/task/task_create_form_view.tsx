@@ -7,13 +7,6 @@ import {
   getTaskTypes,
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
-import type {
-  NewNmlTask,
-  NewTask,
-  TaskCreationResponse,
-  TaskCreationResponseContainer,
-} from "admin/task/task_create_bulk_view";
-import { NUM_TASKS_PER_BATCH, normalizeFileEvent } from "admin/task/task_create_bulk_view";
 import {
   Alert,
   App,
@@ -53,6 +46,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
+import type {
+  NewNmlTask,
+  NewTask,
+  TaskCreationResponse,
+  TaskCreationResponseContainer,
+} from "./task_create_utils";
+import { NUM_TASKS_PER_BATCH, normalizeFileEvent } from "./task_create_utils";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;

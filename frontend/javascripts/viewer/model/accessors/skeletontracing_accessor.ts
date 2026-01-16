@@ -15,10 +15,7 @@ import {
   TreeMap,
 } from "viewer/model/types/tree_types";
 import type { NumberLike, SkeletonTracing, StoreAnnotation, WebknossosState } from "viewer/store";
-import {
-  MISSING_GROUP_ID,
-  findGroup,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max } from "../helpers/iterator_utils";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
@@ -328,31 +325,4 @@ export function* mapGroupsToGenerator<R>(
       yield* mapGroupsToGenerator(group.children, callback);
     }
   }
-}
-
-function mapGroupAndChildrenHelper(group: TreeGroup, fn: (g: TreeGroup) => TreeGroup): TreeGroup {
-  const newChildren = mapGroups(group.children, fn);
-  return fn({ ...group, children: newChildren });
-}
-
-export function mapGroups(groups: TreeGroup[], fn: (g: TreeGroup) => TreeGroup): TreeGroup[] {
-  return groups.map((group) => mapGroupAndChildrenHelper(group, fn));
-}
-
-export function mapGroupsWithRoot(
-  groups: TreeGroup[],
-  fn: (g: TreeGroup) => TreeGroup,
-): TreeGroup[] {
-  // Add the virtual root group so that the map function can also mutate
-  // the high-level elements (e.g., filtering elements in the first level).
-  return mapGroups(
-    [
-      {
-        name: "Root",
-        groupId: MISSING_GROUP_ID,
-        children: groups,
-      },
-    ],
-    fn,
-  )[0].children; // Read the root group's children again
 }

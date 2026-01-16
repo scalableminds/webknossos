@@ -66,7 +66,11 @@ import {
   importVolumeTracingAction,
   setLargestSegmentIdAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getTreeEdgesAsCSV, getTreeNodesAsCSV } from "viewer/model/helpers/csv_helpers";
+import {
+  getTreeEdgesAsCSV,
+  getTreeNodesAsCSV,
+  getTreesAsCSV,
+} from "viewer/model/helpers/csv_helpers";
 import {
   NmlParseError,
   getNmlName,
@@ -564,6 +568,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
   handleCSVDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing, annotationId } = this.props;
+    const datasetUnit = Store.getState().dataset.dataSource.scale.unit; //TODO_c make pretty
 
     if (!skeletonTracing) {
       return;
@@ -574,12 +579,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
-      const treesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
+      const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
+      const nodesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
       const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 
       const blobWriter = new Zip.BlobWriter("application/zip");
       const writer = new Zip.ZipWriter(blobWriter);
-      await writer.add("nodes.csv", new Zip.TextReader(treesCsv));
+      await writer.add("trees.csv", new Zip.TextReader(treesCsv));
+      await writer.add("nodes.csv", new Zip.TextReader(nodesCsv));
       await writer.add("edges.csv", new Zip.TextReader(edgesCsv));
       await writer.close();
       saveAs(await blobWriter.getData(), "tree_export.zip");

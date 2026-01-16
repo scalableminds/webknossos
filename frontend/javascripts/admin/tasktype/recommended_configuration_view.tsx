@@ -5,7 +5,7 @@ import features from "features";
 import { jsonStringify } from "libs/utils";
 import _ from "lodash";
 import { type RecommendedConfiguration, settings } from "messages";
-import * as React from "react";
+import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "viewer/constants";
 const FormItem = Form.Item;
@@ -195,7 +195,7 @@ export default function RecommendedConfigurationView({
     {
       key: "config",
       label: (
-        <React.Fragment>
+        <Fragment>
           <Checkbox
             checked={enabled}
             style={{
@@ -203,7 +203,7 @@ export default function RecommendedConfigurationView({
             }}
           />{" "}
           Add Recommended User Settings
-        </React.Fragment>
+        </Fragment>
       ),
       showArrow: false,
       children: recommendedSettingsView,

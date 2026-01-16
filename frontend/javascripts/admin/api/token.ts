@@ -1,5 +1,5 @@
 import Request from "libs/request";
-import * as Utils from "libs/utils";
+import { getUrlParamsObject } from "libs/utils";
 import { location } from "libs/window";
 
 const MAX_TOKEN_RETRY_ATTEMPTS = 3;
@@ -26,7 +26,7 @@ function requestUserToken(): Promise<string> {
 
 export function getSharingTokenFromUrlParameters(): string | null | undefined {
   if (location != null) {
-    const params = Utils.getUrlParamsObject();
+    const params = getUrlParamsObject();
 
     if (params?.token != null) {
       return params.token;

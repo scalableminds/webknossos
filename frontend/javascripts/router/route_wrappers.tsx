@@ -10,8 +10,7 @@ import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_prov
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
-import { coalesce } from "libs/utils";
+import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
 import { isNumber } from "lodash";
 import { useEffect } from "react";
@@ -88,7 +87,7 @@ export function DatasetSettingsRouteWrapper() {
   const { datasetNameAndId = "" } = useParams();
   const location = useLocation();
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
-  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  const getParams = getUrlParamsObjectFromString(location.search);
   if (datasetName) {
     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
     // The schema is something like <authority>/datasets/:datasetName/edit
@@ -128,7 +127,7 @@ export function CreateExplorativeRouteWrapper() {
 
         const tracingType = coalesce(TracingTypeEnum, type) || TracingTypeEnum.skeleton;
         const { autoFallbackLayer, fallbackLayerName, minMag, maxMag } =
-          Utils.getUrlParamsObjectFromString(location.search);
+          getUrlParamsObjectFromString(location.search);
         const magRestrictions: APIMagRestrictions = {};
 
         if (minMag !== undefined) {
@@ -196,7 +195,7 @@ export function TracingSandboxLegacyRouteWrapper() {
   if (tracingType == null) {
     return <h3>Invalid annotation URL.</h3>;
   }
-  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  const getParams = getUrlParamsObjectFromString(location.search);
   return (
     <AsyncRedirect
       redirectTo={async () => {
@@ -217,7 +216,7 @@ export function TracingSandboxRouteWrapper() {
 
   const tracingType = coalesce(TracingTypeEnum, type);
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
-  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  const getParams = getUrlParamsObjectFromString(location.search);
 
   if (tracingType == null) {
     return <h3>Invalid annotation URL.</h3>;
@@ -254,7 +253,7 @@ export function TracingSandboxRouteWrapper() {
 export function TracingViewModeLegacyWrapper() {
   const { datasetName = "", organizationId = "" } = useParams();
   const location = useLocation();
-  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  const getParams = getUrlParamsObjectFromString(location.search);
 
   return (
     <AsyncRedirect
@@ -275,7 +274,7 @@ export function TracingViewModeRouteWrapper() {
   const location = useLocation();
 
   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(datasetNameAndId);
-  const getParams = Utils.getUrlParamsObjectFromString(location.search);
+  const getParams = getUrlParamsObjectFromString(location.search);
   useEffect(markTracingViewLoadStartEffect, []);
   if (datasetName) {
     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.

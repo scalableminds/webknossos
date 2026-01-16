@@ -1,5 +1,5 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import * as Utils from "libs/utils";
+import { diffArrays } from "libs/utils";
 import _ from "lodash";
 import type { Edge } from "./types/tree_types";
 
@@ -186,7 +186,7 @@ export function diffEdgeCollections(
   for (const changedNodeIndex of mapDiff.changed) {
     // For each changedNodeIndex there is at least one outgoing edge which was added or removed.
     // So, check for each outgoing edge whether it only exists in A or B
-    const outgoingEdgesDiff = Utils.diffArrays(
+    const outgoingEdgesDiff = diffArrays(
       edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
       edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
     );

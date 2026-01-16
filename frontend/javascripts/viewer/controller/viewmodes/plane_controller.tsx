@@ -1,9 +1,10 @@
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { isNoElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
 import _ from "lodash";
-import * as React from "react";
+import type React from "react";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { OrthoView, OrthoViewMap } from "viewer/constants";
@@ -291,7 +292,7 @@ function createDelayAwareMoveHandler(
   return fn;
 }
 
-class PlaneController extends React.PureComponent<Props> {
+class PlaneController extends PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Plane Controller: Responsible for Plane Modes
@@ -332,7 +333,7 @@ class PlaneController extends React.PureComponent<Props> {
     // See: https://github.com/scalableminds/webknossos/issues/3475
     OrthoViewValuesWithoutTDView.forEach((id) => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
-      Utils.waitForElementWithId(inputcatcherId).then((el) => {
+      waitForElementWithId(inputcatcherId).then((el) => {
         if (!document.body.contains(el)) {
           console.error("el is not attached anymore");
         }
@@ -435,7 +436,7 @@ class PlaneController extends React.PureComponent<Props> {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        Utils.isNoElementFocussed()
+        isNoElementFocused()
       ) {
         event.preventDefault();
       }

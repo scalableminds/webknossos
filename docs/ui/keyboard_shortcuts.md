@@ -128,8 +128,8 @@ If Multi Cut Tool is activated, the following shortcuts are available:
 
 | Key Binding                                 | Operation                                   |
 |---------------------------------------------|---------------------------------------------|
-| ++Enter++                                   | Perform Multi Cut                           |
-| ++Escape++                                  | Clear Partition Selection of Multi Cut Tool |
+| ++enter++                                   | Perform Multi Cut                           |
+| ++escape++                                  | Clear Partition Selection of Multi Cut Tool |
 | ++ctrl++ / ++cmd++ + Left Click             | Add Segment to Partition One for Multi Cut  |
 | ++ctrl++ / ++cmd++ + ++shift++ + Left Click | Add Segment to Partition Two for Multi Cut  |
 

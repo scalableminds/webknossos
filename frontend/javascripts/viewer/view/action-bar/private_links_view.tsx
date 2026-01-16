@@ -182,7 +182,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
 
   return (
-    <Space.Compact className="no-borders">
+    <Space.Compact className="no-borders" block>
       <Input
         value={baseUrl}
         size="small"

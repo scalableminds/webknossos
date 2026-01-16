@@ -3,7 +3,7 @@ import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
-import * as THREE from "three";
+import { Matrix4, Vector3 as Vector3Three } from "three";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
 import Constants, { OrthoViews, Vector3Indices, Vector2Indices } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -571,25 +571,25 @@ class SectionLabeler {
 
 const CANONICAL_BASES = {
   [OrthoViews.PLANE_XY]: {
-    u: new THREE.Vector3(1, 0, 0),
-    v: new THREE.Vector3(0, 1, 0),
-    n: new THREE.Vector3(0, 0, 1),
+    u: new Vector3Three(1, 0, 0),
+    v: new Vector3Three(0, 1, 0),
+    n: new Vector3Three(0, 0, 1),
   },
   [OrthoViews.PLANE_YZ]: {
-    u: new THREE.Vector3(0, 1, 0),
-    v: new THREE.Vector3(0, 0, 1),
-    n: new THREE.Vector3(1, 0, 0),
+    u: new Vector3Three(0, 1, 0),
+    v: new Vector3Three(0, 0, 1),
+    n: new Vector3Three(1, 0, 0),
   },
   [OrthoViews.PLANE_XZ]: {
-    u: new THREE.Vector3(1, 0, 0),
-    v: new THREE.Vector3(0, 0, 1),
-    n: new THREE.Vector3(0, -1, 0),
+    u: new Vector3Three(1, 0, 0),
+    v: new Vector3Three(0, 0, 1),
+    n: new Vector3Three(0, -1, 0),
   },
 };
 const CANONICAL_NORMALS = {
-  [OrthoViews.PLANE_XY]: new THREE.Vector3(0, 0, 1),
-  [OrthoViews.PLANE_YZ]: new THREE.Vector3(1, 0, 0),
-  [OrthoViews.PLANE_XZ]: new THREE.Vector3(0, 1, 0),
+  [OrthoViews.PLANE_XY]: new Vector3Three(0, 0, 1),
+  [OrthoViews.PLANE_YZ]: new Vector3Three(1, 0, 0),
+  [OrthoViews.PLANE_XZ]: new Vector3Three(0, 1, 0),
 };
 
 function isAlmostZero(num: number, threshold: number = 0.01) {
@@ -606,10 +606,7 @@ export function mapTransformedPlane(
 
   const basis = CANONICAL_BASES[originalPlane];
 
-  const m = new THREE.Matrix4(
-    // @ts-ignore
-    ...invertAndTranspose(transform.affineMatrix),
-  );
+  const m = new Matrix4(...invertAndTranspose(transform.affineMatrix));
 
   // transform basis vectors
   const u2 = basis.u.clone().applyMatrix4(m).normalize();
@@ -620,7 +617,7 @@ export function mapTransformedPlane(
   let bestDot = Number.NEGATIVE_INFINITY;
 
   for (const [view, normal] of Object.entries(CANONICAL_NORMALS)) {
-    const dot = Math.abs(n2.dot(normal as THREE.Vector3));
+    const dot = Math.abs(n2.dot(normal as Vector3Three));
     if (dot > bestDot) {
       bestDot = dot;
       bestView = view as OrthoView;

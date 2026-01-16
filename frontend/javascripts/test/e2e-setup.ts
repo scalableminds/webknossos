@@ -1,4 +1,4 @@
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 // @ts-ignore
 import deepForEach from "deep-for-each";
 import fs from "node:fs";
@@ -66,7 +66,7 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   if (obj == null) return obj;
 
   // Replace volatile properties with deterministic values
-  const newObj = _.cloneDeep(obj);
+  const newObj = cloneDeep(obj);
 
   deepForEach(
     newObj,

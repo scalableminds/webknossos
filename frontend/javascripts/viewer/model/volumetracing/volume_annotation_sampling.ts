@@ -1,5 +1,5 @@
 import { map3 } from "libs/utils";
-import _ from "lodash";
+import once from "lodash/once";
 import messages from "messages";
 import type { Writeable } from "types/globals";
 import type { BucketAddress, LabeledVoxelsMap, Vector3 } from "viewer/constants";
@@ -41,7 +41,7 @@ function upsampleVoxelMap(
     thirdDimensionVoxelValue / targetMag[dimensionIndices[2]] / constants.BUCKET_WIDTH,
   );
 
-  const warnAboutCouldNotCreate = _.once((zoomedAddress) => {
+  const warnAboutCouldNotCreate = once((zoomedAddress) => {
     console.warn(messages["sampling.could_not_get_or_create_bucket"](zoomedAddress));
   });
 
@@ -170,7 +170,7 @@ function downsampleVoxelMap(
   const scaleToSource = map3((val, index) => val / sourceMag[index], targetMag);
   const scaleToGoal = map3((val, index) => val / targetMag[index], sourceMag);
 
-  const warnAboutCouldNotCreate = _.once((zoomedAddress) => {
+  const warnAboutCouldNotCreate = once((zoomedAddress) => {
     console.warn(messages["sampling.could_not_get_or_create_bucket"](zoomedAddress));
   });
 

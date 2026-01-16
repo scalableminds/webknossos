@@ -1,4 +1,5 @@
-import _ from "lodash";
+import debounce from "lodash/debounce";
+import noop from "lodash/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
@@ -161,7 +162,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: _.noop,
+    onClick: noop,
     onTouchStart,
     onTouchEnd,
   };
@@ -311,7 +312,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 
   const debouncedSetter = useMemo(
     () =>
-      _.debounce((val: T) => {
+      debounce((val: T) => {
         setDebouncedValue(val);
       }, delay),
     [delay],

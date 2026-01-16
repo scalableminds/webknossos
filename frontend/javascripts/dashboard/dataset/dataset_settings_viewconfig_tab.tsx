@@ -5,7 +5,7 @@ import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admi
 import { Col, Form, Input, InputNumber, Row, Select, Switch, Table, Tooltip } from "antd";
 import { Slider } from "components/slider";
 import { Vector3Input } from "libs/vector_input";
-import _ from "lodash";
+import map from "lodash/map";
 import messages, { layerViewConfigurations, settings, settingsTooltips } from "messages";
 import { useMemo, useState } from "react";
 import type { APIDataset } from "types/api_types";
@@ -132,7 +132,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
         "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
     },
   };
-  const layerViewConfigurationEntries = _.map(
+  const layerViewConfigurationEntries = map(
     { ...getDefaultLayerViewConfiguration(), min: 0, max: 255, intensityRange: [0, 255] },
     (defaultValue: any, key: string) => {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration

@@ -15,7 +15,8 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, List } from "antd";
-import _ from "lodash";
+import groupBy from "lodash/groupBy";
+import max from "lodash/max";
 import type React from "react";
 
 import classNames from "classnames";
@@ -522,7 +523,7 @@ function getDescriptionForBatch(
   actions: Array<ServerUpdateAction>,
   annotation: StoreAnnotation,
 ): Description {
-  const groupedUpdateActions = _.groupBy(actions, "name");
+  const groupedUpdateActions = groupBy(actions, "name");
 
   const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
 
@@ -599,7 +600,7 @@ export default function VersionEntry({
   onRestoreVersion,
   onPreviewVersion,
 }: Props) {
-  const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
+  const lastTimestamp = max(actions.map((action) => action.value.actionTimestamp));
   const contributors = useWkSelector((state) => state.annotation.contributors);
   const activeUser = useWkSelector((state) => state.activeUser);
   const owner = useWkSelector((state) => state.annotation.owner);

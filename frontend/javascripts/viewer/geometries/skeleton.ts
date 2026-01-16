@@ -1,5 +1,6 @@
 import { diffArrays } from "libs/utils";
-import _ from "lodash";
+import range from "lodash/range";
+import values from "lodash/values";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -58,7 +59,7 @@ const NodeBufferHelperType = {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 3), 3));
 
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
-    for (const idx of _.range(0, additionalCoordLength)) {
+    for (const idx of range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
         new BufferAttribute(new Float32Array(capacity), 1),
@@ -83,7 +84,7 @@ const EdgeBufferHelperType = {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 2 * 3), 3));
 
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
-    for (const idx of _.range(0, additionalCoordLength)) {
+    for (const idx of range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
         new BufferAttribute(new Float32Array(capacity * 2), 1),
@@ -564,7 +565,7 @@ class Skeleton {
       attributes.position.set(untransformedPosition, index * 3);
 
       if (node.additionalCoordinates) {
-        for (const idx of _.range(0, node.additionalCoordinates.length)) {
+        for (const idx of range(0, node.additionalCoordinates.length)) {
           const attributeAdditionalCoordinates =
             buffer.geometry.attributes[`additionalCoord_${idx}`];
           attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
@@ -576,7 +577,7 @@ class Skeleton {
       attributes.isCommented.array[index] = false;
       attributes.nodeId.array[index] = node.id;
       attributes.treeId.array[index] = treeId;
-      return _.values(attributes);
+      return values(attributes);
     });
   }
 
@@ -620,7 +621,7 @@ class Skeleton {
       attribute.set(position, index * 3);
 
       if (additionalCoordinates) {
-        for (const idx of _.range(0, additionalCoordinates.length)) {
+        for (const idx of range(0, additionalCoordinates.length)) {
           const attributeAdditionalCoordinates =
             buffer.geometry.attributes[`additionalCoord_${idx}`];
           attributeAdditionalCoordinates.set([additionalCoordinates[idx].value], index);
@@ -690,7 +691,7 @@ class Skeleton {
 
       const changedAttributes = [];
       if (source.additionalCoordinates && target.additionalCoordinates) {
-        for (const idx of _.range(0, source.additionalCoordinates.length)) {
+        for (const idx of range(0, source.additionalCoordinates.length)) {
           const additionalCoordAttribute = attributes[`additionalCoord_${idx}`];
 
           additionalCoordAttribute.set([source.additionalCoordinates[idx].value], 2 * index);

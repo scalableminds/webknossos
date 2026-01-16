@@ -4,7 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,
@@ -155,7 +155,7 @@ class PlaneView {
     }
   }
 
-  performMeshHitTest = _.throttle((mousePosition: [number, number]): RaycasterHit => {
+  performMeshHitTest = throttle((mousePosition: [number, number]): RaycasterHit => {
     const storeState = Store.getState();
     const sceneController = getSceneController();
     const { segmentMeshController } = sceneController;
@@ -274,7 +274,7 @@ class PlaneView {
     app.vent.emit("rerender");
   }
 
-  resizeThrottled = _.throttle((): void => {
+  resizeThrottled = throttle((): void => {
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);

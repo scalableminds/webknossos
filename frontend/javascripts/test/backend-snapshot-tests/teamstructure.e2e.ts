@@ -1,4 +1,4 @@
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import {
   tokenUserA,
   tokenUserB,
@@ -50,7 +50,7 @@ user_A, user_B, user_C, user_D, user_E
   test("teams_userDefault", async () => {
     setUserAuthToken(tokenUserA);
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await api.getTeams(), (team) => team.name);
 
     expect(teams[0].name).toBe("team_X1");
     expect(teams[1].name).toBe("team_X2");
@@ -62,7 +62,7 @@ user_A, user_B, user_C, user_D, user_E
   test("teams_user_D", async () => {
     setUserAuthToken(tokenUserD);
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await api.getTeams(), (team) => team.name);
 
     expect(teams[0].name).toBe("team_X2");
     expect(teams.length).toBe(1);
@@ -71,7 +71,7 @@ user_A, user_B, user_C, user_D, user_E
   test("teams_user_E", async () => {
     setUserAuthToken(tokenUserE);
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await api.getTeams(), (team) => team.name);
 
     expect(teams[0].name).toBe("team_Y1");
     expect(teams.length).toBe(1);
@@ -102,7 +102,7 @@ user_A, user_B, user_C, user_D, user_E
   test("taskTypes_userDefault", async () => {
     setUserAuthToken(tokenUserA);
 
-    const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
+    const taskTypes = sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
 
     expect(taskTypes[0].description).toBe("Check those cells out!");
     expect(taskTypes.length).toBe(2);
@@ -111,7 +111,7 @@ user_A, user_B, user_C, user_D, user_E
   test("taskTypes_user_D", async () => {
     setUserAuthToken(tokenUserD);
 
-    const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
+    const taskTypes = sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
 
     expect(taskTypes.length).toBe(1);
   });
@@ -119,7 +119,7 @@ user_A, user_B, user_C, user_D, user_E
   test("taskTypes_user_E", async () => {
     setUserAuthToken(tokenUserE);
 
-    const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
+    const taskTypes = sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
 
     expect(taskTypes.length).toBe(0);
   });

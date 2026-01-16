@@ -1,4 +1,4 @@
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import {
   tokenUserA,
   setUserAuthToken,
@@ -25,7 +25,7 @@ import {
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await getActiveDatasetsOfMyOrganization();
-  const dataset = _.sortBy(datasets, (d) => d.name)[0];
+  const dataset = sortBy(datasets, (d) => d.name)[0];
 
   return dataset;
 }
@@ -47,7 +47,7 @@ describe("Dataset API (E2E)", () => {
       retry++;
     }
 
-    datasets = _.sortBy(datasets, (d) => d.name);
+    datasets = sortBy(datasets, (d) => d.name);
     writeTypeCheckingFile(datasets, "dataset", "APIDatasetCompact", {
       isArray: true,
     });
@@ -57,14 +57,14 @@ describe("Dataset API (E2E)", () => {
 
   it("getActiveDatasets", async () => {
     let datasets = await getActiveDatasetsOfMyOrganization();
-    datasets = _.sortBy(datasets, (d) => d.name);
+    datasets = sortBy(datasets, (d) => d.name);
 
     expect(replaceVolatileValues(datasets)).toMatchSnapshot();
   });
 
   it("getDatasetAccessList", async () => {
     const dataset = await getFirstDataset();
-    const accessList = _.sortBy(await getDatasetAccessList(dataset), (user) => user.id);
+    const accessList = sortBy(await getDatasetAccessList(dataset), (user) => user.id);
 
     expect(replaceVolatileValues(accessList)).toMatchSnapshot();
   });

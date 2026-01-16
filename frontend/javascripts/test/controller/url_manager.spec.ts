@@ -11,7 +11,7 @@ import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import DATASET from "../fixtures/dataset_server_object";
-import _ from "lodash";
+import clone from "lodash/clone";
 import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 
 describe("UrlManager", () => {
@@ -284,8 +284,8 @@ describe("UrlManager", () => {
   });
 
   it("Inserting an updated dataset name in the URL should yield the correct URL", () => {
-    const testDatasetEasy = update(_.clone(DATASET), { name: { $set: "extract_me" } });
-    const testDatasetComplex = update(_.clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
+    const testDatasetEasy = update(clone(DATASET), { name: { $set: "extract_me" } });
+    const testDatasetComplex = update(clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
     // View
     location.pathname = `/datasets/replace_me-${testDatasetEasy.id}/view`;
     const newPathName1 = getUpdatedPathnameWithNewDatasetName(location, testDatasetEasy);

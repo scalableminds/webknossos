@@ -2,7 +2,9 @@ import { getEditableTeams, getTeams } from "admin/rest_api";
 import { Select } from "antd";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
+import compact from "lodash/compact";
+import flatten from "lodash/flatten";
+import unionBy from "lodash/unionBy";
 import { useCallback, useEffect, useState } from "react";
 import type { APITeam } from "types/api_types";
 
@@ -26,12 +28,12 @@ function TeamSelectionComponent({
   disabled,
 }: TeamSelectionComponentProps) {
   const [possibleTeams, setPossibleTeams] = useState<APITeam[]>([]);
-  const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? _.flatten([value]) : []);
+  const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? flatten([value]) : []);
   const [isFetchingData, setIsFetchingData] = useState(false);
 
   // Sync selectedTeams with value
   useEffect(() => {
-    setSelectedTeams(value ? _.flatten([value]) : []);
+    setSelectedTeams(value ? flatten([value]) : []);
   }, [value]);
 
   // Fetch teams on mount
@@ -55,7 +57,7 @@ function TeamSelectionComponent({
   }
 
   const getAllTeams = useCallback((): APITeam[] => {
-    return _.unionBy(possibleTeams, selectedTeams, (t) => t.id);
+    return unionBy(possibleTeams, selectedTeams, (t) => t.id);
   }, [possibleTeams, selectedTeams]);
 
   const onSelectTeams = (selectedTeamIdsOrId: string | Array<string>) => {
@@ -63,7 +65,7 @@ function TeamSelectionComponent({
       ? selectedTeamIdsOrId
       : [selectedTeamIdsOrId];
     const allTeams = getAllTeams();
-    const selectedTeams = _.compact(selectedTeamIds.map((id) => allTeams.find((t) => t.id === id)));
+    const selectedTeams = compact(selectedTeamIds.map((id) => allTeams.find((t) => t.id === id)));
     if (onChange) {
       onChange(Array.isArray(selectedTeamIdsOrId) ? selectedTeams : selectedTeams[0]);
     }

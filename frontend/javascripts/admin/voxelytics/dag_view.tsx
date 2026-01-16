@@ -12,7 +12,7 @@ import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import ColorHash from "color-hash";
 import { useWkSelector } from "libs/react_hooks";
-import { memoize } from "lodash";
+import memoize from "lodash/memoize";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,

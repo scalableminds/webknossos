@@ -1,5 +1,5 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import { call, put, take } from "redux-saga/effects";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { delay } from "typed-redux-saga";
@@ -206,7 +206,7 @@ describe("Proofreading (with mesh actions)", () => {
           throw new Error("Unexpected version of min cut request:" + version);
         }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
-        if (agglomerateId === 6 && _.isEqual(partition1, [1337]) && _.isEqual(partition2, [1338])) {
+        if (agglomerateId === 6 && isEqual(partition1, [1337]) && isEqual(partition2, [1338])) {
           return [
             {
               position1: [1337, 1337, 1337],
@@ -430,8 +430,8 @@ describe("Proofreading (with mesh actions)", () => {
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
         if (
           agglomerateId === 1 &&
-          _.isEqual(partition1, [1, 2]) &&
-          _.isEqual(partition2, [1337, 1338])
+          isEqual(partition1, [1, 2]) &&
+          isEqual(partition2, [1337, 1338])
         ) {
           return [
             {

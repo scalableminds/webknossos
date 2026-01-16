@@ -1,6 +1,8 @@
 import type { meshApi } from "admin/rest_api";
 import { V3 } from "libs/mjs";
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
+import sortedIndex from "lodash/sortedIndex";
+import sortedIndexOf from "lodash/sortedIndexOf";
 import type { BufferGeometry } from "three";
 import type { Vector3 } from "viewer/constants";
 
@@ -54,7 +56,7 @@ export class VertexSegmentMapping {
   }
 
   getUnmappedSegmentIdForPosition(position: number) {
-    const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
+    const index = sortedIndex(this.cumulativeStartPosition, position) - 1;
     if (index >= this.unmappedSegmentIds.length) {
       throw new Error(`Could not look up id for position=${position} in VertexSegmentMapping.`);
     }
@@ -62,7 +64,7 @@ export class VertexSegmentMapping {
   }
 
   getRangeForPosition(position: number): [number, number] {
-    const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
+    const index = sortedIndex(this.cumulativeStartPosition, position) - 1;
     if (index + 1 >= this.cumulativeStartPosition.length) {
       throw new Error(`Could not look up range for position=${position} in VertexSegmentMapping.`);
     }
@@ -70,7 +72,7 @@ export class VertexSegmentMapping {
   }
 
   getRangeForUnmappedSegmentId(segmentId: number): [number, number] | null {
-    const index = _.sortedIndexOf(this.unmappedSegmentIds, segmentId);
+    const index = sortedIndexOf(this.unmappedSegmentIds, segmentId);
     if (index === -1) {
       return null;
     }
@@ -78,7 +80,7 @@ export class VertexSegmentMapping {
   }
 
   containsSegmentId(segmentId: number): boolean {
-    return _.sortedIndexOf(this.unmappedSegmentIds, segmentId) !== -1;
+    return sortedIndexOf(this.unmappedSegmentIds, segmentId) !== -1;
   }
 }
 
@@ -86,7 +88,7 @@ export function sortByDistanceTo(
   availableChunks: Vector3[] | meshApi.MeshChunk[] | null | undefined,
   seedPosition: Vector3,
 ) {
-  return _.sortBy(availableChunks, (chunk: Vector3 | meshApi.MeshChunk) =>
+  return sortBy(availableChunks, (chunk: Vector3 | meshApi.MeshChunk) =>
     V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
   ) as Array<Vector3> | Array<meshApi.MeshChunk>;
 }

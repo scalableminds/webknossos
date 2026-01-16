@@ -1,7 +1,7 @@
 import { WarningOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
 import { usePolledState } from "libs/react_helpers";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import { getUnrenderableLayerInfosForCurrentZoom } from "viewer/model/accessors/flycam_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import type { SmallerOrHigherInfo } from "viewer/model/helpers/mag_info";
@@ -45,7 +45,7 @@ export default function ViewportStatusIndicator() {
         };
       });
 
-    if (!_.isEqual(unrenderableLayerNamesWithInfo, newUnrenderableLayersNamesWithInfos)) {
+    if (!isEqual(unrenderableLayerNamesWithInfo, newUnrenderableLayersNamesWithInfos)) {
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UnrenderableLayerNamesInfo[]' is... Remove this comment to see the full error message
       setUnrenderableLayerNamesWithInfo(newUnrenderableLayersNamesWithInfos);
     }

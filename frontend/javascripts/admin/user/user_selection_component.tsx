@@ -2,7 +2,7 @@ import { getUsers } from "admin/rest_api";
 import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import { useState } from "react";
 
 type Props = {
@@ -19,7 +19,7 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
         const users = await getUsers();
         const activeUsers = users.filter((u) => u.isActive);
 
-        return _.sortBy(activeUsers, "lastName");
+        return sortBy(activeUsers, "lastName");
       } catch (error) {
         handleGenericError(error as Error);
         return [];

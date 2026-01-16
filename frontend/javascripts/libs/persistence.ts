@@ -1,6 +1,8 @@
 import { PropTypes } from "@scalableminds/prop-types";
 import ErrorHandling from "libs/error_handling";
-import _ from "lodash";
+import extend from "lodash/extend";
+import isEqual from "lodash/isEqual";
+import pick from "lodash/pick";
 import type { EmptyObject } from "types/globals";
 
 class Persistence<T extends Record<string, any>> {
@@ -23,10 +25,7 @@ class Persistence<T extends Record<string, any>> {
         locationState[this.name],
       );
 
-      const persistedState = _.pick(
-        locationState[this.name],
-        Object.keys(this.stateProperties),
-      ) as T;
+      const persistedState = pick(locationState[this.name], Object.keys(this.stateProperties)) as T;
 
       try {
         // Check whether the type of the persisted state conforms to that of the component to avoid messing up
@@ -57,11 +56,11 @@ class Persistence<T extends Record<string, any>> {
   ) {
     const locationState = (window.history.state || {}) as Record<string, T>;
 
-    const stateToBePersisted = _.pick(state, Object.keys(stateProperties));
+    const stateToBePersisted = pick(state, Object.keys(stateProperties));
 
     if (
       locationState[this.name] == null ||
-      !_.isEqual(stateToBePersisted, locationState[this.name])
+      !isEqual(stateToBePersisted, locationState[this.name])
     ) {
       // Don't use the navigate object of react-router here, because
       // calling navigate(..., replace=True) leads to focus-loss-bugs for input fields
@@ -72,7 +71,7 @@ class Persistence<T extends Record<string, any>> {
       window.history.replaceState(
         // There could be multiple state namespaces on one page, so only extend the current location state,
         // but do not replace it
-        _.extend(locationState, {
+        extend(locationState, {
           [this.name]: stateToBePersisted,
         }),
         "",

@@ -1,5 +1,5 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import { call, put, take } from "redux-saga/effects";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -211,7 +211,7 @@ const mockEdgesForAgglomerateMinCut = (
         throw new Error("Unexpected version of min cut request:" + version);
       }
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
-      if (agglomerateId === 1 && _.isEqual(partition1, [3]) && _.isEqual(partition2, [2])) {
+      if (agglomerateId === 1 && isEqual(partition1, [3]) && isEqual(partition2, [2])) {
         return [
           {
             position1: [3, 3, 3],

@@ -2,7 +2,7 @@ import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import _ from "lodash";
+import last from "lodash/last";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
@@ -329,11 +329,11 @@ function useManagedUrlParams(
     const recursive = params.get("recursive");
     if (recursive != null) setSearchRecursively(recursive === "true");
 
-    const folderSpecifier = _.last(location.pathname.split("/"));
+    const folderSpecifier = last(location.pathname.split("/"));
 
     if (folderSpecifier?.includes("-")) {
       const nameChunksAndFolderId = folderSpecifier.split("-");
-      const folderId = _.last(nameChunksAndFolderId);
+      const folderId = last(nameChunksAndFolderId);
       if (folderId) {
         setActiveFolderId(folderId);
       }

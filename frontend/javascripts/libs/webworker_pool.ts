@@ -1,4 +1,4 @@
-import _ from "lodash";
+import range from "lodash/range";
 export default class WebWorkerPool<P, R> {
   // This class can be used to instantiate multiple web workers
   // which are then used for computation in a simple round-robin manner.
@@ -14,7 +14,7 @@ export default class WebWorkerPool<P, R> {
   currentWorkerIdx: number;
 
   constructor(workerFn: () => (...args: Array<P>) => R, count: number) {
-    this.workers = _.range(0, count).map((_idx) => workerFn());
+    this.workers = range(0, count).map((_idx) => workerFn());
     this.currentWorkerIdx = 0;
   }
 

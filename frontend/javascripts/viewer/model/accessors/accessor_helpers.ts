@@ -1,4 +1,4 @@
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 
 /*
   Wraps a given function so that it returns the same instance on consecutive
@@ -22,7 +22,7 @@ import _ from "lodash";
  */
 export function reuseInstanceOnEquality<R, F extends (...args: Array<any>) => R>(
   fn: F,
-  equalityFunction: (arg0: R, arg1: R) => boolean = _.isEqual,
+  equalityFunction: (arg0: R, arg1: R) => boolean = isEqual,
 ): F {
   let lastResult: R;
   // @ts-expect-error ts-migrate(2322) FIXME: Type '(...args: Array<any>) => R' is not assignabl... Remove this comment to see the full error message

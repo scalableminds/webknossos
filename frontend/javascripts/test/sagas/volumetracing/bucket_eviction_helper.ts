@@ -1,4 +1,4 @@
-import _ from "lodash";
+import range from "lodash/range";
 import { createBucketResponseFunction, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import Store from "viewer/store";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -44,12 +44,12 @@ export async function testLabelingManyBuckets(
   await api.data.reloadAllBuckets();
 
   // Prepare to paint into the center of 50 buckets.
-  const paintPositions1 = _.range(0, 50).map(
+  const paintPositions1 = range(0, 50).map(
     (idx) => [32 * idx + 16, 32 * idx + 16, 32 * idx + 16] as Vector3,
   );
 
   // Prepare to paint into the center of 50 other buckets.
-  const paintPositions2 = _.range(50, 100).map(
+  const paintPositions2 = range(50, 100).map(
     (idx) => [32 * idx + 16, 32 * idx + 16, 32 * idx + 16] as Vector3,
   );
 

@@ -2,7 +2,8 @@ import { PlusSquareOutlined } from "@ant-design/icons";
 import { type MenuProps, Table, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
-import _ from "lodash";
+import noop from "lodash/noop";
+import partial from "lodash/partial";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -140,13 +141,13 @@ export default function BoundingBoxTab() {
           name={bb.name}
           isExportEnabled={isExportEnabled}
           isVisible={bb.isVisible}
-          onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
-          onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? () => handleExportBoundingBox(bb) : _.noop}
-          onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
-          onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
-          onNameChange={_.partial(setBoundingBoxName, bb.id)}
-          onColorChange={_.partial(setBoundingBoxColor, bb.id)}
+          onBoundingChange={partial(handleBoundingBoxBoundingChange, bb.id)}
+          onDelete={partial(deleteBoundingBox, bb.id)}
+          onExport={isExportEnabled ? () => handleExportBoundingBox(bb) : noop}
+          onGoToBoundingBox={partial(handleGoToBoundingBox, bb.id)}
+          onVisibilityChange={partial(setBoundingBoxVisibility, bb.id)}
+          onNameChange={partial(setBoundingBoxName, bb.id)}
+          onColorChange={partial(setBoundingBoxColor, bb.id)}
           disabled={!allowUpdate}
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}

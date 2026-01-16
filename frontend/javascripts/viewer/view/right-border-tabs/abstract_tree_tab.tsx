@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash/throttle";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { EmptyObject } from "types/globals";
@@ -16,7 +16,7 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
   const nodeListRef = useRef<Array<NodeListItem>>([]);
   const dispatch = useDispatch();
 
-  const drawTree = _.throttle(
+  const drawTree = throttle(
     useCallback(() => {
       if (!skeletonTracing || !isVisible) {
         return;

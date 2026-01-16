@@ -5,7 +5,7 @@ import { AsyncButton } from "components/async_clickables";
 import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import { isEqual } from "lodash";
+import isEqual from "lodash/isEqual";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APIDataStore, VoxelSize } from "types/api_types";

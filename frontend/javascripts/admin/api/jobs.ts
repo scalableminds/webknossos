@@ -1,6 +1,7 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import _ from "lodash";
+import camelCase from "lodash/camelCase";
+import mapKeys from "lodash/mapKeys";
 import type {
   APIAnnotationType,
   APIJob,
@@ -18,7 +19,7 @@ import { getOrganization } from "./organization";
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
     ...job,
-    args: _.mapKeys(job.args, (_value, key) => _.camelCase(key)),
+    args: mapKeys(job.args, (_value, key) => camelCase(key)),
   };
 }
 

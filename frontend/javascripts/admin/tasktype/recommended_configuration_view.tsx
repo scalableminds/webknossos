@@ -3,7 +3,8 @@ import type { FormInstance } from "antd/lib/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { jsonStringify } from "libs/utils";
-import _ from "lodash";
+import map from "lodash/map";
+import omit from "lodash/omit";
 import { type RecommendedConfiguration, settings } from "messages";
 import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";
@@ -102,7 +103,7 @@ const removeSettings = (
   try {
     const settingsObject = JSON.parse(settingsString);
 
-    const newSettings = _.omit(
+    const newSettings = omit(
       settingsObject,
       Object.keys(getRecommendedConfigByCategory()[settingsKey]),
     );
@@ -125,7 +126,7 @@ export default function RecommendedConfigurationView({
   onChangeEnabled: (arg0: boolean) => void;
 }) {
   const recommendedConfiguration = getDefaultRecommendedConfiguration();
-  const configurationEntries = _.map(recommendedConfiguration, (_value: any, key: string) => {
+  const configurationEntries = map(recommendedConfiguration, (_value: any, key: string) => {
     // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
     const settingsKey: keyof RecommendedConfiguration = key;
     return {

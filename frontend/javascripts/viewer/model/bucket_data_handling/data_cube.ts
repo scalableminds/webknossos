@@ -9,7 +9,8 @@ import {
   mod,
   union,
 } from "libs/utils";
-import _ from "lodash";
+import keyBy from "lodash/keyBy";
+import once from "lodash/once";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
@@ -43,7 +44,7 @@ import Store from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 import { getConstructorForElementClass } from "../helpers/typed_buffer";
 
-const warnAboutTooManyAllocations = _.once(() => {
+const warnAboutTooManyAllocations = once(() => {
   const msg =
     "WEBKNOSSOS needed to allocate an unusually large amount of image data. It is advised to save your work and reload the page.";
   ErrorHandling.notify(new Error(msg));
@@ -146,7 +147,7 @@ class DataCube {
     this.isSegmentation = isSegmentation;
     this.magInfo = magInfo;
     this.layerName = layerName;
-    this.additionalAxes = _.keyBy(additionalAxes, "name");
+    this.additionalAxes = keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
 
     this.cubes = {};

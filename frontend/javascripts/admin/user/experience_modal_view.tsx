@@ -6,7 +6,11 @@ import SelectExperienceDomain from "components/select_experience_domain";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import fromPairs from "lodash/fromPairs";
+import map from "lodash/map";
+import max from "lodash/max";
+import min from "lodash/min";
+import union from "lodash/union";
 import { useState } from "react";
 import type { APIUser, ExperienceDomainList } from "types/api_types";
 
@@ -51,7 +55,7 @@ function ExperienceModalView({
   function getTableEntries(users: APIUser[]): TableEntry[] {
     if (users.length <= 1) {
       return sortEntries(
-        _.map(users[0].experiences, (value, domain) => ({
+        map(users[0].experiences, (value, domain) => ({
           domain,
           value,
           lowestValue: -1,
@@ -63,7 +67,7 @@ function ExperienceModalView({
     }
 
     // find all existing experience domains
-    const allDomains: string[] = _.union(...users.map((user) => Object.keys(user.experiences)));
+    const allDomains: string[] = union(...users.map((user) => Object.keys(user.experiences)));
 
     // adds the number of users with this domain (sharedByCount) to all domains
     const allDomainsWithCount = allDomains.map((domain) => {
@@ -82,17 +86,17 @@ function ExperienceModalView({
     const tableEntries = allDomainsWithCount.map((entry) => {
       const usersValues = users.map((user) => user.experiences[entry.domain]);
 
-      const min = _.min(usersValues);
+      const minVal = min(usersValues);
 
-      const max = _.max(usersValues);
+      const maxVal = max(usersValues);
 
       const isShared = entry.sharedByCount === users.length;
-      const value = isShared && max === min ? min : -1;
+      const value = isShared && maxVal === minVal ? minVal : -1;
       return {
         domain: entry.domain,
         value,
-        lowestValue: min,
-        highestValue: max,
+        lowestValue: minVal,
+        highestValue: maxVal,
         sharedByCount: entry.sharedByCount,
         changed: false,
       };
@@ -106,7 +110,7 @@ function ExperienceModalView({
     const newUserPromises: Array<Promise<APIUser>> = selectedUsers.map((user: APIUser) => {
       const newExperiences = {
         ...user.experiences,
-        ..._.fromPairs(relevantEntries.map((entry) => [entry.domain, entry.value])),
+        ...fromPairs(relevantEntries.map((entry) => [entry.domain, entry.value])),
       };
       removedDomains.forEach((domain) => {
         if (domain in newExperiences) {

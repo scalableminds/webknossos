@@ -7,7 +7,7 @@ import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { MathUtils, Matrix4 } from "three";
@@ -546,7 +546,7 @@ function* diffNodes(
 }
 
 function updateNodePredicate(prevNode: Node, node: Node): boolean {
-  return !_.isEqual(prevNode, node);
+  return !isEqual(prevNode, node);
 }
 
 function* diffEdges(
@@ -573,8 +573,8 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     // equality. This avoids unnecessary updates in certain cases (e.g.,
     // when two trees are merged, the comments are concatenated, even
     // if one of them is empty; thus, resulting in new instances).
-    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
-    !_.isEqual(prevTree.comments, tree.comments) ||
+    !isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    !isEqual(prevTree.comments, tree.comments) ||
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
     prevTree.timestamp !== tree.timestamp ||

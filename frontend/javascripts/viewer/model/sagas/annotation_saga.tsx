@@ -3,7 +3,7 @@ import { editAnnotation } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { hasUrlParam } from "libs/utils";
-import _ from "lodash";
+import mapValues from "lodash/mapValues";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";
@@ -58,7 +58,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   // viewConfiguration.
   const { layers } = yield* select((state) => state.datasetConfiguration);
   const viewConfiguration = {
-    layers: _.mapValues(layers, (layer) => ({
+    layers: mapValues(layers, (layer) => ({
       isDisabled: layer.isDisabled,
     })),
   };

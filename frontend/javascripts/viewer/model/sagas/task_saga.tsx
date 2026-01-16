@@ -3,7 +3,9 @@ import { Button } from "antd";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { clamp } from "libs/utils";
-import _ from "lodash";
+import find from "lodash/find";
+import size from "lodash/size";
+import uniq from "lodash/uniq";
 import messages from "messages";
 import React from "react";
 import { call, delay, put, take } from "typed-redux-saga";
@@ -47,18 +49,18 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
 
 function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const { recommendedConfiguration } = taskType;
-  if (recommendedConfiguration == null || _.size(recommendedConfiguration) === 0) return;
+  if (recommendedConfiguration == null || size(recommendedConfiguration) === 0) return;
   const userConfiguration = yield* select((state) => state.userConfiguration);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
   const zoomStep = yield* select((state) => state.flycam.zoomStep);
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
 
-  const configurationDifference = _.find(recommendedConfiguration, (value, _key) => {
+  const configurationDifference = find(recommendedConfiguration, (value, _key) => {
     const key = _key as keyof RecommendedConfiguration;
     if (key === "zoom" && zoomStep !== value) {
       return true;
     } else if (key === "segmentationOpacity") {
-      const opacities = _.uniq(
+      const opacities = uniq(
         segmentationLayers.map((layer) => datasetConfiguration.layers[layer.name].alpha),
       );
 

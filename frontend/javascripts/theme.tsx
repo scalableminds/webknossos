@@ -3,7 +3,8 @@ import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
-import _ from "lodash";
+import clone from "lodash/clone";
+import merge from "lodash/merge";
 import type React from "react";
 import { useEffect } from "react";
 import type { APIUser } from "types/api_types";
@@ -59,7 +60,7 @@ const OverridesForNavbarAndStatusBarTheme: ThemeConfig = {
     colorBgContainerDisabled: "#313131",
   },
 };
-export const NavAndStatusBarTheme = _.merge(
+export const NavAndStatusBarTheme = merge(
   getAntdTheme("dark"),
   OverridesForNavbarAndStatusBarTheme,
 );
@@ -111,7 +112,7 @@ export function getAntdTheme(userTheme: Theme) {
     algorithm,
     // Without the clone(), the default theme shows dark backgrounds in various components.
     // Apparently, antd mutates this variable?
-    token: _.clone(globalDesignToken),
+    token: clone(globalDesignToken),
     components,
     // Disable inheriting from the parent theme, in case we are nesting dark and light mode components
     inherit: false,

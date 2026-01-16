@@ -12,7 +12,7 @@ import dayjs from "dayjs";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import _ from "lodash";
+import noop from "lodash/noop";
 import { switchTo } from "navbar";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -144,7 +144,7 @@ function AcceptTermsOfServiceModal({
       open={isModalOpen}
       title="Terms of Services"
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
-      onCancel={acceptanceInfo.acceptanceDeadlinePassed ? _.noop : closeModal}
+      onCancel={acceptanceInfo.acceptanceDeadlinePassed ? noop : closeModal}
       width={850}
       maskClosable={false}
       footer={[

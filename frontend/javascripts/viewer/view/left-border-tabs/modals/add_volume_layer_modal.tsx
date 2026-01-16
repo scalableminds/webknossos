@@ -6,7 +6,8 @@ import {
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
 import Toast from "libs/toast";
-import _ from "lodash";
+import clone from "lodash/clone";
+import differenceWith from "lodash/differenceWith";
 import messages from "messages";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -85,7 +86,7 @@ export function validateReadableLayerName(
     // and the readableLayerName is equal to the name given by nameNotToCount.
     const index = allReadableLayerNames.indexOf(nameNotToCount);
     if (index > -1) {
-      allReadableLayerNames = _.clone(allReadableLayerNames); // Avoiding modifying passed parameters.
+      allReadableLayerNames = clone(allReadableLayerNames); // Avoiding modifying passed parameters.
       allReadableLayerNames.splice(index, 1);
     }
   }
@@ -157,7 +158,7 @@ export default function AddVolumeLayerModal({
   const segmentationLayers = getSegmentationLayers(dataset);
   const volumeTracingLayers = getVolumeTracingLayers(dataset);
 
-  const availableSegmentationLayers = _.differenceWith(segmentationLayers, volumeTracingLayers);
+  const availableSegmentationLayers = differenceWith(segmentationLayers, volumeTracingLayers);
 
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();

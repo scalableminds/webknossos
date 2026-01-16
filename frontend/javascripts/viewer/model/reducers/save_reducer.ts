@@ -1,6 +1,8 @@
 import update from "immutability-helper";
 import Date from "libs/date";
-import _ from "lodash";
+import chunk from "lodash/chunk";
+import isEqual from "lodash/isEqual";
+import sumBy from "lodash/sumBy";
 import { type TracingStats, getStats } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
@@ -41,7 +43,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         throw new Error("Tried to save something even though user is not logged in.");
       }
 
-      const updateActionChunks = _.chunk(items, MAXIMUM_ACTION_COUNT_PER_BATCH);
+      const updateActionChunks = chunk(items, MAXIMUM_ACTION_COUNT_PER_BATCH);
 
       const transactionGroupCount = updateActionChunks.length;
       const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
@@ -70,7 +72,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         oldQueue.length > 0 &&
         newQueue.length > 0 &&
         newQueue.at(-1)?.actions.some((action) => NOT_IDEMPOTENT_ACTIONS.includes(action.name)) &&
-        _.isEqual(oldQueue.at(-1)?.actions, newQueue.at(-1)?.actions)
+        isEqual(oldQueue.at(-1)?.actions, newQueue.at(-1)?.actions)
       ) {
         console.warn(
           "Redundant saving was detected.",
@@ -102,7 +104,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       if (count > 0) {
         const queue = state.save.queue;
 
-        const processedQueueActionCount = _.sumBy(
+        const processedQueueActionCount = sumBy(
           queue.slice(0, count),
           (batch) => batch.actions.length,
         );

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import range from "lodash/range";
 import { getBitDepth, getByteCountFromLayer } from "viewer/model/accessors/dataset_accessor";
 import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
@@ -98,8 +98,8 @@ describe("wkstore_adapter", () => {
 
     const fourBitFactor = _fourBit && layer.category === "color" ? 0.5 : 1;
     const byteCount = fourBitFactor * getByteCountFromLayer(layer) * Constants.BUCKET_SIZE;
-    const bucketData1 = _.range(0, byteCount).map((i) => i % 256);
-    const bucketData2 = _.range(0, byteCount).map((i) => (2 * i) % 256);
+    const bucketData1 = range(0, byteCount).map((i) => i % 256);
+    const bucketData2 = range(0, byteCount).map((i) => (2 * i) % 256);
 
     const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
 

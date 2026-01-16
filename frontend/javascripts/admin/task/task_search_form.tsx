@@ -4,7 +4,7 @@ import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
 import { Button, Col, Dropdown, Flex, Form, Input, Row, Select } from "antd";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";
-import _ from "lodash";
+import size from "lodash/size";
 import { useEffect, useState } from "react";
 import type { APIProject, APITaskType, APIUser } from "types/api_types";
 const FormItem = Form.Item;
@@ -60,7 +60,7 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
     const persistedFieldValues = persistedfieldValues != null ? persistedfieldValues : {};
     const fieldValues = initialFieldValues != null ? initialFieldValues : persistedFieldValues;
 
-    if (_.size(fieldValues) > 0) {
+    if (size(fieldValues) > 0) {
       form.setFieldsValue(fieldValues);
       handleSearchFormFinish(false);
     }

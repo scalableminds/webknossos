@@ -1,4 +1,4 @@
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import {
   tokenUserA,
   tokenUserC,
@@ -20,7 +20,7 @@ describe("Folder API (E2E)", () => {
   });
 
   it("getFolderTree", async () => {
-    const folderTree = _.sortBy(await getFolderTree(), (folderWithParent) => folderWithParent.name);
+    const folderTree = sortBy(await getFolderTree(), (folderWithParent) => folderWithParent.name);
 
     writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
       isArray: true,

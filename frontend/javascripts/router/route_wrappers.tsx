@@ -12,7 +12,7 @@ import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
-import { isNumber } from "lodash";
+import isNumber from "lodash/isNumber";
 import { useEffect } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";

@@ -1,6 +1,8 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { Checkbox, Divider, Popover, Tooltip } from "antd";
-import _ from "lodash";
+import mapValues from "lodash/mapValues";
+import pick from "lodash/pick";
+import pickBy from "lodash/pickBy";
 import React from "react";
 import ButtonComponent from "viewer/view/components/button_component";
 import type {
@@ -32,12 +34,12 @@ const getFilteredConnectomeData = (
   const { agglomerates, synapses, connectomeFile } = connectomeData;
 
   // Filter by synapse direction by potentially filtering the in/out keys of the agglomerates
-  const filteredAgglomerates = _.mapValues(agglomerates, (agglomerate) =>
-    _.pick(agglomerate, synapseDirections),
+  const filteredAgglomerates = mapValues(agglomerates, (agglomerate) =>
+    pick(agglomerate, synapseDirections),
   );
 
   // Filter by synapse type by removing all synapses that are not of the selected type(s)
-  const filteredSynapses = _.pickBy(synapses, (synapse: Synapse) =>
+  const filteredSynapses = pickBy(synapses, (synapse: Synapse) =>
     synapseTypes.includes(synapse.type),
   );
 

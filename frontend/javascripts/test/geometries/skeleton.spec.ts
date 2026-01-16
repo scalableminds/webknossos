@@ -1,7 +1,7 @@
 // Integration tests for skeleton.ts
 // Ensure singletons are set up
 import "test/helpers/apiHelpers";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { describe, it, beforeAll, expect } from "vitest";
 import type { Vector3 } from "viewer/constants";
@@ -123,7 +123,7 @@ describe("Skeleton", () => {
     textureData.set(treeColors);
 
     // Using isEqual from lodash as noted in the original test
-    expect(_.isEqual(skeleton.treeColorTexture.image.data, textureData)).toBe(true);
+    expect(isEqual(skeleton.treeColorTexture.image.data, textureData)).toBe(true);
   });
 
   it("should increase its buffers once the max capacity is reached", async () => {

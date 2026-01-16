@@ -1,4 +1,7 @@
-import _ from "lodash";
+import extend from "lodash/extend";
+import cloneDeep from "lodash/cloneDeep";
+import sortBy from "lodash/sortBy";
+import size from "lodash/size";
 import update from "immutability-helper";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import type { Node } from "viewer/model/types/tree_types";
@@ -164,7 +167,7 @@ const initialSkeletonTracing: SkeletonTracing = {
   additionalAxes: [],
 };
 
-const initialState: WebknossosState = _.extend({}, defaultState, {
+const initialState: WebknossosState = extend({}, defaultState, {
   dataset: {
     ...defaultState.dataset,
     name: "Test Dataset",
@@ -751,7 +754,7 @@ describe("NML", () => {
   });
 
   it("addTreesAndGroups reducer should assign new node and tree ids", () => {
-    const action = addTreesAndGroupsAction(_.cloneDeep(initialSkeletonTracing.trees), []);
+    const action = addTreesAndGroupsAction(cloneDeep(initialSkeletonTracing.trees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
 
@@ -770,7 +773,7 @@ describe("NML", () => {
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.size()).toBe(3);
     expect(newSkeletonTracing.trees.getOrThrow(4).nodes.getOrThrow(12).id).toBe(12);
 
-    const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.toArray(), "source");
+    const getSortedEdges = (edges: EdgeCollection) => sortBy(edges.toArray(), "source");
 
     // And node ids in edges, branchpoints and comments should have been replaced
     expect(getSortedEdges(newSkeletonTracing.trees.getOrThrow(3).edges)).toEqual([
@@ -819,8 +822,8 @@ describe("NML", () => {
 
   it("addTreesAndGroups reducer should assign new group ids", () => {
     const action = addTreesAndGroupsAction(
-      _.cloneDeep(initialSkeletonTracing.trees),
-      _.cloneDeep(initialSkeletonTracing.treeGroups),
+      cloneDeep(initialSkeletonTracing.trees),
+      cloneDeep(initialSkeletonTracing.treeGroups),
     );
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
@@ -831,7 +834,7 @@ describe("NML", () => {
     expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
 
     // New node and tree ids should have been assigned
-    expect(_.size(newSkeletonTracing.treeGroups)).toBe(4);
+    expect(size(newSkeletonTracing.treeGroups)).toBe(4);
     expect(newSkeletonTracing.treeGroups[2].groupId).not.toBe(
       newSkeletonTracing.treeGroups[0].groupId,
     );
@@ -865,7 +868,7 @@ describe("NML", () => {
       comments: testComments,
     });
 
-    const action = addTreesAndGroupsAction(_.cloneDeep(newTrees), []);
+    const action = addTreesAndGroupsAction(cloneDeep(newTrees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
 
@@ -917,18 +920,18 @@ describe("NML", () => {
     expect(parsedTrees.getOrThrow(3).nodes.has(1)).toBe(true);
     expect(parsedTrees.getOrThrow(3).nodes.has(2)).toBe(false);
     expect(parsedTrees.getOrThrow(3).nodes.has(7)).toBe(false);
-    expect(_.size(parsedTrees.getOrThrow(3).branchPoints)).toBe(1);
-    expect(_.size(parsedTrees.getOrThrow(3).comments)).toBe(1);
+    expect(size(parsedTrees.getOrThrow(3).branchPoints)).toBe(1);
+    expect(size(parsedTrees.getOrThrow(3).comments)).toBe(1);
     expect(parsedTrees.getOrThrow(4).nodes.has(2)).toBe(true);
     expect(parsedTrees.getOrThrow(5).nodes.has(7)).toBe(true);
-    expect(_.size(parsedTrees.getOrThrow(5).branchPoints)).toBe(1);
+    expect(size(parsedTrees.getOrThrow(5).branchPoints)).toBe(1);
 
     // Check that the split up trees were wrapped in a group
     // which was inserted into the original tree's group
     const parentGroup = findGroup(parsedTreeGroups, 3);
     if (parentGroup == null)
       throw Error("Assertion Error: Serialized group is missing after parsing.");
-    expect(_.size(parentGroup.children)).toBe(1);
+    expect(size(parentGroup.children)).toBe(1);
     expect(parentGroup.children[0].name).toBe("TestTree-0");
   });
 });

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/rest_api";
 import { describe, beforeAll, expect, it } from "vitest";
@@ -10,7 +10,7 @@ describe("Teams API (E2E)", () => {
   });
 
   it("getTeams()", async () => {
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await api.getTeams(), (team) => team.name);
 
     writeTypeCheckingFile(teams, "team", "APITeam", {
       isArray: true,
@@ -20,7 +20,7 @@ describe("Teams API (E2E)", () => {
   });
 
   it("getEditableTeams()", async () => {
-    const editableTeams = _.sortBy(await api.getEditableTeams(), (team) => team.name);
+    const editableTeams = sortBy(await api.getEditableTeams(), (team) => team.name);
 
     expect(editableTeams).toMatchSnapshot();
   });

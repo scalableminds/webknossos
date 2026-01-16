@@ -3,7 +3,10 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { coalesce, map3, numberArrayToVector3, roundTo } from "libs/utils";
 import window, { location } from "libs/window";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
+import partition from "lodash/partition";
+import size from "lodash/size";
+import throttle from "lodash/throttle";
 import messages from "messages";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
 import type { APIDataset, AdditionalCoordinate } from "types/api_types";
@@ -153,7 +156,7 @@ class UrlManager {
     this.updateUnthrottled();
   }
 
-  update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
+  update = throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
 
   updateUnthrottled() {
     const url = this.buildUrl();
@@ -220,7 +223,7 @@ class UrlManager {
     }
 
     const commaSeparatedValues = urlHash.split(",");
-    const [baseValues, keyValuePairStrings] = _.partition(
+    const [baseValues, keyValuePairStrings] = partition(
       commaSeparatedValues,
       (value) => !value.includes("="),
     );
@@ -292,7 +295,7 @@ class UrlManager {
     const flycamRotation = map3((e) => roundTo(e, 2), state.flycam.rotation);
     const rotation = {
       // Keep rotation state empty if no rotation is active to have shorter url hashes.
-      rotation: _.isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
+      rotation: isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
     };
     const activeNode = state.annotation.skeleton?.activeNodeId;
     const activeNodeOptional = activeNode != null ? { activeNode } : {};
@@ -370,7 +373,7 @@ class UrlManager {
     }
 
     const stateByLayerOptional =
-      _.size(stateByLayer) > 0
+      size(stateByLayer) > 0
         ? {
             stateByLayer,
           }

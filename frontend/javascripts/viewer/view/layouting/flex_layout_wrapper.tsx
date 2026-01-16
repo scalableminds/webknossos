@@ -6,7 +6,7 @@ import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "fle
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import messages from "messages";
 import type React from "react";
 import { Fragment, PureComponent } from "react";
@@ -89,7 +89,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     this.unbindListeners = [];
     this.addListeners();
     this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
-    props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
+    props.setBorderOpenStatus(cloneDeep(this.borderOpenStatusWhenNotMaximized));
     this.updateToModelStateAndAdjustIt(model);
     this.state = {
       model,
@@ -441,7 +441,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
-    const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
+    const currentLayoutModel = cloneDeep(this.state.model.toJson());
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
@@ -507,7 +507,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
-    const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
+    const borderOpenStatusCopy = cloneDeep(Store.getState().uiInformation.borderOpenStatus);
 
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);

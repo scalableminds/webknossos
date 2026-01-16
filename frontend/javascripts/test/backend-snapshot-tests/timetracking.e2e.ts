@@ -1,4 +1,4 @@
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import dayjs from "dayjs";
 import {
   tokenUserA,
@@ -24,7 +24,7 @@ describe("Time Tracking API (E2E)", () => {
     setUserAuthToken(tokenUserA);
     activeUser = await api.getActiveUser();
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await api.getTeams(), (team) => team.name);
 
     firstTeam = teams[0];
   });

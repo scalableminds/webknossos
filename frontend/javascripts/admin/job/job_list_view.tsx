@@ -24,7 +24,7 @@ import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy, pluralize } from "libs/utils";
-import _ from "lodash";
+import capitalize from "lodash/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -129,7 +129,7 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
 export function JobState({ job }: { job: APIJob }) {
   const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
-  const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+  const jobStateNormalized = capitalize(job.state.toLowerCase());
 
   return (
     <Tooltip title={tooltip}>

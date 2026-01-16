@@ -3,7 +3,7 @@
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */
-import _ from "lodash";
+import max from "lodash/max";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
 import {
@@ -198,7 +198,7 @@ describe("Volume Tracing", () => {
     }
 
     // @ts-ignore
-    expect(_.max(data), "All the data should be 0 (== erased).").toBe(0);
+    expect(max(data), "All the data should be 0 (== erased).").toBe(0);
   }
 
   it<WebknossosTestContext>("Undo erasing in mag 4 (load before undo)", async (context) => {

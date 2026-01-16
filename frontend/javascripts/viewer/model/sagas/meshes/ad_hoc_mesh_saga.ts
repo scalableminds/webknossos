@@ -9,7 +9,8 @@ import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
-import _ from "lodash";
+import get from "lodash/get";
+import set from "lodash/set";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -82,7 +83,7 @@ function getOrAddMapForSegment(
 
   const keys = [additionalCoordKey, layerName];
   // create new map if adhocMeshesMapByLayer[additionalCoordinatesString][layerName] doesn't exist yet.
-  _.set(adhocMeshesMapByLayer, keys, _.get(adhocMeshesMapByLayer, keys, new Map()));
+  set(adhocMeshesMapByLayer, keys, get(adhocMeshesMapByLayer, keys, new Map()));
   const meshesMap = adhocMeshesMapByLayer[additionalCoordKey][layerName];
   const maybeMap = meshesMap.get(segmentId);
 

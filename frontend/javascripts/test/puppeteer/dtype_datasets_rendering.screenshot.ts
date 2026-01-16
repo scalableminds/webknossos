@@ -16,7 +16,8 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
-import _ from "lodash";
+import flatten from "lodash/flatten";
+import uniq from "lodash/uniq";
 import {
   getDtypeConfigForElementClass,
   getSupportedValueRangeForElementClass,
@@ -116,7 +117,7 @@ type Spec = {
   alsoTestSelectiveSegmentId?: boolean;
 };
 
-const specs: Array<Spec> = _.flatten(
+const specs: Array<Spec> = flatten(
   dtypes.map((dtype): Spec[] => {
     const elementClass = dtype === "float32" ? "float" : dtype;
 
@@ -180,7 +181,7 @@ const specs: Array<Spec> = _.flatten(
   }),
 );
 
-const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
+const datasetNames = uniq(specs.map((spec) => spec.datasetName));
 
 const datasetNameToId: Record<string, string> = {};
 

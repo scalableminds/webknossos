@@ -9,7 +9,7 @@ import { message } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
-import _ from "lodash";
+import min from "lodash/min";
 import { buffers, eventChannel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import {
@@ -733,7 +733,7 @@ function buildMappingObject(mappingName: string, fetchedMappings: APIMappings): 
     );
 
     for (const mappingClass of mapping.classes) {
-      const minId = _.min(mappingClass);
+      const minId = min(mappingClass);
       if (minId == null) {
         // The class is empty and can be ignored
         continue;

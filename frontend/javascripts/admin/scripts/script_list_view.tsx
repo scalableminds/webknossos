@@ -7,7 +7,7 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import partial from "lodash/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
@@ -174,7 +174,7 @@ function ScriptListView() {
                   Edit
                 </Link>
                 <br />
-                <LinkButton onClick={_.partial(deleteScript, script)}>
+                <LinkButton onClick={partial(deleteScript, script)}>
                   <DeleteOutlined className="icon-margin-right" />
                   Delete
                 </LinkButton>

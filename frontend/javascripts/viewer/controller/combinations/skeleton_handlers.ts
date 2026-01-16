@@ -1,6 +1,7 @@
 import { V3 } from "libs/mjs";
 import { values } from "libs/utils";
-import _ from "lodash";
+import min from "lodash/min";
+import pick from "lodash/pick";
 import { Euler, Matrix4, Scene, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
@@ -338,12 +339,12 @@ export function createSkeletonNode(
   let state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
   const activeMagIndices = getActiveMagIndicesForLayers(state);
-  const activeMagIndicesOfEnabledColorLayers = _.pick(
+  const activeMagIndicesOfEnabledColorLayers = pick(
     activeMagIndices,
     enabledColorLayers.map((l) => l.name),
   );
   const finestMagIdx =
-    _.min(values(activeMagIndicesOfEnabledColorLayers)) || _.min(values(activeMagIndices)) || 0;
+    min(values(activeMagIndicesOfEnabledColorLayers)) || min(values(activeMagIndices)) || 0;
 
   Store.dispatch(
     createNodeAction(
@@ -411,7 +412,7 @@ export function maybeGetNodeIdFromPosition(
   const { skeletons } = SceneController;
 
   // Unfortunately, we cannot import the Skeleton class here to set the correct type, due to cyclic dependencies
-  const skeletonsWhichSupportPicking = _.values(skeletons).filter(
+  const skeletonsWhichSupportPicking = values(skeletons).filter(
     (skeleton) => skeleton.supportsPicking,
   );
 

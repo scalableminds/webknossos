@@ -1,4 +1,4 @@
-import _ from "lodash";
+import mean from "lodash/mean";
 import type { Matrix4x4 } from "mjs";
 import { Matrix, solve } from "ml-matrix";
 import type { Vector3 } from "viewer/constants";
@@ -34,7 +34,7 @@ export default function estimateAffine(
   const xMatrix = solve(A, b);
   const x = xMatrix.to1DArray();
   const error = Matrix.sub(b, new Matrix(A).mmul(xMatrix)).to1DArray();
-  const meanError = _.mean(error.map((el) => Math.abs(el)));
+  const meanError = mean(error.map((el) => Math.abs(el)));
   if (optInfoOut) {
     optInfoOut.meanError = meanError;
   }

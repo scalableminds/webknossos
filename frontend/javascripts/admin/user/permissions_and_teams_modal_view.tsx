@@ -3,7 +3,9 @@ import { getEditableTeams, updateUser } from "admin/rest_api";
 import { App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import { useFetch } from "libs/react_helpers";
-import _ from "lodash";
+import has from "lodash/has";
+import keyBy from "lodash/keyBy";
+import omit from "lodash/omit";
 import messages from "messages";
 import React, { type Key, useEffect, useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
@@ -90,14 +92,14 @@ export function PermissionsAndTeamsComponent({
   }
 
   function handleUnselectTeam(teamName: string) {
-    setSelectedTeams(_.omit(selectedTeams, teamName));
+    setSelectedTeams(omit(selectedTeams, teamName));
   }
 
   function getTeamComponent(team: APITeam, isDisabled: boolean) {
     return (
       <Checkbox
         value={team.name}
-        checked={_.has(selectedTeams, team.name)}
+        checked={has(selectedTeams, team.name)}
         disabled={isDisabled}
         onChange={(event) => {
           if (event.target.checked) {
@@ -128,7 +130,7 @@ export function PermissionsAndTeamsComponent({
           paddingBottom: 8,
         }}
         value={selectedValue}
-        disabled={!_.has(selectedTeams, team.name) || isDisabled}
+        disabled={!has(selectedTeams, team.name) || isDisabled}
         onChange={({ target: { value } }) =>
           handleSelectTeamRole(team.name, value === ROLES.teammanager)
         }
@@ -263,7 +265,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
     const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
     if (singleUserMaybe) {
-      const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
+      const newSelectedTeams = keyBy(singleUserMaybe.teams, "name");
 
       const userPermission = getPermissionGroupOfUser(singleUserMaybe);
       setSelectedTeams(newSelectedTeams);

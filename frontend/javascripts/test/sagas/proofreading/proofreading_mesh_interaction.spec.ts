@@ -1,7 +1,11 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
 import _ from "lodash";
 import { call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import {
+  type WebknossosTestContext,
+  setupWebknossosForTesting,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { delay } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
@@ -63,7 +67,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+    yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
     yield put(setActiveCellAction(1, undefined, null, 1));
 
     yield call(createEditableMapping);
@@ -244,7 +248,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
+    yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
     yield call(createEditableMapping);
@@ -370,9 +374,9 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Generator<any, void, any> {
       yield simulateSplitAgglomeratesViaMeshes(context);
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(receivedUpdateActions.slice(-2)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -382,6 +386,20 @@ describe("Proofreading (with mesh actions)", () => {
             // but the merge made it a 4, because the split operation is after the injected version 7.
             segmentId1: 1337,
             segmentId2: 1338,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [1337, 1337, 1337],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 4,
+            metadata: [],
+            name: null,
           },
         },
       ]);
@@ -476,7 +494,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
+    yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
     yield call(createEditableMapping);
@@ -530,9 +548,8 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Generator<any, void, any> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
-      expect(mergeSaveActionBatch).toEqual([
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+      expect(receivedUpdateActions.slice(-3)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -549,6 +566,21 @@ describe("Proofreading (with mesh actions)", () => {
             agglomerateId: 1,
             segmentId1: 3,
             segmentId2: 1337,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+
+            additionalCoordinates: undefined,
+            anchorPosition: [1, 1, 1],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1,
+            metadata: [],
+            name: null,
           },
         },
       ]);
@@ -637,10 +669,9 @@ describe("Proofreading (with mesh actions)", () => {
 
     const task = startSaga(function* task(): Generator<any, void, any> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
-      expect(mergeSaveActionBatch).toEqual([
+      expect(receivedUpdateActions.slice(-3)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -657,6 +688,20 @@ describe("Proofreading (with mesh actions)", () => {
             agglomerateId: 1,
             segmentId1: 3,
             segmentId2: 1337,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [1, 1, 1],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1,
+            metadata: [],
+            name: null,
           },
         },
       ]);

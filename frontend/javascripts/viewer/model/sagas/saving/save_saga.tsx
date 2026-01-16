@@ -235,7 +235,12 @@ function* fulfillAllEnsureHasNewestVersionActions(
   }
 }
 
-function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
+function* reapplyUpdateActionsFromSaveQueue(
+  // appliedBackendUpdateActions contains the backend actions that were used to forward the local state
+  // during rebase. These actions can be used as additional information to adapt the local, pending
+  // save queue entries to the rebase.
+  appliedBackendUpdateActions: APIUpdateActionBatch[],
+): Saga<{ successful: boolean }> {
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const currentVersion = yield* select((state) => state.annotation.version);
   if (saveQueueEntries.length === 0) {
@@ -244,7 +249,10 @@ function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
   // Potentially update save queue entries to state after applying missing backend actions.
   // Properties like unmapped segment ids of proofreading actions might have changed and are updated here.
   // updateSaveQueueEntriesToStateAfterRebase might do some additional needed backend requests.
-  const { success, updatedSaveQueue } = yield* call(updateSaveQueueEntriesToStateAfterRebase);
+  const { success, updatedSaveQueue } = yield* call(
+    updateSaveQueueEntriesToStateAfterRebase,
+    appliedBackendUpdateActions,
+  );
   if (success) {
     const saveQueueAsServerUpdateActionBatches = saveQueueEntriesToServerUpdateActionBatches(
       updatedSaveQueue,
@@ -282,7 +290,10 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     yield* call(diffTracingsAndPrepareRebase);
   }
 
+  // ColoredLogger.logRed("needsRebasing", needsRebasing);
+
   try {
+    // ColoredLogger.logRed("apply from server", missingUpdateActions);
     if (missingUpdateActions.length > 0) {
       const { successful } = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
       if (!successful) {
@@ -290,8 +301,9 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       }
     }
     if (needsRebasing) {
+      // ColoredLogger.logRed("Reapply from save queue");
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
-      const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue);
+      const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue, missingUpdateActions);
       if (!successful) {
         return { successful: false, shouldTerminate: false };
       }
@@ -480,9 +492,12 @@ export function* tryToIncorporateActions(
         }
         case "updateLargestSegmentId":
         case "createSegment":
+        case "mergeSegments":
         case "deleteSegment":
-        case "updateSegment":
-        case "updateSegmentGroups":
+        case "updateSegmentPartial":
+        case "updateMetadataOfSegment":
+        case "upsertSegmentGroup":
+        case "deleteSegmentGroup":
         // Volume User Bounding Boxes
         case "addUserBoundingBoxInVolumeTracing":
         case "deleteUserBoundingBoxInVolumeTracing":
@@ -568,9 +583,11 @@ export function* tryToIncorporateActions(
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
         case "mergeTree":
+        case "updateSegment":
         case "updateSkeletonTracing":
         case "updateVolumeTracing":
         case "updateUserBoundingBoxesInSkeletonTracing":
+        case "updateSegmentGroups":
         case "updateUserBoundingBoxesInVolumeTracing": {
           console.error("Cannot apply action", action.name);
           yield* call(finalize);

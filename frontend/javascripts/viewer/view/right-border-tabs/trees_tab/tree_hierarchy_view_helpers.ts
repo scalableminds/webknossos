@@ -2,6 +2,7 @@ import type { DataNode } from "antd/es/tree";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { mapGroupsWithRoot } from "viewer/model/accessors/skeletontracing_accessor";
+import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
@@ -252,6 +253,11 @@ export function getGroupByIdWithSubgroups(
   treeGroups: TreeGroup[],
   groupId: number | undefined,
 ): number[] {
+  /*
+   * Given a nested array of groups and a group id,
+   * returns the ids of the given group and all its
+   * subgroups.
+   */
   const groupWithSubgroups: number[] = [];
   callDeepWithChildren(treeGroups, groupId, (treeGroup) => {
     groupWithSubgroups.push(treeGroup.groupId);
@@ -281,6 +287,36 @@ export function moveGroupsHelper(
         : parentGroup.children,
   }));
   return newGroups;
+}
+
+export function createGroupHelper(
+  segmentGroups: TreeGroup[],
+  name: string | null | undefined,
+  newGroupId: number | null | undefined,
+  parentGroupId: number | null | undefined,
+) {
+  if (parentGroupId == null) {
+    // Guard against explicitly passed null or undefined.
+    parentGroupId = MISSING_GROUP_ID;
+  }
+
+  const newSegmentGroups = _.cloneDeep(segmentGroups);
+  newGroupId = newGroupId ?? getMaximumGroupId(newSegmentGroups) + 1;
+  const newGroup = {
+    name: name || `Group ${newGroupId}`,
+    groupId: newGroupId,
+    children: [],
+    // isExpanded: false,
+  };
+
+  if (parentGroupId === MISSING_GROUP_ID) {
+    newSegmentGroups.push(newGroup);
+  } else {
+    callDeep(newSegmentGroups, parentGroupId, (item) => {
+      item.children.push(newGroup);
+    });
+  }
+  return { newSegmentGroups, newGroupId };
 }
 
 export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(

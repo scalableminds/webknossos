@@ -62,5 +62,45 @@
       "transactionId": "dummyRequestId",
       "version": 10,
     },
+    {
+      "actions": [
+        {
+          "name": "createSegment",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "additionalCoordinates": undefined,
+            "anchorPosition": [
+              2,
+              2,
+              2,
+            ],
+            "color": null,
+            "creationTime": 1494695001688,
+            "groupId": null,
+            "id": 1,
+            "metadata": [],
+            "name": null,
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME","REMOVE_SEGMENT","REMOVE_MESH","SET_BUSY_BLOCKING_INFO_ACTION","CLICK_SEGMENT","MAYBE_FETCH_MESH_FILES","UPDATE_SEGMENT"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 3,
+          "nodeCount": 6,
+          "treeCount": 3,
+        },
+        "volumeTracingId": {
+          "segmentCount": 1,
+        },
+      },
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 11,
+    },
   ],
 ]

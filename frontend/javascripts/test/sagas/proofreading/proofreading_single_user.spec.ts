@@ -1,5 +1,9 @@
 import { call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import {
+  type WebknossosTestContext,
+  setupWebknossosForTesting,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,
@@ -52,7 +56,7 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Execute the actual merge and wait for the finished mapping.
@@ -105,7 +109,7 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Prepare the server's reply for the upcoming split.
@@ -133,9 +137,8 @@ describe("Proofreading (Single User)", () => {
 
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
-      expect(mergeSaveActionBatch).toEqual([
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+      expect(receivedUpdateActions.slice(-1)).toEqual([
         {
           name: "splitAgglomerate",
           value: {

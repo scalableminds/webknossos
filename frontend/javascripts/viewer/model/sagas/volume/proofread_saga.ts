@@ -75,7 +75,9 @@ import {
   disallowSagaWhileBusyAction,
 } from "viewer/model/actions/ui_actions";
 import {
+  clickSegmentAction,
   initializeEditableMappingAction,
+  mergeSegmentsAction,
   removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
@@ -199,10 +201,6 @@ function proofreadCoarseMagIndex(): number {
       window.__proofreadCoarseResolutionIndex
     : 3;
 }
-function proofreadUsingMeshes(): boolean {
-  // @ts-ignore
-  return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
-}
 
 function* syncWithBackend() {
   yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
@@ -212,12 +210,14 @@ function* syncWithBackend() {
 
 let coarselyLoadedSegmentIds: number[] = [];
 
-function* loadCoarseMesh(
+function* ensureSegmentItemAndLoadCoarseMesh(
   layerName: string,
   segmentId: number,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
+  yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
+
   const autoRenderMeshInProofreading = yield* select(
     (state) => state.userConfiguration.autoRenderMeshInProofreading,
   );
@@ -318,10 +318,14 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
-  if (!proofreadUsingMeshes()) return;
-
-  /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
-  yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
+  /* Load a coarse mesh of the agglomerate at the click position */
+  yield* call(
+    ensureSegmentItemAndLoadCoarseMesh,
+    layerName,
+    segmentId,
+    position,
+    additionalCoordinates,
+  );
 }
 
 export function* createEditableMapping(): Saga<string> {
@@ -603,7 +607,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     nodePosition,
   });
 
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     pack(sourceAgglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetAgglomerateId, newTargetAgglomerateId, targetNodePosition),
   ]);
@@ -828,7 +832,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       ? edgesToRemove[0].position1
       : edgesToRemove[0].position2;
 
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: agglomerateId,
       newAgglomerateId: newAgglomerateIdFromPartition1,
@@ -1043,6 +1047,21 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
+  if (action.type === "PROOFREAD_MERGE") {
+    // todop: theoretically, the journal stuff could/should (?) happen within the reducer
+    // that handles mergeSegmentsAction. what about applying such an action during rebasing?
+    // yield* put(
+    //   appendToSegmentJournalAction({
+    //     type: "MERGE_SEGMENTS",
+    //     sourceId: sourceAgglomerateId,
+    //     targetId: targetAgglomerateId,
+    //   }),
+    // );
+
+    // Remove the segment that doesn't exist anymore.
+    yield* put(mergeSegmentsAction(sourceAgglomerateId, targetAgglomerateId, volumeTracingId));
+  }
+
   yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
 
@@ -1105,11 +1124,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     console.log("finished updating the mapping after a min-cut");
   }
 
-  if (action.type === "PROOFREAD_MERGE") {
-    // Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
-  }
-
   /* Reload meshes */
   const newMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId].mapping,
@@ -1157,7 +1171,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     Toast.info(`Assigned name "${sourceAgglomerate.name}" to new split-off segment.`);
   }
 
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: sourceAgglomerateId,
       newAgglomerateId: newSourceAgglomerateId,
@@ -1299,7 +1313,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   }
 
   /* Reload meshes */
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: targetAgglomerateId,
       newAgglomerateId: newTargetAgglomerateId,
@@ -1481,7 +1495,7 @@ function* getAgglomerateInfos(
   }
 }
 
-function* refreshAffectedMeshes(
+function* refreshAffectedSegmentItemsAndMeshes(
   layerName: string,
   items: Array<{
     agglomerateId: number;
@@ -1491,9 +1505,7 @@ function* refreshAffectedMeshes(
 ) {
   // ATTENTION: This saga should usually be called with `spawn` to avoid that the user
   // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
-  if (!proofreadUsingMeshes()) {
-    return;
-  }
+
   // Segmentations with more than 3 dimensions are currently not compatible
   // with proofreading. Once such datasets appear, this parameter needs to be
   // adapted.
@@ -1511,7 +1523,7 @@ function* refreshAffectedMeshes(
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
       yield* call(
-        loadCoarseMesh,
+        ensureSegmentItemAndLoadCoarseMesh,
         layerName,
         Number(item.newAgglomerateId),
         item.nodePosition,
@@ -1724,7 +1736,7 @@ function* gatherInfoForOperation(
     console.warn("[Proofreading] Cannot execute operation because no active segment item exists");
     return null;
   }
-  const activeSegmentPositionFloat = activeSegment.somePosition;
+  const activeSegmentPositionFloat = activeSegment.anchorPosition;
   if (activeSegmentPositionFloat == null) {
     console.warn("[Proofreading] Cannot execute operation because active segment has no position");
     return null;

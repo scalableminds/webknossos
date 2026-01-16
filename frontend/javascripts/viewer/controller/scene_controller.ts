@@ -149,7 +149,7 @@ class SceneController {
     // proportional to the actual size in nm.
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
-    // The dimension(s) with the highest mag will not be distorted.
+    // The dimension(s) with the highest resolution will not be distorted.
     this.rootGroup.scale.copy(
       new ThreeVector3(...Store.getState().dataset.dataSource.scale.factor),
     );

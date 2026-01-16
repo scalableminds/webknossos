@@ -35,7 +35,7 @@ import {
   getSegmentsForLayer,
 } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
-import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
+import { cachedDiffSegmentLists } from "../sagas/volume/volume_diffing";
 
 // 512**2 (entries) * 0.25 (load capacity) == 65_536 custom segment colors
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
@@ -357,7 +357,17 @@ export default class LayerRenderingManager {
         Store.getState(),
         this.name,
       );
-      for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
+      // todop: passing [] as the segment journals doesn't make optimal use of caching (the
+      // diffing will always run twice per change).
+      // beware: passing/ the journal will create the need to also properly handle the
+      // mergeSegments action.
+      for (const updateAction of cachedDiffSegmentLists(
+        this.name,
+        prevSegments,
+        newSegments,
+        [],
+        [],
+      )) {
         if (
           updateAction.name === "updateSegment" ||
           updateAction.name === "createSegment" ||

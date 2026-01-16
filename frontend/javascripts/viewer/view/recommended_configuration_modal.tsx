@@ -1,6 +1,6 @@
 import { settingComments } from "admin/tasktype/recommended_configuration_view";
 import { Modal, Table } from "antd";
-import { map } from "lodash";
+import map from "lodash/map";
 import messages, { settings } from "messages";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";

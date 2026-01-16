@@ -568,6 +568,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
   handleCSVDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing, annotationId } = this.props;
+    const datasetUnit = Store.getState().dataset.dataSource.scale.unit; //TODO_c make pretty
 
     if (!skeletonTracing) {
       return;
@@ -578,7 +579,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
-      const treesCsv = getTreesAsCSV(annotationId, skeletonTracing);
+      const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
       const nodesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
       const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 

@@ -1,24 +1,31 @@
 import saveAs from "file-saver";
+import _ from "lodash";
+import { api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
-export function getTreesAsCSV(annotationId: string, tracing: SkeletonTracing) {
+export function getTreesAsCSV(annotationId: string, tracing: SkeletonTracing, datasetUnit: string) {
   const visibleTrees = tracing.trees
     .values()
     .filter((tree) => tree.isVisible)
     .toArray();
-  const csvHeader = "annotationId,treeId,name,groupId,colorRGB,numberOfNodes,numberOfEdges";
+  const capitalizedUnit = _.capitalize(datasetUnit);
+  const csvHeader = `annotationId,treeId,name,groupId,colorRGB,numberOfNodes,numberOfEdges,pathLengthIn${capitalizedUnit},pathLengthVx`;
 
   const csvLines = visibleTrees.map((tree) => {
+    const [lengthInDSUnit, lengthInVx] = api.tracing.measureTreeLength(tree.treeId);
     const row = [
       annotationId,
       tree.treeId,
       tree.name,
-      tree.groupId,
+      tree.groupId === MISSING_GROUP_ID ? "root" : tree.groupId,
       tree.color,
       tree.nodes.size(),
       tree.edges.size(),
+      lengthInDSUnit,
+      lengthInVx,
     ];
     return transformToCSVRow(row);
   });
@@ -35,7 +42,7 @@ export function getTreeNodesAsCSV(
     .filter((tree) => tree.isVisible)
     .toArray();
   const csvHeader =
-    "annotationId,treeId,nodeId,nodeRadius,x,y,z,rotX,rotY,rotZ,additionalCoords,viewport,inMag,bitDepth,interpolation,time,comment";
+    "annotationId,treeId,nodeId,nodeRadiusNm,x,y,z,rotX,rotY,rotZ,additionalCoords,viewport,inMag,bitDepth,interpolation,time,comment";
   const { annotationId } = state.annotation;
 
   const csvLines = visibleTrees.flatMap((tree) =>

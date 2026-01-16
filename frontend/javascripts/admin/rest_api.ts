@@ -1180,21 +1180,44 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
         };
       },
       chunkSize: 10 * 1024 * 1024, // 10MB
-      permanentErrors: [400, 403, 404, 409, 415, 500, 501],
       simultaneousUploads: 3,
       chunkRetryInterval: 2000,
       maxChunkRetries: undefined,
       xhrTimeout: 10 * 60 * 1000, // 10m
-
       // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
       generateUniqueIdentifier,
+      // The following errors only tell ResumableJS to not
+      // retry automatically when they appear.
+      // 403 is explicitly listed because we want to get a fileError
+      // event. Then, we can invalidate the token and trigger
+      // a retry ourselves (see below).
+      permanentErrors: [400, 403, 404, 409, 415, 500, 501],
     });
 
-    resumable.on("fileError", function (file, message) {
-      console.log("fileError with message", message);
-      handleInvalidToken().then(() => {
-        file.retry();
-      });
+    let lastFileErrorTimestamp: number | null = null;
+    resumable.on("fileError", function (file, _message) {
+      // When a file could not be uploaded, assume that the token is. Then,
+      // refresh the token (unless we already did this in the last hour) and
+      // retry the file upload.
+      const ONE_HOUR_MS = 3600 * 1000;
+      if (lastFileErrorTimestamp == null || Date.now() - lastFileErrorTimestamp < ONE_HOUR_MS) {
+        handleInvalidToken()
+          .then(() => {
+            file.retry();
+          })
+          .catch(() => {
+            // Note that "terminalFileError" is an event which is only triggered by WK
+            // and not by the ResumableUpload library itself. We merely use the event bus
+            // of the ResumableUpload object.
+            // @ts-ignore The type definitions are incorrect. fire accepts an event name.
+            resumable.fire("terminalFileError");
+          });
+      } else {
+        // @ts-ignore See above.
+        resumable.fire("terminalFileError");
+      }
+
+      lastFileErrorTimestamp = Date.now();
     });
 
     return resumable;

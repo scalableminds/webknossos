@@ -4,7 +4,6 @@ import filter from "lodash/filter";
 import max from "lodash/max";
 import reduce from "lodash/reduce";
 import sum from "lodash/sum";
-import values from "lodash/values";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -54,7 +53,7 @@ export class WebKnossosModel {
         const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
-          values(this.dataLayers).forEach((layer) => layer.destroy());
+          Object.values(this.dataLayers).forEach((layer) => layer.destroy());
         }
 
         this.dataLayers = dataLayers;
@@ -339,7 +338,7 @@ export class WebKnossosModel {
      */
 
     if (this.dataLayers != null) {
-      values(this.dataLayers).forEach((layer) => layer.destroy());
+      Object.values(this.dataLayers).forEach((layer) => layer.destroy());
       this.dataLayers = {};
     }
   }

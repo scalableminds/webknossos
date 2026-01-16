@@ -2,7 +2,6 @@ import ErrorHandling from "libs/error_handling";
 import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
-import find from "lodash/find";
 import flattenDeep from "lodash/flattenDeep";
 import intersection from "lodash/intersection";
 import max from "lodash/max";
@@ -600,9 +599,7 @@ export const getEnabledColorLayers = memoizeOne(_getEnabledColorLayers);
 export function getThumbnailURL(dataset: APIDataset): string {
   const layers = dataset.dataSource.dataLayers;
 
-  const colorLayer = find(layers, {
-    category: "color",
-  });
+  const colorLayer = layers.find((l) => l.category === "color");
 
   if (colorLayer) {
     return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;

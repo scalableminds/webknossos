@@ -1,4 +1,3 @@
-import isArray from "lodash/isArray";
 import isObject from "lodash/isObject";
 import isString from "lodash/isString";
 import { useEffect } from "react";
@@ -16,7 +15,7 @@ const onMessage = async (event) => {
   // }
   if (!isObject(event.data)) return;
   const { type, args, messageId } = event.data;
-  if (type == null || !isArray(args)) return;
+  if (type == null || !Array.isArray(args)) return;
   let returnValue = null;
 
   switch (type) {

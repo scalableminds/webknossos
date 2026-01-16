@@ -3,7 +3,6 @@ import type { FormInstance } from "antd/lib/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { jsonStringify } from "libs/utils";
-import map from "lodash/map";
 import omit from "lodash/omit";
 import { type RecommendedConfiguration, settings } from "messages";
 import { Fragment } from "react";
@@ -126,7 +125,7 @@ export default function RecommendedConfigurationView({
   onChangeEnabled: (arg0: boolean) => void;
 }) {
   const recommendedConfiguration = getDefaultRecommendedConfiguration();
-  const configurationEntries = map(recommendedConfiguration, (_value: any, key: string) => {
+  const configurationEntries = Object.entries(recommendedConfiguration).map(([key, _value]) => {
     // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
     const settingsKey: keyof RecommendedConfiguration = key;
     return {

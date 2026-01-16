@@ -42,7 +42,6 @@ import Toast from "libs/toast";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash/keyBy";
-import map from "lodash/map";
 import React, { type Key, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
@@ -416,7 +415,7 @@ function UserListView() {
             width={250}
             render={(experiences: ExperienceMap, user: APIUser) => (
               <Space wrap>
-                {map(experiences, (value, domain) => (
+                {Object.entries(experiences).map(([domain, value]) => (
                   <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
                     <span
                       onClick={(evt) => {

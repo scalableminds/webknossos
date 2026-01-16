@@ -12,7 +12,7 @@ import { useFetch } from "libs/react_helpers";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import { chunkIntoTimeWindows } from "libs/utils";
-import flatten from "lodash/flatten";
+
 import flattenDepth from "lodash/flattenDepth";
 import groupBy from "lodash/groupBy";
 import isEqual from "lodash/isEqual";
@@ -287,7 +287,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     getNextPageParam: (lastPage) => lastPage.nextPage,
     getPreviousPageParam: (lastPage) => lastPage.previousPage,
   });
-  const flattenedVersions = flatten(versions?.pages.map((page) => page.data) || []);
+  const flattenedVersions = versions?.pages.flatMap((page) => page.data) || [];
   const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
   const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = flattenDepth(
     Object.entries(groupedAndChunkedVersions) as any,

@@ -4,7 +4,7 @@ import { isNoElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
 import intersection from "lodash/intersection";
 import union from "lodash/union";
-import values from "lodash/values";
+
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -705,7 +705,7 @@ class PlaneController extends PureComponent<Props> {
   }
 
   destroyInput() {
-    for (const mouse of values(this.input.mouseControllers)) {
+    for (const mouse of Object.values(this.input.mouseControllers)) {
       mouse.destroy();
     }
 

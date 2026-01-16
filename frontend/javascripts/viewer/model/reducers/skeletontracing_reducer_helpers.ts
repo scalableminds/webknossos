@@ -7,10 +7,8 @@ import compact from "lodash/compact";
 import first from "lodash/first";
 import isEmpty from "lodash/isEmpty";
 import last from "lodash/last";
-import map from "lodash/map";
 import lodashMax from "lodash/max";
 import random from "lodash/random";
-import some from "lodash/some";
 import sortedIndex from "lodash/sortedIndex";
 import without from "lodash/without";
 import type {
@@ -438,8 +436,7 @@ export function createBranchPoint(
   const { branchPointsAllowed } = restrictions;
   if (!branchPointsAllowed) return null;
 
-  const doesBranchPointExistAlready = some(
-    tree.branchPoints,
+  const doesBranchPointExistAlready = tree.branchPoints.some(
     (branchPoint) => branchPoint.nodeId === node.id,
   );
 
@@ -912,7 +909,7 @@ export function createMutableTreeMapFromTreeArray(
           tree.color != null
             ? colorObjectToRGBArray(tree.color)
             : ColorGenerator.distinctColorForId(tree.treeId),
-        branchPoints: map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
+        branchPoints: tree.branchPoints.map(serverBranchPointToMutableBranchPoint),
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,

@@ -1,4 +1,4 @@
-import { diffArrays, diffObjects } from "libs/utils";
+import { diffArrays, diffMaps, diffObjects } from "libs/utils";
 import _ from "lodash";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
@@ -210,7 +210,7 @@ export function diffGroupsGranular(prevGroups: TreeGroup[], groups: TreeGroup[])
 
   const { newlyExpandedIds, newlyNotExpandedIds } = diffGroups(prevGroups, groups);
 
-  const { onlyA, onlyB, changed } = Utils.diffMaps(prevGroupsById, groupsById, _.isEqual);
+  const { onlyA, onlyB, changed } = diffMaps(prevGroupsById, groupsById, _.isEqual);
 
   return {
     prevGroupsById,

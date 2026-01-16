@@ -1,6 +1,12 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
-import { colorObjectToRGBArray, floor3, mapEntriesToMap, point3ToVector3 } from "libs/utils";
+import {
+  ColoredLogger,
+  colorObjectToRGBArray,
+  floor3,
+  mapEntriesToMap,
+  point3ToVector3,
+} from "libs/utils";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
@@ -345,7 +351,7 @@ function VolumeTracingReducer(
           ]),
         });
       } else {
-        Utils.ColoredLogger.logRed("no volume tracing?");
+        ColoredLogger.logRed("no volume tracing?");
       }
 
       // todop: adapt journal?

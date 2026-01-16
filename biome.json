@@ -40,7 +40,8 @@
         "useExponentiationOperator": "off",
         "useDefaultParameterLast": "off",
         "useAsConstAssertion": "off",
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noNamespaceImport": "error"
       },
       "complexity": {
         "useSimplifiedLogicExpression": "off",
@@ -103,7 +104,9 @@
   },
   "overrides": [
     {
-      "include": ["**/package.json"],
+      "include": [
+        "**/package.json"
+      ],
       "formatter": {
         "lineWidth": 1
       }

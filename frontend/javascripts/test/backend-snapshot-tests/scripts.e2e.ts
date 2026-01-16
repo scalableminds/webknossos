@@ -1,5 +1,12 @@
 import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
-import * as api from "admin/rest_api";
+import {
+  getScripts,
+  getScript,
+  createScript,
+  updateScript,
+  deleteScript,
+  getActiveUser,
+} from "admin/rest_api";
 import { describe, it, beforeAll, expect } from "vitest";
 
 describe("Scripts API (E2E)", () => {
@@ -9,15 +16,15 @@ describe("Scripts API (E2E)", () => {
     setUserAuthToken(tokenUserA);
   });
 
-  it("getScripts()", async () => {
-    const scripts = await api.getScripts();
+  it("getScripts()", async ({ expect }) => {
+    const scripts = await getScripts();
     expect(scripts).toMatchSnapshot();
   });
 
-  it("getScript()", async () => {
-    const scripts = await api.getScripts();
+  it("getScript()", async ({ expect }) => {
+    const scripts = await getScripts();
     const firstScript = scripts[0];
-    const script = await api.getScript(firstScript.id);
+    const script = await getScript(firstScript.id);
 
     writeTypeCheckingFile(script, "script", "APIScript");
 
@@ -25,7 +32,7 @@ describe("Scripts API (E2E)", () => {
   });
 
   it("createScript(), updateScript(), and deleteScript()", async () => {
-    const activeUser = await api.getActiveUser();
+    const activeUser = await getActiveUser();
     const data = {
       id: "will-be-ignored-anyway",
       name: "MergerMode",
@@ -34,7 +41,7 @@ describe("Scripts API (E2E)", () => {
     };
 
     // Create New Script
-    const createdScript = await api.createScript(data);
+    const createdScript = await createScript(data);
 
     // Since the id will change after re-runs, we fix it here for easy
     // snapshotting
@@ -49,14 +56,14 @@ describe("Scripts API (E2E)", () => {
       owner: activeUser.id,
     });
 
-    const updatedScript = await api.updateScript(createdScript.id, newData);
+    const updatedScript = await updateScript(createdScript.id, newData);
     const updatedScriptWithFixedId = Object.assign({}, updatedScript, {
       id: "fixed-script-id",
     });
     expect(updatedScriptWithFixedId).toMatchSnapshot();
 
     // Delete Script
-    const response = await api.deleteScript(createdScript.id);
+    const response = await deleteScript(createdScript.id);
     expect(response).toMatchSnapshot();
   });
 });

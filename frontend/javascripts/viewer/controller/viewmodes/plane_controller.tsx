@@ -9,8 +9,13 @@ import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { OrthoView, OrthoViewMap } from "viewer/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
-import * as MoveHandlers from "viewer/controller/combinations/move_handlers";
-import * as SkeletonHandlers from "viewer/controller/combinations/skeleton_handlers";
+import { moveU, moveV, moveW, zoom } from "viewer/controller/combinations/move_handlers";
+import {
+  moveAlongDirection,
+  moveNode,
+  toPrecedingNode,
+  toSubsequentNode,
+} from "viewer/controller/combinations/skeleton_handlers";
 import {
   AreaMeasurementToolController,
   BoundingBoxToolController,
@@ -24,7 +29,7 @@ import {
   SkeletonToolController,
   VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
-import * as VolumeHandlers from "viewer/controller/combinations/volume_handlers";
+import { changeBrushSizeIfBrushIsActiveBy } from "viewer/controller/combinations/volume_handlers";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
@@ -127,8 +132,8 @@ class SkeletonKeybindings {
       delete: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
       backspace: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
       c: () => Store.dispatch(createTreeAction()),
-      e: () => SkeletonHandlers.moveAlongDirection(),
-      r: () => SkeletonHandlers.moveAlongDirection(true),
+      e: () => moveAlongDirection(),
+      r: () => moveAlongDirection(true),
       // Branches
       b: () => Store.dispatch(createBranchPointAction()),
       j: () => Store.dispatch(requestDeleteBranchPointAction()),
@@ -137,17 +142,17 @@ class SkeletonKeybindings {
         api.tracing.centerTDView();
       },
       // navigate nodes
-      "ctrl + ,": () => SkeletonHandlers.toPrecedingNode(),
-      "ctrl + .": () => SkeletonHandlers.toSubsequentNode(),
+      "ctrl + ,": () => toPrecedingNode(),
+      "ctrl + .": () => toSubsequentNode(),
     };
   }
 
   static getLoopedKeyboardControls() {
     return {
-      "ctrl + left": () => SkeletonHandlers.moveNode(-1, 0),
-      "ctrl + right": () => SkeletonHandlers.moveNode(1, 0),
-      "ctrl + up": () => SkeletonHandlers.moveNode(0, -1),
-      "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
+      "ctrl + left": () => moveNode(-1, 0),
+      "ctrl + right": () => moveNode(1, 0),
+      "ctrl + up": () => moveNode(0, -1),
+      "ctrl + down": () => moveNode(0, 1),
     };
   }
 
@@ -245,7 +250,7 @@ function createDelayAwareMoveHandler(
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
   const fn = (timeFactor: number, first: boolean) =>
-    MoveHandlers.moveW(
+    moveW(
       getMoveOffset(Store.getState(), timeFactor) * multiplier,
       first,
       useDynamicSpaceDirection,
@@ -443,10 +448,10 @@ class PlaneController extends PureComponent<Props> {
     });
     this.input.keyboard = new InputKeyboard({
       // Move
-      left: (timeFactor) => MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
-      right: (timeFactor) => MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
-      up: (timeFactor) => MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
-      down: (timeFactor) => MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
+      left: (timeFactor) => moveU(-getMoveOffset(Store.getState(), timeFactor)),
+      right: (timeFactor) => moveU(getMoveOffset(Store.getState(), timeFactor)),
+      up: (timeFactor) => moveV(-getMoveOffset(Store.getState(), timeFactor)),
+      down: (timeFactor) => moveV(getMoveOffset(Store.getState(), timeFactor)),
       "shift + left": (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
       "shift + right": (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
       "shift + up": (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
@@ -464,8 +469,8 @@ class PlaneController extends PureComponent<Props> {
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         // KeyboardJS is sensitive to ordering (complex combos first)
-        "shift + i": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
-        "shift + o": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
+        "shift + i": () => changeBrushSizeIfBrushIsActiveBy(-1),
+        "shift + o": () => changeBrushSizeIfBrushIsActiveBy(1),
         "shift + f": createDelayAwareMoveHandler(5, true),
         "shift + d": createDelayAwareMoveHandler(-5, true),
         "shift + space": createDelayAwareMoveHandler(-1),
@@ -476,8 +481,8 @@ class PlaneController extends PureComponent<Props> {
         f: createDelayAwareMoveHandler(1, true),
         d: createDelayAwareMoveHandler(-1, true),
         // Zoom in/out
-        i: () => MoveHandlers.zoom(1, false),
-        o: () => MoveHandlers.zoom(-1, false),
+        i: () => zoom(1, false),
+        o: () => zoom(-1, false),
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
         ...loopedKeyboardControls,

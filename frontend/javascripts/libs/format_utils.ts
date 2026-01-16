@@ -9,7 +9,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
-import _ from "lodash";
+import memoize from "lodash/memoize";
 import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
 import { Unicode } from "viewer/constants";
 
@@ -348,7 +348,7 @@ export function formatCountToDataAmountUnit(
   );
 }
 
-const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
+const getSortedFactorsAndUnits = memoize((unitMap: Map<number, string>) =>
   Array.from(unitMap.entries()).sort((a, b) => a[0] - b[0]),
 );
 

@@ -1733,13 +1733,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pirxpilot/saxophone@npm:^1.0.0":
-  version: 1.0.1
-  resolution: "@pirxpilot/saxophone@npm:1.0.1"
-  checksum: 10c0/b92ed9c1ba6f341c30df01d6d7ef6f2a137fa45799344251a5f0e75c5d77b7bdfec346362fc65d75ee383901cd4271bcdef55db0f736844d8a7d737a97d0db5d
-  languageName: node
-  linkType: hard
-
 "@pkgjs/parseargs@npm:^0.11.0":
   version: 0.11.0
   resolution: "@pkgjs/parseargs@npm:0.11.0"
@@ -12391,7 +12384,6 @@ __metadata:
     "@dnd-kit/sortable": "npm:^8.0.0"
     "@fortawesome/fontawesome-free": "npm:^5.15.4"
     "@github/webauthn-json": "npm:^2.1.1"
-    "@pirxpilot/saxophone": "npm:^1.0.0"
     "@redux-saga/testing-utils": "npm:^1.1.5"
     "@rehooks/document-title": "npm:^1.0.2"
     "@scalableminds/prop-types": "npm:^15.8.1"

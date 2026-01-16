@@ -126,7 +126,6 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@fortawesome/fontawesome-free": "^5.15.4",
     "@github/webauthn-json": "^2.1.1",
-    "@pirxpilot/saxophone": "^1.0.0",
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.8.1",
     "@tanstack/query-async-storage-persister": "^5.83.0",

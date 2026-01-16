@@ -1,4 +1,5 @@
 import type TPS3D from "libs/thin_plate_spline";
+import { range } from "lodash";
 import each from "lodash/each";
 import mapValues from "lodash/mapValues";
 import template from "lodash/template";
@@ -420,6 +421,7 @@ void main() {
     isFragment: true,
     glslTypeForElementClass,
     each,
+    range,
   });
 }
 
@@ -635,5 +637,6 @@ void main() {
     generateCalculateTpsOffsetFunction,
     glslTypeForElementClass,
     each,
+    range,
   });
 }

@@ -46,6 +46,7 @@ import { SimpleRow } from "dashboard/folders/metadata_table";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
+import { sum } from "lodash";
 import difference from "lodash/difference";
 import flatten from "lodash/flatten";
 import isNumber from "lodash/isNumber";

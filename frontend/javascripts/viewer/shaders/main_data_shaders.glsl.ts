@@ -1,5 +1,5 @@
 import type TPS3D from "libs/thin_plate_spline";
-import { range } from "lodash";
+import range from "lodash/range";
 import each from "lodash/each";
 import mapValues from "lodash/mapValues";
 import template from "lodash/template";

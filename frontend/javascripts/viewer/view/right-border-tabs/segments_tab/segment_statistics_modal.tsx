@@ -359,7 +359,7 @@ export function SegmentStatisticsModal({
       open
       title="Segment Statistics"
       onCancel={onCancel}
-      width={800}
+      width={1000}
       onOk={() =>
         !isErrorCase &&
         exportStatisticsToCSV(

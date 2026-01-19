@@ -1,5 +1,5 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Button, type MenuProps, Table, Typography } from "antd";
+import { type MenuProps, Table, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
@@ -23,6 +23,7 @@ import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import UserBoundingBoxInput from "viewer/view/components/setting_input_views";
 import DownloadModalView from "../action-bar/download_modal_view";
+import ButtonComponent from "../components/button_component";
 import { getContextMenuPositionFromEvent } from "../context_menu";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 
@@ -172,7 +173,7 @@ export default function BoundingBoxTab() {
   const maybeAddBoundingBoxButton = allowUpdate ? (
     <div style={{ textAlign: "center" }}>
       <FastTooltip title="Click to add another bounding box.">
-        <Button size="small" onClick={addNewBoundingBox} icon={<PlusOutlined />} />
+        <ButtonComponent size="small" onClick={addNewBoundingBox} icon={<PlusOutlined />} />
       </FastTooltip>
     </div>
   ) : null;
@@ -263,7 +264,7 @@ export default function BoundingBoxTab() {
                 onRow={(bb) => ({
                   onClick: (event) => {
                     hideContextMenu();
-                    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                    if (event.ctrlKey || event.metaKey) {
                       setSelectedRowKeys((prev) =>
                         prev.includes(bb.id)
                           ? prev.filter((key) => key !== bb.id)
@@ -271,6 +272,7 @@ export default function BoundingBoxTab() {
                       );
                     } else {
                       handleGoToBoundingBox(bb.id);
+                      setSelectedRowKeys([]);
                       dispatch(setActiveUserBoundingBoxId(bb.id));
                     }
                   },

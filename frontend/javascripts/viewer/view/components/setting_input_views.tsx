@@ -8,7 +8,6 @@ import {
   ScanOutlined,
 } from "@ant-design/icons";
 import {
-  Button,
   Col,
   Flex,
   Input,
@@ -34,6 +33,7 @@ import type { Vector3, Vector4, Vector6 } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
+import ButtonComponent from "./button_component";
 
 const ROW_GUTTER = 1;
 
@@ -394,7 +394,6 @@ type UserBoundingBoxInputProps = {
 };
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
-const RIGHT_COL_SPAN = 2;
 
 export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
@@ -574,106 +573,94 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
       onClick={onHideContextMenu}
     >
-      <Row
+      <Flex
+        gap="middle"
+        justify="flex-start"
         style={{
           marginTop: 10,
           marginBottom: 10,
         }}
       >
-        <Col span={3}>
+        <Flex gap="middle" justify="space-between" align="center">
           <Switch
             size="small"
             onChange={onVisibilityChange}
             checked={isVisible}
-            style={{
-              margin: "auto 0px",
-            }}
             // To prevent centering the bounding box on every edit (e.g. upon visibility change)
             // the click events are stopped from propagating to the parent div.
             onClick={(_value, e) => e.stopPropagation()}
           />
-        </Col>
-
-        <Col span={2}>
-          <Flex justify="space-around">
-            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-              <ColorSetting
-                value={Utils.rgbToHex(upscaledColor)}
-                onChange={handleColorChange}
-                disabled={disabled}
-              />
-            </FastTooltip>
-          </Flex>
-        </Col>
-        <Col span={SETTING_RIGHT_SPAN}>
           <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-            <span>
-              <Input
-                defaultValue={name}
-                placeholder="Bounding Box Name"
-                size="small"
-                value={name}
-                onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
-                  setName(evt.target.value);
-                }}
-                onPressEnter={handleNameChanged}
-                onBlur={handleNameChanged}
-                disabled={disabled}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </span>
-          </FastTooltip>
-        </Col>
-        <Col span={RIGHT_COL_SPAN}>
-          <FastTooltip title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}>
-            <Button
-              onClick={onDelete}
+            <ColorSetting
+              value={Utils.rgbToHex(upscaledColor)}
+              onChange={handleColorChange}
               disabled={disabled}
-              icon={<DeleteOutlined />}
-              type="text"
-              size="small"
             />
           </FastTooltip>
-        </Col>
-      </Row>
-      <Row
+        </Flex>
+        <FastTooltip title={disabled ? editingDisallowedExplanation : null} style={{ flexGrow: 1 }}>
+          <Input
+            defaultValue={name}
+            placeholder="Bounding Box Name"
+            size="small"
+            value={name}
+            onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+              setName(evt.target.value);
+            }}
+            onPressEnter={handleNameChanged}
+            onBlur={handleNameChanged}
+            disabled={disabled}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </FastTooltip>
+        <ButtonComponent
+          title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}
+          onClick={onDelete}
+          disabled={disabled}
+          icon={<DeleteOutlined />}
+          type="text"
+          size="small"
+        />
+      </Flex>
+      <Flex
         style={{
           marginBottom: 10,
         }}
         align="top"
+        gap="middle"
+        justify="flex-start"
       >
-        <Col span={5}>
+        <div style={{ width: 60, flexShrink: 0 }}>
           <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
-            <label className="settings-label"> Bounds: </label>
+            <label> Bounds: </label>
           </FastTooltip>
-        </Col>
-        <Col span={SETTING_RIGHT_SPAN}>
-          <FastTooltip
-            title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
-            placement="top-start"
-          >
-            <Input
-              status={isValid ? "" : "error"}
-              onChange={handleChange}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              value={text}
-              placeholder="0, 0, 0, 512, 512, 512"
-              size="small"
-              disabled={disabled}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </FastTooltip>
-        </Col>
-        <Col span={RIGHT_COL_SPAN}>
-          <div
-            onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
-            onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
-          >
-            <EllipsisOutlined style={marginLeftStyle} />
-          </div>
-        </Col>
-      </Row>
+        </div>
+        <FastTooltip
+          title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
+          placement="top-start"
+          style={{ flexGrow: 1 }}
+        >
+          <Input
+            status={isValid ? "" : "error"}
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            value={text}
+            placeholder="0, 0, 0, 512, 512, 512"
+            size="small"
+            disabled={disabled}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </FastTooltip>
+        <ButtonComponent
+          type="text"
+          size="small"
+          onClick={(evt) =>
+            onOpenContextMenu(getContextMenu(), evt as React.MouseEvent<HTMLDivElement>, bboxId)
+          }
+          icon={<EllipsisOutlined />}
+        />
+      </Flex>
     </div>
   );
 }

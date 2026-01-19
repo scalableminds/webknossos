@@ -22,7 +22,7 @@ import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
 import Zip from "libs/zipjs_wrapper";
-import _ from "lodash";
+import _, { capitalize } from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import React from "react";
@@ -568,7 +568,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
   handleCSVDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing, annotationId } = this.props;
-    const datasetUnit = Store.getState().dataset.dataSource.scale.unit; //TODO_c make pretty
+    const datasetUnit = Store.getState().dataset.dataSource.scale.unit;
+    const capitalizedShortDSUnit = capitalize(LongUnitToShortUnitMap[datasetUnit]);
 
     if (!skeletonTracing) {
       return;
@@ -579,8 +580,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
-      const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
-      const nodesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
+      const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, capitalizedShortDSUnit);
+      const nodesCsv = getTreeNodesAsCSV(
+        Store.getState(),
+        skeletonTracing,
+        applyTransforms,
+        capitalizedShortDSUnit,
+      );
       const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 
       const blobWriter = new Zip.BlobWriter("application/zip");

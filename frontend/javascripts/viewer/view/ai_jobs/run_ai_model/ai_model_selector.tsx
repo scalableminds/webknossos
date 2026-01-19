@@ -192,6 +192,7 @@ export const AiModelSelector: React.FC = () => {
             emptyText:
               searchTerm.length > 0 ? "No models match your search." : switchToTrainingButton,
           }}
+          style={{ maxHeight: "360px", overflowY: "auto" }}
           renderItem={(item) => (
             <List.Item
               className={"hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")}

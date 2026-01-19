@@ -117,7 +117,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         segmentIds,
         bucketPosition.mag,
         editableMappingTracingId,
-        None, // use newest version: TODO for review check if that's true. My assumption was that this code is only called when the volume tracing is updated. Thus, always the newest version must be used.
+        None, // use newest version
         bucketPosition.additionalCoordinates
       )
       _ = previousBucketPositionsBySegment.foreach {

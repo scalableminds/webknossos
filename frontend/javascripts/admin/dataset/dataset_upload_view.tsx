@@ -58,6 +58,7 @@ import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager }
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
+import _ from "lodash";
 import countBy from "lodash/countBy";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";

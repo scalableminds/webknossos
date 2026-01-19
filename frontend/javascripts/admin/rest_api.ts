@@ -904,7 +904,7 @@ export function getSegmentSurfaceArea(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
-  // TODOM: Add versioning parameter tracingVersion. -> backend supports this already
+  // TODOM: Add versioning parameter annotationVersion. -> backend supports this already
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {

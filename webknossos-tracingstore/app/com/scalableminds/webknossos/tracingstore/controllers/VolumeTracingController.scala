@@ -374,7 +374,7 @@ class VolumeTracingController @Inject()(
               data: Array[Byte] <- fullMeshService.loadFor(annotationId,
                                                            tracingId,
                                                            fullMeshRequest,
-                                                           request.body.tracingVersion) ?~> "mesh.loadFull.failed"
+                                                           request.body.annotationVersion) ?~> "mesh.loadFull.failed"
               surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
             } yield surfaceArea
           }

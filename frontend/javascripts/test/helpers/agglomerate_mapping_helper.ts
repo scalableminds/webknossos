@@ -72,7 +72,6 @@ export class AgglomerateMapping {
     }
 
     nextAdjacencyList.get(segmentIdA)!.add(segmentIdB);
-    nextAdjacencyList.get(segmentIdB)!.add(segmentIdA);
 
     const previousVersionMap = previous.map;
     const nextVersionMap = new Map(previousVersionMap); // copy-on-write
@@ -105,17 +104,23 @@ export class AgglomerateMapping {
      * The target component is reassigned to a new id.
      */
     const previous = this.versions[this.currentVersion];
-    this.ensureNode(segmentIdA, previous.adjacencyList);
-    this.ensureNode(segmentIdB, previous.adjacencyList);
-
     // copy adjacency list (shallow)
     const nextAdjacencyList = new Map<number, Set<number>>();
     for (const [k, v] of previous.adjacencyList) {
       nextAdjacencyList.set(k, new Set(v));
     }
 
-    nextAdjacencyList.get(segmentIdA)!.delete(segmentIdB);
-    nextAdjacencyList.get(segmentIdB)!.delete(segmentIdA);
+    let didRemove = false;
+    if (previous.adjacencyList.has(segmentIdA)) {
+      didRemove = nextAdjacencyList.get(segmentIdA)!.delete(segmentIdB);
+    }
+    if (previous.adjacencyList.has(segmentIdB)) {
+      didRemove = nextAdjacencyList.get(segmentIdB)!.delete(segmentIdA) || didRemove;
+    }
+
+    if (!didRemove) {
+      throw new Error(`Cannot remove edge: ${segmentIdA} -> ${segmentIdB}`);
+    }
 
     const previousVersionMap = previous.map;
     const keepComponentId = previousVersionMap.get(segmentIdA)!;
@@ -135,7 +140,20 @@ export class AgglomerateMapping {
         const currentSegmentId = bfsStack.pop()!;
         componentSegmentIds.push(currentSegmentId);
 
+        // Get neighbors in both directions (outgoing and incoming edges)
+        const neighbors = new Set<number>();
+        // Outgoing edges
         for (const neighbor of nextAdjacencyList.get(currentSegmentId) ?? []) {
+          neighbors.add(neighbor);
+        }
+        // Incoming edges
+        for (const [segmentId, adjacentSet] of nextAdjacencyList) {
+          if (adjacentSet.has(currentSegmentId)) {
+            neighbors.add(segmentId);
+          }
+        }
+
+        for (const neighbor of neighbors) {
           if (!visitedSegmentIds.has(neighbor)) {
             visitedSegmentIds.add(neighbor);
             bfsStack.push(neighbor);

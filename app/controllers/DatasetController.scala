@@ -365,9 +365,9 @@ class DatasetController @Inject()(userService: UserService,
           _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-          dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
+          dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext) ?~> "dataStore.notFound"
           _ <- Fox.fromBool(dataset.isVirtual) ?~> "duplicateToOrga is only possible for virtual datasets"
-          _ <- organizationDAO.findOne(targetOrganizationId) ?~> "organization.notFound"
+          _ <- organizationDAO.findOne(targetOrganizationId)(GlobalAccessContext) ?~> "organization.notFound"
           newDatasetId = ObjectId.generate
           newDirectoryName = datasetService.generateDirectoryName(dataset.name, newDatasetId)
           adaptedDataSource = dataSource.withUpdatedId(DataSourceId(newDirectoryName, targetOrganizationId))

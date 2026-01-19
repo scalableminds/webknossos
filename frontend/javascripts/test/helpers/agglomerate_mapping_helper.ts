@@ -1,5 +1,10 @@
 import _ from "lodash";
 
+type VersionSnapshot = {
+  map: Map<number, number>;
+  adjacencyList: Map<number, Set<number>>;
+};
+
 export class AgglomerateMapping {
   /*
    * This class is used to mock the backend in the proofreading
@@ -13,11 +18,9 @@ export class AgglomerateMapping {
 
   public segmentIds: number[];
 
-  // adjacency list of the *current* graph (edges themselves are *not* versioned)
-  private readonly adjacencyList = new Map<number, Set<number>>();
-
-  // snapshot of the component‑ID map after every operation, versions[0] = initial state
-  private versions: Array<Map<number, number>> = [];
+  // snapshot of (component-ID map + adjacency list) after every operation
+  // versions[0] = initial state
+  private versions: VersionSnapshot[] = [];
 
   public currentVersion = -1; // newest version index
   private largestMappedId: number; // monotone counter for fresh IDs
@@ -27,17 +30,26 @@ export class AgglomerateMapping {
     initialVersion: number = 0,
   ) {
     this.segmentIds = _.uniq(edges.flat());
-
     this.largestMappedId = Math.max(...this.segmentIds);
+
+    const initialAdjacencyList = new Map<number, Set<number>>();
     const initialVersionMap = new Map<number, number>();
+
     for (const segmentId of this.segmentIds) {
-      this.adjacencyList.set(segmentId, new Set());
+      initialAdjacencyList.set(segmentId, new Set());
       initialVersionMap.set(segmentId, segmentId); // each segment is its own component at v0
     }
-    this.commit(initialVersionMap, true);
 
-    for (const edge of edges) {
-      this.addEdge(edge[0], edge[1], true);
+    this.commit(
+      {
+        map: initialVersionMap,
+        adjacencyList: initialAdjacencyList,
+      },
+      true,
+    );
+
+    for (const [a, b] of edges) {
+      this.addEdge(a, b, true);
     }
 
     this.resetVersionCounter(initialVersion);
@@ -49,24 +61,41 @@ export class AgglomerateMapping {
      * that are present in the component defined by segmentIdB
      * are remapped to the mapped id of segmentIdA.
      */
-    this.ensureNode(segmentIdA);
-    this.ensureNode(segmentIdB);
-    this.adjacencyList.get(segmentIdA)!.add(segmentIdB);
-    this.adjacencyList.get(segmentIdB)!.add(segmentIdA);
+    const previous = this.versions[this.currentVersion];
+    this.ensureNode(segmentIdA, previous.adjacencyList);
+    this.ensureNode(segmentIdB, previous.adjacencyList);
 
-    const previousVersionMap = this.versions[this.currentVersion];
-    const nextVersionMap = new Map(previousVersionMap); // shallow copy for copy‑on‑write
+    // copy adjacency list (shallow)
+    const nextAdjacencyList = new Map<number, Set<number>>();
+    for (const [k, v] of previous.adjacencyList) {
+      nextAdjacencyList.set(k, new Set(v));
+    }
+
+    nextAdjacencyList.get(segmentIdA)!.add(segmentIdB);
+    nextAdjacencyList.get(segmentIdB)!.add(segmentIdA);
+
+    const previousVersionMap = previous.map;
+    const nextVersionMap = new Map(previousVersionMap); // copy-on-write
+
     const componentIdA = previousVersionMap.get(segmentIdA)!;
     const componentIdB = previousVersionMap.get(segmentIdB)!;
 
     // Only merge if the components differ
     if (componentIdA !== componentIdB) {
       for (const [segmentId, componentId] of nextVersionMap) {
-        if (componentId === componentIdB) nextVersionMap.set(segmentId, componentIdA);
+        if (componentId === componentIdB) {
+          nextVersionMap.set(segmentId, componentIdA);
+        }
       }
     }
 
-    this.commit(nextVersionMap, bumpVersion);
+    this.commit(
+      {
+        map: nextVersionMap,
+        adjacencyList: nextAdjacencyList,
+      },
+      bumpVersion,
+    );
   }
 
   removeEdge(segmentIdA: number, segmentIdB: number, bumpVersion: boolean): void {
@@ -75,15 +104,22 @@ export class AgglomerateMapping {
      * The source component (defined by segmentIdA) will keep its mapped id.
      * The target component is reassigned to a new id.
      */
-    this.ensureNode(segmentIdA);
-    this.ensureNode(segmentIdB);
-    this.adjacencyList.get(segmentIdA)!.delete(segmentIdB);
-    this.adjacencyList.get(segmentIdB)!.delete(segmentIdA);
+    const previous = this.versions[this.currentVersion];
+    this.ensureNode(segmentIdA, previous.adjacencyList);
+    this.ensureNode(segmentIdB, previous.adjacencyList);
 
-    console.log("removing edge", segmentIdA, segmentIdB);
+    // copy adjacency list (shallow)
+    const nextAdjacencyList = new Map<number, Set<number>>();
+    for (const [k, v] of previous.adjacencyList) {
+      nextAdjacencyList.set(k, new Set(v));
+    }
 
-    const previousVersionMap = this.versions[this.currentVersion];
+    nextAdjacencyList.get(segmentIdA)!.delete(segmentIdB);
+    nextAdjacencyList.get(segmentIdB)!.delete(segmentIdA);
+
+    const previousVersionMap = previous.map;
     const keepComponentId = previousVersionMap.get(segmentIdA)!;
+
     const nextVersionMap = new Map<number, number>();
     const visitedSegmentIds = new Set<number>();
 
@@ -98,31 +134,32 @@ export class AgglomerateMapping {
       while (bfsStack.length) {
         const currentSegmentId = bfsStack.pop()!;
         componentSegmentIds.push(currentSegmentId);
-        for (const neighborSegmentId of this.adjacencyList.get(currentSegmentId) ?? []) {
-          if (!visitedSegmentIds.has(neighborSegmentId)) {
-            visitedSegmentIds.add(neighborSegmentId);
-            bfsStack.push(neighborSegmentId);
+
+        for (const neighbor of nextAdjacencyList.get(currentSegmentId) ?? []) {
+          if (!visitedSegmentIds.has(neighbor)) {
+            visitedSegmentIds.add(neighbor);
+            bfsStack.push(neighbor);
           }
         }
       }
 
-      // Determine the ID to assign:
       let newComponentId: number;
+
       if (
         componentSegmentIds.some(
           (segmentId) => previousVersionMap.get(segmentId) !== previousVersionMap.get(segmentIdA),
         )
       ) {
-        // Unrelated component → keep previous IDs
+        // unrelated component → keep previous IDs
         for (const segmentId of componentSegmentIds) {
           nextVersionMap.set(segmentId, previousVersionMap.get(segmentId)!);
         }
         continue;
       } else if (componentSegmentIds.includes(segmentIdA)) {
-        // Component that includes `segmentIdA` keeps its ID
+        // component containing A keeps its ID
         newComponentId = keepComponentId;
       } else {
-        // New component → assign fresh ID
+        // split-off component → new ID
         newComponentId = ++this.largestMappedId;
       }
 
@@ -131,16 +168,24 @@ export class AgglomerateMapping {
       }
     }
 
-    this.commit(nextVersionMap, bumpVersion);
+    this.commit(
+      {
+        map: nextVersionMap,
+        adjacencyList: nextAdjacencyList,
+      },
+      bumpVersion,
+    );
   }
 
   mapSegment(segmentId: number, version: number): number {
     /*
-     * Look up the component‑ID of `segmentId` at an arbitrary version.
+     * Look up the component-ID of `segmentId` at an arbitrary version.
      */
-    const versionMap = this.getMap(version);
-    const componentId = versionMap.get(segmentId);
-    if (componentId === undefined) throw new Error("Unknown segmentId");
+    const snapshot = this.getSnapshot(version);
+    const componentId = snapshot.map.get(segmentId);
+    if (componentId === undefined) {
+      throw new Error("Unknown segmentId");
+    }
     return componentId;
   }
 
@@ -148,8 +193,20 @@ export class AgglomerateMapping {
     /*
      * Get the entire mapping for a specific version.
      */
-    if (version == null || version < 0 || version > this.currentVersion)
+    return this.getSnapshot(version).map;
+  }
+
+  getAdjacencyList(version: number): Map<number, Set<number>> {
+    /*
+     * Get the adjacency list for a specific version.
+     */
+    return this.getSnapshot(version).adjacencyList;
+  }
+
+  private getSnapshot(version: number): VersionSnapshot {
+    if (version == null || version < 0 || version > this.currentVersion) {
       throw new RangeError(`Invalid version: ${version}`);
+    }
     return this.versions[version];
   }
 
@@ -159,11 +216,12 @@ export class AgglomerateMapping {
      * If `initialVersion` is greater than 0, all previous versions are set to the
      * newest version.
      */
-    const newestMap = this.versions.at(-1);
-    if (newestMap == null) {
+    const newest = this.versions.at(-1);
+    if (newest == null) {
       throw new Error("No initial version of map found.");
     }
-    this.versions = Array.from({ length: initialVersion + 1 }, () => newestMap);
+
+    this.versions = Array.from({ length: initialVersion + 1 }, () => newest);
     this.currentVersion = initialVersion;
   }
 
@@ -173,37 +231,37 @@ export class AgglomerateMapping {
      * because the backend also stores other things than the agglomerate mapping
      * in the annotation).
      */
-    const newestMap = this.versions.at(-1);
-    if (newestMap == null) {
+    const newest = this.versions.at(-1);
+    if (newest == null) {
       throw new Error("No initial version of map found.");
     }
-    this.commit(newestMap, true);
+    this.commit(newest, true);
   }
 
   /* Helpers */
 
-  private ensureNode(segmentId: number): void {
-    if (!this.adjacencyList.has(segmentId)) {
+  private ensureNode(segmentId: number, adjacencyList: Map<number, Set<number>>): void {
+    if (!adjacencyList.has(segmentId)) {
       throw new Error(`Segment ${segmentId} was not in the original set`);
     }
   }
 
-  private commit(newVersionMap: Map<number, number>, bumpVersion: boolean): void {
+  private commit(snapshot: VersionSnapshot, bumpVersion: boolean): void {
     /*
-     * Push mapping snapshot and advance the global version counter
+     * Push snapshot and advance the global version counter
      */
     if (bumpVersion) {
       this.currentVersion++;
-      this.versions.push(newVersionMap);
+      this.versions.push(snapshot);
       // console.log(
       //   `Committed v=${this.currentVersion} with mapping: `,
-      //   // newVersionMap.entries().toArray(),
+      //   // snapshot.entries().toArray(),
       // );
     } else {
-      this.versions[this.currentVersion] = newVersionMap;
+      this.versions[this.currentVersion] = snapshot;
       // console.log(
       //   `Appended new update to v=${this.currentVersion}; resulting mapping: `,
-      //   // newVersionMap.entries().toArray(),
+      //   // snapshot.entries().toArray(),
       // );
     }
   }

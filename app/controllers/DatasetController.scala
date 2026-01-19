@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJs
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
   DataSourceStatus,
   ElementClass,
   LayerAttachmentDataformat,
@@ -364,8 +365,21 @@ class DatasetController @Inject()(userService: UserService,
           _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+          dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
           _ <- Fox.fromBool(dataset.isVirtual) ?~> "duplicateToOrga is only possible for virtual datasets"
-          // TODO insert in target orga
+          _ <- organizationDAO.findOne(targetOrganizationId) ?~> "organization.notFound"
+          newDatasetId = ObjectId.generate
+          newDirectoryName = datasetService.generateDirectoryName(dataset.name, newDatasetId)
+          adaptedDataSource = dataSource.withUpdatedId(DataSourceId(newDirectoryName, targetOrganizationId))
+          dataset <- datasetService.createDataset(
+            dataStore,
+            newDatasetId,
+            dataset.name,
+            adaptedDataSource,
+            None,
+            isVirtual = true
+            // TODO metadata, description
+          )
         } yield Ok(Json.toJson(dataSource))
       }
     }

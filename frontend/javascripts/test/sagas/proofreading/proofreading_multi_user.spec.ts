@@ -802,7 +802,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   });
 
-  it.only("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
     /*
       todop: double check this docstring
       Initial Mapping:
@@ -948,6 +948,20 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 1,
             agglomerateId1: 1339,
             agglomerateId2: 1,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [4, 4, 4],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
+            metadata: [],
+            name: null,
           },
         },
       ]);

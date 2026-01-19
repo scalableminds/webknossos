@@ -676,7 +676,7 @@ case class DeleteSegmentGroupVolumeAction(groupId: Int,
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def removeFromGroupHierarchy(groups: Seq[SegmentGroup]): Seq[SegmentGroup] =
       groups.collect {
-        case SegmentGroup(_, id, children, _, _) if id == this.groupId =>
+        case SegmentGroup(_, id, _, _, _) if id == this.groupId =>
           None
         case segmentGroup =>
           Some(segmentGroup.withChildren(removeFromGroupHierarchy(segmentGroup.children)))

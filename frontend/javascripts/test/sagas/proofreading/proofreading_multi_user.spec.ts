@@ -950,13 +950,13 @@ describe("Proofreading (Multi User)", () => {
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      const viz = new MappingVisualizer(backendMock.agglomerateMapping);
+      // const viz = new MappingVisualizer(backendMock.agglomerateMapping);
 
-      for (const version of _.range(backendMock.agglomerateMapping.currentVersion + 1)) {
-        viz.renderVersion(version, {
-          outputPath: `debug/mapping-${version}.svg`,
-        });
-      }
+      // for (const version of _.range(backendMock.agglomerateMapping.currentVersion + 1)) {
+      //   viz.renderVersion(version, {
+      //     outputPath: `debug/mapping-${version}.svg`,
+      //   });
+      // }
 
       const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 

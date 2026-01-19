@@ -31,9 +31,10 @@ import { diceCoefficient as dice } from "dice-coefficient";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
-import * as Utils from "libs/utils";
+import { compareBy, localeCompareBy } from "libs/utils";
 import _ from "lodash";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent, useContext, useRef } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router-dom";
@@ -94,7 +95,7 @@ type ContextMenuProps = {
 };
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
-  const inputRef = React.useContext(ContextMenuContext);
+  const inputRef = useContext(ContextMenuContext);
   const {
     datasets,
     reloadDataset,
@@ -124,7 +125,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const refContent = inputRef.current;
 
   return (
-    <React.Fragment>
+    <Fragment>
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
       <Dropdown
         menu={menu}
@@ -135,7 +136,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
       >
         <div />
       </Dropdown>
-    </React.Fragment>
+    </Fragment>
   );
 }
 
@@ -240,7 +241,7 @@ const DraggableDatasetRow = ({
   rowKey,
   ...restProps
 }: DraggableDatasetRowProps) => {
-  const ref = React.useRef<HTMLTableRowElement>(null);
+  const ref = useRef<HTMLTableRowElement>(null);
   const theme = useWkSelector((state) => state.uiInformation.theme);
   // @ts-ignore
 
@@ -430,7 +431,7 @@ class FolderRenderer {
   }
 }
 
-class DatasetTable extends React.PureComponent<Props, State> {
+class DatasetTable extends PureComponent<Props, State> {
   state: State = {
     sortedInfo: {
       columnKey: useLruRank ? undefined : "created",
@@ -623,7 +624,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         title: "Name",
         dataIndex: "name",
         key: "name",
-        sorter: Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
+        sorter: localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
         sortOrder: sortedInfo.columnKey === "name" ? sortedInfo.order : undefined,
         render: (_name: string, rowRenderer: RowRenderer, _index) => rowRenderer.renderNameColumn(),
       },
@@ -632,7 +633,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         title: "Creation Date",
         dataIndex: "created",
         key: "created",
-        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+        sorter: compareBy<RowRenderer>((rowRenderer) =>
           isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
         ),
         sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
@@ -665,7 +666,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         render: (_: any, rowRenderer: RowRenderer) => {
           return isRecordADataset(rowRenderer.data) ? rowRenderer.renderStorageColumn() : null;
         },
-        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+        sorter: compareBy<RowRenderer>((rowRenderer) =>
           isRecordADataset(rowRenderer.data) && rowRenderer.data.usedStorageBytes
             ? rowRenderer.data.usedStorageBytes
             : 0,

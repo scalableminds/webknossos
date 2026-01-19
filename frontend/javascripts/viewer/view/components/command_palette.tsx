@@ -3,8 +3,7 @@ import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
-import * as Utils from "libs/utils";
+import { capitalize, getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -187,7 +186,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const viewDatasetsItem = {
     name: DynamicCommands.viewDataset,
-    command: () => {},
+    command: () => { },
     shortcut: "Enter to show list",
     color: commandEntryColor,
   };
@@ -210,7 +209,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const viewAnnotationItems = {
     name: DynamicCommands.viewAnnotation,
     shortcut: "Enter to show list",
-    command: () => {},
+    command: () => { },
     color: commandEntryColor,
   };
 
@@ -242,28 +241,28 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       adminMenu == null
         ? []
         : adminMenu.children.map((entry: { key: string }) => {
-            return { name: getLabelForPath(entry.key), path: entry.key };
-          });
+          return { name: getLabelForPath(entry.key), path: entry.key };
+        });
 
     const analysisSubMenu = getAnalysisSubMenu(true);
     const analysisCommands =
       analysisSubMenu != null
         ? analysisSubMenu.children.map((entry) => {
-            return { name: getLabelForPath(entry.key), path: entry.key };
-          })
+          return { name: getLabelForPath(entry.key), path: entry.key };
+        })
         : [];
 
-    const statisticsCommands = Utils.isUserAdminOrManager(activeUser)
+    const statisticsCommands = isUserAdminOrManager(activeUser)
       ? [
-          {
-            path: "/reports/projectProgress",
-            name: "Project Progress",
-          },
-          {
-            path: "/reports/availableTasks",
-            name: "Available Tasks",
-          },
-        ]
+        {
+          path: "/reports/projectProgress",
+          name: "Project Progress",
+        },
+        {
+          path: "/reports/availableTasks",
+          name: "Available Tasks",
+        },
+      ]
       : [];
 
     const navigationEntries = [

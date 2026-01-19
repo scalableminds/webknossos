@@ -8,9 +8,9 @@ import {
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import Request from "libs/request";
-import * as foldersApi from "admin/api/folders";
 import { describe, it, beforeAll, expect } from "vitest";
 import { APIMetadataEnum } from "types/api_types";
+import { createFolder, getFolder, getFolderTree, updateFolder } from "admin/api/folders";
 
 describe("Folder API (E2E)", () => {
   beforeAll(async () => {
@@ -20,10 +20,7 @@ describe("Folder API (E2E)", () => {
   });
 
   it("getFolderTree", async () => {
-    const folderTree = _.sortBy(
-      await foldersApi.getFolderTree(),
-      (folderWithParent) => folderWithParent.name,
-    );
+    const folderTree = _.sortBy(await getFolderTree(), (folderWithParent) => folderWithParent.name);
 
     writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
       isArray: true,
@@ -34,7 +31,7 @@ describe("Folder API (E2E)", () => {
   const organizationXRootFolderId = "570b9f4e4bb848d0885ea917";
 
   it("getFolder", async () => {
-    const folder = await foldersApi.getFolder(organizationXRootFolderId);
+    const folder = await getFolder(organizationXRootFolderId);
 
     writeTypeCheckingFile(folder, "folder", "Folder");
     expect(folder).toMatchSnapshot();
@@ -42,7 +39,7 @@ describe("Folder API (E2E)", () => {
 
   it("updateFolder", async () => {
     const newName = "renamed organization x root folder";
-    const updatedFolder = await foldersApi.updateFolder({
+    const updatedFolder = await updateFolder({
       id: organizationXRootFolderId,
       allowedTeams: [],
       name: newName,
@@ -55,7 +52,7 @@ describe("Folder API (E2E)", () => {
 
   it("createFolder", async () => {
     const newName = "a newly created folder!";
-    const folder = await foldersApi.createFolder(organizationXRootFolderId, newName);
+    const folder = await createFolder(organizationXRootFolderId, newName);
     expect(folder.name).toBe(newName);
 
     expect(replaceVolatileValues(folder)).toMatchSnapshot();
@@ -68,7 +65,7 @@ describe("Folder API (E2E)", () => {
 
     await Request.receiveJSON(`/api/folders/${subFolderId}`);
 
-    const updatedFolderWithTeam = await foldersApi.updateFolder({
+    const updatedFolderWithTeam = await updateFolder({
       id: subFolderId,
       allowedTeams: [teamId],
       name: "A subfolder!",
@@ -83,7 +80,7 @@ describe("Folder API (E2E)", () => {
      * we expect that they can see the subfolder we add the team to, but not the other.
      */
 
-    const subFolderSeenByUserC = await foldersApi.getFolder(subFolderId);
+    const subFolderSeenByUserC = await getFolder(subFolderId);
 
     expect(subFolderSeenByUserC).toMatchSnapshot();
 

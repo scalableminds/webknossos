@@ -3,7 +3,13 @@ import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import {
+  getAdaptToTypeFunctionFromList,
+  millisecondsToMinutes,
+  minutesToMilliseconds,
+  parseMaybe,
+  retryAsyncFunction,
+} from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -349,7 +355,7 @@ export function deleteTeam(teamId: string): Promise<void> {
 // ### Projects
 function transformProject<T extends APIProject | APIProjectWithStatus>(response: T): T {
   return Object.assign({}, response, {
-    expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
+    expectedTime: millisecondsToMinutes(response.expectedTime),
   });
 }
 
@@ -394,7 +400,7 @@ export function deleteProject(projectId: string): Promise<void> {
 }
 export function createProject(project: APIProjectCreator): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
-    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+    expectedTime: minutesToMilliseconds(project.expectedTime),
   });
   return Request.sendJSONReceiveJSON("/api/projects", {
     data: transformedProject,
@@ -402,7 +408,7 @@ export function createProject(project: APIProjectCreator): Promise<APIProject> {
 }
 export function updateProject(projectId: string, project: APIProjectUpdater): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
-    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+    expectedTime: minutesToMilliseconds(project.expectedTime),
   });
   return Request.sendJSONReceiveJSON(`/api/projects/${projectId}`, {
     method: "PUT",
@@ -1800,7 +1806,7 @@ export function computeAdHocMesh(
         },
       },
     );
-    const neighbors = (Utils.parseMaybe(headers.neighbors) as number[] | null) || [];
+    const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
     return {
       buffer,
       neighbors,
@@ -1869,7 +1875,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
-    return Utils.retryAsyncFunction(() =>
+    return retryAsyncFunction(() =>
       Request.receiveArraybuffer(
         `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
         {
@@ -1883,7 +1889,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
     );
   });
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
+  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
   const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
   return new Map(keyValues);
@@ -1909,7 +1915,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Utils.retryAsyncFunction(() =>
+    return retryAsyncFunction(() =>
       Request.receiveArraybuffer(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
         {
@@ -1925,7 +1931,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   });
 
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
+  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
 
   const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
@@ -2103,7 +2109,7 @@ export async function getEdgesForAgglomerateMinCut(
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Utils.retryAsyncFunction(() =>
+    retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
         {
@@ -2138,7 +2144,7 @@ export async function getNeighborsForAgglomerateNode(
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Utils.retryAsyncFunction(() =>
+    retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
         {

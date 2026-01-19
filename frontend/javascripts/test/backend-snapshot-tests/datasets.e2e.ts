@@ -7,16 +7,24 @@ import {
   replaceVolatileValues,
 } from "test/e2e-setup";
 import type { APIDataset } from "types/api_types";
-import * as api from "admin/rest_api";
 import { describe, it, beforeAll, expect } from "vitest";
 import {
   getOrganizationForDataset,
   getDatasetIdFromNameAndOrganization,
 } from "admin/api/disambiguate_legacy_routes";
 import fs from "node:fs";
+import {
+  getDatasets,
+  getActiveDatasetsOfMyOrganization,
+  getDatasetAccessList,
+  updateDatasetTeams,
+  getEditableTeams,
+  getDataset,
+  triggerDatasetCheck,
+} from "admin/rest_api";
 
 async function getFirstDataset(): Promise<APIDataset> {
-  const datasets = await api.getActiveDatasetsOfMyOrganization();
+  const datasets = await getActiveDatasetsOfMyOrganization();
   const dataset = _.sortBy(datasets, (d) => d.name)[0];
 
   return dataset;
@@ -27,15 +35,15 @@ describe("Dataset API (E2E)", () => {
     // Reset database and change token
     resetDatabase();
     setUserAuthToken(tokenUserA);
-    await api.triggerDatasetCheck("http://localhost:9000");
+    await triggerDatasetCheck("http://localhost:9000");
   });
 
   it("getDatasets", async () => {
-    let datasets = await api.getDatasets();
+    let datasets = await getDatasets();
     let retry = 0;
 
     while (JSON.stringify(datasets).indexOf("Not imported yet") === -1 && retry < 10) {
-      datasets = await api.getDatasets();
+      datasets = await getDatasets();
       retry++;
     }
 
@@ -48,7 +56,7 @@ describe("Dataset API (E2E)", () => {
   });
 
   it("getActiveDatasets", async () => {
-    let datasets = await api.getActiveDatasetsOfMyOrganization();
+    let datasets = await getActiveDatasetsOfMyOrganization();
     datasets = _.sortBy(datasets, (d) => d.name);
 
     expect(replaceVolatileValues(datasets)).toMatchSnapshot();
@@ -56,28 +64,28 @@ describe("Dataset API (E2E)", () => {
 
   it("getDatasetAccessList", async () => {
     const dataset = await getFirstDataset();
-    const accessList = _.sortBy(await api.getDatasetAccessList(dataset), (user) => user.id);
+    const accessList = _.sortBy(await getDatasetAccessList(dataset), (user) => user.id);
 
     expect(replaceVolatileValues(accessList)).toMatchSnapshot();
   });
 
   it("updateDatasetTeams", async () => {
-    const [dataset, newTeams] = await Promise.all([getFirstDataset(), api.getEditableTeams()]);
-    const updatedDataset = await api.updateDatasetTeams(
+    const [dataset, newTeams] = await Promise.all([getFirstDataset(), getEditableTeams()]);
+    const updatedDataset = await updateDatasetTeams(
       dataset.id,
       newTeams.map((team) => team.id),
     );
     expect(replaceVolatileValues(updatedDataset)).toMatchSnapshot();
 
     // undo the Change
-    await api.updateDatasetTeams(
+    await updateDatasetTeams(
       dataset.id,
       dataset.allowedTeams.map((team) => team.id),
     );
   });
 
   it("It should correctly disambiguate old dataset links", async () => {
-    let datasets = await api.getActiveDatasetsOfMyOrganization();
+    let datasets = await getActiveDatasetsOfMyOrganization();
 
     for (const dataset of datasets) {
       const organizationId = await getOrganizationForDataset(dataset.name);
@@ -90,19 +98,17 @@ describe("Dataset API (E2E)", () => {
 
   // it("getDatasetSharingToken and revokeDatasetSharingToken", async () => {
   //   const dataset = await getFirstDataset();
-  //   const sharingToken = api.getDatasetSharingToken(dataset.name);
+  //   const sharingToken = getDatasetSharingToken(dataset.name);
   //   expect(sharingToken).toMatchSnapshot();
-  //   await api.revokeDatasetSharingToken(dataset.name);
+  //   await revokeDatasetSharingToken(dataset.name);
   //   expect(true).toBe(true);
   // });
 
   it("Public dataset access", async () => {
-    const datasetCompactList = await api.getDatasets();
+    const datasetCompactList = await getDatasets();
     // Get dataset details (which includes isPublic flag). With this call we also validate that the private dataset
     // we query can be accessed with the current user token (we later access it without a token and expect it to fail).
-    const datasets = await Promise.all(
-      datasetCompactList.map((dataset) => api.getDataset(dataset.id)),
-    );
+    const datasets = await Promise.all(datasetCompactList.map((dataset) => getDataset(dataset.id)));
 
     const publicDatasetId = datasets.find((d) => d.isPublic)?.id;
     const privateDatasetId = datasets.find((d) => !d.isPublic)?.id;
@@ -111,12 +117,12 @@ describe("Dataset API (E2E)", () => {
     }
 
     setUserAuthToken("invalidToken");
-    const publicDataset = await api.getDataset(publicDatasetId);
+    const publicDataset = await getDataset(publicDatasetId);
     expect(publicDataset).toBeDefined();
     expect(publicDataset.isPublic).toBe(true);
     // Accessing private dataset without token should fail
     try {
-      await api.getDataset(privateDatasetId);
+      await getDataset(privateDatasetId);
       expect.fail("Accessing private dataset without token should fail");
     } catch (error) {
       expect(error).toBeDefined();
@@ -125,7 +131,7 @@ describe("Dataset API (E2E)", () => {
   });
 
   async function getTestDatasetId(datasetName: string = "test-dataset"): Promise<string> {
-    let datasets = await api.getActiveDatasetsOfMyOrganization();
+    let datasets = await getActiveDatasetsOfMyOrganization();
     const dataset = datasets.find((d) => d.name === datasetName);
     if (!dataset) {
       throw new Error(`Dataset with name ${datasetName} not found`);

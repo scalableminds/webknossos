@@ -1,4 +1,4 @@
-import * as Utils from "libs/utils";
+import { diffArrays, diffObjects } from "libs/utils";
 import _ from "lodash";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
@@ -119,7 +119,7 @@ function* diffBoundingBoxContents(
     onlyA: deletedBBoxIds,
     onlyB: addedBBoxIds,
     both: maybeChangedBBoxIds,
-  } = Utils.diffArrays(
+  } = diffArrays(
     prevBoundingBoxesWithoutIsVisible.map((bbox) => bbox.id),
     currentBoundingBoxesWithoutIsVisible.map((bbox) => bbox.id),
   );
@@ -146,7 +146,7 @@ function* diffBoundingBoxContents(
     }
     if (currentBbox === prevBbox) continue;
 
-    const changedProps = Utils.diffObjects(prevBbox, currentBbox);
+    const changedProps = diffObjects(prevBbox, currentBbox);
 
     if (!_.isEmpty(changedProps)) {
       yield updateBBoxAction(currentBbox.id, changedProps, tracingId);

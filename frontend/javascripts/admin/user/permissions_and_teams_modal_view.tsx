@@ -3,7 +3,6 @@ import { getEditableTeams, updateUser } from "admin/rest_api";
 import { App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import { useFetch } from "libs/react_helpers";
-import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { type Key, useEffect, useState } from "react";
@@ -293,7 +292,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
   function setPermissionsAndTeams() {
     const newUserPromises = users.map((user) => {
       if (selectedUserIds.includes(user.id)) {
-        const newTeams = Utils.values(selectedTeams);
+        const newTeams = Object.values(selectedTeams);
         let permissions = { isAdmin: user.isAdmin, isDatasetManager: user.isDatasetManager };
 
         if (activeUser.isAdmin && selectedUserIds.length === 1) {

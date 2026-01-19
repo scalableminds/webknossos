@@ -45,7 +45,12 @@ import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import {
+  filterWithSearchQueryAND,
+  isUserAdmin,
+  isUserAdminOrManager,
+  isUserAdminOrTeamManager,
+} from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
 import { getAntdTheme } from "theme";
@@ -170,8 +175,8 @@ function getCollapsibleMenuTitle(
 }
 
 export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
-  const isAdmin = Utils.isUserAdmin(activeUser);
-  const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
+  const isAdmin = isUserAdmin(activeUser);
+  const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
 
   const adminstrationSubMenuItems = isAdminOrTeamManager
@@ -565,7 +570,7 @@ function LoggedInAvatar({
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
-  const filteredOrganizations = Utils.filterWithSearchQueryAND(
+  const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
     ["name", "id"],
     organizationFilter,
@@ -630,7 +635,7 @@ function LoggedInAvatar({
               key: "account",
               label: <Link to="/account">Account Settings</Link>,
             },
-            activeOrganization && Utils.isUserAdmin(activeUser)
+            activeOrganization && isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
                   label: <Link to={"/organization/overview"}>Organization Settings</Link>,
@@ -804,7 +809,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
 
-  const isAdminOrManager = activeUser != null ? Utils.isUserAdminOrManager(activeUser) : false;
+  const isAdminOrManager = activeUser != null ? isUserAdminOrManager(activeUser) : false;
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
@@ -839,7 +844,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
 
     if (isAdminOrManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
-      if (Utils.isUserAdminOrTeamManager(activeUser)) {
+      if (isUserAdminOrTeamManager(activeUser)) {
         menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
       }
     } else {

@@ -2,8 +2,8 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { zeroPad } from "libs/utils";
+import _, { clamp } from "lodash";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
@@ -207,7 +207,7 @@ function SkeletonTracingReducer(
 
     case "SET_NODE_RADIUS": {
       const { radius, nodeId, treeId } = action;
-      const clampedRadius = Utils.clamp(
+      const clampedRadius = clamp(
         userSettings.nodeRadius.minimum,
         radius,
         userSettings.nodeRadius.maximum,
@@ -1144,7 +1144,7 @@ function SkeletonTracingReducer(
         return state;
       }
 
-      const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
+      const defaultName = `Tree${zeroPad(tree.treeId, 3)}`;
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         name: action.name || defaultName,

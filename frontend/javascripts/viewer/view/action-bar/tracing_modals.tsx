@@ -1,6 +1,6 @@
 import { ConfigProvider } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import * as React from "react";
+import { useMemo } from "react";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import Constants from "viewer/constants";
 import {
@@ -62,7 +62,7 @@ function TracingModals() {
   );
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
-  const modals = React.useMemo(() => {
+  const modals = useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const modalList = [];
 

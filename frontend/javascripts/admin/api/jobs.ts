@@ -375,7 +375,7 @@ type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
   aiModelCategory: APIAiModelCategory.EM_NUCLEI;
-  maxDistanceNm: number;
+  instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
 };

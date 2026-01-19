@@ -11,7 +11,6 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
-import * as React from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 
@@ -26,8 +25,9 @@ import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy } from "libs/utils";
 import messages from "messages";
+import { PureComponent, useContext } from "react";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -96,7 +96,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<Props, State> {
+class DashboardTaskListView extends PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
@@ -413,7 +413,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy<APITaskWithAnnotation>(
+      compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),
@@ -552,8 +552,8 @@ function TopBar({
   toggleShowFinished: () => void;
   getFinishVerb: () => string;
 }) {
-  const activeTab = React.useContext(ActiveTabContext);
-  const renderingTab = React.useContext(RenderingTabContext);
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   const content = (
     <Space>

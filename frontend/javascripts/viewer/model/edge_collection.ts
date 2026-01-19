@@ -1,5 +1,5 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import * as Utils from "libs/utils";
+import { diffArrays, diffNumberArrays } from "libs/utils";
 import _ from "lodash";
 import type { Edge } from "./types/tree_types";
 
@@ -199,7 +199,7 @@ export function diffEdgeCollections(
       // A normal implementation diff for deep edge comparison would be slow.
       // The edges are then recreated based on the returned diff.
       // If in some later time instance equality is needed, thi should be fairly easy to implement here.
-      const targetDiff = Utils.diffNumberArrays(
+      const targetDiff = diffNumberArrays(
         edgeCollectionA.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
         edgeCollectionB.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
       );
@@ -209,7 +209,7 @@ export function diffEdgeCollections(
         onlyB: targetDiff.onlyB.map((target) => ({ source: changedNodeIndex, target })),
       };
     } else {
-      outgoingEdgesDiff = Utils.diffArrays(
+      outgoingEdgesDiff = diffArrays(
         edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
         edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
       );

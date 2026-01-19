@@ -6,7 +6,7 @@ import { Button, Flex, Input, Progress, Space, Spin, Table, Tooltip } from "antd
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND } from "libs/utils";
 import type React from "react";
 import { type Key, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -275,7 +275,7 @@ export default function WorkflowListView() {
               render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
             },
           ]}
-          dataSource={Utils.filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
+          dataSource={filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
           locale={{ emptyText: null }}
         />
       </Spin>

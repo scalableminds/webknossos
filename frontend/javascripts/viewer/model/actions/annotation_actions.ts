@@ -19,12 +19,12 @@ import type {
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "viewer/store";
+import type { Action } from "./actions";
 import type { InitializeSkeletonTracingAction } from "./skeletontracing_actions";
 import type {
   InitializeEditableMappingAction,
   InitializeVolumeTracingAction,
 } from "./volumetracing_actions";
-import type { Action } from "./actions";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type InitializationAction =

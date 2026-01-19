@@ -55,25 +55,25 @@ export class MappingVisualizer {
 
     const lines: string[] = [];
 
-    lines.push(`digraph G {`);
+    lines.push("digraph G {");
     lines.push(`  rankdir=${rankdir};`);
-    lines.push(`  compound=true;`);
-    lines.push(`  node [shape=circle, fontsize=10];`);
-    lines.push(`  edge [fontsize=9];`);
+    lines.push("  compound=true;");
+    lines.push("  node [shape=circle, fontsize=10];");
+    lines.push("  edge [fontsize=9];");
     lines.push("");
 
     // clusters per component
     for (const [componentId, segmentIds] of components.entries()) {
       lines.push(`  subgraph cluster_${componentId} {`);
       lines.push(`    label="Agglomerate ${componentId}";`);
-      lines.push(`    fontsize=12;`);
-      lines.push(`    style=rounded;`);
+      lines.push("    fontsize=12;");
+      lines.push("    style=rounded;");
 
       for (const segmentId of segmentIds) {
         lines.push(`    ${segmentId};`);
       }
 
-      lines.push(`  }`);
+      lines.push("  }");
       lines.push("");
     }
 
@@ -88,7 +88,7 @@ export class MappingVisualizer {
       }
     }
 
-    lines.push(`}`);
+    lines.push("}");
     return lines.join("\n");
   }
 }

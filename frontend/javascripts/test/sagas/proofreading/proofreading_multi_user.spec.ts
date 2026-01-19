@@ -36,8 +36,6 @@ import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { ColoredLogger } from "libs/utils";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
-import { MappingVisualizer } from "test/helpers/mapping_visualizer";
-import _ from "lodash";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -284,9 +282,6 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(tracingId, expectedMappingAfterMerge2);
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
-
-      const debugState = Store.getState();
-      debugger;
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.slice(-3)).toEqual([

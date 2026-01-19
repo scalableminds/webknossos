@@ -1,7 +1,7 @@
 import { MailOutlined, SaveOutlined } from "@ant-design/icons";
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { updateOrganization } from "admin/rest_api";
+import { updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
 import { Button, Col, Form, Input, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";

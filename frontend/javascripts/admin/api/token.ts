@@ -1,5 +1,5 @@
 import Request from "libs/request";
-import * as Utils from "libs/utils";
+import { getUrlParamsObject } from "libs/utils";
 import { location } from "libs/window";
 
 const MAX_TOKEN_RETRY_ATTEMPTS = 3;
@@ -41,7 +41,7 @@ export function refreshToken() {
 
 export function getSharingTokenFromUrlParameters(): string | null | undefined {
   if (location != null) {
-    const params = Utils.getUrlParamsObject();
+    const params = getUrlParamsObject();
 
     if (params?.token != null) {
       return params.token;
@@ -66,7 +66,7 @@ export async function doWithToken<T>(
   }
 
   return tokenPromise.then(fn).catch(async (error) => {
-    if (error.status === 403 || error.status === 400) {
+    if (error.status === 403) {
       console.warn(
         `Token expired (attempt ${tries}/${MAX_TOKEN_RETRY_ATTEMPTS}). Requesting new token...`,
       );

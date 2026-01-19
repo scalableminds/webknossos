@@ -3,23 +3,25 @@ package com.scalableminds.webknossos.datastore.datavault
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{
-  LegacyDataVaultCredential,
   CredentializedUPath,
+  LegacyDataVaultCredential,
   S3AccessKeyCredential
 }
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Empty, Full, Failure => BoxFailure}
 import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
 import org.apache.commons.lang3.builder.HashCodeBuilder
+import scala.jdk.DurationConverters._
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
   AnonymousCredentialsProvider,
   AwsCredentialsProvider,
-  EnvironmentVariableCredentialsProvider,
+  EnvironmentVariableCredentialsProvider
 }
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.{
@@ -35,6 +37,7 @@ import software.amazon.awssdk.services.s3.model.{
 import java.net.URI
 import java.util.concurrent.CompletionException
 import scala.collection.immutable.NumericRange
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.FutureConverters._
@@ -215,7 +218,11 @@ object S3DataVault {
   private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, ws: WSClient)(
       implicit ec: ExecutionContext): Fox[S3AsyncClient] = {
     val basic =
-      S3AsyncClient.builder().credentialsProvider(getCredentialsProvider(credentialOpt)).crossRegionAccessEnabled(true)
+      S3AsyncClient
+        .builder()
+        .credentialsProvider(getCredentialsProvider(credentialOpt))
+        .crossRegionAccessEnabled(true)
+        .httpClientBuilder(NettyNioAsyncHttpClient.builder().connectionAcquisitionTimeout((2 minutes).toJava))
     if (S3UriUtils.isNonAmazonHost(uri)) {
       for {
         protocol <- determineProtocol(uri, ws)

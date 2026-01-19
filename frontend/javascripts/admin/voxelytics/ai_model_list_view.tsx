@@ -6,7 +6,7 @@ import {
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
-import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
+import { getAiModels, updateAiModel } from "admin/rest_api";
 import { App, Button, Col, Flex, Modal, Row, Select, Table, Tooltip, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
@@ -18,6 +18,7 @@ import { useState } from "react";
 import type { Key } from "react";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 
+import { getUsersOrganizations } from "admin/api/organization";
 import { Link } from "react-router-dom";
 import type { AiModel } from "types/api_types";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";

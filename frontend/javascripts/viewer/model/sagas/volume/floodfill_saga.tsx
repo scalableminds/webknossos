@@ -2,7 +2,7 @@ import LinkButton from "components/link_button";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { getRandomColor } from "libs/utils";
 import _ from "lodash";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -156,7 +156,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     return;
   }
 
-  const { position: positionFloat, planeId } = floodFillAction;
+  const { positionInLayerSpace: positionFloat, planeId } = floodFillAction;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   if (volumeTracing.hasEditableMapping) {
     const message = "Volume modification is not allowed when an editable mapping is active.";
@@ -392,7 +392,7 @@ function* notifyUserAboutResult(
             name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
               ",",
             )}, timestamp=${new Date().getTime()})`,
-            color: Utils.getRandomColor(),
+            color: getRandomColor(),
             isVisible: true,
           }),
         );

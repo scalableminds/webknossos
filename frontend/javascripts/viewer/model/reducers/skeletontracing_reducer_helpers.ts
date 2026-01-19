@@ -2,7 +2,7 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
+import { colorObjectToRGBArray, point3ToVector3, zeroPad } from "libs/utils";
 import _ from "lodash";
 import type {
   MetadataEntryProto,
@@ -63,7 +63,7 @@ export function generateTreeName(state: WebknossosState, timestamp: number, tree
     prefix = `task_${state.task.id}_${user}_`;
   }
 
-  return `${prefix}${Utils.zeroPad(treeId, 3)}`;
+  return `${prefix}${zeroPad(treeId, 3)}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
@@ -862,9 +862,9 @@ export function setExpandedTreeGroups(
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
-    untransformedPosition: Utils.point3ToVector3(n.position),
+    untransformedPosition: point3ToVector3(n.position),
     additionalCoordinates: n.additionalCoordinates,
-    rotation: Utils.point3ToVector3(n.rotation),
+    rotation: point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
     mag: n.mag,
@@ -901,7 +901,7 @@ export function createMutableTreeMapFromTreeArray(
         ),
         color:
           tree.color != null
-            ? Utils.colorObjectToRGBArray(tree.color)
+            ? colorObjectToRGBArray(tree.color)
             : ColorGenerator.distinctColorForId(tree.treeId),
         branchPoints: _.map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
         isVisible: tree.isVisible != null ? tree.isVisible : true,

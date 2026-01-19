@@ -1,18 +1,21 @@
-import { updateSelectedThemeOfUser } from "admin/rest_api";
+import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
+import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
-import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
-import * as Utils from "libs/utils";
+import Toast from "libs/toast";
+import { capitalize, getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { useMemo } from "react";
-import type { Command } from "react-command-palette";
-import ReactCommandPalette from "react-command-palette";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import ReactCommandPalette, { type Command } from "react-command-palette";
+import { useNavigate } from "react-router-dom";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { ViewModeValues } from "viewer/constants";
+import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
@@ -22,11 +25,22 @@ import {
   useTracingViewMenuItems,
 } from "../action-bar/use_tracing_view_menu_items";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
+import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
-type CommandWithoutId = Omit<Command, "id">;
-
 const commandEntryColor = "#5660ff";
+
+type ExtendedCommand = Command & {
+  shortcut?: string;
+  highlight?: string;
+};
+
+type CommandWithoutId = Omit<ExtendedCommand, "id">;
+
+enum DynamicCommands {
+  viewDataset = "View Dataset ",
+  viewAnnotation = "View Annotation ",
+}
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
   if ("title" in action && action.title != null) {
@@ -57,10 +71,28 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
+const cleanStringOfMostHTML = (dirtyString: string | undefined) => {
+  if (dirtyString == null) return null;
+  return DOMPurify.sanitize(dirtyString, { ALLOWED_TAGS: ["b"] });
+};
+
+const shortCutDictForTools: Record<string, string> = {
+  [AnnotationTool.MOVE.id]: "Ctrl + K, M",
+  [AnnotationTool.SKELETON.id]: "Ctrl + K, S",
+  [AnnotationTool.BRUSH.id]: "Ctrl + K, B",
+  [AnnotationTool.ERASE_BRUSH.id]: "Ctrl + K, E",
+  [AnnotationTool.TRACE.id]: "Ctrl + K, L",
+  [AnnotationTool.ERASE_TRACE.id]: "Ctrl + K, R",
+  [AnnotationTool.VOXEL_PIPETTE.id]: "Ctrl + K, P",
+  [AnnotationTool.QUICK_SELECT.id]: "Ctrl + K, Q",
+  [AnnotationTool.BOUNDING_BOX.id]: "Ctrl + K, X",
+  [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
+};
+
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
-  const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
@@ -70,6 +102,9 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
+
+  const navigate = useNavigate();
+  const [paletteKey, setPaletteKey] = useState(0);
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -84,7 +119,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const theme = getThemeFromUser(activeUser);
 
   const getTabsAndSettingsMenuItems = () => {
-    if (!isInTracingView) return [];
+    if (!isInAnnotationView) return [];
     const commands: CommandWithoutId[] = [];
 
     (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key) => {
@@ -98,6 +133,84 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       }
     });
     return commands;
+  };
+
+  // type annotation due to the library
+  const handleSelect = useCallback(async (command: Record<string, unknown>) => {
+    if (command.name == null) {
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewDataset) {
+      try {
+        const items = await getDatasetItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No datasets available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load datasets.");
+      }
+      return;
+    }
+
+    if (command.name === DynamicCommands.viewAnnotation) {
+      try {
+        const items = await getAnnotationItems();
+        if (items.length > 0) {
+          setCommands(items);
+        } else {
+          Toast.info("No annotations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load annotations.");
+      }
+      return;
+    }
+
+    closePalette();
+  }, []);
+
+  const getDatasetItems = useCallback(async () => {
+    const datasets = await getDatasets();
+    return datasets.map((dataset) => ({
+      name: `View Dataset: ${dataset.name} (id ${dataset.id})`,
+      command: () => {
+        window.location.href = getViewDatasetURL(dataset);
+      },
+      color: commandEntryColor,
+      id: dataset.id,
+    }));
+  }, []);
+
+  const viewDatasetsItem = {
+    name: DynamicCommands.viewDataset,
+    command: () => {},
+    shortcut: "Enter to show list",
+    color: commandEntryColor,
+  };
+
+  const getAnnotationItems = useCallback(async () => {
+    const annotations = await getReadableAnnotations(false);
+    const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
+    return sortedAnnotations.map((annotation) => {
+      return {
+        name: `View Annotation: ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
+        command: () => {
+          window.location.href = `/annotations/${annotation.id}`;
+        },
+        color: commandEntryColor,
+        id: annotation.id,
+      };
+    });
+  }, []);
+
+  const viewAnnotationItems = {
+    name: DynamicCommands.viewAnnotation,
+    shortcut: "Enter to show list",
+    command: () => {},
+    color: commandEntryColor,
   };
 
   const getSuperUserItems = (): CommandWithoutId[] => {
@@ -131,7 +244,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
-    const statisticsCommands = Utils.isUserAdminOrManager(activeUser)
+    const statisticsCommands = isUserAdminOrManager(activeUser)
       ? [
           {
             path: "/reports/projectProgress",
@@ -150,7 +263,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       commands.push({
         name: `Go to ${entry.name}`,
         command: () => {
-          window.location.href = entry.path;
+          navigate(entry.path);
         },
         color: commandEntryColor,
       });
@@ -186,8 +299,25 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
-  const getToolEntries = () => {
-    if (!isInTracingView) return [];
+  const getViewModeEntries = () => {
+    if (!isInAnnotationView) return [];
+    const commands = ViewModeValues.map((mode) => ({
+      name: `Switch to ${mode} mode`,
+      command: () => {
+        Store.dispatch(setViewModeAction(mode));
+      },
+      color: commandEntryColor,
+    }));
+    commands.push({
+      name: "Reset layout",
+      command: () => layoutEmitter.emit(LayoutEvents.resetLayout),
+      color: commandEntryColor,
+    });
+    return commands;
+  };
+
+  const getToolEntries = useCallback(() => {
+    if (!isInAnnotationView) return [];
     const commands: CommandWithoutId[] = [];
     let availableTools = Object.values(AnnotationTool);
     if (isViewMode || !allowUpdate) {
@@ -197,44 +327,83 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       commands.push({
         name: `Switch to ${tool.readableName}`,
         command: () => Store.dispatch(setToolAction(tool)),
+        shortcut: shortCutDictForTools[tool.id] || "",
         color: commandEntryColor,
       });
     });
     return commands;
-  };
+  }, [isInAnnotationView, isViewMode, allowUpdate]);
 
   const tracingMenuItems = useTracingViewMenuItems(props, null);
 
   const menuActions = useMemo(() => {
-    if (!isInTracingView) return [];
+    if (!isInAnnotationView) return [];
     if (isViewMode) {
       return viewDatasetMenu;
     }
     return tracingMenuItems;
-  }, [isInTracingView, isViewMode, tracingMenuItems]);
+  }, [isInAnnotationView, isViewMode, tracingMenuItems]);
 
-  const allCommands = [
+  const allStaticCommands = [
+    viewDatasetsItem,
+    viewAnnotationItems,
     ...getNavigationEntries(),
     ...getThemeEntries(),
     ...getToolEntries(),
+    ...getViewModeEntries(),
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getSuperUserItems(),
   ];
+
+  const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only rerun if allowUpdate changes
+  useEffect(() => {
+    setCommands(allStaticCommands);
+  }, [allowUpdate]);
+
+  const closePalette = () => {
+    setPaletteKey((prevKey) => prevKey + 1);
+  };
+
+  const commandsWithIds = useMemo(() => {
+    return commands.map((command, index) => {
+      return { id: index, ...command };
+    });
+  }, [commands]);
+
   return (
     <ReactCommandPalette
-      commands={allCommands.map((command, counter) => {
-        return {
-          ...command,
-          id: counter,
-        };
-      })}
+      commands={commandsWithIds}
+      key={paletteKey}
       hotKeys={["ctrl+p", "command+p"]}
       trigger={label}
-      closeOnSelect
-      resetInputOnOpen
       maxDisplayed={100}
       theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
+      onSelect={handleSelect}
+      showSpinnerOnSelect={false}
+      resetInputOnOpen
+      onRequestClose={() => setCommands(allStaticCommands)}
+      closeOnSelect={false}
+      renderCommand={(command) => {
+        const { shortcut, highlight: maybeDirtyString, name } = command as ExtendedCommand;
+        const cleanString = cleanStringOfMostHTML(maybeDirtyString);
+        return (
+          <div
+            className="item"
+            style={{ display: "flex", justifyContent: "space-between", width: "100%" }}
+          >
+            {cleanString ? (
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: modified from https://github.com/asabaylus/react-command-palette/blob/main/src/default-command.js
+              <span dangerouslySetInnerHTML={{ __html: cleanString }} />
+            ) : (
+              <span>{name}</span>
+            )}
+            <span>{shortcut}</span>
+          </div>
+        );
+      }}
     />
   );
 };

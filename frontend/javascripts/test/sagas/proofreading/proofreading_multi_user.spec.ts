@@ -256,7 +256,6 @@ describe("Proofreading (Multi User)", () => {
           sourceId: 1,
           targetId: 4,
         },
-        _injected: true,
       },
     ]);
 

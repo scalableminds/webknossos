@@ -152,9 +152,17 @@ describe("Proofreading (Multi User)", () => {
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(receivedUpdateActions).toEqual([
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1,
+            targetId: 4,
+          },
+        },
         {
           name: "mergeAgglomerate",
           value: {
@@ -768,9 +776,9 @@ describe("Proofreading (Multi User)", () => {
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(receivedUpdateActions).toEqual([
         {
           name: "mergeAgglomerate",
           value: {
@@ -779,6 +787,20 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 1,
             agglomerateId1: 1337,
             agglomerateId2: 1,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [4, 4, 4],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1337,
+            metadata: [],
+            name: null,
           },
         },
       ]);

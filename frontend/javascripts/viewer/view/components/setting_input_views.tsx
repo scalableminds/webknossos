@@ -503,6 +503,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const marginLeftStyle = {
     marginLeft: 6,
   };
+  const leftColumnFlexStyle = "0 0 60px";
   const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
   const exportButton = (
     <>
@@ -581,7 +582,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           marginBottom: 10,
         }}
       >
-        <Flex gap="middle" justify="space-between" align="center">
+        <Flex gap="middle" justify="space-between" align="center" flex={leftColumnFlexStyle}>
           <Switch
             size="small"
             onChange={onVisibilityChange}
@@ -630,7 +631,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         gap="middle"
         justify="flex-start"
       >
-        <div style={{ width: 60, flexShrink: 0 }}>
+        <div style={{ flex: leftColumnFlexStyle }}>
           <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
             <label> Bounds: </label>
           </FastTooltip>
@@ -652,14 +653,10 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>
-        <ButtonComponent
-          type="text"
-          size="small"
-          onClick={(evt) =>
-            onOpenContextMenu(getContextMenu(), evt as React.MouseEvent<HTMLDivElement>, bboxId)
-          }
-          icon={<EllipsisOutlined />}
-        />
+        {/* onOpenContextMenu needs event from div*/}
+        <div onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}>
+          <ButtonComponent type="text" size="small" icon={<EllipsisOutlined />} />
+        </div>
       </Flex>
     </div>
   );

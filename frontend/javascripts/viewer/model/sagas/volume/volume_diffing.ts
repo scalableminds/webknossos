@@ -1,5 +1,5 @@
 import { diffDiffableMaps } from "libs/diffable_map";
-import { diffArrays } from "libs/utils";
+import { ColoredLogger, diffArrays } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
@@ -57,7 +57,10 @@ export function* diffVolumeTracing(
     AnnotationLayerEnum.Volume,
   );
 
-  if (prevVolumeTracing.segments !== volumeTracing.segments) {
+  if (
+    prevVolumeTracing.segments !== volumeTracing.segments ||
+    prevVolumeTracing.segmentJournal !== volumeTracing.segmentJournal
+  ) {
     for (const action of cachedDiffSegmentLists(
       volumeTracing.tracingId,
       prevVolumeTracing.segments,
@@ -122,10 +125,11 @@ function* uncachedDiffSegmentLists(
   segmentJournal: Array<SegmentJournalEntry>,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   const {
-    onlyA: deletedSegmentIds,
+    onlyA: initialDeletedSegmentIds,
     onlyB: addedSegmentIds,
     changed: bothSegmentIds,
   } = diffDiffableMaps(prevSegments, newSegments);
+  const deletedSegmentIdSet = new Set(initialDeletedSegmentIds);
 
   const prevLatestJournalEntryIndex = prevSegmentJournal.at(-1)?.entryIndex;
   const journalDiff =
@@ -141,23 +145,29 @@ function* uncachedDiffSegmentLists(
           return segmentJournal.slice(splitIndex + 1);
         })();
 
-  const segmentJournalByRemovedId = _.groupBy(
-    journalDiff.filter((entry) => entry.type === "MERGE_SEGMENTS"),
-    (entry) => entry.targetId,
-  );
+  console.log("prevSegmentJournal", prevSegmentJournal);
+  console.log("segmentJournal", segmentJournal);
+  ColoredLogger.logBlue("[diffing] using journalDiff", journalDiff);
 
-  for (const segmentId of deletedSegmentIds) {
-    if (segmentJournalByRemovedId[segmentId]?.length === 1) {
-      const mergeJournalEntry = segmentJournalByRemovedId[segmentId][0];
-      // todop: what about the source segment that got its name changed potentially?
-      yield mergeSegmentsVolumeAction(
-        mergeJournalEntry.sourceId,
-        mergeJournalEntry.targetId,
-        tracingId,
-      );
-    } else {
-      yield deleteSegmentVolumeAction(segmentId, tracingId);
-    }
+  for (const mergeJournalEntry of journalDiff) {
+    // todop: what about the source segment that got its name changed potentially?
+    // that should (?) be respected so that no updateSegmentPartialVolumeAction
+    // is emitted for that.
+    yield mergeSegmentsVolumeAction(
+      mergeJournalEntry.sourceId,
+      mergeJournalEntry.targetId,
+      tracingId,
+    );
+
+    // Note that the merge entry doesn't always imply the existence
+    // of targetId in deletedSegmentIdSet. This happens when two agglomerates
+    // were merged, but there was no segment item for the target.
+    // The following line will be a no-op then.
+    deletedSegmentIdSet.delete(mergeJournalEntry.targetId);
+  }
+
+  for (const segmentId of deletedSegmentIdSet) {
+    yield deleteSegmentVolumeAction(segmentId, tracingId);
   }
 
   for (const segmentId of addedSegmentIds) {

@@ -24,6 +24,7 @@ import type {
   InitializeEditableMappingAction,
   InitializeVolumeTracingAction,
 } from "./volumetracing_actions";
+import type { Action } from "./actions";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type InitializationAction =
@@ -118,7 +119,7 @@ export type UserBoundingBoxAction =
   | AddUserBoundingBoxesAction
   | FinishedResizingUserBoundingBoxAction;
 
-export const AllUserBoundingBoxActions = [
+export const AllUserBoundingBoxActions: Action["type"][] = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_NEW_USER_BOUNDING_BOX",
   "CHANGE_USER_BOUNDING_BOX",

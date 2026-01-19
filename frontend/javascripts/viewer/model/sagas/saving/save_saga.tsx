@@ -2,7 +2,7 @@ import { getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import _ from "lodash";
 import { type Channel, buffers } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -278,9 +278,9 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   // When liveCollab is disabled, this code typically runs in read-only mode where the save queue is empty.
   const saveQueueEntries = yield* select((state) => state.save.queue);
 
-  // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing
-  // This code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
-  // be ensured because not allowed to edit means the save queue would be empty. Thus no needsRebasing = true.
+  // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing,
+  // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
+  // be ensured because "not allowed to edit" means the save queue would be empty. Thus no needsRebasing = true.
   const needsRebasing =
     WkDevFlags.liveCollab &&
     othersMayEdit &&
@@ -290,7 +290,11 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     yield* call(diffTracingsAndPrepareRebase);
   }
 
-  // ColoredLogger.logRed("needsRebasing", needsRebasing);
+  ColoredLogger.logRed("needsRebasing", needsRebasing);
+  ColoredLogger.logRed(
+    "local saveQueueEntries",
+    _.flattenDeep(saveQueueEntries.map((entry) => entry.actions)),
+  );
 
   try {
     // ColoredLogger.logRed("apply from server", missingUpdateActions);

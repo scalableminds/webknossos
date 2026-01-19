@@ -8,7 +8,13 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, getAdaptToTypeFunction, isEditableEventTarget, isNumberMap } from "libs/utils";
+import {
+  ColoredLogger,
+  SoftError,
+  getAdaptToTypeFunction,
+  isEditableEventTarget,
+  isNumberMap,
+} from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -216,6 +222,7 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
+  ColoredLogger.logGreen("ensureSegmentItemAndLoadCoarseMesh", segmentId, position);
   yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
 
   const autoRenderMeshInProofreading = yield* select(
@@ -1059,6 +1066,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // );
 
     // Remove the segment that doesn't exist anymore.
+    ColoredLogger.logGreen("dispatch mergeSegmentsAction");
     yield* put(mergeSegmentsAction(sourceAgglomerateId, targetAgglomerateId, volumeTracingId));
   }
 

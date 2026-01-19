@@ -41,6 +41,7 @@ import type {
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
+import { ColoredLogger } from "libs/utils";
 
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,

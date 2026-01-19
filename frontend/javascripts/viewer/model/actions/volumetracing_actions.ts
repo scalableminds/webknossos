@@ -15,6 +15,7 @@ import type {
 } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import type { ApplicableVolumeUpdateAction } from "../sagas/volume/update_actions";
+import type { Action } from "./actions";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -132,7 +133,7 @@ export type VolumeTracingAction =
   | BatchUpdateGroupsAndSegmentsAction
   | ApplyVolumeUpdateActionsFromServerAction;
 
-export const VolumeTracingSaveRelevantActions = [
+export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
   "FINISH_ANNOTATION_STROKE",
@@ -140,12 +141,13 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_SEGMENT_GROUPS",
   "SET_EXPANDED_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
+  "MERGE_SEGMENTS",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
   // Note that the following three actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
-  "FINISH_MAPPING_INITIALIZATION_ACTION",
+  "FINISH_MAPPING_INITIALIZATION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
   "SET_HAS_EDITABLE_MAPPING",
   "SET_MAPPING_IS_LOCKED",

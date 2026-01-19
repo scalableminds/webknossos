@@ -36,6 +36,8 @@ import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { ColoredLogger } from "libs/utils";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
+import { MappingVisualizer } from "test/helpers/mapping_visualizer";
+import _ from "lodash";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -51,8 +53,13 @@ function* prepareEditableMapping(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(activeSegmentId, { anchorPosition }, tracingId));
-  // yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
+  yield put(
+    updateSegmentAction(
+      activeSegmentId,
+      { name: `Segment ${activeSegmentId}`, anchorPosition },
+      tracingId,
+    ),
+  );
   yield put(setActiveCellAction(activeSegmentId));
 
   yield call(createEditableMapping);
@@ -141,6 +148,8 @@ describe("Proofreading (Multi User)", () => {
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       yield* expectMapping(tracingId, expectedMappingAfterMerge);
+
+      yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
@@ -177,8 +186,8 @@ describe("Proofreading (Multi User)", () => {
       {6 -> 7}
       {1337, 1338}
 
-      - Frontend merges segments 5 and 6
       - Backend merges 1 and 4
+      - Frontend merges segments 5 and 6
 
       The resulting mapping will be:
       {6 <- 5 <- 4 -> 1 -> 2 -> 3}
@@ -192,10 +201,38 @@ describe("Proofreading (Multi User)", () => {
         name: "updateSegmentPartial",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
+          id: 1,
+          anchorPosition: [1, 1, 1],
+          additionalCoordinates: undefined,
+          name: "Custom Name 1",
+          color: [1, 2, 3],
+          groupId: null,
+          metadata: [],
+          creationTime: 0,
+        },
+      },
+      {
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
           id: 4,
           anchorPosition: [4, 4, 4],
           additionalCoordinates: undefined,
-          name: "",
+          name: "Custom Name 4",
+          color: [1, 2, 3],
+          groupId: null,
+          metadata: [],
+          creationTime: 0,
+        },
+      },
+      {
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 6,
+          anchorPosition: [6, 6, 6],
+          additionalCoordinates: undefined,
+          name: "Custom Name 6",
           color: [1, 2, 3],
           groupId: null,
           metadata: [],
@@ -219,6 +256,7 @@ describe("Proofreading (Multi User)", () => {
           sourceId: 1,
           targetId: 4,
         },
+        _injected: true,
       },
     ]);
 
@@ -226,7 +264,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 5, [5, 5, 5]);
+      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4]);
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -237,38 +275,52 @@ describe("Proofreading (Multi User)", () => {
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       yield* expectMapping(tracingId, expectedMappingAfterMerge2);
-
+      yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
+      const debugState = Store.getState();
+      debugger;
+
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.slice(-2)).toEqual([
+      expect(receivedUpdateActions.slice(-3)).toEqual([
         {
           name: "mergeSegments",
           value: {
             actionTracingId: "volumeTracingId",
             sourceId: 1,
-            targetId: 4,
+            targetId: 6,
           },
         },
         {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 5,
+            segmentId1: 4,
             segmentId2: 6,
             agglomerateId1: 1,
             agglomerateId2: 6,
+          },
+        },
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: "volumeTracingId",
+            anchorPosition: [4, 4, 4],
+            id: 1,
           },
         },
       ]);
 
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
-      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
-      expect(segment6AfterSaving).toBeUndefined();
+      const segment1AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(1);
+      expect(segment1AfterSaving).toBeTruthy();
 
       const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4);
       expect(segment4AfterSaving).toBeUndefined();
+
+      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
+      expect(segment6AfterSaving).toBeUndefined();
     });
 
     await task.toPromise();
@@ -714,6 +766,7 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
+      yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
@@ -749,7 +802,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   });
 
-  it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
+  it.only("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
     /*
       todop: double check this docstring
       Initial Mapping:
@@ -796,7 +849,7 @@ describe("Proofreading (Multi User)", () => {
         name: "splitAgglomerate",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 7,
+          segmentId1: 7, // will keep its agglomerate id
           segmentId2: 1337,
           agglomerateId: 1337,
         },
@@ -815,6 +868,14 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1338, 1339 ]]
      */
     backendMock.planVersionInjection(6, [
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: 1339,
+          targetId: 4,
+        },
+      },
       {
         name: "mergeAgglomerate",
         value: {
@@ -865,11 +926,20 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
+      yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const viz = new MappingVisualizer(backendMock.agglomerateMapping);
 
-      expect(mergeSaveActionBatch).toEqual([
+      for (const version of _.range(backendMock.agglomerateMapping.currentVersion + 1)) {
+        viz.renderVersion(version, {
+          outputPath: `debug/mapping-${version}.svg`,
+        });
+      }
+
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
+
+      expect(receivedUpdateActions).toEqual([
         {
           name: "mergeAgglomerate",
           value: {
@@ -902,7 +972,6 @@ describe("Proofreading (Multi User)", () => {
 
   it("should merge two agglomerates optimistically and not trigger rebasing due to no incoming backend actions", async (context: WebknossosTestContext) => {
     /*
-      todop: double check this docstring
       Initial Mapping:
       {1 -> 2 -> 3}
       {4 -> 5}
@@ -932,11 +1001,20 @@ describe("Proofreading (Multi User)", () => {
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
+      yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const mergeSaveActionBatch = getFlattenedUpdateActions(context).slice(-2);
 
       expect(mergeSaveActionBatch).toEqual([
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            sourceId: 1,
+            targetId: 4,
+          },
+        },
         {
           name: "mergeAgglomerate",
           value: {

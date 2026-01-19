@@ -1,5 +1,5 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { getAdaptToTypeFunction } from "libs/utils";
+import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
 import _ from "lodash";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -172,11 +172,17 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
   );
   const annotationBeforeUpdate = yield* select((state) => state.annotation);
 
+  ColoredLogger.logRed(
+    "adapt actions during rebase",
+    _.flattenDeep(saveQueue.map((entry) => entry.actions)),
+  );
+
   let success = true;
   const updatedSaveQueue = saveQueue
     .map((saveQueueEntry): SaveQueueEntry | null => {
       const newActions = saveQueueEntry.actions
         .map((action) => {
+          ColoredLogger.logYellow("trying to update action", action);
           switch (action.name) {
             case "mergeAgglomerate":
             case "splitAgglomerate": {
@@ -324,6 +330,11 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 partialMapping.get(action.value.sourceId) ?? action.value.sourceId;
               const newTargetId =
                 partialMapping.get(action.value.targetId) ?? action.value.targetId;
+
+              ColoredLogger.logYellow("Adapting mergeSegments from", action.value, "to", {
+                newSourceId,
+                newTargetId,
+              });
 
               return {
                 ...action,

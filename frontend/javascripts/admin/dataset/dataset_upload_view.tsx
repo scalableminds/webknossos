@@ -59,7 +59,6 @@ import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
 import _ from "lodash";
-import countBy from "lodash/countBy";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { type BlockerFunction, Link } from "react-router-dom";
@@ -586,7 +585,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       }
     }
 
-    const countedFileExtensions = countBy(fileExtensions, (str) => str);
+    const countedFileExtensions = _.countBy(fileExtensions, (str) => str);
     const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
     if (containsExtension("nml")) {

@@ -45,6 +45,7 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
+import { ACTIONBAR_MARGIN_LEFT } from "./action-bar/tools/tool_helpers";
 // import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import { NumberSliderSetting } from "./components/setting_input_views";
@@ -128,13 +129,14 @@ function AdditionalCoordinatesInputView() {
           })}
         </div>
       }
+      placement="bottom"
     >
       <ArbitraryVectorInput
         autoSize
         vectorLength={additionalCoordinates.length}
         value={additionalCoordinates.map((el) => el.value)}
         onChange={changeAdditionalCoordinatesFromVector}
-        style={{ marginLeft: 10, marginRight: 10 }}
+        style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
         addonBefore={additionalCoordinates.map((coord) => coord.name).join("")}
       />
     </Popover>

@@ -1,7 +1,7 @@
-import type { InputProps } from "antd";
+import type { InputProps, InputRef } from "antd";
 import _ from "lodash";
 import type React from "react";
-import { PureComponent } from "react";
+import { PureComponent, forwardRef } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import InputComponent from "viewer/view/components/input_component";
@@ -17,6 +17,7 @@ type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
   autoSize?: boolean;
   // Only used in ArbitraryVectorInput case
   vectorLength?: number;
+  inputRef?: React.Ref<InputRef>;
 };
 type State = {
   isEditing: boolean;
@@ -148,12 +149,13 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
   };
 
   render() {
+    const { inputRef } = this.props;
     const {
       style,
       autoSize,
       vectorLength: _vectorLength,
       ...props
-    } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
+    } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals", "inputRef"]);
 
     const { addonBefore } = props;
     const addonBeforeLength =
@@ -161,6 +163,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
 
     return (
       <InputComponent
+        ref={inputRef}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         value={this.state.text}
@@ -189,22 +192,35 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
   }
 }
 
-export class Vector3Input extends BaseVector<Vector3> {
+class Vector3InputBase extends BaseVector<Vector3> {
   get defaultValue(): Vector3 {
     return [0, 0, 0];
   }
 }
-export class Vector6Input extends BaseVector<Vector6> {
+
+class Vector6InputBase extends BaseVector<Vector6> {
   get defaultValue(): Vector6 {
     return [0, 0, 0, 0, 0, 0];
   }
 }
 
-export class ArbitraryVectorInput extends BaseVector<number[]> {
+class ArbitraryVectorInputBase extends BaseVector<number[]> {
   get defaultValue(): number[] {
     return Array(this.props.vectorLength).fill(0);
   }
 }
+
+export const Vector3Input = forwardRef<InputRef, BaseProps<Vector3>>((props, ref) => (
+  <Vector3InputBase {...props} inputRef={ref} />
+));
+
+export const Vector6Input = forwardRef<InputRef, BaseProps<Vector6>>((props, ref) => (
+  <Vector6InputBase {...props} inputRef={ref} />
+));
+
+export const ArbitraryVectorInput = forwardRef<InputRef, BaseProps<number[]>>((props, ref) => (
+  <ArbitraryVectorInputBase {...props} inputRef={ref} />
+));
 
 type BoundingBoxInputProps = Omit<InputProps, "value"> & {
   value: ServerBoundingBoxMinMaxTypeTuple;

@@ -371,16 +371,17 @@ class DatasetController @Inject()(userService: UserService,
           newDatasetId = ObjectId.generate
           newDirectoryName = datasetService.generateDirectoryName(dataset.name, newDatasetId)
           adaptedDataSource = dataSource.withUpdatedId(DataSourceId(newDirectoryName, targetOrganizationId))
-          dataset <- datasetService.createDataset(
+          _ <- datasetService.createDataset(
             dataStore,
             newDatasetId,
             dataset.name,
             adaptedDataSource,
             None,
-            isVirtual = true
-            // TODO metadata, description
+            isVirtual = true,
+            metadata = dataset.metadata,
+            description = dataset.description,
           )
-        } yield Ok(Json.toJson(dataSource))
+        } yield Ok(Json.toJson(newDatasetId))
       }
     }
 

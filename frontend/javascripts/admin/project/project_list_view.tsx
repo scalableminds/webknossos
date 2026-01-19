@@ -30,7 +30,12 @@ import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  localeCompareBy,
+  millisecondsToHours,
+} from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
@@ -207,7 +212,7 @@ function ProjectListView() {
     },
   ];
 
-  const filteredProjects = Utils.filterWithSearchQueryAND(
+  const filteredProjects = filterWithSearchQueryAND(
     projects,
     ["name", "team", "priority", "owner", "pendingInstances", "tracingTime"],
 
@@ -258,14 +263,14 @@ function ProjectListView() {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy<APIProjectWithStatus>((project) => project.name)}
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.name)}
             width={250}
           />
           <Column
             title="Pending Task Instances"
             dataIndex="pendingInstances"
             key="pendingInstances"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
             filters={greaterThanZeroFilters}
             onFilter={(value, project: APIProjectWithStatus) => {
               if (value === "0") {
@@ -278,9 +283,9 @@ function ProjectListView() {
             title={<Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>}
             dataIndex="tracingTime"
             key="tracingTime"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
             render={(tracingTimeMs) =>
-              Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
+              millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
                 maximumFractionDigits: 1,
               })
             }
@@ -296,7 +301,7 @@ function ProjectListView() {
             title="Team"
             dataIndex="teamName"
             key="teamName"
-            sorter={Utils.localeCompareBy<APIProjectWithStatus>((project) => project.team)}
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.team)}
             filters={_.uniqBy(
               filteredProjects.map((project) => ({
                 text: project.teamName,
@@ -311,9 +316,7 @@ function ProjectListView() {
             title="Owner"
             dataIndex="owner"
             key="owner"
-            sorter={Utils.localeCompareBy<APIProjectWithStatus>(
-              (project) => project.owner.lastName,
-            )}
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.owner.lastName)}
             render={(owner: APIUserBase) => (
               <>
                 <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
@@ -334,7 +337,7 @@ function ProjectListView() {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.created)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.created)}
             render={(created) => <FormattedDate timestamp={created} />}
             defaultSortOrder="descend"
           />
@@ -342,7 +345,7 @@ function ProjectListView() {
             title="Priority"
             dataIndex="priority"
             key="priority"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.priority)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.priority)}
             render={(priority, project: APIProjectWithStatus) =>
               `${priority} ${project.paused ? "(paused)" : ""}`
             }
@@ -358,7 +361,7 @@ function ProjectListView() {
             title="Time Limit"
             dataIndex="expectedTime"
             key="expectedTime"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
             render={(expectedTime) => `${expectedTime}m`}
           />
           <Column

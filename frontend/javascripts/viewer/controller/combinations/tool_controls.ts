@@ -1,7 +1,7 @@
 import features from "features";
 import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
+import { clamp } from "libs/utils";
 import { document } from "libs/window";
 import { Color } from "three";
 import {
@@ -102,7 +102,7 @@ export class MoveToolController {
 
           case "alt":
           case "ctrlOrMeta": {
-            MoveHandlers.zoomPlanes(Utils.clamp(-1, delta, 1), true);
+            MoveHandlers.zoomPlanes(clamp(-1, delta, 1), true);
             break;
           }
 

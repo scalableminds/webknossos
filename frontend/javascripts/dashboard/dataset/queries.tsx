@@ -10,7 +10,7 @@ import {
 import { type DatasetUpdater, getDataset, getDatasets, updateDatasetPartial } from "admin/rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { conjugate, diffArrays, pluralize } from "libs/utils";
 import _ from "lodash";
 import { useEffect, useRef } from "react";
 import {
@@ -472,7 +472,7 @@ function diffDatasets(
     onlyA: onlyInOld,
     onlyB: onlyInNew,
     both,
-  } = Utils.diffArrays(
+  } = diffArrays(
     oldDatasets.map((ds) => ds.id),
     newDatasets.map((ds) => ds.id),
   );
@@ -519,17 +519,17 @@ export function generateDiffMessage(diff: {
   const maybeAlso = newOrChangedCount ? "Also, " : "";
   const removedStr =
     diff.onlyInOld > 0
-      ? `${maybeAlso}${diff.onlyInOld} ${Utils.pluralize(
+      ? `${maybeAlso}${diff.onlyInOld} ${pluralize(
           "dataset",
           diff.onlyInOld,
-        )} no longer ${Utils.conjugate("exist", diff.onlyInOld)} in this folder.`
+        )} no longer ${conjugate("exist", diff.onlyInOld)} in this folder.`
       : "";
   const maybeNewAndChangedSentence = newOrChangedCount
-    ? `There ${Utils.conjugate(
+    ? `There ${conjugate(
         "are",
         newOrChangedCount,
         "is",
-      )} ${newStr}${maybeAnd}${changedStr}${Utils.pluralize("dataset", newOrChangedCount)}.`
+      )} ${newStr}${maybeAnd}${changedStr}${pluralize("dataset", newOrChangedCount)}.`
     : "";
   return joinStrings(maybeNewAndChangedSentence, removedStr);
 }

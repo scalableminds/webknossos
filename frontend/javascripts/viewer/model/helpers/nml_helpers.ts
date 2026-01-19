@@ -1,7 +1,10 @@
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
-import * as Utils from "libs/utils";
-import { coalesce } from "libs/utils";
+import {
+  coalesce,
+  computeArrayFromBoundingBox,
+  computeBoundingBoxFromBoundingBoxObject,
+} from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -200,7 +203,7 @@ function serializeTaskBoundingBox(
   tagName: string,
 ): string {
   if (boundingBox) {
-    const boundingBoxArray = Utils.computeArrayFromBoundingBox(boundingBox);
+    const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
     const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
     return serializeTag(tagName, {
       topLeftX,
@@ -217,7 +220,7 @@ function serializeTaskBoundingBox(
 
 function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string {
   const { boundingBox, id, name, isVisible } = bb;
-  const boundingBoxArray = Utils.computeArrayFromBoundingBox(boundingBox);
+  const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
   const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
   const color = bb.color ? mapColorToComponents(bb.color) : {};
   return serializeTag(tagName, {
@@ -1081,7 +1084,7 @@ export function parseNml(nmlString: string): Promise<{
           );
           const boundingBoxObject = parseBoundingBoxObject(attr);
           const userBoundingBox = {
-            boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+            boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
             color: _parseColor(attr, DEFAULT_COLOR),
             id: userBoundingBoxId,
             isVisible: _parseBool(attr, "isVisible", {
@@ -1099,7 +1102,7 @@ export function parseNml(nmlString: string): Promise<{
           const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
           const boundingBoxObject = parseBoundingBoxObject(attr);
           const userBoundingBox = {
-            boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+            boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
             color: TASK_BOUNDING_BOX_COLOR,
             id: userBoundingBoxId,
             isVisible: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,

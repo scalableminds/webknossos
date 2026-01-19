@@ -22,7 +22,7 @@ import {
 import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { hexToRgb, numberArrayToVector6, rgbToHex, roundTo, stringToNumberArray } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type * as React from "react";
@@ -139,7 +139,7 @@ type LogSliderSettingProps = {
   label: string | React.ReactNode;
   max: number;
   min: number;
-  roundTo: number;
+  roundToDigit: number;
   disabled?: boolean;
   spans?: Vector3;
   precision?: number;
@@ -156,7 +156,7 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
     label,
     max,
     min,
-    roundTo = 3,
+    roundToDigit = 3,
     disabled = false,
     spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
     precision,
@@ -190,7 +190,7 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
     const calculatedValue = calculateValue(tooltipValue);
     return calculatedValue >= 10000
       ? calculatedValue.toExponential()
-      : Utils.roundTo(calculatedValue, roundTo);
+      : roundTo(calculatedValue, roundToDigit);
   };
 
   const getSliderValue = () => {
@@ -233,7 +233,7 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
           }}
           step={value / 10}
           precision={precision ?? 2}
-          value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
+          value={roundToDigit != null ? roundTo(value, roundToDigit) : value}
           onChange={onChangeInput}
           disabled={disabled}
           size="small"
@@ -455,12 +455,12 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     const newText = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(newText);
-    const value = Utils.stringToNumberArray(newText);
+    const value = stringToNumberArray(newText);
     const isValidLength = value.length === 6;
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      onBoundingChange(Utils.numberArrayToVector6(value));
+      onBoundingChange(numberArrayToVector6(value));
     }
 
     setText(newText);
@@ -593,7 +593,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           />
           <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
             <ColorSetting
-              value={Utils.rgbToHex(upscaledColor)}
+              value={rgbToHex(upscaledColor)}
               onChange={handleColorChange}
               disabled={disabled}
             />
@@ -680,7 +680,7 @@ export function ColorSetting(props: ColorSettingPropTypes) {
   const { value, disabled = false, style } = props;
 
   const onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    props.onChange(Utils.hexToRgb(evt.target.value));
+    props.onChange(hexToRgb(evt.target.value));
   };
 
   return (

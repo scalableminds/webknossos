@@ -1,6 +1,6 @@
 import { InputNumber, Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
-import * as Utils from "libs/utils";
+import { hexToRgb, map3, rgbToHex } from "libs/utils";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
@@ -66,13 +66,13 @@ export function ChangeColorMenuItemContent({
   rgb: Vector3;
 }) {
   const isFirstColorChange = useRef(true);
-  const color = Utils.rgbToHex(Utils.map3((value) => value * 255, rgb));
+  const color = rgbToHex(map3((value) => value * 255, rgb));
   const onChangeColor = (colorStr: string) => {
     if (isDisabled) {
       return;
     }
-    const colorRgb = Utils.hexToRgb(colorStr);
-    const newColor = Utils.map3((component) => component / 255, colorRgb);
+    const colorRgb = hexToRgb(colorStr);
+    const newColor = map3((component) => component / 255, colorRgb);
 
     // Only create a new undo state on the first color change event.
     // All following color change events should mutate the most recent undo
@@ -107,7 +107,7 @@ const ThrottledRGBAColorPicker = ({
     throttledSetValue(newValue);
   };
   const setValueFromHex = (color: string) => {
-    const colorRgb = Utils.hexToRgb(color);
+    const colorRgb = hexToRgb(color);
     setValue({ r: colorRgb[0], g: colorRgb[1], b: colorRgb[2], a: value.a });
   };
 
@@ -136,7 +136,7 @@ const ThrottledRGBAColorPicker = ({
       />
     );
   };
-  const valueAsHex = Utils.rgbToHex([value.r, value.g, value.b]);
+  const valueAsHex = rgbToHex([value.r, value.g, value.b]);
   const hexInputWidth = COLOR_PICKER_WIDTH * (1 - RELATIVE_OPACITY_INPUT_WIDTH);
   return (
     <div style={{ marginRight: 10, width: COLOR_PICKER_WIDTH }}>
@@ -172,7 +172,7 @@ export function ChangeRGBAColorMenuItemContent({
   };
   const onChangeColor = (color: RgbaColor) => {
     const colorRgb: Vector3 = [color.r, color.g, color.b];
-    const newColor: Vector4 = [...Utils.map3((component) => component / 255, colorRgb), color.a];
+    const newColor: Vector4 = [...map3((component) => component / 255, colorRgb), color.a];
 
     // Only create a new undo state on the first color change event.
     // All following color change events should mutate the most recent undo

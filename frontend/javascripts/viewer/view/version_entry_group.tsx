@@ -2,7 +2,7 @@ import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 import { Avatar, List } from "antd";
 import FormattedDate from "components/formatted_date";
 import _ from "lodash";
-import * as React from "react";
+import { Component, Fragment } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import VersionEntry from "viewer/view/version_entry";
 
@@ -39,10 +39,10 @@ function GroupHeader({
     >
       <List.Item.Meta
         title={
-          <React.Fragment>
+          <Fragment>
             {lastVersion} to {batches[0].version} (
             <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
-          </React.Fragment>
+          </Fragment>
         }
         avatar={
           <Avatar size="small" icon={expanded ? <CaretDownOutlined /> : <CaretRightOutlined />} />
@@ -51,7 +51,7 @@ function GroupHeader({
     </List.Item>
   );
 }
-export default class VersionEntryGroup extends React.Component<Props, State> {
+export default class VersionEntryGroup extends Component<Props, State> {
   state: State = {
     expanded: false,
   };
@@ -87,7 +87,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
 
     const containsMultipleBatches = batches.length > 1;
     return (
-      <React.Fragment>
+      <Fragment>
         {containsMultipleBatches ? (
           <GroupHeader
             toggleExpand={this.toggleExpand}
@@ -110,7 +110,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
               />
             ))
           : null}
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

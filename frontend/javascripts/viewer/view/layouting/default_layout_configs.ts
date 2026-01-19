@@ -1,5 +1,4 @@
-import { getIsInIframe } from "libs/utils";
-import * as Utils from "libs/utils";
+import { entries, getIsInIframe, keys } from "libs/utils";
 /*
  * This file defines:
  *  - the main tabs which can be arranged in WK Core
@@ -26,6 +25,7 @@ import type {
   TabNode,
   TabsetNode,
 } from "./flex_layout_types";
+
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 15;
 const layoutHeaderHeight = 20;
@@ -110,16 +110,16 @@ export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode 
 }
 const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 
-Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
+entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
 const OrthoViewports = {} as Record<keyof typeof OrthoViews, TabNode>;
-Utils.keys(OrthoViews).forEach((viewportId) => {
+keys(OrthoViews).forEach((viewportId) => {
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const ArbitraryViewports = {} as Record<keyof typeof ArbitraryViews, TabNode>;
-Utils.keys(ArbitraryViews).forEach((viewportId) => {
+keys(ArbitraryViews).forEach((viewportId) => {
   const name = ArbitraryViewsToName[viewportId];
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });

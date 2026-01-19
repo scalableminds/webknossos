@@ -8,7 +8,8 @@ import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explo
 import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
@@ -146,9 +147,8 @@ function CreateAnnotationButton() {
   const visibleSegmentationLayers = useWkSelector((state) => getVisibleSegmentationLayers(state));
   const segmentationLayers = useWkSelector((state) => getSegmentationLayers(state.dataset));
   const dataset = useWkSelector((state) => state.dataset);
-  const [isLayerSelectionModalVisible, setLayerSelectionModalVisible] =
-    React.useState<boolean>(false);
-  const [selectedLayerName, setSelectedLayerName] = React.useState<string | undefined>(undefined);
+  const [isLayerSelectionModalVisible, setLayerSelectionModalVisible] = useState<boolean>(false);
+  const [selectedLayerName, setSelectedLayerName] = useState<string | undefined>(undefined);
 
   const getUnambiguousSegmentationLayer = () => {
     if (visibleSegmentationLayers?.length === 1) return visibleSegmentationLayers[0];
@@ -264,7 +264,7 @@ function ModesView() {
   );
 }
 
-class ActionBarView extends React.PureComponent<Props, State> {
+class ActionBarView extends PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
   };
@@ -386,7 +386,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <React.Fragment>
+      <Fragment>
         <div className="action-bar">
           {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
@@ -412,7 +412,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

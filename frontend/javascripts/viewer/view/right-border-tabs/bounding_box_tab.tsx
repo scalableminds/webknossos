@@ -2,7 +2,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { type MenuProps, Table, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
+import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import _ from "lodash";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -93,7 +93,7 @@ export default function BoundingBoxTab() {
     );
 
   function handleBoundingBoxBoundingChange(id: number, boundingBox: Vector6) {
-    setChangeBoundingBoxBounds(id, Utils.computeBoundingBoxFromArray(boundingBox));
+    setChangeBoundingBoxBounds(id, computeBoundingBoxFromArray(boundingBox));
   }
 
   function handleExportBoundingBox(bb: UserBoundingBox) {
@@ -148,7 +148,7 @@ export default function BoundingBoxTab() {
         <UserBoundingBoxInput
           key={bb.id}
           bboxId={bb.id}
-          value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
+          value={computeArrayFromBoundingBox(bb.boundingBox)}
           color={bb.color}
           name={bb.name}
           isExportEnabled={isExportEnabled}

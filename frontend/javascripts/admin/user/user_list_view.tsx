@@ -39,7 +39,7 @@ import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import React, { type Key, useEffect, useState } from "react";
@@ -362,7 +362,7 @@ function UserListView() {
       </Space>
       <Spin size="large" spinning={isLoading}>
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(
+          dataSource={filterWithSearchQueryAND(
             users,
             ["firstName", "lastName", "email", "teams", (user) => Object.keys(user.experiences)],
             searchQuery,
@@ -392,21 +392,21 @@ function UserListView() {
             dataIndex="lastName"
             key="lastName"
             width={200}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.lastName)}
+            sorter={localeCompareBy<APIUser>((user) => user.lastName)}
           />
           <Column
             title="First Name"
             dataIndex="firstName"
             key="firstName"
             width={200}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.firstName)}
+            sorter={localeCompareBy<APIUser>((user) => user.firstName)}
           />
           <Column
             title="Email"
             dataIndex="email"
             key="email"
             width={320}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.email)}
+            sorter={localeCompareBy<APIUser>((user) => user.email)}
           />
           <Column
             title="Experiences"

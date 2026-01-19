@@ -593,6 +593,7 @@ class DataSourceController @Inject()(
             agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _))
           volumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             segmentIndexFileService.getSegmentVolume(
+              datasetId,
               dataSource.id,
               dataLayer,
               segmentIndexFileKey,
@@ -614,7 +615,8 @@ class DataSourceController @Inject()(
           agglomerateFileKeyOpt <- Fox.runOptional(request.body.mappingName)(
             agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _))
           boxes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            segmentIndexFileService.getSegmentBoundingBox(dataSource.id,
+            segmentIndexFileService.getSegmentBoundingBox(datasetId,
+                                                          dataSource.id,
                                                           dataLayer,
                                                           segmentIndexFileKey,
                                                           agglomerateFileKeyOpt,
@@ -651,7 +653,7 @@ class DataSourceController @Inject()(
               _ =>
                 for {
                   data: Array[Byte] <- fullMeshService
-                    .loadFor(dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+                    .loadFor(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
                   surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
                 } yield surfaceArea
             )

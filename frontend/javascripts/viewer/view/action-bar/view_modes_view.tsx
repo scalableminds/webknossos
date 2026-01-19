@@ -1,8 +1,8 @@
 import { Button, Dropdown, type MenuProps, Space } from "antd";
-import * as Utils from "libs/utils";
 import { useCallback } from "react";
 
 import { useWkSelector } from "libs/react_hooks";
+import { capitalize } from "lodash";
 import { useDispatch } from "react-redux";
 import { type ViewMode, ViewModeValues } from "viewer/constants";
 import constants from "viewer/constants";
@@ -59,7 +59,7 @@ function ViewModesView() {
       type: "group",
       label: "Select View Mode",
       children: ViewModeValues.map((mode) => ({
-        label: Utils.capitalize(mode),
+        label: capitalize(mode),
         key: mode,
         disabled: isDisabled(mode),
         icon: <span style={{ marginRight: 8 }}>{VIEW_MODE_TO_ICON[mode]}</span>,
@@ -73,7 +73,7 @@ function ViewModesView() {
   };
 
   return (
-    <Dropdown menu={menuProps} trigger={["click", "hover"]}>
+    <Dropdown menu={menuProps}>
       <Button style={NARROW_BUTTON_STYLE}>
         <Space>{VIEW_MODE_TO_ICON[viewMode]}</Space>
       </Button>

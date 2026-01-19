@@ -11,19 +11,35 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
-import { Alert, App, Button, Col, Flex, Input, Row, Space, Spin, Table, Tag, Tooltip } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Col,
+  Flex,
+  Input,
+  Modal,
+  Row,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+} from "antd";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
+import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import React, { type Key, useEffect, useState } from "react";
@@ -31,6 +47,8 @@ import { Link } from "react-router-dom";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { Store } from "viewer/singletons";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -65,7 +83,9 @@ function UserListView() {
   const [activationFilter, setActivationFilter] = useState<ActivationFilterType>(["activated"]);
   const [searchQuery, setSearchQuery] = useState("");
   const [singleSelectedUser, setSingleSelectedUser] = useState<APIUser | null | undefined>(null);
+  const [userToEdit, setUserToEdit] = useState<APIUser | null>(null);
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(null);
+  const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
   useEffect(() => {
     const { searchQuery, activationFilter } = persistence.load();
@@ -267,6 +287,7 @@ function UserListView() {
 
   const noOtherUsers = users.length < 2;
   const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
+  const mayChangeNameForUsers = features().isWkorgInstance === false && activeUser.isAdmin;
 
   return (
     <div className="container">
@@ -302,6 +323,28 @@ function UserListView() {
               setIsInviteModalOpen(visible);
             }}
           />
+          {userToEdit != null ? (
+            <Modal
+              destroyOnHidden
+              title="Change Name"
+              open={editNameModalOpen}
+              footer={null}
+              onCancel={() => setEditNameModalOpen(false)}
+            >
+              <ChangeUsernameView
+                onClose={() => setEditNameModalOpen(false)}
+                user={userToEdit}
+                setEditedUser={(editedUser: APIUser) => {
+                  setUsers((users) =>
+                    users.map((user) => (editedUser.id === user.id ? editedUser : user)),
+                  );
+                  if (activeUser.id === editedUser.id) {
+                    Store.dispatch(setActiveUserAction(editedUser));
+                  }
+                }}
+              />
+            </Modal>
+          ) : null}
         </Space>
         <Search
           style={{
@@ -319,7 +362,7 @@ function UserListView() {
       </Space>
       <Spin size="large" spinning={isLoading}>
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(
+          dataSource={filterWithSearchQueryAND(
             users,
             ["firstName", "lastName", "email", "teams", (user) => Object.keys(user.experiences)],
             searchQuery,
@@ -349,55 +392,57 @@ function UserListView() {
             dataIndex="lastName"
             key="lastName"
             width={200}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.lastName)}
+            sorter={localeCompareBy<APIUser>((user) => user.lastName)}
           />
           <Column
             title="First Name"
             dataIndex="firstName"
             key="firstName"
             width={200}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.firstName)}
+            sorter={localeCompareBy<APIUser>((user) => user.firstName)}
           />
           <Column
             title="Email"
             dataIndex="email"
             key="email"
             width={320}
-            sorter={Utils.localeCompareBy<APIUser>((user) => user.email)}
+            sorter={localeCompareBy<APIUser>((user) => user.email)}
           />
           <Column
             title="Experiences"
             dataIndex="experiences"
             key="experiences"
             width={250}
-            render={(experiences: ExperienceMap, user: APIUser) =>
-              _.map(experiences, (value, domain) => (
-                <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
-                  <span
-                    onClick={(evt) => {
-                      evt.stopPropagation();
-                      // If no user is selected, set singleSelectedUser. Otherwise,
-                      // open the modal so that all selected users are edited.
-                      setSingleSelectedUser(selectedUserIds.length > 0 ? null : user);
-                      setDomainToEdit(domain);
-                      setIsExperienceModalOpen(true);
-                    }}
-                  >
-                    {domain} : {value}
-                  </span>
-                  <CopyOutlined
-                    style={{
-                      margin: "0 0 0 5px",
-                    }}
-                    onClick={async (evt) => {
-                      evt.stopPropagation();
-                      await navigator.clipboard.writeText(domain);
-                      Toast.success(`"${domain}" copied to clipboard`);
-                    }}
-                  />
-                </Tag>
-              ))
-            }
+            render={(experiences: ExperienceMap, user: APIUser) => (
+              <Space wrap>
+                {_.map(experiences, (value, domain) => (
+                  <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
+                    <span
+                      onClick={(evt) => {
+                        evt.stopPropagation();
+                        // If no user is selected, set singleSelectedUser. Otherwise,
+                        // open the modal so that all selected users are edited.
+                        setSingleSelectedUser(selectedUserIds.length > 0 ? null : user);
+                        setDomainToEdit(domain);
+                        setIsExperienceModalOpen(true);
+                      }}
+                    >
+                      {domain} : {value}
+                    </span>
+                    <CopyOutlined
+                      style={{
+                        margin: "0 0 0 5px",
+                      }}
+                      onClick={async (evt) => {
+                        evt.stopPropagation();
+                        await navigator.clipboard.writeText(domain);
+                        Toast.success(`"${domain}" copied to clipboard`);
+                      }}
+                    />
+                  </Tag>
+                ))}
+              </Space>
+            )}
           />
           <Column
             title="Teams - Role"
@@ -506,11 +551,22 @@ function UserListView() {
             width={175}
             fixed="right"
             render={(__, user: APIUser) => (
-              <span>
+              <Flex vertical align="start">
                 <Link to={`/users/${user.id}/details`}>
                   <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
-                <br />
+                {mayChangeNameForUsers ? (
+                  <LinkButton
+                    icon={<UserOutlined />}
+                    onClick={(event) => {
+                      setUserToEdit(user);
+                      setEditNameModalOpen(true);
+                      event.stopPropagation();
+                    }}
+                  >
+                    Change Name
+                  </LinkButton>
+                ) : null}
                 {user.isActive ? (
                   activeUser.isAdmin ? (
                     <LinkButton
@@ -534,7 +590,7 @@ function UserListView() {
                     Activate User
                   </LinkButton>
                 )}
-              </span>
+              </Flex>
             )}
           />
         </Table>

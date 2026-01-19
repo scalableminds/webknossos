@@ -21,22 +21,24 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
+import { Button, Card, Col, Flex, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
 import type { SearchProps } from "antd/lib/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
+import LinkButton from "components/link_button";
 import TextWithDescription from "components/text_with_description";
 import update from "immutability-helper";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { PureComponent, useContext } from "react";
 import { Link } from "react-router-dom";
 import {
   type APIAnnotationInfo,
@@ -87,7 +89,7 @@ const persistence = new Persistence<PartialState>(
 );
 
 const READ_ONLY_ICON = (
-  <span className="fa-stack fa-1x">
+  <span className="fa-stack fa-1x" style={{ width: "1em" }}>
     <i className="fas fa-pen fa-stack-1x" />
     <i className="fas fa-slash fa-stack-1x" />
   </span>
@@ -97,7 +99,7 @@ function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 
-class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   state: State = {
     shouldShowArchivedAnnotations: false,
     archivedModeState: {
@@ -487,9 +489,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <Card
             variant="borderless"
             cover={
-              <div style={{ display: "flex", justifyContent: "center" }}>
+              <Flex justify="center">
                 <i className="drawing drawing-empty-list-annotations" />
-              </div>
+              </Flex>
             }
             style={{ background: "transparent" }}
           >
@@ -528,7 +530,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
-    const filteredAnnotations = Utils.filterWithSearchQueryAND(
+    const filteredAnnotations = filterWithSearchQueryAND(
       this.getCurrentAnnotations(),
       ["id", "name", "modified", "tags", "owner"],
       this.state.searchQuery,
@@ -563,7 +565,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   renderTable() {
     const filteredAndSortedAnnotations = this._getSearchFilteredAnnotations().sort(
-      Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
+      compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
       if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
@@ -613,7 +615,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return this.getEmptyListPlaceholder();
     }
 
-    const disabledColor = { color: "var(--ant-color-text-disabled)" };
     const columns: ColumnType<APIAnnotationInfo>[] = [
       {
         title: "ID",
@@ -624,22 +625,24 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <FormattedId id={annotation.id} />
 
             {!this.isAnnotationEditable(annotation) ? (
-              <div style={disabledColor}>{READ_ONLY_ICON} read-only</div>
+              <LinkButton disabled icon={READ_ONLY_ICON}>
+                read-only
+              </LinkButton>
             ) : null}
             {annotation.isLockedByOwner ? (
-              <div style={disabledColor}>
-                <LockOutlined style={{ marginLeft: 8, marginRight: 8 }} /> locked
-              </div>
+              <LinkButton disabled icon={<LockOutlined />}>
+                locked
+              </LinkButton>
             ) : null}
           </>
         ),
-        sorter: Utils.localeCompareBy((annotation) => annotation.id),
+        sorter: localeCompareBy((annotation) => annotation.id),
       },
       {
         title: "Name",
         width: 280,
         dataIndex: "name",
-        sorter: Utils.localeCompareBy((annotation) => annotation.name),
+        sorter: localeCompareBy((annotation) => annotation.name),
         render: (_name: string, annotation: APIAnnotationInfo) =>
           this.renderNameWithDescription(annotation),
       },
@@ -652,7 +655,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         onFilter: (value: React.Key | boolean, annotation: APIAnnotationInfo) =>
           (annotation.owner != null && annotation.owner.id === value.toString()) ||
           annotation.teams.some((team) => team.id === value),
-        sorter: Utils.localeCompareBy((annotation) => annotation.owner?.firstName || ""),
+        sorter: localeCompareBy((annotation) => annotation.owner?.firstName || ""),
         render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
           const ownerName = owner != null ? renderOwner(owner) : null;
           const teamTags = annotation.teams.map((t) => (
@@ -722,7 +725,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         title: "Modification Date",
         dataIndex: "modified",
         width: 200,
-        sorter: Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
+        sorter: compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
         render: (modified) => <FormattedDate timestamp={modified} />,
       },
       {
@@ -828,8 +831,8 @@ function TopBar({
   shouldShowArchivedAnnotations: boolean;
   archiveAll: () => void;
 }) {
-  const activeTab = React.useContext(ActiveTabContext);
-  const renderingTab = React.useContext(RenderingTabContext);
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   const search = (
     <Search

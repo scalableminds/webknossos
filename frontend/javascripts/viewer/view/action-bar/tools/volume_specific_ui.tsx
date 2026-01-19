@@ -54,6 +54,7 @@ import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpola
 import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import { QuickSelectControls } from "../quick_select_settings";
 import {
+  ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,
   NARROW_BUTTON_STYLE,
   RadioButtonWithTooltip,
@@ -159,7 +160,7 @@ export function OverwriteModeSwitch({
       // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: {    target: {        value: Overwri... Remove this comment to see the full error message
       onChange={handleSetOverwriteMode}
       style={{
-        marginLeft: 10,
+        marginLeft: ACTIONBAR_MARGIN_LEFT,
       }}
     >
       <RadioButtonWithTooltip
@@ -291,7 +292,6 @@ export function CreateSegmentButton() {
         onClick={handleCreateCell}
         style={{
           width: 36,
-          paddingLeft: 10,
         }}
         title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
@@ -323,7 +323,7 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
         dispatch(setActiveUserAction(newUserSync));
       }}
       description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
-      overlayStyle={{ maxWidth: 400 }}
+      styles={{ root: { maxWidth: 400 } }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
     >
       {children}
@@ -360,7 +360,7 @@ export function QuickSelectSettingsPopover() {
             tooltipPlacement="right"
             className="narrow"
             active={isQuickSelectActive || showNux}
-            style={{ marginLeft: 12, marginRight: 12 }}
+            style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
           >
             <SettingOutlined />
           </ToggleButton>
@@ -390,22 +390,21 @@ export function FloodFillSettings() {
 
       <ButtonComponent
         style={{
-          opacity: isRestrictedToBoundingBox ? 1 : 0.5,
-          marginLeft: 12,
-          display: "inline-block",
+          marginLeft: ACTIONBAR_MARGIN_LEFT,
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
         onClick={toggleRestrictFloodfillToBoundingBox}
         title={
           "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
         }
-      >
-        <img
-          src="/assets/images/icon-restrict-floodfill-to-bbox.svg"
-          alt="Restrict floodfill"
-          style={IMG_STYLE_FOR_SPACEY_ICONS}
-        />
-      </ButtonComponent>
+        icon={
+          <img
+            src="/assets/images/icon-restrict-floodfill-to-bbox.svg"
+            alt="Restrict floodfill"
+            style={IMG_STYLE_FOR_SPACEY_ICONS}
+          />
+        }
+      />
     </div>
   );
 }
@@ -413,13 +412,7 @@ export function FloodFillSettings() {
 function FillModeSwitch() {
   const fillMode = useWkSelector((state) => state.userConfiguration.fillMode);
   return (
-    <Radio.Group
-      value={fillMode}
-      onChange={handleSetFillMode}
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <Radio.Group value={fillMode} onChange={handleSetFillMode}>
       <RadioButtonWithTooltip
         title="Only perform the Fill operation in the current plane."
         style={NARROW_BUTTON_STYLE}
@@ -451,16 +444,11 @@ export function ProofreadingComponents() {
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
 
   return (
-    <Space.Compact
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <Space.Compact>
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
         className="narrow"
-        style={{ marginLeft: 12 }}
       >
         <ClearOutlined />
       </ButtonComponent>

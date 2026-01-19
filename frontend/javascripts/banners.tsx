@@ -8,8 +8,7 @@ import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import { parseCTimeDefaultDate } from "libs/utils";
-import * as Utils from "libs/utils";
+import { parseCTimeDefaultDate, sleep } from "libs/utils";
 import _ from "lodash";
 import type React from "react";
 import { useCallback, useEffect, useReducer, useState } from "react";
@@ -181,7 +180,7 @@ export function UpgradeVersionBanner() {
   const isVersionOutdated = useFetch(
     async () => {
       if (!activeUser) return false;
-      await Utils.sleep(INITIAL_DELAY);
+      await sleep(INITIAL_DELAY);
       const buildInfo = await getBuildInfo();
       const lastCommitDate = parseCTimeDefaultDate(buildInfo.webknossos.commitDate);
       const needsUpdate = dayjs().diff(lastCommitDate, "month") >= 6;

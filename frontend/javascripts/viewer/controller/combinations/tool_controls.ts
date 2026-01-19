@@ -1,7 +1,7 @@
 import features from "features";
 import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
+import { clamp } from "libs/utils";
 import { document } from "libs/window";
 import { Color } from "three";
 import {
@@ -102,7 +102,7 @@ export class MoveToolController {
 
           case "alt":
           case "ctrlOrMeta": {
-            MoveHandlers.zoomPlanes(Utils.clamp(-1, delta, 1), true);
+            MoveHandlers.zoomPlanes(clamp(-1, delta, 1), true);
             break;
           }
 
@@ -553,7 +553,7 @@ export class EraseToolController {
         const isControlOrMetaPressed = event.ctrlKey || event.metaKey;
         if (event.shiftKey) {
           if (isControlOrMetaPressed) {
-            VolumeHandlers.handleFloodFill(pos, plane);
+            VolumeHandlers.handleFloodFill(Store.getState(), pos, plane);
           } else {
             VolumeHandlers.handlePickCell(pos);
           }
@@ -641,7 +641,7 @@ export class FillCellToolController {
         if (shouldPickCell) {
           VolumeHandlers.handlePickCell(pos);
         } else {
-          VolumeHandlers.handleFloodFill(pos, plane);
+          VolumeHandlers.handleFloodFill(Store.getState(), pos, plane);
         }
       },
     };

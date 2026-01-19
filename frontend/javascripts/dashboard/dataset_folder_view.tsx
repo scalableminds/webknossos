@@ -1,7 +1,6 @@
-import { Button, Card, Col, Row } from "antd";
+import { Button, Card, Col, Flex, Row } from "antd";
 import features, { getDemoDatasetUrl } from "features";
-import { filterNullValues } from "libs/utils";
-import * as Utils from "libs/utils";
+import { filterNullValues, isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
@@ -123,9 +122,9 @@ function DatasetFolderViewInner(props: Props) {
         <Card
           variant="borderless"
           cover={
-            <div style={{ display: "flex", justifyContent: "center" }}>
+            <Flex justify="center">
               <i className="drawing drawing-empty-list-dataset-upload" />
-            </div>
+            </Flex>
           }
           style={{ background: "transparent" }}
         >
@@ -159,16 +158,11 @@ function DatasetFolderViewInner(props: Props) {
     );
 
     const adminHeader =
-      Utils.isUserAdminOrDatasetManager(props.user) || Utils.isUserTeamManager(props.user) ? (
-        <div
-          className="pull-right"
-          style={{
-            display: "flex",
-          }}
-        >
+      isUserAdminOrDatasetManager(props.user) || isUserTeamManager(props.user) ? (
+        <>
           <DatasetRefreshButton context={context} />
           <DatasetAddButton context={context} />
-        </div>
+        </>
       ) : null;
 
     return (
@@ -183,7 +177,7 @@ function DatasetFolderViewInner(props: Props) {
           gutter={32}
         >
           {features().isWkorgInstance ? openPublicDatasetCard : null}
-          {Utils.isUserAdminOrDatasetManager(props.user) ? uploadPlaceholderCard : null}
+          {isUserAdminOrDatasetManager(props.user) ? uploadPlaceholderCard : null}
         </Row>
       </React.Fragment>
     );

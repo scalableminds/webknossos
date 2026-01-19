@@ -2,7 +2,12 @@ import app from "app";
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { V3 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
-import * as Utils from "libs/utils";
+import {
+  computeBoundingBoxFromBoundingBoxObject,
+  convertNumberTo64BitTuple,
+  isWindows,
+  map3,
+} from "libs/utils";
 import _ from "lodash";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/globals";
@@ -285,7 +290,7 @@ class PlaneMaterialFactory {
           Identity4x4,
         ),
       };
-      const bbox = Utils.computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
+      const bbox = computeBoundingBoxFromBoundingBoxObject(layer.boundingBox);
       this.uniforms[`${layerName}_bboxMin`] = {
         value: bbox.min,
       };
@@ -589,7 +594,7 @@ class PlaneMaterialFactory {
           const state = Store.getState();
           const position = getPosition(state.flycam);
 
-          const toOrigin = new Matrix4().makeTranslation(...Utils.map3((p) => -p, position));
+          const toOrigin = new Matrix4().makeTranslation(...map3((p) => -p, position));
           const backToFlycamCenter = new Matrix4().makeTranslation(...position);
           const invertRotation = new Matrix4()
             .makeRotationFromEuler(new Euler(rotation[0], rotation[1], rotation[2], "ZYX"))
@@ -712,7 +717,7 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64BitTuple(
+            const [high, low] = convertNumberTo64BitTuple(
               hoveredSegmentId != null ? Math.abs(hoveredSegmentId) : null,
             );
 
@@ -723,7 +728,7 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
           (hoveredUnmappedSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64BitTuple(
+            const [high, low] = convertNumberTo64BitTuple(
               hoveredUnmappedSegmentId != null ? Math.abs(hoveredUnmappedSegmentId) : null,
             );
 
@@ -937,7 +942,7 @@ class PlaneMaterialFactory {
       return;
     }
 
-    const [high, low] = Utils.convertNumberTo64BitTuple(Math.abs(activeCellId));
+    const [high, low] = convertNumberTo64BitTuple(Math.abs(activeCellId));
 
     this.uniforms.activeCellIdLow.value = low;
     this.uniforms.activeCellIdHigh.value = high;
@@ -1121,6 +1126,7 @@ class PlaneMaterialFactory {
       isOrthogonal: this.isOrthogonal,
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
+      isWindows: isWindows(),
     });
     return [
       code,
@@ -1161,6 +1167,7 @@ class PlaneMaterialFactory {
       isOrthogonal: this.isOrthogonal,
       useInterpolation: interpolation,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
+      isWindows: isWindows(),
     });
   }
 

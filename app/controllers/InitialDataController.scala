@@ -260,6 +260,10 @@ Samplecountry
     sharingToken = None,
     status = "",
     logoUrl = None,
+    metadata = Json.arr(
+      Json.obj("key" -> "species", "type" -> "string", "value" -> "mouse"),
+      Json.obj("key" -> "acquisition", "type" -> "string", "value" -> "SBEM")
+    )
   )
 
   def insert: Fox[Unit] =

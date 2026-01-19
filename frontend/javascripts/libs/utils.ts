@@ -714,7 +714,7 @@ export function millisecondsToHours(ms: number) {
   return ms / oneHourInMilliseconds;
 }
 
-export function isNoElementFocussed(): boolean {
+export function isNoElementFocused(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
   return document.activeElement === document.body;
@@ -1440,4 +1440,8 @@ export function stringToBoolean(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   if (normalized === "true") return true;
   return false;
+}
+
+export function isWindows(): boolean {
+  return navigator.platform.includes("Win");
 }

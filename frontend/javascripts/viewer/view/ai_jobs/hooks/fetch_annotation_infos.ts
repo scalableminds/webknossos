@@ -5,7 +5,7 @@ import {
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { computeBoundingBoxFromBoundingBoxObject, point3ToVector3 } from "libs/utils";
 import { type APIAnnotation, AnnotationLayerEnum, type ServerVolumeTracing } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { convertUserBoundingBoxesFromServerToFrontend } from "viewer/model/reducers/reducer_helpers";
@@ -68,14 +68,25 @@ async function getVolumeServerTracings(annotation: APIAnnotation): Promise<Serve
 
 /**
  * Extracts magnification information from server volume tracings.
- * @returns An array of magnification information.
+ * @returns An object mapping layer names to their magnification information.
  */
-function getVolumeTracingMags(volumeServerTracings: ServerVolumeTracing[]) {
-  return volumeServerTracings.map(({ mags }) =>
-    mags
-      ? mags.map((mag) => ({ mag: Utils.point3ToVector3(mag) }))
-      : [{ mag: [1, 1, 1] as Vector3 }],
-  );
+function getVolumeTracingMags(
+  annotation: APIAnnotation,
+  volumeServerTracings: ServerVolumeTracing[],
+) {
+  const volumeLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
+  const volumeTracingMags: Record<string, { mag: Vector3 }[]> = {};
+
+  volumeServerTracings.forEach((tracing) => {
+    const layer = volumeLayers.find((l) => l.tracingId === tracing.id);
+
+    if (layer) {
+      volumeTracingMags[layer.name] = tracing.mags
+        ? tracing.mags.map((mag) => ({ mag: point3ToVector3(mag) }))
+        : [{ mag: [1, 1, 1] as Vector3 }];
+    }
+  });
+  return volumeTracingMags;
 }
 
 /**
@@ -110,7 +121,7 @@ async function getBoundingBoxes(
     const largestId = existingIds.length > 0 ? Math.max(...existingIds) : -1;
     userBoundingBoxes.push({
       name: "Task Bounding Box",
-      boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(annotation.task.boundingBox),
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(annotation.task.boundingBox),
       color: [0, 0, 0],
       isVisible: true,
       id: largestId + 1,
@@ -124,7 +135,7 @@ async function getBoundingBoxes(
  * @param annotationId - The ID of the annotation to fetch information for.
  * @returns A promise that resolves to an object containing all necessary annotation information.
  */
-async function fetchAnnotationInfo(
+export async function fetchAnnotationInfo(
   annotationId: string,
 ): Promise<AnnotationInfoForAITrainingJob<APIAnnotation>> {
   const annotation = await getUnversionedAnnotationInformation(annotationId, {
@@ -138,7 +149,7 @@ async function fetchAnnotationInfo(
   );
 
   const userBoundingBoxes = await getBoundingBoxes(annotation, volumeTracings);
-  const volumeTracingMags = getVolumeTracingMags(volumeServerTracings);
+  const volumeTracingMags = getVolumeTracingMags(annotation, volumeServerTracings);
 
   return {
     annotation,

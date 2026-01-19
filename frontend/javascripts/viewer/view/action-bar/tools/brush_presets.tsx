@@ -169,7 +169,7 @@ export function ChangeBrushSizePopover() {
               <Col>
                 <LogSliderSetting
                   label=""
-                  roundTo={0}
+                  roundToDigit={0}
                   min={userSettings.brushSize.minimum}
                   max={maximumBrushSize}
                   precision={0}

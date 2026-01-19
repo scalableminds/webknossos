@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
+import { getRandomColor } from "libs/utils";
 import _ from "lodash";
 import type { AdditionalCoordinate } from "types/api_types";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
@@ -201,7 +201,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         },
         id: boundingBoxId,
         name: `Bounding box ${boundingBoxId}`,
-        color: Utils.getRandomColor(),
+        color: getRandomColor(),
         isVisible: true,
       };
 

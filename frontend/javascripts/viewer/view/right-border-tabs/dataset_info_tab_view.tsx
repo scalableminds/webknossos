@@ -25,6 +25,7 @@ import {
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
+  getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -34,7 +35,7 @@ import {
 
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 
-import { getOrganization } from "admin/rest_api";
+import { getOrganization } from "admin/api/organization";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
@@ -404,7 +405,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={`/datasets/${getReadableURLPart(this.props.dataset)}/view`}
+          to={getViewDatasetURL(this.props.dataset)}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",

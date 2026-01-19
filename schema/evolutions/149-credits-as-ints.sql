@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 149 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 148 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 
 -- 1. Drop triggers and function that depend on credit_delta.
@@ -62,6 +62,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 150;
+UPDATE webknossos.releaseInformation SET schemaVersion = 149;
 
 COMMIT TRANSACTION;

@@ -106,8 +106,8 @@ import type {
 } from "viewer/store";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
-import { doWithToken, refreshToken } from "./api/token";
 import { getOrganization } from "./api/organization";
+import { doWithToken, refreshToken } from "./api/token";
 
 export * from "./api/token";
 export * from "./api/jobs";

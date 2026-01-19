@@ -357,6 +357,19 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
+  def duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log() {
+        for {
+          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "duplicateToOrga is only possible for virtual datasets"
+          // TODO insert in target orga
+        } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
   def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
            sharingToken: Option[String]): Action[AnyContent] =

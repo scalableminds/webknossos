@@ -126,9 +126,12 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
-        user <- userBox.toFox ?~> "auth.token.noUser"
-        isAllowed <- datasetService.isEditableBy(dataset, Some(user))
-      } yield UserAccessAnswer(isAllowed)
+        isAllowed <- userBox match {
+          case Full(user) => datasetService.isEditableBy(dataset, Some(user))
+          case _          => Fox.successful(false)
+        }
+        msg = if (isAllowed) None else Some("Invalid access token")
+      } yield UserAccessAnswer(isAllowed, msg)
 
     def tryDelete: Fox[UserAccessAnswer] =
       for {
@@ -136,8 +139,12 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
-        user <- userBox.toFox ?~> "auth.token.noUser"
-      } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
+        isAllowed = userBox match {
+          case Full(user) => user._organization == dataset._organization && user.isAdmin
+          case _          => false
+        }
+        msg = if (isAllowed) None else Some("Invalid access token")
+      } yield UserAccessAnswer(isAllowed, msg)
 
     def tryAdministrate: Fox[UserAccessAnswer] =
       userBox match {
@@ -145,7 +152,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           for {
             isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, idOpt.getOrElse(user._organization))
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
-        case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
+        case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token")))
       }
 
     mode match {

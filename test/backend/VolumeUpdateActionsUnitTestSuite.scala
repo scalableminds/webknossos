@@ -249,7 +249,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
   }
 
   "UpsertSegmentGroupVolumeAction" should {
-    "should insert and update new segment groups" in {
+    "insert and update new segment groups" in {
       val groupId = 1
       val initialName = "Group 1"
       val renamedName = "Group 2"
@@ -286,7 +286,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
                                                    isExpanded = Some(true)))
     }
 
-    "should reparent a segment group recursively correctly to root" in {
+    "reparent a segment group recursively correctly to root" in {
       val newParent = -1
 
       val upsertGroup3Action = UpsertSegmentGroupVolumeAction(
@@ -333,7 +333,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
     }
 
-    "should reparent a segment group recursively correctly" in {
+    "reparent a segment group recursively correctly" in {
       val newParent = 1
 
       val upsertGroup3Action = UpsertSegmentGroupVolumeAction(
@@ -355,7 +355,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       assert(result.segmentGroups.head.children(1).children.head.children.isEmpty)
     }
 
-    "should reparent a segment group into a different root subtree with children" in {
+    "reparent a segment group into a different root subtree with children" in {
 
       val newParent2 = 4
       val upsertGroup5Action = UpsertSegmentGroupVolumeAction(
@@ -389,7 +389,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       assert(group7.children.isEmpty)
     }
 
-    "should rename a group in first root subtree" in {
+    "rename a group in first root subtree" in {
 
       val newName = "New Name"
       val renameGroup3Action = UpsertSegmentGroupVolumeAction(
@@ -403,7 +403,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       assert(result2.segmentGroups.head.children.head.children.head.name == newName)
     }
 
-    "should rename a group in second root subtree" in {
+    "rename a group in second root subtree" in {
 
       val newName = "New Name"
       val renameGroup6Action = UpsertSegmentGroupVolumeAction(
@@ -419,20 +419,22 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
   }
   "DeleteSegmentGroupVolumeAction" should {
 
-    "should delete a segment group recursively correctly" in {
+    "delete a segment group recursively correctly" in {
       val deleteGroup1Action = DeleteSegmentGroupVolumeAction(
         groupId = groupId1,
         actionTracingId = Dummies.tracingId
       )
       val result = deleteGroup1Action.applyOn(tracingWithSegmentGroups)
-      assert(result.segmentGroups.isEmpty)
+      assert(result.segmentGroups.length == 1)
+      assert(result.segmentGroups.head.groupId == groupId5)
+      assert(result.segmentGroups.head.children.length == 2)
 
       val deleteGroup2Action = DeleteSegmentGroupVolumeAction(
         groupId = groupId2,
         actionTracingId = Dummies.tracingId
       )
       val result2 = deleteGroup2Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups.length == 1)
+      assert(result2.segmentGroups.length == 2)
       assert(result2.segmentGroups.head.groupId == groupId1)
       assert(result2.segmentGroups.head.children.isEmpty)
 
@@ -441,7 +443,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
       val result3 = deleteGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result3.segmentGroups.length == 1)
+      assert(result3.segmentGroups.length == 2)
       assert(result3.segmentGroups.head.groupId == groupId1)
       assert(result3.segmentGroups.head.children.length == 1)
       assert(result3.segmentGroups.head.children.head.groupId == groupId2)

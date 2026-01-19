@@ -26,6 +26,7 @@ import dayjs from "dayjs";
 import React from "react";
 import { connect } from "react-redux";
 
+import { BlobReader, ZipReader } from "@zip.js/zip.js";
 import {
   AllowedTeamsFormItem,
   CardContainer,
@@ -57,8 +58,7 @@ import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager }
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import Zip from "libs/zipjs_wrapper";
-import _ from "lodash";
+import countBy from "lodash/countBy";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { type BlockerFunction, Link } from "react-router-dom";
@@ -557,7 +557,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       if (fileExtension === "zip") {
         try {
-          const reader = new Zip.ZipReader(new Zip.BlobReader(file));
+          const reader = new ZipReader(new BlobReader(file));
           const entries = await reader.getEntries();
           await reader.close();
           for (const entry of entries) {
@@ -585,7 +585,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       }
     }
 
-    const countedFileExtensions = _.countBy(fileExtensions, (str) => str);
+    const countedFileExtensions = countBy(fileExtensions, (str) => str);
     const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
     if (containsExtension("nml")) {

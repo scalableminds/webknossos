@@ -5,7 +5,6 @@ import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 
 import path from "node:path";
-import { viteProxyErrorHandler } from "./frontend/vite/vite-proxy-error-handler";
 
 // https://vite.dev/config/
 

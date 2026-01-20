@@ -1,5 +1,5 @@
 import { diffDiffableMaps } from "libs/diffable_map";
-import { ColoredLogger, diffArrays } from "libs/utils";
+import { diffArrays } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";

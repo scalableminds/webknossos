@@ -292,13 +292,8 @@ describe("Update Action Application for VolumeTracing", () => {
   );
 
   it("should be able to apply actions basic group editing", () => {
-    const state1 = applyActions(initialState, [
-      VolumeTracingActions.setSegmentGroupsAction(SEGMENT_GROUPS, tracingId),
-    ]);
-
-    const state2 = applyActions(state1, [
-      VolumeTracingActions.setSegmentGroupsAction(SEGMENT_GROUPS_EDITED, tracingId),
-    ]);
+    const state1 = applyActions(initialState, [setSegmentGroupsAction(SEGMENT_GROUPS, tracingId)]);
+    const state2 = applyActions(state1, [setSegmentGroupsAction(SEGMENT_GROUPS_EDITED, tracingId)]);
 
     const volumeTracing1 = enforceVolumeTracing(state1);
     const volumeTracing2 = enforceVolumeTracing(state2);
@@ -309,7 +304,7 @@ describe("Update Action Application for VolumeTracing", () => {
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
-        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        applyVolumeUpdateActionsFromServerAction(updateActions),
         setActiveUserBoundingBoxId(null),
       ]),
     );
@@ -319,11 +314,11 @@ describe("Update Action Application for VolumeTracing", () => {
 
   it("should be able to apply actions for edge case where a group is moved into one of its children", () => {
     const state1 = applyActions(initialState, [
-      VolumeTracingActions.setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.BEFORE, tracingId),
+      setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.BEFORE, tracingId),
     ]);
 
     const state2 = applyActions(state1, [
-      VolumeTracingActions.setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.AFTER, tracingId),
+      setSegmentGroupsAction(MOVE_GROUP_EDGE_CASE.AFTER, tracingId),
     ]);
 
     const volumeTracing1 = enforceVolumeTracing(state1);
@@ -335,7 +330,7 @@ describe("Update Action Application for VolumeTracing", () => {
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
-        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        applyVolumeUpdateActionsFromServerAction(updateActions),
         setActiveUserBoundingBoxId(null),
       ]),
     );
@@ -345,11 +340,11 @@ describe("Update Action Application for VolumeTracing", () => {
 
   it("should be able to apply actions for edge case where two groups are swapped", () => {
     const state1 = applyActions(initialState, [
-      VolumeTracingActions.setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.BEFORE, tracingId),
+      setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.BEFORE, tracingId),
     ]);
 
     const state2 = applyActions(state1, [
-      VolumeTracingActions.setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.AFTER, tracingId),
+      setSegmentGroupsAction(SWAP_GROUP_EDGE_CASE.AFTER, tracingId),
     ]);
 
     const volumeTracing1 = enforceVolumeTracing(state1);
@@ -361,7 +356,7 @@ describe("Update Action Application for VolumeTracing", () => {
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
-        VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+        applyVolumeUpdateActionsFromServerAction(updateActions),
         setActiveUserBoundingBoxId(null),
       ]),
     );

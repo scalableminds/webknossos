@@ -367,10 +367,11 @@ function VolumeTracingReducer(
           // This is because of cases like this:
           // Source segment: {id: 1, name: null}
           // Target segment: {id: 2, name: "Segment 2 - Custom String"}
-          // Without the fallback logic, the new segment would simply be
-          // {id: 1, name: "Segment 2 - Custom String"} which would be confusing.
+          // Without the fallback logic, the new segment 1 would simply be
+          // "Segment 2 - Custom String" which would be confusing because of the
+          // id mismatch.
           // The below logic produces this instead:
-          // {id: 1, name: "Segment 1 and Segment 2 - Custom String"} which would be confusing.
+          // {id: 1, name: "Segment 1 and Segment 2 - Custom String"}.
           const sourceName = getSegmentName(
             sourceSegment ?? { id: action.sourceId, name: undefined },
             false,

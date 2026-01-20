@@ -62,12 +62,14 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
 }
 
 const renderedInputCatchers = new Map();
+
 export async function initializeInputCatcherSizes() {
   // In an interval of 100 ms we check whether the input catchers can be initialized
   const pollInterval = 100;
   await waitForCondition(() => renderedInputCatchers.size > 0, pollInterval);
   recalculateInputCatcherSizes();
 }
+
 export function recalculateInputCatcherSizes() {
   const viewportRects: Record<string, Rect> = {
     PLANE_XY: emptyViewportRect,

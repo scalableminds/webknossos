@@ -51,6 +51,7 @@ type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch
 const VERSION_LIST_PLACEHOLDER = {
   emptyText: "No versions created yet.",
 };
+
 export async function previewVersion(version?: number) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;

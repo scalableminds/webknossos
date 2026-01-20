@@ -4,7 +4,7 @@ import type { WebknossosState } from "viewer/store";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 
-import * as SaveActions from "viewer/model/actions/save_actions";
+import { pushSaveQueueTransaction, shiftSaveQueueAction } from "viewer/model/actions/save_actions";
 import SaveReducer from "viewer/model/reducers/save_reducer";
 import { createEdge } from "viewer/model/sagas/volume/update_actions";
 import { TIMESTAMP } from "test/global_mocks";
@@ -31,7 +31,7 @@ describe("Save Reducer", () => {
   it("should add update actions to the queue", () => {
     const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
     const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
-    const pushAction = SaveActions.pushSaveQueueTransaction(items);
+    const pushAction = pushSaveQueueTransaction(items);
     const newState = SaveReducer(initialState, pushAction);
 
     expect(newState.save.queue).toEqual(saveQueue);
@@ -43,15 +43,15 @@ describe("Save Reducer", () => {
       createEdge(treeId, 2, 3, tracingId),
     ];
     const saveQueue = createSaveQueueFromUpdateActions([getItems(0), getItems(1)], TIMESTAMP);
-    const testState = SaveReducer(initialState, SaveActions.pushSaveQueueTransaction(getItems(0)));
-    const newState = SaveReducer(testState, SaveActions.pushSaveQueueTransaction(getItems(1)));
+    const testState = SaveReducer(initialState, pushSaveQueueTransaction(getItems(0)));
+    const newState = SaveReducer(testState, pushSaveQueueTransaction(getItems(1)));
 
     expect(newState.save.queue).toEqual(saveQueue);
   });
 
   it("should add zero update actions to the queue", () => {
     const items: UpdateActionWithoutIsolationRequirement[] = [];
-    const pushAction = SaveActions.pushSaveQueueTransaction(items);
+    const pushAction = pushSaveQueueTransaction(items);
     const newState = SaveReducer(initialState, pushAction);
     expect(newState.save.queue).toEqual([]);
   });
@@ -60,9 +60,9 @@ describe("Save Reducer", () => {
     const firstItem = [createEdge(0, 1, 2, tracingId)];
     const secondItem = [createEdge(1, 2, 3, tracingId)];
     const saveQueue = createSaveQueueFromUpdateActions([secondItem], TIMESTAMP);
-    const firstPushAction = SaveActions.pushSaveQueueTransaction(firstItem);
-    const secondPushAction = SaveActions.pushSaveQueueTransaction(secondItem);
-    const popAction = SaveActions.shiftSaveQueueAction(1);
+    const firstPushAction = pushSaveQueueTransaction(firstItem);
+    const secondPushAction = pushSaveQueueTransaction(secondItem);
+    const popAction = shiftSaveQueueAction(1);
 
     let newState = SaveReducer(initialState, firstPushAction);
     newState = SaveReducer(newState, secondPushAction);
@@ -74,8 +74,8 @@ describe("Save Reducer", () => {
   it("should remove zero update actions from the queue", () => {
     const items = [createEdge(0, 1, 2, tracingId), createEdge(1, 2, 3, tracingId)];
     const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
-    const pushAction = SaveActions.pushSaveQueueTransaction(items);
-    const popAction = SaveActions.shiftSaveQueueAction(0);
+    const pushAction = pushSaveQueueTransaction(items);
+    const popAction = shiftSaveQueueAction(0);
 
     let newState = SaveReducer(initialState, pushAction);
     newState = SaveReducer(newState, popAction);
@@ -85,8 +85,8 @@ describe("Save Reducer", () => {
 
   it("should remove all update actions from the queue (1/2)", () => {
     const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
-    const pushAction = SaveActions.pushSaveQueueTransaction(items);
-    const popAction = SaveActions.shiftSaveQueueAction(2);
+    const pushAction = pushSaveQueueTransaction(items);
+    const popAction = shiftSaveQueueAction(2);
 
     let newState = SaveReducer(initialState, pushAction);
     newState = SaveReducer(newState, popAction);
@@ -96,8 +96,8 @@ describe("Save Reducer", () => {
 
   it("should remove all update actions from the queue (2/2)", () => {
     const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
-    const pushAction = SaveActions.pushSaveQueueTransaction(items);
-    const popAction = SaveActions.shiftSaveQueueAction(5);
+    const pushAction = pushSaveQueueTransaction(items);
+    const popAction = shiftSaveQueueAction(5);
 
     let newState = SaveReducer(initialState, pushAction);
     newState = SaveReducer(newState, popAction);

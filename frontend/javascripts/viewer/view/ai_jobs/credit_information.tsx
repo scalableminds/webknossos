@@ -32,7 +32,7 @@ export const RunAiModelCreditInformation: React.FC = () => {
       selectedJobType={selectedJobType}
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
-      startButtonTitle="Start Analysis"
+      startButtonTitle="Start analysis"
       areParametersValid={areParametersValid}
     />
   );
@@ -49,7 +49,7 @@ export const AlignmentCreditInformation: React.FC = () => {
       selectedJobType={selectJobType}
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
-      startButtonTitle="Start Alignment"
+      startButtonTitle="Start alignment"
       areParametersValid={areParametersValid}
     />
   );
@@ -94,7 +94,7 @@ export const TrainingCreditInformation: React.FC = () => {
       selectedJobType={selectedJobType}
       selectedBoundingBox={trainingBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
-      startButtonTitle="Start Training"
+      startButtonTitle="Start training"
       areParametersValid={areParametersValid}
     />
   );
@@ -240,6 +240,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           size="large"
           style={{ marginTop: "24px" }}
           disabled={
+            isFetching ||
             !selectedModel ||
             !selectedBoundingBox ||
             !jobCreditCostInfo?.hasEnoughCredits ||
@@ -249,7 +250,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           onClick={handleStartAnalysis}
         >
           {startButtonTitle}
-          {jobCreditCostInfo?.hasEnoughCredits === false ? " (Not enough credits)" : ""}
+          {jobCreditCostInfo?.hasEnoughCredits === false ? " (not enough credits)" : ""}
         </Button>
         {jobCreditCostInfo?.hasEnoughCredits === false && (
           <Link to={"/organization"}>

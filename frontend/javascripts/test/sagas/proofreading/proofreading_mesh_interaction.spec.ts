@@ -96,9 +96,17 @@ describe("Proofreading (with mesh actions)", () => {
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-    const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+    const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
-    expect(mergeSaveActionBatch).toEqual([
+    expect(receivedUpdateActions).toEqual([
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 1,
+          targetId: 1337,
+        },
+      },
       {
         name: "mergeAgglomerate",
         value: {

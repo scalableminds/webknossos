@@ -540,7 +540,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      // Agglomerate 1 was splitted twice between 2 and 3.
+      // Agglomerate 1 was split twice between 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],

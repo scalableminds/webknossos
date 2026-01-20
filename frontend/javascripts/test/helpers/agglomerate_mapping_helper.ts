@@ -119,7 +119,9 @@ export class AgglomerateMapping {
     }
 
     if (!didRemove) {
-      throw new Error(`Cannot remove edge: ${segmentIdA} -> ${segmentIdB}`);
+      // Commit the current version again.
+      this.commit(this.versions.at(-1)!, bumpVersion);
+      return;
     }
 
     const previousVersionMap = previous.map;

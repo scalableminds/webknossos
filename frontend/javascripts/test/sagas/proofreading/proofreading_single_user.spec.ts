@@ -72,9 +72,17 @@ describe("Proofreading (Single User)", () => {
 
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(receivedUpdateActions).toEqual([
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1,
+            targetId: 4,
+          },
+        },
         {
           name: "mergeAgglomerate",
           value: {

@@ -250,9 +250,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           onClick={handleStartAnalysis}
         >
           {startButtonTitle}
-          {jobCreditCostInfo?.hasEnoughCredits === false
-            ? " (Not enough credits)"
-            : ""}
+          {jobCreditCostInfo?.hasEnoughCredits === false ? " (Not enough credits)" : ""}
         </Button>
         {jobCreditCostInfo?.hasEnoughCredits === false && (
           <Link to={"/organization"}>

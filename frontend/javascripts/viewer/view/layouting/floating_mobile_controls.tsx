@@ -23,15 +23,16 @@ const ICON_TRANSFORM_VALUE = "scale(1)";
 export function FloatingMobileControls() {
   const dispatch = useDispatch();
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
-  const state = useWkSelector((state) => state);
 
   const moveForwardArbitrary = useCallback(
-    (timeFactor: number) => dispatch(moveFlycamAction([0, 0, getMoveOffset3d(state, timeFactor)])),
-    [state, dispatch],
+    (timeFactor: number) =>
+      dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)])),
+    [dispatch],
   );
   const moveBackwardArbitrary = useCallback(
-    (timeFactor: number) => dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(state, timeFactor)])),
-    [state, dispatch],
+    (timeFactor: number) =>
+      dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(Store.getState(), timeFactor)])),
+    [dispatch],
   );
 
   const moveForwardProps = useRepeatedButtonTrigger(

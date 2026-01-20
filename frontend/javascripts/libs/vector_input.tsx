@@ -10,8 +10,8 @@ import { stringToNumberArray } from "./utils";
 const CHARACTER_WIDTH_PX = 8;
 
 type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
-  value: T | string;
-  onChange: (value: T) => void;
+  value?: T | string;
+  onChange?: (value: T) => void;
   changeOnlyOnBlur?: boolean;
   allowDecimals?: boolean;
   autoSize?: boolean;
@@ -37,15 +37,23 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
     this.state = {
       isEditing: false,
       isValid: true,
-      text: this.getText(props.value),
+      text: this.getText(props.value ?? BaseVector.defaultProps.value),
     };
+  }
+
+  getValue() {
+    return this.props.value ?? BaseVector.defaultProps.value;
+  }
+
+  getOnChangeFn() {
+    return this.props.onChange ?? BaseVector.defaultProps.onChange;
   }
 
   componentDidUpdate(prevProps: BaseProps<T>) {
     if (!this.state.isEditing && prevProps.value !== this.props.value) {
       this.setState({
         isValid: true,
-        text: this.getText(this.props.value),
+        text: this.getText(this.getValue()),
       });
     }
   }
@@ -66,17 +74,17 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
     if (this.state.isValid) {
       if (this.props.changeOnlyOnBlur) {
         const vector = stringToNumberArray(this.state.text) as any as T;
-        this.props.onChange(vector);
+        this.getOnChangeFn()(vector);
       } else {
         this.setState({
           isValid: true,
-          text: this.getText(this.props.value),
+          text: this.getText(this.getValue()),
         });
       }
     } else {
       this.setState((prevState) => {
         const fallbackValue = this.makeInvalidValueValid(prevState.text);
-        this.props.onChange(fallbackValue);
+        this.getOnChangeFn()(fallbackValue);
         return {
           isValid: true,
           text: fallbackValue.join(", "),
@@ -99,7 +107,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
   handleFocus = (_event: React.FocusEvent<HTMLInputElement>) => {
     this.setState({
       isEditing: true,
-      text: this.getText(this.props.value),
+      text: this.getText(this.getValue()),
       isValid: true,
     });
   };
@@ -115,7 +123,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
 
     if (isValidFormat && isValidInput && !this.props.changeOnlyOnBlur) {
       const vector = value as any as T;
-      this.props.onChange(vector);
+      this.getOnChangeFn()(vector);
     }
 
     this.setState({
@@ -143,7 +151,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
     } else {
       vec[vectorIndex] -= 1;
     }
-    this.props.onChange(vec);
+    this.getOnChangeFn()(vec);
     const text = vec.join(", ");
     this.setState({ text });
   };
@@ -171,12 +179,12 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
         style={
           autoSize
             ? {
-                ...style,
-                width:
-                  this.getText(this.state.text).length * CHARACTER_WIDTH_PX +
-                  25 +
-                  addonBeforeLength,
-              }
+              ...style,
+              width:
+                this.getText(this.state.text).length * CHARACTER_WIDTH_PX +
+                25 +
+                addonBeforeLength,
+            }
             : style
         }
         {...props}

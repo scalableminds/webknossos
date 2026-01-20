@@ -10,7 +10,14 @@ import {
   OverwriteModeEnum,
   MappingStatusEnum,
 } from "viewer/constants";
-import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
+import {
+  addToContourListAction,
+  finishEditingAction,
+  setActiveCellAction,
+  setMappingIsLockedAction,
+  startEditingAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import type { ActiveMappingInfo } from "viewer/store";
 import { askUserForLockingActiveMapping } from "viewer/model/sagas/saga_helpers";
@@ -41,10 +48,10 @@ const dummyActiveMapping: ActiveMappingInfo = {
 const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingLockedIfNeeded: true };
 
 const ACTIVE_CELL_ID = 5;
-const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
-const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
-const addToContourListActionFn = VolumeTracingActions.addToContourListAction;
-const finishEditingAction = VolumeTracingActions.finishEditingAction();
+const setActiveCell = setActiveCellAction(ACTIVE_CELL_ID);
+const startEditing = startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
+const addToContourList = addToContourListAction;
+const finishEditing = finishEditingAction();
 
 const mockedDataset = update(defaultVolumeState.dataset, {
   dataSource: {
@@ -72,7 +79,7 @@ describe("VolumeTracingSaga", () => {
     });
 
     it("should do something if changed (saga test)", async (context: WebknossosTestContext) => {
-      Store.dispatch(setActiveCellAction);
+      Store.dispatch(setActiveCell);
       await Model.ensureSavedState();
       expect(context.receivedDataPerSaveRequest.length).toBe(1);
       const requestBatches = context.receivedDataPerSaveRequest[0];
@@ -95,7 +102,7 @@ describe("VolumeTracingSaga", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
-    saga.next(startEditingAction);
+    saga.next(startEditing);
     saga.next(true);
     saga.next({
       isBusy: false,
@@ -116,10 +123,10 @@ describe("VolumeTracingSaga", () => {
       expect,
       saga.next([]), // pass empty additional coords
       put(
-        VolumeTracingActions.updateSegmentAction(
+        updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            anchorPosition: startEditingAction.positionInLayerSpace,
+            anchorPosition: startEditing.positionInLayerSpace,
             additionalCoordinates: [],
           },
           volumeTracing.tracingId,
@@ -139,7 +146,7 @@ describe("VolumeTracingSaga", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
-    saga.next(startEditingAction);
+    saga.next(startEditing);
     saga.next(true);
     saga.next({
       isBusy: false,
@@ -159,10 +166,10 @@ describe("VolumeTracingSaga", () => {
       expect,
       saga.next([]), // pass empty additional coords
       put(
-        VolumeTracingActions.updateSegmentAction(
+        updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            anchorPosition: startEditingAction.positionInLayerSpace,
+            anchorPosition: startEditing.positionInLayerSpace,
             additionalCoordinates: [],
           },
           volumeTracing.tracingId,
@@ -180,11 +187,11 @@ describe("VolumeTracingSaga", () => {
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
-    saga.next(addToContourListActionFn([1, 2, 3]));
+    saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
-    saga.next(addToContourListActionFn([2, 3, 4]));
+    saga.next(addToContourList([2, 3, 4]));
     saga.next(OrthoViews.PLANE_XY);
-    saga.next(addToContourListActionFn([3, 4, 5]));
+    saga.next(addToContourList([3, 4, 5]));
     saga.next(OrthoViews.PLANE_XY);
     expect(sectionLabeler.minCoord).toEqual([-1, 0, 1]);
     expect(sectionLabeler.maxCoord).toEqual([5, 6, 7]);
@@ -194,7 +201,7 @@ describe("VolumeTracingSaga", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
-    saga.next(startEditingAction);
+    saga.next(startEditing);
     saga.next(true);
     saga.next({
       isBusy: false,
@@ -214,10 +221,10 @@ describe("VolumeTracingSaga", () => {
       expect,
       saga.next([]), // pass empty additional coords
       put(
-        VolumeTracingActions.updateSegmentAction(
+        updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            anchorPosition: startEditingAction.positionInLayerSpace,
+            anchorPosition: startEditing.positionInLayerSpace,
             additionalCoordinates: [],
           },
           volumeTracing.tracingId,
@@ -235,7 +242,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
-    saga.next(addToContourListActionFn([1, 2, 3]));
+    saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     // Validate that finishLayer was called
     const wroteVoxelsBox = {
@@ -243,7 +250,7 @@ describe("VolumeTracingSaga", () => {
     };
     expectValueDeepEqual(
       expect,
-      saga.next(finishEditingAction),
+      saga.next(finishEditing),
       call(
         finishSectionLabeler,
         sectionLabeler,
@@ -260,7 +267,7 @@ describe("VolumeTracingSaga", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
-    saga.next(startEditingAction);
+    saga.next(startEditing);
     saga.next(true);
     saga.next({
       isBusy: false,
@@ -280,10 +287,10 @@ describe("VolumeTracingSaga", () => {
       expect,
       saga.next([]), // pass empty additional coords
       put(
-        VolumeTracingActions.updateSegmentAction(
+        updateSegmentAction(
           ACTIVE_CELL_ID,
           {
-            anchorPosition: startEditingAction.positionInLayerSpace,
+            anchorPosition: startEditing.positionInLayerSpace,
             additionalCoordinates: [],
           },
           volumeTracing.tracingId,
@@ -301,7 +308,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(sectionLabeler);
     saga.next(OrthoViews.PLANE_XY);
     saga.next("action_channel");
-    saga.next(addToContourListActionFn([1, 2, 3]));
+    saga.next(addToContourList([1, 2, 3]));
     saga.next(OrthoViews.PLANE_XY);
     const wroteVoxelsBox = {
       value: false,
@@ -309,7 +316,7 @@ describe("VolumeTracingSaga", () => {
     // Validate that finishLayer was called
     expectValueDeepEqual(
       expect,
-      saga.next(finishEditingAction),
+      saga.next(finishEditing),
       call(
         finishSectionLabeler,
         sectionLabeler,
@@ -326,7 +333,7 @@ describe("VolumeTracingSaga", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
-    saga.next(startEditingAction);
+    saga.next(startEditing);
     saga.next(true);
     // When isBusy is true, the saga should wait for a new START_EDITING action
     // (thus, other actions, such as finishLayer, will be ignored).
@@ -343,7 +350,7 @@ describe("VolumeTracingSaga", () => {
     const saga = editVolumeLayerAsync();
     saga.next();
     expectValueDeepEqual(expect, saga.next(), take("START_EDITING"));
-    saga.next(startEditingAction);
+    saga.next(startEditing);
     saga.next(true);
     saga.next({
       isBusy: false,
@@ -383,7 +390,7 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(
       expect,
       saga.next({}),
-      put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+      put(setMappingIsLockedAction(volumeTracing.tracingId)),
     );
     expect(saga.next().done).toBe(true);
   });
@@ -395,7 +402,7 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(
       expect,
       saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-      put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+      put(setMappingIsLockedAction(volumeTracing.tracingId)),
     );
     expect(saga.next().done).toBe(true);
   });
@@ -407,7 +414,7 @@ describe("VolumeTracingSaga", () => {
     expectValueDeepEqual(
       expect,
       saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-      put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+      put(setMappingIsLockedAction(volumeTracing.tracingId)),
     );
     expect(saga.next().done).toBe(true);
   });

@@ -9,7 +9,17 @@ import {
   changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
-import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
+import {
+  applyVolumeUpdateActionsFromServerAction,
+  createCellAction,
+  mergeSegmentsAction,
+  removeSegmentAction,
+  setActiveCellAction,
+  setLargestSegmentIdAction,
+  setSegmentGroupsAction,
+  toggleSegmentGroupAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import type {
@@ -111,9 +121,9 @@ describe("Update Action Application for VolumeTracing", () => {
   const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
-    VolumeTracingActions.updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),
-    VolumeTracingActions.updateSegmentAction(3, { anchorPosition: [3, 4, 5] }, tracingId),
-    VolumeTracingActions.updateSegmentAction(
+    updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),
+    updateSegmentAction(3, { anchorPosition: [3, 4, 5] }, tracingId),
+    updateSegmentAction(
       3,
       {
         name: "name",
@@ -139,25 +149,21 @@ describe("Update Action Application for VolumeTracing", () => {
     }),
     changeUserBoundingBoxAction(1, { name: "Updated Name" }),
     deleteUserBoundingBoxAction(1),
-    VolumeTracingActions.setSegmentGroupsAction(
+    setSegmentGroupsAction(
       [makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")],
       tracingId,
     ),
-    VolumeTracingActions.updateSegmentAction(3, { isVisible: false }, tracingId),
+    updateSegmentAction(3, { isVisible: false }, tracingId),
     // Needs to be visible again for the toggleSegmentGroupAction to turn all segments invisible and thus trigger a compact updateSegmentGroupVisibilityAction.
-    VolumeTracingActions.updateSegmentAction(3, { isVisible: true }, tracingId),
+    updateSegmentAction(3, { isVisible: true }, tracingId),
     // The group with id 3 needs at least one visible cells for the reducer to make to toggle it.
-    VolumeTracingActions.updateSegmentAction(2, { groupId: 3 }, tracingId),
+    updateSegmentAction(2, { groupId: 3 }, tracingId),
     // Moreover, at least two are needed to make the compaction evict a updateSegmentGroupVisibilityAction.
-    VolumeTracingActions.createCellAction(4, 4),
-    VolumeTracingActions.setActiveCellAction(4),
-    VolumeTracingActions.updateSegmentAction(
-      4,
-      { groupId: 3, anchorPosition: [7, 8, 9], isVisible: true },
-      tracingId,
-    ),
-    VolumeTracingActions.toggleSegmentGroupAction(3, tracingId),
-    VolumeTracingActions.updateSegmentAction(
+    createCellAction(4, 4),
+    setActiveCellAction(4),
+    updateSegmentAction(4, { groupId: 3, anchorPosition: [7, 8, 9], isVisible: true }, tracingId),
+    toggleSegmentGroupAction(3, tracingId),
+    updateSegmentAction(
       3,
       {
         metadata: [
@@ -173,13 +179,10 @@ describe("Update Action Application for VolumeTracing", () => {
       },
       tracingId,
     ),
-    VolumeTracingActions.mergeSegmentsAction(3, 2, tracingId),
-    VolumeTracingActions.removeSegmentAction(3, tracingId),
-    VolumeTracingActions.setLargestSegmentIdAction(10000),
-    VolumeTracingActions.setSegmentGroupsAction(
-      [makeBasicGroupObject(3, "group 3 - renamed")],
-      tracingId,
-    ),
+    mergeSegmentsAction(3, 2, tracingId),
+    removeSegmentAction(3, tracingId),
+    setLargestSegmentIdAction(10000),
+    setSegmentGroupsAction([makeBasicGroupObject(3, "group 3 - renamed")], tracingId),
   ];
 
   test("User actions for test should not contain no-ops", () => {
@@ -246,7 +249,7 @@ describe("Update Action Application for VolumeTracing", () => {
             state2WithoutActiveBoundingBox,
             (state) =>
               applyActions(state, [
-                VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+                applyVolumeUpdateActionsFromServerAction(updateActions),
                 setActiveUserBoundingBoxId(null),
               ]),
           );

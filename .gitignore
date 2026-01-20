@@ -45,6 +45,7 @@ project/boot/
 project/plugins/project/
 public-test/test-bundle
 public/bundle
+public/assets
 public/commit.txt
 public/docs
 public/docs/frontend-api

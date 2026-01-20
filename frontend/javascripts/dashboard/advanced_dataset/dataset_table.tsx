@@ -893,7 +893,7 @@ export function DatasetTags({
 
 export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {
   return (
-    <div style={{ maxWidth: 250 }}>
+    <Space wrap>
       {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
         <Tag
           key={layer.name}
@@ -908,7 +908,7 @@ export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDatas
           {layer.name} - {layer.elementClass}
         </Tag>
       ))}
-    </div>
+    </Space>
   );
 }
 

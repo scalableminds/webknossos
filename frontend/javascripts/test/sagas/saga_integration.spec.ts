@@ -19,7 +19,7 @@ import {
   deleteNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { discardSaveQueueAction } from "viewer/model/actions/save_actions";
-import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
+import { updateTree } from "viewer/model/sagas/volume/update_actions";
 import { TIMESTAMP } from "test/global_mocks";
 
 describe("Saga Integration Tests", () => {
@@ -44,7 +44,7 @@ describe("Saga Integration Tests", () => {
       name: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
     };
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
-      [[UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
+      [[updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
       TIMESTAMP,
       getStats(state.annotation) || undefined,
     );

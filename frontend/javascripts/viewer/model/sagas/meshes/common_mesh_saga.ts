@@ -1,8 +1,8 @@
+import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
 import ErrorHandling from "libs/error_handling";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
-import Zip from "libs/zipjs_wrapper";
 import messages from "messages";
 import type { Group } from "three";
 import { all, call, put, take, takeEvery } from "typed-redux-saga";
@@ -60,7 +60,7 @@ function* downloadMeshCellsAsZIP(
   segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
-  const zipWriter = new Zip.ZipWriter(new Zip.BlobWriter("application/zip"));
+  const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
     const addFileToZipWriterPromises = segments.map((element) => {
@@ -77,7 +77,7 @@ function* downloadMeshCellsAsZIP(
         });
         return;
       }
-      const stlDataReader = new Zip.BlobReader(getSTLBlob(geometry, element.segmentId));
+      const stlDataReader = new BlobReader(getSTLBlob(geometry, element.segmentId));
       return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
     });
     yield all(addFileToZipWriterPromises);

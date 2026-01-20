@@ -615,7 +615,10 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         </FastTooltip>
         <ButtonComponent
           title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
           disabled={disabled}
           icon={<DeleteOutlined />}
           type="text"

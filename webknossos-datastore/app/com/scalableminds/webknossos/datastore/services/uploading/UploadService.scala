@@ -398,7 +398,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } else {
       for {
         dataSourceFromDir <- Fox.successful(
-          dataSourceService.dataSourceFromDir(unpackedDir, dataSourceId.organizationId, resolveMagPaths = false))
+          dataSourceService.dataSourceFromDir(unpackedDir, dataSourceId.organizationId, resolvePaths = false))
         usableDataSourceFromDir <- dataSourceFromDir.toUsable.toFox ?~> s"Invalid dataset uploaded: ${dataSourceFromDir.statusOpt
           .getOrElse("")}"
         _ <- deleteFilesNotReferencedInDataSource(unpackedDir, usableDataSourceFromDir)
@@ -455,7 +455,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     }
 
   private def checkPathsInUploadedDatasourcePropertiesJson(unpackToDir: Path, organizationId: String): Fox[Unit] = {
-    val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId, resolveMagPaths = false)
+    val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId, resolvePaths = false)
     for {
       _ <- Fox.runOptional(dataSource.toUsable)(usableDataSource =>
         Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)) ?~> "dataset.upload.disallowedPaths")

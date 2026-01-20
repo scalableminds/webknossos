@@ -459,7 +459,7 @@ class DSLegacyApiController @Inject()(
       val dataSource = dataSourceService.dataSourceFromDir(
         dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
         organizationId,
-        resolveMagPaths = true)
+        resolvePaths = true)
       dataSource match {
         case UsableDataSource(_, _, _, _, _) =>
           for {

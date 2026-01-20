@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
+import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
-import update from "immutability-helper";
 import {
   getAdaptToTypeFunctionFromList,
   millisecondsToMinutes,
@@ -1044,7 +1044,7 @@ export async function getDataset(
   sharingToken?: string | null | undefined,
   includeZeroMagLayers?: boolean | null | undefined,
   options: RequestOptions = {},
-  filterZeroMagLayers: boolean = true
+  filterZeroMagLayers: boolean = true,
 ): Promise<APIDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
@@ -1054,7 +1054,10 @@ export async function getDataset(
     params.set("includeZeroMagLayers", includeZeroMagLayers.toString());
   }
 
-  const dataset: APIDataset = await Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
+  const dataset: APIDataset = await Request.receiveJSON(
+    `/api/datasets/${datasetId}?${params}`,
+    options,
+  );
 
   if (!filterZeroMagLayers) {
     return dataset;
@@ -1062,10 +1065,10 @@ export async function getDataset(
   return update(dataset, {
     dataSource: {
       dataLayers: {
-        $set: dataset.dataSource.dataLayers.filter(layer => layer.mags.length > 0)
-      }
-    }
-  })
+        $set: dataset.dataSource.dataLayers.filter((layer) => layer.mags.length > 0),
+      },
+    },
+  });
 }
 
 export async function getDatasetLegacy(

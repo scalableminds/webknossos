@@ -47,14 +47,12 @@ import { Store } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   LabelAction,
-  Segment,
   SegmentGroup,
   SegmentMap,
   StoreAnnotation,
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import type { SegmentHierarchyNode } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   MISSING_GROUP_ID,
   getGroupByIdWithSubgroups,
@@ -706,10 +704,11 @@ export function getLabelActionFromPreviousSlice(
 }
 
 export function getSegmentName(
-  segment: Segment | SegmentHierarchyNode,
-  fallbackToId: boolean = false,
+  segment: { id: number; name?: string | undefined | null },
+  fallbackToIdOnly: boolean = false,
 ): string {
-  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  const fallback = fallbackToIdOnly ? `${segment.id}` : `Segment ${segment.id}`;
+  // Note that we don't use ?? here because empty strings should also be disregarded.
   return segment.name || fallback;
 }
 

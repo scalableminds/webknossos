@@ -1,4 +1,3 @@
-import { ColoredLogger } from "libs/utils";
 import { call, put } from "redux-saga/effects";
 import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
 import { actionChannel, flush } from "typed-redux-saga";

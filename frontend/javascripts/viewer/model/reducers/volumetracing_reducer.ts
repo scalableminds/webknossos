@@ -1,12 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
-import {
-  ColoredLogger,
-  colorObjectToRGBArray,
-  floor3,
-  mapEntriesToMap,
-  point3ToVector3,
-} from "libs/utils";
+import { colorObjectToRGBArray, floor3, mapEntriesToMap, point3ToVector3 } from "libs/utils";
+import groupBy from "lodash/groupBy";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
@@ -16,6 +11,7 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
+  getSegmentName,
   getSegmentationLayerForTracing,
   getSelectedIds,
   getVisibleSegments,
@@ -27,6 +23,7 @@ import {
   type SetSegmentsAction,
   type UpdateSegmentAction,
   removeSegmentAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import {
   applyUserStateToGroups,
@@ -331,31 +328,92 @@ function VolumeTracingReducer(
     }
 
     case "MERGE_SEGMENTS": {
-      const newState = handleRemoveSegment(
+      const updateInfo = getSegmentUpdateInfo(state, action.layerName);
+      if (updateInfo.type !== "UPDATE_VOLUME_TRACING") {
+        return state;
+      }
+      const { volumeTracing } = updateInfo;
+      const { segments } = volumeTracing;
+      const sourceSegment = segments.getNullable(action.sourceId);
+      const targetSegment = segments.getNullable(action.targetId);
+
+      let newState = handleRemoveSegment(
         state,
         removeSegmentAction(action.targetId, action.layerName),
       );
+      const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
-      const volumeTracing = getVolumeTracingFromAction(newState, action);
-      if (volumeTracing) {
-        const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
+      newState = updateVolumeTracing(newState, volumeTracing.tracingId, {
+        segmentJournal: volumeTracing.segmentJournal.concat([
+          {
+            type: "MERGE_SEGMENTS",
+            sourceId: action.sourceId,
+            targetId: action.targetId,
+            entryIndex,
+          },
+        ]),
+      });
 
-        return updateVolumeTracing(newState, volumeTracing.tracingId, {
-          segmentJournal: volumeTracing.segmentJournal.concat([
-            {
-              type: "MERGE_SEGMENTS",
-              sourceId: action.sourceId,
-              targetId: action.targetId,
-              entryIndex,
-            },
-          ]),
-        });
+      // Since the target segment is deleted (absorbed by the source segment),
+      // we should ensure that no information is lost.
+      // However, this is only necessary when the targetSegment is not null.
+      if (targetSegment != null) {
+        const props: Writable<Partial<Segment>> = {};
+        // Handle `name` by concatening names
+        if (targetSegment.name != null) {
+          // The new segments name should always start with the original
+          // source segment's name. Therefore, we use getSegmentName
+          // so that we have a fallback even when no source segment existed.
+          // This is because of cases like this:
+          // Source segment: {id: 1, name: null}
+          // Target segment: {id: 2, name: "Segment 2 - Custom String"}
+          // Without the fallback logic, the new segment would simply be
+          // {id: 1, name: "Segment 2 - Custom String"} which would be confusing.
+          // The below logic produces this instead:
+          // {id: 1, name: "Segment 1 and Segment 2 - Custom String"} which would be confusing.
+          const sourceName = getSegmentName(
+            sourceSegment ?? { id: action.sourceId, name: undefined },
+            false,
+          );
+          props.name = `${sourceName} and ${targetSegment.name}`;
+        }
+
+        // Handle metadata by concatening the entries. If the resulting keys
+        // would not be unique, the keys are postfixed like this: key-originalSegmentId
+        if (targetSegment.metadata.length > 0) {
+          const sourceMetadata = sourceSegment?.metadata ?? [];
+          const mergedMetadataEntries = sourceMetadata.concat(targetSegment.metadata);
+          // Items of mergedMetadataEntries with index < pivotIndex,
+          // belong to the source segment. The other belong to the
+          // target segment.
+          const pivotIndex = sourceMetadata.length;
+          const keyToEntries = groupBy(mergedMetadataEntries, (entry) => entry.key);
+          const metadataEntriesWithUniqueKeys = mergedMetadataEntries.map((entry, index) => {
+            if (keyToEntries[entry.key].length > 1) {
+              const originalSegmentId = index < pivotIndex ? action.sourceId : action.targetId;
+              return {
+                ...entry,
+                key: `${entry.key}-${originalSegmentId}`,
+              };
+            } else {
+              return entry;
+            }
+          });
+          props.metadata = metadataEntriesWithUniqueKeys;
+        }
+
+        if (Object.keys(props).length > 0) {
+          newState = handleUpdateSegment(
+            newState,
+            updateSegmentAction(action.sourceId, props, action.layerName),
+          );
+        }
       }
+
+      return newState;
 
       // todop: adapt journal?
       // can we always append to the segment journal?
-
-      return newState;
     }
 
     case "REMOVE_SEGMENT": {

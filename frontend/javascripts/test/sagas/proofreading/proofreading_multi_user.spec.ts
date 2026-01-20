@@ -34,7 +34,6 @@ import {
 import type { NeighborInfo } from "admin/rest_api";
 import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import { ColoredLogger } from "libs/utils";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 
 function* prepareEditableMapping(
@@ -901,6 +900,24 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId2: 4,
         },
       },
+      {
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 1339,
+          name: "Custom Name for 1339",
+          metadata: [{ key: "key1", stringValue: "value for 1339" }],
+        },
+      },
+      {
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          id: 1,
+          name: "Custom Name for 1",
+          metadata: [{ key: "key1", stringValue: "value for 1" }],
+        },
+      },
     ]);
 
     const { annotation } = Store.getState();
@@ -952,9 +969,27 @@ describe("Proofreading (Multi User)", () => {
       //   });
       // }
 
-      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
+      const segment1339AfterSaving =
+        Store.getState().annotation.volumes[0].segments.getNullable(1339);
+      expect(segment1339AfterSaving).toMatchObject({
+        name: "Custom Name for 1339 and Custom Name for 1",
+        metadata: [
+          { key: "key1-1339", stringValue: "value for 1339" },
+          { key: "key1-1", stringValue: "value for 1" },
+        ],
+      });
+
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-3);
 
       expect(receivedUpdateActions).toEqual([
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            sourceId: 1339,
+            targetId: 1,
+          },
+        },
         {
           name: "mergeAgglomerate",
           value: {
@@ -966,17 +1001,11 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "createSegment",
+          name: "updateSegmentPartial",
           value: {
             actionTracingId: "volumeTracingId",
-            additionalCoordinates: undefined,
             anchorPosition: [4, 4, 4],
-            color: null,
-            creationTime: 1494695001688,
-            groupId: null,
             id: 1339,
-            metadata: [],
-            name: null,
           },
         },
       ]);

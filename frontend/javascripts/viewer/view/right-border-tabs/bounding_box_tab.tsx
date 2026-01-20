@@ -272,7 +272,7 @@ export default function BoundingBoxTab() {
                       );
                     } else {
                       handleGoToBoundingBox(bb.id);
-                      setSelectedRowKeys([]);
+                      setSelectedRowKeys([bb.id]);
                       dispatch(setActiveUserBoundingBoxId(bb.id));
                     }
                   },

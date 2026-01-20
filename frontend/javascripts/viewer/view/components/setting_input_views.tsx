@@ -503,7 +503,6 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const marginLeftStyle = {
     marginLeft: 6,
   };
-  const leftColumnFlexStyle = "0 0 60px";
   const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
   const exportButton = (
     <>
@@ -582,7 +581,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           marginBottom: 10,
         }}
       >
-        <Flex gap="middle" justify="space-between" align="center" flex={leftColumnFlexStyle}>
+        <Flex gap="middle" justify="space-between" align="center">
           <Switch
             size="small"
             onChange={onVisibilityChange}
@@ -627,15 +626,16 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         style={{
           marginBottom: 10,
         }}
-        align="top"
+        align="flex-start"
         gap="middle"
         justify="flex-start"
       >
-        <div style={{ flex: leftColumnFlexStyle }}>
-          <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
-            <label> Bounds: </label>
-          </FastTooltip>
-        </div>
+        <FastTooltip
+          style={{ flex: "0 0 60px" }}
+          title="The top-left corner of the bounding box followed by the width, height, and depth."
+        >
+          <label> Bounds: </label>
+        </FastTooltip>
         <FastTooltip
           title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
           placement="top-start"

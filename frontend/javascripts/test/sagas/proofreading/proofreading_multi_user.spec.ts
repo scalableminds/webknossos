@@ -418,7 +418,6 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-    ColoredLogger.logGreen("task done");
   }, 8000);
 
   function prepareGetNeighborsForAgglomerateNode(mocks: WebknossosTestContext["mocks"]) {

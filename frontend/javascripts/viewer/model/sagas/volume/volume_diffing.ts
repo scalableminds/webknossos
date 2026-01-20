@@ -145,10 +145,6 @@ function* uncachedDiffSegmentLists(
           return segmentJournal.slice(splitIndex + 1);
         })();
 
-  console.log("prevSegmentJournal", prevSegmentJournal);
-  console.log("segmentJournal", segmentJournal);
-  ColoredLogger.logBlue("[diffing] using journalDiff", journalDiff);
-
   for (const mergeJournalEntry of journalDiff) {
     // todop: what about the source segment that got its name changed potentially?
     // that should (?) be respected so that no updateSegmentPartialVolumeAction

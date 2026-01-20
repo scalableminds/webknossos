@@ -222,7 +222,6 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
-  ColoredLogger.logGreen("ensureSegmentItemAndLoadCoarseMesh", segmentId, position);
   yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
 
   const autoRenderMeshInProofreading = yield* select(

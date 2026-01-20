@@ -163,7 +163,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
       updatedSaveQueue: SaveQueueEntry[];
     }
 > {
-  // ColoredLogger.logRed("updateSaveQueueEntriesToStateAfterRebase");
   const saveQueue = yield* select((state) => state.save.queue);
   const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
   yield* call(addMissingSegmentsToLoadedMappings, idsToFetch);

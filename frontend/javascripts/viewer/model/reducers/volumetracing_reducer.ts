@@ -350,8 +350,6 @@ function VolumeTracingReducer(
             },
           ]),
         });
-      } else {
-        ColoredLogger.logRed("no volume tracing?");
       }
 
       // todop: adapt journal?

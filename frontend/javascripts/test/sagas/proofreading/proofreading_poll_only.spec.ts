@@ -51,7 +51,6 @@ describe("Proofreading (Poll only)", () => {
 
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
-      ColoredLogger.logGreen("1");
 
       const mapping0 = yield select(
         (state) =>

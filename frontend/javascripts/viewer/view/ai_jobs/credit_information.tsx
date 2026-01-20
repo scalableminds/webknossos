@@ -141,7 +141,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
     return 0;
   }, [selectedBoundingBox]);
 
-  const { data: jobCreditCostInfo, isFetching } = useQuery<JobCreditCostInfo>({
+  const { data: cachedJobCreditCostInfo, isFetching } = useQuery<JobCreditCostInfo>({
     queryKey: [
       "jobCreditCost",
       selectedJobType ?? "no-type",
@@ -154,6 +154,7 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
       ),
     enabled: Boolean(selectedBoundingBox && selectedJobType),
   });
+  const jobCreditCostInfo = isFetching ? null : cachedJobCreditCostInfo;
 
   const getBoundingBoxinVoxels = useCallback((): string => {
     if (selectedBoundingBox) {
@@ -249,11 +250,11 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           onClick={handleStartAnalysis}
         >
           {startButtonTitle}
-          {areParametersValid && !jobCreditCostInfo?.hasEnoughCredits
+          {jobCreditCostInfo?.hasEnoughCredits === false
             ? " (Not enough credits)"
             : ""}
         </Button>
-        {areParametersValid && !jobCreditCostInfo?.hasEnoughCredits && (
+        {jobCreditCostInfo?.hasEnoughCredits === false && (
           <Link to={"/organization"}>
             <Button block>Order more Credits</Button>
           </Link>

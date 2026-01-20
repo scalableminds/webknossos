@@ -77,7 +77,6 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         newDatasetId,
         parameters.datasetName,
         dataSourceWithLayersToLink.toUnusableWithStatus(DataSourceStatus.notYetUploadedToPaths),
-        None,
         isVirtual = true
       )
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(

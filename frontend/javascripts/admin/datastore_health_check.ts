@@ -1,4 +1,11 @@
-import * as RestAPI from "admin/rest_api";
+import {
+  getBuildInfo,
+  getDataOrTracingStoreBuildInfo,
+  getDataStoresCached,
+  getTracingStoreCached,
+  isInMaintenance as isInMaintenanceAPICall,
+  pingHealthEndpoint,
+} from "admin/rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
@@ -21,9 +28,9 @@ const memoizedThrottle = <F extends (...args: Array<any>) => any>(func: F, wait 
 // Otherwise, the memoization will not work correctly if the path and query-string are part of the URL
 const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string): Promise<any> => {
   const [datastores, tracingstore, isInMaintenance] = await Promise.all([
-    RestAPI.getDataStoresCached(),
-    RestAPI.getTracingStoreCached(),
-    RestAPI.isInMaintenance(),
+    getDataStoresCached(),
+    getTracingStoreCached(),
+    isInMaintenanceAPICall(),
   ]).catch(() => [null, null, null]);
 
   if (datastores == null || tracingstore == null || isInMaintenance == null) {
@@ -43,7 +50,7 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
 
     if (usedStore != null) {
       const { url, path } = usedStore;
-      RestAPI.pingHealthEndpoint(url, path).then(
+      pingHealthEndpoint(url, path).then(
         () => {
           if (usedStore.path === "data") {
             // Only check a version mismatch for the data store, because
@@ -64,8 +71,8 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
 
 async function checkVersionMismatchInDataStore(datastoreUrl: string) {
   const [buildinfoWebknossos, buildinfoDatastore] = (await Promise.all([
-    RestAPI.getBuildInfo(),
-    RestAPI.getDataOrTracingStoreBuildInfo(datastoreUrl),
+    getBuildInfo(),
+    getDataOrTracingStoreBuildInfo(datastoreUrl),
   ])) as [APIBuildInfoWk, APIBuildInfoDatastore];
   const expectedDatastoreApiVersion = buildinfoWebknossos.webknossos.datastoreApiVersion;
   const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore;

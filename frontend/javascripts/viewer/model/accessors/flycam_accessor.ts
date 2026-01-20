@@ -30,7 +30,6 @@ import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_
 import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
-import * as scaleInfo from "viewer/model/scaleinfo";
 import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "viewer/store";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
@@ -586,7 +585,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(voxelSize);
+  const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;

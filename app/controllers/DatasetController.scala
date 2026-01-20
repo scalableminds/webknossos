@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
   DataSourceStatus,
   ElementClass,
   LayerAttachmentDataformat,
@@ -376,6 +377,32 @@ class DatasetController @Inject()(userService: UserService,
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset, includeZeroMagLayers.getOrElse(false)) ?~> "dataset.list.fetchDataSourceFailed"
         } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
+  def duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log() {
+        for {
+          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+          dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext) ?~> "dataStore.notFound"
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "duplicateToOrga is only possible for virtual datasets"
+          _ <- organizationDAO.findOne(targetOrganizationId)(GlobalAccessContext) ?~> "organization.notFound"
+          newDatasetId = ObjectId.generate
+          newDirectoryName = datasetService.generateDirectoryName(dataset.name, newDatasetId)
+          adaptedDataSource = dataSource.withUpdatedId(DataSourceId(newDirectoryName, targetOrganizationId))
+          _ <- datasetService.createDataset(
+            dataStore,
+            newDatasetId,
+            dataset.name,
+            adaptedDataSource,
+            isVirtual = true,
+            metadata = dataset.metadata,
+            description = dataset.description,
+          )
+        } yield Ok(Json.toJson(newDatasetId))
       }
     }
 

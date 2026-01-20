@@ -1059,7 +1059,7 @@ export async function getDataset(
     options,
   );
 
-  if (!filterZeroMagLayers) {
+  if (!filterZeroMagLayers || !("dataLayers" in dataset.dataSource.dataLayers)) {
     return dataset;
   }
   return update(dataset, {

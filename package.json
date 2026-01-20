@@ -144,6 +144,7 @@
     "classnames": "^2.2.5",
     "color-hash": "^2.0.1",
     "comlink": "^4.3.0",
+    "core-js": "^3.45.1",
     "cwise": "^1.0.10",
     "dagre": "^0.8.5",
     "dayjs": "^1.11.13",

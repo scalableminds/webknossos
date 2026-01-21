@@ -268,7 +268,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       dataSourceUpdates: UsableDataSource,
       layerRenamings: Seq[LayerRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
     for {
-      existingDataSource <- usableDataSourceFor(dataset, includeZeroMagLayers = true)
+      existingDataSource <- usableDataSourceFor(dataset)
       datasetId = dataset._id
       dataStoreClient <- clientFor(dataset)
       updatedDataSource <- applyDataSourceUpdates(existingDataSource, dataSourceUpdates, layerRenamings).toFox
@@ -429,21 +429,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def usableDataSourceFor(dataset: Dataset, includeZeroMagLayers: Boolean = false)(
-      implicit mp: MessagesProvider): Fox[UsableDataSource] =
+  def usableDataSourceFor(dataset: Dataset)(implicit mp: MessagesProvider): Fox[UsableDataSource] =
     for {
-      dataSource <- dataSourceFor(dataset, includeZeroMagLayers) ?~> "dataSource.notFound" ~> NOT_FOUND
+      dataSource <- dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
     } yield usableDataSource
 
-  def dataSourceFor(dataset: Dataset, includeZeroMagLayers: Boolean = false): Fox[DataSource] = {
+  def dataSourceFor(dataset: Dataset): Fox[DataSource] = {
     val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     if (dataset.isUsable)
       for {
         voxelSize <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoVoxelSize"
         dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-        dataLayersFiltered = if (includeZeroMagLayers) dataLayers else dataLayers.filter(_.mags.nonEmpty)
-      } yield UsableDataSource(dataSourceId, dataLayersFiltered, voxelSize)
+      } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
     else
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
   }
@@ -645,8 +643,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                    requestingUserOpt: Option[User],
                    organization: Option[Organization] = None,
                    dataStore: Option[DataStore] = None,
-                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None,
-                   includeZeroMagLayers: Boolean = false)(implicit ctx: DBAccessContext): Fox[JsObject] =
+                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
+      implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       organization <- Fox.fillOption(organization) {
         organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
@@ -662,7 +660,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isEditable <- isEditableBy(dataset, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
-      dataSource <- dataSourceFor(dataset, includeZeroMagLayers) ?~> "dataset.list.fetchDataSourceFailed"
+      dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
       usedStorageBytes <- if (requestingUserOpt.exists(u => u._organization == dataset._organization))
         organizationDAO.getUsedStorageForDataset(dataset._id)
       else Fox.successful(0L)

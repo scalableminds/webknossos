@@ -61,7 +61,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken, None)(request))
+        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
         adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
       } yield adaptedResult
     }
@@ -184,7 +184,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
-        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken, None)(request))
+        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
         adaptedResult <- replaceInResult(replaceVoxelSize)(result)
       } yield adaptedResult
     }

@@ -1042,16 +1042,12 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 export async function getDataset(
   datasetId: string,
   sharingToken?: string | null | undefined,
-  includeZeroMagLayers?: boolean | null | undefined,
   options: RequestOptions = {},
   filterZeroMagLayers: boolean = true,
 ): Promise<APIDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
     params.set("sharingToken", String(sharingToken));
-  }
-  if (includeZeroMagLayers != null) {
-    params.set("includeZeroMagLayers", includeZeroMagLayers.toString());
   }
 
   const dataset: APIDataset = await Request.receiveJSON(
@@ -1083,7 +1079,7 @@ export async function getDatasetLegacy(
     sharingToken,
     options,
   );
-  return getDataset(datasetId, sharingToken, null, options);
+  return getDataset(datasetId, sharingToken, options);
 }
 
 export type DatasetUpdater = {

@@ -9,7 +9,6 @@ import {
   map3,
 } from "libs/utils";
 import extend from "lodash/extend";
-import flatten from "lodash/flatten";
 import flattenDeep from "lodash/flattenDeep";
 import isEqual from "lodash/isEqual";
 import keyBy from "lodash/keyBy";
@@ -1146,7 +1145,7 @@ class PlaneMaterialFactory {
     const allDenseMags = Object.values(getMagInfoByLayer(storeState.dataset)).map((magInfo) =>
       magInfo.getDenseMags(),
     );
-    const flatMags = flatten(allDenseMags);
+    const flatMags = allDenseMags.flat();
     return flatMags.length;
   }
 

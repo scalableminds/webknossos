@@ -1,6 +1,5 @@
 import ThreeDMap from "libs/ThreeDMap";
 import { M4x4, V3 } from "libs/mjs";
-import flatten from "lodash/flatten";
 import range from "lodash/range";
 import uniqBy from "lodash/uniqBy";
 import type { Matrix4x4 } from "mjs";
@@ -129,19 +128,17 @@ function addNecessaryBucketsToPriorityQueueOblique(
     const zDiff = 10;
     const scanLinesPoints = M4x4.transformVectorsAffine(
       queryMatrix,
-      flatten(
-        range(steps + 1).map((idx) => [
-          // Cast lines at z=-10
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
-          // Cast lines at z=0
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
-          // Cast lines at z=10
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
-        ]),
-      ),
+      range(steps + 1).flatMap((idx) => [
+        // Cast lines at z=-10
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        // Cast lines at z=0
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+        // Cast lines at z=10
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+      ]),
     );
 
     for (const [a, b] of chunk2(scanLinesPoints)) {

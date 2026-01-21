@@ -1,5 +1,4 @@
 import app from "app";
-import values from "lodash/values";
 import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
@@ -134,7 +133,7 @@ class Cube {
       vec(min[0], 0, min[2]),
     ]);
 
-    for (const mesh of values(this.crossSections).concat([this.cube])) {
+    for (const mesh of Object.values(this.crossSections).concat([this.cube])) {
       mesh.geometry.computeBoundingSphere();
       mesh.geometry.attributes.position.needsUpdate = true;
     }
@@ -171,7 +170,7 @@ class Cube {
   }
 
   getMeshes(): Line[] {
-    return [this.cube].concat(values(this.crossSections));
+    return [this.cube].concat(Object.values(this.crossSections));
   }
 
   setIsHighlighted(highlighted: boolean) {

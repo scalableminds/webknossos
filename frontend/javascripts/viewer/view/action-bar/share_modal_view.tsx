@@ -30,7 +30,6 @@ import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import flatten from "lodash/flatten";
 import isEqual from "lodash/isEqual";
 import messages from "messages";
 import type React from "react";
@@ -252,7 +251,7 @@ function _ShareModalView(props: Props) {
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
-    const newTeams = flatten([value]);
+    const newTeams = [value].flat();
     if (isEqual(newTeams, sharedTeams)) {
       return;
     }

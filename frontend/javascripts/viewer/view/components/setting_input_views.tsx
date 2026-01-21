@@ -516,10 +516,9 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       Delete
     </>
   );
-  const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
-    isLockedByOwner,
-    isOwner,
-  );
+  const editingDisallowedExplanation = isLockedByOwner
+    ? messages["tracing.read_only_mode_notification"](isLockedByOwner, isOwner)
+    : "";
 
   const getContextMenu = () => {
     const items: MenuProps["items"] = [

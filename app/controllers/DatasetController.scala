@@ -419,10 +419,7 @@ class DatasetController @Inject()(userService: UserService,
             datasetLastUsedTimesDAO.updateForDatasetAndUser(dataset._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
-          js <- datasetService.publicWrites(dataset,
-                                            request.identity,
-                                            Some(organization),
-                                            Some(dataStore))
+          js <- datasetService.publicWrites(dataset, request.identity, Some(organization), Some(dataStore))
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataset))
             if (dataset.isPublic) {

@@ -1001,7 +1001,7 @@ class SegmentsView extends React.Component<Props, State> {
     <Space.Compact block>
       <FastTooltip
         title="Select a mesh file from which precomputed meshes will be loaded."
-        style={{ width: "100%" }}
+        style={{ width: "100%", marginRight: -1 }} // negativ margin offset because of border of the <Select> below
       >
         <ConfigProvider
           renderEmpty={renderEmptyMeshFileSelect}

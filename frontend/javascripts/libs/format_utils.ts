@@ -587,7 +587,3 @@ export function formatMilliCreditsString(credits: number): string {
   const paddedMillisWithoutTrailingZeros = paddedMillis.replace(/0+$/, "");
   return `${fullCredits}.${paddedMillisWithoutTrailingZeros}`;
 }
-
-export function formatCurrency(amount: number, currency: string): string {
-  return `${amount.toFixed(2)}${ThinSpace}${currency}`;
-}

@@ -297,14 +297,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                      updates: UsableDataSource,
                                      layerRenamings: Seq[LayerRenaming]): Box[UsableDataSource] = {
     val existingDataSourceWithRenamedLayers = applyLayerRenamings(existingDataSource, layerRenamings)
-    val updatedLayers = existingDataSourceWithRenamedLayers.dataLayers.flatMap { existingLayer =>
-      val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
-      layerUpdatesOpt match {
-        case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
-        case None               => None
-      }
-    }
     for {
+      _ <- Box.fromBool(
+        existingDataSourceWithRenamedLayers.dataLayers.length == existingDataSourceWithRenamedLayers.dataLayers
+          .distinctBy(_.name)
+          .length) ?~ "Layer renamings create name collisions."
+      updatedLayers = existingDataSourceWithRenamedLayers.dataLayers.flatMap { existingLayer =>
+        val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
+        layerUpdatesOpt match {
+          case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
+          case None               => None
+        }
+      }
       addedLayers <- findNewLayers(existingDataSourceWithRenamedLayers, updates)
     } yield
       existingDataSource.copy(

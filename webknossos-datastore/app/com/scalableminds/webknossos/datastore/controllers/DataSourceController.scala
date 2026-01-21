@@ -51,7 +51,7 @@ import java.io.File
 import java.net.URI
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class PathValidationResult(
     path: UPath,
@@ -709,8 +709,8 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
       datasetCache.invalidateCache(datasetId)
       for {
-        dataSource <- datasetCache.getById(datasetId)
-        _ = clearCachesOfDataSource(datasetId, dataSource, layerName = None)
+        dataSourceBox <- datasetCache.getById(datasetId).shiftBox
+        _ = dataSourceBox.foreach(clearCachesOfDataSource(datasetId, _, layerName = None))
       } yield Ok
     }
   }

@@ -1,5 +1,5 @@
 import type { InputProps } from "antd";
-import _ from "lodash";
+import omit from "lodash/omit";
 import type React from "react";
 import { PureComponent } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";
@@ -153,7 +153,7 @@ abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>
       autoSize,
       vectorLength: _vectorLength,
       ...props
-    } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
+    } = omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
 
     const { addonBefore } = props;
     const addonBeforeLength =

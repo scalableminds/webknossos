@@ -1,5 +1,5 @@
 import { Collapse, notification } from "antd";
-import _ from "lodash";
+import debounce from "lodash/debounce";
 import type React from "react";
 import { useEffect } from "react";
 import { animationFrame, sleep } from "./utils";
@@ -222,7 +222,7 @@ const Toast = {
 };
 export default Toast;
 
-export const showToastOnce = _.debounce(
+export const showToastOnce = debounce(
   (
     type: ToastStyle,
     message: React.ReactNode,

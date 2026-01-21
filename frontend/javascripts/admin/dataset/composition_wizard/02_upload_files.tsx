@@ -6,7 +6,7 @@ import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
-import _ from "lodash";
+import zip from "lodash/zip";
 import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
@@ -178,7 +178,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("The two NML files should have the same tree count.");
   }
 
-  for (const [tree1, tree2] of _.zip(
+  for (const [tree1, tree2] of zip(
     trees1
       .values()
       .toArray()
@@ -195,7 +195,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     }
     const nodes1 = Array.from(tree1.nodes.values()).sort((a, b) => a.id - b.id);
     const nodes2 = Array.from(tree2.nodes.values()).sort((a, b) => a.id - b.id);
-    for (const [node1, node2] of _.zip(nodes1, nodes2)) {
+    for (const [node1, node2] of zip(nodes1, nodes2)) {
       if ((node1 == null) !== (node2 == null)) {
         throw new SoftError(
           `Tree ${tree1.treeId} and tree ${tree2.treeId} don't have the same amount of trees. Ensure that the NML structures match each other.`,

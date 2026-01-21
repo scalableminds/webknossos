@@ -1,4 +1,4 @@
-import _ from "lodash";
+import range from "lodash/range";
 import type { ServerSkeletonTracingTree } from "types/api_types"; // This is a quick'n'dirty code to generate a huge amount of mocked trees.
 
 // Since the server cannot handle such big tracings at the moment, we'll
@@ -69,5 +69,5 @@ export default function generateDummyTrees(
     };
   }
 
-  return _.range(treeCount).map(() => generateDummyTree());
+  return range(treeCount).map(() => generateDummyTree());
 }

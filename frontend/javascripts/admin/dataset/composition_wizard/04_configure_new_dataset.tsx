@@ -26,7 +26,7 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager } from "libs/utils";
-import _ from "lodash";
+import uniqBy from "lodash/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
 import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
@@ -77,7 +77,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const handleTransformImport = async () => {
     const newLinks: LayerLink[] = (
-      _.flatMap(linkedDatasets, (dataset) =>
+      linkedDatasets.flatMap((dataset) =>
         dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
       ) as [APIDataset, APIDataLayer][]
     ).map(
@@ -184,7 +184,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         layers: layersWithTransforms,
       });
 
-      const uniqueDatasets = _.uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
+      const uniqueDatasets = uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
       const datasetMarkdownLinks = uniqueDatasets
         .map(
           (el) =>

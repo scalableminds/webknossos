@@ -520,6 +520,10 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     ? messages["tracing.read_only_mode_notification"](isLockedByOwner, isOwner)
     : "";
 
+  const exportDisallowedExplanation = isLockedByOwner
+    ? editingDisallowedExplanation
+    : "This WEBKNOSSOS instance is not configured to run export jobs.";
+
   const getContextMenu = () => {
     const items: MenuProps["items"] = [
       {
@@ -547,7 +551,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         label: isExportEnabled ? (
           exportButton
         ) : (
-          <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
+          <FastTooltip title={exportDisallowedExplanation}>{exportButton}</FastTooltip>
         ),
         disabled: !isExportEnabled,
         onClick: onExport,

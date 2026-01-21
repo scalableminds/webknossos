@@ -530,7 +530,7 @@ class AbstractTreeRenderer {
    * @return {Boolean}    true if node is commented
    */
   nodeIdHasComment(id: number): boolean {
-    return this.tree.comments.find((c: any) => c.node === id) != null;
+    return this.tree.comments.some((c: any) => c.node === id);
   }
 
   /**

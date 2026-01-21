@@ -162,7 +162,7 @@
     "js-priority-queue": "^0.1.5",
     "jsonschema": "^1.2.4",
     "keyboardjs": "^2.7.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "lz-string": "^1.4.4",
     "lz4-wasm": "^0.9.2",
     "memoize-one": "^6.0.0",

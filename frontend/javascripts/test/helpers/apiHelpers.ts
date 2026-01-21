@@ -1,5 +1,5 @@
 import { type Mock, vi, type TestContext as BaseTestContext } from "vitest";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";
@@ -251,7 +251,7 @@ function receiveJSONMockImplementation(
     url.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
     url.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)
   ) {
-    return Promise.resolve(_.cloneDeep(annotationFixture));
+    return Promise.resolve(cloneDeep(annotationFixture));
   }
   if (url.startsWith("http://localhost:9000/tracings/mapping/volumeTracingId/info")) {
     return Promise.resolve({
@@ -463,7 +463,7 @@ export async function setupWebknossosForTesting(
       _sharingToken?: string | null | undefined,
       _options: RequestOptions = {},
     ) => {
-      return _.cloneDeep(dataset);
+      return cloneDeep(dataset);
     },
   );
 
@@ -483,7 +483,7 @@ export async function setupWebknossosForTesting(
       };
     })(),
   );
-  vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(annotationProto));
+  vi.mocked(parseProtoAnnotation).mockReturnValue(cloneDeep(annotationProto));
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",

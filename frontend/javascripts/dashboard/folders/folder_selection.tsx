@@ -1,12 +1,12 @@
 import { TreeSelect } from "antd";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import { useEffect, useState } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
 import type { FolderItem } from "types/api_types";
 
 function addDisabledProperty(tree: FolderItem[]) {
-  const newTree = _.cloneDeep(tree);
+  const newTree = cloneDeep(tree);
 
   function traverse(element: FolderItem) {
     if (Array.isArray(element.children)) {

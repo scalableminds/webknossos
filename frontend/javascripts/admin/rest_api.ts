@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
@@ -1038,11 +1039,12 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
   return datasets;
 }
 
-export function getDataset(
+export async function getDataset(
   datasetId: string,
   sharingToken?: string | null | undefined,
   includeZeroMagLayers?: boolean | null | undefined,
   options: RequestOptions = {},
+  filterZeroMagLayers: boolean = true,
 ): Promise<APIDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
@@ -1052,7 +1054,21 @@ export function getDataset(
     params.set("includeZeroMagLayers", includeZeroMagLayers.toString());
   }
 
-  return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
+  const dataset: APIDataset = await Request.receiveJSON(
+    `/api/datasets/${datasetId}?${params}`,
+    options,
+  );
+
+  if (!filterZeroMagLayers || !("dataLayers" in (dataset.dataSource ?? {}))) {
+    return dataset;
+  }
+  return update(dataset, {
+    dataSource: {
+      dataLayers: {
+        $set: dataset.dataSource.dataLayers.filter((layer) => layer.mags.length > 0),
+      },
+    },
+  });
 }
 
 export async function getDatasetLegacy(

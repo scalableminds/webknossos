@@ -516,10 +516,11 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       Delete
     </>
   );
-  const editingDisallowedExplanation = isLockedByOwner
-    ? messages["tracing.read_only_mode_notification"](isLockedByOwner, isOwner)
-    : "";
 
+  const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
+    isLockedByOwner,
+    isOwner,
+  );
   const exportDisallowedExplanation = isLockedByOwner
     ? editingDisallowedExplanation
     : "This WEBKNOSSOS instance is not configured to run export jobs.";

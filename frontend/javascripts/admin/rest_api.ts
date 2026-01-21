@@ -1199,7 +1199,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
 
     let lastFileErrorTimestamp: number | null = null;
     resumable.on("fileError", function (file, _message) {
-      // When a file could not be uploaded, assume that the token is. Then,
+      // When a file could not be uploaded, assume that the token is invalid. Then,
       // refresh the token (unless we already did this in the last hour) and
       // retry the file upload.
       const ONE_HOUR_MS = 3600 * 1000;

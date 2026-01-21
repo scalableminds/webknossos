@@ -1,15 +1,22 @@
 import saveAs from "file-saver";
+import capitalize from "lodash/capitalize";
+import { LongUnitToShortUnitMap, type UnitLong } from "viewer/constants";
 import { api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
-export function getTreesAsCSV(annotationId: string, tracing: SkeletonTracing, datasetUnit: string) {
+export function getTreesAsCSV(
+  annotationId: string,
+  tracing: SkeletonTracing,
+  datasetUnit: UnitLong,
+) {
+  const capitalizedShortDSUnit = capitalize(LongUnitToShortUnitMap[datasetUnit]);
   const visibleTrees = tracing.trees
     .values()
     .filter((tree) => tree.isVisible)
     .toArray();
-  const csvHeader = `annotationId,treeId,name,groupId,colorRGB,numberOfNodes,numberOfEdges,pathLengthIn${datasetUnit},pathLengthVx`;
+  const csvHeader = `annotationId,treeId,name,groupId,colorRGB,numberOfNodes,numberOfEdges,pathLengthIn${capitalizedShortDSUnit},pathLengthVx`;
 
   const csvLines = visibleTrees.map((tree) => {
     const [lengthInDSUnit, lengthInVx] = api.tracing.measureTreeLength(tree.treeId);
@@ -33,13 +40,14 @@ export function getTreeNodesAsCSV(
   state: WebknossosState,
   tracing: SkeletonTracing,
   applyTransform: boolean,
-  datasetUnit: string,
+  datasetUnit: UnitLong,
 ) {
+  const capitalizedShortDSUnit = capitalize(LongUnitToShortUnitMap[datasetUnit]);
   const visibleTrees = tracing.trees
     .values()
     .filter((tree) => tree.isVisible)
     .toArray();
-  const csvHeader = `annotationId,treeId,nodeId,nodeRadius${datasetUnit},x,y,z,rotX,rotY,rotZ,additionalCoords,viewport,inMag,bitDepth,interpolation,time,comment`;
+  const csvHeader = `annotationId,treeId,nodeId,nodeRadius${capitalizedShortDSUnit},x,y,z,rotX,rotY,rotZ,additionalCoords,viewport,inMag,bitDepth,interpolation,time,comment`;
   const { annotationId } = state.annotation;
 
   const csvLines = visibleTrees.flatMap((tree) =>

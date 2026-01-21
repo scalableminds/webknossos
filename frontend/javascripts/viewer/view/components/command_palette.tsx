@@ -4,7 +4,9 @@ import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { capitalize, getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
-import _ from "lodash";
+import compact from "lodash/compact";
+import noop from "lodash/noop";
+import sortBy from "lodash/sortBy";
 import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
@@ -53,12 +55,12 @@ const getLabelForAction = (action: NonNullable<ItemType>) => {
 };
 
 const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutId[] => {
-  return _.compact(
+  return compact(
     menuActions.map((action) => {
       if (action == null) {
         return null;
       }
-      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : _.noop;
+      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : noop;
       return {
         name: getLabelForAction(action),
         command: onClickAction,
@@ -193,7 +195,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const getAnnotationItems = useCallback(async () => {
     const annotations = await getReadableAnnotations(false);
-    const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
+    const sortedAnnotations = sortBy(annotations, (a) => a.modified).reverse();
     return sortedAnnotations.map((annotation) => {
       return {
         name: `View Annotation: ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,

@@ -12,7 +12,14 @@ import { useFetch } from "libs/react_helpers";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import { chunkIntoTimeWindows } from "libs/utils";
-import _ from "lodash";
+import flatten from "lodash/flatten";
+import flattenDepth from "lodash/flattenDepth";
+import groupBy from "lodash/groupBy";
+import isEqual from "lodash/isEqual";
+import isString from "lodash/isString";
+import mapValues from "lodash/mapValues";
+import max from "lodash/max";
+import memoize from "lodash/memoize";
 import { useEffect, useState } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getCreationTimestamp } from "viewer/model/accessors/annotation_accessor";
@@ -59,7 +66,7 @@ export async function previewVersion(version?: number) {
   const annotationProto = await getAnnotationProto(tracingStore.url, annotationId, version);
 
   if (
-    !_.isEqual(
+    !isEqual(
       annotationProto.annotationLayers.map((l) => l.tracingId),
       annotationLayers.map((l) => l.tracingId),
     )
@@ -91,7 +98,7 @@ async function handleRestoreVersion(
   version: number,
 ) {
   if (props.initialAllowUpdate) {
-    const newestVersion = _.max(versions.map((batch) => batch.version)) || 0;
+    const newestVersion = max(versions.map((batch) => batch.version)) || 0;
     Store.dispatch(setVersionNumberAction(newestVersion));
     Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
     await Model.ensureSavedState();
@@ -113,19 +120,19 @@ export const handleCloseRestoreView = async () => {
   Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
 };
 
-const getGroupedAndChunkedVersions = _.memoize(
+const getGroupedAndChunkedVersions = memoize(
   (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
     // This function first groups the versions by day, where the key is the output of the moment calendar function.
     // Then, the versions for each day are chunked into x-minute intervals,
     // so that the actions of one chunk are all from within one x-minute interval.
-    const groupedVersions = _.groupBy(versions, (batch) =>
-      dayjs.utc(_.max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
+    const groupedVersions = groupBy(versions, (batch) =>
+      dayjs.utc(max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
     );
 
     const getBatchTime = (batch: APIUpdateActionBatch): number =>
-      _.max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
+      max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
 
-    return _.mapValues(groupedVersions, (versionsOfOneDay) =>
+    return mapValues(groupedVersions, (versionsOfOneDay) =>
       chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
     );
   },
@@ -280,9 +287,9 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     getNextPageParam: (lastPage) => lastPage.nextPage,
     getPreviousPageParam: (lastPage) => lastPage.previousPage,
   });
-  const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
+  const flattenedVersions = flatten(versions?.pages.map((page) => page.data) || []);
   const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
-  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = _.flattenDepth(
+  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = flattenDepth(
     Object.entries(groupedAndChunkedVersions) as any,
     2,
   );
@@ -342,7 +349,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
           loading={isFetching || isChangingVersion}
           locale={VERSION_LIST_PLACEHOLDER}
           renderItem={(batchesOrDateString) =>
-            _.isString(batchesOrDateString) ? (
+            isString(batchesOrDateString) ? (
               <List.Item className="version-section">
                 <div
                   style={{

@@ -1,4 +1,5 @@
-import _ from "lodash";
+import keys from "lodash/keys";
+import pickBy from "lodash/pickBy";
 import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_types";
 import {
   defaultDatasetViewConfiguration,
@@ -43,7 +44,7 @@ export function ensureDatasetSettingsHasLayerOrder(
   datasetConfiguration: Record<string, any>,
   dataset: APIDataset,
 ) {
-  const colorLayerNames = _.keys(datasetConfiguration.layers).filter((layerName) =>
+  const colorLayerNames = keys(datasetConfiguration.layers).filter((layerName) =>
     isColorLayer(dataset, layerName),
   );
   const onlyExistingLayers =
@@ -95,7 +96,7 @@ export const enforceValidatedDatasetViewConfiguration = (
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         newLayerConfig[layer.name] = isOptional
           ? {}
-          : _.pickBy(layerConfigDefault, (value: any) => value !== null);
+          : pickBy(layerConfigDefault, (value: any) => value !== null);
       }
     });
   }

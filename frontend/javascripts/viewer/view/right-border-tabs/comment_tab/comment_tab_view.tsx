@@ -24,7 +24,9 @@ import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import flatMap from "lodash/flatMap";
+import isEmpty from "lodash/isEmpty";
+import uniq from "lodash/uniq";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 
@@ -271,7 +273,7 @@ function CommentTabView(props: Props) {
 
   function toggleExpandAllTrees() {
     setExpandedTreeIds((prevState) => {
-      const shouldBeCollapsed = !_.isEmpty(prevState);
+      const shouldBeCollapsed = !isEmpty(prevState);
       return shouldBeCollapsed ? [] : getData().map((tree) => tree.treeId.toString());
     });
   }
@@ -460,10 +462,10 @@ function CommentTabView(props: Props) {
 
                     const tree = getData().find((tree) => tree.nodes.has(comment.nodeId));
                     if (tree) {
-                      setExpandedTreeIds(_.uniq([...expandedTreeIds, tree.treeId.toString()]));
+                      setExpandedTreeIds(uniq([...expandedTreeIds, tree.treeId.toString()]));
                     }
                   }}
-                  data={_.flatMap(getData(), (tree) =>
+                  data={flatMap(getData(), (tree) =>
                     tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
                   )}
                   searchKey="content"

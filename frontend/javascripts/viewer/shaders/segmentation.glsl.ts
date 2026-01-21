@@ -393,7 +393,7 @@ export const getSegmentId: ShaderModule = {
   requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
 
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
       vec3 layerCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(layerCoordUVW, <%= segmentationName %>_bboxMin, <%= segmentationName %>_bboxMax)) {

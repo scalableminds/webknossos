@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import _ from "lodash";
+import range from "lodash/range";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
@@ -152,7 +152,7 @@ describe("Update Action Application for VolumeTracing", () => {
   const beforeVersionIndices =
     hardcodedBeforeVersionIndex != null
       ? [hardcodedBeforeVersionIndex]
-      : _.range(0, userActions.length);
+      : range(0, userActions.length);
 
   describe.each(compactionModes)(
     "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
@@ -161,7 +161,7 @@ describe("Update Action Application for VolumeTracing", () => {
         const afterVersionIndices =
           hardcodedAfterVersionIndex != null
             ? [hardcodedAfterVersionIndex]
-            : _.range(beforeVersionIndex, userActions.length + 1);
+            : range(beforeVersionIndex, userActions.length + 1);
 
         test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
           const state2WithActiveCell = applyActions(

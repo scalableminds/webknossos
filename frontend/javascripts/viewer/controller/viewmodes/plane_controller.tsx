@@ -2,7 +2,9 @@ import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } 
 import Toast from "libs/toast";
 import { isNoElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
-import _ from "lodash";
+import intersection from "lodash/intersection";
+import union from "lodash/union";
+import values from "lodash/values";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -88,7 +90,7 @@ function ensureNonConflictingHandlers(
   volumeControls: Record<string, any>,
   proofreadControls?: Record<string, any>,
 ): void {
-  const conflictingHandlers = _.intersection(
+  const conflictingHandlers = intersection(
     Object.keys(skeletonControls),
     Object.keys(volumeControls),
     proofreadControls ? Object.keys(proofreadControls) : [],
@@ -375,7 +377,7 @@ class PlaneController extends PureComponent<Props> {
     const lineMeasurementControls = LineMeasurementToolController.getPlaneMouseControls();
     const areaMeasurementControls = AreaMeasurementToolController.getPlaneMouseControls();
 
-    const allControlKeys = _.union(
+    const allControlKeys = union(
       Object.keys(moveControls),
       Object.keys(skeletonControls),
       Object.keys(drawControls),
@@ -708,7 +710,7 @@ class PlaneController extends PureComponent<Props> {
   }
 
   destroyInput() {
-    for (const mouse of _.values(this.input.mouseControllers)) {
+    for (const mouse of values(this.input.mouseControllers)) {
       mouse.destroy();
     }
 

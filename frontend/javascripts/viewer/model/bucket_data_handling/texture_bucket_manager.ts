@@ -3,7 +3,9 @@ import type UpdatableTexture from "libs/UpdatableTexture";
 import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import { waitForCondition } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import noop from "lodash/noop";
+import range from "lodash/range";
+import uniqBy from "lodash/uniqBy";
 import type { DataTexture } from "three";
 import type { ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -102,7 +104,7 @@ export default class TextureBucketManager {
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
-    this.freeIndexSet = new Set(_.range(this.maximumCapacity));
+    this.freeIndexSet = new Set(range(this.maximumCapacity));
     this.dataTextures = [];
   }
 
@@ -189,7 +191,7 @@ export default class TextureBucketManager {
     // this queue has to be filled from the front (via unshift) und read from the
     // back (via pop). This ensures that the newest bucket "wins" if there are
     // multiple buckets for the same index.
-    this.writerQueue = _.uniqBy(this.writerQueue, (el) => el._index);
+    this.writerQueue = uniqBy(this.writerQueue, (el) => el._index);
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
     const packedBucketSize = this.getPackedBucketSize();
@@ -316,8 +318,8 @@ export default class TextureBucketManager {
     };
 
     enqueueBucket(index);
-    let unlistenToLoadedFn = _.noop;
-    let unlistenToLabeledFn = _.noop;
+    let unlistenToLoadedFn = noop;
+    let unlistenToLabeledFn = noop;
 
     const updateBucketData = () => {
       // Check that the bucket is still in the data texture.

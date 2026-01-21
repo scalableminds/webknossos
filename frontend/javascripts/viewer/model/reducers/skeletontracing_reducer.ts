@@ -3,7 +3,9 @@ import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
 import { zeroPad } from "libs/utils";
-import _, { clamp } from "lodash";
+import clamp from "lodash/clamp";
+import identity from "lodash/identity";
+import orderBy from "lodash/orderBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
@@ -356,11 +358,11 @@ function SkeletonTracingReducer(
 
     case "SELECT_NEXT_TREE": {
       const { activeTreeId, trees } = skeletonTracing;
-      if (_.values(trees).length === 0) return state;
+      if (trees.size() === 0) return state;
       const increaseDecrease = action.forward ? 1 : -1;
       const orderAttribute = state.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
-      const treeIds = _.orderBy(trees.values().toArray(), [orderAttribute]).map((t) => t.treeId);
+      const treeIds = orderBy(trees.values().toArray(), [orderAttribute]).map((t) => t.treeId);
 
       // default to the first tree
       const activeTreeIdIndex = activeTreeId != null ? treeIds.indexOf(activeTreeId) : 0;
@@ -572,7 +574,7 @@ function SkeletonTracingReducer(
       const expandedGroups = additionallyExpandGroup(
         skeletonTracing.treeGroups,
         tree.groupId,
-        _.identity,
+        identity,
       );
       if (expandedGroups == null) {
         return state;

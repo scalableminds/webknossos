@@ -32,7 +32,13 @@ import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import { compareBy, localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import difference from "lodash/difference";
+import keyBy from "lodash/keyBy";
+import minBy from "lodash/minBy";
+import noop from "lodash/noop";
+import partial from "lodash/partial";
+import sortBy from "lodash/sortBy";
+import without from "lodash/without";
 import type React from "react";
 import { Fragment, PureComponent, useContext, useRef } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
@@ -492,7 +498,7 @@ class DatasetTable extends PureComponent<Props, State> {
 
     const filteredByTags = (datasets: APIDatasetCompact[]) =>
       datasets.filter((dataset) => {
-        const notIncludedTags = _.difference(this.props.searchTags, dataset.tags);
+        const notIncludedTags = difference(this.props.searchTags, dataset.tags);
 
         return notIncludedTags.length === 0;
       });
@@ -576,7 +582,7 @@ class DatasetTable extends PureComponent<Props, State> {
     const filteredDataSource = this.getFilteredDatasets();
     const { sortedInfo } = this.state;
     let dataSourceSortedByRank: Array<DatasetOrFolder> = useLruRank
-      ? _.sortBy(filteredDataSource, ["lastUsedByUser", "created"]).reverse()
+      ? sortBy(filteredDataSource, ["lastUsedByUser", "created"]).reverse()
       : filteredDataSource;
     const isSearchQueryLongEnough = this.props.searchQuery.length >= MINIMUM_SEARCH_QUERY_LENGTH;
     if (!isSearchQueryLongEnough) {
@@ -590,8 +596,8 @@ class DatasetTable extends PureComponent<Props, State> {
       // Sort using the dice coefficient if the table is not sorted by another key
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
       isSearchQueryLongEnough && sortedInfo.columnKey == null
-        ? _.chain([...filteredDataSource, ...activeSubfolders])
-            .map((datasetOrFolder) => {
+        ? sortBy(
+            [...filteredDataSource, ...activeSubfolders].map((datasetOrFolder) => {
               const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
               const rank = useLruRank ? datasetToRankMap.get(datasetOrFolder) || 0 : 0;
               const rankCoefficient = 1 - rank / filteredDataSource.length;
@@ -600,11 +606,11 @@ class DatasetTable extends PureComponent<Props, State> {
                 datasetOrFolder,
                 coefficient,
               };
-            })
-            .sortBy("coefficient")
+            }),
+            "coefficient",
+          )
             .map(({ datasetOrFolder }) => datasetOrFolder)
             .reverse()
-            .value()
         : dataSourceSortedByRank;
     const sortedDataSourceRenderers: RowRenderer[] = sortedDataSource.map((record) =>
       isRecordADataset(record)
@@ -754,7 +760,7 @@ class DatasetTable extends PureComponent<Props, State> {
                   const selectedIndices = selectedDatasets.map((selectedDS) =>
                     renderedRowData.indexOf(selectedDS),
                   );
-                  const closestSelectedDatasetIdx = _.minBy(selectedIndices, (idx) =>
+                  const closestSelectedDatasetIdx = minBy(selectedIndices, (idx) =>
                     Math.abs(idx - clickedDatasetIdx),
                   );
 
@@ -859,7 +865,7 @@ export function DatasetTags({
         };
       }
     } else {
-      const newTags = _.without(dataset.tags, tag);
+      const newTags = without(dataset.tags, tag);
       updater = {
         tags: newTags,
       };
@@ -875,15 +881,15 @@ export function DatasetTags({
           tag={tag}
           key={tag}
           kind="datasets"
-          onClick={_.partial(onClickTag || _.noop, tag)}
-          onClose={_.partial(editTagFromDataset, false, tag)}
+          onClick={partial(onClickTag || noop, tag)}
+          onClose={partial(editTagFromDataset, false, tag)}
           closable={dataset.isEditable}
         />
       ))}
       {dataset.isEditable ? (
         <EditableTextIcon
           icon={<PlusOutlined />}
-          onChange={_.partial(editTagFromDataset, true)}
+          onChange={partial(editTagFromDataset, true)}
           label="Add Tag"
         />
       ) : null}
@@ -893,7 +899,7 @@ export function DatasetTags({
 
 export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {
   return (
-    <div style={{ maxWidth: 250 }}>
+    <Space wrap>
       {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
         <Tag
           key={layer.name}
@@ -908,7 +914,7 @@ export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDatas
           {layer.name} - {layer.elementClass}
         </Tag>
       ))}
-    </div>
+    </Space>
   );
 }
 
@@ -929,7 +935,7 @@ export function TeamTags({
     return <Tag variant="outlined">{emptyValue}</Tag>;
   }
 
-  const allowedTeamsById = _.keyBy(dataset.allowedTeams, "id");
+  const allowedTeamsById = keyBy(dataset.allowedTeams, "id");
   return (
     <>
       {permittedTeams.map((team) => {

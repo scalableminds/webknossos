@@ -1,7 +1,9 @@
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { document } from "libs/window";
-import _ from "lodash";
+import max from "lodash/max";
+import memoize from "lodash/memoize";
+import min from "lodash/min";
 import {
   ByteType,
   FloatType,
@@ -222,7 +224,7 @@ function getSmallestCommonBucketCapacity<
       sizeAndCount.packingDegree,
     ),
   );
-  return _.min(capacities) || 0;
+  return min(capacities) || 0;
 }
 
 function getRenderSupportedLayerCount<
@@ -240,7 +242,7 @@ function getRenderSupportedLayerCount<
   // here (because some layers might need fewer textures), but this would be harder to communicate to
   // the user and also more complex to maintain code-wise.
   const maximumTextureCountForLayer =
-    _.max(
+    max(
       Array.from(textureInformationPerLayer.values()).map(
         (sizeAndCount) => sizeAndCount.textureCount,
       ),
@@ -359,7 +361,7 @@ function _getSupportedValueRangeForElementClass(
 
 // Use memoization to ensure that the returned tuples always have the
 // same identity.
-export const getSupportedValueRangeForElementClass = _.memoize(
+export const getSupportedValueRangeForElementClass = memoize(
   _getSupportedValueRangeForElementClass,
 );
 

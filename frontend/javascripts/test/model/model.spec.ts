@@ -1,4 +1,4 @@
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ControlModeEnum } from "viewer/constants";
 import {
@@ -31,11 +31,11 @@ const { tracingId } = ANNOTATION.annotationLayers[0];
 
 function receiveJSONMockImplementation(url: string, _options: any, returnValue: Promise<any>) {
   if (url.startsWith(`/api/annotations/${ANNOTATION_ID}/info?timestamp=${Date.now()}`)) {
-    return Promise.resolve(_.cloneDeep(ANNOTATION));
+    return Promise.resolve(cloneDeep(ANNOTATION));
   } else if (
     url.startsWith(`${ANNOTATION.tracingStore.url}/tracings/${contentType}/${tracingId}`)
   ) {
-    return Promise.resolve(_.cloneDeep(TRACING));
+    return Promise.resolve(cloneDeep(TRACING));
   } else if (url.startsWith(`/api/datasets/${ANNOTATION.datasetId}`)) {
     return returnValue;
   }
@@ -54,13 +54,13 @@ describe("Model Initialization", () => {
     location.href = `http://localhost:9000/datasets/${DATASET.name}-${DATASET.id}/view`;
     location.pathname = `/datasets/${DATASET.name}-${DATASET.id}/view`;
 
-    const datasetObject = _.clone(DATASET);
+    const datasetObject = cloneDeep(DATASET);
 
     // @ts-expect-error still delete dataLayers on the cloned object.
     delete datasetObject.dataSource.dataLayers;
 
     vi.mocked(Request).receiveJSON.mockImplementation((url: string, options?: any) =>
-      receiveJSONMockImplementation(url, options, Promise.resolve(_.cloneDeep(datasetObject))),
+      receiveJSONMockImplementation(url, options, Promise.resolve(cloneDeep(datasetObject))),
     );
 
     await expect(

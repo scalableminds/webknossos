@@ -13,7 +13,14 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
+import {
+  BlobReader,
+  BlobWriter,
+  type Entry,
+  TextReader,
+  ZipReader,
+  ZipWriter,
+} from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
 import { saveAs } from "file-saver";
@@ -21,8 +28,10 @@ import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
-import Zip from "libs/zipjs_wrapper";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
+import last from "lodash/last";
+import orderBy from "lodash/orderBy";
+import size from "lodash/size";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import React from "react";
@@ -261,7 +270,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const { successes: importActionsWithDatasetNames, errors } = await promiseAllWithErrors(
       files.map(async (file) => {
-        const ext = (_.last(file.name.split(".")) || "").toLowerCase();
+        const ext = (last(file.name.split(".")) || "").toLowerCase();
 
         let tryImportFunctions;
         if (ext === "nml" || ext === "xml")
@@ -364,14 +373,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
           if (group.children) {
             // Groups are always sorted by name and appear before the trees
-            const sortedGroups = _.orderBy(group.children, ["name"], ["asc"]);
+            const sortedGroups = orderBy(group.children, ["name"], ["asc"]);
 
             yield* mapGroupsAndTreesSorted(sortedGroups, _groupToTreesMap, sortBy);
           }
 
           if (_groupToTreesMap[group.groupId] != null) {
             // Trees are sorted by the sortBy property
-            const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
+            const sortedTrees = orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
             yield* sortedTrees.map(makeTree);
           }
@@ -389,7 +398,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { treeGroups, trees } = this.props.skeletonTracing;
 
-    let newTreeGroups = _.cloneDeep(treeGroups);
+    let newTreeGroups = cloneDeep(treeGroups);
 
     const groupToTreesMap = createGroupToTreesMap(trees);
     let treeIdsToDelete: number[] = [];
@@ -577,10 +586,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       const treesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
       const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 
-      const blobWriter = new Zip.BlobWriter("application/zip");
-      const writer = new Zip.ZipWriter(blobWriter);
-      await writer.add("nodes.csv", new Zip.TextReader(treesCsv));
-      await writer.add("edges.csv", new Zip.TextReader(edgesCsv));
+      const blobWriter = new BlobWriter("application/zip");
+      const writer = new ZipWriter(blobWriter);
+      await writer.add("nodes.csv", new TextReader(treesCsv));
+      await writer.add("edges.csv", new TextReader(edgesCsv));
       await writer.close();
       saveAs(await blobWriter.getData(), "tree_export.zip");
     } catch (e) {
@@ -877,7 +886,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     const { showSkeletons, trees, treeGroups } = skeletonTracing;
-    const noTreesAndGroups = trees.size() === 0 && _.size(treeGroups) === 0;
+    const noTreesAndGroups = trees.size() === 0 && size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";

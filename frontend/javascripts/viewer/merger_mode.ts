@@ -1,4 +1,4 @@
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import messages from "messages";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { UnregisterHandler } from "viewer/api/api_latest";
@@ -395,7 +395,7 @@ function changeOpacity(mergerModeState: MergerModeState) {
 
   const layerSettings = api.data.getConfiguration("layers");
   // Invert the visibility of the segmentation layer.
-  const copyOfLayerSettings: WriteableDatasetLayerConfiguration = _.cloneDeep(layerSettings) as any;
+  const copyOfLayerSettings: WriteableDatasetLayerConfiguration = cloneDeep(layerSettings) as any;
   const isSegmentationDisabled = copyOfLayerSettings[segmentationLayerName].isDisabled;
   copyOfLayerSettings[segmentationLayerName].isDisabled = !isSegmentationDisabled;
   api.data.setConfiguration("layers", copyOfLayerSettings);

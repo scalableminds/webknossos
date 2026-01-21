@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import _ from "lodash";
+import memoize from "lodash/memoize";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -130,7 +130,7 @@ class Plane {
     this.displayCrosshair = value;
   };
 
-  getLineBasicMaterial = _.memoize(
+  getLineBasicMaterial = memoize(
     (color: number, linewidth: number) =>
       new LineBasicMaterial({
         color,

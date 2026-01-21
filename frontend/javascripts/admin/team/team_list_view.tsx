@@ -8,7 +8,7 @@ import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import partial from "lodash/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
@@ -255,7 +255,7 @@ function TeamListView() {
                   </LinkButton>
                 </div>
                 <div>
-                  <LinkButton onClick={_.partial(deleteTeam, team)} icon={<DeleteOutlined />}>
+                  <LinkButton onClick={partial(deleteTeam, team)} icon={<DeleteOutlined />}>
                     Delete
                   </LinkButton>
                 </div>

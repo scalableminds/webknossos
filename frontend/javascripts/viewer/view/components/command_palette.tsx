@@ -3,9 +3,12 @@ import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { capitalize, getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
-import _ from "lodash";
-import { getAdministrationSubMenu } from "navbar";
+import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
+import capitalize from "lodash/capitalize";
+import compact from "lodash/compact";
+import noop from "lodash/noop";
+import sortBy from "lodash/sortBy";
+import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useNavigate } from "react-router-dom";
@@ -53,12 +56,12 @@ const getLabelForAction = (action: NonNullable<ItemType>) => {
 };
 
 const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutId[] => {
-  return _.compact(
+  return compact(
     menuActions.map((action) => {
       if (action == null) {
         return null;
       }
-      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : _.noop;
+      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : noop;
       return {
         name: getLabelForAction(action),
         command: onClickAction,
@@ -193,7 +196,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const getAnnotationItems = useCallback(async () => {
     const annotations = await getReadableAnnotations(false);
-    const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
+    const sortedAnnotations = sortBy(annotations, (a) => a.modified).reverse();
     return sortedAnnotations.map((annotation) => {
       return {
         name: `View Annotation: ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
@@ -244,6 +247,14 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
             return { name: getLabelForPath(entry.key), path: entry.key };
           });
 
+    const analysisSubMenu = getAnalysisSubMenu(true);
+    const analysisCommands =
+      analysisSubMenu != null
+        ? analysisSubMenu.children.map((entry) => {
+            return { name: getLabelForPath(entry.key), path: entry.key };
+          })
+        : [];
+
     const statisticsCommands = isUserAdminOrManager(activeUser)
       ? [
           {
@@ -257,7 +268,12 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         ]
       : [];
 
-    const navigationEntries = [...basicNavigationEntries, ...adminCommands, ...statisticsCommands];
+    const navigationEntries = [
+      ...basicNavigationEntries,
+      ...adminCommands,
+      ...analysisCommands,
+      ...statisticsCommands,
+    ];
 
     navigationEntries.forEach((entry) => {
       commands.push({

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
 import {
   tokenUserA,
   tokenUserB,
@@ -9,7 +9,15 @@ import {
   resetDatabase,
 } from "test/e2e-setup";
 import { getTask } from "admin/api/tasks";
-import * as api from "admin/rest_api";
+import {
+  getTeams,
+  createTeam,
+  deleteTeam,
+  deleteProject,
+  updateUser,
+  getUser,
+  getTaskTypes,
+} from "admin/rest_api";
 import { describe, test, beforeAll, expect } from "vitest";
 
 function getExpectedErrorObject(errorMessage: string) {
@@ -50,7 +58,7 @@ user_A, user_B, user_C, user_D, user_E
   test("teams_userDefault", async () => {
     setUserAuthToken(tokenUserA);
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await getTeams(), (team) => team.name);
 
     expect(teams[0].name).toBe("team_X1");
     expect(teams[1].name).toBe("team_X2");
@@ -62,7 +70,7 @@ user_A, user_B, user_C, user_D, user_E
   test("teams_user_D", async () => {
     setUserAuthToken(tokenUserD);
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await getTeams(), (team) => team.name);
 
     expect(teams[0].name).toBe("team_X2");
     expect(teams.length).toBe(1);
@@ -71,7 +79,7 @@ user_A, user_B, user_C, user_D, user_E
   test("teams_user_E", async () => {
     setUserAuthToken(tokenUserE);
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await getTeams(), (team) => team.name);
 
     expect(teams[0].name).toBe("team_Y1");
     expect(teams.length).toBe(1);
@@ -81,7 +89,7 @@ user_A, user_B, user_C, user_D, user_E
     // the teamManager is not allowed to delete the team
     setUserAuthToken(tokenUserD);
 
-    await expect(api.deleteTeam("69882b370d889b84020efd4f")).rejects.toMatchObject(
+    await expect(deleteTeam("69882b370d889b84020efd4f")).rejects.toMatchObject(
       getExpectedErrorObject("Access denied. Only admin users can execute this operation."),
     );
   });
@@ -93,7 +101,7 @@ user_A, user_B, user_C, user_D, user_E
     const newTeam = {
       name: "test-team-name",
     };
-    await expect(api.createTeam(newTeam)).rejects.toMatchObject(
+    await expect(createTeam(newTeam)).rejects.toMatchObject(
       getExpectedErrorObject("Access denied. Only admin users can execute this operation."),
     );
   });
@@ -102,7 +110,7 @@ user_A, user_B, user_C, user_D, user_E
   test("taskTypes_userDefault", async () => {
     setUserAuthToken(tokenUserA);
 
-    const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
+    const taskTypes = sortBy(await getTaskTypes(), (taskType) => taskType.id);
 
     expect(taskTypes[0].description).toBe("Check those cells out!");
     expect(taskTypes.length).toBe(2);
@@ -111,7 +119,7 @@ user_A, user_B, user_C, user_D, user_E
   test("taskTypes_user_D", async () => {
     setUserAuthToken(tokenUserD);
 
-    const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
+    const taskTypes = sortBy(await getTaskTypes(), (taskType) => taskType.id);
 
     expect(taskTypes.length).toBe(1);
   });
@@ -119,7 +127,7 @@ user_A, user_B, user_C, user_D, user_E
   test("taskTypes_user_E", async () => {
     setUserAuthToken(tokenUserE);
 
-    const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
+    const taskTypes = sortBy(await getTaskTypes(), (taskType) => taskType.id);
 
     expect(taskTypes.length).toBe(0);
   });
@@ -153,14 +161,14 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserB);
 
     const userIdC = "770b9f4d2a7c0e4d008da6ef";
-    const user = await api.getUser(userIdC);
+    const user = await getUser(userIdC);
     expect(user.firstName).toBe("user_C");
 
     const newUser = Object.assign({}, user, {
       isActive: false,
     });
 
-    await expect(api.updateUser(newUser)).rejects.toMatchObject(
+    await expect(updateUser(newUser)).rejects.toMatchObject(
       getExpectedErrorObject("You are not authorized to view or edit this resource"),
     );
   });
@@ -171,7 +179,7 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserE);
 
     const projectId = "58135bfd2faeb3190181c057";
-    await expect(api.deleteProject(projectId)).rejects.toMatchObject(
+    await expect(deleteProject(projectId)).rejects.toMatchObject(
       getExpectedErrorObject("Project could not be found"),
     );
   });

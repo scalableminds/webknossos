@@ -1,7 +1,7 @@
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import { location } from "libs/window";
-import _ from "lodash";
+import memoize from "lodash/memoize";
 import type {
   APIOrganization,
   APIOrganizationCompact,
@@ -179,4 +179,4 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
   return Request.receiveJSON("/api/pricing/status");
 }
 
-export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
+export const cachedGetPricingPlanStatus = memoize(getPricingPlanStatus);

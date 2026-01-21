@@ -40,7 +40,8 @@
         "useExponentiationOperator": "off",
         "useDefaultParameterLast": "off",
         "useAsConstAssertion": "off",
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noNamespaceImport": "error"
       },
       "complexity": {
         "useSimplifiedLogicExpression": "off",
@@ -82,6 +83,16 @@
         "noRedeclare": "off",
         "noFallthroughSwitchClause": "off",
         "noAssignInExpressions": "off"
+      },
+      "nursery": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "lodash": "Import <method> from 'lodash/<method>' instead."
+            }
+          }
+        }
       }
     }
   },
@@ -103,7 +114,9 @@
   },
   "overrides": [
     {
-      "include": ["**/package.json"],
+      "include": [
+        "**/package.json"
+      ],
       "formatter": {
         "lineWidth": 1
       }

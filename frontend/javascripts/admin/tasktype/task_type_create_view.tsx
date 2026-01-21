@@ -7,7 +7,7 @@ import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Toolti
 import type { RuleObject } from "antd/es/form";
 import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
-import _ from "lodash";
+import merge from "lodash/merge";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -110,7 +110,7 @@ function TaskTypeCreateView() {
     };
 
     // Use merge which is deep _.extend
-    const defaultFormValues: Partial<FormValues> = _.merge({}, defaultValues, taskType);
+    const defaultFormValues: Partial<FormValues> = merge({}, defaultValues, taskType);
     form.setFieldsValue(defaultFormValues);
 
     if (taskType?.recommendedConfiguration) {

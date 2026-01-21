@@ -1,6 +1,6 @@
 import { Input, type InputProps, type InputRef } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import _ from "lodash";
+import noop from "lodash/noop";
 import type React from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -19,7 +19,7 @@ function InputComponent(props: InputProps) {
   const {
     title,
     style,
-    onChange = _.noop,
+    onChange = noop,
     onFocus,
     onBlur,
     onKeyDown,

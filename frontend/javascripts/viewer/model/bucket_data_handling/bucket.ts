@@ -1,7 +1,8 @@
 import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import noop from "lodash/noop";
+import throttle from "lodash/throttle";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import { Color } from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
@@ -31,13 +32,13 @@ export type BucketStateEnumType = keyof typeof BucketStateEnum;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
-const warnMergeWithoutPendingOperations = _.throttle(() => {
+const warnMergeWithoutPendingOperations = throttle(() => {
   ErrorHandling.notify(
     new Error("Bucket.merge() was called with an empty list of pending operations."),
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
-const warnAwaitedMissingBucket = _.throttle(() => {
+const warnAwaitedMissingBucket = throttle(() => {
   ErrorHandling.notify(new Error("Awaited missing bucket"));
 }, WARNING_THROTTLE_THRESHOLD);
 
@@ -143,9 +144,9 @@ export class DataBucket {
     this.data = null;
 
     if (this.cube.isSegmentation) {
-      this.throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
+      this.throttledTriggerLabeled = throttle(() => this.trigger("bucketLabeled"), 10);
     } else {
-      this.throttledTriggerLabeled = _.noop;
+      this.throttledTriggerLabeled = noop;
     }
   }
 

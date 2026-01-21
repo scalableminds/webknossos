@@ -1,4 +1,3 @@
-import _ from "lodash";
 import {
   DoubleSide,
   Matrix4,
@@ -58,7 +57,7 @@ class ArbitraryPlane {
   }
 
   addToScene(scene: Scene) {
-    _.values(this.meshes).forEach((mesh) => {
+    Object.values(this.meshes).forEach((mesh) => {
       if (mesh) {
         scene.add(mesh);
       }
@@ -99,7 +98,7 @@ class ArbitraryPlane {
         mesh.matrixWorldNeedsUpdate = true;
       };
 
-      _.values(this.meshes).forEach(updateMesh);
+      Object.values(this.meshes).forEach(updateMesh);
 
       this.isDirty = false;
       getSceneController().update(this);

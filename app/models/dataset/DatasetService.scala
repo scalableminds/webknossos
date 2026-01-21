@@ -30,7 +30,7 @@ import models.job.JobDAO
 import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import security.RandomIDGenerator
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -133,18 +133,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetId: ObjectId,
       datasetName: String,
       dataSource: DataSource,
-      publication: Option[ObjectId] = None,
-      isVirtual: Boolean = false
+      isVirtual: Boolean = false,
+      metadata: JsArray = JsArray.empty,
+      description: Option[String] = None
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    val metadata =
-      if (publication.isDefined)
-        Json.arr(
-          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name"),
-          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region"),
-          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method")
-        )
-      else Json.arr()
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
@@ -154,13 +147,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         datasetId,
         dataStore.name,
         organization._id,
-        publication,
+        None,
         None,
         organizationRootFolder._id,
         dataSourceHash,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
-        description = None,
+        description = description,
         directoryName = dataSource.id.directoryName,
         isPublic = false,
         isUsable = dataSource.isUsable,

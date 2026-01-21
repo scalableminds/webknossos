@@ -13,7 +13,14 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
+import {
+  BlobReader,
+  BlobWriter,
+  type Entry,
+  TextReader,
+  ZipReader,
+  ZipWriter,
+} from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
 import { saveAs } from "file-saver";
@@ -21,7 +28,6 @@ import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
-import Zip from "libs/zipjs_wrapper";
 import cloneDeep from "lodash/cloneDeep";
 import last from "lodash/last";
 import orderBy from "lodash/orderBy";
@@ -580,10 +586,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       const treesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
       const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 
-      const blobWriter = new Zip.BlobWriter("application/zip");
-      const writer = new Zip.ZipWriter(blobWriter);
-      await writer.add("nodes.csv", new Zip.TextReader(treesCsv));
-      await writer.add("edges.csv", new Zip.TextReader(edgesCsv));
+      const blobWriter = new BlobWriter("application/zip");
+      const writer = new ZipWriter(blobWriter);
+      await writer.add("nodes.csv", new TextReader(treesCsv));
+      await writer.add("edges.csv", new TextReader(edgesCsv));
       await writer.close();
       saveAs(await blobWriter.getData(), "tree_export.zip");
     } catch (e) {

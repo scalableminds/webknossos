@@ -3,7 +3,6 @@ import { Button } from "antd";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { clamp } from "libs/utils";
-
 import messages from "messages";
 import React from "react";
 import { call, delay, put, take } from "typed-redux-saga";

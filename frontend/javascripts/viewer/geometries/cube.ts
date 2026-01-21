@@ -1,5 +1,4 @@
 import app from "app";
-
 import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";

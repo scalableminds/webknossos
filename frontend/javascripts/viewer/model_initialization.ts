@@ -20,7 +20,6 @@ import { point3ToVector3 } from "libs/utils";
 import { location } from "libs/window";
 import cloneDeep from "lodash/cloneDeep";
 import extend from "lodash/extend";
-
 import first from "lodash/first";
 import isEqual from "lodash/isEqual";
 import merge from "lodash/merge";

@@ -16,7 +16,6 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
-
 import uniq from "lodash/uniq";
 import {
   getDtypeConfigForElementClass,

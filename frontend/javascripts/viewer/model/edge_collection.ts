@@ -1,6 +1,5 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import { diffArrays } from "libs/utils";
-
 import type { Edge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;

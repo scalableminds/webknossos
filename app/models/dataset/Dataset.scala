@@ -130,7 +130,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
         JsonHelper.parseAs[DatasetViewConfiguration](_).toFox)
       metadata <- JsonHelper.parseAs[JsArray](r.metadata).toFox
-      creationType <- r.creationtype.map(DatasetCreationType.fromString).toFox
+      creationType <- Fox.runOptional(r.creationtype)(DatasetCreationType.fromString(_).toFox)
     } yield {
       Dataset(
         ObjectId(r._Id),

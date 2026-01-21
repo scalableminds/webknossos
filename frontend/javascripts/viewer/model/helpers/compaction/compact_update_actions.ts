@@ -1,9 +1,8 @@
 import { withoutValues } from "libs/utils";
-import filter from "lodash/filter";
-import flatten from "lodash/flatten";
+
 import groupBy from "lodash/groupBy";
 import keyBy from "lodash/keyBy";
-import values from "lodash/values";
+
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import type {
   CreateEdgeUpdateAction,
@@ -95,7 +94,7 @@ function compactMovedNodesAndEdges(
   >;
 
   // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
-  for (const movedPairings of values(groupedMovedNodesAndEdges)) {
+  for (const movedPairings of Object.values(groupedMovedNodesAndEdges)) {
     const actionTracingId = movedPairings[0][1].value.actionTracingId;
     const oldTreeId = movedPairings[0][1].value.treeId;
     const newTreeId = movedPairings[0][0].value.treeId;
@@ -157,7 +156,7 @@ function compactMovedNodesAndEdges(
     compactedActions = withoutValues(
       compactedActions,
       // Cast movedPairs type to satisfy _.flatten
-      flatten(movedPairings as Array<[CreateOrDeleteNodeOrEdge, CreateOrDeleteNodeOrEdge]>),
+      (movedPairings as Array<[CreateOrDeleteNodeOrEdge, CreateOrDeleteNodeOrEdge]>).flat(),
     );
   }
 
@@ -173,8 +172,7 @@ function compactDeletedTrees(updateActions: Array<UpdateActionWithoutIsolationRe
   const deletedTreeIds = updateActions
     .filter((ua) => ua.name === "deleteTree")
     .map((ua) => (ua as DeleteTreeUpdateAction).value.id);
-  return filter(
-    updateActions,
+  return updateActions.filter(
     (ua) =>
       !(
         (ua.name === "deleteNode" || ua.name === "deleteEdge") &&

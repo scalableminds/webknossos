@@ -3,9 +3,6 @@ import { Button } from "antd";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { clamp } from "libs/utils";
-import find from "lodash/find";
-import size from "lodash/size";
-import uniq from "lodash/uniq";
 import messages from "messages";
 import React from "react";
 import { call, delay, put, take } from "typed-redux-saga";
@@ -49,40 +46,45 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
 
 function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const { recommendedConfiguration } = taskType;
-  if (recommendedConfiguration == null || size(recommendedConfiguration) === 0) return;
+  if (recommendedConfiguration == null || Object.keys(recommendedConfiguration).length === 0)
+    return;
   const userConfiguration = yield* select((state) => state.userConfiguration);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
   const zoomStep = yield* select((state) => state.flycam.zoomStep);
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
 
-  const configurationDifference = find(recommendedConfiguration, (value, _key) => {
-    const key = _key as keyof RecommendedConfiguration;
-    if (key === "zoom" && zoomStep !== value) {
-      return true;
-    } else if (key === "segmentationOpacity") {
-      const opacities = uniq(
-        segmentationLayers.map((layer) => datasetConfiguration.layers[layer.name].alpha),
-      );
-
-      // If there are different opacity values for the segmentation layers, the recommendation
-      // differs. Otherwise, we compare the one opacity value with the recommended one.
-      if (opacities.length > 1 || opacities[0] !== value) {
+  const hasConfigurationDifference = Object.entries(recommendedConfiguration).some(
+    ([_key, value]) => {
+      const key = _key as keyof RecommendedConfiguration;
+      if (key === "zoom" && zoomStep !== value) {
         return true;
-      } else {
-        return false;
+      } else if (key === "segmentationOpacity") {
+        const opacities = [
+          ...new Set(
+            segmentationLayers.map((layer) => datasetConfiguration.layers[layer.name].alpha),
+          ),
+        ];
+
+        // If there are different opacity values for the segmentation layers, the recommendation
+        // differs. Otherwise, we compare the one opacity value with the recommended one.
+        if (opacities.length > 1 || opacities[0] !== value) {
+          return true;
+        } else {
+          return false;
+        }
+        // @ts-ignore
+      } else if (key in userConfiguration && userConfiguration[key] !== value) {
+        return true;
+        // @ts-ignore
+      } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
+        return true;
       }
-      // @ts-ignore
-    } else if (key in userConfiguration && userConfiguration[key] !== value) {
-      return true;
-      // @ts-ignore
-    } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
-      return true;
-    }
 
-    return false;
-  });
+      return false;
+    },
+  );
 
-  if (configurationDifference == null) return;
+  if (!hasConfigurationDifference) return;
   let confirmed = false;
   // The renderIndependently call returns a promise that is only resolved
   // once destroy is called. yield* will wait until the returned promise is resolved.

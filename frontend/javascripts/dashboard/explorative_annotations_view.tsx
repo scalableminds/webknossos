@@ -36,7 +36,6 @@ import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import compact from "lodash/compact";
-import flatMap from "lodash/flatMap";
 import intersection from "lodash/intersection";
 import keyBy from "lodash/keyBy";
 import mapValues from "lodash/mapValues";
@@ -598,7 +597,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       "id",
     ).map(({ formattedName, id }) => ({ text: formattedName, value: id }));
     const teamFilters = uniqBy(
-      flatMap(filteredAndSortedAnnotations, (annotation) => annotation.teams),
+      filteredAndSortedAnnotations.flatMap((annotation) => annotation.teams),
       "id",
     ).map((team) => ({ text: team.name, value: team.id }));
 

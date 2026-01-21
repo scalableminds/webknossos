@@ -4,7 +4,7 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 149 
 
 DROP VIEW webknossos.datasets_;
 
-CREATE TYPE webknossos.DATASET_CREATION_TYPE AS ENUM ('Upload', 'DiskScan', 'UploadToPaths', 'ExploreAndAdd', 'Compose');
+CREATE TYPE webknossos.DATASET_CREATION_TYPE AS ENUM ('Upload', 'DiskScan', 'UploadToPaths', 'ExploreAndAdd', 'Compose', 'DuplicateToOrga');
 
 ALTER TABLE webknossos.datasets ADD COLUMN creationType webknossos.DATASET_CREATION_TYPE;
 

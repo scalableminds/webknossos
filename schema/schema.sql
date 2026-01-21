@@ -92,7 +92,7 @@ CREATE TABLE webknossos.publications(
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TYPE webknossos.DATASET_CREATION_TYPE AS ENUM ('Upload', 'DiskScan', 'UploadToPaths', 'ExploreAndAdd', 'Compose');
+CREATE TYPE webknossos.DATASET_CREATION_TYPE AS ENUM ('Upload', 'DiskScan', 'UploadToPaths', 'ExploreAndAdd', 'Compose', 'DuplicateToOrga');
 CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('yoctometer', 'zeptometer', 'attometer', 'femtometer', 'picometer', 'nanometer', 'micrometer', 'millimeter', 'centimeter', 'decimeter', 'meter', 'hectometer', 'kilometer', 'megameter', 'gigameter', 'terameter', 'petameter', 'exameter', 'zettameter', 'yottameter', 'angstrom', 'inch', 'foot', 'yard', 'mile', 'parsec');
 CREATE TABLE webknossos.datasets(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,

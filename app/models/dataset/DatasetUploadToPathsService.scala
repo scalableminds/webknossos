@@ -232,7 +232,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
       uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
+      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       attachmentPath = generateAttachmentPath(parameters.attachmentName,
                                               parameters.attachmentDataformat,
@@ -253,7 +253,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       _ <- datasetService.usableDataSourceFor(dataset)
       _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
       uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
+      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)
       _ <- datasetMagsDAO.insertPending(dataset._id,

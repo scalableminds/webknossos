@@ -1,4 +1,4 @@
-import _ from "lodash";
+import without from "lodash/without";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
@@ -38,7 +38,7 @@ class TemporalBucketManager {
           this.pushQueue.insert(bucket);
         }
 
-        this.loadedPromises = _.without(this.loadedPromises, loadedPromise);
+        this.loadedPromises = without(this.loadedPromises, loadedPromise);
         return resolve();
       };
 

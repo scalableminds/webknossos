@@ -1,4 +1,6 @@
-import _ from "lodash";
+import flow from "lodash/flow";
+import isEqual from "lodash/isEqual";
+import without from "lodash/without";
 import type {
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
@@ -21,7 +23,7 @@ function removeAllButLastUpdateActiveItemAndCameraAction(
     (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateCamera",
   );
 
-  return _.without(
+  return without(
     updateActionsBatches,
     ...updateActiveNodeOnlyBatches.slice(0, -1),
     ...updateActiveSegmentIdOnlyBatches.slice(0, -1),
@@ -35,7 +37,7 @@ function removeAllButLastUpdateTdCameraAction(updateActionsBatches: Array<SaveQu
   const updateTracingOnlyBatches = updateActionsBatches.filter(
     (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateTdCamera",
   );
-  return _.without(updateActionsBatches, ...updateTracingOnlyBatches.slice(0, -1));
+  return without(updateActionsBatches, ...updateTracingOnlyBatches.slice(0, -1));
 }
 
 function removeSubsequentUpdateTreeActions(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -57,7 +59,7 @@ function removeSubsequentUpdateTreeActions(updateActionsBatches: Array<SaveQueue
     }
   }
 
-  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+  return without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
 function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -79,7 +81,7 @@ function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueue
     }
   }
 
-  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+  return without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
 export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -106,7 +108,7 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
         previousAction == null ||
         previousAction.name !== currentAction.name ||
         previousAction.value.boundingBoxId !== currentAction.value.boundingBoxId ||
-        !_.isEqual(
+        !isEqual(
           new Set(Object.keys(previousAction.value)),
           new Set(Object.keys(currentAction.value)),
         )
@@ -140,10 +142,10 @@ function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQu
     }
   }
 
-  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+  return without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
-const compactAll = _.flow([
+const compactAll = flow([
   removeAllButLastUpdateActiveItemAndCameraAction,
   removeAllButLastUpdateTdCameraAction,
   removeSubsequentUpdateNodeActions,

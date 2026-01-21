@@ -11,8 +11,25 @@ import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracin
 import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
 import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
-import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
-import * as api from "admin/rest_api";
+import {
+  updateActiveNode,
+  updateCameraAnnotation,
+  updateMetadataOfAnnotation,
+  updateTree,
+  updateTreeGroups,
+} from "viewer/model/sagas/volume/update_actions";
+import {
+  createExplorational,
+  editAnnotation,
+  finishAllAnnotations,
+  finishAnnotation,
+  getAnnotationProto,
+  getReadableAnnotations,
+  getTracingsForAnnotation,
+  getUnversionedAnnotationInformation,
+  reOpenAnnotation,
+  sendSaveRequestWithToken,
+} from "admin/rest_api";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import { describe, it, beforeAll, expect } from "vitest";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
@@ -35,7 +52,7 @@ describe("Annotation API (E2E)", () => {
 
   it("getAnnotationInformation()", async () => {
     const annotationId = "570ba0092a7c0e980056fe9b";
-    const annotation = await api.getUnversionedAnnotationInformation(annotationId);
+    const annotation = await getUnversionedAnnotationInformation(annotationId);
     expect(annotation.id).toBe(annotationId);
 
     writeTypeCheckingFile(annotation, "annotation", "APIAnnotation");
@@ -46,7 +63,7 @@ describe("Annotation API (E2E)", () => {
   it("getAnnotationInformation() for public annotation while logged out", async () => {
     setUserAuthToken("invalidToken");
     const annotationId = "88135c192faeb34c0081c05d";
-    const annotation = await api.getUnversionedAnnotationInformation(annotationId);
+    const annotation = await getUnversionedAnnotationInformation(annotationId);
 
     expect(annotation.id).toBe(annotationId);
     expect(annotation).toMatchSnapshot();
@@ -54,32 +71,32 @@ describe("Annotation API (E2E)", () => {
   });
 
   it("getReadableAnnotations()", async () => {
-    const annotations = await api.getReadableAnnotations(false, 0);
+    const annotations = await getReadableAnnotations(false, 0);
     expect(replaceVolatileValues(annotations)).toMatchSnapshot();
   });
 
   it("finishAnnotation() and reOpenAnnotation() for task", async () => {
     const annotationId = "78135c192faeb34c0081c05d";
-    const finishedAnnotation = await api.finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
+    const finishedAnnotation = await finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
 
     expect(finishedAnnotation.state).toBe("Finished");
     expect(replaceVolatileValues(finishedAnnotation)).toMatchSnapshot();
 
-    const reopenedAnnotation = await api.reOpenAnnotation(annotationId, APIAnnotationTypeEnum.Task);
+    const reopenedAnnotation = await reOpenAnnotation(annotationId, APIAnnotationTypeEnum.Task);
     expect(reopenedAnnotation.state).toBe("Active");
     expect(replaceVolatileValues(reopenedAnnotation)).toMatchSnapshot();
   });
 
   it("finishAnnotation() and reOpenAnnotation() for explorational", async () => {
     const annotationId = "68135c192faeb34c0081c05d";
-    const finishedAnnotation = await api.finishAnnotation(
+    const finishedAnnotation = await finishAnnotation(
       annotationId,
       APIAnnotationTypeEnum.Explorational,
     );
     expect(finishedAnnotation.state).toBe("Finished");
     expect(replaceVolatileValues(finishedAnnotation)).toMatchSnapshot();
 
-    const reopenedAnnotation = await api.reOpenAnnotation(
+    const reopenedAnnotation = await reOpenAnnotation(
       annotationId,
       APIAnnotationTypeEnum.Explorational,
     );
@@ -89,15 +106,15 @@ describe("Annotation API (E2E)", () => {
 
   it("editAnnotation()", async () => {
     const annotationId = "68135c192faeb34c0081c05d";
-    const originalAnnotation = await api.getUnversionedAnnotationInformation(annotationId);
+    const originalAnnotation = await getUnversionedAnnotationInformation(annotationId);
     const { visibility } = originalAnnotation;
     const newName = "new name";
     const newVisibility = "Public";
-    await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
+    await editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
       visibility: newVisibility,
       name: newName,
     });
-    const editedAnnotation = await api.getUnversionedAnnotationInformation(annotationId);
+    const editedAnnotation = await getUnversionedAnnotationInformation(annotationId);
     expect(editedAnnotation.name).toBe(newName);
     expect(editedAnnotation.visibility).toBe(newVisibility);
     expect(editedAnnotation.id).toBe(annotationId);
@@ -107,42 +124,38 @@ describe("Annotation API (E2E)", () => {
     );
     expect(replaceVolatileValues(editedAnnotation)).toMatchSnapshot();
 
-    await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
+    await editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
       visibility,
     });
   });
 
   it("finishAllAnnotations()", async () => {
     const annotationIds = ["78135c192faeb34c0081c05d", "78135c192faeb34c0081c05e"];
-    await api.finishAllAnnotations(annotationIds);
+    await finishAllAnnotations(annotationIds);
 
     const finishedAnnotations = await Promise.all(
-      annotationIds.map((id) => api.getUnversionedAnnotationInformation(id)),
+      annotationIds.map((id) => getUnversionedAnnotationInformation(id)),
     );
     expect(finishedAnnotations.length).toBe(2);
 
     finishedAnnotations.forEach((annotation) => {
       expect(annotation.state).toBe("Finished");
     });
-    await Promise.all(
-      annotationIds.map((id) => api.reOpenAnnotation(id, APIAnnotationTypeEnum.Task)),
-    );
+    await Promise.all(annotationIds.map((id) => reOpenAnnotation(id, APIAnnotationTypeEnum.Task)));
   });
 
   it("createExplorational() and finishAnnotation()", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+    const createdExplorational = await createExplorational(datasetId, "skeleton", false, null);
     expect(replaceVolatileValues(createdExplorational)).toMatchSnapshot();
 
-    await api.finishAnnotation(createdExplorational.id, APIAnnotationTypeEnum.Explorational);
-    const finishedAnnotation = await api.getUnversionedAnnotationInformation(
-      createdExplorational.id,
-    );
+    await finishAnnotation(createdExplorational.id, APIAnnotationTypeEnum.Explorational);
+    const finishedAnnotation = await getUnversionedAnnotationInformation(createdExplorational.id);
     expect(finishedAnnotation.state).toBe("Finished");
   });
 
   it("getTracingsForAnnotation()", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
-    const tracings = await api.getTracingsForAnnotation(createdExplorational);
+    const createdExplorational = await createExplorational(datasetId, "skeleton", false, null);
+    const tracings = await getTracingsForAnnotation(createdExplorational);
 
     writeTypeCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
 
@@ -150,8 +163,8 @@ describe("Annotation API (E2E)", () => {
   });
 
   it("getTracingsForAnnotation() for volume", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "volume", false, null);
-    const tracings = await api.getTracingsForAnnotation(createdExplorational);
+    const createdExplorational = await createExplorational(datasetId, "volume", false, null);
+    const tracings = await getTracingsForAnnotation(createdExplorational);
 
     writeTypeCheckingFile(tracings[0], "tracing-volume", "ServerVolumeTracing");
 
@@ -159,8 +172,8 @@ describe("Annotation API (E2E)", () => {
   });
 
   it("getTracingsForAnnotation() for hybrid", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "hybrid", false, null);
-    const tracings = await api.getTracingsForAnnotation(createdExplorational);
+    const createdExplorational = await createExplorational(datasetId, "hybrid", false, null);
+    const tracings = await getTracingsForAnnotation(createdExplorational);
 
     writeTypeCheckingFile(tracings, "tracing-hybrid", "ServerTracing", {
       isArray: true,
@@ -174,7 +187,7 @@ describe("Annotation API (E2E)", () => {
   });
 
   async function sendUpdateActions(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
-    return api.sendSaveRequestWithToken(
+    return sendSaveRequestWithToken(
       `${explorational.tracingStore.url}/tracings/annotation/${explorational.id}/update?token=`,
       {
         method: "POST",
@@ -185,7 +198,7 @@ describe("Annotation API (E2E)", () => {
   }
 
   it("Send update actions and compare resulting tracing", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+    const createdExplorational = await createExplorational(datasetId, "skeleton", false, null);
     const tracingId = createdExplorational.annotationLayers[0].tracingId;
     const initialSkeleton = {
       activeNodeId: 3,
@@ -195,8 +208,8 @@ describe("Annotation API (E2E)", () => {
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
         [
-          [UpdateActions.updateActiveNode(initialSkeleton)],
-          [UpdateActions.updateCameraAnnotation([2, 3, 4], null, [1, 2, 3], 2)],
+          [updateActiveNode(initialSkeleton)],
+          [updateCameraAnnotation([2, 3, 4], null, [1, 2, 3], 2)],
         ],
         123456789,
         null,
@@ -206,8 +219,8 @@ describe("Annotation API (E2E)", () => {
     );
     await sendUpdateActions(createdExplorational, saveQueue);
 
-    const tracings = await api.getTracingsForAnnotation(createdExplorational);
-    const annotationProto = await api.getAnnotationProto(
+    const tracings = await getTracingsForAnnotation(createdExplorational);
+    const annotationProto = await getAnnotationProto(
       createdExplorational.tracingStore.url,
       createdExplorational.id,
     );
@@ -221,7 +234,7 @@ describe("Annotation API (E2E)", () => {
   });
 
   it("Send complex update actions and compare resulting tracing", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+    const createdExplorational = await createExplorational(datasetId, "skeleton", false, null);
     const { tracingId } = createdExplorational.annotationLayers[0];
     const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
     const treeGroups = [
@@ -243,7 +256,7 @@ describe("Annotation API (E2E)", () => {
       },
     ];
     const createTreesUpdateActions = Array.from(diffTrees(tracingId, new DiffableMap(), trees));
-    const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups, tracingId);
+    const updateTreeGroupsUpdateAction = updateTreeGroups(treeGroups, tracingId);
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
         [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
@@ -255,7 +268,7 @@ describe("Annotation API (E2E)", () => {
     );
 
     await sendUpdateActions(createdExplorational, saveQueue);
-    const tracings = await api.getTracingsForAnnotation(createdExplorational);
+    const tracings = await getTracingsForAnnotation(createdExplorational);
 
     writeTypeCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
 
@@ -263,7 +276,7 @@ describe("Annotation API (E2E)", () => {
   });
 
   it("Update Metadata for Skeleton Tracing", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+    const createdExplorational = await createExplorational(datasetId, "skeleton", false, null);
     const { tracingId } = createdExplorational.annotationLayers[0];
     let trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
     const createTreesUpdateActions = Array.from(diffTrees(tracingId, new DiffableMap(), trees));
@@ -286,7 +299,7 @@ describe("Annotation API (E2E)", () => {
       metadata,
     });
 
-    const updateTreeAction = UpdateActions.updateTree(trees.getOrThrow(1), tracingId);
+    const updateTreeAction = updateTree(trees.getOrThrow(1), tracingId);
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
         [createTreesUpdateActions, [updateTreeAction]],
@@ -299,16 +312,16 @@ describe("Annotation API (E2E)", () => {
 
     await sendUpdateActions(createdExplorational, saveQueue);
 
-    const tracings = await api.getTracingsForAnnotation(createdExplorational);
+    const tracings = await getTracingsForAnnotation(createdExplorational);
     expect(replaceVolatileValues(tracings[0])).toMatchSnapshot();
   });
 
   it("Send update actions for updating metadata", async () => {
-    const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
+    const createdExplorational = await createExplorational(datasetId, "skeleton", false, null);
     const newDescription = "new description";
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
-        [[UpdateActions.updateMetadataOfAnnotation(newDescription)]],
+        [[updateMetadataOfAnnotation(newDescription)]],
         123456789,
         null,
         true,
@@ -317,7 +330,7 @@ describe("Annotation API (E2E)", () => {
     );
     await sendUpdateActions(createdExplorational, saveQueue);
 
-    const annotation = await api.getAnnotationProto(
+    const annotation = await getAnnotationProto(
       createdExplorational.tracingStore.url,
       createdExplorational.id,
     );

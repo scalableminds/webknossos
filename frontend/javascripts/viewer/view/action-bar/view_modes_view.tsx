@@ -2,7 +2,7 @@ import { Button, Dropdown, type MenuProps, Space } from "antd";
 import { useCallback } from "react";
 
 import { useWkSelector } from "libs/react_hooks";
-import { capitalize } from "lodash";
+import capitalize from "lodash/capitalize";
 import { useDispatch } from "react-redux";
 import { type ViewMode, ViewModeValues } from "viewer/constants";
 import constants from "viewer/constants";

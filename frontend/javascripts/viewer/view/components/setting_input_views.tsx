@@ -23,7 +23,7 @@ import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import Toast from "libs/toast";
 import { hexToRgb, numberArrayToVector6, rgbToHex, roundTo, stringToNumberArray } from "libs/utils";
-import _ from "lodash";
+import isNumber from "lodash/isNumber";
 import messages from "messages";
 import type * as React from "react";
 import { useEffect, useState } from "react";
@@ -84,7 +84,7 @@ export function NumberSliderSetting(props: NumberSliderSettingProps) {
       : spans;
 
   const isValueValid = (_value: number | null) =>
-    _.isNumber(_value) && _value >= min && _value <= max;
+    isNumber(_value) && _value >= min && _value <= max;
 
   const _onChange = (_value: number | null) => {
     if (_value != null && isValueValid(_value)) {

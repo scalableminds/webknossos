@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { parseCTimeDefaultDate, sleep } from "libs/utils";
-import _ from "lodash";
+import first from "lodash/first";
 import type React from "react";
 import { useCallback, useEffect, useReducer, useState } from "react";
 import type { MaintenanceInfo } from "types/api_types";
@@ -123,7 +123,7 @@ export function MaintenanceBanner() {
     );
 
     setCurrentMaintenance(currentMaintenance);
-    setClosestUpcomingMaintenance(_.first(upcomingMaintenances));
+    setClosestUpcomingMaintenance(first(upcomingMaintenances));
   }, [activeUser]);
 
   useEffect(() => {

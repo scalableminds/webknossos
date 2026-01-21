@@ -1,4 +1,4 @@
-import _ from "lodash";
+import range from "lodash/range";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
@@ -49,8 +49,8 @@ const createVolumeLayer = () => ({
 });
 
 function createLayers(grayscaleCount: number, volumeCount: number) {
-  const grayscaleLayers = _.range(0, grayscaleCount).map(() => createGrayscaleLayer());
-  const volumeLayers = _.range(0, volumeCount).map(() => createVolumeLayer());
+  const grayscaleLayers = range(0, grayscaleCount).map(() => createGrayscaleLayer());
+  const volumeLayers = range(0, volumeCount).map(() => createVolumeLayer());
   return grayscaleLayers.concat(volumeLayers);
 }
 

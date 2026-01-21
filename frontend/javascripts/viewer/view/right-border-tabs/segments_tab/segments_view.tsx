@@ -999,8 +999,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMeshesHeader = () => (
-    <Space.Compact>
-      <FastTooltip title="Select a mesh file from which precomputed meshes will be loaded.">
+    <Space.Compact block>
+      <FastTooltip
+        title="Select a mesh file from which precomputed meshes will be loaded."
+        style={{ width: "100%" }}
+      >
         <ConfigProvider
           renderEmpty={renderEmptyMeshFileSelect}
           theme={{ cssVar: { key: "antd-app-theme" } }}
@@ -1011,6 +1014,7 @@ class SegmentsView extends React.Component<Props, State> {
             onChange={this.handleMeshFileSelected}
             loading={this.props.availableMeshFiles == null}
             popupMatchSelectWidth={false}
+            style={{ width: "100%" }}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
@@ -1858,7 +1862,7 @@ class SegmentsView extends React.Component<Props, State> {
             ).map((node) => node.key);
             return (
               <React.Fragment>
-                <Space.Compact>
+                <Space.Compact block style={{ marginBottom: "var(--ant-margin-sm)" }}>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}

@@ -881,8 +881,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           defaultValue={defaultSettings.gammaCorrectionValue}
         />
         <Row
-          className="margin-bottom"
           style={{
+            marginBottom: "var(--ant-margin-sm)",
             marginTop: 6,
           }}
         >

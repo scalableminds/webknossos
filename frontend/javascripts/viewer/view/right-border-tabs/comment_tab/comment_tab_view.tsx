@@ -455,7 +455,7 @@ function CommentTabView(props: Props) {
           return (
             <React.Fragment>
               {renderMarkdownModal()}
-              <Space.Compact block>
+              <Space.Compact block style={{ marginBottom: "var(--ant-margin-sm)" }}>
                 <AdvancedSearchPopover
                   onSelect={(comment) => {
                     setActiveNode(comment.nodeId);
@@ -524,7 +524,6 @@ function CommentTabView(props: Props) {
               <div
                 style={{
                   flex: "1 1 auto",
-                  marginTop: 20,
                   listStyle: "none",
                 }}
               >

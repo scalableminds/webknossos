@@ -125,7 +125,7 @@ export default function RecommendedConfigurationView({
   onChangeEnabled: (arg0: boolean) => void;
 }) {
   const recommendedConfiguration = getDefaultRecommendedConfiguration();
-  const configurationEntries = Object.entries(recommendedConfiguration).map(([key, _value]) => {
+  const configurationEntries = Object.entries(recommendedConfiguration).map(([key]) => {
     // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
     const settingsKey: keyof RecommendedConfiguration = key;
     return {

@@ -47,7 +47,6 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import difference from "lodash/difference";
-import flatten from "lodash/flatten";
 import isNumber from "lodash/isNumber";
 import memoize from "lodash/memoize";
 import sortBy from "lodash/sortBy";
@@ -1679,7 +1678,7 @@ class SegmentsView extends React.Component<Props, State> {
   getMultiSelectMenu = (): MenuProps => {
     const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
     return {
-      items: flatten([
+      items: [
         this.getLoadMeshesFromFileMenuItem(null),
         this.getComputeMeshesAdHocMenuItem(null),
         doSelectedSegmentsHaveAnyMeshes ? this.maybeGetShowOrHideMeshesMenuItems(null) : null,
@@ -1689,7 +1688,7 @@ class SegmentsView extends React.Component<Props, State> {
         this.getSetGroupColorMenuItem(null),
         this.getResetGroupColorMenuItem(null),
         this.getRemoveFromSegmentListMenuItem(null),
-      ]),
+      ].flat(),
     };
   };
 
@@ -1752,7 +1751,7 @@ class SegmentsView extends React.Component<Props, State> {
       const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         const getMenu = (): MenuProps => ({
-          items: flatten([
+          items: [
             {
               key: "create",
               onClick: () => {
@@ -1790,7 +1789,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.getRemoveMeshesMenuItem(id),
             this.maybeGetShowOrHideMeshesMenuItems(id),
             this.getDownLoadMeshesMenuItem(id),
-          ]),
+          ].flat(),
         });
 
         const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");

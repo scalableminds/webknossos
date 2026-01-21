@@ -1,6 +1,5 @@
 import { diffArrays } from "libs/utils";
 import range from "lodash/range";
-import values from "lodash/values";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -577,7 +576,7 @@ class Skeleton {
       attributes.isCommented.array[index] = false;
       attributes.nodeId.array[index] = node.id;
       attributes.treeId.array[index] = treeId;
-      return values(attributes);
+      return Object.values(attributes);
     });
   }
 

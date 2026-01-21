@@ -1,4 +1,3 @@
-import find from "lodash/find";
 import min from "lodash/min";
 import messages from "messages";
 import type { Vector2 } from "viewer/constants";
@@ -531,11 +530,7 @@ class AbstractTreeRenderer {
    * @return {Boolean}    true if node is commented
    */
   nodeIdHasComment(id: number): boolean {
-    return (
-      find(this.tree.comments, {
-        node: id,
-      }) != null
-    );
+    return this.tree.comments.some((c: any) => c.node === id);
   }
 
   /**

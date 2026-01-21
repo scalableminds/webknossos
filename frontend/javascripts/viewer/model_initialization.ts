@@ -20,8 +20,6 @@ import { point3ToVector3 } from "libs/utils";
 import { location } from "libs/window";
 import cloneDeep from "lodash/cloneDeep";
 import extend from "lodash/extend";
-import find from "lodash/find";
-import findIndex from "lodash/findIndex";
 import first from "lodash/first";
 import isEqual from "lodash/isEqual";
 import merge from "lodash/merge";
@@ -180,8 +178,7 @@ export async function initialize(
             // Only when the newest version is requested (version==null),
             // the stats are available in unversionedAnnotation.
             version == null
-              ? (find(
-                  unversionedAnnotation.annotationLayers,
+              ? (unversionedAnnotation.annotationLayers.find(
                   (layer) => layer.tracingId === protoLayer.tracingId,
                 )?.stats ?? {})
               : {},
@@ -610,8 +607,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     //    and a new layer is created and added.
     // 2) The volume layer should be based on a fallback layer. In that case, merge the original fallbackLayer
     //    with the new volume layer.
-    const fallbackLayerIndex = findIndex(
-      originalLayers,
+    const fallbackLayerIndex = originalLayers.findIndex(
       (layer) => layer.name === tracing.fallbackLayer,
     );
 

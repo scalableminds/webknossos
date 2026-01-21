@@ -7,7 +7,8 @@ import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
 import Toast from "libs/toast";
 import { chunkDynamically } from "libs/utils";
-import _ from "lodash";
+import sortBy from "lodash/sortBy";
+import zip from "lodash/zip";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-saga";
@@ -379,7 +380,7 @@ function* loadPrecomputedMeshesInChunksForLod(
 
         const errorsWithDetails = [];
 
-        for (const [chunk, data] of _.zip(chunks, dataForChunks)) {
+        for (const [chunk, data] of zip(chunks, dataForChunks)) {
           try {
             if (chunk == null || data == null) {
               throw new Error("Unexpected null value.");
@@ -442,7 +443,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   }
 
   // Merge Chunks
-  const sortedBufferGeometries = _.sortBy(
+  const sortedBufferGeometries = sortBy(
     bufferGeometries,
     (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
   );

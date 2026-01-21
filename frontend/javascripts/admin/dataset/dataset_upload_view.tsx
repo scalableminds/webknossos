@@ -58,7 +58,11 @@ import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager }
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import countBy from "lodash/countBy";
+import difference from "lodash/difference";
+import throttle from "lodash/throttle";
+import uniqBy from "lodash/uniqBy";
+import without from "lodash/without";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { type BlockerFunction, Link } from "react-router-dom";
@@ -78,7 +82,7 @@ import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_c
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
-const logRetryToAnalytics = _.throttle((datasetName: string) => {
+const logRetryToAnalytics = throttle((datasetName: string) => {
   ErrorHandling.notify(new Error(`Warning: Upload of dataset ${datasetName} was retried.`));
 }, REPORT_THROTTLE_THRESHOLD);
 
@@ -585,7 +589,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       }
     }
 
-    const countedFileExtensions = _.countBy(fileExtensions, (str) => str);
+    const countedFileExtensions = countBy(fileExtensions, (str) => str);
     const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
     if (containsExtension("nml")) {
@@ -1039,7 +1043,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                       const filePaths = files.map((file) => file.path || "");
                       return (
                         unfinishedUploadToContinue.filePaths.length === filePaths.length &&
-                        _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
+                        difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
                       );
                     },
                     "The selected files do not match the files of the unfinished upload. Please select the same files as before." +
@@ -1099,11 +1103,11 @@ function FileUploadArea({
 }) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
-    onChange(_.uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
+    onChange(uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
   };
 
   const removeFile = (file: FileWithPath) => {
-    onChange(_.without(fileList, file));
+    onChange(without(fileList, file));
   };
 
   const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({

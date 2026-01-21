@@ -1,6 +1,6 @@
 import { Dropdown, type MenuProps, Tag, Tree, type TreeProps } from "antd";
 import { stringToAntdColorPreset } from "libs/format_utils";
-import _ from "lodash";
+import groupBy from "lodash/groupBy";
 import memoizeOne from "memoize-one";
 import React from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -104,7 +104,7 @@ function _convertConnectomeToTreeData(
       .map((synapseId) => synapses[synapseId]) // Some synapses might be filtered out
       .filter((synapse) => synapse != null);
 
-    const synapsesByPartner = _.groupBy(partnerSynapses, direction === "in" ? "src" : "dst");
+    const synapsesByPartner = groupBy(partnerSynapses, direction === "in" ? "src" : "dst");
 
     return Object.keys(synapsesByPartner).map((partnerId2) => ({
       key: `segment;${partnerId2};${direction};${partnerId1};`,

@@ -2,7 +2,7 @@ import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
 import { pluralize } from "libs/utils";
-import _ from "lodash";
+import sum from "lodash/sum";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -477,7 +477,7 @@ const DetailsForSelection = memo(
                 />
                 <SimpleRow
                   label="Tree Count (all children)"
-                  value={_.sum(
+                  value={sum(
                     groupWithSubgroups.map((groupId) => groupToTreesMap[groupId]?.length ?? 0),
                   )}
                 />

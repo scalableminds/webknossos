@@ -1,5 +1,5 @@
 import Deferred from "libs/async/deferred";
-import _ from "lodash";
+import noop from "lodash/noop";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import type {
@@ -242,7 +242,7 @@ export const maybeFetchMeshFilesAction = (
   dataset: APIDataset,
   mustRequest: boolean,
   autoActivate: boolean = true,
-  callback: (meshes: Array<APIMeshFileInfo>) => void = _.noop,
+  callback: (meshes: Array<APIMeshFileInfo>) => void = noop,
 ) =>
   ({
     type: "MAYBE_FETCH_MESH_FILES",

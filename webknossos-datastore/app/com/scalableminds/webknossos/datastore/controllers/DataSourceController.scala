@@ -708,7 +708,10 @@ class DataSourceController @Inject()(
   def invalidateCache(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
       datasetCache.invalidateCache(datasetId)
-      Future.successful(Ok)
+      for {
+        dataSource <- datasetCache.getById(datasetId)
+        _ = clearCachesOfDataSource(datasetId, dataSource, layerName = None)
+      } yield Ok
     }
   }
 

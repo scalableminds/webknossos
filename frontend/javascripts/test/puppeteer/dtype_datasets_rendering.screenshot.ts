@@ -153,17 +153,17 @@ const specs: Array<Spec> = dtypes.flatMap((dtype): Spec[] => {
           {
             name: `dtype_${dtype}_segmentation_${zoomedIn.postfix}`,
             dtype,
-            datasetName: `dtype_test_${dtype}_segmentation`,
+            datasetName: `dtype_test_${dtype}_color`,
             viewOverride: zoomedIn.viewOverride,
-            datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+            datasetConfig: datasetConfigHelper(`${dtype}_color`, undefined),
             alsoTestSelectiveSegmentId: true,
           },
           {
-            name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
+            name: `dtype_${dtype}_color_${zoomedOut.postfix}`,
             dtype,
-            datasetName: `dtype_test_${dtype}_segmentation`,
+            datasetName: `dtype_test_${dtype}_color`,
             viewOverride: zoomedOut.viewOverride,
-            datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+            datasetConfig: datasetConfigHelper(`${dtype}_color`, undefined),
           },
         ];
 

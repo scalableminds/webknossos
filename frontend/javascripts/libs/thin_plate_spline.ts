@@ -1,4 +1,4 @@
-import _ from "lodash";
+import range from "lodash/range";
 import { Matrix, solve } from "ml-matrix";
 import type { Vector3 } from "viewer/constants";
 import { V3 } from "./mjs";
@@ -89,7 +89,7 @@ class TPS1d {
     }
 
     let bendingPart = 0;
-    for (const i of _.range(dist.length)) {
+    for (const i of range(dist.length)) {
       let el = dist[i];
       if (el !== 0) {
         el = el ** 2 * Math.log(el ** 2);
@@ -163,7 +163,7 @@ export default class TPS3D {
     const offsetX: number[] = [];
     const offsetY: number[] = [];
     const offsetZ: number[] = [];
-    for (const idx of _.range(0, sourcePoints.length)) {
+    for (const idx of range(0, sourcePoints.length)) {
       cps.push(sourcePoints[idx]);
       offsetX.push(targetPoints[idx][0] - sourcePoints[idx][0]);
       offsetY.push(targetPoints[idx][1] - sourcePoints[idx][1]);

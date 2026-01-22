@@ -20,7 +20,7 @@ import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import partial from "lodash/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
@@ -270,7 +270,7 @@ function TaskTypeListView() {
                   Download
                 </AsyncLink>
                 <br />
-                <LinkButton onClick={_.partial(deleteTaskType, taskType)} icon={<DeleteOutlined />}>
+                <LinkButton onClick={partial(deleteTaskType, taskType)} icon={<DeleteOutlined />}>
                   Delete
                 </LinkButton>
               </span>

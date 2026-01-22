@@ -1,10 +1,10 @@
 import deepFreezeLib from "deep-freeze";
-import _ from "lodash";
+import identity from "lodash/identity";
 
 // Do not use the deep-freeze library in production
 // process.env.NODE_ENV is being substituted by webpack
 let deepFreeze = deepFreezeLib;
-if (process.env.NODE_ENV === "production") deepFreeze = _.identity;
+if (process.env.NODE_ENV === "production") deepFreeze = identity;
 
 export default function reduceReducers(
   ...reducers: Array<(...args: Array<any>) => any>

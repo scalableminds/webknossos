@@ -7,7 +7,7 @@ import { getUrlParamValue, hasUrlParam, isNoElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import extend from "lodash/extend";
 import messages from "messages";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -223,7 +223,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     const keyboardControls = {};
 
     if (controlMode !== ControlModeEnum.VIEW) {
-      _.extend(keyboardControls, {
+      extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
         "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
@@ -270,7 +270,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
     let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
 
-    _.extend(keyboardControls, {
+    extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
         let segmentationLayer = Model.getVisibleSegmentationLayer();

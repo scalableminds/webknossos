@@ -1,7 +1,6 @@
 // See
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
 // for all functions in M4x4, V2 and V3.
-import _ from "lodash";
 import type { Vector2, Vector3, Vector4 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
 
@@ -55,7 +54,7 @@ const M4x4 = {
       throw new Error("transformVectorsAffine doesn't support typed arrays at the moment.");
     }
     // @ts-ignore
-    return chunk3(M4x4.transformPointsAffine(m, _.flatten(points)));
+    return chunk3(M4x4.transformPointsAffine(m, points.flat()));
   },
   // Applies a transformation matrix on an array of points.
   transformPoints(

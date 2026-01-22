@@ -1,6 +1,6 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import _ from "lodash";
+import partition from "lodash/partition";
 import type { BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,
@@ -276,7 +276,7 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
-  const [segmentationLayerNames, colorLayerNames] = _.partition(
+  const [segmentationLayerNames, colorLayerNames] = partition(
     dataset.dataSource.dataLayers,
     (layer) => layer.category === "segmentation",
   ).map((layers) => layers.map((layer) => layer.name).sort());
@@ -762,8 +762,6 @@ export type APIFeatureToggles = {
   readonly mitochondriaInferralCostInMilliCreditsPerGVx: number;
   readonly instancesInferralCostInMilliCreditsPerGVx: number;
   readonly alignmentCostInMilliCreditsPerGVx: number;
-  readonly costPerCreditInEuro: number;
-  readonly costPerCreditInDollar: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;

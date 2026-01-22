@@ -1,4 +1,4 @@
-import _ from "lodash";
+import min from "lodash/min";
 import messages from "messages";
 import type { Vector2 } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
@@ -92,7 +92,7 @@ class AbstractTreeRenderer {
 
   buildTree(): AbstractNode | null | undefined {
     // Assumption: Node with smallest id is root
-    const rootId = _.min(Array.from(this.tree.nodes.keys()));
+    const rootId = min(Array.from(this.tree.nodes.keys()));
 
     const rootNode = {
       id: rootId,
@@ -530,11 +530,7 @@ class AbstractTreeRenderer {
    * @return {Boolean}    true if node is commented
    */
   nodeIdHasComment(id: number): boolean {
-    return (
-      _.find(this.tree.comments, {
-        node: id,
-      }) != null
-    );
+    return this.tree.comments.some((c: any) => c.node === id);
   }
 
   /**

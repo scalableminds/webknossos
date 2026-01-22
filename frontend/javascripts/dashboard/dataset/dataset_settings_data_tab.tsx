@@ -103,6 +103,30 @@ function SimpleDatasetForm({
     initialTransformationsMode,
   );
 
+  const getDatasetTransformationsModeCard = (dataset: APIDataset | null | undefined) => {
+    return (
+      <SettingsCard
+        title="Transformation Configuration"
+        content={
+          <Input.TextArea
+            defaultValue={JSON.stringify(
+              dataset?.dataSource.dataLayers.map((layer) => {
+                return {
+                  name: layer.name,
+                  coordinateTransformations: layer.coordinateTransformations ?? [],
+                };
+              }),
+              null,
+              2,
+            )}
+            autoSize={{ minRows: 10, maxRows: 20 }}
+          />
+        }
+        style={marginBottom}
+      />
+    );
+  };
+
   const getTransformationSettings = () => {
     switch (transformationsMode) {
       case TransformationsMode.NONE:
@@ -122,27 +146,7 @@ function SimpleDatasetForm({
           />
         );
       case TransformationsMode.ADVANCED:
-        return (
-          <SettingsCard
-            title="Advanced Transformations"
-            content={
-              <Input.TextArea
-                defaultValue={JSON.stringify(
-                  dataset?.dataSource.dataLayers.map((layer) => {
-                    return {
-                      name: layer.name,
-                      coordinateTransformations: layer.coordinateTransformations ?? [] ?? [],
-                    };
-                  }),
-                  null,
-                  2,
-                )}
-                autoSize={{ minRows: 10, maxRows: 20 }}
-                style={marginBottom}
-              />
-            }
-          />
-        );
+        return getDatasetTransformationsModeCard(dataset);
       default:
         return null;
     }
@@ -255,7 +259,7 @@ function SimpleDatasetForm({
               </FormItemWithInfo>
             </Col>
             <FormItemWithInfo
-              name={["dataSource", "transformations"]}
+              name={["dataSource", "transformationMode"]}
               label="Transformation Mode"
               info="The transformations for the dataset."
             >

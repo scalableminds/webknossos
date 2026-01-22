@@ -328,7 +328,7 @@ class DataSourceService @Inject()(
     } yield removedEntriesList.sum
 
   def deletePathsFromDiskOrManagedS3(paths: Seq[UPath]): Fox[Unit] = {
-    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath)
+    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(_.startsWith(dataBaseDir))
     val managedS3Paths = paths.filter(managedS3Service.pathIsInManagedS3)
     for {
       _ <- Fox.serialCombined(localPaths)(PathUtils.deleteDirectoryRecursively(_).toFox)

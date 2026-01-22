@@ -1,4 +1,5 @@
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
+import range from "lodash/range";
 import runAsync from "test/helpers/run-async";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
@@ -88,10 +89,10 @@ describe("PullQueue", () => {
     ];
 
     mockedCube.getBucket.mockImplementation((address: BucketAddress) => {
-      return buckets.find((bucket) => _.isEqual(bucket.zoomedAddress, address));
+      return buckets.find((bucket) => isEqual(bucket.zoomedAddress, address));
     });
     mockedCube.getOrCreateBucket.mockImplementation((address: BucketAddress) => {
-      return buckets.find((bucket) => _.isEqual(bucket.zoomedAddress, address));
+      return buckets.find((bucket) => isEqual(bucket.zoomedAddress, address));
     });
 
     for (const bucket of buckets) {
@@ -109,8 +110,8 @@ describe("PullQueue", () => {
     pullQueue,
     buckets,
   }) => {
-    const bucketData1 = _.range(0, 32 * 32 * 32).map((i) => i % 256);
-    const bucketData2 = _.range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
+    const bucketData1 = range(0, 32 * 32 * 32).map((i) => i % 256);
+    const bucketData2 = range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
 
     vi.mocked(requestWithFallback).mockResolvedValue([
       new Uint8Array(bucketData1),

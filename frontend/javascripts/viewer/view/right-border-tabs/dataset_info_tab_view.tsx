@@ -8,7 +8,7 @@ import { Tag, Typography } from "antd";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import React, { type CSSProperties } from "react";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
@@ -46,7 +46,6 @@ import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_a
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
-import { Store } from "viewer/singletons";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -669,13 +668,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 }
 
 function DebugInfo() {
+  const dispatch = useDispatch();
   const versionOnClient = useWkSelector((state) => {
     return state.annotation.version;
   });
   return (
     <>
       Version: {versionOnClient}
-      <ReloadOutlined onClick={() => Store.dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
+      <ReloadOutlined onClick={() => dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
     </>
   );
 }

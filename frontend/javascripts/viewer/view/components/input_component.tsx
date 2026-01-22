@@ -1,7 +1,15 @@
 import { Input, type InputProps, type InputRef } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import _ from "lodash";
-import React, { forwardRef, useEffect, useLayoutEffect, useRef, useState } from "react";
+import noop from "lodash/noop";
+import type React from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 /*
  * A lightweight wrapper around <Input> which:
@@ -18,7 +26,7 @@ const InputComponent = forwardRef<InputRef, InputProps>((props, ref) => {
   const {
     title,
     style,
-    onChange = _.noop,
+    onChange = noop,
     onFocus,
     onBlur,
     onKeyDown,
@@ -30,7 +38,7 @@ const InputComponent = forwardRef<InputRef, InputProps>((props, ref) => {
   const [currentValue, setCurrentValue] = useState(value);
 
   // Forward the ref to the internal inputRef if provided
-  React.useImperativeHandle(ref, () => inputRef.current as InputRef, []);
+  useImperativeHandle(ref, () => inputRef.current as InputRef, []);
 
   useEffect(() => {
     setCurrentValue(value);

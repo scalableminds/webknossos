@@ -3,11 +3,15 @@ import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { capitalize, getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
-import _ from "lodash";
+import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
+import capitalize from "lodash/capitalize";
+import compact from "lodash/compact";
+import noop from "lodash/noop";
+import sortBy from "lodash/sortBy";
 import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -18,7 +22,6 @@ import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { Store } from "viewer/singletons";
 import type { UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
@@ -53,12 +56,12 @@ const getLabelForAction = (action: NonNullable<ItemType>) => {
 };
 
 const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutId[] => {
-  return _.compact(
+  return compact(
     menuActions.map((action) => {
       if (action == null) {
         return null;
       }
-      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : _.noop;
+      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : noop;
       return {
         name: getLabelForAction(action),
         command: onClickAction,
@@ -90,6 +93,8 @@ const shortCutDictForTools: Record<string, string> = {
 };
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
+  const dispatch = useDispatch();
+
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
@@ -127,7 +132,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         // removing the watermark is a paid feature
         commands.push({
           name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
-          command: () => Store.dispatch(updateUserSettingAction(key, !userConfig[key])),
+          command: () => dispatch(updateUserSettingAction(key, !userConfig[key])),
           color: commandEntryColor,
         });
       }
@@ -193,7 +198,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const getAnnotationItems = useCallback(async () => {
     const annotations = await getReadableAnnotations(false);
-    const sortedAnnotations = _.sortBy(annotations, (a) => a.modified).reverse();
+    const sortedAnnotations = sortBy(annotations, (a) => a.modified).reverse();
     return sortedAnnotations.map((annotation) => {
       return {
         name: `View Annotation: ${annotation.name.length > 0 ? `${annotation.name} (id ${annotation.id})` : annotation.id}`,
@@ -302,8 +307,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
           if (theme === "auto") theme = getSystemColorTheme();
 
           const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
-          Store.dispatch(setThemeAction(theme));
-          Store.dispatch(setActiveUserAction(newUser));
+          dispatch(setThemeAction(theme));
+          dispatch(setActiveUserAction(newUser));
         },
         color: commandEntryColor,
       });
@@ -317,7 +322,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     const commands = ViewModeValues.map((mode) => ({
       name: `Switch to ${mode} mode`,
       command: () => {
-        Store.dispatch(setViewModeAction(mode));
+        dispatch(setViewModeAction(mode));
       },
       color: commandEntryColor,
     }));
@@ -339,13 +344,13 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     availableTools.forEach((tool) => {
       commands.push({
         name: `Switch to ${tool.readableName}`,
-        command: () => Store.dispatch(setToolAction(tool)),
+        command: () => dispatch(setToolAction(tool)),
         shortcut: shortCutDictForTools[tool.id] || "",
         color: commandEntryColor,
       });
     });
     return commands;
-  }, [isInAnnotationView, isViewMode, allowUpdate]);
+  }, [isInAnnotationView, isViewMode, allowUpdate, dispatch]);
 
   const tracingMenuItems = useTracingViewMenuItems(props, null);
 

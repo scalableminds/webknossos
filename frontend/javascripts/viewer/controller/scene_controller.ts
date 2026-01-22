@@ -1,7 +1,6 @@
 import app from "app";
 import Toast from "libs/toast";
 import window from "libs/window";
-import _ from "lodash";
 
 import { rgbToInt } from "libs/utils";
 import {
@@ -265,7 +264,7 @@ class SceneController {
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
     const planeGroup = new Group();
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       planeGroup.add(...plane.getMeshes());
     }
     // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
@@ -492,7 +491,7 @@ class SceneController {
     }
 
     if (!optArbitraryPlane) {
-      for (const currentPlane of _.values<Plane>(this.planes)) {
+      for (const currentPlane of Object.values(this.planes)) {
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 
@@ -510,7 +509,7 @@ class SceneController {
   }
 
   setDisplayCrosshair(value: boolean): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setDisplayCrosshair(value);
     }
 
@@ -523,7 +522,7 @@ class SceneController {
   }
 
   setInterpolation(value: boolean): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setLinearInterpolationEnabled(value);
     }
 
@@ -689,7 +688,7 @@ class SceneController {
   }
 
   stopPlaneMode(): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setVisible(false);
     }
 
@@ -703,7 +702,7 @@ class SceneController {
   }
 
   startPlaneMode(): void {
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.setVisible(true);
     }
 
@@ -743,7 +742,7 @@ class SceneController {
     Object.values(this.layerBoundingBoxes).forEach((cube) => cube.destroy());
     this.forEachTaskCube((cube) => cube.destroy());
 
-    for (const plane of _.values(this.planes)) {
+    for (const plane of Object.values(this.planes)) {
       plane.destroy();
     }
 

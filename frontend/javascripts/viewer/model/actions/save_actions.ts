@@ -11,7 +11,7 @@ import type {
 import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 import { areSetsEqual } from "libs/utils";
-import _ from "lodash";
+import compact from "lodash/compact";
 
 export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";
@@ -175,7 +175,7 @@ export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
 ): Promise<void> => {
   // All skeleton and volume tracings should respond to the dispatched action.
   const tracingIds = new Set(
-    _.compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
+    compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
   );
   const reportedTracingIds = new Set();
   const deferred = new Deferred();

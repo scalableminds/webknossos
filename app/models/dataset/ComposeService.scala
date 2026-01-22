@@ -52,8 +52,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                                       dataSource,
                                                       Some(composeRequest.targetFolderId),
                                                       user,
-                                                      isVirtual = true)
-
+                                                      isVirtual = true,
+                                                      creationType = DatasetCreationType.Compose)
     } yield (dataSource, dataset._id)
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(

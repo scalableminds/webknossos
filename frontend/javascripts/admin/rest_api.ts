@@ -1203,7 +1203,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       // refresh the token (unless we already did this in the last hour) and
       // retry the file upload.
       const ONE_HOUR_MS = 3600 * 1000;
-      if (lastFileErrorTimestamp == null || Date.now() - lastFileErrorTimestamp < ONE_HOUR_MS) {
+      if (lastFileErrorTimestamp == null || Date.now() - lastFileErrorTimestamp > ONE_HOUR_MS) {
         handleInvalidToken()
           .then(() => {
             file.retry();

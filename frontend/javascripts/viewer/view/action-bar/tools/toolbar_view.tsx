@@ -16,11 +16,11 @@ import {
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { useCallback } from "react";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
@@ -40,11 +40,13 @@ import {
   VolumeInterpolationButton,
 } from "./volume_specific_ui";
 
-const handleAddNewUserBoundingBox = () => {
-  Store.dispatch(addUserBoundingBoxAction());
-};
-
 function CreateNewBoundingBoxButton() {
+  const dispatch = useDispatch();
+
+  const handleAddNewUserBoundingBox = useCallback(() => {
+    dispatch(addUserBoundingBoxAction());
+  }, [dispatch]);
+
   return (
     <ButtonComponent
       onClick={handleAddNewUserBoundingBox}
@@ -77,12 +79,8 @@ function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationToo
   return adaptedActiveTool.id;
 }
 
-const handleSetTool = (event: RadioChangeEvent) => {
-  const value = event.target.value as AnnotationToolId;
-  Store.dispatch(setToolAction(AnnotationTool[value]));
-};
-
 export default function ToolbarView() {
+  const dispatch = useDispatch();
   const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
   const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
   const toolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
@@ -97,6 +95,14 @@ export default function ToolbarView() {
     isShiftPressed,
     isControlOrMetaPressed,
     isAltPressed,
+  );
+
+  const handleSetTool = useCallback(
+    (event: RadioChangeEvent) => {
+      const value = event.target.value as AnnotationToolId;
+      dispatch(setToolAction(AnnotationTool[value]));
+    },
+    [dispatch],
   );
 
   return (

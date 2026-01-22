@@ -24,7 +24,20 @@ export const viteConfig = {
     },
   },
   plugins: [
-    react({ skipFastRefresh: true, fastRefresh: false }),
+    react({
+      skipFastRefresh: true,
+      fastRefresh: false,
+      babel: {
+        plugins: [
+          [
+            "babel-plugin-react-compiler",
+            {
+              target: "18",
+            },
+          ],
+        ],
+      },
+    }),
     tsconfigPaths(),
     wasm(),
     viteProtobufPlugin({

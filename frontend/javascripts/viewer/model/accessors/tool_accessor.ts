@@ -1,4 +1,4 @@
-import _ from "lodash";
+import without from "lodash/without";
 import type { WebknossosState } from "viewer/store";
 
 abstract class AbstractAnnotationTool {
@@ -143,7 +143,7 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   ] as AnnotationTool[],
 };
 
-export const VolumeTools = _.without(
+export const VolumeTools = without(
   Toolkits.VOLUME_TOOLS,
   AnnotationTool.MOVE,
   AnnotationTool.VOXEL_PIPETTE,

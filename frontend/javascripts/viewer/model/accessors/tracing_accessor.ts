@@ -1,4 +1,4 @@
-import _ from "lodash";
+import compact from "lodash/compact";
 import type { TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -89,7 +89,7 @@ export function selectTracing(
 function _getTaskBoundingBoxes(state: WebknossosState) {
   const { annotation, task } = state;
   if (task == null) return {};
-  const layers = _.compact([annotation.skeleton, ...annotation.volumes]);
+  const layers = compact([annotation.skeleton, ...annotation.volumes]);
   return Object.fromEntries(layers.map((l) => [l.tracingId, l.boundingBox]));
 }
 

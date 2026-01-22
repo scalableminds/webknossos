@@ -3,7 +3,8 @@ import { copyToClipboad } from "admin/voxelytics/utils";
 import { Tooltip } from "antd";
 import { useFetch } from "libs/react_helpers";
 import { useDebouncedValue, useWkSelector } from "libs/react_hooks";
-import _ from "lodash";
+import compact from "lodash/compact";
+import range from "lodash/range";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
@@ -97,7 +98,7 @@ export default function VoxelValueTooltip() {
   );
 
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
-  const layers = _.compact([...colorLayers, visibleSegmentationLayer]);
+  const layers = compact([...colorLayers, visibleSegmentationLayer]);
 
   const layerNamesWithDataValues = useFetch(
     async () => {
@@ -122,7 +123,7 @@ export default function VoxelValueTooltip() {
           const channelCount = api.data.getChannelCount(layer.name);
 
           const dataValue = await Promise.all(
-            _.range(channelCount).map((channelIndex) =>
+            range(channelCount).map((channelIndex) =>
               api.data.getDataValue(
                 layer.name,
                 positionInLayer.map((el) => Math.floor(el)) as Vector3,

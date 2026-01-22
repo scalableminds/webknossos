@@ -110,6 +110,7 @@ POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary           
 POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
 GET           /datasets/:datasetId/dataSourceForSuperUser                                       controllers.DatasetController.dataSourceForSuperUser(datasetId: ObjectId)
+POST          /datasets/:datasetId/duplicateToOrga                                              controllers.DatasetController.duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 

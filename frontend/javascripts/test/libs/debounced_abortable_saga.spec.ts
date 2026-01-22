@@ -1,7 +1,7 @@
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { sleep } from "libs/utils";
 import { describe, it, expect } from "vitest";
-import _ from "lodash";
+import debounce from "lodash/debounce";
 import { createDebouncedAbortableCallable } from "libs/async/debounced_abortable_saga";
 
 const createAbortableFnWithProtocol = () => {
@@ -64,7 +64,7 @@ describe("DebouncedAbortableSaga", () => {
     // For 1000 invocations, _.debounce is roughly 10x faster.
     // However, this probably not a bottleneck right now.
 
-    const lodashDebounced = _.debounce((_obj: { id: number }) => {});
+    const lodashDebounced = debounce((_obj: { id: number }) => {});
 
     const { abortableFn } = createAbortableFnWithProtocol();
     const fn = createDebouncedAbortableCallable(abortableFn, DEBOUNCE_THRESHOLD, this);

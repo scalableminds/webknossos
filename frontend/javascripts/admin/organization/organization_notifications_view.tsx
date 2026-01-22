@@ -7,9 +7,9 @@ import { Button, Col, Form, Input, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { Store } from "viewer/singletons";
 
 const FormItem = Form.Item;
 
@@ -19,6 +19,7 @@ type FormValues = {
 };
 
 export function OrganizationNotificationsView() {
+  const dispatch = useDispatch();
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
@@ -44,7 +45,7 @@ export function OrganizationNotificationsView() {
       organization.name,
       formValues.newUserMailingList,
     );
-    Store.dispatch(setActiveOrganizationAction(updatedOrganization));
+    dispatch(setActiveOrganizationAction(updatedOrganization));
     Toast.success("Notification settings were saved successfully.");
   }
 

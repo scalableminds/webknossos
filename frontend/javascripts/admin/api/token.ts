@@ -9,7 +9,7 @@ let tokenPromise: Promise<string>;
 let tokenRequestPromise: Promise<string> | null;
 let shouldUseURLToken: boolean = true;
 
-function createNewTokenPromise(): Promise<string> {
+function getOrCreateNewTokenPromise(): Promise<string> {
   /*
    * This function requests a new user token unless
    * there is already an ongoing request for a new
@@ -35,7 +35,9 @@ export function refreshToken() {
    * This function can be used to invalidate an existing token.
    * It returns a promise that will contain a new token.
    */
-  tokenPromise = createNewTokenPromise();
+  // Note that tokenPromise is a module variable and will be
+  // used in doWithToken.
+  tokenPromise = getOrCreateNewTokenPromise();
   return tokenPromise;
 }
 
@@ -60,7 +62,7 @@ export async function doWithToken<T>(
     useURLTokenIfAvailable && shouldUseURLToken ? getSharingTokenFromUrlParameters() : null;
 
   if (token == null) {
-    tokenPromise = tokenPromise ?? createNewTokenPromise();
+    tokenPromise = tokenPromise ?? getOrCreateNewTokenPromise();
   } else {
     tokenPromise = Promise.resolve(token);
   }

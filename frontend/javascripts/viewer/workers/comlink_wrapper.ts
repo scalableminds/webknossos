@@ -1,21 +1,26 @@
-import * as Comlink from "comlink";
 import {
   requestOptionsTransferHandler,
   throwTransferHandlerWithResponseSupport,
 } from "viewer/workers/headers_transfer_handler";
 
-function importComlink() {
+async function importComlink() {
   const isNodeContext = typeof process !== "undefined" && process.title !== "browser";
 
   if (!isNodeContext) {
     // Comlink should only be imported in a browser context, since it makes use of functionality
     // which does not exist in node
+    const {
+      wrap,
+      transferHandlers,
+      expose: _expose,
+      transfer: _transfer,
+    } = await import("comlink");
 
     return {
-      wrap: Comlink.wrap,
-      transferHandlers: Comlink.transferHandlers,
-      _expose: Comlink.expose,
-      _transfer: Comlink.transfer,
+      wrap,
+      transferHandlers,
+      _expose,
+      _transfer,
     };
   } else {
     return {
@@ -27,7 +32,7 @@ function importComlink() {
   }
 }
 
-const { wrap, transferHandlers, _expose, _transfer } = importComlink();
+const { wrap, transferHandlers, _expose, _transfer } = await importComlink();
 // It's important that transferHandlers are registered in this wrapper module and
 // not from another file. Otherwise, callers would need to register the handler
 // in the main thread as well as in the web worker.

@@ -53,6 +53,7 @@ import {
 } from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
+import { useDispatch } from "react-redux";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -62,7 +63,6 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -469,13 +469,14 @@ function NotificationIcon({
   activeUser: APIUser;
   navbarHeight: number;
 }) {
+  const dispatch = useDispatch();
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: new Date().getTime(),
     });
-    Store.dispatch(setActiveUserAction(newUserSync));
+    dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
@@ -765,6 +766,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
 }
 
 function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
@@ -787,7 +789,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const redirectUrl = await logoutUser();
-    Store.dispatch(logoutUserAction());
+    dispatch(logoutUserAction());
     // Hard navigation
     location.href = redirectUrl;
   };

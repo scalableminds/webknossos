@@ -676,7 +676,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reservemagUploadToPath.notVirtual"
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveMagUploadToPath.notVirtual"
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         magPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
       } yield Ok(Json.toJson(magPath))

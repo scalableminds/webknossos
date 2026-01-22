@@ -6,10 +6,10 @@ import LinkButton from "components/link_button";
 import features from "features";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -27,12 +27,13 @@ const DEFAULT_STYLE = {
 
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const [form] = Form.useForm();
+  const dispatch = useDispatch();
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {
     const [user, organization] = await loginUser(formValues);
-    Store.dispatch(setActiveUserAction(user));
-    Store.dispatch(setActiveOrganizationAction(organization));
+    dispatch(setActiveUserAction(user));
+    dispatch(setActiveOrganizationAction(organization));
 
     if (onLoggedIn) {
       onLoggedIn();
@@ -43,8 +44,8 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const webauthnLogin = async () => {
     try {
       const [user, organization] = await doWebAuthnLogin();
-      Store.dispatch(setActiveUserAction(user));
-      Store.dispatch(setActiveOrganizationAction(organization));
+      dispatch(setActiveUserAction(user));
+      dispatch(setActiveOrganizationAction(organization));
       if (onLoggedIn) {
         onLoggedIn();
       }

@@ -16,7 +16,9 @@ import {
   isNumberMap,
 } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
+import union from "lodash/union";
+import uniq from "lodash/uniq";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
@@ -766,7 +768,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
   // The unmapped segments of this edge might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
   // There is no guarantee that for all mesh parts the mapping is locally stored.
-  const additionalUnmappedSegmentsToReRequest = _.union(unmappedSegmentsOfPartitions, [
+  const additionalUnmappedSegmentsToReRequest = union(unmappedSegmentsOfPartitions, [
     edgesToRemove[0].segmentId1,
     edgesToRemove[0].segmentId2,
   ]);
@@ -1152,7 +1154,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     targetAgglomerate &&
     (sourceAgglomerate.name || targetAgglomerate.name)
   ) {
-    const mergedName = _.uniq([sourceAgglomerate.name, targetAgglomerate.name])
+    const mergedName = uniq([sourceAgglomerate.name, targetAgglomerate.name])
       .filter((name) => name != null)
       .join(",");
     if (mergedName !== sourceAgglomerate.name) {
@@ -1548,9 +1550,9 @@ function getDeleteEdgeActionForEdgePositions(
   let firstNodeId;
   let secondNodeId;
   for (const node of sourceTree.nodes.values()) {
-    if (_.isEqual(node.untransformedPosition, edge.position1)) {
+    if (isEqual(node.untransformedPosition, edge.position1)) {
       firstNodeId = node.id;
-    } else if (_.isEqual(node.untransformedPosition, edge.position2)) {
+    } else if (isEqual(node.untransformedPosition, edge.position2)) {
       secondNodeId = node.id;
     }
     if (firstNodeId && secondNodeId) {
@@ -1617,7 +1619,7 @@ export function* splitAgglomerateInMapping(
     activeMapping,
     sourceAgglomerateId,
   );
-  const splitSegmentIds = _.union(segmentIdsFromLocalMapping, additionalSegmentsToRequest);
+  const splitSegmentIds = union(segmentIdsFromLocalMapping, additionalSegmentsToRequest);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import range from "lodash/range";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import { describe, it, expect } from "vitest";
 
@@ -187,8 +187,8 @@ describe("DiffableMap", () => {
     const diff = diffDiffableMaps(map1, map2);
     const expectedDiff = {
       changed: [51],
-      onlyA: _.range(100).filter((idx) => idx % 2 === 0),
-      onlyB: _.range(100, 105),
+      onlyA: range(100).filter((idx) => idx % 2 === 0),
+      onlyB: range(100, 105),
     };
     expect(sort(diff.changed)).toEqual(expectedDiff.changed);
     expect(sort(diff.onlyA)).toEqual(expectedDiff.onlyA);
@@ -221,7 +221,7 @@ describe("DiffableMap", () => {
     const expectedDiff = {
       changed: [51],
       onlyA: [110],
-      onlyB: _.range(0, 105).filter((idx) => idx % 2 === 0 || idx > 100),
+      onlyB: range(0, 105).filter((idx) => idx % 2 === 0 || idx > 100),
     };
 
     expect(sort(diff.changed)).toEqual(expectedDiff.changed);

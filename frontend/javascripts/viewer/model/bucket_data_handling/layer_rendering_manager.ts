@@ -6,7 +6,9 @@ import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import _ from "lodash";
+import identity from "lodash/identity";
+import isEqual from "lodash/isEqual";
+import throttle from "lodash/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -44,7 +46,7 @@ const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
 
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
 const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
-  _.isEqual(oldArgs, newArgs),
+  isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
@@ -105,7 +107,7 @@ export function getGlobalLayerIndexForLayerName(
   layerName: string,
   optSanitizer?: (arg: string) => string,
 ): number {
-  const sanitizer = optSanitizer || _.identity;
+  const sanitizer = optSanitizer || identity;
   const dataset = Store.getState().dataset;
   const layerIndex = dataset.dataSource.dataLayers.findIndex(
     (layer) => sanitizer(layer.name) === layerName,
@@ -218,13 +220,13 @@ export default class LayerRenderingManager {
     const maximumZoomForAllMags = state.flycamInfoCache.maximumZoomForAllMags[this.name];
 
     if (
-      !_.isEqual(this.lastZoomedMatrix, matrix) ||
+      !isEqual(this.lastZoomedMatrix, matrix) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
-      !_.isEqual(additionalCoordinates, this.additionalCoordinates) ||
-      !_.isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
+      !isEqual(additionalCoordinates, this.additionalCoordinates) ||
+      !isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
@@ -465,6 +467,6 @@ function showTooManyCustomColorsWarning() {
   );
 }
 
-const throttledShowTooManyCustomColorsWarning = _.throttle(showTooManyCustomColorsWarning, 5000, {
+const throttledShowTooManyCustomColorsWarning = throttle(showTooManyCustomColorsWarning, 5000, {
   leading: true,
 });

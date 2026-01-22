@@ -14,7 +14,9 @@ import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
+import groupBy from "lodash/groupBy";
+import isNumber from "lodash/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
@@ -413,7 +415,7 @@ class TracingApi {
     assertExists(commentText, "Comment text is missing.");
 
     // Convert nodeId to node
-    if (_.isNumber(nodeId)) {
+    if (isNumber(nodeId)) {
       const tree =
         treeId != null
           ? skeletonTracing.trees.getNullable(treeId)
@@ -608,7 +610,7 @@ class TracingApi {
     const { annotation } = Store.getState();
     const skeletonTracing = assertSkeleton(annotation);
 
-    const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
+    const newTreeGroups = cloneDeep(skeletonTracing.treeGroups);
 
     callDeep(newTreeGroups, groupId, (item) => {
       // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'name' because it is a read-only ... Remove this comment to see the full error message
@@ -929,7 +931,7 @@ class TracingApi {
       return;
     }
 
-    let newSegmentGroups = _.cloneDeep(segmentGroups);
+    let newSegmentGroups = cloneDeep(segmentGroups);
 
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
     let segmentIdsToDelete: number[] = [];
@@ -1232,7 +1234,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of the given tree and returns the length in nanometer and in voxels.
+   * Measures the length of the given tree and returns the length in dataset unit and in voxels.
    */
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
@@ -1260,7 +1262,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of all trees and returns the length in nanometer and in voxels.
+   * Measures the length of all trees and returns the length in dataset unit and in voxels.
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
@@ -1566,7 +1568,7 @@ class DataApi {
    * Returns the names of all available layers of the current tracing.
    */
   getLayerNames(): Array<string> {
-    return _.map(this.model.dataLayers, "name");
+    return Object.values(this.model.dataLayers).map((layer) => layer.name);
   }
 
   /**
@@ -2266,7 +2268,7 @@ class DataApi {
         Math.floor(pos[2] / labeledMag[2]),
       ],
     );
-    const groupedByW = _.groupBy(globalPositions, (pos) => pos[thirdDim]);
+    const groupedByW = groupBy(globalPositions, (pos) => pos[thirdDim]);
 
     for (const group of Object.values(groupedByW)) {
       const w = group[0][thirdDim];
@@ -2394,7 +2396,7 @@ class DataApi {
       console.warn(`The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
       Instead, they are part of the segmentation layer configuration and can be set as follows:
       "const layerSettings = api.data.getConfiguration('layers');
-      const copyOfLayerSettings = _.cloneDeep(layerSettings);
+      const copyOfLayerSettings = cloneDeep(layerSettings);
       copyOfLayerSettings[<segmentationLayerName>].alpha = 40;
       copyOfLayerSettings[<segmentationLayerName>].isDisabled = false;
       api.data.setConfiguration('layers', copyOfLayerSettings);"`);

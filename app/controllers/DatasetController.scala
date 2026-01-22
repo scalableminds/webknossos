@@ -214,7 +214,8 @@ class DatasetController @Inject()(userService: UserService,
           dataSource,
           folderIdOpt,
           request.identity,
-          isVirtual = true
+          isVirtual = true,
+          creationType = DatasetCreationType.ExploreAndAdd
         ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -236,7 +237,8 @@ class DatasetController @Inject()(userService: UserService,
           request.body.dataSource,
           request.body.folderId,
           user,
-          isVirtual = true
+          isVirtual = true,
+          creationType = DatasetCreationType.ExploreAndAdd
         )
         _ = datasetService.trackNewDataset(dataset,
                                            user,
@@ -379,6 +381,7 @@ class DatasetController @Inject()(userService: UserService,
             isVirtual = true,
             metadata = dataset.metadata,
             description = dataset.description,
+            creationType = DatasetCreationType.DuplicateToOrga
           )
         } yield Ok(Json.toJson(newDatasetId))
       }

@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import _ from "lodash";
+import memoize from "lodash/memoize";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type {
@@ -913,7 +913,7 @@ export const getBucketRetrievalSourceFn =
   // per layerName. This is important since the function uses reuseInstanceOnEquality
   // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
   // consecutive calls.
-  _.memoize((layerName: string) =>
+  memoize((layerName: string) =>
     reuseInstanceOnEquality((state: WebknossosState): BucketRetrievalSource => {
       const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
 

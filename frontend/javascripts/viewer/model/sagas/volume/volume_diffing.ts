@@ -1,6 +1,6 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { diffArrays } from "libs/utils";
-import _ from "lodash";
+import {isEqual} from "lodash";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
@@ -189,7 +189,7 @@ function* uncachedDiffSegmentLists(
 
     const changedPropertyNames: Set<Exclude<keyof Segment, "isVisible">> = new Set();
     for (const propertyName of SegmentPropertiesWithoutUserState) {
-      if (!_.isEqual(prevSegment[propertyName], segment[propertyName])) {
+      if (!isEqual(prevSegment[propertyName], segment[propertyName])) {
         changedPropertyNames.add(propertyName);
       }
     }

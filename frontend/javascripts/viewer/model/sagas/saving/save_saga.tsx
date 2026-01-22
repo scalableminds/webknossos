@@ -3,7 +3,8 @@ import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { ColoredLogger, sleep } from "libs/utils";
-import _ from "lodash";
+import compact from "lodash/compact";
+import sum from "lodash/sum";
 import { type Channel, buffers } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -71,7 +72,7 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   });
   while (true) {
     yield* delay(CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS);
-    const sumOfBuckets = _.sum(currentBucketCounts);
+    const sumOfBuckets = sum(currentBucketCounts);
     if (sumOfBuckets > bucketSaveWarningThreshold) {
       Store.dispatch(showManyBucketUpdatesWarningAction());
     }
@@ -134,7 +135,7 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
   const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
   const volumeTracings = yield* select((state) => state.annotation.volumes);
 
-  const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
+  const tracings: Array<SkeletonTracing | VolumeTracing> = compact([
     ...volumeTracings,
     maybeSkeletonTracing,
   ]);

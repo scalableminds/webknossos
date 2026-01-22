@@ -1,4 +1,4 @@
-import _ from "lodash";
+import uniq from "lodash/uniq";
 
 type VersionSnapshot = {
   map: Map<number, number>;
@@ -29,7 +29,7 @@ export class AgglomerateMapping {
     public readonly edges: Array<[number, number]>,
     initialVersion: number = 0,
   ) {
-    this.segmentIds = _.uniq(edges.flat());
+    this.segmentIds = uniq(edges.flat());
     this.largestMappedId = Math.max(...this.segmentIds);
 
     const initialAdjacencyList = new Map<number, Set<number>>();

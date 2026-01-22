@@ -3,7 +3,8 @@ import { Keyboard } from "keyboardjs";
 import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
 import window, { document } from "libs/window";
-import _ from "lodash";
+import extend from "lodash/extend";
+import noop from "lodash/noop";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
@@ -108,16 +109,16 @@ export class InputKeyboardNoLoop {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
+      this.attach(EXTENDED_COMMAND_KEYS, noop, noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
-        this.attach(key, callback, _.noop, true);
+        this.attach(key, callback, noop, true);
       }
     }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
+      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : noop;
       this.attach(key, callback, keyUpCallback);
     }
   }
@@ -153,7 +154,7 @@ export class InputKeyboardNoLoop {
   attach(
     key: KeyboardKey,
     keyDownCallback: KeyboardHandler,
-    keyUpCallback: KeyboardHandler = _.noop,
+    keyUpCallback: KeyboardHandler = noop,
     isExtendedCommand: boolean = false,
   ) {
     const binding: KeyboardBindingPress = [
@@ -703,7 +704,7 @@ export class InputMouse {
     };
     // Don't use {...boundingRect, }, because boundingRect is a DOMRect
     // which isn't compatible with the spreading, apparently.
-    return _.extend({}, boundingRect, {
+    return extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,
     });

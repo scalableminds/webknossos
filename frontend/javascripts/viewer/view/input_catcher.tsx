@@ -1,7 +1,7 @@
 import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import type * as React from "react";
 import { useRef } from "react";
 import type { Rect, Viewport, ViewportRects } from "viewer/constants";
@@ -62,12 +62,14 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
 }
 
 const renderedInputCatchers = new Map();
+
 export async function initializeInputCatcherSizes() {
   // In an interval of 100 ms we check whether the input catchers can be initialized
   const pollInterval = 100;
   await waitForCondition(() => renderedInputCatchers.size > 0, pollInterval);
   recalculateInputCatcherSizes();
 }
+
 export function recalculateInputCatcherSizes() {
   const viewportRects: Record<string, Rect> = {
     PLANE_XY: emptyViewportRect,
@@ -88,7 +90,7 @@ export function recalculateInputCatcherSizes() {
   // we want to avoid the following set action, as the corresponding reducer
   // will re-calculate the zoom ranges for the available magnifications
   // (which is expensive and unnecessary).
-  if (!_.isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
+  if (!isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
     Store.dispatch(setInputCatcherRects(viewportRects as ViewportRects));
   }
 }

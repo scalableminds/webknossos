@@ -8,7 +8,7 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
@@ -450,7 +450,7 @@ function* uncachedDiffSegmentLists(
     const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
     const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
 
-    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
+    if (!isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,

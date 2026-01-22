@@ -41,14 +41,14 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
-import _ from "lodash";
+import keyBy from "lodash/keyBy";
 import React, { type Key, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { Store } from "viewer/singletons";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -68,6 +68,7 @@ const persistence = new Persistence<{
 
 function UserListView() {
   const { modal } = App.useApp();
+  const dispatch = useDispatch();
 
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const activeOrganization = useWkSelector((state) =>
@@ -142,7 +143,7 @@ function UserListView() {
   }
 
   function closeExperienceModal(updatedUsers: Array<APIUser>): void {
-    const updatedUsersMap = _.keyBy(updatedUsers, (u) => u.id);
+    const updatedUsersMap = keyBy(updatedUsers, (u) => u.id);
 
     setIsExperienceModalOpen(false);
     setUsers((users) => users.map((user) => updatedUsersMap[user.id] || user));
@@ -339,7 +340,7 @@ function UserListView() {
                     users.map((user) => (editedUser.id === user.id ? editedUser : user)),
                   );
                   if (activeUser.id === editedUser.id) {
-                    Store.dispatch(setActiveUserAction(editedUser));
+                    dispatch(setActiveUserAction(editedUser));
                   }
                 }}
               />
@@ -415,7 +416,7 @@ function UserListView() {
             width={250}
             render={(experiences: ExperienceMap, user: APIUser) => (
               <Space wrap>
-                {_.map(experiences, (value, domain) => (
+                {Object.entries(experiences).map(([domain, value]) => (
                   <Tag key={`experience_${user.id}_${domain}`} variant="outlined">
                     <span
                       onClick={(evt) => {

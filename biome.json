@@ -83,6 +83,16 @@
         "noRedeclare": "off",
         "noFallthroughSwitchClause": "off",
         "noAssignInExpressions": "off"
+      },
+      "nursery": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "lodash": "Import <method> from 'lodash/<method>' instead."
+            }
+          }
+        }
       }
     }
   },

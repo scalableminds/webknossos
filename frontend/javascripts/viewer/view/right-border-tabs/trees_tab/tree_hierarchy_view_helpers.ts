@@ -1,5 +1,6 @@
 import type { DataNode } from "antd/es/tree";
-import _ from "lodash";
+import groupBy from "lodash/groupBy";
+import orderBy from "lodash/orderBy";
 import memoizeOne from "memoize-one";
 import { mapGroupsWithRoot } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
@@ -80,7 +81,7 @@ export function insertTreesAndTransform(
     const { groupId } = group;
 
     // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
-    const trees = _.orderBy(groupToTreesMap[groupId] || [], [sortBy], ["asc"]).map(
+    const trees = orderBy(groupToTreesMap[groupId] || [], [sortBy], ["asc"]).map(
       makeTreeNodeFromTree,
     );
 
@@ -92,7 +93,7 @@ export function insertTreesAndTransform(
     const treeNode = makeTreeNodeFromGroup(group, {
       // Ensure that groups are always at the top when sorting by timestamp
       timestamp: 0,
-      children: _.orderBy(treeNodeChildren, [sortBy], ["asc"]),
+      children: orderBy(treeNodeChildren, [sortBy], ["asc"]),
       disableCheckbox: treeNodeChildren.length === 0,
       expanded: group.isExpanded == null || group.isExpanded,
       isChecked: treeNodeChildren.every(
@@ -206,7 +207,7 @@ export function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: Tr
 }
 
 function _createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
-  return _.groupBy(trees.values().toArray(), (tree) =>
+  return groupBy(trees.values().toArray(), (tree) =>
     tree.groupId != null ? tree.groupId : MISSING_GROUP_ID,
   );
 }

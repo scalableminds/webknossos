@@ -11,7 +11,8 @@ import {
   retryAsyncFunction,
 } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import memoize from "lodash/memoize";
+import zip from "lodash/zip";
 import messages from "messages";
 import ResumableJS from "resumablejs";
 import {
@@ -868,7 +869,7 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
-export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+export const hasSegmentIndexInDataStoreCached = memoize(hasSegmentIndexInDataStore, (...args) =>
   args.join("::"),
 );
 
@@ -1564,13 +1565,13 @@ export async function getDatastores(): Promise<APIDataStore[]> {
   return datastores;
 }
 
-export const getDataStoresCached = _.memoize(getDatastores);
+export const getDataStoresCached = memoize(getDatastores);
 
 export function getTracingstore(): Promise<APITracingStore> {
   return Request.receiveJSON("/api/tracingstore");
 }
 
-export const getTracingStoreCached = _.memoize(getTracingstore);
+export const getTracingStoreCached = memoize(getTracingstore);
 
 // ### Active User
 export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
@@ -1890,7 +1891,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   });
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
   return new Map(keyValues);
 }
@@ -1933,7 +1934,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
 
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
   return new Map(keyValues);
 }
@@ -2209,7 +2210,7 @@ export async function getSamMask(
 }
 
 // ### Short links
-export const createShortLink = _.memoize(
+export const createShortLink = memoize(
   (longLink: string): Promise<ShortLink> =>
     Request.sendJSONReceiveJSON("/api/shortLinks", {
       method: "POST",

@@ -2,7 +2,7 @@ import { InputMouse } from "libs/input";
 import { V3 } from "libs/mjs";
 import TrackballControls from "libs/trackball_controls";
 import { clamp, waitForElementWithId } from "libs/utils";
-import _ from "lodash";
+import get from "lodash/get";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
@@ -314,9 +314,7 @@ class TDController extends PureComponent<Props> {
     if (hitResult == null) {
       return null;
     }
-    const meshId: number | null = hitResult
-      ? _.get(hitResult.node.parent, "segmentId", null)
-      : null;
+    const meshId: number | null = hitResult ? get(hitResult.node.parent, "segmentId", null) : null;
     const unmappedSegmentId: number | null = hitResult?.unmappedSegmentId || null;
     const meshClickedPosition = hitResult ? hitResult.point : null;
     return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };

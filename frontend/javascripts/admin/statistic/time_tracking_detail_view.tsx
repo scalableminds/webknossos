@@ -3,7 +3,7 @@ import { Col, Divider, Row } from "antd";
 import dayjs from "dayjs";
 import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
-import _ from "lodash";
+import groupBy from "lodash/groupBy";
 import type { APITimeTrackingPerAnnotation } from "types/api_types";
 import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
 import { AnnotationStats } from "viewer/view/right-border-tabs/dataset_info_tab_view";
@@ -26,7 +26,7 @@ const renderRow = (
   userDataPerAnnotation: APITimeTrackingPerAnnotation[],
 ): [Array<JSX.Element>, Array<JSX.Element>] => {
   if (userDataPerAnnotation == null) return [[], []];
-  const groupedByProject = _.groupBy(userDataPerAnnotation, "projectName");
+  const groupedByProject = groupBy(userDataPerAnnotation, "projectName");
   let taskRows: Array<JSX.Element> = [];
   let annotationRows: Array<JSX.Element> = [];
   for (const [project, loggedTimes] of Object.entries(groupedByProject)) {

@@ -1,7 +1,7 @@
 import Drawing from "libs/drawing";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import _ from "lodash";
+import clone from "lodash/clone";
 import messages from "messages";
 import { Matrix4, Vector3 as Vector3Three } from "three";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
@@ -213,8 +213,8 @@ class SectionLabeler {
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
-      maxCoord = _.clone(pos);
-      minCoord = _.clone(pos);
+      maxCoord = clone(pos);
+      minCoord = clone(pos);
     }
 
     for (const i of Vector3Indices) {

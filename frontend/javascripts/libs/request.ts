@@ -1,5 +1,9 @@
 import handleStatus from "libs/handle_http_status";
-import _ from "lodash";
+import defaultsDeep from "lodash/defaultsDeep";
+import isArrayBuffer from "lodash/isArrayBuffer";
+import isObject from "lodash/isObject";
+import isString from "lodash/isString";
+import map from "lodash/map";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
 import { createWorker } from "viewer/workers/comlink_wrapper";
@@ -36,7 +40,7 @@ class Request {
   receiveJSON = (url: string, options: RequestOptions = {}): Promise<any> =>
     this.triggerRequest(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         headers: {
           Accept: "application/json",
         },
@@ -59,7 +63,7 @@ class Request {
     }
 
     let body =
-      _.isString(options.data) || _.isArrayBuffer(options.data)
+      isString(options.data) || isArrayBuffer(options.data)
         ? options.data
         : JSON.stringify(options.data);
 
@@ -75,7 +79,7 @@ class Request {
       }
     }
 
-    return _.defaultsDeep(options, {
+    return defaultsDeep(options, {
       method: "POST",
       body,
       headers: {
@@ -140,7 +144,7 @@ class Request {
     const body = options.data instanceof FormData ? options.data : toFormData(options.data);
     return this.receiveJSON(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         method: "POST",
         body,
       }),
@@ -155,7 +159,7 @@ class Request {
   ): Promise<any> =>
     this.receiveJSON(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         method: "POST",
         body: options.data,
         headers: {
@@ -167,7 +171,7 @@ class Request {
   receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<any> =>
     this.triggerRequest(
       url,
-      _.defaultsDeep(options, {
+      defaultsDeep(options, {
         headers: {
           Accept: "application/octet-stream",
           "Access-Control-Request-Headers": "content-type, missing-buckets",
@@ -210,7 +214,7 @@ class Request {
       showErrorToast: true,
       params: null,
     };
-    options = _.defaultsDeep(options, defaultOptions);
+    options = defaultsDeep(options, defaultOptions);
 
     if (options.host) {
       url = urljoin(options.host, url);
@@ -221,10 +225,10 @@ class Request {
       let appendix;
       const { params } = options;
 
-      if (_.isString(params)) {
+      if (isString(params)) {
         appendix = params;
-      } else if (_.isObject(params)) {
-        appendix = _.map(params, (value: string, key: string) => `${key}=${value}`).join("&");
+      } else if (isObject(params)) {
+        appendix = map(params, (value: string, key: string) => `${key}=${value}`).join("&");
       } else {
         throw new Error("options.params is expected to be a string or object for a request!");
       }

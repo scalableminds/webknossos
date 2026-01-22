@@ -41,7 +41,8 @@ import {
   hasUrlParam,
   localeCompareBy,
 } from "libs/utils";
-import _ from "lodash";
+import isEmpty from "lodash/isEmpty";
+import partial from "lodash/partial";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -90,7 +91,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }, [searchQuery]);
 
   async function fetchData(queryObject: QueryObject) {
-    if (!_.isEmpty(queryObject)) {
+    if (!isEmpty(queryObject)) {
       setIsLoading(true);
 
       try {
@@ -388,7 +389,7 @@ function TaskListView({ initialFieldValues }: Props) {
           </div>
           {task.status.pending > 0 ? (
             <div>
-              <LinkButton onClick={_.partial(assignTaskToUser, task)} icon={<UserAddOutlined />}>
+              <LinkButton onClick={partial(assignTaskToUser, task)} icon={<UserAddOutlined />}>
                 Manually Assign to User
               </LinkButton>
             </div>
@@ -408,7 +409,7 @@ function TaskListView({ initialFieldValues }: Props) {
             </div>
           ) : null}
           <div>
-            <LinkButton onClick={_.partial(deleteTask, task)} icon={<DeleteOutlined />}>
+            <LinkButton onClick={partial(deleteTask, task)} icon={<DeleteOutlined />}>
               Delete
             </LinkButton>
           </div>

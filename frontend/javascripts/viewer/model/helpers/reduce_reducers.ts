@@ -1,10 +1,10 @@
 import deepFreezeLib from "deep-freeze";
-import _ from "lodash";
+import identity from "lodash/identity";
 
 // Do not use the deep-freeze library in production
 // import.meta.env.MODE is set by vite
 let deepFreeze = deepFreezeLib;
-if (import.meta.env.MODE === "production") deepFreeze = _.identity;
+if (process.env.NODE_ENV === "production") deepFreeze = identity;
 
 export default function reduceReducers(
   ...reducers: Array<(...args: Array<any>) => any>

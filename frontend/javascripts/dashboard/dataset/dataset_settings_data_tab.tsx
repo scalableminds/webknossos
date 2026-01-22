@@ -22,7 +22,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
-import { cloneElement, useEffect } from "react";
+import { cloneElement, useEffect, useState } from "react";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { syncValidator } from "types/validation";
@@ -79,6 +79,73 @@ function SimpleDatasetForm({
   };
   const marginBottom: React.CSSProperties = {
     marginBottom: 24,
+  };
+
+  enum TransformationsMode {
+    NONE = "none",
+    SIMPLE = "simple",
+    ADVANCED = "advanced",
+  }
+
+  const transformationItems = [
+    { value: TransformationsMode.NONE, label: "None" },
+    { value: TransformationsMode.SIMPLE, label: "Simple" },
+    { value: TransformationsMode.ADVANCED, label: "Advanced" },
+  ];
+
+  const doesDatasetHaveAdvancedTransformations = dataset?.dataSource.dataLayers.some(
+    (layer) => (layer.coordinateTransformations?.length ?? 0) > 0,
+  );
+  const initialTransformationsMode = doesDatasetHaveAdvancedTransformations
+    ? TransformationsMode.ADVANCED
+    : TransformationsMode.SIMPLE;
+  const [transformationsMode, setTransformationsMode] = useState<TransformationsMode>(
+    initialTransformationsMode,
+  );
+
+  const getTransformationSettings = () => {
+    switch (transformationsMode) {
+      case TransformationsMode.NONE:
+        return null;
+      case TransformationsMode.SIMPLE:
+        return (
+          <SettingsCard
+            title="Axis Rotation"
+            style={marginBottom}
+            content={
+              <Row gutter={[24, 24]}>
+                <Col span={24}>
+                  <AxisRotationSettingForDataset form={form} />
+                </Col>
+              </Row>
+            }
+          />
+        );
+      case TransformationsMode.ADVANCED:
+        return (
+          <SettingsCard
+            title="Advanced Transformations"
+            content={
+              <Input.TextArea
+                defaultValue={JSON.stringify(
+                  dataset?.dataSource.dataLayers.map((layer) => {
+                    return {
+                      name: layer.name,
+                      coordinateTransformations: layer.coordinateTransformations ?? [] ?? [],
+                    };
+                  }),
+                  null,
+                  2,
+                )}
+                autoSize={{ minRows: 10, maxRows: 20 }}
+                style={marginBottom}
+              />
+            }
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -187,21 +254,23 @@ function SimpleDatasetForm({
                 />
               </FormItemWithInfo>
             </Col>
+            <FormItemWithInfo
+              name={["dataSource", "transformations"]}
+              label="Transformation Mode"
+              info="The transformations for the dataset."
+            >
+              <Select
+                options={transformationItems}
+                value={transformationsMode}
+                onChange={setTransformationsMode}
+                defaultValue={initialTransformationsMode}
+              />
+            </FormItemWithInfo>
           </Row>
         }
       />
 
-      <SettingsCard
-        title="Axis Rotation"
-        style={marginBottom}
-        content={
-          <Row gutter={[24, 24]}>
-            <Col span={24}>
-              <AxisRotationSettingForDataset form={form} />
-            </Col>
-          </Row>
-        }
-      />
+      {getTransformationSettings()}
 
       {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
         // the layer name may change in this view, the order does not, so idx is the right key choice here

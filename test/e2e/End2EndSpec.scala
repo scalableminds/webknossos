@@ -18,7 +18,7 @@ import scala.sys.process._
 class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
 
   private val argumentMapRead = parseCustomJavaArgs(arguments)
-  private val testPort = 9000
+  private val testPort = 9001
   private val argumentMap = argumentMapRead +
     ("http.port" -> testPort)
 

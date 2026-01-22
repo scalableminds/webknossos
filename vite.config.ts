@@ -57,7 +57,7 @@ export const viteConfig = {
     cors: true,
     proxy: {
       // You can add more routes here, e.g. "^/(api|binary|auth)"
-      "^/(api|data|tracings)": {
+      "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,
       },

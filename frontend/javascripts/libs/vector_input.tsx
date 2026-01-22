@@ -1,268 +1,321 @@
-import type { InputProps, InputRef } from "antd";
-import _ from "lodash";
+import { type InputProps, Space } from "antd";
 import type React from "react";
-import { PureComponent, forwardRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import InputComponent from "viewer/view/components/input_component";
 import { stringToNumberArray } from "./utils";
+import noop from "lodash/noop";
 
 const CHARACTER_WIDTH_PX = 8;
 
-type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
-  value: T | string;
-  onChange: (value: T) => void;
+type VectorInputProps<T> = Omit<InputProps, "value" | "onChange" | "defaultValue"> & {
+  value?: T | string;
+  onChange?: (value: T) => void;
   changeOnlyOnBlur?: boolean;
   allowDecimals?: boolean;
   autoSize?: boolean;
-  // Only used in ArbitraryVectorInput case
-  vectorLength?: number;
-  inputRef?: React.Ref<InputRef>;
+  placeHolder?: string;
 };
-type State = {
-  isEditing: boolean;
-  isValid: boolean;
-  text: string;
-}; // Accepts both a string or a VectorX as input and always outputs a valid VectorX
 
-abstract class BaseVector<T extends number[]> extends PureComponent<BaseProps<T>, State> {
-  abstract get defaultValue(): T;
-  static defaultProps = {
-    value: "",
-    onChange: () => {},
-  };
+function vectorToText<T extends number[]>(value: T | string): string {
+  return Array.isArray(value) ? value.join(", ") : value;
+}
 
-  constructor(props: BaseProps<T>) {
-    super(props);
-    this.state = {
-      isEditing: false,
-      isValid: true,
-      text: this.getText(props.value),
-    };
-  }
+function useVectorInput<T extends number[]>(
+  defaultValue: T,
+  value?: T | string,
+  onChange: (value: T) => void = noop,
+  changeOnlyOnBlur = false,
+  allowDecimals = false,
+) {
+  if (value === undefined) value = defaultValue;
 
-  componentDidUpdate(prevProps: BaseProps<T>) {
-    if (!this.state.isEditing && prevProps.value !== this.props.value) {
-      this.setState({
-        isValid: true,
-        text: this.getText(this.props.value),
-      });
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(() => vectorToText(value));
+  const [isValid, setIsValid] = useState(true);
+
+  // Sync external value changes when not editing
+  useEffect(() => {
+    if (!isEditing) {
+      setText(vectorToText(value));
+      setIsValid(true);
     }
-  }
+  }, [value, isEditing]);
 
-  getText(value: T | string): string {
-    if (Array.isArray(value)) {
-      return value.join(", ");
-    }
+  const sanitizeAndPad = useCallback(
+    (inputText: string): T => {
+      const cleaned = inputText.replace(allowDecimals ? /[^0-9,.]/g : /[^0-9,]/g, "");
+      const parsed = cleaned
+        .split(",")
+        .map((el) => Number.parseFloat(el) || 0)
+        .slice(0, defaultValue.length);
 
-    return value;
-  }
+      // Pad with zeros if needed
+      while (parsed.length < defaultValue.length) {
+        parsed.push(0);
+      }
 
-  handleBlur = (_: React.FocusEvent<HTMLInputElement>) => {
-    this.setState({
-      isEditing: false,
-    });
+      return parsed as T;
+    },
+    [allowDecimals, defaultValue.length],
+  );
 
-    if (this.state.isValid) {
-      if (this.props.changeOnlyOnBlur) {
-        const vector = stringToNumberArray(this.state.text) as any as T;
-        this.props.onChange(vector);
+  const handleChange = useCallback(
+    (evt: React.ChangeEvent<HTMLInputElement>) => {
+      const newText = evt.target.value;
+
+      // Validate input characters
+      const validChars = allowDecimals ? /^[\d\s,.]*$/ : /^[\d\s,]*$/;
+      if (!validChars.test(newText)) {
+        return;
+      }
+
+      const parsed = stringToNumberArray(newText);
+      const formatValid = parsed.length === defaultValue.length;
+
+      setText(newText);
+      setIsValid(formatValid);
+
+      // Update immediately if valid and not in blur-only mode
+      if (formatValid && !changeOnlyOnBlur) {
+        onChange(parsed as T);
+      }
+    },
+    [allowDecimals, defaultValue.length, changeOnlyOnBlur, onChange],
+  );
+
+  const handleFocus = useCallback(() => {
+    setIsEditing(true);
+    setText(vectorToText(value));
+    setIsValid(true);
+  }, [value]);
+
+  const handleBlur = useCallback(() => {
+    setIsEditing(false);
+
+    if (isValid) {
+      // In blur-only mode, commit the change
+      if (changeOnlyOnBlur) {
+        onChange(stringToNumberArray(text) as T);
       } else {
-        this.setState({
-          isValid: true,
-          text: this.getText(this.props.value),
-        });
+        // Otherwise, reset to the current value
+        setText(vectorToText(value));
       }
     } else {
-      this.setState((prevState) => {
-        const fallbackValue = this.makeInvalidValueValid(prevState.text);
-        this.props.onChange(fallbackValue);
-        return {
-          isValid: true,
-          text: fallbackValue.join(", "),
-        };
-      });
+      // Invalid input: sanitize and commit
+      const sanitized = sanitizeAndPad(text);
+      onChange(sanitized);
+      setText(vectorToText(sanitized));
+      setIsValid(true);
     }
+  }, [isValid, changeOnlyOnBlur, text, value, sanitizeAndPad, onChange]);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+        return;
+      }
+
+      event.preventDefault();
+      const input = event.target as HTMLInputElement;
+      const vec = stringToNumberArray(input.value) as T;
+
+      // Find which vector element the cursor is in
+      const commasBeforeCursor =
+        input.value.slice(0, input.selectionStart || 0).split(",").length - 1;
+
+      vec[commasBeforeCursor] += event.key === "ArrowUp" ? 1 : -1;
+      onChange(vec);
+      setText(vectorToText(vec));
+    },
+    [onChange],
+  );
+
+  return {
+    text,
+    handleChange,
+    handleFocus,
+    handleBlur,
+    handleKeyDown,
   };
+}
 
-  makeInvalidValueValid(text: string): T {
-    const validSubVector = text
-      .replace(this.props.allowDecimals ? /[^0-9,.]/gm : /[^0-9,]/gm, "")
-      .split(",")
-      .map((el) => Number.parseFloat(el) || 0)
-      .slice(0, this.defaultValue.length);
-    const paddedVector = validSubVector.concat(this.defaultValue.slice(validSubVector.length));
-    const vector = paddedVector as any as T;
-    return vector;
-  }
+export function Vector3Input({
+  value,
+  onChange,
+  changeOnlyOnBlur,
+  allowDecimals,
+  autoSize,
+  style,
+  ...props
+}: VectorInputProps<Vector3>) {
+  const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
+    [0, 0, 0],
+    value,
+    onChange,
+    changeOnlyOnBlur,
+    allowDecimals,
+  );
 
-  handleFocus = (_event: React.FocusEvent<HTMLInputElement>) => {
-    this.setState({
-      isEditing: true,
-      text: this.getText(this.props.value),
-      isValid: true,
-    });
-  };
+  const inputStyle = useMemo(() => {
+    if (!autoSize) return style;
 
-  handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const text = evt.target.value;
-    // only numbers, commas and whitespace is allowed
-    const isValidInput = this.props.allowDecimals
-      ? /^[\d\s,.]*$/g.test(text)
-      : /^[\d\s,]*$/g.test(text);
-    const value = stringToNumberArray(text);
-    const isValidFormat = value.length === this.defaultValue.length;
+    return {
+      ...style,
+      width: text.length * CHARACTER_WIDTH_PX + 25,
+    };
+  }, [autoSize, style, text.length]);
 
-    if (isValidFormat && isValidInput && !this.props.changeOnlyOnBlur) {
-      const vector = value as any as T;
-      this.props.onChange(vector);
-    }
+  return (
+    <InputComponent
+      {...props}
+      value={text}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      style={inputStyle}
+    />
+  );
+}
 
-    this.setState({
-      text,
-      isValid: isValidFormat,
-    });
-  };
+export function Vector6Input({
+  value,
+  onChange,
+  changeOnlyOnBlur,
+  allowDecimals,
+  autoSize,
+  style,
+  ...props
+}: VectorInputProps<Vector6>) {
+  const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
+    [0, 0, 0, 0, 0, 0],
+    value,
+    onChange,
+    changeOnlyOnBlur,
+    allowDecimals,
+  );
 
-  handleOnKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    /* Increment/decrement current value when using arrow up/down */
-    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
-      return;
-    }
+  const inputStyle = useMemo(() => {
+    if (!autoSize) return style;
 
-    event.preventDefault();
-    const { selectionStart, value } = event.target as HTMLInputElement;
-    const vec = stringToNumberArray(value) as T;
+    return {
+      ...style,
+      width: text.length * CHARACTER_WIDTH_PX + 25,
+    };
+  }, [autoSize, style, text.length]);
 
-    // Count commas before the selection to obtain the index of the current element
-    const vectorIndex = Array.from((value as string).slice(0, selectionStart || 0)).filter(
-      (el: string) => el === ",",
-    ).length;
-    if (event.key === "ArrowUp") {
-      vec[vectorIndex] += 1;
-    } else {
-      vec[vectorIndex] -= 1;
-    }
-    this.props.onChange(vec);
-    const text = vec.join(", ");
-    this.setState({ text });
-  };
+  return (
+    <InputComponent
+      {...props}
+      value={text}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      style={inputStyle}
+    />
+  );
+}
 
-  render() {
-    const { inputRef } = this.props;
-    const {
-      style,
-      autoSize,
-      vectorLength: _vectorLength,
-      ...props
-    } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals", "inputRef"]);
+export function ArbitraryVectorInput({
+  value,
+  onChange,
+  changeOnlyOnBlur,
+  allowDecimals,
+  autoSize,
+  vectorLength = 3,
+  style,
+  vectorLabel,
+  ...props
+}: VectorInputProps<number[]> & { vectorLength?: number; vectorLabel?: string }) {
+  const defaultValue = useMemo(() => Array(vectorLength).fill(0), [vectorLength]);
 
-    const { addonBefore } = props;
-    const addonBeforeLength =
-      typeof addonBefore === "string" ? 20 + CHARACTER_WIDTH_PX * addonBefore.length : 0;
+  const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
+    defaultValue,
+    value,
+    onChange,
+    changeOnlyOnBlur,
+    allowDecimals,
+  );
 
+  const inputStyle = useMemo(() => {
+    if (!autoSize) return style;
+
+    const vectorLabelWidth =
+      typeof vectorLabel === "string" ? 20 + CHARACTER_WIDTH_PX * vectorLabel.length : 0;
+
+    return {
+      ...style,
+      width: text.length * CHARACTER_WIDTH_PX + 25 + vectorLabelWidth,
+    };
+  }, [autoSize, style, text.length, vectorLabel]);
+
+  if (vectorLabel) {
     return (
-      <InputComponent
-        ref={inputRef}
-        onChange={this.handleChange}
-        onFocus={this.handleFocus}
-        value={this.state.text}
-        onKeyDown={this.handleOnKeyDown}
-        style={
-          autoSize
-            ? {
-                ...style,
-                width:
-                  this.getText(this.state.text).length * CHARACTER_WIDTH_PX +
-                  25 +
-                  addonBeforeLength,
-              }
-            : style
-        }
-        {...props}
-        // onBlur needs to be placed below the ...props spread
-        // to ensure that it isn't overridden. User-specified onBlurs
-        // are not supported (see Props type), but might be passed
-        // nevertheless (e.g., when the VectorInput is a child of a
-        // Popover component). Until now, it hasn't raised any problems
-        // (the Popover example merely passed undefined as onBlur, anyway).
-        onBlur={this.handleBlur}
-      />
+      <Space.Compact>
+        <Space.Addon>{vectorLabel}</Space.Addon>
+        <InputComponent
+          {...props}
+          value={text}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          style={inputStyle}
+        />
+      </Space.Compact>
     );
   }
+
+  return (
+    <InputComponent
+      {...props}
+      value={text}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      style={inputStyle}
+    />
+  );
 }
 
-class Vector3InputBase extends BaseVector<Vector3> {
-  get defaultValue(): Vector3 {
-    return [0, 0, 0];
-  }
-}
-
-class Vector6InputBase extends BaseVector<Vector6> {
-  get defaultValue(): Vector6 {
-    return [0, 0, 0, 0, 0, 0];
-  }
-}
-
-class ArbitraryVectorInputBase extends BaseVector<number[]> {
-  get defaultValue(): number[] {
-    return Array(this.props.vectorLength).fill(0);
-  }
-}
-
-export const Vector3Input = forwardRef<InputRef, BaseProps<Vector3>>((props, ref) => (
-  <Vector3InputBase {...props} inputRef={ref} />
-));
-
-export const Vector6Input = forwardRef<InputRef, BaseProps<Vector6>>((props, ref) => (
-  <Vector6InputBase {...props} inputRef={ref} />
-));
-
-export const ArbitraryVectorInput = forwardRef<InputRef, BaseProps<number[]>>((props, ref) => (
-  <ArbitraryVectorInputBase {...props} inputRef={ref} />
-));
-
-type BoundingBoxInputProps = Omit<InputProps, "value"> & {
-  value: ServerBoundingBoxMinMaxTypeTuple;
-  onChange: (arg0: ServerBoundingBoxMinMaxTypeTuple) => void;
+type BoundingBoxInputProps = Omit<InputProps, "value" | "defaultValue"> & {
+  value?: ServerBoundingBoxMinMaxTypeTuple;
+  onChange?: (value: ServerBoundingBoxMinMaxTypeTuple) => void;
 };
 
-function boundingBoxToVector6(value: ServerBoundingBoxMinMaxTypeTuple): Vector6 {
-  const { topLeft, width, height, depth } = value;
-  const [x, y, z] = topLeft;
-  return [x, y, z, width, height, depth];
-}
-
 const emptyBoundingBox = {
-  topLeft: [0, 0, 0],
+  topLeft: [0, 0, 0] as [number, number, number],
   width: 0,
   height: 0,
   depth: 0,
 };
 
-export class BoundingBoxInput extends PureComponent<BoundingBoxInputProps> {
-  static defaultProps = {
-    value: emptyBoundingBox,
-    onChange: () => {},
-  };
+export function BoundingBoxInput({
+  value = emptyBoundingBox,
+  onChange = noop,
+  ...props
+}: BoundingBoxInputProps) {
+  const vector6Value = useMemo(() => {
+    const { topLeft, width, height, depth } = value;
+    const [x, y, z] = topLeft;
+    return [x, y, z, width, height, depth] as Vector6;
+  }, [value]);
 
-  render() {
-    const { value, onChange, ...props } = this.props;
-    const vector6Value = boundingBoxToVector6(value || emptyBoundingBox);
-    return (
-      <Vector6Input
-        {...props}
-        value={vector6Value}
-        changeOnlyOnBlur
-        onChange={([x, y, z, width, height, depth]) =>
-          onChange({
-            topLeft: [x, y, z],
-            width,
-            height,
-            depth,
-          })
-        }
-      />
-    );
-  }
+  const handleChange = useCallback(
+    ([x, y, z, width, height, depth]: Vector6) => {
+      onChange({
+        topLeft: [x, y, z],
+        width,
+        height,
+        depth,
+      });
+    },
+    [onChange],
+  );
+
+  return <Vector6Input {...props} value={vector6Value} changeOnlyOnBlur onChange={handleChange} />;
 }

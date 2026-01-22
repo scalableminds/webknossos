@@ -254,7 +254,7 @@ export function ArbitraryVectorInput({
 
   if (vectorLabel) {
     return (
-      <Space.Compact>
+      <Space.Compact style={inputStyle}>
         <Space.Addon>{vectorLabel}</Space.Addon>
         <InputComponent
           {...props}
@@ -263,7 +263,6 @@ export function ArbitraryVectorInput({
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          style={inputStyle}
         />
       </Space.Compact>
     );

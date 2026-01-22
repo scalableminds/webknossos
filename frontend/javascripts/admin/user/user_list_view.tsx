@@ -43,12 +43,12 @@ import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash/keyBy";
 import React, { type Key, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { Store } from "viewer/singletons";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -68,6 +68,7 @@ const persistence = new Persistence<{
 
 function UserListView() {
   const { modal } = App.useApp();
+  const dispatch = useDispatch();
 
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const activeOrganization = useWkSelector((state) =>
@@ -339,7 +340,7 @@ function UserListView() {
                     users.map((user) => (editedUser.id === user.id ? editedUser : user)),
                   );
                   if (activeUser.id === editedUser.id) {
-                    Store.dispatch(setActiveUserAction(editedUser));
+                    dispatch(setActiveUserAction(editedUser));
                   }
                 }}
               />

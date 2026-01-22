@@ -1251,7 +1251,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of the given tree and returns the length in nanometer and in voxels.
+   * Measures the length of the given tree and returns the length in dataset unit and in voxels.
    */
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
@@ -1279,7 +1279,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of all trees and returns the length in nanometer and in voxels.
+   * Measures the length of all trees and returns the length in dataset unit and in voxels.
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);

@@ -26,6 +26,7 @@ import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
+import models.dataset.DatasetCreationType.DatasetCreationType
 import models.job.JobDAO
 import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
@@ -110,7 +111,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                             dataSource: DataSource,
                             folderId: Option[ObjectId],
                             user: User,
-                            isVirtual: Boolean): Fox[Dataset] =
+                            isVirtual: Boolean,
+                            creationType: DatasetCreationType): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
@@ -118,11 +120,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
       directoryName = generateDirectoryName(datasetName, newDatasetId)
-      dataset <- createDataset(dataStore,
-                               newDatasetId,
-                               datasetName,
-                               dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
-                               isVirtual = isVirtual)
+      dataset <- createDataset(
+        dataStore,
+        newDatasetId,
+        datasetName,
+        dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
+        isVirtual = isVirtual,
+        creationType = creationType
+      )
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
@@ -135,7 +140,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource: DataSource,
       isVirtual: Boolean = false,
       metadata: JsArray = JsArray.empty,
-      description: Option[String] = None
+      description: Option[String] = None,
+      creationType: DatasetCreationType.Value
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -163,7 +169,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
-        metadata = metadata
+        metadata = metadata,
+        creationType = Some(creationType),
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
@@ -215,7 +222,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
           updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
         case _ =>
-          createDataset(dataStore, ObjectId.generate, dataSource.id.directoryName, dataSource).map(ds => Some(ds._id))
+          createDataset(dataStore,
+                        ObjectId.generate,
+                        dataSource.id.directoryName,
+                        dataSource,
+                        creationType = DatasetCreationType.DiskScan).map(ds => Some(ds._id))
       }
     }
   }

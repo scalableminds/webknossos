@@ -1,11 +1,11 @@
-import { type InputProps, Space } from "antd";
+import { type InputProps, type InputRef, Space } from "antd";
+import noop from "lodash/noop";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import InputComponent from "viewer/view/components/input_component";
 import { stringToNumberArray } from "./utils";
-import noop from "lodash/noop";
 
 const CHARACTER_WIDTH_PX = 8;
 
@@ -141,145 +141,145 @@ function useVectorInput<T extends number[]>(
   };
 }
 
-export function Vector3Input({
-  value,
-  onChange,
-  changeOnlyOnBlur,
-  allowDecimals,
-  autoSize,
-  style,
-  ...props
-}: VectorInputProps<Vector3>) {
-  const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
-    [0, 0, 0],
-    value,
-    onChange,
-    changeOnlyOnBlur,
-    allowDecimals,
-  );
-
-  const inputStyle = useMemo(() => {
-    if (!autoSize) return style;
-
-    return {
-      ...style,
-      width: text.length * CHARACTER_WIDTH_PX + 25,
-    };
-  }, [autoSize, style, text.length]);
-
-  return (
-    <InputComponent
-      {...props}
-      value={text}
-      onChange={handleChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      style={inputStyle}
-    />
-  );
-}
-
-export function Vector6Input({
-  value,
-  onChange,
-  changeOnlyOnBlur,
-  allowDecimals,
-  autoSize,
-  style,
-  ...props
-}: VectorInputProps<Vector6>) {
-  const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
-    [0, 0, 0, 0, 0, 0],
-    value,
-    onChange,
-    changeOnlyOnBlur,
-    allowDecimals,
-  );
-
-  const inputStyle = useMemo(() => {
-    if (!autoSize) return style;
-
-    return {
-      ...style,
-      width: text.length * CHARACTER_WIDTH_PX + 25,
-    };
-  }, [autoSize, style, text.length]);
-
-  return (
-    <InputComponent
-      {...props}
-      value={text}
-      onChange={handleChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      style={inputStyle}
-    />
-  );
-}
-
-export function ArbitraryVectorInput({
-  value,
-  onChange,
-  changeOnlyOnBlur,
-  allowDecimals,
-  autoSize,
-  vectorLength = 3,
-  style,
-  vectorLabel,
-  ...props
-}: VectorInputProps<number[]> & { vectorLength?: number; vectorLabel?: string }) {
-  const defaultValue = useMemo(() => Array(vectorLength).fill(0), [vectorLength]);
-
-  const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
-    defaultValue,
-    value,
-    onChange,
-    changeOnlyOnBlur,
-    allowDecimals,
-  );
-
-  const inputStyle = useMemo(() => {
-    if (!autoSize) return style;
-
-    const vectorLabelWidth =
-      typeof vectorLabel === "string" ? 20 + CHARACTER_WIDTH_PX * vectorLabel.length : 0;
-
-    return {
-      ...style,
-      width: text.length * CHARACTER_WIDTH_PX + 25 + vectorLabelWidth,
-    };
-  }, [autoSize, style, text.length, vectorLabel]);
-
-  if (vectorLabel) {
-    return (
-      <Space.Compact style={inputStyle}>
-        <Space.Addon>{vectorLabel}</Space.Addon>
-        <InputComponent
-          {...props}
-          value={text}
-          onChange={handleChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-        />
-      </Space.Compact>
+export const Vector3Input = forwardRef<InputRef, VectorInputProps<Vector3>>(
+  ({ value, onChange, changeOnlyOnBlur, allowDecimals, autoSize, style, ...props }, ref) => {
+    const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
+      [0, 0, 0],
+      value,
+      onChange,
+      changeOnlyOnBlur,
+      allowDecimals,
     );
-  }
 
-  return (
-    <InputComponent
-      {...props}
-      value={text}
-      onChange={handleChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      style={inputStyle}
-    />
-  );
-}
+    const inputStyle = useMemo(() => {
+      if (!autoSize) return style;
+
+      return {
+        ...style,
+        width: text.length * CHARACTER_WIDTH_PX + 25,
+      };
+    }, [autoSize, style, text.length]);
+
+    return (
+      <InputComponent
+        {...props}
+        ref={ref}
+        value={text}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        style={inputStyle}
+      />
+    );
+  },
+);
+
+export const Vector6Input = forwardRef<InputRef, VectorInputProps<Vector6>>(
+  ({ value, onChange, changeOnlyOnBlur, allowDecimals, autoSize, style, ...props }, ref) => {
+    const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
+      [0, 0, 0, 0, 0, 0],
+      value,
+      onChange,
+      changeOnlyOnBlur,
+      allowDecimals,
+    );
+
+    const inputStyle = useMemo(() => {
+      if (!autoSize) return style;
+
+      return {
+        ...style,
+        width: text.length * CHARACTER_WIDTH_PX + 25,
+      };
+    }, [autoSize, style, text.length]);
+
+    return (
+      <InputComponent
+        {...props}
+        ref={ref}
+        value={text}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        style={inputStyle}
+      />
+    );
+  },
+);
+
+export const ArbitraryVectorInput = forwardRef<
+  InputRef,
+  VectorInputProps<number[]> & { vectorLength?: number; vectorLabel?: string }
+>(
+  (
+    {
+      value,
+      onChange,
+      changeOnlyOnBlur,
+      allowDecimals,
+      autoSize,
+      vectorLength = 3,
+      style,
+      vectorLabel,
+      ...props
+    },
+    ref,
+  ) => {
+    const defaultValue = useMemo(() => Array(vectorLength).fill(0), [vectorLength]);
+
+    const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
+      defaultValue,
+      value,
+      onChange,
+      changeOnlyOnBlur,
+      allowDecimals,
+    );
+
+    const inputStyle = useMemo(() => {
+      if (!autoSize) return style;
+
+      const vectorLabelWidth =
+        typeof vectorLabel === "string" ? 20 + CHARACTER_WIDTH_PX * vectorLabel.length : 0;
+
+      return {
+        ...style,
+        width: text.length * CHARACTER_WIDTH_PX + 25 + vectorLabelWidth,
+      };
+    }, [autoSize, style, text.length, vectorLabel]);
+
+    if (vectorLabel) {
+      return (
+        <Space.Compact style={inputStyle}>
+          <Space.Addon>{vectorLabel}</Space.Addon>
+          <InputComponent
+            {...props}
+            ref={ref}
+            value={text}
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+          />
+        </Space.Compact>
+      );
+    }
+
+    return (
+      <InputComponent
+        {...props}
+        ref={ref}
+        value={text}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        style={inputStyle}
+      />
+    );
+  },
+);
 
 type BoundingBoxInputProps = Omit<InputProps, "value" | "defaultValue"> & {
   value?: ServerBoundingBoxMinMaxTypeTuple;
@@ -293,28 +293,34 @@ const emptyBoundingBox = {
   depth: 0,
 };
 
-export function BoundingBoxInput({
-  value = emptyBoundingBox,
-  onChange = noop,
-  ...props
-}: BoundingBoxInputProps) {
-  const vector6Value = useMemo(() => {
-    const { topLeft, width, height, depth } = value;
-    const [x, y, z] = topLeft;
-    return [x, y, z, width, height, depth] as Vector6;
-  }, [value]);
+export const BoundingBoxInput = forwardRef<InputRef, BoundingBoxInputProps>(
+  ({ value = emptyBoundingBox, onChange = noop, ...props }, ref) => {
+    const vector6Value = useMemo(() => {
+      const { topLeft, width, height, depth } = value;
+      const [x, y, z] = topLeft;
+      return [x, y, z, width, height, depth] as Vector6;
+    }, [value]);
 
-  const handleChange = useCallback(
-    ([x, y, z, width, height, depth]: Vector6) => {
-      onChange({
-        topLeft: [x, y, z],
-        width,
-        height,
-        depth,
-      });
-    },
-    [onChange],
-  );
+    const handleChange = useCallback(
+      ([x, y, z, width, height, depth]: Vector6) => {
+        onChange({
+          topLeft: [x, y, z],
+          width,
+          height,
+          depth,
+        });
+      },
+      [onChange],
+    );
 
-  return <Vector6Input {...props} value={vector6Value} changeOnlyOnBlur onChange={handleChange} />;
-}
+    return (
+      <Vector6Input
+        {...props}
+        ref={ref}
+        value={vector6Value}
+        changeOnlyOnBlur
+        onChange={handleChange}
+      />
+    );
+  },
+);

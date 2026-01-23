@@ -1452,3 +1452,15 @@ export function stringToBoolean(value: string): boolean {
 export function isWindows(): boolean {
   return navigator.platform.includes("Win");
 }
+
+export function replaceOrAdd<T>(
+  volumes: T[],
+  newVolumeTracing: T,
+  predicate: (tracing: T) => boolean,
+): T[] {
+  const index = volumes.findIndex(predicate);
+  if (index === -1) {
+    return volumes.concat([newVolumeTracing]);
+  }
+  return volumes.slice().splice(index, 1, newVolumeTracing);
+}

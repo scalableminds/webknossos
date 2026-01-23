@@ -1,6 +1,12 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
-import { colorObjectToRGBArray, floor3, mapEntriesToMap, point3ToVector3 } from "libs/utils";
+import {
+  colorObjectToRGBArray,
+  floor3,
+  mapEntriesToMap,
+  point3ToVector3,
+  replaceOrAdd,
+} from "libs/utils";
 import groupBy from "lodash/groupBy";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
@@ -257,11 +263,11 @@ function VolumeTracingReducer(
         state.activeUser,
         state.annotation.owner,
       );
-      const newVolumes = state.annotation.volumes.filter(
-        (tracing) => tracing.tracingId !== volumeTracing.tracingId,
-      );
-      newVolumes.push(volumeTracing);
-      const newState = update(state, {
+      const tracingPredicate = (tracing: VolumeTracing) =>
+        tracing.tracingId === volumeTracing.tracingId;
+      const newVolumes = replaceOrAdd(state.annotation.volumes, volumeTracing, tracingPredicate);
+
+      let newState = update(state, {
         annotation: {
           volumes: {
             $set: newVolumes,
@@ -280,22 +286,34 @@ function VolumeTracingReducer(
         const newSegmentId = volumeTracing.largestSegmentId + 1;
         if (newSegmentId > getMaximumSegmentIdForLayer(newState.dataset, segmentationLayer.name)) {
           // If the new segment ID would overflow the maximum segment ID, simply set the active cell to largestSegmentId.
-          return setActiveCellReducer(
+          newState = setActiveCellReducer(
             newState,
             volumeTracing,
             volumeTracing.largestSegmentId,
             null,
           );
         } else {
-          return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
+          newState = createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
         }
+      }
+
+      // Extract volumeTracing again because it can have changed by the code from above.
+      const newVolumeTracing = newState.annotation.volumes.find(tracingPredicate);
+      if (newVolumeTracing == null) {
+        // Satisfy TS
+        throw new Error("Could not find volume tracing that was just created.");
       }
 
       return update(newState, {
         save: {
           rebaseRelevantServerAnnotationState: {
-            // todop: strictly speaking, we should only add the new volume entry
-            volumes: { $set: newState.annotation.volumes },
+            volumes: {
+              $set: replaceOrAdd(
+                newState.save.rebaseRelevantServerAnnotationState.volumes,
+                newVolumeTracing,
+                tracingPredicate,
+              ),
+            },
           },
         },
       });

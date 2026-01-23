@@ -1,13 +1,16 @@
 import mean from "lodash/mean";
 import type { Matrix4x4 } from "mjs";
-import { Matrix, solve } from "ml-matrix";
+
 import type { Vector3 } from "viewer/constants";
+
+import { getMlMatrix } from "./ml_matrix_loader";
 
 export default function estimateAffine(
   sourcePoints: Vector3[],
   targetPoints: Vector3[],
   optInfoOut?: { meanError: number },
 ) {
+  const { Matrix, solve } = getMlMatrix();
   /* Estimates an affine matrix that transforms from source points to target points. */
   // Number of correspondences
   const N = sourcePoints.length;
@@ -34,7 +37,7 @@ export default function estimateAffine(
   const xMatrix = solve(A, b);
   const x = xMatrix.to1DArray();
   const error = Matrix.sub(b, new Matrix(A).mmul(xMatrix)).to1DArray();
-  const meanError = mean(error.map((el) => Math.abs(el)));
+  const meanError = mean(error.map((el: number) => Math.abs(el)));
   if (optInfoOut) {
     optInfoOut.meanError = meanError;
   }

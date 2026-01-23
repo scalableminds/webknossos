@@ -1,10 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import TPS3D from "libs/thin_plate_spline";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 import { V3 } from "libs/mjs";
 import type { Vector3 } from "viewer/constants";
 
+import { ensureMlMatrixLoaded } from "libs/ml_matrix_loader";
+
 describe("Thin Plate Spline", () => {
+  beforeAll(async () => {
+    await ensureMlMatrixLoaded();
+  });
   it("Basic TPS calculation", async () => {
     const [sourcePoints, targetPoints] = getPointsC555();
 

@@ -1,5 +1,5 @@
 import range from "lodash/range";
-import { Matrix, solve } from "ml-matrix";
+import { getMlMatrix } from "./ml_matrix_loader";
 import type { Vector3 } from "viewer/constants";
 import { V3 } from "./mjs";
 
@@ -17,6 +17,7 @@ class TPS1d {
   cps: Vector3[] = []; // control point locations [(x1, y1), (x2, y2), ...]
 
   fit(offsetValues: number[], cps: Vector3[]) {
+    const { Matrix, solve } = getMlMatrix();
     this.cps = cps;
     const n = offsetValues.length;
     const v = Matrix.columnVector(offsetValues);

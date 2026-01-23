@@ -1,11 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import type { Vector3 } from "viewer/constants";
 import Matrix from "ml-matrix";
 import estimateAffine, { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 import { M4x4 } from "libs/mjs";
 
+import { ensureMlMatrixLoaded } from "libs/ml_matrix_loader";
+
 describe("Estimate Affine", () => {
+  beforeAll(async () => {
+    await ensureMlMatrixLoaded();
+  });
   it("Estimate affine projection", () => {
     const [sourcePoints, targetPoints] = getPointsC555();
     const affineMatrix = estimateAffine(sourcePoints, targetPoints);

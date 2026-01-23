@@ -5,9 +5,13 @@ import {
   OrthoViews,
   type Vector3,
 } from "viewer/constants";
+import type { Writeable } from "types/type_utils";
 import {
   getRequestedOrVisibleSegmentationLayer,
   getSegmentationLayerForTracing,
+  getSegmentName,
+  getSelectedIds,
+  getVisibleSegments,
   getVolumeTracingById,
   isVolumeAnnotationDisallowedForZoom,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -17,22 +21,40 @@ import type {
   EditableMapping,
   LabelAction,
   MappingType,
+  Segment,
   SegmentGroup,
   SegmentMap,
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import { isInSupportedValueRangeForLayer } from "../accessors/dataset_accessor";
-import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import {
+  getLayerByName,
+  getVisibleSegmentationLayer,
+  isInSupportedValueRangeForLayer,
+} from "../accessors/dataset_accessor";
+import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import type {
   FinishMappingInitializationAction,
   SetMappingAction,
   SetMappingEnabledAction,
   SetMappingNameAction,
 } from "../actions/settings_actions";
-import type { VolumeTracingAction } from "../actions/volumetracing_actions";
+import {
+  removeSegmentAction,
+  type ClickSegmentAction,
+  type MergeSegmentsAction,
+  type VolumeTracingAction,
+  UpdateSegmentAction,
+  RemoveSegmentAction,
+  SetSegmentsAction,
+  updateSegmentAction,
+} from "../actions/volumetracing_actions";
 import type { TreeGroup } from "../types/tree_types";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
+import { findParentIdForGroupId } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { sanitizeMetadata } from "./skeletontracing_reducer";
+import { floor3 } from "libs/utils";
+import groupBy from "lodash/groupBy";
 
 export type VolumeTracingReducerAction =
   | VolumeTracingAction
@@ -373,4 +395,182 @@ export function toggleSegmentGroupReducer(
   });
 
   return updateSegments(state, layerName, (_oldSegments) => newSegments);
+}
+
+export function handleSetSegments(state: WebknossosState, action: SetSegmentsAction) {
+  const { segments, layerName } = action;
+  return updateSegments(state, layerName, (_oldSegments) => segments);
+}
+
+export function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction) {
+  return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
+}
+
+export function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
+  return updateSegments(state, action.layerName, (segments) => {
+    const { segmentId, segment } = action;
+    if (segmentId === 0) {
+      return segments;
+    }
+    const oldSegment = segments.getNullable(segmentId);
+
+    const newSegment: Writeable<Segment> = {
+      id: segmentId,
+      // If oldSegment exists, its creationTime will be
+      // used by ...oldSegment
+      creationTime: action.timestamp,
+      name: null,
+      color: null,
+      isVisible: true,
+      groupId: getSelectedIds(state)[0].group,
+      metadata: [],
+      ...oldSegment,
+      ...segment,
+    };
+
+    if (newSegment.anchorPosition) {
+      newSegment.anchorPosition = floor3(newSegment.anchorPosition);
+    } else {
+      // UPDATE_SEGMENT was called for a non-existing segment without providing
+      // a position. This is necessary to define custom colors for segments
+      // which are listed in a JSON mapping. The action will store the segment
+      // without a position.
+    }
+    newSegment.metadata = sanitizeMetadata(newSegment.metadata);
+
+    const newSegmentMap = segments.set(segmentId, newSegment);
+    return newSegmentMap;
+  });
+}
+
+export function handleMergeSegments(state: WebknossosState, action: MergeSegmentsAction) {
+  const updateInfo = getSegmentUpdateInfo(state, action.layerName);
+  if (updateInfo.type !== "UPDATE_VOLUME_TRACING") {
+    return state;
+  }
+  const { volumeTracing } = updateInfo;
+  const { segments } = volumeTracing;
+  const sourceSegment = segments.getNullable(action.sourceId);
+  const targetSegment = segments.getNullable(action.targetId);
+
+  let newState = handleRemoveSegment(state, removeSegmentAction(action.targetId, action.layerName));
+  const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
+
+  newState = updateVolumeTracing(newState, volumeTracing.tracingId, {
+    segmentJournal: volumeTracing.segmentJournal.concat([
+      {
+        type: "MERGE_SEGMENTS",
+        sourceId: action.sourceId,
+        targetId: action.targetId,
+        entryIndex,
+      },
+    ]),
+  });
+
+  // Since the target segment is deleted (absorbed by the source segment),
+  // we should ensure that no information is lost.
+  // However, this is only necessary when the targetSegment is not null.
+  if (targetSegment != null) {
+    const props: Writeable<Partial<Segment>> = {};
+    // Handle `name` by concatening names
+    if (targetSegment.name != null) {
+      // The new segments name should always start with the original
+      // source segment's name. Therefore, we use getSegmentName
+      // so that we have a fallback even when no source segment existed.
+      // This is because of cases like this:
+      // Source segment: {id: 1, name: null}
+      // Target segment: {id: 2, name: "Segment 2 - Custom String"}
+      // Without the fallback logic, the new segment 1 would simply be
+      // "Segment 2 - Custom String" which would be confusing because of the
+      // id mismatch.
+      // The below logic produces this instead:
+      // {id: 1, name: "Segment 1 and Segment 2 - Custom String"}.
+      const sourceName = getSegmentName(
+        sourceSegment ?? { id: action.sourceId, name: undefined },
+        false,
+      );
+      props.name = `${sourceName} and ${targetSegment.name}`;
+    }
+
+    // Handle metadata by concatening the entries. If the resulting keys
+    // would not be unique, the keys are postfixed like this: key-originalSegmentId
+    if (targetSegment.metadata.length > 0) {
+      const sourceMetadata = sourceSegment?.metadata ?? [];
+      const mergedMetadataEntries = sourceMetadata.concat(targetSegment.metadata);
+      // Items of mergedMetadataEntries with index < pivotIndex,
+      // belong to the source segment. The other belong to the
+      // target segment.
+      const pivotIndex = sourceMetadata.length;
+      const keyToEntries = groupBy(mergedMetadataEntries, (entry) => entry.key);
+      const metadataEntriesWithUniqueKeys = mergedMetadataEntries.map((entry, index) => {
+        if (keyToEntries[entry.key].length > 1) {
+          const originalSegmentId = index < pivotIndex ? action.sourceId : action.targetId;
+          return {
+            ...entry,
+            key: `${entry.key}-${originalSegmentId}`,
+          };
+        } else {
+          return entry;
+        }
+      });
+      props.metadata = metadataEntriesWithUniqueKeys;
+    }
+
+    // Form some properties, the data in source segment should simply "win".
+    // However, if the source item didn't exist before, we use the data from targetSegment.
+    if (sourceSegment == null) {
+      if (targetSegment.anchorPosition != null) {
+        props.anchorPosition = targetSegment.anchorPosition;
+      }
+      if (targetSegment.additionalCoordinates != null) {
+        props.additionalCoordinates = targetSegment.additionalCoordinates;
+      }
+      if (targetSegment.groupId != null) {
+        props.groupId = targetSegment.groupId;
+      }
+    }
+
+    if (Object.keys(props).length > 0) {
+      newState = handleUpdateSegment(
+        newState,
+        updateSegmentAction(action.sourceId, props, action.layerName),
+      );
+    }
+  }
+
+  return newState;
+}
+
+export function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction) {
+  const maybeVolumeLayer =
+    action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
+
+  const layerName = maybeVolumeLayer?.name;
+  if (layerName == null) return state;
+
+  const getNewGroups = () => {
+    const { segments, segmentGroups } = getVisibleSegments(state);
+    if (segments == null) return segmentGroups;
+    const { segmentId } = action;
+    const segmentForId = segments.getNullable(segmentId);
+    if (segmentForId == null) return segmentGroups;
+    // Expand recursive parents of group too, if necessary
+    const pathToRoot = new Set([segmentForId.groupId]);
+    if (segmentForId.groupId != null) {
+      let currentParent = findParentIdForGroupId(segmentGroups, segmentForId.groupId);
+      while (currentParent != null) {
+        pathToRoot.add(currentParent);
+        currentParent = findParentIdForGroupId(segmentGroups, currentParent);
+      }
+    }
+    return mapGroups(segmentGroups, (group) => {
+      if (pathToRoot.has(group.groupId) && !group.isExpanded) {
+        return { ...group, isExpanded: true };
+      }
+      return group;
+    });
+  };
+  return setSegmentGroups(state, layerName, getNewGroups());
 }

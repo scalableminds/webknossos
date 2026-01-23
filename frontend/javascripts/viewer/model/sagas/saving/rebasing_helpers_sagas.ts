@@ -1,6 +1,7 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
-import _ from "lodash";
+import { flattenDeep } from "lodash/flattenDeep";
+import { omitBy } from "lodash/omitBy";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
@@ -173,7 +174,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
 
   ColoredLogger.logRed(
     "adapt actions during rebase",
-    _.flattenDeep(saveQueue.map((entry) => entry.actions)),
+    flattenDeep(saveQueue.map((entry) => entry.actions)),
   );
 
   let success = true;
@@ -258,7 +259,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               const newAction: UpdateSegmentPartialUpdateAction = {
                 name: "updateSegmentPartial",
                 value: {
-                  ..._.omitBy(action.value, (value) => value == null),
+                  ...omitBy(action.value, (value) => value == null),
                   actionTracingId: action.value.actionTracingId,
                   id: action.value.id,
                 },

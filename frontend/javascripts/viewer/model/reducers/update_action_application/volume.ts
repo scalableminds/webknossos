@@ -1,4 +1,4 @@
-import _ from "lodash";
+import {keyBy} from "lodash/keyBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -83,7 +83,7 @@ function applySingleAction(
       const { metadata } = segment;
 
       const removeKeySet = new Set(removeEntriesByKey);
-      const upsertDict = _.keyBy(upsertEntriesByKey, "key");
+      const upsertDict = keyBy(upsertEntriesByKey, "key");
 
       const metadataEntries = metadata.map(
         (item) => [item.key, item] as [string, MetadataEntryProto],

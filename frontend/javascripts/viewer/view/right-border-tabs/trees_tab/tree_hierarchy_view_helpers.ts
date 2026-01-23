@@ -301,7 +301,7 @@ export function createGroupHelper(
     parentGroupId = MISSING_GROUP_ID;
   }
 
-  const newSegmentGroups = _.cloneDeep(segmentGroups);
+  const newSegmentGroups = cloneDeep(segmentGroups);
   newGroupId = newGroupId ?? getMaximumGroupId(newSegmentGroups) + 1;
   const newGroup = {
     name: name || `Group ${newGroupId}`,

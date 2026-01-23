@@ -1,6 +1,5 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { diffArrays } from "libs/utils";
-import {isEqual} from "lodash";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
 import {

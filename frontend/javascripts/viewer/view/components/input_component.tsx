@@ -1,6 +1,6 @@
 import { Input, type InputProps, type InputRef } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import type React from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 

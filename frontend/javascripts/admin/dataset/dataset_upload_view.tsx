@@ -58,11 +58,11 @@ import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager }
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import countBy from "lodash/countBy";
-import difference from "lodash/difference";
-import throttle from "lodash/throttle";
-import uniqBy from "lodash/uniqBy";
-import without from "lodash/without";
+import countBy from "lodash-es/countBy";
+import difference from "lodash-es/difference";
+import throttle from "lodash-es/throttle";
+import uniqBy from "lodash-es/uniqBy";
+import without from "lodash-es/without";
 import messages from "messages";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { type BlockerFunction, Link } from "react-router-dom";

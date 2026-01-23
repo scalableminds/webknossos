@@ -13,7 +13,7 @@ import LinkButton from "components/link_button";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import uniq from "lodash/uniq";
+import uniq from "lodash-es/uniq";
 import { useState } from "react";
 import type { Key } from "react";
 import { formatUserName } from "viewer/model/accessors/user_accessor";

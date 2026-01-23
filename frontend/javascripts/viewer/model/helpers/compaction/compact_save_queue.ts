@@ -1,6 +1,6 @@
-import flow from "lodash/flow";
-import isEqual from "lodash/isEqual";
-import without from "lodash/without";
+import flow from "lodash-es/flow";
+import isEqual from "lodash-es/isEqual";
+import without from "lodash-es/without";
 import type {
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,

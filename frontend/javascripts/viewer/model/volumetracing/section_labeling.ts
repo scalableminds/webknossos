@@ -1,7 +1,7 @@
 import Drawing from "libs/drawing";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import clone from "lodash/clone";
+import clone from "lodash-es/clone";
 import messages from "messages";
 import { Matrix4, Vector3 as Vector3Three } from "three";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";

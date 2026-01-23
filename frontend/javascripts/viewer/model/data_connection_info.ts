@@ -1,7 +1,7 @@
 import window from "libs/window";
-import max from "lodash/max";
-import min from "lodash/min";
-import sum from "lodash/sum";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import sum from "lodash-es/sum";
 
 const CONSIDERED_TIMESPAN_IN_STATS = 5000;
 

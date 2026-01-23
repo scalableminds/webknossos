@@ -1,8 +1,8 @@
 import update from "immutability-helper";
 import Date from "libs/date";
-import chunk from "lodash/chunk";
-import isEqual from "lodash/isEqual";
-import sumBy from "lodash/sumBy";
+import chunk from "lodash-es/chunk";
+import isEqual from "lodash-es/isEqual";
+import sumBy from "lodash-es/sumBy";
 import { type TracingStats, getStats } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";

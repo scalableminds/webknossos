@@ -1,5 +1,5 @@
 import type { InputProps } from "antd";
-import omit from "lodash/omit";
+import omit from "lodash-es/omit";
 import type React from "react";
 import { PureComponent } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";

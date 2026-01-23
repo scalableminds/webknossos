@@ -9,7 +9,7 @@ import FastTooltip from "components/fast_tooltip";
 import ErrorHandling from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
-import throttle from "lodash/throttle";
+import throttle from "lodash-es/throttle";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 

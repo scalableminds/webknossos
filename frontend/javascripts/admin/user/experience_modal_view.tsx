@@ -6,10 +6,10 @@ import SelectExperienceDomain from "components/select_experience_domain";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { localeCompareBy } from "libs/utils";
-import fromPairs from "lodash/fromPairs";
-import max from "lodash/max";
-import min from "lodash/min";
-import union from "lodash/union";
+import fromPairs from "lodash-es/fromPairs";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import union from "lodash-es/union";
 import { useState } from "react";
 import type { APIUser, ExperienceDomainList } from "types/api_types";
 

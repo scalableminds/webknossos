@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import { parseCTimeDefaultDate, sleep } from "libs/utils";
-import first from "lodash/first";
+import first from "lodash-es/first";
 import type React from "react";
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { useDispatch } from "react-redux";

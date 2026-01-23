@@ -2,8 +2,8 @@ import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } 
 import Toast from "libs/toast";
 import { isNoElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
-import intersection from "lodash/intersection";
-import union from "lodash/union";
+import intersection from "lodash-es/intersection";
+import union from "lodash-es/union";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";

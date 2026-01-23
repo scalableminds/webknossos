@@ -11,7 +11,7 @@ import type {
 import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 import { areSetsEqual } from "libs/utils";
-import compact from "lodash/compact";
+import compact from "lodash-es/compact";
 
 export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";

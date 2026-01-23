@@ -1,7 +1,7 @@
 import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 import type * as React from "react";
 import { useRef } from "react";
 import type { Rect, Viewport, ViewportRects } from "viewer/constants";

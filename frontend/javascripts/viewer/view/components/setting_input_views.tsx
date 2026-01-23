@@ -23,7 +23,7 @@ import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import Toast from "libs/toast";
 import { hexToRgb, numberArrayToVector6, rgbToHex, roundTo, stringToNumberArray } from "libs/utils";
-import isNumber from "lodash/isNumber";
+import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type * as React from "react";
 import { useEffect, useState } from "react";

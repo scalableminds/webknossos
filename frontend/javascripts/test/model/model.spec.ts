@@ -1,4 +1,4 @@
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "lodash-es/cloneDeep";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ControlModeEnum } from "viewer/constants";
 import {

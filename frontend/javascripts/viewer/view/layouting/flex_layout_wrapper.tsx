@@ -6,7 +6,7 @@ import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "fle
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
 import type React from "react";
 import { Fragment, PureComponent } from "react";

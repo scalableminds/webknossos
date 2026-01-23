@@ -1,10 +1,10 @@
 import { map3, maxValue, minValue } from "libs/utils";
-import head from "lodash/head";
-import isEqual from "lodash/isEqual";
-import keyBy from "lodash/keyBy";
-import range from "lodash/range";
-import sortBy from "lodash/sortBy";
-import uniq from "lodash/uniq";
+import head from "lodash-es/head";
+import isEqual from "lodash-es/isEqual";
+import keyBy from "lodash-es/keyBy";
+import range from "lodash-es/range";
+import sortBy from "lodash-es/sortBy";
+import uniq from "lodash-es/uniq";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "viewer/constants";
 

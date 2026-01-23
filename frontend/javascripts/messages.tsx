@@ -1,4 +1,4 @@
-import template from "lodash/template";
+import template from "lodash-es/template";
 import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,

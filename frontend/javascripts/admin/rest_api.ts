@@ -11,8 +11,8 @@ import {
   retryAsyncFunction,
 } from "libs/utils";
 import window from "libs/window";
-import memoize from "lodash/memoize";
-import zip from "lodash/zip";
+import memoize from "lodash-es/memoize";
+import zip from "lodash-es/zip";
 import messages from "messages";
 import ResumableJS from "resumablejs";
 import {

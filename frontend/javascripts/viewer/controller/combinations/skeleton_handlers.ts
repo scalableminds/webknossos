@@ -1,7 +1,7 @@
 import { V3 } from "libs/mjs";
 import { values } from "libs/utils";
-import min from "lodash/min";
-import pick from "lodash/pick";
+import min from "lodash-es/min";
+import pick from "lodash-es/pick";
 import { Euler, Matrix4, Scene, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";

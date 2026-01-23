@@ -1,7 +1,7 @@
 import ThreeDMap from "libs/ThreeDMap";
 import { M4x4, V3 } from "libs/mjs";
-import range from "lodash/range";
-import uniqBy from "lodash/uniqBy";
+import range from "lodash-es/range";
+import uniqBy from "lodash-es/uniqBy";
 import type { Matrix4x4 } from "mjs";
 import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";

@@ -1,8 +1,8 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { Checkbox, Divider, Popover, Tooltip } from "antd";
-import mapValues from "lodash/mapValues";
-import pick from "lodash/pick";
-import pickBy from "lodash/pickBy";
+import mapValues from "lodash-es/mapValues";
+import pick from "lodash-es/pick";
+import pickBy from "lodash-es/pickBy";
 import React from "react";
 import ButtonComponent from "viewer/view/components/button_component";
 import type {

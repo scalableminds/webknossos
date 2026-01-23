@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import range from "lodash/range";
-import mean from "lodash/mean";
+import range from "lodash-es/range";
+import mean from "lodash-es/mean";
 
 import "test/mocks/updatable_texture.mock";
 import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";

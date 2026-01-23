@@ -3,7 +3,7 @@ import type { FormInstance } from "antd/lib/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { jsonStringify } from "libs/utils";
-import omit from "lodash/omit";
+import omit from "lodash-es/omit";
 import { type RecommendedConfiguration, settings } from "messages";
 import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";

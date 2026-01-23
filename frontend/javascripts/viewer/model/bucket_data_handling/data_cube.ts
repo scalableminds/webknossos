@@ -9,8 +9,8 @@ import {
   mod,
   union,
 } from "libs/utils";
-import keyBy from "lodash/keyBy";
-import once from "lodash/once";
+import keyBy from "lodash-es/keyBy";
+import once from "lodash-es/once";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";

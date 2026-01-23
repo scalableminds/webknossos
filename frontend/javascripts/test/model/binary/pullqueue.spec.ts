@@ -1,5 +1,5 @@
-import isEqual from "lodash/isEqual";
-import range from "lodash/range";
+import isEqual from "lodash-es/isEqual";
+import range from "lodash-es/range";
 import runAsync from "test/helpers/run-async";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import PullQueue from "viewer/model/bucket_data_handling/pullqueue";

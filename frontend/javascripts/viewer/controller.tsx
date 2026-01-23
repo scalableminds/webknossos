@@ -7,7 +7,7 @@ import { getUrlParamValue, hasUrlParam, isNoElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import extend from "lodash/extend";
+import extend from "lodash-es/extend";
 import messages from "messages";
 import { PureComponent } from "react";
 import { connect } from "react-redux";

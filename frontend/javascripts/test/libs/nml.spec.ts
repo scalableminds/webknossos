@@ -1,7 +1,7 @@
-import extend from "lodash/extend";
-import cloneDeep from "lodash/cloneDeep";
-import sortBy from "lodash/sortBy";
-import size from "lodash/size";
+import extend from "lodash-es/extend";
+import cloneDeep from "lodash-es/cloneDeep";
+import sortBy from "lodash-es/sortBy";
+import size from "lodash-es/size";
 import update from "immutability-helper";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import type { Node } from "viewer/model/types/tree_types";

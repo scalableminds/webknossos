@@ -18,11 +18,11 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { point3ToVector3 } from "libs/utils";
 import { location } from "libs/window";
-import cloneDeep from "lodash/cloneDeep";
-import extend from "lodash/extend";
-import first from "lodash/first";
-import isEqual from "lodash/isEqual";
-import merge from "lodash/merge";
+import cloneDeep from "lodash-es/cloneDeep";
+import extend from "lodash-es/extend";
+import first from "lodash-es/first";
+import isEqual from "lodash-es/isEqual";
+import merge from "lodash-es/merge";
 import messages from "messages";
 import type {
   APIAnnotation,

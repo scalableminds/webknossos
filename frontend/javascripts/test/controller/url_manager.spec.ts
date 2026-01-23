@@ -11,7 +11,7 @@ import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import DATASET from "../fixtures/dataset_server_object";
-import clone from "lodash/clone";
+import clone from "lodash-es/clone";
 import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 
 describe("UrlManager", () => {

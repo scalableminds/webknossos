@@ -6,13 +6,7 @@ import type { AdditionalCoordinate } from "types/api_types";
 import type { ContourMode, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
-import type {
-  NumberLike,
-  Segment,
-  SegmentGroup,
-  SegmentJournalEntry,
-  SegmentMap,
-} from "viewer/store";
+import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import type { ApplicableVolumeUpdateAction } from "../sagas/volume/update_actions";
 import type { Action } from "./actions";
@@ -74,7 +68,6 @@ export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSel
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
-export type AppendToSegmentJournalAction = ReturnType<typeof appendToSegmentJournalAction>;
 
 export type BatchableUpdateSegmentAction =
   | UpdateSegmentAction
@@ -128,7 +121,6 @@ export type VolumeTracingAction =
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
-  | AppendToSegmentJournalAction
   | SetVolumeBucketDataHasChangedAction
   | BatchUpdateGroupsAndSegmentsAction
   | ApplyVolumeUpdateActionsFromServerAction;
@@ -515,12 +507,6 @@ export const batchUpdateGroupsAndSegmentsAction = (actions: BatchableUpdateSegme
 export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) as const;
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
-
-export const appendToSegmentJournalAction = (entry: Omit<SegmentJournalEntry, "entryIndex">) =>
-  ({
-    type: "APPEND_TO_SEGMENT_JOURNAL",
-    entry,
-  }) as const;
 
 export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   ({

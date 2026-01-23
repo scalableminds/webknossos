@@ -430,9 +430,6 @@ function VolumeTracingReducer(
       }
 
       return newState;
-
-      // todop: adapt journal?
-      // can we always append to the segment journal?
     }
 
     case "REMOVE_SEGMENT": {
@@ -637,16 +634,6 @@ function VolumeTracingReducer(
     case "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER": {
       const { actions } = action;
       return applyVolumeUpdateActionsFromServer(actions, state, VolumeTracingReducer);
-    }
-
-    case "APPEND_TO_SEGMENT_JOURNAL": {
-      // todop: delete this because we directly do this in the mergeSegments handling?
-      return state;
-      // const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
-
-      // return updateVolumeTracing(state, volumeTracing.tracingId, {
-      //   segmentJournal: volumeTracing.segmentJournal.concat([{ ...action.entry, entryIndex }]),
-      // });
     }
 
     default:

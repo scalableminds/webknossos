@@ -1056,19 +1056,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   }
 
   if (action.type === "PROOFREAD_MERGE") {
-    // todop: theoretically, the journal stuff could/should (?) happen within the reducer
-    // that handles mergeSegmentsAction. what about applying such an action during rebasing?
-    // yield* put(
-    //   appendToSegmentJournalAction({
-    //     type: "MERGE_SEGMENTS",
-    //     sourceId: sourceAgglomerateId,
-    //     targetId: targetAgglomerateId,
-    //   }),
-    // );
-
     // Remove the segment that doesn't exist anymore.
-    ColoredLogger.logGreen("dispatch mergeSegmentsAction");
     yield* put(mergeSegmentsAction(sourceAgglomerateId, targetAgglomerateId, volumeTracingId));
+    ColoredLogger.logGreen("dispatch mergeSegmentsAction");
   }
 
   yield* put(pushSaveQueueTransaction(updateActions));

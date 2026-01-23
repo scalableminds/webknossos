@@ -75,7 +75,7 @@ function useVectorInput<T extends number[]>(
       // Check if we have the right number of elements
       const formatValid = parsed.length === defaultValue.length;
 
-      setIsValid(formatValid); // Keep this!
+      setIsValid(formatValid);
 
       if (formatValid && !changeOnlyOnBlur) {
         onChange(parsed as T);
@@ -137,7 +137,7 @@ function useVectorInput<T extends number[]>(
     return {
       ...style,
       width: `${width}px`,
-      minWidth: 86, // size of "0, 0, 0"
+      minWidth: 86, // width of string "0, 0, 0"
     };
   }, [disableAutoSize, text, style]);
 
@@ -362,7 +362,7 @@ export const BoundingBoxInput = forwardRef<InputRef, BoundingBoxInputProps>(
         value={vector6Value}
         changeOnlyOnBlur
         onChange={handleChange}
-        disableAutoSize={false}
+        disableAutoSize={true}
       />
     );
   },

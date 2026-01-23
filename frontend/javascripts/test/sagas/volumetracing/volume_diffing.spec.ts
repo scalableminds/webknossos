@@ -3,14 +3,19 @@ import { updateMetadataOfSegmentUpdateAction } from "viewer/model/sagas/volume/u
 import {
   diffMetadataOfSegments,
   diffSegmentGroups,
+  uncachedDiffSegmentLists,
 } from "viewer/model/sagas/volume/volume_diffing";
 import type { Segment } from "viewer/store";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import {
   MOVE_GROUP_EDGE_CASE,
   SEGMENT_GROUPS,
   SEGMENT_GROUPS_EDITED,
 } from "./segment_group_fixtures";
+import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
+import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
+import { createSegment1, createSegment2, id1, id2 } from "test/fixtures/segment_merging_fixtures";
+import { mergeSegmentsAction } from "viewer/model/actions/volumetracing_actions";
 
 const createSegment = (
   id: number,
@@ -152,4 +157,51 @@ describe("diffSegmentGroups for volume tracings", () => {
       },
     ]);
   });
+});
+
+describe("uncachedDiffSegmentLists should diff segment lists", () => {
+  describe.for([[], [id1, id2], [id1], [id2]])(
+    "mergeSegment actions should be detected during diffing",
+    (segmentItemsToCreateInSetup) => {
+      test(`with prepared segments: [${segmentItemsToCreateInSetup}]`, () => {
+        let newState = initialState;
+        if (segmentItemsToCreateInSetup.includes(id1)) {
+          newState = VolumeTracingReducer(initialState, createSegment1);
+        }
+        if (segmentItemsToCreateInSetup.includes(id1)) {
+          newState = VolumeTracingReducer(initialState, createSegment2);
+        }
+        const stateBeforeMerge = newState;
+        newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+        const stateAfterMerge = newState;
+
+        const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
+        const volumeTracing = stateAfterMerge.annotation.volumes[0];
+
+        const updateActions = Array.from(
+          uncachedDiffSegmentLists(
+            VOLUME_TRACING_ID,
+            prevVolumeTracing.segments,
+            volumeTracing.segments,
+            prevVolumeTracing.segmentJournal,
+            volumeTracing.segmentJournal,
+          ),
+        );
+
+        expect(updateActions).toEqual([
+          {
+            name: "mergeSegments",
+            value: {
+              actionTracingId: VOLUME_TRACING_ID,
+              sourceId: id1,
+              targetId: id2,
+            },
+          },
+        ]);
+      });
+    },
+  );
+
+  // todop: other updateSegment actions in the same diffing should not get lost
+  // todop: try to detect multiple merges?
 });

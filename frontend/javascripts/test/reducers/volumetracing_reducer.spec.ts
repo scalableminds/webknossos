@@ -9,15 +9,21 @@ import {
   registerLabelPointAction,
   resetContourAction,
   setActiveCellAction,
-  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import UiReducer from "viewer/model/reducers/ui_reducer";
 import { describe, it, expect } from "vitest";
 import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import type { WebknossosState, StoreAnnotation, VolumeTracing, Segment } from "viewer/store";
+import type { WebknossosState, StoreAnnotation, VolumeTracing } from "viewer/store";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
+import {
+  createSegment1,
+  createSegment2,
+  getSegment,
+  id1,
+  id2,
+} from "test/fixtures/segment_merging_fixtures";
 
 // biome-ignore lint/suspicious/noExportsInTest:
 export function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing {
@@ -293,37 +299,6 @@ describe("VolumeTracing", () => {
   });
 
   describe("should merge segments", () => {
-    const getSegment = (state: WebknossosState, id: number) =>
-      state.annotation.volumes[0].segments.getNullable(id);
-    const createAction = (id: number, properties: Partial<Segment>) =>
-      updateSegmentAction(
-        id,
-        {
-          anchorPosition: [id, id, id],
-          groupId: id,
-          ...properties,
-        },
-        VOLUME_TRACING_ID,
-        undefined,
-        true,
-      );
-
-    const [id1, id2] = [1, 2];
-    const createSegment1 = createAction(id1, {
-      name: "Name 1",
-      metadata: [
-        { key: "someKey1", stringValue: "someStringValue" },
-        { key: "someKey2", stringListValue: ["list", "value"] },
-      ],
-    });
-    const createSegment2 = createAction(id2, {
-      name: "Name 2",
-      metadata: [
-        { key: "someKey1", stringValue: "someStringValue" },
-        { key: "someKey3", stringListValue: ["list", "value"] },
-      ],
-    });
-
     it("should merge two segments (simple)", () => {
       let newState = VolumeTracingReducer(initialState, createSegment1);
       newState = VolumeTracingReducer(newState, createSegment2);

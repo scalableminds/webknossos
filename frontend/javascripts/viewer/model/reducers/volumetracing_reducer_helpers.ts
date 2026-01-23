@@ -1,15 +1,17 @@
 import update from "immutability-helper";
+import { floor3 } from "libs/utils";
+import groupBy from "lodash/groupBy";
+import type { Writeable } from "types/type_utils";
 import {
   type ContourMode,
   type OrthoViewWithoutTD,
   OrthoViews,
   type Vector3,
 } from "viewer/constants";
-import type { Writeable } from "types/type_utils";
 import {
   getRequestedOrVisibleSegmentationLayer,
-  getSegmentationLayerForTracing,
   getSegmentName,
+  getSegmentationLayerForTracing,
   getSelectedIds,
   getVisibleSegments,
   getVolumeTracingById,
@@ -27,6 +29,7 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
+import { findParentIdForGroupId } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import {
   getLayerByName,
   getVisibleSegmentationLayer,
@@ -40,21 +43,18 @@ import type {
   SetMappingNameAction,
 } from "../actions/settings_actions";
 import {
-  removeSegmentAction,
   type ClickSegmentAction,
   type MergeSegmentsAction,
+  type RemoveSegmentAction,
+  type SetSegmentsAction,
+  type UpdateSegmentAction,
   type VolumeTracingAction,
-  UpdateSegmentAction,
-  RemoveSegmentAction,
-  SetSegmentsAction,
+  removeSegmentAction,
   updateSegmentAction,
 } from "../actions/volumetracing_actions";
 import type { TreeGroup } from "../types/tree_types";
-import { forEachGroups } from "./skeletontracing_reducer_helpers";
-import { findParentIdForGroupId } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
-import { floor3 } from "libs/utils";
-import groupBy from "lodash/groupBy";
+import { forEachGroups } from "./skeletontracing_reducer_helpers";
 
 export type VolumeTracingReducerAction =
   | VolumeTracingAction

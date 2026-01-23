@@ -119,7 +119,7 @@ export const cachedDiffSegmentLists = memoizeOne(
     ),
 );
 
-function* uncachedDiffSegmentLists(
+export function* uncachedDiffSegmentLists(
   tracingId: string,
   prevSegments: SegmentMap,
   newSegments: SegmentMap,
@@ -146,6 +146,7 @@ function* uncachedDiffSegmentLists(
 
           return segmentJournal.slice(splitIndex + 1);
         })();
+  const mergedSourceIds = new Set(journalDiff.map((entry) => entry.sourceId));
 
   for (const mergeJournalEntry of journalDiff) {
     // todop: what about the source segment that got its name changed potentially?
@@ -169,6 +170,13 @@ function* uncachedDiffSegmentLists(
   }
 
   for (const segmentId of addedSegmentIds) {
+    if (mergedSourceIds.has(segmentId)) {
+      // Ignore added segment ids if they were a `source` in a journal entry,
+      // because the corresponding mergeSegments update action already reflects
+      // that change.
+      continue;
+    }
+
     const segment = newSegments.getOrThrow(segmentId);
     yield createSegmentVolumeAction(
       segment.id,
@@ -186,6 +194,12 @@ function* uncachedDiffSegmentLists(
   }
 
   for (const segmentId of bothSegmentIds) {
+    if (mergedSourceIds.has(segmentId)) {
+      // Ignore added segment ids if they were a `source` in a journal entry,
+      // because the corresponding mergeSegments update action already reflects
+      // that change.
+      continue;
+    }
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 

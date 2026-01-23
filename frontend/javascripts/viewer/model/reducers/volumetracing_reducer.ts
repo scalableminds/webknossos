@@ -25,7 +25,12 @@ import {
   type VolumeTracingReducerAction,
   addToContourListReducer,
   createCellReducer,
+  expandSegmentParents,
   getSegmentUpdateInfo,
+  handleMergeSegments,
+  handleRemoveSegment,
+  handleSetSegments,
+  handleUpdateSegment,
   hideBrushReducer,
   resetContourReducer,
   setActiveCellReducer,
@@ -37,11 +42,6 @@ import {
   updateDirectionReducer,
   updateSegments,
   updateVolumeTracing,
-  handleSetSegments,
-  handleUpdateSegment,
-  handleMergeSegments,
-  handleRemoveSegment,
-  expandSegmentParents,
 } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "viewer/store";
 import { getGroupNodeKey } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";

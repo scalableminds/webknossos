@@ -26,7 +26,8 @@ export type SetHideUnregisteredSegmentsAction = ReturnType<
 // A simple "click segment" is dispatched when clicking
 // with the MOVE tool. Currently, this has the side-effect
 // of adding the clicked segment to the segment list (if one
-// exists and if it's not already there)
+// exists and if it's not already there). Additionally,
+// the parent groups are expanded in the sidebar.
 export type ClickSegmentAction = ReturnType<typeof clickSegmentAction>;
 export type UpdateProofreadingMarkerPositionAction = ReturnType<
   typeof updateProofreadingMarkerPositionAction
@@ -286,6 +287,11 @@ export const updateSegmentAction = (
   timestamp: number = Date.now(),
   createsNewUndoState: boolean = false,
 ) => {
+  /*
+   * Action to update properties of a segment item. This action
+   * can (and should) also be used to create a new segment item.
+   * There is no dedicated "createSegmentAction".
+   */
   if (segmentId == null) {
     throw new Error("Segment ID must not be null.");
   }

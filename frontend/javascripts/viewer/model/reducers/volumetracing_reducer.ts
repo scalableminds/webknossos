@@ -421,6 +421,20 @@ function VolumeTracingReducer(
           props.metadata = metadataEntriesWithUniqueKeys;
         }
 
+        // Form some properties, the data in source segment should simply "win".
+        // However, if the source item didn't exist before, we use the data from targetSegment.
+        if (sourceSegment == null) {
+          if (targetSegment.anchorPosition != null) {
+            props.anchorPosition = targetSegment.anchorPosition;
+          }
+          if (targetSegment.additionalCoordinates != null) {
+            props.additionalCoordinates = targetSegment.additionalCoordinates;
+          }
+          if (targetSegment.groupId != null) {
+            props.groupId = targetSegment.groupId;
+          }
+        }
+
         if (Object.keys(props).length > 0) {
           newState = handleUpdateSegment(
             newState,

@@ -6,11 +6,11 @@ import { combinedReducer } from "viewer/store";
 import { setDatasetAction } from "viewer/model/actions/dataset_actions";
 import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
 import { apiDatasetForVolumeTracing } from "./dataset_server_object";
-import { tracing as serverVolumeTracing } from "./volumetracing_server_objects";
+import { tracing as serverVolumeTracing, VOLUME_TRACING_ID } from "./volumetracing_server_objects";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { preprocessDataset } from "viewer/model_initialization";
 
-export const VOLUME_TRACING_ID = "volumeTracingId";
+export { VOLUME_TRACING_ID };
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 

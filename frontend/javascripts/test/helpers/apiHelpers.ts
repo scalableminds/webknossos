@@ -77,6 +77,7 @@ import type {
 import type { ArbitraryObject } from "types/type_utils";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import { __setFeatures } from "features";
+import flattenDeep from "lodash/flattenDeep";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -105,7 +106,7 @@ export interface WebknossosTestContext extends BaseTestContext {
 }
 
 export function getFlattenedUpdateActions(context: WebknossosTestContext) {
-  return _.flattenDeep(
+  return flattenDeep(
     context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
       saveQueueEntries.map((entry) => entry.actions),
     ),

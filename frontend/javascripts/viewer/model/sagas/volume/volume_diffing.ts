@@ -1,5 +1,8 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { diffArrays } from "libs/utils";
+import isEqual from "lodash/isEqual";
+import keyBy from "lodash/keyBy";
+import sortedIndexBy from "lodash/sortedIndexBy";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
@@ -135,7 +138,7 @@ function* uncachedDiffSegmentLists(
     prevLatestJournalEntryIndex == null
       ? segmentJournal
       : (() => {
-          const splitIndex = _.sortedIndexBy<{ entryIndex: number }>(
+          const splitIndex = sortedIndexBy<{ entryIndex: number }>(
             segmentJournal,
             { entryIndex: prevLatestJournalEntryIndex },
             "entryIndex",
@@ -221,8 +224,8 @@ export function* diffMetadataOfSegments(segment: Segment, prevSegment: Segment, 
     return;
   }
 
-  const metadataDict = _.keyBy(metadata, "key");
-  const prevMetadataDict = _.keyBy(prevMetadata, "key");
+  const metadataDict = keyBy(metadata, "key");
+  const prevMetadataDict = keyBy(prevMetadata, "key");
 
   const { both, onlyA, onlyB } = diffArrays(
     prevMetadata.map((m) => m.key),

@@ -212,7 +212,7 @@ export function diffGroupsGranular(prevGroups: TreeGroup[], groups: TreeGroup[])
 
   const { newlyExpandedIds, newlyNotExpandedIds } = diffGroups(prevGroups, groups);
 
-  const { onlyA, onlyB, changed } = diffMaps(prevGroupsById, groupsById, _.isEqual);
+  const { onlyA, onlyB, changed } = diffMaps(prevGroupsById, groupsById, isEqual);
 
   return {
     prevGroupsById,

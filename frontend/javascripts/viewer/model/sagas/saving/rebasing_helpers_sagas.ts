@@ -1,7 +1,7 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
-import { flattenDeep } from "lodash/flattenDeep";
-import { omitBy } from "lodash/omitBy";
+import flattenDeep from "lodash/flattenDeep";
+import omitBy from "lodash/omitBy";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";

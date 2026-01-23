@@ -4,6 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { ColoredLogger, sleep } from "libs/utils";
 import compact from "lodash/compact";
+import flattenDeep from "lodash/flattenDeep";
 import sum from "lodash/sum";
 import { type Channel, buffers } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
@@ -294,7 +295,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   ColoredLogger.logRed("needsRebasing", needsRebasing);
   ColoredLogger.logRed(
     "local saveQueueEntries",
-    _.flattenDeep(saveQueueEntries.map((entry) => entry.actions)),
+    flattenDeep(saveQueueEntries.map((entry) => entry.actions)),
   );
 
   try {

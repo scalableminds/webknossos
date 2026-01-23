@@ -1,4 +1,4 @@
-import {keyBy} from "lodash/keyBy";
+import keyBy from "lodash/keyBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import {

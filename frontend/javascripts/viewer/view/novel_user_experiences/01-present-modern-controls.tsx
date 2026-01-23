@@ -42,10 +42,7 @@ export default function PresentModernControls() {
       okText="Enable the Context Menu"
       cancelText="Keep the Classic Controls"
       onOk={handleEnableContextMenu}
-      onCancel={() => {
-        handleKeepClassicControls();
-        closeModal();
-      }}
+      onCancel={handleKeepClassicControls}
     >
       <h1>Say Hello to the Context Menu</h1>
       <p>

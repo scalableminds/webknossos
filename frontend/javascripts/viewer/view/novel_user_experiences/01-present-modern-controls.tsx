@@ -1,5 +1,5 @@
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
-import { Button, Modal } from "antd";
+import { Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
@@ -35,7 +35,18 @@ export default function PresentModernControls() {
   };
 
   return (
-    <Modal maskClosable={false} open onCancel={closeModal} width={800} footer={null}>
+    <Modal
+      maskClosable={false}
+      open
+      width={800}
+      okText="Enable the Context Menu"
+      cancelText="Keep the Classic Controls"
+      onOk={handleEnableContextMenu}
+      onCancel={() => {
+        handleKeepClassicControls();
+        closeModal();
+      }}
+    >
       <h1>Say Hello to the Context Menu</h1>
       <p>
         WEBKNOSSOS now provides an easy-to-use context menu that allows performing even complex
@@ -55,21 +66,9 @@ export default function PresentModernControls() {
         Previously, the right-click was reserved for certain actions, such as creating a node or
         erasing volume data. These actions are now available in their respective tool via left-click
         (e.g., using the dedicated erase tool) or happen automatically (e.g., selecting a node
-        doesn’t require holding shift anymore).
+        doesn't require holding shift anymore).
       </p>
-      <div className="center-item-using-flex">
-        <Button
-          type="primary"
-          onClick={handleEnableContextMenu}
-          style={{
-            marginRight: 12,
-          }}
-        >
-          Enable the Context Menu
-        </Button>
 
-        <Button onClick={handleKeepClassicControls}>Keep the Classic Controls</Button>
-      </div>
       <p
         style={{
           color: "var(--ant-color-text-secondary)",

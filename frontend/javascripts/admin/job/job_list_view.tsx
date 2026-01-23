@@ -486,7 +486,7 @@ function JobListView() {
   const uniqueStates = Array.from(new Set(jobs?.map((job) => job.state) || [])).sort();
 
   const jobTypeFilters = uniqueJobTypes.map((command) => ({
-    text: getJobTypeName(command as APIJobCommand),
+    text: getJobTypeName(command),
     value: command,
   }));
 

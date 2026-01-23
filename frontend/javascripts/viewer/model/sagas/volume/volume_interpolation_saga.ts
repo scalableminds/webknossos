@@ -1,4 +1,3 @@
-import cwise from "cwise";
 import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -38,6 +37,15 @@ import { Model, api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
 import { createSectionLabeler, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import {
+  ensureCwiseLoaded,
+  getAbsMax,
+  getAssign,
+  getIsEqual,
+  getIsEqualFromBigUint64,
+  getIsNonZero,
+  getMul,
+} from "./cwise_loader";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -151,68 +159,6 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
 
 export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInfo);
 
-const isEqual = cwise({
-  args: ["array", "scalar"],
-  body: function body(a: number, b: number) {
-    a = a === b ? 1 : 0;
-  },
-});
-
-const isEqualFromBigUint64: (
-  output: NdArray<TypedArrayWithoutBigInt>,
-  a: NdArray<BigUint64Array<ArrayBuffer>>,
-  b: bigint,
-) => void = cwise({
-  args: ["array", "array", "scalar"],
-  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
-  body: function body(output: number, a: bigint, b: bigint) {
-    output = a === b ? 1 : 0;
-  },
-});
-
-const isNonZero = cwise({
-  args: ["array"],
-  // The following function is parsed by cwise which is why
-  // the shorthand syntax is not supported.
-  // Also, cwise uses this function content to build
-  // the target function. Adding a return here would not
-  // yield the desired behavior for isNonZero.
-
-  body: function (a) {
-    if (a > 0) {
-      return true;
-    }
-  },
-  // The following function is parsed by cwise which is why
-  // the shorthand syntax is not supported.
-
-  post: function () {
-    return false;
-  },
-}) as (arr: NdArray) => boolean;
-
-const mul = cwise({
-  args: ["array", "scalar"],
-  body: function body(a: number, b: number) {
-    a = a * b;
-  },
-});
-
-const absMax = cwise({
-  args: ["array", "array"],
-  body: function body(a: number, b: number) {
-    a = Math.abs(a) > Math.abs(b) ? a : b;
-  },
-});
-
-const assign = cwise({
-  args: ["array", "array"],
-  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
-  body: function body(a: number, b: number) {
-    a = b;
-  },
-});
-
 export function copyNdArray(
   Constructor: Uint8ArrayConstructor | Float32ArrayConstructor,
   arr: ndarray.NdArray,
@@ -231,7 +177,7 @@ export function copyNdArray(
   }
 
   const newArr = ndarray(new Constructor(arr.size), arr.shape, stride);
-  assign(newArr, arr);
+  getAssign()(newArr, arr);
 
   return newArr;
 }
@@ -248,20 +194,21 @@ function signedDist(arr: ndarray.NdArray) {
   distanceTransform(arr);
 
   // Invert negatedArr (1 to 0 and 0 to 1)
-  isEqual(negatedArr, 0);
+  getIsEqual()(negatedArr, 0);
   distanceTransform(negatedArr);
   // Negate the distances
-  mul(negatedArr, -1);
+  getMul()(negatedArr, -1);
 
   // Create a combined array which contains positive
   // distances for voxels outside of the labeled area
   // and negative distances for voxels inside the labeled
   // area.
-  absMax(arr, negatedArr);
+  getAbsMax()(arr, negatedArr);
   return arr;
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
+  yield* ensureCwiseLoaded();
   const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
@@ -407,13 +354,13 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
     const activeCellIdBig = BigInt(activeCellId);
     // Calculate firstSlice = firstSliceBigInt[...] == activeCellId
-    isEqualFromBigUint64(
+    getIsEqualFromBigUint64()(
       firstSlice,
       firstSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
       activeCellIdBig,
     );
     // Calculate lastSlice = lastSliceBigInt[...] == activeCellId
-    isEqualFromBigUint64(
+    getIsEqualFromBigUint64()(
       lastSlice,
       lastSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
       activeCellIdBig,
@@ -423,9 +370,9 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArrayWithoutBigInt>;
 
     // Calculate firstSlice = firstSlice[...] == activeCellId
-    isEqual(firstSlice, activeCellId);
+    getIsEqual()(firstSlice, activeCellId);
     // Calculate lastSlice = lastSlice[...] == activeCellId
-    isEqual(lastSlice, activeCellId);
+    getIsEqual()(lastSlice, activeCellId);
   }
 
   if (onlyExtrude) {
@@ -436,7 +383,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     }
   }
 
-  if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {
+  if (!getIsNonZero()(firstSlice) || !getIsNonZero()(lastSlice)) {
     Toast.warning(
       `Could not interpolate segment, because id ${activeCellId} was not found in source/target slice.`,
     );

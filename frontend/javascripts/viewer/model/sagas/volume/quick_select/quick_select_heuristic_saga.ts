@@ -64,6 +64,7 @@ import type {
 } from "viewer/store";
 import { createSectionLabeler, labelWithVoxelBuffer2D } from "../helpers";
 import { copyNdArray } from "../volume_interpolation_saga";
+import { ensureCwiseLoaded } from "../cwise_loader";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 
@@ -174,6 +175,7 @@ export function* prepareQuickSelect(
 export default function* performQuickSelect(
   action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
 ): Saga<void> {
+  yield* ensureCwiseLoaded();
   const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null || action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
     return;

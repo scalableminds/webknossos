@@ -69,14 +69,13 @@ function useVectorInput<T extends number[]>(
   const handleChange = useCallback(
     (evt: React.ChangeEvent<HTMLInputElement>) => {
       const newText = evt.target.value;
-
-      // We set the text immediately so the width can grow
-      // even if the format isn't "valid" yet (e.g., trailing comma)
       setText(newText);
 
       const parsed = stringToNumberArray(newText);
+      // Check if we have the right number of elements
       const formatValid = parsed.length === defaultValue.length;
-      setIsValid(formatValid);
+
+      setIsValid(formatValid); // Keep this!
 
       if (formatValid && !changeOnlyOnBlur) {
         onChange(parsed as T);
@@ -144,6 +143,7 @@ function useVectorInput<T extends number[]>(
 
   return {
     text,
+    isValid,
     handleChange,
     handleFocus,
     handleBlur,
@@ -162,22 +162,30 @@ export const Vector3Input = forwardRef<InputRef, VectorInputProps<Vector3>>(
     { value, onChange, changeOnlyOnBlur, allowDecimals, style, disableAutoSize = false, ...props },
     ref,
   ) => {
-    const { text, handleChange, handleFocus, handleBlur, handleKeyDown, styleWithAutomaticWidth } =
-      useVectorInput(
-        [0, 0, 0],
-        value,
-        onChange,
-        changeOnlyOnBlur,
-        allowDecimals,
-        disableAutoSize,
-        style,
-      );
+    const {
+      text,
+      isValid,
+      handleChange,
+      handleFocus,
+      handleBlur,
+      handleKeyDown,
+      styleWithAutomaticWidth,
+    } = useVectorInput(
+      [0, 0, 0],
+      value,
+      onChange,
+      changeOnlyOnBlur,
+      allowDecimals,
+      disableAutoSize,
+      style,
+    );
 
     return (
       <InputComponent
         {...props}
         ref={ref}
         value={text}
+        status={isValid ? "success" : "error"}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -198,22 +206,30 @@ export const Vector6Input = forwardRef<InputRef, VectorInputProps<Vector6>>(
     { value, onChange, changeOnlyOnBlur, allowDecimals, disableAutoSize = false, style, ...props },
     ref,
   ) => {
-    const { text, handleChange, handleFocus, handleBlur, handleKeyDown, styleWithAutomaticWidth } =
-      useVectorInput(
-        [0, 0, 0, 0, 0, 0],
-        value,
-        onChange,
-        changeOnlyOnBlur,
-        allowDecimals,
-        disableAutoSize,
-        style,
-      );
+    const {
+      text,
+      isValid,
+      handleChange,
+      handleFocus,
+      handleBlur,
+      handleKeyDown,
+      styleWithAutomaticWidth,
+    } = useVectorInput(
+      [0, 0, 0, 0, 0, 0],
+      value,
+      onChange,
+      changeOnlyOnBlur,
+      allowDecimals,
+      disableAutoSize,
+      style,
+    );
 
     return (
       <InputComponent
         {...props}
         ref={ref}
         value={text}
+        status={isValid ? "success" : "error"}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -249,16 +265,23 @@ export const ArbitraryVectorInput = forwardRef<
   ) => {
     const defaultValue = useMemo(() => Array(vectorLength).fill(0), [vectorLength]);
 
-    const { text, handleChange, handleFocus, handleBlur, handleKeyDown, styleWithAutomaticWidth } =
-      useVectorInput(
-        defaultValue,
-        value,
-        onChange,
-        changeOnlyOnBlur,
-        allowDecimals,
-        disableAutoSize,
-        style,
-      );
+    const {
+      text,
+      isValid,
+      handleChange,
+      handleFocus,
+      handleBlur,
+      handleKeyDown,
+      styleWithAutomaticWidth,
+    } = useVectorInput(
+      defaultValue,
+      value,
+      onChange,
+      changeOnlyOnBlur,
+      allowDecimals,
+      disableAutoSize,
+      style,
+    );
 
     if (vectorLabel) {
       return (
@@ -268,6 +291,7 @@ export const ArbitraryVectorInput = forwardRef<
             {...props}
             ref={ref}
             value={text}
+            status={isValid ? "success" : "error"}
             onChange={handleChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -282,6 +306,7 @@ export const ArbitraryVectorInput = forwardRef<
         {...props}
         ref={ref}
         value={text}
+        status={isValid ? "success" : "error"}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}

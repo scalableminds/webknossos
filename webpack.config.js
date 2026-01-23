@@ -165,13 +165,21 @@ module.exports = function (env = {}) {
       ],
       splitChunks: {
         chunks: "all",
-        // Use a consistent name for the vendors chunk
-        name: "vendors~main",
         cacheGroups: {
           html2canvas: {
             test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
             chunks: "all",
             name: "vendors~html2canvas",
+          },
+          cwise: {
+            test: /[\\/]node_modules[\\/](cwise|cwise-compiler|cwise-parser)[\\/]/,
+            chunks: "all",
+            name: "vendors~cwise",
+          },
+          mlMatrix: {
+            test: /[\\/]node_modules[\\/](ml-matrix)[\\/]/,
+            chunks: "all",
+            name: "vendors~ml-matrix",
           },
         },
       },

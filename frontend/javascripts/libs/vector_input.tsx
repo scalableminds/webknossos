@@ -14,7 +14,7 @@ type VectorInputProps<T> = Omit<InputProps, "value" | "onChange" | "defaultValue
   onChange?: (value: T) => void;
   changeOnlyOnBlur?: boolean;
   allowDecimals?: boolean;
-  autoSize?: boolean;
+  disableAutoSize?: boolean;
   placeHolder?: string;
 };
 
@@ -22,12 +22,20 @@ function vectorToText<T extends number[]>(value: T | string): string {
   return Array.isArray(value) ? value.join(", ") : value;
 }
 
+/**
+ * A custom hook that manages the state, sanitization, and automatic width calculation
+ * for vector-style text inputs.
+ * * It synchronizes raw string input with numerical arrays, provides keyboard
+ * navigation for incrementing values, and calculates dynamic CSS widths.
+ */
 function useVectorInput<T extends number[]>(
   defaultValue: T,
   value?: T | string,
   onChange: (value: T) => void = noop,
   changeOnlyOnBlur = false,
   allowDecimals = false,
+  disableAutoSize = false,
+  style?: React.CSSProperties,
 ) {
   if (value === undefined) value = defaultValue;
 
@@ -35,7 +43,6 @@ function useVectorInput<T extends number[]>(
   const [text, setText] = useState(() => vectorToText(value));
   const [isValid, setIsValid] = useState(true);
 
-  // Sync external value changes when not editing
   useEffect(() => {
     if (!isEditing) {
       setText(vectorToText(value));
@@ -45,17 +52,15 @@ function useVectorInput<T extends number[]>(
 
   const sanitizeAndPad = useCallback(
     (inputText: string): T => {
-      const cleaned = inputText.replace(allowDecimals ? /[^0-9,.]/g : /[^0-9,]/g, "");
+      const cleaned = inputText.replace(allowDecimals ? /[^0-9,.\-]/g : /[^0-9,\-]/g, "");
       const parsed = cleaned
         .split(",")
         .map((el) => Number.parseFloat(el) || 0)
         .slice(0, defaultValue.length);
 
-      // Pad with zeros if needed
       while (parsed.length < defaultValue.length) {
         parsed.push(0);
       }
-
       return parsed as T;
     },
     [allowDecimals, defaultValue.length],
@@ -65,24 +70,19 @@ function useVectorInput<T extends number[]>(
     (evt: React.ChangeEvent<HTMLInputElement>) => {
       const newText = evt.target.value;
 
-      // Validate input characters
-      const validChars = allowDecimals ? /^[\d\s,.]*$/ : /^[\d\s,]*$/;
-      if (!validChars.test(newText)) {
-        return;
-      }
+      // We set the text immediately so the width can grow
+      // even if the format isn't "valid" yet (e.g., trailing comma)
+      setText(newText);
 
       const parsed = stringToNumberArray(newText);
       const formatValid = parsed.length === defaultValue.length;
-
-      setText(newText);
       setIsValid(formatValid);
 
-      // Update immediately if valid and not in blur-only mode
       if (formatValid && !changeOnlyOnBlur) {
         onChange(parsed as T);
       }
     },
-    [allowDecimals, defaultValue.length, changeOnlyOnBlur, onChange],
+    [defaultValue.length, changeOnlyOnBlur, onChange],
   );
 
   const handleFocus = useCallback(() => {
@@ -94,25 +94,18 @@ function useVectorInput<T extends number[]>(
   const handleBlur = useCallback(() => {
     setIsEditing(false);
 
-    if (isValid) {
-      // In blur-only mode, commit the change
-      if (changeOnlyOnBlur) {
-        onChange(stringToNumberArray(text) as T);
-      } else {
-        // Otherwise, reset to the current value
-        setText(vectorToText(value));
-      }
-    } else {
-      // Invalid input: sanitize and commit
-      const sanitized = sanitizeAndPad(text);
-      onChange(sanitized);
-      setText(vectorToText(sanitized));
-      setIsValid(true);
-    }
-  }, [isValid, changeOnlyOnBlur, text, value, sanitizeAndPad, onChange]);
+    // On blur, we always sanitize to ensure we end back in a valid state
+    const sanitized = sanitizeAndPad(text);
+    const sanitizedText = vectorToText(sanitized);
+
+    onChange(sanitized);
+    setText(sanitizedText);
+    setIsValid(true);
+  }, [text, sanitizeAndPad, onChange]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      /* Increment/decrement current value when using arrow up/down */
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
         return;
       }
@@ -125,12 +118,29 @@ function useVectorInput<T extends number[]>(
       const commasBeforeCursor =
         input.value.slice(0, input.selectionStart || 0).split(",").length - 1;
 
-      vec[commasBeforeCursor] += event.key === "ArrowUp" ? 1 : -1;
+      if (Number.isNaN(vec[commasBeforeCursor])) {
+        vec[commasBeforeCursor] = 0;
+      }
+      const increment = event.key === "ArrowUp" ? 1 : -1;
+      vec[commasBeforeCursor] += increment;
       onChange(vec);
       setText(vectorToText(vec));
     },
     [onChange],
   );
+  const styleWithAutomaticWidth = useMemo(() => {
+    if (disableAutoSize) return style;
+
+    // Use the raw text length to ensure the input grows while typing
+    // Added a small buffer for the cursor and padding
+    const width = Math.max(text.length, 1) * CHARACTER_WIDTH_PX + 10;
+
+    return {
+      ...style,
+      width: `${width}px`,
+      minWidth: 86, // size of "0, 0, 0"
+    };
+  }, [disableAutoSize, text, style]);
 
   return {
     text,
@@ -138,27 +148,30 @@ function useVectorInput<T extends number[]>(
     handleFocus,
     handleBlur,
     handleKeyDown,
+    styleWithAutomaticWidth,
   };
 }
 
+/**
+ * A specialized input for 3D vectors (x, y, z).
+ * Automatically handles comma-separated formatting, sanitization on blur,
+ * and dynamic width adjustment based on text length.
+ */
 export const Vector3Input = forwardRef<InputRef, VectorInputProps<Vector3>>(
-  ({ value, onChange, changeOnlyOnBlur, allowDecimals, autoSize, style, ...props }, ref) => {
-    const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
-      [0, 0, 0],
-      value,
-      onChange,
-      changeOnlyOnBlur,
-      allowDecimals,
-    );
-
-    const inputStyle = useMemo(() => {
-      if (!autoSize) return style;
-
-      return {
-        ...style,
-        width: text.length * CHARACTER_WIDTH_PX + 25,
-      };
-    }, [autoSize, style, text.length]);
+  (
+    { value, onChange, changeOnlyOnBlur, allowDecimals, style, disableAutoSize = false, ...props },
+    ref,
+  ) => {
+    const { text, handleChange, handleFocus, handleBlur, handleKeyDown, styleWithAutomaticWidth } =
+      useVectorInput(
+        [0, 0, 0],
+        value,
+        onChange,
+        changeOnlyOnBlur,
+        allowDecimals,
+        disableAutoSize,
+        style,
+      );
 
     return (
       <InputComponent
@@ -169,30 +182,32 @@ export const Vector3Input = forwardRef<InputRef, VectorInputProps<Vector3>>(
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        style={inputStyle}
+        style={styleWithAutomaticWidth}
       />
     );
   },
 );
 
+/**
+ * A specialized input for 6D vectors (x, y, z, w, h, d).
+ * Automatically handles comma-separated formatting, sanitization on blur,
+ * and dynamic width adjustment based on text length.
+ */
 export const Vector6Input = forwardRef<InputRef, VectorInputProps<Vector6>>(
-  ({ value, onChange, changeOnlyOnBlur, allowDecimals, autoSize, style, ...props }, ref) => {
-    const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
-      [0, 0, 0, 0, 0, 0],
-      value,
-      onChange,
-      changeOnlyOnBlur,
-      allowDecimals,
-    );
-
-    const inputStyle = useMemo(() => {
-      if (!autoSize) return style;
-
-      return {
-        ...style,
-        width: text.length * CHARACTER_WIDTH_PX + 25,
-      };
-    }, [autoSize, style, text.length]);
+  (
+    { value, onChange, changeOnlyOnBlur, allowDecimals, disableAutoSize = false, style, ...props },
+    ref,
+  ) => {
+    const { text, handleChange, handleFocus, handleBlur, handleKeyDown, styleWithAutomaticWidth } =
+      useVectorInput(
+        [0, 0, 0, 0, 0, 0],
+        value,
+        onChange,
+        changeOnlyOnBlur,
+        allowDecimals,
+        disableAutoSize,
+        style,
+      );
 
     return (
       <InputComponent
@@ -203,12 +218,17 @@ export const Vector6Input = forwardRef<InputRef, VectorInputProps<Vector6>>(
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        style={inputStyle}
+        style={styleWithAutomaticWidth}
       />
     );
   },
 );
 
+/**
+ * A specialized input for arbitrary-length vectors.
+ * Automatically handles comma-separated formatting, sanitization on blur,
+ * and dynamic width adjustment based on text length.
+ */
 export const ArbitraryVectorInput = forwardRef<
   InputRef,
   VectorInputProps<number[]> & { vectorLength?: number; vectorLabel?: string }
@@ -219,7 +239,7 @@ export const ArbitraryVectorInput = forwardRef<
       onChange,
       changeOnlyOnBlur,
       allowDecimals,
-      autoSize,
+      disableAutoSize = false,
       vectorLength = 3,
       style,
       vectorLabel,
@@ -229,29 +249,20 @@ export const ArbitraryVectorInput = forwardRef<
   ) => {
     const defaultValue = useMemo(() => Array(vectorLength).fill(0), [vectorLength]);
 
-    const { text, handleChange, handleFocus, handleBlur, handleKeyDown } = useVectorInput(
-      defaultValue,
-      value,
-      onChange,
-      changeOnlyOnBlur,
-      allowDecimals,
-    );
-
-    const inputStyle = useMemo(() => {
-      if (!autoSize) return style;
-
-      const vectorLabelWidth =
-        typeof vectorLabel === "string" ? 20 + CHARACTER_WIDTH_PX * vectorLabel.length : 0;
-
-      return {
-        ...style,
-        width: text.length * CHARACTER_WIDTH_PX + 25 + vectorLabelWidth,
-      };
-    }, [autoSize, style, text.length, vectorLabel]);
+    const { text, handleChange, handleFocus, handleBlur, handleKeyDown, styleWithAutomaticWidth } =
+      useVectorInput(
+        defaultValue,
+        value,
+        onChange,
+        changeOnlyOnBlur,
+        allowDecimals,
+        disableAutoSize,
+        style,
+      );
 
     if (vectorLabel) {
       return (
-        <Space.Compact style={inputStyle}>
+        <Space.Compact style={styleWithAutomaticWidth}>
           <Space.Addon>{vectorLabel}</Space.Addon>
           <InputComponent
             {...props}
@@ -275,7 +286,7 @@ export const ArbitraryVectorInput = forwardRef<
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        style={inputStyle}
+        style={styleWithAutomaticWidth}
       />
     );
   },
@@ -293,6 +304,12 @@ const emptyBoundingBox = {
   depth: 0,
 };
 
+/**
+ * A composite input specifically for server-side bounding box objects.
+ * * Maps a `{ topLeft: [x,y,z], width, height, depth }` object to a 6-element
+ * vector input. This component defaults to `changeOnlyOnBlur` to ensure
+ * complex data structures are only updated once the full vector is valid.
+ */
 export const BoundingBoxInput = forwardRef<InputRef, BoundingBoxInputProps>(
   ({ value = emptyBoundingBox, onChange = noop, ...props }, ref) => {
     const vector6Value = useMemo(() => {
@@ -320,6 +337,7 @@ export const BoundingBoxInput = forwardRef<InputRef, BoundingBoxInputProps>(
         value={vector6Value}
         changeOnlyOnBlur
         onChange={handleChange}
+        disableAutoSize={false}
       />
     );
   },

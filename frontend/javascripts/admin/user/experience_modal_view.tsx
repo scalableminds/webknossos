@@ -1,6 +1,6 @@
 import { CloseOutlined, DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
 import { updateUser } from "admin/rest_api";
-import { Badge, Button, Flex, InputNumber, Modal, Space, Table, Tag, Tooltip } from "antd";
+import { Badge, Button, InputNumber, Modal, Space, Table, Tag, Tooltip } from "antd";
 import HighlightableRow from "components/highlightable_row";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { handleGenericError } from "libs/error_handling";

@@ -672,6 +672,7 @@ function SkeletonTracingReducer(
         (state: WebknossosState, action: Action) => SkeletonTracingReducer(state, action, true),
         actions,
         state,
+        action.ignoreUnsupportedActionTypes,
       );
     }
 

@@ -516,7 +516,7 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
       props.metadata = metadataEntriesWithUniqueKeys;
     }
 
-    // Form some properties, the data in source segment should simply "win".
+    // For some properties, the data in source segment should simply "win".
     // However, if the source item didn't exist before, we use the data from targetSegment.
     if (sourceSegment == null) {
       if (targetSegment.anchorPosition != null) {

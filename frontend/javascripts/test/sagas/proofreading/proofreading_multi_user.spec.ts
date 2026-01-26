@@ -95,7 +95,7 @@ describe("Proofreading (Multi User)", () => {
       {1337, 1338}
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     backendMock.planVersionInjection(5, [
       {
@@ -748,7 +748,7 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
+          [1, 1, 1], // At this position is: unmappedId=1 / mappedId=1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -828,7 +828,7 @@ describe("Proofreading (Multi User)", () => {
 
       - Backend splits agglomerate 1337 (segments 7 and 1337)
       - Backend merges agglomerates 1339 and 4 (segments 1337 and 5)
-      - Frontend merges agglomerates 4 and 1 (target segment 4)
+      - Frontend merges agglomerates 4 and 1 (target segment 1)
 
       The resulting mapping correctly incorporates all backend split and merge actions, including those involving initially not-loaded segments.
      */
@@ -845,7 +845,7 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1337, 1337 ],
      *  [ 1338, 1337 ]]
      */
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]]);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
     /* Should lead to the following full mapping:
      * [[ 1, 1 ],
@@ -939,7 +939,7 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // At this position is: unmappedId=4 / mappedId=4
+          [1, 1, 1], // At this position is: unmappedId=1 / mappedId=1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -969,17 +969,30 @@ describe("Proofreading (Multi User)", () => {
       //   });
       // }
 
-      const segment1339AfterSaving =
-        Store.getState().annotation.volumes[0].segments.getNullable(1339);
-      expect(segment1339AfterSaving).toMatchObject({
-        name: "Custom Name for 1339 and Custom Name for 1",
-        metadata: [
-          { key: "key1-1339", stringValue: "value for 1339" },
-          { key: "key1-1", stringValue: "value for 1" },
-        ],
-      });
+      const backendState = backendMock.getState()!;
+      const frontendState = Store.getState();
 
-      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-3);
+      for (const state of [frontendState, backendState]) {
+        const currentSegments = state.annotation.volumes[0].segments;
+        expect(currentSegments.size()).toEqual(1);
+        const segment1AfterSaving = currentSegments.getNullable(1);
+        expect(segment1AfterSaving).toBeUndefined();
+
+        const segment4AfterSaving = currentSegments.getNullable(4);
+        expect(segment4AfterSaving).toBeUndefined();
+
+        const segment1339AfterSaving = currentSegments.getNullable(1339);
+        expect(segment1339AfterSaving).toMatchObject({
+          name: "Custom Name for 1339 and Custom Name for 1",
+          metadata: [
+            { key: "key1-1339", stringValue: "value for 1339" },
+            { key: "key1-1", stringValue: "value for 1" },
+          ],
+          anchorPosition: [4, 4, 4],
+        });
+      }
+
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
       expect(receivedUpdateActions).toEqual([
         {
@@ -1000,15 +1013,8 @@ describe("Proofreading (Multi User)", () => {
             agglomerateId2: 1,
           },
         },
-        {
-          name: "updateSegmentPartial",
-          value: {
-            actionTracingId: "volumeTracingId",
-            anchorPosition: [4, 4, 4],
-            id: 1339,
-          },
-        },
       ]);
+
       yield* expectMapping(
         tracingId,
         new Map([

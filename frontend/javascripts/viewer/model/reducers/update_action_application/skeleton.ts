@@ -34,10 +34,16 @@ export function applySkeletonUpdateActionsFromServer(
   SkeletonTracingReducer: Reducer,
   actions: ApplicableSkeletonServerUpdateAction[],
   state: WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   let newState = state;
   for (const ua of actions) {
-    newState = applySingleAction(SkeletonTracingReducer, ua, newState);
+    newState = applySingleAction(
+      SkeletonTracingReducer,
+      ua,
+      newState,
+      ignoreUnsupportedActionTypes,
+    );
   }
 
   return newState;
@@ -47,6 +53,7 @@ function applySingleAction(
   SkeletonTracingReducer: Reducer,
   ua: ApplicableSkeletonServerUpdateAction,
   state: WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   switch (ua.name) {
     case "createTree": {
@@ -463,6 +470,9 @@ function applySingleAction(
   }
   ua satisfies never;
 
+  if (ignoreUnsupportedActionTypes) {
+    return state;
+  }
   // Satisfy TS.
   throw new Error("Reached unexpected part of function.");
 }

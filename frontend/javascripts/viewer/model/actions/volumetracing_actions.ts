@@ -522,8 +522,10 @@ export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
 
 export const applyVolumeUpdateActionsFromServerAction = (
   actions: Array<ApplicableVolumeUpdateAction>,
+  ignoreUnsupportedActionTypes: boolean = false,
 ) =>
   ({
     type: "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
     actions,
+    ignoreUnsupportedActionTypes,
   }) as const;

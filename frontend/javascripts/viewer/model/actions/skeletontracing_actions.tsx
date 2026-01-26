@@ -582,10 +582,12 @@ export const updateNavigationListAction = (list: Array<number>, activeIndex: num
 
 export const applySkeletonUpdateActionsFromServerAction = (
   actions: Array<ApplicableSkeletonServerUpdateAction>,
+  ignoreUnsupportedActionTypes: boolean = false,
 ) =>
   ({
     type: "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER",
     actions,
+    ignoreUnsupportedActionTypes,
   }) as const;
 
 export const loadAgglomerateSkeletonAction = (

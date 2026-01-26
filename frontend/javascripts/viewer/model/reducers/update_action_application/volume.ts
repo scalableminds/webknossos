@@ -40,10 +40,11 @@ export function applyVolumeUpdateActionsFromServer(
     state: WebknossosState,
     action: VolumeTracingReducerAction,
   ) => WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   let newState = state;
   for (const ua of actions) {
-    newState = applySingleAction(ua, newState, VolumeTracingReducer);
+    newState = applySingleAction(ua, newState, VolumeTracingReducer, ignoreUnsupportedActionTypes);
   }
 
   return newState;
@@ -56,6 +57,7 @@ function applySingleAction(
     state: WebknossosState,
     action: VolumeTracingReducerAction,
   ) => WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   switch (ua.name) {
     case "updateLargestSegmentId": {
@@ -261,6 +263,9 @@ function applySingleAction(
 
   ua satisfies never;
 
+  if (ignoreUnsupportedActionTypes) {
+    return state;
+  }
   // Satisfy TS.
   throw new Error("Reached unexpected part of function.");
 }

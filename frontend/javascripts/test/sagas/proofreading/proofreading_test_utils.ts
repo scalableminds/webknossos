@@ -1,9 +1,10 @@
 import type { RequestOptionsWithData } from "libs/request";
-import { sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
+import { combinedReducer } from "viewer/store";
 import {
   type BucketOverride,
   type WebknossosTestContext,
@@ -21,10 +22,12 @@ import { setToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type {
+  ApplicableSkeletonServerUpdateAction,
+  ApplicableVolumeUpdateAction,
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry } from "viewer/store";
+import type { SaveQueueEntry, WebknossosState } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping } from "./proofreading_fixtures";
 import {
@@ -32,6 +35,8 @@ import {
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
+import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -84,11 +89,37 @@ class BackendMock {
   constructor(
     public overrides: BucketOverride[],
     additionalEdges: Vector2[] = [],
+    private initialState: WebknossosState | undefined = undefined,
   ) {
     this.agglomerateMapping = new AgglomerateMapping(
       edgesForInitialMapping.concat(additionalEdges),
       1, // the annotation's current version (as defined in hybridtracing_server_objects.ts)
     );
+  }
+
+  getState() {
+    let state = this.initialState;
+    if (state == null) {
+      return null;
+    }
+    for (const version of this.updateActionLog) {
+      state = combinedReducer(
+        state,
+        applySkeletonUpdateActionsFromServerAction(
+          version.value as ApplicableSkeletonServerUpdateAction[],
+          true,
+        ),
+      );
+      state = combinedReducer(
+        state,
+        applyVolumeUpdateActionsFromServerAction(
+          version.value as ApplicableVolumeUpdateAction[],
+          true,
+        ),
+      );
+    }
+
+    return state;
   }
 
   private addOnSavedListener = (fn: () => void) => {
@@ -309,6 +340,7 @@ class BackendMock {
 export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
+  initialState: WebknossosState | undefined = undefined,
 ) {
   const { mocks } = context;
 
@@ -325,6 +357,7 @@ export function mockInitialBucketAndAgglomerateData(
       { position: [7, 7, 7], value: 7 },
     ],
     additionalEdges,
+    initialState,
   );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(

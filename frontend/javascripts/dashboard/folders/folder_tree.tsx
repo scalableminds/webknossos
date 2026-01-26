@@ -77,6 +77,9 @@ export function FolderTreeSidebar({
     accept: DraggableDatasetType,
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
+  // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
+  const dropRef = useRef<HTMLDivElement>(null);
+  drop(dropRef);
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
     (keys: React.Key[], { nativeEvent }: { nativeEvent: MouseEvent }) => {
@@ -160,7 +163,7 @@ export function FolderTreeSidebar({
       className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
     >
       <div
-        ref={drop}
+        ref={dropRef}
         style={{
           marginRight: 4,
           borderRadius: 2,

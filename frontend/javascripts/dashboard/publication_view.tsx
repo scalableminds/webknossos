@@ -79,7 +79,7 @@ function PublicationView(props: Props) {
       locale={{
         emptyText: "No featured publications.",
       }}
-      className="antd-no-border-list"
+      className="antd-no-border-list publication-list"
       renderItem={(publication) => (
         <List.Item key={publication.id}>
           <PublicationCard publication={publication} showDetailedLink />

@@ -2,7 +2,7 @@ import update from "immutability-helper";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { clamp, map3, mod } from "libs/utils";
-import _ from "lodash";
+import clone from "lodash/clone";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -318,7 +318,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "MOVE_FLYCAM_ORTHO": {
-      const vector = _.clone(action.vector);
+      const vector = clone(action.vector);
 
       const { planeId } = action;
 

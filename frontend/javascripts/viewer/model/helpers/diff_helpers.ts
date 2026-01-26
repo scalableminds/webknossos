@@ -1,5 +1,7 @@
 import { diffArrays, diffObjects } from "libs/utils";
-import _ from "lodash";
+import isEmpty from "lodash/isEmpty";
+import isEqual from "lodash/isEqual";
+import keyBy from "lodash/keyBy";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
   addUserBoundingBoxInSkeletonTracing,
@@ -48,7 +50,7 @@ export function diffGroups(prevGroups: TreeGroup[], groups: TreeGroup[]) {
       newlyNotExpandedIds: [],
     };
   }
-  const didContentChange = !_.isEqual(stripIsExpanded(prevGroups), stripIsExpanded(groups));
+  const didContentChange = !isEqual(stripIsExpanded(prevGroups), stripIsExpanded(groups));
 
   const prevExpandedState = gatherIdToExpandedState(prevGroups);
   const expandedState = gatherIdToExpandedState(groups);
@@ -104,7 +106,7 @@ function* diffBoundingBoxContents(
 
   const prevBoundingBoxesWithoutIsVisible = stripIsVisible(prevBoundingBoxes);
   const currentBoundingBoxesWithoutIsVisible = stripIsVisible(currentBoundingBoxes);
-  const didContentChange = !_.isEqual(
+  const didContentChange = !isEqual(
     prevBoundingBoxesWithoutIsVisible,
     currentBoundingBoxesWithoutIsVisible,
   );
@@ -112,8 +114,8 @@ function* diffBoundingBoxContents(
   if (!didContentChange) {
     return;
   }
-  const prevBBoxById = _.keyBy(prevBoundingBoxesWithoutIsVisible, (bbox) => bbox.id);
-  const currentBBoxById = _.keyBy(currentBoundingBoxesWithoutIsVisible, (bbox) => bbox.id);
+  const prevBBoxById = keyBy(prevBoundingBoxesWithoutIsVisible, (bbox) => bbox.id);
+  const currentBBoxById = keyBy(currentBoundingBoxesWithoutIsVisible, (bbox) => bbox.id);
 
   const {
     onlyA: deletedBBoxIds,
@@ -148,7 +150,7 @@ function* diffBoundingBoxContents(
 
     const changedProps = diffObjects(prevBbox, currentBbox);
 
-    if (!_.isEmpty(changedProps)) {
+    if (!isEmpty(changedProps)) {
       yield updateBBoxAction(currentBbox.id, changedProps, tracingId);
     }
   }

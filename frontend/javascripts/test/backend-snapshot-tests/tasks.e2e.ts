@@ -1,4 +1,5 @@
-import _ from "lodash";
+import omitBy from "lodash/omitBy";
+import isNull from "lodash/isNull";
 import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
 import {
   getTask,
@@ -60,7 +61,7 @@ describe("Task API  (E2E)", () => {
   test("updateTask()", async () => {
     const taskBase = await getTask("58135c192faeb34c0081c058");
 
-    const task = _.omitBy(
+    const task = omitBy(
       {
         ...taskBase,
         taskTypeId: taskBase.type.id,
@@ -68,7 +69,7 @@ describe("Task API  (E2E)", () => {
         scriptId: taskBase.script ? taskBase.script.id : null,
         pendingInstances: taskBase.status.pending,
       },
-      _.isNull,
+      isNull,
     );
 
     // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.

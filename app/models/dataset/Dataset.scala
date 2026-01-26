@@ -34,6 +34,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.RealPathInfo
 import com.scalableminds.webknossos.schema.Tables._
 import controllers.DatasetUpdateParameters
+import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
@@ -71,6 +72,7 @@ case class Dataset(_id: ObjectId,
                    sortingKey: Instant = Instant.now,
                    metadata: JsArray = JsArray.empty,
                    tags: List[String] = List.empty,
+                   creationType: Option[DatasetCreationType] = None,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
 
@@ -128,6 +130,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
         JsonHelper.parseAs[DatasetViewConfiguration](_).toFox)
       metadata <- JsonHelper.parseAs[JsArray](r.metadata).toFox
+      creationType <- Fox.runOptional(r.creationtype)(DatasetCreationType.fromString(_).toFox)
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -152,6 +155,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         Instant.fromSql(r.sortingkey),
         metadata,
         parseArrayLiteral(r.tags).sorted,
+        creationType,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -627,7 +631,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
                      description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
-                     sharingToken, sortingKey, metadata, tags,
+                     sharingToken, sortingKey, metadata, tags, creationType,
                      created, isDeleted
                    )
                    VALUES(
@@ -636,7 +640,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
                      ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
-                     ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags},
+                     ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
                      ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()

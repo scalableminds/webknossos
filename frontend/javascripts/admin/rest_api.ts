@@ -1213,7 +1213,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
             // Note that "terminalFileError" is an event which is only triggered by WK
             // and not by the ResumableUpload library itself. We merely use the event bus
             // of the ResumableUpload object.
-            // @ts-ignore The type definitions are incorrect. fire accepts an event name.
+            // @ts-ignore The type definitions are incorrect. fire accepts these parameters.
             resumable.fire("terminalFileError", file, message);
           });
       } else {

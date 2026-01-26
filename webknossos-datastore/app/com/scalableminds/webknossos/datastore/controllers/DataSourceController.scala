@@ -51,7 +51,7 @@ import java.io.File
 import java.net.URI
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class PathValidationResult(
     path: UPath,
@@ -708,7 +708,10 @@ class DataSourceController @Inject()(
   def invalidateCache(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
       datasetCache.invalidateCache(datasetId)
-      Future.successful(Ok)
+      for {
+        dataSourceBox <- datasetCache.getById(datasetId).shiftBox
+        _ = dataSourceBox.foreach(clearCachesOfDataSource(datasetId, _, layerName = None))
+      } yield Ok
     }
   }
 

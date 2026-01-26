@@ -50,7 +50,7 @@ export class MagInfo {
   getDenseMags = memoizeOne(() => convertToDenseMags(this.getMagList()));
 
   getMagList = memoizeOne(() =>
-    _.sortBy(Array.from(this.magnificationMap.values()), (mag) => Math.max(...mag)),
+    sortBy(Array.from(this.magnificationMap.values()), (mag) => Math.max(...mag)),
   );
 
   getMagsWithIndices(): Array<[number, Vector3]> {

@@ -1,6 +1,7 @@
 import ThreeDMap from "libs/ThreeDMap";
 import { M4x4, V3 } from "libs/mjs";
-import _ from "lodash";
+import range from "lodash/range";
+import uniqBy from "lodash/uniqBy";
 import type { Matrix4x4 } from "mjs";
 import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
@@ -15,7 +16,7 @@ import { MAX_ZOOM_STEP_DIFF, getPriorityWeightForZoomStepDiff } from "../loading
 // in this use case (only one mag at a time is gathered).
 const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 ** 16 * y + z;
 
-const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition);
+const makeBucketsUnique = (buckets: Vector3[]) => uniqBy(buckets, hashPosition);
 
 const ALPHA = Math.PI / 2;
 
@@ -38,7 +39,7 @@ const ROTATIONS = {
 export default function determineBucketsForOblique(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   position: Vector3,
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
@@ -48,11 +49,11 @@ export default function determineBucketsForOblique(
 ): void {
   let zoomStepDiff = 0;
 
-  while (logZoomStep + zoomStepDiff < mags.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
+  while (logZoomStep + zoomStepDiff < denseMags.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
     addNecessaryBucketsToPriorityQueueOblique(
       loadingStrategy,
       viewMode,
-      mags,
+      denseMags,
       position,
       enqueueFunction,
       matrix,
@@ -68,7 +69,7 @@ export default function determineBucketsForOblique(
 function addNecessaryBucketsToPriorityQueueOblique(
   loadingStrategy: LoadingStrategy,
   viewMode: ViewMode,
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   position: Vector3,
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
@@ -117,7 +118,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
       [-enlargedHalfExtent[0], -enlargedHalfExtent[1], 0],
       [-enlargedHalfExtent[0], +enlargedHalfExtent[1], 0],
     ]);
-    const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], mags, logZoomStep);
+    const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], denseMags, logZoomStep);
     const steps = stepRateBuckets.length + 1;
     const stepSize = [enlargedExtent[0] / steps, enlargedExtent[1] / steps];
     // This array holds the start and end points
@@ -127,23 +128,21 @@ function addNecessaryBucketsToPriorityQueueOblique(
     const zDiff = 10;
     const scanLinesPoints = M4x4.transformVectorsAffine(
       queryMatrix,
-      _.flatten(
-        _.range(steps + 1).map((idx) => [
-          // Cast lines at z=-10
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
-          // Cast lines at z=0
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
-          // Cast lines at z=10
-          [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
-          [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
-        ]),
-      ),
+      range(steps + 1).flatMap((idx) => [
+        // Cast lines at z=-10
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], -zDiff],
+        // Cast lines at z=0
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], 0],
+        // Cast lines at z=10
+        [-enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+        [enlargedHalfExtent[0], -enlargedHalfExtent[1] + idx * stepSize[1], zDiff],
+      ]),
     );
 
     for (const [a, b] of chunk2(scanLinesPoints)) {
-      for (const bucket of traverse(a, b, mags, logZoomStep)) {
+      for (const bucket of traverse(a, b, denseMags, logZoomStep)) {
         traversedBuckets.push(bucket);
       }
     }
@@ -155,7 +154,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
   // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
   // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
   // potential other coordinates.
-  const centerAddress = globalPositionToBucketPosition(position, mags, logZoomStep, null);
+  const centerAddress = globalPositionToBucketPosition(position, denseMags, logZoomStep, null);
 
   for (const bucketAddress of traversedBucketsVec4) {
     const bucketVector3 = bucketAddress.slice(0, 3) as any as Vector3;

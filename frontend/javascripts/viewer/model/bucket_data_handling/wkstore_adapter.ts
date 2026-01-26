@@ -4,7 +4,7 @@ import Request from "libs/request";
 import { parseMaybe } from "libs/utils";
 import WebworkerPool from "libs/webworker_pool";
 import window from "libs/window";
-import _ from "lodash";
+import chunk from "lodash/chunk";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
@@ -291,9 +291,9 @@ function sliceBufferIntoPieces(
 export async function createCompressedUpdateBucketActions(
   batch: Array<DataBucket>,
 ): Promise<UpdateActionWithoutIsolationRequirement[]> {
-  return _.flatten(
+  return (
     await Promise.all(
-      _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
+      chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
         const byteArrays = batchSubset.map((bucket) => {
           const data = bucket.getCopyOfData();
           return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
@@ -306,6 +306,6 @@ export async function createCompressedUpdateBucketActions(
           return updateBucket(bucketInfo, compressedBase64, bucket.getTracingId());
         });
       }),
-    ),
-  );
+    )
+  ).flat();
 }

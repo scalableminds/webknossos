@@ -1,5 +1,10 @@
 import { map3, maxValue, minValue } from "libs/utils";
-import _ from "lodash";
+import head from "lodash/head";
+import isEqual from "lodash/isEqual";
+import keyBy from "lodash/keyBy";
+import range from "lodash/range";
+import sortBy from "lodash/sortBy";
+import uniq from "lodash/uniq";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "viewer/constants";
 
@@ -32,7 +37,7 @@ export class MagInfo {
     const { mags } = this;
     const magnificationMap = new Map();
 
-    if (mags.length !== _.uniq(mags.map(maxValue)).length) {
+    if (mags.length !== uniq(mags.map(maxValue)).length) {
       throw new Error("Max dimension in magnifications is not unique.");
     }
 
@@ -44,10 +49,12 @@ export class MagInfo {
 
   getDenseMags = memoizeOne(() => convertToDenseMags(this.getMagList()));
 
-  getMagList = memoizeOne(() => Array.from(this.magnificationMap.values()));
+  getMagList = memoizeOne(() =>
+    sortBy(Array.from(this.magnificationMap.values()), (mag) => Math.max(...mag)),
+  );
 
   getMagsWithIndices(): Array<[number, Vector3]> {
-    return _.sortBy(
+    return sortBy(
       Array.from(this.magnificationMap.entries()).map((entry) => {
         const [powerOfTwo, mag] = entry;
         const magIndex = Math.log2(powerOfTwo);
@@ -91,7 +98,7 @@ export class MagInfo {
     // Assert that the index exists and that the mag at that index
     // equals the mag argument
     const magMaybe = this.getMagByIndex(index);
-    if (!_.isEqual(magnification, magMaybe)) {
+    if (!isEqual(magnification, magMaybe)) {
       throw new Error(
         `Magnification ${magnification} with index ${index} is not equal to existing magnification at that index: ${magMaybe}.`,
       );
@@ -175,7 +182,7 @@ export class MagInfo {
       }
     });
 
-    const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
+    const bestIndexWithDistance = head(sortBy(indicesWithDistances, (entry) => entry[1]));
     if (bestIndexWithDistance == null) {
       throw new Error(errorMessage || "Couldn't find any magnification.");
     }
@@ -232,18 +239,18 @@ export function convertToDenseMags(magnifications: Array<Vector3>): Array<Vector
   // This function returns an array of mags, for which each index will
   // hold a mag with highest_dim === 2**index and where mags are monotonously increasing.
 
-  if (magnifications.length !== _.uniq(magnifications.map(maxValue)).length) {
+  if (magnifications.length !== uniq(magnifications.map(maxValue)).length) {
     throw new Error("Max dimension in magnifications is not unique.");
   }
 
   const maxMag = Math.log2(maxValue(magnifications.map((v) => maxValue(v))));
 
-  const magnificationsLookUp = _.keyBy(magnifications, maxValue);
+  const magnificationsLookUp = keyBy(magnifications, maxValue);
 
   const maxResPower = 2 ** maxMag;
   let lastMag = [maxResPower, maxResPower, maxResPower];
 
-  return _.range(maxMag, -1, -1)
+  return range(maxMag, -1, -1)
     .map((exp) => {
       const resPower = 2 ** exp;
       // If the magnification does not exist, use the component-wise minimum of the next-higher

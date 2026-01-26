@@ -11,7 +11,10 @@ import { Form, type FormInstance } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
+import extend from "lodash/extend";
+import isEqual from "lodash/isEqual";
+import size from "lodash/size";
 import messages from "messages";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -95,7 +98,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
-      let fetchedDataset = await getDataset(datasetId);
+      let fetchedDataset = await getDataset(datasetId, null, undefined, false);
       const dataSource = fetchedDataset.dataSource;
 
       setSavedDataSourceOnServer(dataSource);
@@ -105,7 +108,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       }
 
       if (fetchedDataset.dataSource.status?.includes("Error")) {
-        const datasetClone = _.cloneDeep(fetchedDataset) as any as MutableAPIDataset;
+        const datasetClone = cloneDeep(fetchedDataset) as any as MutableAPIDataset;
         datasetClone.dataSource.status = fetchedDataset.dataSource.status;
         fetchedDataset = datasetClone as APIDataset;
       }
@@ -189,7 +192,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
 
   const didDatasourceChange = useCallback(
     (dataSource: Record<string, any>) => {
-      return !_.isEqual(dataSource, savedDataSourceOnServer || {});
+      return !isEqual(dataSource, savedDataSourceOnServer || {});
     },
     [savedDataSourceOnServer],
   );
@@ -211,7 +214,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const isOnlyDatasourceIncorrectAndNotEdited = useCallback(() => {
     const validationSummary = getFormValidationSummary();
 
-    if (_.size(validationSummary) === 1 && validationSummary.data) {
+    if (size(validationSummary) === 1 && validationSummary.data) {
       try {
         const dataSource = form.getFieldValue("dataSource");
         const didNotEditDatasource = !didDatasourceChange(dataSource);
@@ -251,7 +254,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
     if (datasetDefaultConfiguration != null) {
       await updateDatasetDefaultConfiguration(
         datasetId,
-        _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+        extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
           layers: JSON.parse(formValues.defaultConfigurationLayersJson),
         }),
       );

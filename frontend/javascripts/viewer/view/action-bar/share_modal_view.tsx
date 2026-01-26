@@ -30,7 +30,7 @@ import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useState } from "react";

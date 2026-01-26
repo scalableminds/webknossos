@@ -1,7 +1,7 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import camelCase from "lodash/camelCase";
-import mapKeys from "lodash/mapKeys";
+import camelCase from "lodash-es/camelCase";
+import mapKeys from "lodash-es/mapKeys";
 import type {
   APIAnnotationType,
   APIJob,

@@ -8,8 +8,8 @@ import {
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import compact from "lodash/compact";
-import every from "lodash/every";
+import compact from "lodash-es/compact";
+import every from "lodash-es/every";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";

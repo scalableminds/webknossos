@@ -1,5 +1,5 @@
-import debounce from "lodash/debounce";
-import noop from "lodash/noop";
+import debounce from "lodash-es/debounce";
+import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";

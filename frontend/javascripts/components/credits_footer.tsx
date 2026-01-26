@@ -2,7 +2,14 @@ import { ConfigProvider, Layout } from "antd";
 import { Typography } from "antd";
 import { Link } from "react-router-dom";
 import { getAntdTheme } from "theme";
+
 const { Footer } = Layout;
+
+const logoStyle = {
+  marginRight: 10,
+  width: "25%",
+  maxWidth: 100,
+};
 
 const creditsFooter = () => (
   <ConfigProvider theme={getAntdTheme("dark")}>
@@ -18,24 +25,20 @@ const creditsFooter = () => (
         <Typography.Paragraph>
           <a href="https://www.brain.mpg.de/connectomics">
             <img
-              className="img-responsive"
               alt="Max Planck Gesellschaft logo"
               src="/images/Max-Planck-Gesellschaft.svg"
+              style={logoStyle}
             />
           </a>
           <a href="https://www.brain.mpg.de/connectomics">
             <img
-              className="img-responsive"
               alt="Max Planck Institute for Brain Research logo"
               src="/images/MPI-brain-research.svg"
+              style={logoStyle}
             />
           </a>
           <a href="https://scalableminds.com">
-            <img
-              className="img-responsive"
-              alt="scalable minds logo"
-              src="/images/scalableminds_logo.svg"
-            />
+            <img alt="scalable minds logo" src="/images/scalableminds_logo.svg" style={logoStyle} />
           </a>
         </Typography.Paragraph>
         <Typography.Paragraph>

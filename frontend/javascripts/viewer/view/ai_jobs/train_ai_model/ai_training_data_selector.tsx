@@ -3,7 +3,7 @@ import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic 
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { computeVolumeFromBoundingBox } from "libs/utils";
-import groupBy from "lodash/groupBy";
+import groupBy from "lodash-es/groupBy";
 import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";

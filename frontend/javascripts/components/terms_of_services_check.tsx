@@ -12,7 +12,7 @@ import dayjs from "dayjs";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import { switchTo } from "navbar";
 import type React from "react";
 import { useEffect, useState } from "react";

@@ -1,8 +1,8 @@
 import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 import { Avatar, List } from "antd";
 import FormattedDate from "components/formatted_date";
-import last from "lodash/last";
-import max from "lodash/max";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
 import { Component, Fragment } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import VersionEntry from "viewer/view/version_entry";

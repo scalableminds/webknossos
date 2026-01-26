@@ -7,7 +7,7 @@ import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { MathUtils, Matrix4 } from "three";

@@ -1,8 +1,8 @@
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import { getIsInIframe } from "libs/utils";
-import cloneDeep from "lodash/cloneDeep";
-import debounce from "lodash/debounce";
+import cloneDeep from "lodash-es/cloneDeep";
+import debounce from "lodash-es/debounce";
 import { createNanoEvents } from "nanoevents";
 import { setStoredLayoutsAction } from "viewer/model/actions/ui_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";

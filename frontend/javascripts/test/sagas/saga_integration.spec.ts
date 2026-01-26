@@ -7,7 +7,7 @@ import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_s
 import Store from "viewer/store";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import omit from "lodash/omit";
+import omit from "lodash-es/omit";
 
 import {
   createTreeMapFromTreeArray,

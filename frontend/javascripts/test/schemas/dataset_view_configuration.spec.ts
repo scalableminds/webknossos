@@ -1,4 +1,4 @@
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "lodash-es/cloneDeep";
 import { describe, it, expect } from "vitest";
 import { validateObjectWithType } from "types/validation";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";

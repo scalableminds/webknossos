@@ -3,7 +3,7 @@ import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { map3, sleep } from "libs/utils";
-import range from "lodash/range";
+import range from "lodash-es/range";
 import ndarray, { type NdArray } from "ndarray";
 import { call, cancel, fork, put } from "typed-redux-saga";
 import type { APIDataset, AdditionalCoordinate } from "types/api_types";

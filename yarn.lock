@@ -3528,7 +3528,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/lodash@npm:^4.17.0, @types/lodash@npm:^4.17.4":
+"@types/lodash-es@npm:^4":
+  version: 4.17.12
+  resolution: "@types/lodash-es@npm:4.17.12"
+  dependencies:
+    "@types/lodash": "npm:*"
+  checksum: 10c0/5d12d2cede07f07ab067541371ed1b838a33edb3c35cb81b73284e93c6fd0c4bbeaefee984e69294bffb53f62d7272c5d679fdba8e595ff71e11d00f2601dde0
+  languageName: node
+  linkType: hard
+
+"@types/lodash@npm:*":
+  version: 4.17.23
+  resolution: "@types/lodash@npm:4.17.23"
+  checksum: 10c0/9d9cbfb684e064a2b78aab9e220d398c9c2a7d36bc51a07b184ff382fa043a99b3d00c16c7f109b4eb8614118f4869678dbae7d5c6700ed16fb9340e26cc0bf6
+  languageName: node
+  linkType: hard
+
+"@types/lodash@npm:^4.17.0":
   version: 4.17.7
   resolution: "@types/lodash@npm:4.17.7"
   checksum: 10c0/40c965b5ffdcf7ff5c9105307ee08b782da228c01b5c0529122c554c64f6b7168fc8f11dc79aa7bae4e67e17efafaba685dc3a47e294dbf52a65ed2b67100561
@@ -7755,6 +7771,13 @@ __metadata:
   version: 4.17.21
   resolution: "lodash-es@npm:4.17.21"
   checksum: 10c0/fb407355f7e6cd523a9383e76e6b455321f0f153a6c9625e21a8827d10c54c2a2341bd2ae8d034358b60e07325e1330c14c224ff582d04612a46a4f0479ff2f2
+  languageName: node
+  linkType: hard
+
+"lodash-es@npm:^4.17.23":
+  version: 4.17.23
+  resolution: "lodash-es@npm:4.17.23"
+  checksum: 10c0/3150fb6660c14c7a6b5f23bd11597d884b140c0e862a17fdb415aaa5ef7741523182904a6b7929f04e5f60a11edb5a79499eb448734381c99ffb3c4734beeddd
   languageName: node
   linkType: hard
 
@@ -12397,7 +12420,7 @@ __metadata:
     "@types/file-saver": "npm:^2.0.5"
     "@types/hammerjs": "npm:^2.0.46"
     "@types/jsdom": "npm:^21.1.7"
-    "@types/lodash": "npm:^4.17.4"
+    "@types/lodash-es": "npm:^4"
     "@types/lz-string": "npm:^1.3.34"
     "@types/memoize-one": "npm:^5.1.2"
     "@types/merge-img": "npm:^2.1.1"
@@ -12451,7 +12474,7 @@ __metadata:
     jsonschema: "npm:^1.2.4"
     keyboardjs: "npm:^2.7.0"
     less: "npm:^4.0.0"
-    lodash: "npm:^4.17.21"
+    lodash-es: "npm:^4.17.23"
     lz-string: "npm:^1.4.4"
     lz4-wasm: "npm:^0.9.2"
     lz4-wasm-nodejs: "npm:^0.9.2"

@@ -1,5 +1,5 @@
 import deepFreezeLib from "deep-freeze";
-import identity from "lodash/identity";
+import identity from "lodash-es/identity";
 
 // Do not use the deep-freeze library in production
 // import.meta.env.MODE is set by vite

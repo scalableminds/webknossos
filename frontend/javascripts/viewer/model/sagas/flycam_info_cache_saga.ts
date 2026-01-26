@@ -1,4 +1,4 @@
-import memoize from "lodash/memoize";
+import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";

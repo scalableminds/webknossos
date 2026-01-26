@@ -41,8 +41,8 @@ import {
   hasUrlParam,
   localeCompareBy,
 } from "libs/utils";
-import isEmpty from "lodash/isEmpty";
-import partial from "lodash/partial";
+import isEmpty from "lodash-es/isEmpty";
+import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";

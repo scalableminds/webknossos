@@ -10,7 +10,7 @@ import {
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
-import every from "lodash/every";
+import every from "lodash-es/every";
 import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";

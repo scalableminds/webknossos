@@ -1,5 +1,5 @@
 import { diffArrays } from "libs/utils";
-import range from "lodash/range";
+import range from "lodash-es/range";
 import {
   BufferAttribute,
   BufferGeometry,

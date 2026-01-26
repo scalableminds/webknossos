@@ -1,6 +1,6 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
 import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import partition from "lodash/partition";
+import partition from "lodash-es/partition";
 import type { BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,

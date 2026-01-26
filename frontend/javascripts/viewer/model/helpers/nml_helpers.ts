@@ -6,10 +6,10 @@ import {
   computeBoundingBoxFromBoundingBoxObject,
 } from "libs/utils";
 import { location } from "libs/window";
-import compact from "lodash/compact";
-import concat from "lodash/concat";
-import size from "lodash/size";
-import zip from "lodash/zip";
+import compact from "lodash-es/compact";
+import concat from "lodash-es/concat";
+import size from "lodash-es/size";
+import zip from "lodash-es/zip";
 import messages from "messages";
 import { SAXParser } from "sax-ts";
 import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";

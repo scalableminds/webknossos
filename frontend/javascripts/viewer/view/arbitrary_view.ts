@@ -2,7 +2,7 @@ import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import window from "libs/window";
-import throttle from "lodash/throttle";
+import throttle from "lodash-es/throttle";
 import {
   Matrix4,
   Object3D,

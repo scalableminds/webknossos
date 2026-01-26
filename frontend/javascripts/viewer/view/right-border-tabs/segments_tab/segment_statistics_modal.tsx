@@ -4,7 +4,7 @@ import { Alert, Modal, Spin, Table } from "antd";
 import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { pluralize } from "libs/utils";
-import capitalize from "lodash/capitalize";
+import capitalize from "lodash-es/capitalize";
 import { useCallback, useMemo } from "react";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";

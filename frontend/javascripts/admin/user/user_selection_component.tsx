@@ -2,7 +2,7 @@ import { getUsers } from "admin/rest_api";
 import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
-import sortBy from "lodash/sortBy";
+import sortBy from "lodash-es/sortBy";
 import { useState } from "react";
 
 type Props = {

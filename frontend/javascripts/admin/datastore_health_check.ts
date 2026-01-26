@@ -7,9 +7,9 @@ import {
   pingHealthEndpoint,
 } from "admin/rest_api";
 import Toast from "libs/toast";
-import memoize from "lodash/memoize";
-import throttle from "lodash/throttle";
-import uniq from "lodash/uniq";
+import memoize from "lodash-es/memoize";
+import throttle from "lodash-es/throttle";
+import uniq from "lodash-es/uniq";
 import messages from "messages";
 import type { APIBuildInfoDatastore, APIBuildInfoWk } from "types/api_types";
 

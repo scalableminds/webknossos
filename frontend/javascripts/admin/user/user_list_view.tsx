@@ -41,7 +41,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
-import keyBy from "lodash/keyBy";
+import keyBy from "lodash-es/keyBy";
 import React, { type Key, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";

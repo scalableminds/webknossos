@@ -3,7 +3,7 @@
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */
-import max from "lodash/max";
+import max from "lodash-es/max";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
 import {

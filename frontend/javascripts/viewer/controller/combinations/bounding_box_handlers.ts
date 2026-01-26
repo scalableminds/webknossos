@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import { document } from "libs/window";
-import throttle from "lodash/throttle";
+import throttle from "lodash-es/throttle";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";

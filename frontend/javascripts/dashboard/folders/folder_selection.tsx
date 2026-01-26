@@ -1,5 +1,5 @@
 import { TreeSelect } from "antd";
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "lodash-es/cloneDeep";
 import { useEffect, useState } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";

@@ -1,6 +1,6 @@
 import { Button, type ButtonProps } from "antd";
 import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import React from "react";
 
 type ButtonComponentProps = ButtonProps & {

@@ -1,4 +1,4 @@
-import sortBy from "lodash/sortBy";
+import sortBy from "lodash-es/sortBy";
 import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import { getTeams, getEditableTeams, createTeam, deleteTeam } from "admin/rest_api";
 import { describe, beforeAll, expect, it } from "vitest";

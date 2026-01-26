@@ -1,7 +1,7 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
-import sum from "lodash/sum";
+import sum from "lodash-es/sum";
 import messages from "messages";
 import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { Identity4x4 } from "viewer/constants";

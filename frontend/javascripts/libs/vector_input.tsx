@@ -120,7 +120,7 @@ function useVectorInput<T extends number[]>(
       const commasBeforeCursor =
         input.value.slice(0, input.selectionStart || 0).split(",").length - 1;
 
-      if (Number.isNaN(vec[commasBeforeCursor])) {
+      if (vec[commasBeforeCursor] == null || Number.isNaN(vec[commasBeforeCursor])) {
         vec[commasBeforeCursor] = 0;
       }
       const increment = event.key === "ArrowUp" ? 1 : -1;

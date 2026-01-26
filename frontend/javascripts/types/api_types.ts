@@ -32,7 +32,6 @@ import type { EmptyObject } from "./globals";
 export type { BoundingBoxProto } from "types/bounding_box";
 export type { AdditionalCoordinate } from "viewer/constants";
 
-type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
   | "uint8"
   | "uint16"
@@ -744,8 +743,6 @@ export type APIBuildInfoTracingstore = {
     ciBuild: string;
   };
 };
-
-type APIBuildInfo = APIBuildInfoWk | APIBuildInfoDatastore | APIBuildInfoTracingstore;
 
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;

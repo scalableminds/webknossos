@@ -6,12 +6,10 @@ import createSagaMiddleware, { type Saga } from "redux-saga";
 // Type imports
 import type { Matrix4x4 } from "libs/mjs";
 import type {
-  APIAllowedMode,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIConnectomeFile,
   APIDataLayer,
-  APIDataSourceId,
   APIDataStore,
   APIDataset,
   APIHistogramData,
@@ -54,12 +52,7 @@ import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Toolkit } from "./model/accessors/tool_accessor";
-import type {
-  MutableTreeGroup,
-  TreeGroup,
-  TreeGroupTypeFlat,
-  TreeMap,
-} from "./model/types/tree_types";
+import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 // Value imports
@@ -113,13 +106,10 @@ export type UserBoundingBoxWithOptIsVisible = Omit<UserBoundingBox, "isVisible">
   isVisible?: boolean;
 };
 
-type SegmentGroupTypeFlat = TreeGroupTypeFlat;
 export type SegmentGroup = TreeGroup;
-type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
 export type Restrictions = APIRestrictions;
-type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
 export type AnnotationVisibility = APIAnnotationVisibility;
@@ -228,9 +218,6 @@ export type StoreAnnotation = Annotation & {
   readonly volumes: Array<VolumeTracing>;
   readonly readOnly: ReadOnlyTracing | null | undefined;
   readonly mappings: Array<EditableMapping>;
-};
-type LegacyViewCommand = APIDataSourceId & {
-  readonly type: typeof ControlModeEnum.VIEW;
 };
 export type TraceOrViewCommand =
   | {

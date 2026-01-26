@@ -435,7 +435,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     resumableUpload.on("filesAdded", () => {
       resumableUpload.upload();
     });
-    resumableUpload.on("fileError", (_file: FileWithPath, message: string) => {
+    // terminalFileError is triggered by the RestApi when a normal fileError could not be
+    // recovered by refreshing the user token.
+    resumableUpload.on("terminalFileError", (_file: FileWithPath, message: string) => {
       Toast.error(message);
       this.setState({
         isUploading: false,

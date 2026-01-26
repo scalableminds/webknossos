@@ -1,6 +1,6 @@
 import { SettingOutlined } from "@ant-design/icons";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 
 import { useWkSelector } from "libs/react_hooks";
@@ -16,14 +16,6 @@ import { LogSliderSetting } from "viewer/view/components/setting_input_views";
 import FastTooltip from "components/fast_tooltip";
 import defaultState from "viewer/default_state";
 import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
-
-const handleUpdateBrushSize = (value: number) => {
-  Store.dispatch(updateUserSettingAction("brushSize", value));
-};
-
-const handleUpdatePresetBrushSizes = (brushSizes: BrushPresets) => {
-  Store.dispatch(updateUserSettingAction("presetBrushSizes", brushSizes));
-};
 
 function BrushPresetButton({
   name,
@@ -67,6 +59,21 @@ export function ChangeBrushSizePopover() {
 
   const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
   const presetBrushSizes = useWkSelector((state) => state.userConfiguration.presetBrushSizes);
+
+  const handleUpdateBrushSize = useCallback(
+    (value: number) => {
+      dispatch(updateUserSettingAction("brushSize", value));
+    },
+    [dispatch],
+  );
+
+  const handleUpdatePresetBrushSizes = useCallback(
+    (brushSizes: BrushPresets) => {
+      dispatch(updateUserSettingAction("presetBrushSizes", brushSizes));
+    },
+    [dispatch],
+  );
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether defaultBrushSizes is needed as dependency.
   useEffect(() => {
     if (presetBrushSizes == null) {

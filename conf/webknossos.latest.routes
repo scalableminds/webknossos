@@ -106,6 +106,8 @@ GET           /datasets/:datasetName/isValidNewName                             
 DELETE        /datasets/:datasetId                                                              controllers.DatasetController.delete(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveAttachmentUploadToPath                                controllers.DatasetController.reserveAttachmentUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishAttachmentUploadToPath                                 controllers.DatasetController.finishAttachmentUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveMagUploadToPath                                       controllers.DatasetController.reserveMagUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/finishMagUploadToPath                                        controllers.DatasetController.finishMagUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary                           controllers.DatasetController.reserveUploadToPathsForPreliminary(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])

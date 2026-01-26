@@ -464,6 +464,12 @@ program
   .action(() => {
     checkEvolutionsSchema();
   });
+program
+  .command("check-schema-evolutions")
+  .description("Compares the schema of SQL files against the evolutions (alias for check-evolutions-schema)")
+  .action(() => {
+    checkEvolutionsSchema();
+  });
 
 program
   .command("apply-evolutions")

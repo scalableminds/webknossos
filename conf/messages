@@ -18,7 +18,6 @@ image.create.failed=Failed to create image
 
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
-auth.token.noUser=Could not determine user for access token
 auth.passkeys.disabled=Passkeys disabled.
 auth.passkeys.requiresHttps=Passkeys are only supported with HTTPS.
 auth.passkeys.unauthorized=Passkey Authentication Failed.
@@ -130,6 +129,8 @@ dataset.explore.autoAdd.failed=Failed to automatically import the explored datas
 dataset.additionalCoordinates.different=Additional coordinates differ in merged units.
 dataset.metadata.duplicateKeys=Metadata keys must be unique.
 dataset.boundingBox.unset=This dataset has no bounding box. Please make sure this dataset is imported correctly.
+dataset.reserveMagUploadToPath.notVirtual=Adding mags to existing datasets is only allowed for virtual datasets.
+dataset.reserveMagUploadToPath.exists=This mag is already pending.
 
 uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(150);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(152);
 COMMIT TRANSACTION;
 
 
@@ -92,6 +92,7 @@ CREATE TABLE webknossos.publications(
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+CREATE TYPE webknossos.DATASET_CREATION_TYPE AS ENUM ('Upload', 'DiskScan', 'UploadToPaths', 'ExploreAndAdd', 'Compose', 'DuplicateToOrga');
 CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('yoctometer', 'zeptometer', 'attometer', 'femtometer', 'picometer', 'nanometer', 'micrometer', 'millimeter', 'centimeter', 'decimeter', 'meter', 'hectometer', 'kilometer', 'megameter', 'gigameter', 'terameter', 'petameter', 'exameter', 'zettameter', 'yottameter', 'angstrom', 'inch', 'foot', 'yard', 'mile', 'parsec');
 CREATE TABLE webknossos.datasets(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -117,6 +118,7 @@ CREATE TABLE webknossos.datasets(
   sortingKey TIMESTAMPTZ NOT NULL,
   metadata JSONB NOT NULL DEFAULT '[]',
   tags TEXT[] NOT NULL DEFAULT '{}',
+  creationType webknossos.DATASET_CREATION_TYPE,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
@@ -194,6 +196,7 @@ CREATE TABLE webknossos.dataset_mags(
   axisOrder JSONB CONSTRAINT axisOrder_requiredKeys CHECK (axisOrder ? 'x' AND axisOrder ? 'y'),
   channelIndex INT,
   credentialId TEXT,
+  uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

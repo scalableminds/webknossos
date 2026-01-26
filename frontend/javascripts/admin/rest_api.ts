@@ -1199,7 +1199,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     });
 
     let lastFileErrorTimestamp: number | null = null;
-    resumable.on("fileError", function (file, _message) {
+    resumable.on("fileError", function (file, message) {
       // When a file could not be uploaded, assume that the token is invalid. Then,
       // refresh the token (unless we already did this in the last hour) and
       // retry the file upload.
@@ -1214,11 +1214,11 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
             // and not by the ResumableUpload library itself. We merely use the event bus
             // of the ResumableUpload object.
             // @ts-ignore The type definitions are incorrect. fire accepts an event name.
-            resumable.fire("terminalFileError");
+            resumable.fire("terminalFileError", file, message);
           });
       } else {
         // @ts-ignore See above.
-        resumable.fire("terminalFileError");
+        resumable.fire("terminalFileError", file, message);
       }
 
       lastFileErrorTimestamp = Date.now();

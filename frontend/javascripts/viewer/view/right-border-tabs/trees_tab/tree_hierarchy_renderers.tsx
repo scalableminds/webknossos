@@ -11,7 +11,7 @@ import { type MenuProps, notification } from "antd";
 import cloneDeep from "lodash/cloneDeep";
 import difference from "lodash/difference";
 import type React from "react";
-import { batchActions, type BatchActionType } from "redux-batched-actions";
+import { type BatchActionType, batchActions } from "redux-batched-actions";
 import {
   LongUnitToShortUnitMap,
   type TreeType,

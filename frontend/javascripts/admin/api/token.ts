@@ -9,7 +9,13 @@ let tokenPromise: Promise<string>;
 let tokenRequestPromise: Promise<string> | null;
 let shouldUseURLToken: boolean = true;
 
-function requestUserToken(): Promise<string> {
+function getOrCreateNewTokenPromise(): Promise<string> {
+  /*
+   * This function requests a new user token unless
+   * there is already an ongoing request for a new
+   * token (tokenRequestPromise != null).
+   * The returned promise will contain the new token.
+   */
   if (tokenRequestPromise) {
     return tokenRequestPromise;
   }
@@ -22,6 +28,17 @@ function requestUserToken(): Promise<string> {
   });
 
   return tokenRequestPromise;
+}
+
+export function refreshToken() {
+  /*
+   * This function can be used to invalidate an existing token.
+   * It returns a promise that will contain a new token.
+   */
+  // Note that tokenPromise is a module variable and will be
+  // used in doWithToken.
+  tokenPromise = getOrCreateNewTokenPromise();
+  return tokenPromise;
 }
 
 export function getSharingTokenFromUrlParameters(): string | null | undefined {
@@ -45,7 +62,7 @@ export async function doWithToken<T>(
     useURLTokenIfAvailable && shouldUseURLToken ? getSharingTokenFromUrlParameters() : null;
 
   if (token == null) {
-    tokenPromise = tokenPromise == null ? requestUserToken() : tokenPromise;
+    tokenPromise = tokenPromise ?? getOrCreateNewTokenPromise();
   } else {
     tokenPromise = Promise.resolve(token);
   }
@@ -55,7 +72,7 @@ export async function doWithToken<T>(
       console.warn(
         `Token expired (attempt ${tries}/${MAX_TOKEN_RETRY_ATTEMPTS}). Requesting new token...`,
       );
-      tokenPromise = requestUserToken();
+      refreshToken();
 
       // If three new tokens did not fix the 403, abort, otherwise we'll get into an endless loop here
       if (tries < MAX_TOKEN_RETRY_ATTEMPTS) {

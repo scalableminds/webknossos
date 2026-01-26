@@ -340,7 +340,7 @@ const Constants = {
   },
   // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
   // we are more lax with the flood fill extent.
-  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 10,
+  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 5,
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
   SCALEBAR_HEIGHT: 22,
   SCALEBAR_OFFSET: 10,

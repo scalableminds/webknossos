@@ -1,5 +1,5 @@
-import clamp from "lodash/clamp";
-import range from "lodash/range";
+import clamp from "lodash-es/clamp";
+import range from "lodash-es/range";
 import type { ElementClass } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import type { ShaderModule } from "./shader_module_system";

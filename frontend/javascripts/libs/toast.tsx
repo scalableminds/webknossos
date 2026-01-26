@@ -1,5 +1,5 @@
 import { Collapse, notification } from "antd";
-import debounce from "lodash/debounce";
+import debounce from "lodash-es/debounce";
 import type React from "react";
 import { useEffect } from "react";
 import { animationFrame, sleep } from "./utils";

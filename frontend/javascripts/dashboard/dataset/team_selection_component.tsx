@@ -2,8 +2,8 @@ import { getEditableTeams, getTeams } from "admin/rest_api";
 import { Select } from "antd";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import Toast from "libs/toast";
-import compact from "lodash/compact";
-import unionBy from "lodash/unionBy";
+import compact from "lodash-es/compact";
+import unionBy from "lodash-es/unionBy";
 import { useCallback, useEffect, useState } from "react";
 import type { APITeam } from "types/api_types";
 

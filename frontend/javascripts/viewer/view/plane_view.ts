@@ -4,7 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
-import throttle from "lodash/throttle";
+import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,

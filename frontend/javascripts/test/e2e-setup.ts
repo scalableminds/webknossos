@@ -1,4 +1,4 @@
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "lodash-es/cloneDeep";
 // @ts-ignore
 import deepForEach from "deep-for-each";
 import fs from "node:fs";

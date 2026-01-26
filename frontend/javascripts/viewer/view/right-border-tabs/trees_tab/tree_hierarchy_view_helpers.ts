@@ -1,6 +1,6 @@
 import type { DataNode } from "antd/es/tree";
-import groupBy from "lodash/groupBy";
-import orderBy from "lodash/orderBy";
+import groupBy from "lodash-es/groupBy";
+import orderBy from "lodash-es/orderBy";
 import memoizeOne from "memoize-one";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";

@@ -1,4 +1,4 @@
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 
 /*
   Wraps a given function so that it returns the same instance on consecutive

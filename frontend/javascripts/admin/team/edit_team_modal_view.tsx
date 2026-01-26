@@ -146,14 +146,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   const usersHaveLoaded = users !== null;
 
   return (
-    <Modal
-      open={isOpen}
-      onCancel={onCancel}
-      title="Add / Remove Users"
-      className="edit-team-modal"
-      footer={null}
-      width={800}
-    >
+    <Modal open={isOpen} onCancel={onCancel} title="Add / Remove Users" footer={null} width={800}>
       <Spin spinning={!usersHaveLoaded}>{usersHaveLoaded ? renderModalBody() : null}</Spin>
     </Modal>
   );

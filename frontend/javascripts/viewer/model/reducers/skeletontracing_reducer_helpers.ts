@@ -3,14 +3,14 @@ import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import { colorObjectToRGBArray, point3ToVector3, zeroPad } from "libs/utils";
-import compact from "lodash/compact";
-import first from "lodash/first";
-import isEmpty from "lodash/isEmpty";
-import last from "lodash/last";
-import lodashMax from "lodash/max";
-import random from "lodash/random";
-import sortedIndex from "lodash/sortedIndex";
-import without from "lodash/without";
+import compact from "lodash-es/compact";
+import first from "lodash-es/first";
+import isEmpty from "lodash-es/isEmpty";
+import last from "lodash-es/last";
+import lodashMax from "lodash-es/max";
+import random from "lodash-es/random";
+import sortedIndex from "lodash-es/sortedIndex";
+import without from "lodash-es/without";
 import type {
   MetadataEntryProto,
   ServerBranchPoint,

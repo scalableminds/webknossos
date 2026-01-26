@@ -1,8 +1,8 @@
 import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
 import window from "libs/window";
-import noop from "lodash/noop";
-import throttle from "lodash/throttle";
+import noop from "lodash-es/noop";
+import throttle from "lodash-es/throttle";
 import { type Emitter, createNanoEvents } from "nanoevents";
 import { Color } from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";

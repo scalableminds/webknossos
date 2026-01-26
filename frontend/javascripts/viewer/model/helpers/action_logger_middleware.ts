@@ -1,4 +1,4 @@
-import drop from "lodash/drop";
+import drop from "lodash-es/drop";
 import type { Dispatch } from "redux";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Action } from "viewer/model/actions/actions";

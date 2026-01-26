@@ -1,4 +1,4 @@
-import range from "lodash/range";
+import range from "lodash-es/range";
 export default class WebWorkerPool<P, R> {
   // This class can be used to instantiate multiple web workers
   // which are then used for computation in a simple round-robin manner.

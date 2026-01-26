@@ -24,9 +24,9 @@ import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
-import flatMap from "lodash/flatMap";
-import isEmpty from "lodash/isEmpty";
-import uniq from "lodash/uniq";
+import flatMap from "lodash-es/flatMap";
+import isEmpty from "lodash-es/isEmpty";
+import uniq from "lodash-es/uniq";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 

@@ -3,7 +3,7 @@ import { editAnnotation } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { hasUrlParam } from "libs/utils";
-import mapValues from "lodash/mapValues";
+import mapValues from "lodash-es/mapValues";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";

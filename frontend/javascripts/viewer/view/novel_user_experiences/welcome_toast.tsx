@@ -3,7 +3,7 @@ import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import defaultsDeep from "lodash/defaultsDeep";
+import defaultsDeep from "lodash-es/defaultsDeep";
 import { ColorWKBlueZircon, getAntdTheme } from "theme";
 
 const darkThemeWithCyanButton = defaultsDeep(

@@ -1,7 +1,7 @@
 import PriorityQueue from "js-priority-queue";
-import intersectionBy from "lodash/intersectionBy";
-import isEqual from "lodash/isEqual";
-import memoize from "lodash/memoize";
+import intersectionBy from "lodash-es/intersectionBy";
+import isEqual from "lodash-es/isEqual";
+import memoize from "lodash-es/memoize";
 import moments from "ndarray-moments";
 import ops from "ndarray-ops";
 import {

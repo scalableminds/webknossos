@@ -24,7 +24,7 @@ import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy, pluralize } from "libs/utils";
-import capitalize from "lodash/capitalize";
+import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -137,6 +137,29 @@ export function JobState({ job }: { job: APIJob }) {
       {jobStateNormalized}
     </Tooltip>
   );
+}
+
+// Helper function to get a friendly name for job types
+function getJobTypeName(command: APIJobCommand): string {
+  const jobTypeNames: Record<string, string> = {
+    [APIJobCommand.CONVERT_TO_WKW]: "Convert to WKW",
+    [APIJobCommand.EXPORT_TIFF]: "Export TIFF",
+    [APIJobCommand.RENDER_ANIMATION]: "Render Animation",
+    [APIJobCommand.COMPUTE_MESH_FILE]: "Compute Mesh",
+    [APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE]: "Compute Segment Index",
+    [APIJobCommand.FIND_LARGEST_SEGMENT_ID]: "Find Largest Segment ID",
+    [APIJobCommand.INFER_NUCLEI]: "AI Nuclei Inference",
+    [APIJobCommand.INFER_NEURONS]: "AI Neuron Inference",
+    [APIJobCommand.INFER_MITOCHONDRIA]: "AI Mitochondria Inference",
+    [APIJobCommand.INFER_INSTANCES]: "AI Instance Segmentation",
+    [APIJobCommand.ALIGN_SECTIONS]: "Align Sections",
+    [APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION]: "Materialize Annotation",
+    [APIJobCommand.TRAIN_NEURON_MODEL]: "Train Neuron Model",
+    [APIJobCommand.TRAIN_INSTANCE_MODEL]: "Train Instance Model",
+    [APIJobCommand.DEPRECATED_TRAIN_MODEL]: "Train Model (Legacy)",
+    [APIJobCommand.DEPRECATED_INFER_WITH_MODEL]: "AI Inference (Legacy)",
+  };
+  return jobTypeNames[command] || command;
 }
 
 function JobListView() {
@@ -436,7 +459,7 @@ function JobListView() {
       return (
         <span>
           {job.state === "SUCCESS" &&
-            "The model may now be selected from the “AI Analysis“ button when viewing a dataset."}
+            'The model may now be selected from the "AI Analysis" button when viewing a dataset.'}
         </span>
       );
     } else {
@@ -457,6 +480,20 @@ function JobListView() {
   function renderState(__: any, job: APIJob) {
     return <JobState job={job} />;
   }
+
+  // Get unique job types and states for filter options
+  const uniqueJobTypes = Array.from(new Set(jobs?.map((job) => job.command) || [])).sort();
+  const uniqueStates = Array.from(new Set(jobs?.map((job) => job.state) || [])).sort();
+
+  const jobTypeFilters = uniqueJobTypes.map((command) => ({
+    text: getJobTypeName(command),
+    value: command,
+  }));
+
+  const stateFilters = uniqueStates.map((state) => ({
+    text: capitalize(state.toLowerCase()),
+    value: state,
+  }));
 
   return (
     <div className="container">
@@ -511,7 +548,14 @@ function JobListView() {
             render={(id) => <FormattedId id={id} />}
             sorter={localeCompareBy<APIJob>((job) => job.id)}
           />
-          <Column title="Description" key="datasetName" render={renderDescription} />
+          <Column
+            title="Description"
+            key="datasetName"
+            render={renderDescription}
+            sorter={localeCompareBy<APIJob>((job) => job.command)}
+            filters={jobTypeFilters}
+            onFilter={(value, record: APIJob) => record.command === value}
+          />
           <Column
             title="Owner"
             key="owner"
@@ -547,6 +591,8 @@ function JobListView() {
             width={120}
             render={renderState}
             sorter={localeCompareBy<APIJob>((job) => job.state)}
+            filters={stateFilters}
+            onFilter={(value, record: APIJob) => record.state === value}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

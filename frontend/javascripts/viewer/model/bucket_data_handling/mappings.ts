@@ -4,8 +4,8 @@ import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import Toast from "libs/toast";
 import { diffMaps } from "libs/utils";
-import size from "lodash/size";
-import throttle from "lodash/throttle";
+import size from "lodash-es/size";
+import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import {
   getElementClass,

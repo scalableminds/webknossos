@@ -259,7 +259,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)

@@ -113,13 +113,13 @@ export type UserBoundingBoxWithOptIsVisible = Omit<UserBoundingBox, "isVisible">
   isVisible?: boolean;
 };
 
-export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
+type SegmentGroupTypeFlat = TreeGroupTypeFlat;
 export type SegmentGroup = TreeGroup;
-export type MutableSegmentGroup = MutableTreeGroup;
+type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
 export type Restrictions = APIRestrictions;
-export type AllowedMode = APIAllowedMode;
+type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
 export type AnnotationVisibility = APIAnnotationVisibility;
@@ -229,7 +229,7 @@ export type StoreAnnotation = Annotation & {
   readonly readOnly: ReadOnlyTracing | null | undefined;
   readonly mappings: Array<EditableMapping>;
 };
-export type LegacyViewCommand = APIDataSourceId & {
+type LegacyViewCommand = APIDataSourceId & {
   readonly type: typeof ControlModeEnum.VIEW;
 };
 export type TraceOrViewCommand =
@@ -497,7 +497,7 @@ export type PlaneRects = {
   readonly PLANE_XZ: Rect;
   readonly TDView: Rect;
 };
-export type PlaneModeData = {
+type PlaneModeData = {
   readonly activeViewport: OrthoView;
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: PlaneRects;
@@ -580,7 +580,7 @@ export type PrecomputedMeshInformation = BaseMeshInformation & {
   readonly meshFileName: string;
 };
 export type MeshInformation = AdHocMeshInformation | PrecomputedMeshInformation;
-export type ConnectomeData = {
+type ConnectomeData = {
   readonly availableConnectomeFiles: Array<APIConnectomeFile> | null | undefined;
   readonly currentConnectomeFile: APIConnectomeFile | null | undefined;
   readonly pendingConnectomeFileName: string | null | undefined;

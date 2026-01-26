@@ -3,7 +3,7 @@ import { Alert, Button } from "antd";
 import { Fragment } from "react";
 import VersionList, { handleCloseRestoreView } from "viewer/view/version_list";
 
-export type Versions = {
+type Versions = {
   skeleton?: number | null | undefined;
   volumes?: Record<string, number>;
 };

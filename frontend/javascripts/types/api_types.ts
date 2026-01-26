@@ -32,7 +32,7 @@ import type { EmptyObject } from "./globals";
 export type { BoundingBoxProto } from "types/bounding_box";
 export type { AdditionalCoordinate } from "viewer/constants";
 
-export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
+type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
   | "uint8"
   | "uint16"
@@ -140,7 +140,7 @@ type MutableAPIDataSourceBase = {
   status?: string;
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
-export type APIUnimportedDatasource = APIDataSourceBase;
+type APIUnimportedDatasource = APIDataSourceBase;
 export type VoxelSize = {
   factor: Vector3;
   unit: UnitLong;
@@ -745,7 +745,7 @@ export type APIBuildInfoTracingstore = {
   };
 };
 
-export type APIBuildInfo = APIBuildInfoWk | APIBuildInfoDatastore | APIBuildInfoTracingstore;
+type APIBuildInfo = APIBuildInfoWk | APIBuildInfoDatastore | APIBuildInfoTracingstore;
 
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;

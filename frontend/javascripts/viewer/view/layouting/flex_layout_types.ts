@@ -1,4 +1,4 @@
-export type Node = RowNode | TabsetNode | TabNode;
+type Node = RowNode | TabsetNode | TabNode;
 export type TabNode = {
   type: "tab";
   name: string;

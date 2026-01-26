@@ -65,7 +65,7 @@ const maxDisplayedTasksCount = 50;
 const TASK_CSV_HEADER =
   "taskId,datasetName,datasetId,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
-export enum SpecificationEnum {
+enum SpecificationEnum {
   Manual = "Manual",
   Nml = "Nml",
   BaseAnnotation = "BaseAnnotation",

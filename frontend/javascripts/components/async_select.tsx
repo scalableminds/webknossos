@@ -10,7 +10,7 @@ import { useMemo, useRef, useState } from "react";
 // Quote:
 // A complete multiple select sample with remote search, debounce fetch, ajax callback order flow, and loading state.
 
-export interface AsyncSelectProps<ValueType = any>
+interface AsyncSelectProps<ValueType = any>
   extends Omit<SelectProps<ValueType | ValueType[]>, "options" | "children"> {
   fetchOptions: (search: string) => Promise<ValueType[]>;
   debounceTimeout?: number;

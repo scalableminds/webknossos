@@ -29,4 +29,4 @@ export { call } from "typed-redux-saga";
 // }
 
 export type Saga<T> = Generator<any, T, any>;
-export type Task<T> = Generator<any, T, any>;
+type Task<T> = Generator<any, T, any>;

@@ -2,8 +2,10 @@ import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-desi
 import { Space, Tooltip } from "antd";
 import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import type * as React from "react";
+import { useCallback } from "react";
+import { useDispatch } from "react-redux";
 import { OrthoViews, OrthoViewsToName } from "viewer/constants";
-import * as MoveHandlers from "viewer/controller/combinations/move_handlers";
+import { moveW } from "viewer/controller/combinations/move_handlers";
 import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_accessor";
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
@@ -11,20 +13,27 @@ import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persis
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
-  MoveHandlers.moveW(getMoveOffset(Store.getState(), timeFactor), isFirst);
+  moveW(getMoveOffset(Store.getState(), timeFactor), isFirst);
 const moveBackward = (timeFactor: number, isFirst: boolean) =>
-  MoveHandlers.moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
-
-const moveForwardArbitrary = (timeFactor: number) =>
-  Store.dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)]));
-const moveBackwardArbitrary = (timeFactor: number) =>
-  Store.dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(Store.getState(), timeFactor)]));
+  moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
 
 const BUTTON_STYLE = { userSelect: "none", WebkitUserSelect: "none" } as const;
 const ICON_TRANSFORM_VALUE = "scale(1)";
 
 export function FloatingMobileControls() {
+  const dispatch = useDispatch();
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
+
+  const moveForwardArbitrary = useCallback(
+    (timeFactor: number) =>
+      dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)])),
+    [dispatch],
+  );
+  const moveBackwardArbitrary = useCallback(
+    (timeFactor: number) =>
+      dispatch(moveFlycamAction([0, 0, -getMoveOffset3d(Store.getState(), timeFactor)])),
+    [dispatch],
+  );
 
   const moveForwardProps = useRepeatedButtonTrigger(
     viewMode === "orthogonal" ? moveForward : moveForwardArbitrary,

@@ -1,16 +1,19 @@
+import { ExperimentOutlined } from "@ant-design/icons";
 import { withAuthentication } from "admin/auth/authentication_modal";
+import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
-import { Alert, Modal, Popover, Space } from "antd";
+import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import type { APIDataset, APISegmentationLayer, APIUser } from "types/api_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_types";
+import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
+import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
 import {
@@ -23,7 +26,7 @@ import {
   is2dDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_actions";
-import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
+import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
@@ -42,15 +45,13 @@ import {
   getLayoutConfig,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import type { StartAIJobModalState } from "./action-bar/ai_job_modals/constants";
-import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
+// import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
-import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
   <Alert
-    message="Read-only version restore mode active!"
+    title="Read-only version restore mode active!"
     style={{
       padding: "4px 15px",
     }}
@@ -60,11 +61,11 @@ const VersionRestoreWarning = (
 type StateProps = {
   dataset: APIDataset;
   activeUser: APIUser | null | undefined;
+  activeOrganization: APIOrganization | null;
   controlMode: ControlMode;
   showVersionRestore: boolean;
   is2d: boolean;
   viewMode: ViewMode;
-  aiJobModalState: StartAIJobModalState;
 };
 type OwnProps = {
   layoutProps: LayoutProps;
@@ -146,9 +147,8 @@ function CreateAnnotationButton() {
   const visibleSegmentationLayers = useWkSelector((state) => getVisibleSegmentationLayers(state));
   const segmentationLayers = useWkSelector((state) => getSegmentationLayers(state.dataset));
   const dataset = useWkSelector((state) => state.dataset);
-  const [isLayerSelectionModalVisible, setLayerSelectionModalVisible] =
-    React.useState<boolean>(false);
-  const [selectedLayerName, setSelectedLayerName] = React.useState<string | undefined>(undefined);
+  const [isLayerSelectionModalVisible, setLayerSelectionModalVisible] = useState<boolean>(false);
+  const [selectedLayerName, setSelectedLayerName] = useState<string | undefined>(undefined);
 
   const getUnambiguousSegmentationLayer = () => {
     if (visibleSegmentationLayers?.length === 1) return visibleSegmentationLayers[0];
@@ -219,9 +219,6 @@ function CreateAnnotationButton() {
       <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="You have to register or login to create an annotation."
-        style={{
-          marginLeft: 12,
-        }}
         type="primary"
         onClick={onClick}
       >
@@ -267,7 +264,7 @@ function ModesView() {
   );
 }
 
-class ActionBarView extends React.PureComponent<Props, State> {
+class ActionBarView extends PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
   };
@@ -300,17 +297,45 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
+    const orgaHasSomePaidPlan = hasSomePaidPlan(this.props.activeOrganization);
+
+    const menuItems = [
+      {
+        key: "open_ai_inference_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
+        label: "Run AI model",
+      },
+      ...(orgaHasSomePaidPlan
+        ? [
+            {
+              key: "open_ai_training_button",
+              onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
+              label: "Train new AI model",
+            },
+          ]
+        : []),
+      {
+        key: "open_ai_alignment_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment")),
+        label: "Run AI Alignment",
+      },
+    ];
+
     return (
-      <ButtonComponent
-        key="ai-job-button"
-        onClick={() => Store.dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
-        style={{ marginLeft: 12, pointerEvents: "auto" }}
-        disabled={disabled}
-        title={tooltipText}
-        icon={<i className="fas fa-magic" />}
-      >
-        AI Analysis
-      </ButtonComponent>
+      // div is for left spacing through CSS
+      <div>
+        <Dropdown
+          key="ai-job-dropdown"
+          menu={{
+            items: menuItems,
+          }}
+          disabled={disabled}
+        >
+          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
+            AI Analysis
+          </Button>
+        </Dropdown>
+      </div>
     );
   }
 
@@ -325,10 +350,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.ALIGN_SECTIONS);
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_NEURONS) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+          APIJobCommand.INFER_MITOCHONDRIA,
+        ) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_NUCLEI) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.ALIGN_SECTIONS);
       return jobsEnabled;
     };
 
@@ -359,7 +386,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <React.Fragment>
+      <Fragment>
         <div className="action-bar">
           {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
@@ -385,8 +412,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
-      </React.Fragment>
+      </Fragment>
     );
   }
 }
@@ -394,11 +420,11 @@ class ActionBarView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: WebknossosState): StateProps => ({
   dataset: state.dataset,
   activeUser: state.activeUser,
+  activeOrganization: state.activeOrganization,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
-  aiJobModalState: state.uiInformation.aIJobModalState,
 });
 
 const connector = connect(mapStateToProps);

@@ -26,10 +26,12 @@ import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
+import models.dataset.DatasetCreationType.DatasetCreationType
+import models.job.JobDAO
 import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import security.RandomIDGenerator
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -55,6 +57,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
+                               jobDAO: JobDAO,
                                annotationDAO: AnnotationDAO,
                                usedStorageService: UsedStorageService,
                                conf: WkConf,
@@ -108,7 +111,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                             dataSource: DataSource,
                             folderId: Option[ObjectId],
                             user: User,
-                            isVirtual: Boolean): Fox[Dataset] =
+                            isVirtual: Boolean,
+                            creationType: DatasetCreationType): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
@@ -116,11 +120,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
       directoryName = generateDirectoryName(datasetName, newDatasetId)
-      dataset <- createDataset(dataStore,
-                               newDatasetId,
-                               datasetName,
-                               dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
-                               isVirtual = isVirtual)
+      dataset <- createDataset(
+        dataStore,
+        newDatasetId,
+        datasetName,
+        dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
+        isVirtual = isVirtual,
+        creationType = creationType
+      )
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
@@ -131,18 +138,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetId: ObjectId,
       datasetName: String,
       dataSource: DataSource,
-      publication: Option[ObjectId] = None,
-      isVirtual: Boolean = false
+      isVirtual: Boolean = false,
+      metadata: JsArray = JsArray.empty,
+      description: Option[String] = None,
+      creationType: DatasetCreationType.Value
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    val metadata =
-      if (publication.isDefined)
-        Json.arr(
-          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name"),
-          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region"),
-          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method")
-        )
-      else Json.arr()
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
@@ -152,13 +153,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         datasetId,
         dataStore.name,
         organization._id,
-        publication,
+        None,
         None,
         organizationRootFolder._id,
         dataSourceHash,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
-        description = None,
+        description = description,
         directoryName = dataSource.id.directoryName,
         isPublic = false,
         isUsable = dataSource.isUsable,
@@ -168,7 +169,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
-        metadata = metadata
+        metadata = metadata,
+        creationType = Some(creationType),
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
@@ -220,7 +222,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
           updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
         case _ =>
-          createDataset(dataStore, ObjectId.generate, dataSource.id.directoryName, dataSource).map(ds => Some(ds._id))
+          createDataset(dataStore,
+                        ObjectId.generate,
+                        dataSource.id.directoryName,
+                        dataSource,
+                        creationType = DatasetCreationType.DiskScan).map(ds => Some(ds._id))
       }
     }
   }
@@ -532,6 +538,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             .mkString(",")}"
           _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> "dataset.delete.failed"
         } yield ()
+      }
+      _ <- Fox.runIf(
+        conf.Features.jobsEnabled && (dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded)) {
+        logger.info(s"Cancelling any pending conversion jobs for dataset ${dataset._id}...")
+        jobDAO.cancelConvertToWkwJobForDataset(dataset._id)
       }
       _ <- deleteDatasetFromDB(dataset._id)
     } yield ()

@@ -5,8 +5,11 @@ import HighlightableRow from "components/highlightable_row";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { localeCompareBy } from "libs/utils";
+import fromPairs from "lodash/fromPairs";
+import max from "lodash/max";
+import min from "lodash/min";
+import union from "lodash/union";
 import { useState } from "react";
 import type { APIUser, ExperienceDomainList } from "types/api_types";
 
@@ -45,13 +48,13 @@ function ExperienceModalView({
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(initialDomainToEdit);
 
   function sortEntries(entries: TableEntry[]): TableEntry[] {
-    return entries.sort(Utils.localeCompareBy((entry) => entry.domain.toLowerCase()));
+    return entries.sort(localeCompareBy((entry) => entry.domain.toLowerCase()));
   }
 
   function getTableEntries(users: APIUser[]): TableEntry[] {
     if (users.length <= 1) {
       return sortEntries(
-        _.map(users[0].experiences, (value, domain) => ({
+        Object.entries(users[0].experiences).map(([domain, value]) => ({
           domain,
           value,
           lowestValue: -1,
@@ -63,7 +66,7 @@ function ExperienceModalView({
     }
 
     // find all existing experience domains
-    const allDomains: string[] = _.union(...users.map((user) => Object.keys(user.experiences)));
+    const allDomains: string[] = union(...users.map((user) => Object.keys(user.experiences)));
 
     // adds the number of users with this domain (sharedByCount) to all domains
     const allDomainsWithCount = allDomains.map((domain) => {
@@ -82,17 +85,17 @@ function ExperienceModalView({
     const tableEntries = allDomainsWithCount.map((entry) => {
       const usersValues = users.map((user) => user.experiences[entry.domain]);
 
-      const min = _.min(usersValues);
+      const minVal = min(usersValues);
 
-      const max = _.max(usersValues);
+      const maxVal = max(usersValues);
 
       const isShared = entry.sharedByCount === users.length;
-      const value = isShared && max === min ? min : -1;
+      const value = isShared && maxVal === minVal ? minVal : -1;
       return {
         domain: entry.domain,
         value,
-        lowestValue: min,
-        highestValue: max,
+        lowestValue: minVal,
+        highestValue: maxVal,
         sharedByCount: entry.sharedByCount,
         changed: false,
       };
@@ -106,18 +109,17 @@ function ExperienceModalView({
     const newUserPromises: Array<Promise<APIUser>> = selectedUsers.map((user: APIUser) => {
       const newExperiences = {
         ...user.experiences,
-        ..._.fromPairs(relevantEntries.map((entry) => [entry.domain, entry.value])),
+        ...fromPairs(relevantEntries.map((entry) => [entry.domain, entry.value])),
       };
       removedDomains.forEach((domain) => {
         if (domain in newExperiences) {
           delete newExperiences[domain];
         }
       });
-      const orderedExperiences = {};
+      const orderedExperiences: typeof newExperiences = {};
       Object.keys(newExperiences)
-        .sort(Utils.localeCompareBy((domain) => domain.toLowerCase()))
+        .sort(localeCompareBy((domain) => domain.toLowerCase()))
         .forEach((key) => {
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           orderedExperiences[key] = newExperiences[key];
         });
       const newUser = { ...user, experiences: orderedExperiences };
@@ -384,10 +386,10 @@ function ExperienceModalView({
             >
               <Tag
                 style={{
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ magin: number; marginTop: number; }' is no... Remove this comment to see the full error message
-                  magin: 8,
+                  margin: 8,
                   marginTop: 10,
                 }}
+                variant="outlined"
                 className="clickable-icon"
                 onClick={() => {
                   setRemovedDomains(

@@ -1,4 +1,5 @@
-import _ from "lodash";
+import debounce from "lodash/debounce";
+import noop from "lodash/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
@@ -10,9 +11,12 @@ import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
  * Hook that returns the previous value of a state or prop.
  * @param value - The current value to track
  * @param ignoreNullAndUndefined - If true, null/undefined values won't update the previous value
- * @returns The previous value, or null if no previous value exists
+ * @returns The previous value, or null if no previous value exists; and a function to clear the stored previous value
  */
-export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
+export function usePrevious<T>(
+  value: T,
+  ignoreNullAndUndefined: boolean = false,
+): [T | null, () => void] {
   // Adapted from: https://usehooks.com/usePrevious/
 
   // The ref object is a generic container whose current property is mutable ...
@@ -24,9 +28,13 @@ export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false
       ref.current = value;
     }
   }, [value, ignoreNullAndUndefined]);
+
+  const clearFn = useCallback(() => {
+    ref.current = null;
+  }, []);
   // Only re-run if value changes
   // Return previous value (happens before update in useEffect above)
-  return ref.current;
+  return [ref.current, clearFn];
 }
 
 const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => ({
@@ -154,7 +162,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: _.noop,
+    onClick: noop,
     onTouchStart,
     onTouchEnd,
   };
@@ -304,7 +312,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 
   const debouncedSetter = useMemo(
     () =>
-      _.debounce((val: T) => {
+      debounce((val: T) => {
         setDebouncedValue(val);
       }, delay),
     [delay],

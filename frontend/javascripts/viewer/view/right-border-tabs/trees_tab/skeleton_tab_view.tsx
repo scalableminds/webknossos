@@ -1,24 +1,40 @@
 import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  ArrowsAltOutlined,
+  DeleteOutlined,
   DownOutlined,
   DownloadOutlined,
   ExclamationCircleOutlined,
+  PlusOutlined,
   SearchOutlined,
+  SortAscendingOutlined,
+  SwapOutlined,
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
+import {
+  BlobReader,
+  BlobWriter,
+  type Entry,
+  TextReader,
+  ZipReader,
+  ZipWriter,
+} from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import Zip from "libs/zipjs_wrapper";
-import _ from "lodash";
+import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
+import cloneDeep from "lodash/cloneDeep";
+import last from "lodash/last";
+import orderBy from "lodash/orderBy";
+import size from "lodash/size";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import * as React from "react";
+import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
@@ -27,8 +43,6 @@ import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
-  getActiveTree,
-  getActiveTreeGroup,
   getTree,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
@@ -61,7 +75,11 @@ import {
   importVolumeTracingAction,
   setLargestSegmentIdAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getTreeEdgesAsCSV, getTreeNodesAsCSV } from "viewer/model/helpers/csv_helpers";
+import {
+  getTreeEdgesAsCSV,
+  getTreeNodesAsCSV,
+  getTreesAsCSV,
+} from "viewer/model/helpers/csv_helpers";
 import {
   NmlParseError,
   getNmlName,
@@ -77,7 +95,6 @@ import { api } from "viewer/singletons";
 import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
-import InputComponent from "viewer/view/components/input_component";
 import TreeHierarchyView from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import {
   GroupTypeEnum,
@@ -194,7 +211,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();
         const nmlFileEntry = entries.find((entry: Entry) =>
-          Utils.isFileExtensionEqualTo(entry.filename, "nml"),
+          isFileExtensionEqualTo(entry.filename, "nml"),
         );
 
         if (nmlFileEntry == null) {
@@ -209,7 +226,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const nmlImportActions = await tryParsingFileAsNml(nmlFile, false);
 
         const dataFileEntry = entries.find((entry: Entry) =>
-          Utils.isFileExtensionEqualTo(entry.filename, "zip"),
+          isFileExtensionEqualTo(entry.filename, "zip"),
         );
 
         if (dataFileEntry) {
@@ -255,9 +272,9 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
-    const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
+    const { successes: importActionsWithDatasetNames, errors } = await promiseAllWithErrors(
       files.map(async (file) => {
-        const ext = (_.last(file.name.split(".")) || "").toLowerCase();
+        const ext = (last(file.name.split(".")) || "").toLowerCase();
 
         let tryImportFunctions;
         if (ext === "nml" || ext === "xml")
@@ -360,14 +377,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
           if (group.children) {
             // Groups are always sorted by name and appear before the trees
-            const sortedGroups = _.orderBy(group.children, ["name"], ["asc"]);
+            const sortedGroups = orderBy(group.children, ["name"], ["asc"]);
 
             yield* mapGroupsAndTreesSorted(sortedGroups, _groupToTreesMap, sortBy);
           }
 
           if (_groupToTreesMap[group.groupId] != null) {
             // Trees are sorted by the sortBy property
-            const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
+            const sortedTrees = orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
             yield* sortedTrees.map(makeTree);
           }
@@ -385,7 +402,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { treeGroups, trees } = this.props.skeletonTracing;
 
-    let newTreeGroups = _.cloneDeep(treeGroups);
+    let newTreeGroups = cloneDeep(treeGroups);
 
     const groupToTreesMap = createGroupToTreesMap(trees);
     let treeIdsToDelete: number[] = [];
@@ -540,7 +557,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       isDownloadingNML: true,
     });
     // Wait 1 second for the Modal to render
-    const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
+    const [buildInfo] = await Promise.all([getBuildInfo(), sleep(1000)]);
     const state = Store.getState();
     const nml = serializeToNml(
       state,
@@ -560,6 +577,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
   handleCSVDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing, annotationId } = this.props;
+    const datasetUnit = Store.getState().dataset.dataSource.scale.unit;
 
     if (!skeletonTracing) {
       return;
@@ -570,13 +588,20 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
-      const treesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
+      const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
+      const nodesCsv = getTreeNodesAsCSV(
+        Store.getState(),
+        skeletonTracing,
+        applyTransforms,
+        datasetUnit,
+      );
       const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 
-      const blobWriter = new Zip.BlobWriter("application/zip");
-      const writer = new Zip.ZipWriter(blobWriter);
-      await writer.add("nodes.csv", new Zip.TextReader(treesCsv));
-      await writer.add("edges.csv", new Zip.TextReader(edgesCsv));
+      const blobWriter = new BlobWriter("application/zip");
+      const writer = new ZipWriter(blobWriter);
+      await writer.add("trees.csv", new TextReader(treesCsv));
+      await writer.add("nodes.csv", new TextReader(nodesCsv));
+      await writer.add("edges.csv", new TextReader(edgesCsv));
       await writer.close();
       saveAs(await blobWriter.getData(), "tree_export.zip");
     } catch (e) {
@@ -777,7 +802,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
           onClick: this.shuffleAllTreeColors,
           title: "Shuffle All Tree Colors",
           disabled: isEditingDisabled,
-          icon: <i className="fas fa-random" />,
+          icon: <SwapOutlined />,
           label: "Shuffle All Tree Colors",
         },
         {
@@ -825,7 +850,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
           onClick: this.handleMeasureAllSkeletonsLength,
           title: "Measure Length of All Skeletons",
 
-          icon: <i className="fas fa-ruler" />,
+          icon: <ArrowsAltOutlined />,
           label: "Measure Length of All Skeletons",
         },
       ],
@@ -836,11 +861,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { unit } = Store.getState().dataset.dataSource.scale;
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
     notification.open({
-      message: `The total length of all skeletons is ${formatNumberToLength(
+      title: `The total length of all skeletons is ${formatNumberToLength(
         totalLengthNm,
         LongUnitToShortUnitMap[unit],
       )} (${formatLengthAsVx(totalLengthVx)}).`,
-      icon: <i className="fas fa-ruler" />,
+      icon: <ArrowsAltOutlined />,
     });
   };
 
@@ -873,9 +898,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     const { showSkeletons, trees, treeGroups } = skeletonTracing;
-    const activeTreeName = getActiveTree(skeletonTracing)?.name ?? "";
-    const activeGroupName = getActiveTreeGroup(skeletonTracing)?.name ?? "";
-    const noTreesAndGroups = trees.size() === 0 && _.size(treeGroups) === 0;
+    const noTreesAndGroups = trees.size() === 0 && size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";
@@ -914,7 +937,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <Space.Compact className="compact-icons compact-wrap">
+                <Space.Compact block className="compact-wrap">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -926,69 +949,48 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <ButtonComponent
                       title="Open the search via CTRL + Shift + F"
                       className="firstButton"
-                    >
-                      <SearchOutlined />
-                    </ButtonComponent>
+                      icon={<SearchOutlined />}
+                    />
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
                     title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
                     disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-plus" />
-                  </ButtonComponent>
+                    icon={<PlusOutlined />}
+                  />
                   <ButtonComponent
                     onClick={this.handleDelete}
                     title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
                     disabled={isEditingDisabled}
-                  >
-                    <i className="far fa-trash-alt" />
-                  </ButtonComponent>
+                    icon={<DeleteOutlined />}
+                  />
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
                     disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-on" />
-                  </ButtonComponent>
+                    icon={<i className="fas fa-toggle-on" />}
+                  />
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
                     disabled={isEditingDisabled}
-                  >
-                    <i className="fas fa-toggle-off" />
-                  </ButtonComponent>
-                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                    <ButtonComponent style={{ overflow: "clip" }} className="lastButton">
-                      More
-                      <DownOutlined />
-                    </ButtonComponent>
-                  </Dropdown>
-                </Space.Compact>
-                <Space.Compact className="compact-icons compact-items">
+                    icon={<i className="fas fa-toggle-off" />}
+                  />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}
                     title="Select previous tree"
-                  >
-                    <i className="fas fa-arrow-left" />
-                  </ButtonComponent>
-                  <InputComponent
-                    onChange={_.noop}
-                    value={activeTreeName || activeGroupName}
-                    disabled
-                    title="Edit the name by double-clicking the tree or by using the details table below the tree list. Note: This text field will be removed in a future update."
-                    style={{ width: "80%" }}
+                    icon={<ArrowLeftOutlined />}
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeForward}
                     title="Select next tree"
-                  >
-                    <i className="fas fa-arrow-right" />
-                  </ButtonComponent>
+                    icon={<ArrowRightOutlined />}
+                  />
                   <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent title="Sort" style={{ overflow: "clip" }}>
-                      <i className="fas fa-sort-alpha-down" />
-                    </ButtonComponent>
+                    <ButtonComponent title="Sort" icon={<SortAscendingOutlined />} />
+                  </Dropdown>
+                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
+                    <ButtonComponent icon={<DownOutlined />}>More</ButtonComponent>
                   </Dropdown>
                 </Space.Compact>
                 {!showSkeletons ? (

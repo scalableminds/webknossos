@@ -21,7 +21,7 @@ export const teamPlanFeatures = [
 
 export const powerPlanFeatures = [
   "Everything from Team and Personal plans",
-  "Unlimited Users",
+  "Up to Unlimited Users",
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",
@@ -88,6 +88,10 @@ export function isFeatureAllowedByPricingPlan(
   if (!organization) return false;
 
   return isPricingPlanGreaterEqualThan(organization.pricingPlan, requiredPricingPlan);
+}
+
+export function hasSomePaidPlan(organization: APIOrganization | null) {
+  return isFeatureAllowedByPricingPlan(organization, PricingPlanEnum.Team);
 }
 
 export function getFeatureNotAvailableInPlanMessage(

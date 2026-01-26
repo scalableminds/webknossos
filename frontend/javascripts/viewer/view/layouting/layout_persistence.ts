@@ -1,7 +1,8 @@
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import { getIsInIframe } from "libs/utils";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
+import debounce from "lodash/debounce";
 import { createNanoEvents } from "nanoevents";
 import { setStoredLayoutsAction } from "viewer/model/actions/ui_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -103,7 +104,7 @@ layoutEmitter.on(LayoutEvents.resetLayout, (layoutKey: LayoutKeys, activeLayout:
   storeLayoutConfig(getDefaultLayouts()[layoutKey], layoutKey, activeLayout);
 });
 
-const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
+const persistLayoutConfigsDebounced = debounce(persistLayoutConfigs, 1000);
 
 export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string) {
   const { storedLayouts } = Store.getState().uiInformation;
@@ -134,7 +135,7 @@ export function getLastActiveLayout(layoutKey: LayoutKeys) {
 
 function getDeepCopyOfStoredLayouts(): Record<string, any> {
   const currentLayouts = Store.getState().uiInformation.storedLayouts;
-  return _.cloneDeep(currentLayouts);
+  return cloneDeep(currentLayouts);
 }
 
 export function storeLayoutConfig(

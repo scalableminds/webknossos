@@ -27,11 +27,15 @@ import {
   ConfigProvider,
   Divider,
   Empty,
+  type GetRef,
   type MenuProps,
   Modal,
   Popover,
   Select,
+  Space,
+  type Tree,
   type TreeProps,
+  Typography,
 } from "antd";
 import type { ItemType } from "antd/lib/menu/interface";
 import type { DataNode } from "antd/lib/tree";
@@ -42,14 +46,17 @@ import { SimpleRow } from "dashboard/folders/metadata_table";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
-import _, { isNumber, memoize } from "lodash";
-import type RcTree from "rc-tree";
+import difference from "lodash/difference";
+import isNumber from "lodash/isNumber";
+import memoize from "lodash/memoize";
+import sortBy from "lodash/sortBy";
+import sum from "lodash/sum";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_types";
+import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
@@ -255,10 +262,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   setActiveCell(
     segmentId: number,
-    somePosition?: Vector3,
+    somePositionInLayerSpace?: Vector3,
     someAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
-    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, somePositionInLayerSpace, someAdditionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {
@@ -371,7 +378,7 @@ function constructTreeData(
   groupToSegmentsMap: Record<number, Segment[]>,
 ): SegmentHierarchyNode[] {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
-  return _.sortBy(groups, "groupId").map((group) => {
+  return sortBy(groups, "groupId").map((group) => {
     const { groupId } = group;
     const segments = groupToSegmentsMap[groupId] || [];
     const treeNode: SegmentHierarchyNode = {
@@ -381,7 +388,7 @@ function constructTreeData(
       id: groupId,
       type: "group",
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
-        _.sortBy(segments, "id").map(
+        sortBy(segments, "id").map(
           (segment): SegmentHierarchyNode => ({
             ...segment,
             title: segment.name || "",
@@ -419,7 +426,7 @@ class SegmentsView extends React.Component<Props, State> {
     contextMenuPosition: null,
     menu: null,
   };
-  tree: React.RefObject<RcTree>;
+  tree: React.RefObject<GetRef<typeof Tree>>;
 
   constructor(props: Props) {
     super(props);
@@ -434,7 +441,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_MESH_FILE,
+        APIJobCommand.COMPUTE_MESH_FILE,
       )
     ) {
       this.pollJobData();
@@ -541,7 +548,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   collapseGroups = (groupsToCollapse: string[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const newExpandedGroups = _.difference(this.getExpandedGroupKeys(), groupsToCollapse);
+    const newExpandedGroups = difference(this.getExpandedGroupKeys(), groupsToCollapse);
     const expandedGroupSet = new Set(newExpandedGroups);
     Store.dispatch(
       setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer.name),
@@ -679,7 +686,8 @@ class SegmentsView extends React.Component<Props, State> {
     const jobs = this.props.activeUser != null ? await getJobs() : [];
     const oldActiveJobId = this.state.activeMeshJobId;
     const meshJobsForDataset = jobs.filter(
-      (job) => job.type === "compute_mesh_file" && job.datasetName === this.props.datasetName,
+      (job) =>
+        job.command === "compute_mesh_file" && job.args.datasetName === this.props.datasetName,
     );
     const activeJob =
       oldActiveJobId != null ? meshJobsForDataset.find((job) => job.id === oldActiveJobId) : null;
@@ -707,7 +715,6 @@ class SegmentsView extends React.Component<Props, State> {
         }
 
         case "STARTED":
-        case "UNKNOWN":
         case "PENDING": {
           break;
         }
@@ -759,7 +766,7 @@ class SegmentsView extends React.Component<Props, State> {
 
     if (
       !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_MESH_FILE,
+        APIJobCommand.COMPUTE_MESH_FILE,
       )
     ) {
       title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
@@ -903,15 +910,14 @@ class SegmentsView extends React.Component<Props, State> {
     return (
       <div>
         <FastTooltip title="The higher the quality, the more computational resources are required">
-          <div>Quality for Ad-Hoc Mesh Computation:</div>
+          <Typography.Paragraph>
+            Select the quality for Ad-Hoc Mesh Computation:
+          </Typography.Paragraph>
         </FastTooltip>
         <Select
-          size="small"
-          style={{
-            width: 220,
-          }}
           value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
           onChange={this.handleQualityChangeForAdHocGeneration}
+          popupMatchSelectWidth={false}
         >
           {magInfo
             .getMagsWithIndices()
@@ -992,21 +998,16 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMeshesHeader = () => (
-    <>
+    <Space.Compact>
       <FastTooltip title="Select a mesh file from which precomputed meshes will be loaded.">
         <ConfigProvider
           renderEmpty={renderEmptyMeshFileSelect}
           theme={{ cssVar: { key: "antd-app-theme" } }}
         >
           <Select
-            style={{
-              width: 180,
-              display: "inline-block",
-            }}
             placeholder="Select a mesh file"
             value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
             onChange={this.handleMeshFileSelected}
-            size="small"
             loading={this.props.availableMeshFiles == null}
             popupMatchSelectWidth={false}
           >
@@ -1024,42 +1025,32 @@ class SegmentsView extends React.Component<Props, State> {
           </Select>
         </ConfigProvider>
       </FastTooltip>
-      <FastTooltip title="Refresh list of available Mesh files">
-        <ReloadOutlined
-          key="refresh"
-          onClick={() =>
-            Store.dispatch(
-              maybeFetchMeshFilesAction(
-                this.props.visibleSegmentationLayer,
-                this.props.dataset,
-                true,
-              ),
-            )
-          }
-          style={{
-            marginLeft: 8,
-          }}
-          className="icon-margin-right"
-        >
-          Reload from Server
-        </ReloadOutlined>
-      </FastTooltip>
-      <FastTooltip title="Add a precomputed mesh file">
-        <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
-          <PlusOutlined className="icon-margin-right" />
-        </Popover>
-      </FastTooltip>
+      <ButtonComponent
+        title="Refresh list of available Mesh files"
+        icon={<ReloadOutlined />}
+        onClick={() =>
+          Store.dispatch(
+            maybeFetchMeshFilesAction(
+              this.props.visibleSegmentationLayer,
+              this.props.dataset,
+              true,
+            ),
+          )
+        }
+      />
+      <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
+        <ButtonComponent title="Add a precomputed mesh file" icon={<PlusOutlined />} />
+      </Popover>
       {this.state.activeMeshJobId != null ? (
-        <FastTooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
-          <LoadingOutlined className="icon-margin-right" />
-        </FastTooltip>
+        <ButtonComponent
+          title='A mesh file is currently being computed. See "Processing Jobs" for more information.'
+          icon={<LoadingOutlined />}
+        />
       ) : null}
-      <FastTooltip title="Configure ad-hoc mesh computation">
-        <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
-          <SettingOutlined />
-        </Popover>
-      </FastTooltip>
-    </>
+      <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
+        <ButtonComponent title="Configure ad-hoc mesh computation" icon={<SettingOutlined />} />
+      </Popover>
+    </Space.Compact>
   );
 
   getToastForMissingPositions = (groupId: number | null) => {
@@ -1687,7 +1678,7 @@ class SegmentsView extends React.Component<Props, State> {
   getMultiSelectMenu = (): MenuProps => {
     const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
     return {
-      items: _.flatten([
+      items: [
         this.getLoadMeshesFromFileMenuItem(null),
         this.getComputeMeshesAdHocMenuItem(null),
         doSelectedSegmentsHaveAnyMeshes ? this.maybeGetShowOrHideMeshesMenuItems(null) : null,
@@ -1697,7 +1688,7 @@ class SegmentsView extends React.Component<Props, State> {
         this.getSetGroupColorMenuItem(null),
         this.getResetGroupColorMenuItem(null),
         this.getRemoveFromSegmentListMenuItem(null),
-      ]),
+      ].flat(),
     };
   };
 
@@ -1760,7 +1751,7 @@ class SegmentsView extends React.Component<Props, State> {
       const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         const getMenu = (): MenuProps => ({
-          items: _.flatten([
+          items: [
             {
               key: "create",
               onClick: () => {
@@ -1798,7 +1789,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.getRemoveMeshesMenuItem(id),
             this.maybeGetShowOrHideMeshesMenuItems(id),
             this.getDownLoadMeshesMenuItem(id),
-          ]),
+          ].flat(),
         });
 
         const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
@@ -1866,7 +1857,7 @@ class SegmentsView extends React.Component<Props, State> {
             ).map((node) => node.key);
             return (
               <React.Fragment>
-                <div style={{ flex: 0, display: "flex" }}>
+                <Space.Compact>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
@@ -1876,15 +1867,12 @@ class SegmentsView extends React.Component<Props, State> {
                     onSelectAllMatches={this.handleSelectAllMatchingSegments}
                   >
                     <ButtonComponent
-                      size="small"
                       title="Open the search via CTRL + Shift + F"
-                      style={{ marginRight: 8 }}
-                    >
-                      <SearchOutlined />
-                    </ButtonComponent>
+                      icon={<SearchOutlined />}
+                    />
                   </AdvancedSearchPopover>
                   {this.getMeshesHeader()}
-                </div>
+                </Space.Compact>
                 <div style={{ flex: 1 }}>
                   {isSegmentHierarchyEmpty ? (
                     <Empty
@@ -2072,7 +2060,7 @@ class SegmentsView extends React.Component<Props, State> {
                 />
                 <SimpleRow
                   label="Segment Count (all children)"
-                  value={_.sum(
+                  value={sum(
                     groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
                   )}
                 />

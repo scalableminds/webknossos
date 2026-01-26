@@ -2,8 +2,15 @@ import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { colorObjectToRGBArray, point3ToVector3, zeroPad } from "libs/utils";
+import compact from "lodash/compact";
+import first from "lodash/first";
+import isEmpty from "lodash/isEmpty";
+import last from "lodash/last";
+import lodashMax from "lodash/max";
+import random from "lodash/random";
+import sortedIndex from "lodash/sortedIndex";
+import without from "lodash/without";
 import type {
   MetadataEntryProto,
   ServerBranchPoint,
@@ -63,7 +70,7 @@ export function generateTreeName(state: WebknossosState, timestamp: number, tree
     prefix = `task_${state.task.id}_${user}_`;
   }
 
-  return `${prefix}${Utils.zeroPad(treeId, 3)}`;
+  return `${prefix}${zeroPad(treeId, 3)}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
@@ -93,7 +100,7 @@ function getNearestTreeId(treeId: number, trees: TreeMap): number {
 
   // Uses a binary search to determine the lowest index at which treeId should be inserted into sortedTreeIds in order to maintain its sort order.
   // This corresponds to the original index of the deleted treeId.
-  const originalIndex = _.sortedIndex(sortedTreeIds, treeId);
+  const originalIndex = sortedIndex(sortedTreeIds, treeId);
 
   const higherOrNearestId = Math.min(originalIndex, sortedTreeIds.length - 1);
   return sortedTreeIds[higherOrNearestId];
@@ -329,7 +336,7 @@ function splitTreeByNodes(
   let intermediateState = state;
 
   // For each new tree root create a new tree
-  const cutTrees: MutableTree[] = _.compact(
+  const cutTrees: MutableTree[] = compact(
     // Sort the treeRootIds, so the tree connected to the node with the lowest id will remain the original tree (treeId, name, timestamp)
     newTreeRootIds
       .slice()
@@ -429,8 +436,7 @@ export function createBranchPoint(
   const { branchPointsAllowed } = restrictions;
   if (!branchPointsAllowed) return null;
 
-  const doesBranchPointExistAlready = _.some(
-    tree.branchPoints,
+  const doesBranchPointExistAlready = tree.branchPoints.some(
     (branchPoint) => branchPoint.nodeId === node.id,
   );
 
@@ -452,24 +458,24 @@ export function deleteBranchPoint(
   const { branchPointsAllowed } = restrictions;
   const { trees } = skeletonTracing;
 
-  const hasBranchPoints = trees.values().some((tree) => !_.isEmpty(tree.branchPoints));
+  const hasBranchPoints = trees.values().some((tree) => !isEmpty(tree.branchPoints));
   if (!branchPointsAllowed || !hasBranchPoints) return null;
 
   // Find most recent branchpoint across all trees
   const treeWithLastBranchpoint = maxBy(
-    trees.values().filter((tree) => !_.isEmpty(tree.branchPoints)),
-    (tree: Tree) => _.last(tree.branchPoints)?.timestamp ?? 0,
+    trees.values().filter((tree) => !isEmpty(tree.branchPoints)),
+    (tree: Tree) => last(tree.branchPoints)?.timestamp ?? 0,
   );
 
   if (treeWithLastBranchpoint == null) {
     return null;
   }
   const branchPoints = treeWithLastBranchpoint.branchPoints;
-  const lastBranchPoint = _.last(branchPoints);
+  const lastBranchPoint = last(branchPoints);
 
   if (branchPoints && lastBranchPoint) {
     // Delete branchpoint
-    const newBranchPoints = _.without(branchPoints, lastBranchPoint);
+    const newBranchPoints = without(branchPoints, lastBranchPoint);
 
     return [newBranchPoints, treeWithLastBranchpoint.treeId, lastBranchPoint.nodeId];
   }
@@ -658,10 +664,10 @@ export function deleteTrees(
 
   if (newTrees.size() > 0 && !suppressActivatingNextNode) {
     // Setting the tree active whose id is the next highest compared to the ids of the deleted trees.
-    const maximumTreeId = _.max(treeIds) || Constants.MIN_TREE_ID;
+    const maximumTreeId = lodashMax(treeIds) || Constants.MIN_TREE_ID;
     newActiveTreeId = getNearestTreeId(maximumTreeId, newTrees);
 
-    const firstKey = _.first(newTrees.getOrThrow(newActiveTreeId).nodes.keys().toArray());
+    const firstKey = first(newTrees.getOrThrow(newActiveTreeId).nodes.keys().toArray());
     newActiveNodeId = firstKey != null ? Number(firstKey) : null;
   }
 
@@ -719,7 +725,7 @@ export function mergeTrees(
 }
 
 export function shuffleTreeColor(skeletonTracing: SkeletonTracing, tree: Tree): [Tree, number] {
-  const randomId = _.random(0, 10000, false);
+  const randomId = random(0, 10000, false);
 
   return setTreeColorIndex(skeletonTracing, tree, randomId);
 }
@@ -862,9 +868,9 @@ export function setExpandedTreeGroups(
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
-    untransformedPosition: Utils.point3ToVector3(n.position),
+    untransformedPosition: point3ToVector3(n.position),
     additionalCoordinates: n.additionalCoordinates,
-    rotation: Utils.point3ToVector3(n.rotation),
+    rotation: point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
     mag: n.mag,
@@ -901,9 +907,9 @@ export function createMutableTreeMapFromTreeArray(
         ),
         color:
           tree.color != null
-            ? Utils.colorObjectToRGBArray(tree.color)
+            ? colorObjectToRGBArray(tree.color)
             : ColorGenerator.distinctColorForId(tree.treeId),
-        branchPoints: _.map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
+        branchPoints: tree.branchPoints.map(serverBranchPointToMutableBranchPoint),
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,

@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import _ from "lodash";
+import memoize from "lodash/memoize";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -24,6 +24,7 @@ import PlaneMaterialFactory, {
   type PlaneShaderMaterial,
 } from "viewer/geometries/materials/plane_material_factory";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
+import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 
 // A subdivision of 100 means that there will be 100 segments per axis
 // and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
@@ -68,10 +69,6 @@ class Plane {
     this.planeID = planeID;
     this.displayCrosshair = true;
     this.lastScaleFactors = [-1, -1];
-    // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
-    // dimension with the highest mag. In all other dimensions, the plane
-    // is smaller in voxels, so that it is squared in nm.
-    // --> scaleInfo.baseVoxel
     this.baseRotation = new Euler(0, 0, 0);
     this.bindToEvents();
     this.createMeshes();
@@ -133,7 +130,7 @@ class Plane {
     this.displayCrosshair = value;
   };
 
-  getLineBasicMaterial = _.memoize(
+  getLineBasicMaterial = memoize(
     (color: number, linewidth: number) =>
       new LineBasicMaterial({
         color,
@@ -163,8 +160,9 @@ class Plane {
     }
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
-    // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
-    const scaleVector: Vector3 = V3.multiply([xFactor, yFactor, 1], this.datasetScaleFactor);
+    // Scale to base voxel space which is the same coordinate space the cameras use
+    const baseVoxelUnit = getBaseVoxelInUnit(this.datasetScaleFactor);
+    const scaleVector: Vector3 = V3.scale([xFactor, yFactor, 1], baseVoxelUnit);
     this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 

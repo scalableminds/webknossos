@@ -1,15 +1,15 @@
 import { getJob, getJobs } from "admin/rest_api";
 import features from "features";
 import { useEffectOnlyOnce, usePolling } from "libs/react_hooks";
-import _ from "lodash";
+import noop from "lodash/noop";
 import { useState } from "react";
 import type { APIJob } from "types/api_types";
 
 type JobInfo = [jobKey: string, jobId: string];
 
 export function useStartAndPollJob({
-  onSuccess = _.noop,
-  onFailure = _.noop,
+  onSuccess = noop,
+  onFailure = noop,
   initialJobKeyExtractor,
   interval = 2000,
 }: {
@@ -31,7 +31,7 @@ export function useStartAndPollJob({
     if (initialJobKeyExtractor != null && areJobsEnabled) {
       (async () => {
         const jobs = await getJobs();
-        jobs.sort((a, b) => b.createdAt - a.createdAt); // sort in descending order
+        jobs.sort((a, b) => b.created - a.created); // sort in descending order
         for (const job of jobs) {
           const key = initialJobKeyExtractor(job);
           if (key != null && job.state === "SUCCESS") {
@@ -49,7 +49,7 @@ export function useStartAndPollJob({
       if (job.state === "SUCCESS") {
         onSuccess(job);
         setRunningJobs((previous) => previous.filter(([, j]) => j !== jobId));
-        if (mostRecentSuccessfulJob == null || job.createdAt > mostRecentSuccessfulJob.createdAt) {
+        if (mostRecentSuccessfulJob == null || job.created > mostRecentSuccessfulJob.created) {
           setMostRecentSuccessfulJob(job);
         }
       } else if (job.state === "FAILURE") {

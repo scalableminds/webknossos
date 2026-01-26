@@ -1,10 +1,10 @@
 import { DownOutlined, DownloadOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
-import { Button, Col, Dropdown, Form, Input, Row, Select } from "antd";
+import { Button, Col, Dropdown, Flex, Form, Input, Row, Select } from "antd";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";
-import _ from "lodash";
+import size from "lodash/size";
 import { useEffect, useState } from "react";
 import type { APIProject, APITaskType, APIUser } from "types/api_types";
 const FormItem = Form.Item;
@@ -60,7 +60,7 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
     const persistedFieldValues = persistedfieldValues != null ? persistedfieldValues : {};
     const fieldValues = initialFieldValues != null ? initialFieldValues : persistedFieldValues;
 
-    if (_.size(fieldValues) > 0) {
+    if (size(fieldValues) > 0) {
       form.setFieldsValue(fieldValues);
       handleSearchFormFinish(false);
     }
@@ -148,10 +148,9 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
         <Col span={12}>
           <FormItem name="taskTypeId" {...formItemLayout} label="Task Type">
             <Select
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               allowClear
               placeholder="Select a Task Type"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}
@@ -169,9 +168,8 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
           <FormItem name="projectId" {...formItemLayout} label="Project">
             <Select
               allowClear
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Select a Project"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}
@@ -187,9 +185,8 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
           <FormItem name="userId" {...formItemLayout} label="User">
             <Select
               allowClear
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Select a User"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}
@@ -205,55 +202,42 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
         </Col>
       </Row>
       <Row>
-        <Col
-          span={24}
-          style={{
-            textAlign: "right",
-          }}
-        >
-          <Dropdown
-            menu={{
-              onClick: () => handleSearchFormFinish(true),
-              items: [
-                {
-                  key: "1",
-                  icon: <RetweetOutlined />,
-                  label: "Show random subset",
-                },
-              ],
-            }}
-          >
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={isLoading}
-              loading={isLoading}
-              style={{
-                paddingRight: 3,
+        <Col span={24}>
+          <Flex justify="flex-end" gap="small">
+            <Dropdown
+              menu={{
+                onClick: () => handleSearchFormFinish(true),
+                items: [
+                  {
+                    key: "1",
+                    icon: <RetweetOutlined />,
+                    label: "Show random subset",
+                  },
+                ],
               }}
             >
-              Search <DownOutlined />
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={isLoading}
+                loading={isLoading}
+                icon={<DownOutlined />}
+                iconPlacement="end"
+              >
+                Search
+              </Button>
+            </Dropdown>
+
+            <Button onClick={handleReset}>Clear</Button>
+            <Button
+              onClick={handleDownloadAllTasks}
+              disabled={isLoading}
+              loading={isLoading}
+              icon={<DownloadOutlined />}
+            >
+              Download tasks as CSV
             </Button>
-          </Dropdown>
-          <Button
-            style={{
-              marginLeft: 8,
-            }}
-            onClick={handleReset}
-          >
-            Clear
-          </Button>
-          <Button
-            style={{
-              marginLeft: 8,
-            }}
-            onClick={handleDownloadAllTasks}
-            disabled={isLoading}
-            loading={isLoading}
-          >
-            Download tasks as CSV
-            <DownloadOutlined />
-          </Button>
+          </Flex>
         </Col>
       </Row>
     </Form>

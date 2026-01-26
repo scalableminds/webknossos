@@ -1,4 +1,4 @@
-import _ from "lodash";
+import memoize from "lodash/memoize";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";
@@ -24,7 +24,7 @@ import { ensureWkInitialized } from "./ready_sagas";
 
 const asyncGetMaximumZoomForAllMags = createWorker(AsyncGetMaximumZoomForAllMags);
 
-const getComputeFunction = _.memoize((_layerName: string) => {
+const getComputeFunction = memoize((_layerName: string) => {
   // The argument _layerName is not used in this function, but
   // we want to have one memoized function per layer name which
   // is why the argument is still needed.
@@ -100,7 +100,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
         ).affineMatrix,
       );
 
-      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
+      const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
 
       const zoomLevels = yield* call(
         getZoomLevelsFn,

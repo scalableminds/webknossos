@@ -4,8 +4,30 @@ import loadable from "./lazy_loader";
 type Props = {
   children?: React.ReactNode;
   className?: string;
+  components?: Record<string, any>;
 };
 
-const Markdown = loadable<Props>(() => import("react-markdown") as Promise<any>);
+function LinkRenderer(props: { children: React.ReactNode; href: string }) {
+  return (
+    <a
+      href={props.href}
+      target="_blank"
+      rel="noreferrer noopener"
+      onClick={(ev) => {
+        ev.stopPropagation();
+      }}
+    >
+      {props.children}
+    </a>
+  );
+}
 
-export default Markdown as React.FC<{ children: React.ReactNode; className?: string }>;
+const ReactMarkdown = loadable<Props>(() => import("react-markdown") as Promise<any>);
+
+export default function Markdown({ children, className }: Props) {
+  return (
+    <ReactMarkdown components={{ a: LinkRenderer }} className={className}>
+      {children}
+    </ReactMarkdown>
+  );
+}

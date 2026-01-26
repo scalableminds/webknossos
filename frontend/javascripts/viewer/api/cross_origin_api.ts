@@ -1,4 +1,5 @@
-import _ from "lodash";
+import isObject from "lodash/isObject";
+import isString from "lodash/isString";
 import { useEffect } from "react";
 import { api } from "viewer/singletons";
 
@@ -12,9 +13,9 @@ const onMessage = async (event) => {
   // if (event.origin !== "https://connectome-viewer.org") {
   //   return;
   // }
-  if (!_.isObject(event.data)) return;
+  if (!isObject(event.data)) return;
   const { type, args, messageId } = event.data;
-  if (type == null || !_.isArray(args)) return;
+  if (type == null || !Array.isArray(args)) return;
   let returnValue = null;
 
   switch (type) {
@@ -32,7 +33,7 @@ const onMessage = async (event) => {
     case "setActiveTreeByName": {
       const treeName = args[0];
 
-      if (_.isString(treeName)) {
+      if (isString(treeName)) {
         api.tracing.setActiveTreeByName(treeName);
       } else {
         const errorMessage = "The first argument needs to be the name of the tree.";
@@ -54,7 +55,7 @@ const onMessage = async (event) => {
     case "importNml": {
       const nmlAsString = args[0];
 
-      if (_.isString(nmlAsString)) {
+      if (isString(nmlAsString)) {
         await api.tracing.importNmlAsString(nmlAsString);
       } else {
         const errorMessage = "The first argument needs to be the content of the nml as a string.";

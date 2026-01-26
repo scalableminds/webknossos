@@ -98,9 +98,8 @@ function ScriptCreateView() {
             ]}
           >
             <Select
-              showSearch
+              showSearch={{ optionFilterProp: "label" }}
               placeholder="Select a User"
-              optionFilterProp="label"
               style={{
                 width: "100%",
               }}

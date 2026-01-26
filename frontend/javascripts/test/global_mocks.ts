@@ -6,14 +6,6 @@ import { vi } from "vitest";
 import protobuf from "protobufjs";
 
 // Mock common utility functions
-vi.mock("libs/keyboard", () => ({
-  default: {
-    bind: vi.fn(),
-    unbind: vi.fn(),
-    withContext: (_arg0: string, arg1: () => void) => arg1(),
-  },
-}));
-
 vi.mock("libs/toast", () => ({
   default: {
     error: vi.fn((msg) => console.error(msg)),
@@ -139,6 +131,9 @@ vi.mock("antd", () => {
     },
     Form: {
       Item: {},
+    },
+    Typography: {
+      Text: {},
     },
   };
 });

@@ -1,10 +1,16 @@
 import update from "immutability-helper";
 import type { WebknossosState } from "viewer/store";
 import { getMaxZoomStep } from "viewer/model/accessors/dataset_accessor";
-import * as accessors from "viewer/model/accessors/flycam_accessor";
+import {
+  _getDummyFlycamMatrix,
+  _getMaximumZoomForAllMags,
+  getActiveMagIndexForLayer,
+} from "viewer/model/accessors/flycam_accessor";
 import constants, { Identity4x4, UnitLong, type Vector3 } from "viewer/constants";
 import { describe, it, expect } from "vitest";
 import defaultState from "viewer/default_state";
+import type { VoxelSize } from "types/api_types";
+
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
 const boundingBox = {
@@ -66,7 +72,7 @@ describe("Flycam Accessors", () => {
   });
 
   it("should calculate the request log zoom step (1/2)", () => {
-    expect(accessors.getActiveMagIndexForLayer(initialState, "layer1")).toBe(0);
+    expect(getActiveMagIndexForLayer(initialState, "layer1")).toBe(0);
   });
 
   it("should calculate the request log zoom step (2/2)", () => {
@@ -78,11 +84,11 @@ describe("Flycam Accessors", () => {
       },
     });
 
-    expect(accessors.getActiveMagIndexForLayer(state, "layer1")).toBe(3);
+    expect(getActiveMagIndexForLayer(state, "layer1")).toBe(3);
   });
 
   it("should calculate appropriate zoom factors for datasets with many magnifications", () => {
-    const scale: Vector3 = [4, 4, 35];
+    const voxelSize: VoxelSize = { factor: [4, 4, 35], unit: UnitLong.nm };
     const mags: Vector3[] = [
       [1, 1, 1],
       [2, 2, 1],
@@ -111,15 +117,15 @@ describe("Flycam Accessors", () => {
       TDView: rect,
     };
 
-    const maximumZoomPerMags = accessors._getMaximumZoomForAllMags(
+    const maximumZoomPerMags = _getMaximumZoomForAllMags(
       constants.MODE_PLANE_TRACING,
       "BEST_QUALITY_FIRST",
-      scale,
+      voxelSize.factor,
       mags,
       rects,
       DEFAULT_REQUIRED_BUCKET_CAPACITY,
       Identity4x4,
-      accessors._getDummyFlycamMatrix(scale),
+      _getDummyFlycamMatrix(voxelSize),
     );
 
     // If this test case should fail at some point, the following values may be updated appropriately

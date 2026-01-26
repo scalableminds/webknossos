@@ -1,5 +1,8 @@
 import type TPS3D from "libs/thin_plate_spline";
-import _ from "lodash";
+import each from "lodash/each";
+import mapValues from "lodash/mapValues";
+import range from "lodash/range";
+import template from "lodash/template";
 import type { ElementClass } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import constants, { ViewModeValuesIndices, OrthoViewIndices } from "viewer/constants";
@@ -63,6 +66,7 @@ export type Params = {
   isOrthogonal: boolean;
   useInterpolation: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
+  isWindows: boolean;
 };
 
 const SHARED_UNIFORM_DECLARATIONS = `
@@ -83,7 +87,7 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY;
 uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
-<% _.each(layerNamesWithSegmentation, function(name) { %>
+<% each(layerNamesWithSegmentation, function(name) { %>
   uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
@@ -95,7 +99,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform vec3 <%= name %>_bboxMax;
 <% }) %>
 
-<% _.each(colorLayerNames, function(name) { %>
+<% each(colorLayerNames, function(name) { %>
   uniform vec3 <%= name %>_color;
   uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_min;
   uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_max;
@@ -165,7 +169,7 @@ const float bucketSize = <%= bucketSize %>;
 
 export default function getMainFragmentShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
-  return _.template(`
+  return template(`
 precision highp float;
 
 ${SHARED_UNIFORM_DECLARATIONS}
@@ -174,11 +178,12 @@ flat in vec2 index;
 flat in uint outputMagIdx[<%= globalLayerCount %>];
 flat in uint outputSeed[<%= globalLayerCount %>];
 flat in float outputAddress[<%= globalLayerCount %>];
+flat in float useBucketBorderVertexOptimization;
 in vec4 worldCoord;
 in vec4 modelCoord;
 in mat4 savedModelMatrix;
 
-<% _.each(layerNamesWithSegmentation, function(name) {
+<% each(layerNamesWithSegmentation, function(name) {
   if (tpsTransformPerLayer[name] != null) { %>
     in vec3 tpsOffsetXYZ_<%= name %>;
 <% }
@@ -220,7 +225,7 @@ void main() {
   }
   vec4 data_color = vec4(0.0);
 
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     uint <%= segmentationName %>_id_low = 0u;
     uint <%= segmentationName %>_id_high = 0u;
     uint <%= segmentationName %>_unmapped_id_low = 0u;
@@ -259,7 +264,7 @@ void main() {
 
   // Get Color Value(s)
   vec3 color_value  = vec3(0.0);
-  <% _.each(orderedColorLayerNames, function(name, layerIndex) { %>
+  <% each(orderedColorLayerNames, function(name, layerIndex) { %>
     <% const color_layer_index = colorLayerNames.indexOf(name); %>
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
@@ -361,7 +366,7 @@ void main() {
   gl_FragColor = data_color;
 
   <% if (hasSegmentation) { %>
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
     // Color map (<= to fight rounding mistakes)
     if ( <%= segmentationName %>_id_low != 0u || <%= segmentationName %>_id_high != 0u ) {
@@ -404,30 +409,32 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
-    ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
+    ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: (vector3: Vector3) =>
       `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
-    OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
+    OrthoViewIndices: mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
     isFragment: true,
     glslTypeForElementClass,
+    each,
+    range,
   });
 }
 
 export function getMainVertexShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
-  return _.template(`
+  return template(`
 precision highp float;
 
 out vec4 worldCoord;
 out vec4 modelCoord;
 out vec2 vUv;
 out mat4 savedModelMatrix;
-<% _.each(layerNamesWithSegmentation, function(name) {
+<% each(layerNamesWithSegmentation, function(name) {
   if (tpsTransformPerLayer[name] != null) { %>
   out vec3 tpsOffsetXYZ_<%= name %>;
 <%
@@ -438,6 +445,8 @@ flat out vec2 index;
 flat out uint outputMagIdx[<%= globalLayerCount %>];
 flat out uint outputSeed[<%= globalLayerCount %>];
 flat out float outputAddress[<%= globalLayerCount %>];
+// bool varyings are not supported
+flat out float useBucketBorderVertexOptimization;
 
 uniform bool is3DViewBeingRendered;
 uniform vec3 representativeMagForVertexAlignment;
@@ -462,7 +471,7 @@ ${compileShader(
 float PLANE_WIDTH = ${formatNumberAsGLSLFloat(Constants.VIEWPORT_WIDTH)};
 float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 
-<% _.each(layerNamesWithSegmentation, function(name) {
+<% each(layerNamesWithSegmentation, function(name) {
   if (tpsTransformPerLayer[name] != null) { %>
   <%= generateTpsInitialization(tpsTransformPerLayer, name) %>
   <%= generateCalculateTpsOffsetFunction(name) %>
@@ -470,11 +479,13 @@ float PLANE_SUBDIVISION = ${formatNumberAsGLSLFloat(PLANE_SUBDIVISION)};
 }) %>
 
 void main() {
-  <% _.each(layerNamesWithSegmentation, function(name) {
+  <% each(layerNamesWithSegmentation, function(name) {
     if (tpsTransformPerLayer[name] != null) { %>
     initializeTPSArraysFor<%= name %>();
   <% }
   }) %>
+
+  useBucketBorderVertexOptimization = 1.0;
 
   vUv = uv;
   modelCoord = vec4(position, 1.0);
@@ -486,6 +497,7 @@ void main() {
   // The same goes when all layers of the dataset are transformed.
   // This shouldn't really impact the performance as isFlycamRotated is a uniform.
   if(isFlycamRotated || !<%= isOrthogonal %> || doAllLayersHaveTransforms) {
+    useBucketBorderVertexOptimization = 0.0;
     return;
   }
   // Remember the original z position, since it can subtly diverge in the
@@ -522,6 +534,14 @@ void main() {
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
   vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
+  vec2 viewportWidthInVoxelsUV = abs(worldCoordBottomRight.xy - worldCoordTopLeft.xy) / voxelSizeFactorUVW.xy;
+  // If the plane subdivision vertices cannot possibly cover all bucket borders, the optimization must not be used.
+  // Otherwise, rendering artifacts will occur (partially rendered planes).
+  if ((d * PLANE_SUBDIVISION).x < viewportWidthInVoxelsUV.x || (d * PLANE_SUBDIVISION).y < viewportWidthInVoxelsUV.y) {
+    useBucketBorderVertexOptimization = 0.0;
+    return;
+  }
+
   vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
@@ -554,7 +574,7 @@ void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
 
   <%
-  _.each(layerNamesWithSegmentation, function(name) {
+  each(layerNamesWithSegmentation, function(name) {
     if (tpsTransformPerLayer[name] != null) {
   %>
     tpsOffsetXYZ_<%= name %> = calculateTpsOffsetFor<%= name %>(
@@ -574,7 +594,7 @@ void main() {
 
   float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
 
-  <% _.each(layerNamesWithSegmentation, function(name, layerIndex) { %>
+  <% each(layerNamesWithSegmentation, function(name, layerIndex) { %>
   if (!<%= name %>_has_transform) {
     float bucketAddress;
     uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[<%= layerIndex %>u];
@@ -603,18 +623,20 @@ void main() {
   `)({
     ...params,
     layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
-    ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
+    ViewModeValuesIndices: mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: (vector3: Vector3) =>
       `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
-    OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
+    OrthoViewIndices: mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
     isFragment: false,
     generateTpsInitialization,
     generateCalculateTpsOffsetFunction,
     glslTypeForElementClass,
+    each,
+    range,
   });
 }

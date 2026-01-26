@@ -62,6 +62,17 @@ object AssetCompilation {
 
   private def assetsGenerationTask: Def.Initialize[Task[Unit]] =
     Def task {
+      // copy schema
+      try {
+        val destination = target.value / "universal" / "stage" / "schema"
+        destination.mkdirs
+        deleteRecursively(destination)
+        copyRecursively(baseDirectory.value / "schema", destination)
+      } catch {
+        case e: Exception =>
+          streams.value.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
+      }
+
       // copy tools/postgres
       try {
         val destination = target.value / "universal" / "stage" / "tools" / "postgres"
@@ -70,7 +81,7 @@ object AssetCompilation {
         copyRecursively(baseDirectory.value / "tools" / "postgres", destination)
       } catch {
         case e: Exception =>
-          streams.value.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
+          streams.value.log.error("Could not copy dbtool to stage dir: " + e.getMessage)
       }
 
       // copy test/db
@@ -94,7 +105,7 @@ object AssetCompilation {
       val runnerValue = (Compile / runner).value
       val sourceManagedValue = sourceManaged.value
 
-      val schemaPath = baseDirectoryValue / "tools" / "postgres" / "schema.sql"
+      val schemaPath = baseDirectoryValue / "schema" / "postgres" / "schema.sql"
       val slickTablesOutPath = sourceManagedValue / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified

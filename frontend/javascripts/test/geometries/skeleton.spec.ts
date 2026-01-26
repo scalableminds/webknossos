@@ -1,9 +1,8 @@
 // Integration tests for skeleton.ts
 // Ensure singletons are set up
 import "test/helpers/apiHelpers";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import * as Utils from "libs/utils";
 import { describe, it, beforeAll, expect } from "vitest";
 import type { Vector3 } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
@@ -23,6 +22,7 @@ import {
   initializeSkeletonTracingAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { initializeAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { sleep } from "libs/utils";
 
 const skeletonCreator = () =>
   new Skeleton((state: WebknossosState) => enforceSkeletonTracing(state.annotation), true);
@@ -123,14 +123,14 @@ describe("Skeleton", () => {
     textureData.set(treeColors);
 
     // Using isEqual from lodash as noted in the original test
-    expect(_.isEqual(skeleton.treeColorTexture.image.data, textureData)).toBe(true);
+    expect(isEqual(skeleton.treeColorTexture.image.data, textureData)).toBe(true);
   });
 
   it("should increase its buffers once the max capacity is reached", async () => {
     const skeleton = skeletonCreator();
 
     Store.dispatch(createNodeAction([2001, 2001, 2001], null, [0.5, 0.5, 0.5], 0, 0));
-    await Utils.sleep(100);
+    await sleep(100);
 
     expect(skeleton.nodes.buffers.length).toBe(2);
     expect(skeleton.edges.buffers.length).toBe(2);
@@ -143,7 +143,7 @@ describe("Skeleton", () => {
     const index = skeleton.nodes.idToBufferPosition.get(id)!.index;
 
     Store.dispatch(deleteNodeAction(1, 1));
-    await Utils.sleep(50);
+    await sleep(50);
 
     expect(skeleton.nodes.buffers[0].geometry.attributes.type.array[index]).toBe(NodeTypes.INVALID);
   });
@@ -154,7 +154,7 @@ describe("Skeleton", () => {
     const id = skeleton.combineIds(2, 1);
     const index = skeleton.nodes.idToBufferPosition.get(id)!.index;
     Store.dispatch(deleteNodeAction(2, 1));
-    await Utils.sleep(50);
+    await sleep(50);
 
     // Use Array.from to handle array subarray properly
     const positionArray = skeleton.edges.buffers[0].geometry.attributes.position.array;
@@ -166,7 +166,7 @@ describe("Skeleton", () => {
     const skeleton = skeletonCreator();
     Store.dispatch(createBranchPointAction(3, 1));
 
-    await Utils.sleep(50);
+    await sleep(50);
     const id = skeleton.combineIds(3, 1);
     const index = skeleton.nodes.idToBufferPosition.get(id)!.index;
 
@@ -181,7 +181,7 @@ describe("Skeleton", () => {
     const { activeNodeId, activeTreeId } = skeletonTracing;
 
     Store.dispatch(setNodeRadiusAction(2));
-    await Utils.sleep(50);
+    await sleep(50);
     const id = skeleton.combineIds(activeNodeId!, activeTreeId!);
     const index = skeleton.nodes.idToBufferPosition.get(id)!.index;
 
@@ -197,7 +197,7 @@ describe("Skeleton", () => {
     if (activeTreeId != null) {
       const activeTree = trees.getOrThrow(activeTreeId);
 
-      await Utils.sleep(50);
+      await sleep(50);
       expect(
         skeleton.treeColorTexture.image.data.subarray(activeTreeId * 4, (activeTreeId + 1) * 4),
       ).toEqual(

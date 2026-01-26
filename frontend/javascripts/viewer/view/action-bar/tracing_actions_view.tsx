@@ -9,10 +9,10 @@ import {
   RollbackOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
-import { Space, Tooltip } from "antd";
+import { Button, Flex, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import messages from "messages";
-import * as React from "react";
+import { Fragment } from "react";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "viewer/view/layouting/default_layout_configs";
 import ActionsMenu from "./actions_menu";
@@ -58,7 +58,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   } = props;
 
   const layoutMissingHelpTitle = (
-    <React.Fragment>
+    <Fragment>
       <h5
         style={{
           color: "#fff",
@@ -67,7 +67,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
         Where is my layout?
       </h5>
       <p>{messages["layouting.missing_custom_layout_info"]}</p>
-    </React.Fragment>
+    </Fragment>
   );
 
   const customLayoutsItems = storedLayoutNamesForView.map((layout) => {
@@ -121,43 +121,62 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
     ),
     children: [
       {
-        key: "new-layout",
-        style: {
-          display: "inline-block",
-        },
-        onClick: addNewLayout,
-        title: "Add a new Layout",
-        icon: <PlusOutlined />,
+        key: "layout-actions",
+        type: "group",
+        label: (
+          <Flex
+            justify="space-between"
+            style={{
+              padding: "0 16px",
+            }}
+          >
+            <Tooltip title="Add a new Layout">
+              <Button
+                type="text"
+                icon={<PlusOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addNewLayout();
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="Reset Layout">
+              <Button
+                type="text"
+                icon={<RollbackOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onResetLayout();
+                }}
+              />
+            </Tooltip>
+            <Tooltip
+              title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}
+            >
+              <Button
+                type="text"
+                icon={autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAutoSaveLayouts(!autoSaveLayouts);
+                }}
+              />
+            </Tooltip>
+            {!autoSaveLayouts && (
+              <Tooltip title="Save current layout">
+                <Button
+                  type="text"
+                  icon={<SaveOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    saveCurrentLayout();
+                  }}
+                />
+              </Tooltip>
+            )}
+          </Flex>
+        ),
       },
-      {
-        key: "reset-layout",
-        style: {
-          display: "inline-block",
-        },
-        onClick: onResetLayout,
-        title: "Reset Layout",
-        icon: <RollbackOutlined />,
-      },
-      {
-        key: "autosave-layout",
-        style: {
-          display: "inline-block",
-        },
-        onClick: () => setAutoSaveLayouts(!autoSaveLayouts),
-        title: `${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`,
-        icon: autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />,
-      },
-      autoSaveLayouts
-        ? null
-        : {
-            key: "save-layout",
-            style: {
-              display: "inline-block",
-            },
-            onClick: saveCurrentLayout,
-            title: "Save current layout",
-            icon: <SaveOutlined />,
-          },
       { key: "divider", type: "divider" },
       {
         key: "available-layouts",
@@ -179,10 +198,8 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 function TracingActionsView({ layoutMenu }: Props) {
   return (
     <>
-      <Space.Compact>
-        <SaveActions />
-        <TaskCompletionActions />
-      </Space.Compact>
+      <SaveActions />
+      <TaskCompletionActions />
       <TracingModals />
       <ActionsMenu layoutMenu={layoutMenu} />
     </>

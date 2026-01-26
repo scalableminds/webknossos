@@ -350,17 +350,23 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkWithinRequestedFileSize(uploadDir: Path, uploadId: String, datasetId: ObjectId): Fox[Unit] =
     for {
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ = totalFileSizeInBytesOpt.foreach { reservedFileSize =>
-        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map { actualFileSize =>
-          if (actualFileSize > reservedFileSize.toLong) {
-            // For the moment, the upload is not rejected, only a slack notification is sent. We’ll add the rejection again once we are certain there are no false positives.
-            val msg =
-              s"Finished upload for $datasetId that exceeded reserved upload size. $reservedFileSize bytes were reserved but $actualFileSize were uploaded according to FileUtils."
-            logger.warn(msg)
-            slackNotificationService.noticeTooLargeUploadRequest(msg)
-          }
-        }
-      }
+      _ <- totalFileSizeInBytesOpt.map { reservedFileSize =>
+        for {
+          actualFileSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox
+          _ <- if (actualFileSize > reservedFileSize.toLong) {
+            cleanUpDatasetExceedingSize(uploadDir, uploadId)
+            Fox.failure(
+              f"Uploaded dataset $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
+          } else Fox.successful(())
+        } yield ()
+      }.getOrElse(Fox.successful(()))
+    } yield ()
+
+  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
+    for {
+      datasetId <- getDatasetIdByUploadId(uploadId)
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Exceeded reserved fileSize")
+      _ <- remoteWebknossosClient.deleteDataset(datasetId)
     } yield ()
 
   private def deleteFilesNotReferencedInDataSource(unpackedDir: Path, dataSource: UsableDataSource): Fox[Unit] =
@@ -392,7 +398,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } else {
       for {
         dataSourceFromDir <- Fox.successful(
-          dataSourceService.dataSourceFromDir(unpackedDir, dataSourceId.organizationId, resolveMagPaths = false))
+          dataSourceService.dataSourceFromDir(unpackedDir, dataSourceId.organizationId, resolvePaths = false))
         usableDataSourceFromDir <- dataSourceFromDir.toUsable.toFox ?~> s"Invalid dataset uploaded: ${dataSourceFromDir.statusOpt
           .getOrElse("")}"
         _ <- deleteFilesNotReferencedInDataSource(unpackedDir, usableDataSourceFromDir)
@@ -449,7 +455,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     }
 
   private def checkPathsInUploadedDatasourcePropertiesJson(unpackToDir: Path, organizationId: String): Fox[Unit] = {
-    val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId, resolveMagPaths = false)
+    val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId, resolvePaths = false)
     for {
       _ <- Fox.runOptional(dataSource.toUsable)(usableDataSource =>
         Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)) ?~> "dataset.upload.disallowedPaths")

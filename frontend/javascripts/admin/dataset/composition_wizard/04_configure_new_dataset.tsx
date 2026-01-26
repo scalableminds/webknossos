@@ -24,15 +24,15 @@ import { formatNumber } from "libs/format_utils";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import Toast, { guardedWithErrorToast } from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { isUserAdminOrDatasetManager } from "libs/utils";
+import uniqBy from "lodash/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
 import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
 import { syncValidator } from "types/validation";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
-import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transformation_helpers";
 import type { WizardComponentProps } from "./common";
@@ -51,7 +51,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const [isLoading, setIsLoading] = useState(false);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
+  const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);
   const [form] = Form.useForm();
   const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);
 
@@ -66,7 +66,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const handleTransformImport = async () => {
     const newLinks: LayerLink[] = (
-      _.flatMap(linkedDatasets, (dataset) =>
+      linkedDatasets.flatMap((dataset) =>
         dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
       ) as [APIDataset, APIDataLayer][]
     ).map(
@@ -173,7 +173,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         layers: layersWithTransforms,
       });
 
-      const uniqueDatasets = _.uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
+      const uniqueDatasets = uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
       const datasetMarkdownLinks = uniqueDatasets
         .map(
           (el) =>
@@ -372,7 +372,7 @@ function LinkedLayerForm({
             info="This is the layer which will be linked into the new dataset."
           >
             <a
-              href={`/datasets/${getReadableURLPart({ name: datasetName, id: datasetId })}/view`}
+              href={getViewDatasetURL({ name: datasetName, id: datasetId })}
               target="_blank"
               rel="noreferrer"
             >

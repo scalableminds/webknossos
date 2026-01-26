@@ -4,8 +4,8 @@ import { Alert, Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
-import { Store } from "viewer/singletons";
 
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { handleResendVerificationEmail } from "./verify_email_view";
 
@@ -17,8 +17,10 @@ const PASSWORD_FIELD_KEY = "password";
 
 function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
   const [form] = Form.useForm();
-  const activeUser = useWkSelector((state) => state.activeUser);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   async function changeEmail(newEmail: string, password: string) {
     const newUser = Object.assign({}, activeUser, {
@@ -37,7 +39,7 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
         handleResendVerificationEmail();
         Toast.success("Email address changed successfully. You will be logged out.");
         await logoutUserEverywhere();
-        Store.dispatch(logoutUserAction());
+        dispatch(logoutUserAction());
         navigate("/auth/login");
       })
       .catch((error) => {
@@ -153,7 +155,7 @@ function ChangeEmailView({ onCancel }: { onCancel: () => void }) {
       </FormItem>
       <Alert
         type="info"
-        message="You will be logged out after successfully changing your email address."
+        title="You will be logged out after successfully changing your email address."
         showIcon
         style={{
           marginBottom: 24,

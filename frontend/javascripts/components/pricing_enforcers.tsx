@@ -11,7 +11,7 @@ import type { PopoverProps } from "antd/lib";
 import type { TooltipPlacement } from "antd/lib/tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { rgbToHex } from "libs/utils";
-import _ from "lodash";
+import noop from "lodash/noop";
 import React from "react";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APIUser } from "types/api_types";
@@ -166,7 +166,7 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
         <SwitchSetting
           label={label}
           value={defaultValue}
-          onChange={_.noop}
+          onChange={noop}
           disabled
           postSwitchIcon={<LockOutlined style={{ marginLeft: 5 }} />}
         />
@@ -226,7 +226,7 @@ export const PricingEnforcedBlur = ({
         >
           <Alert
             showIcon
-            message={getFeatureNotAvailableInPlanMessage(
+            title={getFeatureNotAvailableInPlanMessage(
               requiredPricingPlan,
               activeOrganization,
               activeUser,

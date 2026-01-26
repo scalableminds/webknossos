@@ -83,7 +83,7 @@ import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
-import type { StartAIJobModalState } from "./view/action-bar/ai_job_modals/constants";
+import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
 
 export type { BoundingBoxObject } from "types/bounding_box";
 
@@ -175,7 +175,7 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly somePosition: Vector3 | undefined;
+  readonly somePosition: Vector3 | undefined; // in layer space
   readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
@@ -207,7 +207,7 @@ export type VolumeTracing = TracingBase & {
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
-  // Stores points of the currently drawn region in global coordinates
+  // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
@@ -539,7 +539,7 @@ type UiInformation = {
   readonly showMergeAnnotationModal: boolean;
   readonly showZarrPrivateLinksModal: boolean;
   readonly showAddScriptModal: boolean;
-  readonly aIJobModalState: StartAIJobModalState;
+  readonly aIJobDrawerState: StartAiJobDrawerState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly activeUserBoundingBoxId: number | null | undefined;

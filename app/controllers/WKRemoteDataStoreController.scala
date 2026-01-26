@@ -43,7 +43,6 @@ class WKRemoteDataStoreController @Inject()(
     usedStorageService: UsedStorageService,
     layerToLinkService: LayerToLinkService,
     datasetDAO: DatasetDAO,
-    datasetLayerDAO: DatasetLayerDAO,
     userDAO: UserDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
@@ -81,8 +80,8 @@ class WKRemoteDataStoreController @Inject()(
             preliminaryDataSource,
             uploadInfo.folderId,
             user,
-            // For the moment, the convert_to_wkw job can only fill the dataset if it is not virtual.
-            isVirtual = uploadInfo.isVirtual.getOrElse(!uploadInfo.needsConversion.getOrElse(false))
+            isVirtual = uploadInfo.isVirtual.getOrElse(true),
+            creationType = DatasetCreationType.Upload
           ) ?~> "dataset.upload.creation.failed"
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)

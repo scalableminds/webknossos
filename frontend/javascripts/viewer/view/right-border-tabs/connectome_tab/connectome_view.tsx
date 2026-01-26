@@ -727,7 +727,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const isConnectomeMappingActive = this.isConnectomeMappingActive();
     return isConnectomeMappingActive ? null : (
       <Alert
-        message={
+        title={
           <>
             The mapping this connectome was computed for is not active.{" "}
             <a href="#" onClick={() => this.activateConnectomeMapping()}>
@@ -754,7 +754,7 @@ class ConnectomeView extends React.Component<Props, State> {
     return (
       <>
         <Space.Compact
-          className="compact-icons"
+          block
           style={{
             marginBottom: 10,
           }}

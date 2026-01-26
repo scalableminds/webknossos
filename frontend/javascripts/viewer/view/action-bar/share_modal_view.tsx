@@ -14,7 +14,6 @@ import {
   Alert,
   Button,
   Col,
-  Divider,
   Input,
   Modal,
   Radio,
@@ -25,15 +24,17 @@ import {
 } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import _ from "lodash";
+import isEqual from "lodash/isEqual";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import type {
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -110,6 +111,7 @@ export function useDatasetSharingToken(dataset: APIDataset) {
   }, [dataset, activeUser]);
   return datasetToken;
 }
+
 export function getUrl(sharingToken: string, includeToken: boolean) {
   const { pathname, origin } = location;
   const hash = UrlManager.buildUrlHashJson(Store.getState());
@@ -117,15 +119,19 @@ export function getUrl(sharingToken: string, includeToken: boolean) {
   const url = `${origin}${pathname}${query}#${hash}`;
   return url;
 }
+
 export async function copyUrlToClipboard(url: string) {
   await navigator.clipboard.writeText(url);
   Toast.success("URL copied to clipboard.");
 }
+
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
   const annotationVisibility = useWkSelector((state) => state.annotation.visibility);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
+  const dispatch = useDispatch();
+
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
   const isTraceMode = controlMode === ControlModeEnum.TRACE;
@@ -148,7 +154,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
         <>
           The sharing link can only be opened by users who have the correct permissions to see this
           dataset/annotation. Please open the{" "}
-          <a href="#" onClick={() => Store.dispatch(setShareModalVisibilityAction(true))}>
+          <a href="#" onClick={() => dispatch(setShareModalVisibilityAction(true))}>
             share dialog
           </a>{" "}
           if you want to configure this.
@@ -176,6 +182,8 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
+  const dispatch = useDispatch();
+
   const dataset = useWkSelector((state) => state.dataset);
   const annotation = useWkSelector((state) => state.annotation);
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -237,7 +245,7 @@ function _ShareModalView(props: Props) {
       await editAnnotation(annotationId, annotationType, {
         visibility: newVisibility,
       });
-      Store.dispatch(setAnnotationVisibilityAction(newVisibility));
+      dispatch(setAnnotationVisibilityAction(newVisibility));
       reportSuccessfulChange(newVisibility);
     } catch (e) {
       console.error("Failed to update the annotations visibility.", e);
@@ -251,8 +259,8 @@ function _ShareModalView(props: Props) {
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
-    const newTeams = _.flatten([value]);
-    if (_.isEqual(newTeams, sharedTeams)) {
+    const newTeams = [value].flat();
+    if (isEqual(newTeams, sharedTeams)) {
       return;
     }
     setIsChangingInProgress(true);
@@ -286,7 +294,7 @@ function _ShareModalView(props: Props) {
     if (value !== othersMayEdit) {
       try {
         await setOthersMayEditForAnnotation(annotationId, annotationType, value);
-        Store.dispatch(setOthersMayEditForAnnotationAction(value));
+        dispatch(setOthersMayEditForAnnotationAction(value));
         reportSuccessfulChange(visibility);
       } catch (e) {
         console.error("Failed to update the edit option for others.", e);
@@ -322,7 +330,7 @@ function _ShareModalView(props: Props) {
         style={{
           marginBottom: 18,
         }}
-        message={message}
+        title={message}
         type="warning"
         showIcon
       />
@@ -371,14 +379,10 @@ function _ShareModalView(props: Props) {
           </Hint>
         </Col>
       </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
+      <DividerWithSubtitle>
         <i className={`fas fa-${iconMap[visibility]} icon-margin-right`} />
         Visibility
-      </Divider>
+      </DividerWithSubtitle>
       {maybeShowWarning()}
       <Row>
         <Col
@@ -442,14 +446,10 @@ function _ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
+      <DividerWithSubtitle>
         <ShareAltOutlined className="icon-margin-right" />
         Team Sharing
-      </Divider>
+      </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
         <Row>
           <Col

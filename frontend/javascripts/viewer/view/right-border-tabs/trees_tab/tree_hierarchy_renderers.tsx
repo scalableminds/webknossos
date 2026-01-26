@@ -8,7 +8,8 @@ import {
   TagsOutlined,
 } from "@ant-design/icons";
 import { type MenuProps, notification } from "antd";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
+import difference from "lodash/difference";
 import type React from "react";
 import { batchActions } from "redux-batched-actions";
 import {
@@ -155,7 +156,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       {
         key: "duplicateTree",
         onClick: () => {
-          const copyOfTree = { ..._.cloneDeep(tree), name: `${tree.name} (copy)` };
+          const copyOfTree = { ...cloneDeep(tree), name: `${tree.name} (copy)` };
           const treeMap = new TreeMap([[tree.treeId, copyOfTree]]);
           Store.dispatch(addTreesAndGroupsAction(treeMap, null, undefined, false));
           hideContextMenu();
@@ -277,7 +278,7 @@ const createMenuForTreeGroup = (
   const labelForActiveItems = getLabelForActiveItems();
 
   function createGroup(groupId: number) {
-    const newTreeGroups = _.cloneDeep(props.treeGroups);
+    const newTreeGroups = cloneDeep(props.treeGroups);
 
     const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
     const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
@@ -361,7 +362,7 @@ const createMenuForTreeGroup = (
         const parentGroupNode = getNodeKey(GroupTypeEnum.GROUP, parentGroup.id);
         // If the subgroups should be collapsed, do not collapse the group itself, if it was expanded before.
         const subGroupsWithoutParent = subGroups.filter((groupKey) => groupKey !== parentGroupNode);
-        const newExpandedKeys = _.difference(expandedNodeKeys, subGroupsWithoutParent);
+        const newExpandedKeys = difference(expandedNodeKeys, subGroupsWithoutParent);
         setExpandedGroups(new Set(newExpandedKeys));
       }
     }
@@ -535,7 +536,7 @@ function handleMeasureSkeletonLength(treeId: number, treeName: string) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
 
   notification.open({
-    message: messages["tracing.tree_length_notification"](
+    title: messages["tracing.tree_length_notification"](
       treeName,
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
       formatLengthAsVx(lengthInVx),

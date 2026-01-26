@@ -1,8 +1,14 @@
-import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import _ from "lodash";
+import first from "lodash/first";
+import last from "lodash/last";
+import max from "lodash/max";
+import mean from "lodash/mean";
+import range from "lodash/range";
+import sortBy from "lodash/sortBy";
+import uniqBy from "lodash/uniqBy";
 import memoizeOne from "memoize-one";
+import type { Matrix4x4 } from "mjs";
 import { type Euler, MathUtils, Matrix4, Object3D } from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
@@ -30,8 +36,7 @@ import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_
 import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import Dimensions from "viewer/model/dimensions";
-import * as scaleInfo from "viewer/model/scaleinfo";
-import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit, getBaseVoxelInUnit } from "viewer/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "viewer/store";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import {
@@ -44,7 +49,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -197,8 +202,8 @@ export function _getMaximumZoomForAllMags(
 }
 
 // Only exported for testing.
-export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
-  const scaleMatrix = getMatrixScale(scale);
+export const _getDummyFlycamMatrix = memoizeOne((voxelSize: VoxelSize) => {
+  const scaleMatrix = getBaseVoxelFactorsInUnit(voxelSize);
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 
@@ -256,7 +261,7 @@ export function getNewPositionAndZoomChangeFromTransformationChange(
   const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
   const newSecondPosition = transformPointUnscaled(changeInAppliedTransformation)(secondPosition);
 
-  const scaleChange = _.mean(
+  const scaleChange = mean(
     // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
     V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
   );
@@ -381,8 +386,7 @@ function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: st
 
     // Linearly search for the mag index, for which the zoomFactor
     // is acceptable.
-    const zoomStep = _.findIndex(
-      maximumZoomSteps,
+    const zoomStep = maximumZoomSteps.findIndex(
       (maximumZoomStep) => state.flycam.zoomStep <= maximumZoomStep,
     );
 
@@ -443,16 +447,16 @@ export function getCurrentMagIndex(
 }
 
 function _getValidZoomRangeForUser(state: WebknossosState): [number, number] {
-  const maxOfLayers = _.max(
+  const maxOfLayers = max(
     getDataLayers(state.dataset).map((layer) => {
       const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
-      return _.last(maximumZoomSteps);
+      return last(maximumZoomSteps);
     }),
   );
 
-  const [min, taskAwareMax] = getValidTaskZoomRange(state);
-  const max = maxOfLayers != null ? Math.min(taskAwareMax, maxOfLayers) : 1;
-  return [min, max];
+  const [zoomMin, taskAwareMax] = getValidTaskZoomRange(state);
+  const zoomMax = maxOfLayers != null ? Math.min(taskAwareMax, maxOfLayers) : 1;
+  return [zoomMin, zoomMax];
 }
 
 export const getValidZoomRangeForUser = reuseInstanceOnEquality(_getValidZoomRangeForUser);
@@ -486,11 +490,11 @@ function getValidZoomRangeForMag(
     return [null, null];
   }
 
-  const max = maximumZoomSteps[targetMagIndex];
-  const min = targetMagIndex > 0 ? maximumZoomSteps[targetMagIndex - 1] : 0;
-  // Since the min of the requested range is derived from the max of the previous range,
+  const zoomMax = maximumZoomSteps[targetMagIndex];
+  const zoomMin = targetMagIndex > 0 ? maximumZoomSteps[targetMagIndex - 1] : 0;
+  // Since the zoomMin of the requested range is derived from the zoomMax of the previous range,
   // we add a small delta so that the returned range is inclusive.
-  return [min + Number.EPSILON, max];
+  return [zoomMin + Number.EPSILON, zoomMax];
 }
 
 export function getZoomValue(flycam: Flycam): number {
@@ -509,7 +513,7 @@ export function getValidTaskZoomRange(
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
   // Tracked in #6926.
-  const firstColorLayerNameMaybe = _.first(getColorLayers(state.dataset))?.name;
+  const firstColorLayerNameMaybe = first(getColorLayers(state.dataset))?.name;
 
   if (!respectRestriction || !firstColorLayerNameMaybe) {
     return defaultRange;
@@ -539,7 +543,7 @@ export function isMagRestrictionViolated(state: WebknossosState): boolean {
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
   // Tracked in #6926.
-  const firstColorLayerName = _.first(getColorLayers(state.dataset))?.name;
+  const firstColorLayerName = first(getColorLayers(state.dataset))?.name;
   if (!firstColorLayerName) {
     return false;
   }
@@ -586,7 +590,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(voxelSize);
+  const baseVoxelFactors = getBaseVoxelFactorsInUnit(voxelSize);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;
@@ -666,7 +670,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
       // The current mag is missing and fallback rendering
       // is activated. Thus, check whether one of the fallback
       // zoomSteps can be rendered.
-      return !_.range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {
+      return !range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {
         const fallbackZoomStep = activeMagIdx + diff;
         return magInfo.hasIndex(fallbackZoomStep);
       });
@@ -696,7 +700,7 @@ function _getActiveMagInfo(state: WebknossosState) {
   );
 
   const isActiveMagGlobal =
-    _.uniqBy(Object.values(activeMagOfEnabledLayers), (mag) => (mag != null ? mag.join("-") : null))
+    uniqBy(Object.values(activeMagOfEnabledLayers), (mag) => (mag != null ? mag.join("-") : null))
       .length === 1;
   let representativeMag: Vector3 | undefined | null;
   if (isActiveMagGlobal) {
@@ -710,9 +714,9 @@ function _getActiveMagInfo(state: WebknossosState) {
     // even though all mags have the same minimum.
     const activeMagsWithSorted = activeMags.map((mag) => ({
       mag, // e.g., 4, 4, 1
-      sortedMag: _.sortBy(mag), // e.g., 1, 4, 4
+      sortedMag: sortBy(mag), // e.g., 1, 4, 4
     }));
-    representativeMag = _.sortBy(
+    representativeMag = sortBy(
       activeMagsWithSorted,
       ({ sortedMag }) => sortedMag[0],
       ({ sortedMag }) => sortedMag[1],

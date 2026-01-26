@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import _ from "lodash";
+import range from "lodash/range";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultSkeletonState } from "test/fixtures/skeletontracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
@@ -16,7 +16,24 @@ import {
   changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
-import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
+import {
+  applySkeletonUpdateActionsFromServerAction,
+  createNodeAction,
+  createTreeAction,
+  deleteEdgeAction,
+  deleteNodeAction,
+  deleteTreeAction,
+  mergeTreesAction,
+  setActiveNodeAction,
+  setActiveTreeAction,
+  setNodePositionAction,
+  setTreeEdgeVisibilityAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+  setTreeNameAction,
+  setTreeVisibilityAction,
+  toggleTreeGroupAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
@@ -102,8 +119,7 @@ describe("Update Action Application for SkeletonTracing", () => {
   const seenActionTypes = new Set<string>();
 
   let idx = 0;
-  const createNode = () =>
-    SkeletonTracingActions.createNodeAction([10, 10, idx++], null, rotation, viewport, mag);
+  const createNode = () => createNodeAction([10, 10, idx++], null, rotation, viewport, mag);
 
   /*
    * Hardcode these values if you want to focus on a specific test.
@@ -113,34 +129,34 @@ describe("Update Action Application for SkeletonTracing", () => {
   const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
-    SkeletonTracingActions.deleteTreeAction(2), // delete second tree. one tree remains.
+    deleteTreeAction(2), // delete second tree. one tree remains.
     createNode(), // nodeId=1
     createNode(), // nodeId=2
     createNode(), // nodeId=3
     createNode(), // nodeId=4
     createNode(), // nodeId=5
-    SkeletonTracingActions.deleteNodeAction(3), // tree components == {1,2} {4,5}
-    SkeletonTracingActions.createTreeAction(),
+    deleteNodeAction(3), // tree components == {1,2} {4,5}
+    createTreeAction(),
     createNode(), // nodeId=6
     createNode(), // nodeId=7
     createNode(), // nodeId=8, tree components == {1,2} {4,5} {6,7,8}
-    SkeletonTracingActions.setTreeNameAction("Special Name", 1),
-    SkeletonTracingActions.setActiveNodeAction(null),
-    SkeletonTracingActions.mergeTreesAction(5, 7), // tree components {1,2} {4,5,6,7,8}
-    SkeletonTracingActions.setActiveNodeAction(2),
+    setTreeNameAction("Special Name", 1),
+    setActiveNodeAction(null),
+    mergeTreesAction(5, 7), // tree components {1,2} {4,5,6,7,8}
+    setActiveNodeAction(2),
     createNode(), // nodeId=9, tree components {1,2,9} {4,5,6,7,8}
-    SkeletonTracingActions.setActiveNodeAction(2),
+    setActiveNodeAction(2),
     createNode(), // nodeId=10, tree components {1,2,9,10} {4,5,6,7,8}
-    SkeletonTracingActions.setActiveNodeAction(1),
+    setActiveNodeAction(1),
     createNode(), // nodeId=11, tree components {11,1,2,9,10} {4,5,6,7,8}
-    SkeletonTracingActions.deleteEdgeAction(1, 2), // tree components {11,1} {2,9,10} {4,5,6,7,8}
-    SkeletonTracingActions.setTreeVisibilityAction(1, false),
-    SkeletonTracingActions.createTreeAction(),
+    deleteEdgeAction(1, 2), // tree components {11,1} {2,9,10} {4,5,6,7,8}
+    setTreeVisibilityAction(1, false),
+    createTreeAction(),
     createNode(), // nodeId=12
     createNode(), // nodeId=13
     createNode(), // nodeId=14, tree components == {1,2} {4,5} {6,7,8} {12,13,14}
-    SkeletonTracingActions.deleteTreeAction(3),
-    SkeletonTracingActions.setNodePositionAction([1, 2, 3], 6),
+    deleteTreeAction(3),
+    setNodePositionAction([1, 2, 3], 6),
     addUserBoundingBoxAction({
       boundingBox: { min: [0, 0, 0], max: [10, 10, 10] },
       name: "UserBBox",
@@ -149,18 +165,15 @@ describe("Update Action Application for SkeletonTracing", () => {
     }),
     changeUserBoundingBoxAction(1, { name: "Updated Name" }),
     deleteUserBoundingBoxAction(1),
-    SkeletonTracingActions.setTreeGroupsAction([
-      makeBasicGroupObject(3, "group 3"),
-      makeBasicGroupObject(7, "group 7"),
-    ]),
-    SkeletonTracingActions.setActiveNodeAction(11),
-    SkeletonTracingActions.setTreeGroupAction(3, 1),
-    SkeletonTracingActions.setTreeGroupAction(3, 2),
+    setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
+    setActiveNodeAction(11),
+    setTreeGroupAction(3, 1),
+    setTreeGroupAction(3, 2),
     // Toggle on and off to ensure compaction compacts actions to an updateTreeGroupVisibility action.
-    SkeletonTracingActions.toggleTreeGroupAction(3),
-    SkeletonTracingActions.toggleTreeGroupAction(3),
-    SkeletonTracingActions.setTreeGroupAction(7, 2),
-    SkeletonTracingActions.setTreeEdgeVisibilityAction(2, false),
+    toggleTreeGroupAction(3),
+    toggleTreeGroupAction(3),
+    setTreeGroupAction(7, 2),
+    setTreeEdgeVisibilityAction(2, false),
   ];
 
   test("User actions for test should not contain no-ops", () => {
@@ -176,7 +189,7 @@ describe("Update Action Application for SkeletonTracing", () => {
   const beforeVersionIndices =
     hardcodedBeforeVersionIndex != null
       ? [hardcodedBeforeVersionIndex]
-      : _.range(0, userActions.length);
+      : range(0, userActions.length);
 
   describe.each(compactionModes)(
     "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
@@ -185,7 +198,7 @@ describe("Update Action Application for SkeletonTracing", () => {
         const afterVersionIndices =
           hardcodedAfterVersionIndex != null
             ? [hardcodedAfterVersionIndex]
-            : _.range(beforeVersionIndex, userActions.length + 1);
+            : range(beforeVersionIndex, userActions.length + 1);
 
         test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
           const state2WithActiveTree = applyActions(
@@ -228,7 +241,7 @@ describe("Update Action Application for SkeletonTracing", () => {
             state2WithoutActiveBoundingBox,
             (state) =>
               applyActions(state, [
-                SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
+                applySkeletonUpdateActionsFromServerAction(updateActions),
                 setActiveUserBoundingBoxId(null),
               ]),
           );
@@ -240,21 +253,15 @@ describe("Update Action Application for SkeletonTracing", () => {
   );
 
   it("should clear the active node if it was deleted", () => {
-    const createNode = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
     const newState = applyActions(initialState, [
       createNode, // nodeId=1
       createNode, // nodeId=2
-      SkeletonTracingActions.setActiveNodeAction(2),
+      setActiveNodeAction(2),
     ]);
     expect(getActiveNode(enforceSkeletonTracing(newState.annotation))?.id).toBe(2);
 
-    const newState2 = applyActions(newState, [SkeletonTracingActions.deleteNodeAction(2)]);
+    const newState2 = applyActions(newState, [deleteNodeAction(2)]);
 
     const updateActions = addMissingTimestampProp(
       Array.from(
@@ -266,9 +273,7 @@ describe("Update Action Application for SkeletonTracing", () => {
     );
     const newState3 = transformStateAsReadOnly(newState, (state) =>
       applyActions(state, [
-        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(
-          updateActionsWithoutUpdatingActiveNode,
-        ),
+        applySkeletonUpdateActionsFromServerAction(updateActionsWithoutUpdatingActiveNode),
       ]),
     );
 
@@ -280,9 +285,7 @@ describe("Update Action Application for SkeletonTracing", () => {
       throw new Error("Expected update actions to include an updateActiveNode action.");
     }
     const newState4 = transformStateAsReadOnly(newState, (state) =>
-      applyActions(state, [
-        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction([updateActiveNodeAction]),
-      ]),
+      applyActions(state, [applySkeletonUpdateActionsFromServerAction([updateActiveNodeAction])]),
     );
 
     activeNodeId = enforceSkeletonTracing(newState4.annotation).activeNodeId;
@@ -290,22 +293,16 @@ describe("Update Action Application for SkeletonTracing", () => {
   });
 
   it("should clear the active node and active tree if the active tree was deleted", () => {
-    const createNode = SkeletonTracingActions.createNodeAction(
-      position,
-      null,
-      rotation,
-      viewport,
-      mag,
-    );
+    const createNode = createNodeAction(position, null, rotation, viewport, mag);
     const newState = applyActions(initialState, [
       createNode, // nodeId=1
       createNode, // nodeId=2
-      SkeletonTracingActions.setActiveTreeAction(2),
+      setActiveTreeAction(2),
     ]); // active tree: 2, active node: null
     expect(getActiveTree(enforceSkeletonTracing(newState.annotation))?.treeId).toBe(2);
 
     // newState2 has active tree: 2, active node: null
-    const newState2 = applyActions(newState, [SkeletonTracingActions.deleteTreeAction(2)]);
+    const newState2 = applyActions(newState, [deleteTreeAction(2)]);
 
     const updateActions = addMissingTimestampProp(
       Array.from(
@@ -314,9 +311,7 @@ describe("Update Action Application for SkeletonTracing", () => {
     );
 
     const newState3 = transformStateAsReadOnly(newState, (state) =>
-      applyActions(state, [
-        SkeletonTracingActions.applySkeletonUpdateActionsFromServerAction(updateActions),
-      ]),
+      applyActions(state, [applySkeletonUpdateActionsFromServerAction(updateActions)]),
     );
 
     const { activeTreeId, activeNodeId } = enforceSkeletonTracing(newState3.annotation);

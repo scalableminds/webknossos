@@ -8,6 +8,7 @@ import {
 import { ConfigProvider, Dropdown, type MenuProps } from "antd";
 import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
+import { useDispatch } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import {
   setPythonClientModalVisibilityAction,
@@ -24,6 +25,7 @@ import DownloadModalView from "./download_modal_view";
 type Props = {
   layoutMenu: SubMenuType;
 };
+
 export const screenshotMenuItem: MenuItemType = {
   key: "screenshot-button",
   onClick: downloadScreenshot,
@@ -62,6 +64,7 @@ export const viewDatasetMenu = [
 ];
 
 export default function ViewDatasetActionsView(props: Props) {
+  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isShareModalOpen = useWkSelector((state) => state.uiInformation.showShareModal);
   const isPythonClientModalOpen = useWkSelector(
@@ -74,7 +77,7 @@ export default function ViewDatasetActionsView(props: Props) {
   const shareDatasetModal = (
     <ShareViewDatasetModalView
       isOpen={isShareModalOpen}
-      onOk={() => Store.dispatch(setShareModalVisibilityAction(false))}
+      onOk={() => dispatch(setShareModalVisibilityAction(false))}
     />
   );
   const pythonClientModal = (
@@ -82,7 +85,7 @@ export default function ViewDatasetActionsView(props: Props) {
       isAnnotation={false}
       initialTab="export"
       isOpen={isPythonClientModalOpen}
-      onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
+      onClose={() => dispatch(setPythonClientModalVisibilityAction(false))}
     />
   );
   const overlayMenu: MenuProps = { items: [...viewDatasetMenu, props.layoutMenu] };
@@ -90,18 +93,14 @@ export default function ViewDatasetActionsView(props: Props) {
   const renderAnimationModal = (
     <CreateAnimationModal
       isOpen={isRenderAnimationModalOpen}
-      onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+      onClose={() => dispatch(setRenderAnimationModalVisibilityAction(false))}
     />
   );
 
   const userTheme = getThemeFromUser(activeUser);
 
   return (
-    <div
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <div>
       <ConfigProvider theme={getAntdTheme(userTheme)}>
         {shareDatasetModal}
         {pythonClientModal}

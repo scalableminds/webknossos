@@ -5,7 +5,8 @@ import { Collapse, type CollapseProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
 import Toast from "libs/toast";
-import _ from "lodash";
+import mapValues from "lodash/mapValues";
+import partial from "lodash/partial";
 import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -14,7 +15,7 @@ import type { APIDataset, APIUser } from "types/api_types";
 import type { ArrayElement } from "types/globals";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { ViewMode } from "viewer/constants";
-import Constants, { BLEND_MODES } from "viewer/constants";
+import Constants, { BLEND_MODES, LongUnitToShortUnitMap } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import { getValidZoomRangeForUser } from "viewer/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
@@ -65,15 +66,14 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   UNSAFE_componentWillMount() {
     // cache onChange handler
     // @ts-expect-error ts-migrate(2740) FIXME: Type 'Dictionary<boolean>' is missing the following... Remove this comment to see the full error message
-    this.onChangeUser = _.mapValues(
+    this.onChangeUser = mapValues(
       this.props.userConfiguration,
-      (__, propertyName: keyof UserConfiguration) =>
-        _.partial(this.props.onChangeUser, propertyName),
+      (__, propertyName: keyof UserConfiguration) => partial(this.props.onChangeUser, propertyName),
     );
     // @ts-expect-error ts-migrate(2322) FIXME: Type '{ readonly fourBit: Function1<keyof DatasetC... Remove this comment to see the full error message
-    this.onChangeDataset = _.mapValues(this.props.datasetConfiguration, (__, propertyName) =>
+    this.onChangeDataset = mapValues(this.props.datasetConfiguration, (__, propertyName) =>
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-      _.partial(this.props.onChangeDataset, propertyName),
+      partial(this.props.onChangeDataset, propertyName),
     );
   }
 
@@ -89,7 +89,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           <React.Fragment>
             <LogSliderSetting
               label={<FastTooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</FastTooltip>}
-              roundTo={3}
+              roundToDigit={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
@@ -168,7 +168,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           <React.Fragment>
             <LogSliderSetting
               label={<FastTooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</FastTooltip>}
-              roundTo={3}
+              roundToDigit={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
@@ -238,11 +238,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   };
 
   render() {
+    const datasetScaleUnit = LongUnitToShortUnitMap[this.props.dataset.dataSource.scale.unit];
+    const moveValueString = `${settingsLabels.moveValue} (${datasetScaleUnit}/s)`;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label={
-          <FastTooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</FastTooltip>
-        }
+        label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
         min={userSettings.moveValue3d.minimum}
         max={userSettings.moveValue3d.maximum}
         step={10}
@@ -252,9 +252,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       />
     ) : (
       <NumberSliderSetting
-        label={
-          <FastTooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</FastTooltip>
-        }
+        label={<FastTooltip title={settingsTooltips.moveValue}>{moveValueString}</FastTooltip>}
         min={userSettings.moveValue.minimum}
         max={userSettings.moveValue.maximum}
         step={10}

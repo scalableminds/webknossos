@@ -6,7 +6,6 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
@@ -21,54 +20,48 @@ object AccessMode extends ExtendedEnumeration {
 
 object AccessResourceType extends ExtendedEnumeration {
   type AccessResourceType = Value
-  val datasource, dataset, tracing, annotation, webknossos, jobExport = Value
+  val dataset, tracing, annotation, webknossos, jobExport = Value
 }
 
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
 object UserAccessAnswer { implicit val jsonFormat: OFormat[UserAccessAnswer] = Json.format[UserAccessAnswer] }
 
-case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value)
+case class UserAccessRequest(resourceId: Option[String], resourceType: AccessResourceType.Value, mode: AccessMode.Value)
 object UserAccessRequest {
   implicit val jsonFormat: OFormat[UserAccessRequest] = Json.format[UserAccessRequest]
 
-  def administrateDataSources: UserAccessRequest =
-    UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
+  def administrateDatasets: UserAccessRequest =
+    UserAccessRequest(None, AccessResourceType.dataset, AccessMode.administrate)
 
-  def administrateDataSources(organizationId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId("", organizationId), AccessResourceType.datasource, AccessMode.administrate)
-
-  def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
-    UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
-
-  def readDataset(datasetId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId(datasetId, ""), AccessResourceType.dataset, AccessMode.read)
+  def administrateDatasets(organizationId: String): UserAccessRequest =
+    UserAccessRequest(Some(organizationId), AccessResourceType.dataset, AccessMode.administrate)
 
   def readDataset(datasetId: ObjectId): UserAccessRequest =
-    UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.read)
+    UserAccessRequest(Some(datasetId.toString), AccessResourceType.dataset, AccessMode.read)
 
   def deleteDataset(datasetId: ObjectId): UserAccessRequest =
-    UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.delete)
+    UserAccessRequest(Some(datasetId.toString), AccessResourceType.dataset, AccessMode.delete)
 
   def writeDataset(datasetId: ObjectId): UserAccessRequest =
-    UserAccessRequest(DataSourceId(datasetId.toString, ""), AccessResourceType.dataset, AccessMode.write)
+    UserAccessRequest(Some(datasetId.toString), AccessResourceType.dataset, AccessMode.write)
 
   def readTracing(tracingId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
+    UserAccessRequest(Some(tracingId), AccessResourceType.tracing, AccessMode.read)
 
   def writeTracing(tracingId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
+    UserAccessRequest(Some(tracingId), AccessResourceType.tracing, AccessMode.write)
 
   def readAnnotation(annotationId: ObjectId): UserAccessRequest =
-    UserAccessRequest(DataSourceId(annotationId.toString, ""), AccessResourceType.annotation, AccessMode.read)
+    UserAccessRequest(Some(annotationId.toString), AccessResourceType.annotation, AccessMode.read)
 
   def writeAnnotation(annotationId: ObjectId): UserAccessRequest =
-    UserAccessRequest(DataSourceId(annotationId.toString, ""), AccessResourceType.annotation, AccessMode.write)
+    UserAccessRequest(Some(annotationId.toString), AccessResourceType.annotation, AccessMode.write)
 
   def downloadJobExport(jobId: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId(jobId, ""), AccessResourceType.jobExport, AccessMode.read)
+    UserAccessRequest(Some(jobId), AccessResourceType.jobExport, AccessMode.read)
 
   def webknossos: UserAccessRequest =
-    UserAccessRequest(DataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)
+    UserAccessRequest(None, AccessResourceType.webknossos, AccessMode.administrate)
 }
 
 trait AccessTokenService {
@@ -102,6 +95,8 @@ trait AccessTokenService {
       case UserAccessAnswer(true, _) =>
         block
       case UserAccessAnswer(false, Some(msg)) =>
+        // Note that this should be kept in sync with DSLegacyApiController.withResolvedDatasetId
+        // to make the errors indistinguishable.
         Future.successful(Forbidden("Token may be expired, consider reloading. Access forbidden: " + msg))
       case _ =>
         Future.successful(Forbidden("Token may be expired, consider reloading. Token authentication failed."))

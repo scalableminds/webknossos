@@ -1,6 +1,7 @@
 import {
   BarChartOutlined,
   BellOutlined,
+  ExperimentOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
@@ -12,6 +13,7 @@ import {
   Badge,
   Button,
   ConfigProvider,
+  Flex,
   Input,
   type InputRef,
   Layout,
@@ -26,16 +28,16 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
-  getUsersOrganizations,
   logoutUser,
   sendAnalyticsEvent,
-  switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
+import type { MenuProps } from "antd";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -43,10 +45,15 @@ import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import {
+  filterWithSearchQueryAND,
+  isUserAdmin,
+  isUserAdminOrManager,
+  isUserAdminOrTeamManager,
+} from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import { useDispatch } from "react-redux";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -56,7 +63,6 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -130,16 +136,10 @@ function UserInitials({
   isMultiMember: boolean;
 }) {
   const { firstName, lastName } = activeUser;
-
   const initialOf = (str: string) => str.slice(0, 1).toUpperCase();
 
   return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-      }}
-    >
+    <div>
       <Avatar
         className="hover-effect-via-opacity"
         style={{
@@ -175,8 +175,8 @@ function getCollapsibleMenuTitle(
 }
 
 export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
-  const isAdmin = Utils.isUserAdmin(activeUser);
-  const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
+  const isAdmin = isUserAdmin(activeUser);
+  const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
 
   const adminstrationSubMenuItems = isAdminOrTeamManager
@@ -211,30 +211,12 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       ]
     : [];
 
-  if (features().jobsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/jobs",
-      label: <Link to="/jobs">Processing Jobs</Link>,
-    });
-
   if (isAdmin) {
     adminstrationSubMenuItems.push({
       key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }
-  if (activeUser.isSuperUser) {
-    adminstrationSubMenuItems.push({
-      key: "/aiModels",
-      label: <Link to={"/aiModels"}>AI Models</Link>,
-    });
-  }
-
-  if (features().voxelyticsEnabled)
-    adminstrationSubMenuItems.push({
-      key: "/workflows",
-      label: <Link to="/workflows">Voxelytics</Link>,
-    });
 
   if (adminstrationSubMenuItems.length === 0) {
     return null;
@@ -249,6 +231,43 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
       collapse,
     ),
     children: adminstrationSubMenuItems,
+  };
+}
+
+export function getAnalysisSubMenu(collapse: boolean) {
+  const analysisSubMenuItems = [];
+
+  if (features().jobsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/jobs",
+      label: <Link to="/jobs">Processing Jobs</Link>,
+    });
+    analysisSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
+
+  if (features().voxelyticsEnabled) {
+    analysisSubMenuItems.push({
+      key: "/workflows",
+      label: <Link to="/workflows">Voxelytics</Link>,
+    });
+  }
+
+  if (analysisSubMenuItems.length === 0) {
+    return null;
+  }
+
+  return {
+    key: "analysisMenu",
+    className: collapse ? "hide-on-small-screen" : "",
+    label: getCollapsibleMenuTitle(
+      "Analysis",
+      <ExperimentOutlined className="icon-margin-right" />,
+      collapse,
+    ),
+    children: analysisSubMenuItems,
   };
 }
 
@@ -295,13 +314,12 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
     key: "timeStatisticMenu",
 
     label: (
-      <Link
-        to="/timetracking"
-        style={{
-          fontWeight: 400,
-        }}
-      >
-        {getCollapsibleMenuTitle("Time Tracking", <BarChartOutlined />, collapse)}
+      <Link to="/timetracking">
+        {getCollapsibleMenuTitle(
+          "Time Tracking",
+          <BarChartOutlined className="icon-margin-right" />,
+          collapse,
+        )}
       </Link>
     ),
   };
@@ -313,7 +331,7 @@ function getHelpSubMenu(
   isAuthenticated: boolean,
   isAdminOrManager: boolean,
   collapse: boolean,
-  openHelpModal: MenuClickEventHandler,
+  openHelpModal: MenuProps["onClick"],
 ) {
   const polledVersionString =
     polledVersion != null && polledVersion !== version
@@ -383,7 +401,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "credits",
       label: (
-        <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="https://home.webknossos.org/about-us" rel="noopener noreferrer">
           About & Credits
         </a>
       ),
@@ -451,13 +469,14 @@ function NotificationIcon({
   activeUser: APIUser;
   navbarHeight: number;
 }) {
+  const dispatch = useDispatch();
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: new Date().getTime(),
     });
-    Store.dispatch(setActiveUserAction(newUserSync));
+    dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
@@ -470,9 +489,6 @@ function NotificationIcon({
   return (
     <div
       style={{
-        position: "relative",
-        display: "flex",
-        marginRight: 12,
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
       }}
     >
@@ -555,7 +571,7 @@ function LoggedInAvatar({
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
-  const filteredOrganizations = Utils.filterWithSearchQueryAND(
+  const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
     ["name", "id"],
     organizationFilter,
@@ -620,7 +636,7 @@ function LoggedInAvatar({
               key: "account",
               label: <Link to="/account">Account Settings</Link>,
             },
-            activeOrganization && Utils.isUserAdmin(activeUser)
+            activeOrganization && isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
                   label: <Link to={"/organization/overview"}>Organization Settings</Link>,
@@ -680,7 +696,6 @@ function AnonymousAvatar() {
         className="hover-effect-via-opacity"
         icon={<UserOutlined />}
         style={{
-          marginLeft: 8,
           marginTop: bannerHeight,
         }}
       />
@@ -704,7 +719,7 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" variant="outlined">
           Locked by unknown user.
         </Tag>
       </Tooltip>
@@ -712,7 +727,7 @@ function AnnotationLockedByUserTag({
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success" className="flex-center-child">
+        <Tag color="success" variant="outlined">
           Locked by you. Reload to edit.
         </Tag>
       </Tooltip>
@@ -725,17 +740,13 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning" className="flex-center-child">
+        <Tag color="warning" variant="outlined">
           Locked by {blockingUserName}
         </Tag>
       </Tooltip>
     );
   }
-  return (
-    <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-      {content}
-    </span>
-  );
+  return content;
 }
 
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
@@ -744,9 +755,10 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
     : "";
   const tooltipMessage =
     messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
+
   return (
     <Tooltip title={tooltipMessage}>
-      <Tag color="warning" className="flex-center-child">
+      <Tag color="warning" variant="outlined">
         Locked by {props.annotationOwnerName}
       </Tag>
     </Tooltip>
@@ -754,6 +766,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
 }
 
 function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
@@ -776,7 +789,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const redirectUrl = await logoutUser();
-    Store.dispatch(logoutUserAction());
+    dispatch(logoutUserAction());
     // Hard navigation
     location.href = redirectUrl;
   };
@@ -798,7 +811,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
 
-  const isAdminOrManager = activeUser != null ? Utils.isUserAdminOrManager(activeUser) : false;
+  const isAdminOrManager = activeUser != null ? isUserAdminOrManager(activeUser) : false;
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
@@ -808,11 +821,18 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         <Link
           to="/dashboard"
           style={{
-            fontWeight: 400,
             verticalAlign: "middle",
           }}
         >
-          {getCollapsibleMenuTitle("WEBKNOSSOS", <span className="logo" />, collapseAllNavItems)}
+          {getCollapsibleMenuTitle(
+            "WEBKNOSSOS",
+            <img
+              src="/assets/images/logo-icon-only.svg"
+              className="logo icon-margin-right"
+              alt="logo"
+            />,
+            collapseAllNavItems,
+          )}
         </Link>
       ),
     },
@@ -822,10 +842,11 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   if (_isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
+    menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
 
     if (isAdminOrManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
-      if (Utils.isUserAdminOrTeamManager(activeUser)) {
+      if (isUserAdminOrTeamManager(activeUser)) {
         menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
       }
     } else {
@@ -933,15 +954,9 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         }}
       />
       <ConfigProvider theme={getAntdTheme("dark")}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginRight: 12,
-          }}
-        >
+        <Flex align="center" justify="flex-end" gap="small">
           {trailingNavItems}
-        </div>
+        </Flex>
       </ConfigProvider>
     </Header>
   );

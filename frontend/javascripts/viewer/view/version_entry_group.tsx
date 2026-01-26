@@ -1,8 +1,9 @@
 import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 import { Avatar, List } from "antd";
 import FormattedDate from "components/formatted_date";
-import _ from "lodash";
-import * as React from "react";
+import last from "lodash/last";
+import max from "lodash/max";
+import { Component, Fragment } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import VersionEntry from "viewer/view/version_entry";
 
@@ -27,8 +28,8 @@ function GroupHeader({
   expanded: boolean;
   batches: APIUpdateActionBatch[];
 }) {
-  const lastTimestamp = _.max(batches[0].value.map((action) => action.value.actionTimestamp)) || 0;
-  const lastVersion = _.last(batches)?.version || 0;
+  const lastTimestamp = max(batches[0].value.map((action) => action.value.actionTimestamp)) || 0;
+  const lastVersion = last(batches)?.version || 0;
   return (
     <List.Item
       style={{
@@ -39,10 +40,10 @@ function GroupHeader({
     >
       <List.Item.Meta
         title={
-          <React.Fragment>
+          <Fragment>
             {lastVersion} to {batches[0].version} (
             <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
-          </React.Fragment>
+          </Fragment>
         }
         avatar={
           <Avatar size="small" icon={expanded ? <CaretDownOutlined /> : <CaretRightOutlined />} />
@@ -51,7 +52,7 @@ function GroupHeader({
     </List.Item>
   );
 }
-export default class VersionEntryGroup extends React.Component<Props, State> {
+export default class VersionEntryGroup extends Component<Props, State> {
   state: State = {
     expanded: false,
   };
@@ -87,7 +88,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
 
     const containsMultipleBatches = batches.length > 1;
     return (
-      <React.Fragment>
+      <Fragment>
         {containsMultipleBatches ? (
           <GroupHeader
             toggleExpand={this.toggleExpand}
@@ -110,7 +111,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
               />
             ))
           : null}
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

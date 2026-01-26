@@ -1,6 +1,6 @@
 import { CloseOutlined } from "@ant-design/icons";
 import { Alert, Button } from "antd";
-import * as React from "react";
+import { Fragment } from "react";
 import VersionList, { handleCloseRestoreView } from "viewer/view/version_list";
 
 export type Versions = {
@@ -49,12 +49,12 @@ function VersionView() {
         >
           <Alert
             type="info"
-            message={
-              <React.Fragment>
+            title={
+              <Fragment>
                 You are currently previewing older versions of this annotation. Either restore a
                 version by selecting it or close this view to continue annotating. The shown
                 annotation is in <b>read-only</b> mode as long as this view is opened.
-              </React.Fragment>
+              </Fragment>
             }
           />
         </div>

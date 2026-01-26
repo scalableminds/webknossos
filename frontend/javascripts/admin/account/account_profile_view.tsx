@@ -1,29 +1,34 @@
 import { CheckOutlined, DownOutlined, EditOutlined } from "@ant-design/icons";
 import ChangeEmailView from "admin/auth/change_email_view";
+import ChangeUsernameView from "admin/auth/change_username_view";
 import { updateSelectedThemeOfUser } from "admin/rest_api";
-import { Button, Col, Dropdown, Row } from "antd";
+import { Button, Col, Dropdown, Row, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
+
+import { isUserAdmin, isUserTeamManager } from "libs/utils";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { getSystemColorTheme } from "theme";
 import type { APIUserTheme } from "types/api_types";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 import { SettingsTitle } from "./helpers/settings_title";
 
 function AccountProfileView() {
+  const dispatch = useDispatch();
+
   const activeUser = useWkSelector((state) => state.activeUser);
   const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const { selectedTheme } = activeUser || { selectedTheme: "auto" };
   const [isChangeEmailVisible, setChangeEmailVisible] = useState(false);
+  const [isChangeNameVisible, setChangeNameViewVisible] = useState(false);
   if (!activeUser) return null;
 
-  const role = Utils.isUserAdmin(activeUser)
+  const role = isUserAdmin(activeUser)
     ? "Administrator"
-    : Utils.isUserTeamManager(activeUser)
+    : isUserTeamManager(activeUser)
       ? "Team Manager"
       : "User";
 
@@ -32,8 +37,8 @@ function AccountProfileView() {
 
     if (selectedTheme !== newTheme) {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
-      Store.dispatch(setThemeAction(newTheme));
-      Store.dispatch(setActiveUserAction(newUser));
+      dispatch(setThemeAction(newTheme));
+      dispatch(setActiveUserAction(newUser));
     }
   };
 
@@ -61,7 +66,24 @@ function AccountProfileView() {
   const profileItems: SettingsCardProps[] = [
     {
       title: "Name",
-      content: formatUserName(activeUser, activeUser),
+      content: isChangeNameVisible ? (
+        <ChangeUsernameView
+          user={activeUser}
+          onClose={() => setChangeNameViewVisible(false)}
+          setEditedUser={(updatedUser) => dispatch(setActiveUserAction(updatedUser))}
+        />
+      ) : (
+        formatUserName(activeUser, activeUser)
+      ),
+      action: (
+        <Button
+          type="default"
+          shape="circle"
+          icon={<EditOutlined />}
+          size="small"
+          onClick={() => setChangeNameViewVisible(!isChangeNameVisible)}
+        />
+      ),
     },
     {
       title: "Email",
@@ -94,9 +116,12 @@ function AccountProfileView() {
     {
       title: "Theme",
       content: (
-        <Dropdown.Button menu={{ items: themeItems }} trigger={["click"]} icon={<DownOutlined />}>
-          {themeItems.find((item) => item.key === selectedTheme)?.label}
-        </Dropdown.Button>
+        <Space.Compact>
+          <Button>{themeItems.find((item) => item.key === selectedTheme)?.label}</Button>
+          <Dropdown menu={{ items: themeItems }} trigger={["click"]}>
+            <Button icon={<DownOutlined />} aria-label="Select theme" />
+          </Dropdown>
+        </Space.Compact>
       ),
     },
   ];

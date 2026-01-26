@@ -1,9 +1,10 @@
 import update from "immutability-helper";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { clamp, map3, mod } from "libs/utils";
+import clone from "lodash/clone";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
+import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
   ZOOM_STEP_INTERVAL,
@@ -62,7 +63,7 @@ function rotateOnAxisWithDistance(
 }
 
 function keepRotationInBounds(rotation: Vector3): Vector3 {
-  const rotationInBounds = Utils.map3((v) => Utils.mod(Math.round(v), 360), rotation);
+  const rotationInBounds = map3((v) => mod(Math.round(v), 360), rotation);
   return rotationInBounds;
 }
 
@@ -100,15 +101,8 @@ function rotateReducer(
   });
 }
 
-export function getMatrixScale(voxelSize: Vector3): Vector3 {
-  const scale = [1 / voxelSize[0], 1 / voxelSize[1], 1 / voxelSize[2]];
-  const maxScale = Math.max(scale[0], scale[1], scale[2]);
-  const multi = 1 / maxScale;
-  return [multi * scale[0], multi * scale[1], multi * scale[2]];
-}
-
-function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {
-  const scale = getMatrixScale(voxelSize);
+function resetMatrix(matrix: Matrix4x4, voxelSize: VoxelSize) {
+  const scale = getBaseVoxelFactorsInUnit(voxelSize);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation. The default rotation of 180 degree around z is applied.
@@ -140,7 +134,7 @@ function moveReducer(state: WebknossosState, vector: Vector3): WebknossosState {
 
 export function zoomReducer(state: WebknossosState, zoomStep: number): WebknossosState {
   const [min, max] = getValidZoomRangeForUser(state);
-  let newZoomStep = Utils.clamp(min, zoomStep, max);
+  let newZoomStep = clamp(min, zoomStep, max);
 
   if (isNaN(newZoomStep)) {
     newZoomStep = 1;
@@ -157,7 +151,7 @@ export function zoomReducer(state: WebknossosState, zoomStep: number): Webknosso
 }
 export function setDirectionReducer(state: WebknossosState, direction: Vector3) {
   const previousSpaceDirectionOrtho = state.flycam.spaceDirectionOrtho;
-  const spaceDirectionOrtho = Utils.map3((el, index) => {
+  const spaceDirectionOrtho = map3((el, index) => {
     if (el === 0) {
       return previousSpaceDirectionOrtho[index];
     }
@@ -181,7 +175,7 @@ export function setDirectionReducer(state: WebknossosState, direction: Vector3) 
 export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
-    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale.factor);
+    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
@@ -206,7 +200,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       return update(state, {
         flycam: {
           currentMatrix: {
-            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale.factor),
+            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale),
           },
           rotation: {
             $set: [0, 0, 0],
@@ -268,7 +262,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       let { values } = action;
 
       const existingAdditionalCoordinates = state.flycam.additionalCoordinates;
-      values = Utils.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
+      values = Object.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
         const fallbackValue =
           (existingAdditionalCoordinates != null
             ? existingAdditionalCoordinates[index]?.value
@@ -278,7 +272,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
           if (specifiedValue) {
             return {
               name,
-              value: Utils.clamp(bounds[0], specifiedValue.value, bounds[1]),
+              value: clamp(bounds[0], specifiedValue.value, bounds[1]),
             };
           }
         }
@@ -324,7 +318,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "MOVE_FLYCAM_ORTHO": {
-      const vector = _.clone(action.vector);
+      const vector = clone(action.vector);
 
       const { planeId } = action;
 

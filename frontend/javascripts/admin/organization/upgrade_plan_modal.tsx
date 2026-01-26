@@ -10,18 +10,17 @@ import {
   sendUpgradePricingPlanEmail,
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
-} from "admin/rest_api";
+} from "admin/api/organization";
 import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
-import features from "features";
-import { formatCurrency } from "libs/format_utils";
 
+import type { GetRef } from "antd/lib";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
@@ -76,7 +75,7 @@ export function upgradeUserQuota() {
 }
 
 function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
-  const userInputRef = useRef<HTMLInputElement | null>(null);
+  const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
 
   const handleUserUpgrade = async () => {
     if (userInputRef.current) {
@@ -120,7 +119,7 @@ export function upgradeStorageQuota() {
   renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
-  const storageInputRef = useRef<HTMLInputElement | null>(null);
+  const storageInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
 
   const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
@@ -315,21 +314,8 @@ export function orderWebknossosCredits() {
 }
 
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
-  const userInputRef = useRef<HTMLInputElement | null>(null);
-  const defaultCostPerCreditInEuro = formatCurrency(features().costPerCreditInEuro, "€");
-  const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "$");
-  const [creditCostAsString, setCreditCostsAsString] = useState<string>(
-    `${defaultCostPerCreditInEuro}€/${defaultCostPerCreditInDollar}$`,
-  );
+  const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
   const [creditAmount, setCreditAmount] = useState<number | null>(1);
-  useEffect(() => {
-    if (creditAmount == null) {
-      return;
-    }
-    const totalCostInEuro = creditAmount * features().costPerCreditInEuro;
-    const totalCostInDollar = creditAmount * features().costPerCreditInDollar;
-    setCreditCostsAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
-  }, [creditAmount]);
 
   const handleOrderCredits = async () => {
     if (userInputRef.current) {
@@ -348,8 +334,8 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title="Buy more WEBKNOSSOS Credits"
-      okText={`Buy more WEBKNOSSOS Credits for ${creditCostAsString}`}
+      title="Order more WEBKNOSSOS Credits"
+      okText="Request an Email Quote"
       onOk={handleOrderCredits}
       onCancel={destroy}
       width={800}
@@ -357,8 +343,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
     >
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "5%" }}>
-          You can buy new WEBKNOSSOS credits to pay for premium jobs and services. Each credit costs{" "}
-          {defaultCostPerCreditInEuro} or {defaultCostPerCreditInDollar}.
+          You can order new WEBKNOSSOS credits for premium AI jobs and services.
         </p>
         <div>Amount of credits to order:</div>
         <div>
@@ -372,7 +357,6 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             value={creditAmount}
           />
         </div>
-        Total resulting cost: {creditCostAsString}
         <>
           <Divider style={{ marginTop: 40 }} />
           <p style={{ color: "#aaa", fontSize: 12 }}>

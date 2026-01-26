@@ -1,6 +1,7 @@
 import { ConfigProvider } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import * as React from "react";
+import { useCallback, useMemo } from "react";
+import { useDispatch } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import Constants from "viewer/constants";
 import {
@@ -11,7 +12,6 @@ import {
   setUserScriptsModalVisibilityAction,
   setZarrLinksModalVisibilityAction,
 } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
 import DownloadModalView from "viewer/view/action-bar/download_modal_view";
 import MergeModalView from "viewer/view/action-bar/merge_modal_view";
 import ShareModalView from "viewer/view/action-bar/share_modal_view";
@@ -19,31 +19,9 @@ import UserScriptsModalView from "viewer/view/action-bar/user_scripts_modal_view
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
 
-const handleShareClose = () => {
-  Store.dispatch(setShareModalVisibilityAction(false));
-};
-
-const handleDownloadClose = () => {
-  Store.dispatch(setDownloadModalVisibilityAction(false));
-};
-
-const handleMergeClose = () => {
-  Store.dispatch(setMergeModalVisibilityAction(false));
-};
-
-const handleUserScriptsClose = () => {
-  Store.dispatch(setUserScriptsModalVisibilityAction(false));
-};
-
-const handleZarrLinksClose = () => {
-  Store.dispatch(setZarrLinksModalVisibilityAction(false));
-};
-
-const handleRenderAnimationClose = () => {
-  Store.dispatch(setRenderAnimationModalVisibilityAction(false));
-};
-
 function TracingModals() {
+  const dispatch = useDispatch();
+
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
@@ -62,7 +40,31 @@ function TracingModals() {
   );
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
-  const modals = React.useMemo(() => {
+  const handleShareClose = useCallback(() => {
+    dispatch(setShareModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const handleDownloadClose = useCallback(() => {
+    dispatch(setDownloadModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const handleMergeClose = useCallback(() => {
+    dispatch(setMergeModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const handleUserScriptsClose = useCallback(() => {
+    dispatch(setUserScriptsModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const handleZarrLinksClose = useCallback(() => {
+    dispatch(setZarrLinksModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const handleRenderAnimationClose = useCallback(() => {
+    dispatch(setRenderAnimationModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const modals = useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const modalList = [];
 
@@ -134,6 +136,12 @@ function TracingModals() {
     annotationId,
     annotationType,
     restrictions,
+    handleShareClose,
+    handleDownloadClose,
+    handleMergeClose,
+    handleUserScriptsClose,
+    handleZarrLinksClose,
+    handleRenderAnimationClose,
   ]);
 
   const userTheme = getThemeFromUser(activeUser);

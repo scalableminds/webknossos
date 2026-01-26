@@ -1,14 +1,15 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { doWebAuthnLogin } from "admin/api/webauthn";
 import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
-import { Alert, Button, Form, Input } from "antd";
+import { Alert, Button, Flex, Form, Input } from "antd";
+import LinkButton from "components/link_button";
 import features from "features";
 import { getIsInIframe } from "libs/utils";
 import messages from "messages";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -26,18 +27,13 @@ const DEFAULT_STYLE = {
 
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const [form] = Form.useForm();
-  const linkStyle =
-    layout === "inline"
-      ? {
-          paddingLeft: 10,
-        }
-      : null;
+  const dispatch = useDispatch();
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {
     const [user, organization] = await loginUser(formValues);
-    Store.dispatch(setActiveUserAction(user));
-    Store.dispatch(setActiveOrganizationAction(organization));
+    dispatch(setActiveUserAction(user));
+    dispatch(setActiveOrganizationAction(organization));
 
     if (onLoggedIn) {
       onLoggedIn();
@@ -48,8 +44,8 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const webauthnLogin = async () => {
     try {
       const [user, organization] = await doWebAuthnLogin();
-      Store.dispatch(setActiveUserAction(user));
-      Store.dispatch(setActiveOrganizationAction(organization));
+      dispatch(setActiveUserAction(user));
+      dispatch(setActiveOrganizationAction(organization));
       if (onLoggedIn) {
         onLoggedIn();
       }
@@ -61,7 +57,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const iframeWarning = getIsInIframe() ? (
     <Alert
       type="warning"
-      message={
+      title={
         <span>
           Authentication within an iFrame probably does not work due to third-party cookies being
           forbidden in most browsers. Please
@@ -92,17 +88,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             },
           ]}
         >
-          <Input
-            size="large"
-            prefix={
-              <MailOutlined
-                style={{
-                  fontSize: 13,
-                }}
-              />
-            }
-            placeholder="Email"
-          />
+          <Input size="large" prefix={<MailOutlined />} placeholder="Email" />
         </FormItem>
         <FormItem
           name="password"
@@ -113,79 +99,44 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
             },
           ]}
         >
-          <Password
-            size="large"
-            prefix={
-              <LockOutlined
-                style={{
-                  fontSize: 13,
-                }}
-              />
-            }
-            placeholder="Password"
-          />
+          <Password size="large" prefix={<LockOutlined />} placeholder="Password" />
         </FormItem>
-        <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
-          <FormItem style={{ flexGrow: 1 }}>
+        <FormItem>
+          <Button type="primary" htmlType="submit" block>
+            Log in
+          </Button>
+        </FormItem>
+        {openIdConnectEnabled && (
+          <FormItem>
             <Button
-              type="primary"
-              htmlType="submit"
-              style={{
-                width: "100%",
+              block
+              onClick={async () => {
+                const res = await requestSingleSignOnLogin();
+                window.location.href = res.redirect_url;
               }}
             >
-              Log in
+              Log in with SSO
             </Button>
           </FormItem>
-          {openIdConnectEnabled && (
-            <FormItem style={{ flexGrow: 1 }}>
-              <Button
-                style={{
-                  width: "100%",
-                }}
-                onClick={async () => {
-                  const res = await requestSingleSignOnLogin();
-                  window.location.href = res.redirect_url;
-                }}
-              >
-                Log in with SSO
-              </Button>
-            </FormItem>
-          )}
-        </div>
+        )}
         {passkeysEnabled && (
-          <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
-            <FormItem style={{ flexGrow: 1 }}>
-              <Button style={{ width: "100%" }} onClick={webauthnLogin}>
-                Log in with Passkey
-              </Button>
-            </FormItem>
-          </div>
+          <FormItem>
+            <Button block onClick={webauthnLogin}>
+              Log in with Passkey
+            </Button>
+          </FormItem>
         )}
         {hideFooter ? null : (
-          <FormItem
-            style={{
-              marginBottom: 4,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-              }}
-            >
-              {features().registerToDefaultOrgaEnabled && (
-                <Link
-                  to="/auth/signup"
-                  style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
-                >
-                  Register Now
-                </Link>
-              )}
-              <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
-                Forgot Password
+          <Flex justify="space-between">
+            {features().registerToDefaultOrgaEnabled && (
+              <Link to="/auth/signup">
+                <LinkButton>Register Now</LinkButton>
               </Link>
-            </div>
-          </FormItem>
+            )}
+            <Link to="/auth/resetPassword">
+              <LinkButton>Forgot Password</LinkButton>
+            </Link>
+          </Flex>
         )}
       </Form>
     </div>

@@ -6,7 +6,7 @@ WEBKNOSSOS will notify you via email upon completion or failure of any job.
 
 Example workflows:
 
-- [AI segmentation](./ai_segmentation.md), e.g., nuclei inferral 
+- [AI segmentation](./ai_segmentation.md), e.g. running AI model for nuclei segmentation and mitochondria detection  
 - [converting datasets on upload](../data/upload_ui.md)
 - [mesh file (pre)-computation](../meshes/precomputed_meshes.md)
 - [applying a merger mode annotation](../proofreading/merger_mode.md)
@@ -21,7 +21,7 @@ These workflows are executed in background worker tasks as so-called *processing
     These workflows are exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the WEBKNOSSOS worker or [Voxelytics](https://voxelytics.com) for the job processing.
 
 ## Listing Processing Jobs
-A list of all past and currently running jobs can be found in the administration menu in the navbar (Administration -> *Processing Jobs*).
+A list of all past and currently running jobs can be found in the analysis menu in the navbar (Analysis -> *Processing Jobs*).
 
 Depending on the job workflow you may:
 

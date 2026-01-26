@@ -23,7 +23,10 @@ import {
 } from "dashboard/dataset/dataset_collection_context";
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
+import debounce from "lodash/debounce";
+import isEqual from "lodash/isEqual";
+import noop from "lodash/noop";
+import uniq from "lodash/uniq";
 import type React from "react";
 import { useEffect } from "react";
 import { useState } from "react";
@@ -81,7 +84,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   addNewEntryMenuItems,
 }) => {
   return (
-    <Tag>
+    <Tag variant="outlined">
       <div className="flex-center-child empty-metadata-placeholder">
         <img
           src="/assets/images/metadata-teaser.svg"
@@ -101,7 +104,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
 };
 
 export function getUsedTagsWithinMetadata(metadata: APIMetadataWithError[]) {
-  return _.uniq(
+  return uniq(
     metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
   ).map((tag) => ({ value: tag, label: tag })) as {
     value: string;
@@ -216,7 +219,7 @@ const saveCurrentMetadata = async (
         metadata: metadataWithoutIndexAndError,
       });
     }
-    if (!_.isEqual(serverResponse.metadata, metadataWithoutIndexAndError)) {
+    if (!isEqual(serverResponse.metadata, metadataWithoutIndexAndError)) {
       Toast.error(
         `Failed to save metadata changes for ${datasetOrFolderString} ${datasetOrFolderToUpdate.name}.`,
       );
@@ -233,7 +236,7 @@ const saveCurrentMetadata = async (
   }
 };
 
-const saveMetadataDebounced = _.debounce(
+const saveMetadataDebounced = debounce(
   (
     datasetOrFolder,
     metadata,
@@ -288,8 +291,8 @@ export default function MetadataTable({
           datasetOrFolder,
           metadataRef.current,
           context,
-          _.noop, // No state updates on unmounted component.
-          _.noop, // No state updates on unmounted component.
+          noop, // No state updates on unmounted component.
+          noop, // No state updates on unmounted component.
         );
       }
     },

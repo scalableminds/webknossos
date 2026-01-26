@@ -2,7 +2,8 @@ import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { Alert, Avatar, Button, Checkbox, List, Modal, Spin } from "antd";
 import FormattedDate from "components/formatted_date";
 import prettyBytes from "pretty-bytes";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent } from "react";
 import Dropzone, { type DropzoneInputProps } from "react-dropzone";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
@@ -73,7 +74,7 @@ function NmlDropArea({
   );
 }
 
-class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
+class NmlUploadZoneContainer extends PureComponent<Props, State> {
   _isMounted: boolean = false;
 
   state: State = {
@@ -183,7 +184,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       <Modal open footer={null} onCancel={this.props.hideDropzoneModal}>
         {this.props.isUpdateAllowed ? (
           <Alert
-            message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
+            title="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
             style={{
               marginBottom: 12,
             }}
@@ -220,7 +221,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           })
         }
         footer={
-          <React.Fragment>
+          <Fragment>
             <Checkbox
               style={{
                 float: "left",
@@ -245,7 +246,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             <Button key="submit" type="primary" onClick={this.importTracingFiles}>
               {this.props.isUpdateAllowed ? "Import" : "Create New Annotation"}
             </Button>
-          </React.Fragment>
+          </Fragment>
         }
       >
         <Spin spinning={this.state.isImporting}>{this.renderNmlList()}</Spin>

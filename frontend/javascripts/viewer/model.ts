@@ -1,6 +1,9 @@
-import { isDatasetAccessibleBySwitching } from "admin/rest_api";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { isDatasetAccessibleBySwitching } from "admin/api/organization";
+import { sleep } from "libs/utils";
+import filter from "lodash/filter";
+import max from "lodash/max";
+import reduce from "lodash/reduce";
+import sum from "lodash/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -50,7 +53,7 @@ export class WebKnossosModel {
         const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
-          _.values(this.dataLayers).forEach((layer) => layer.destroy());
+          Object.values(this.dataLayers).forEach((layer) => layer.destroy());
         }
 
         this.dataLayers = dataLayers;
@@ -77,25 +80,25 @@ export class WebKnossosModel {
   }
 
   getAllLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers);
+    return Object.values(this.dataLayers);
   }
 
   getColorLayers(): Array<DataLayer> {
-    return _.filter(
+    return filter(
       this.dataLayers,
       (dataLayer) => getLayerByName(Store.getState().dataset, dataLayer.name).category === "color",
     );
   }
 
   getSegmentationLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers).filter(
+    return Object.values(this.dataLayers).filter(
       (dataLayer) =>
         getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
     );
   }
 
   getSegmentationTracingLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers).filter((dataLayer) => {
+    return Object.values(this.dataLayers).filter((dataLayer) => {
       const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
       return layer.category === "segmentation" && layer.tracingId != null;
     });
@@ -242,7 +245,7 @@ export class WebKnossosModel {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
 
-    const pushQueuesSaved = _.reduce(
+    const pushQueuesSaved = reduce(
       this.dataLayers,
       (saved, dataLayer) => saved && dataLayer.pushQueue.stateSaved(),
       true,
@@ -253,25 +256,27 @@ export class WebKnossosModel {
 
   getLongestPushQueueWaitTime() {
     return (
-      _.max(
-        Utils.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
+      max(
+        Object.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
       ) || 0
     );
   }
 
   getPushQueueStats = () => {
-    const compressingBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) =>
+    const compressingBucketCount = sum(
+      Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.pushQueue.getCompressingBucketCount(),
       ),
     );
 
-    const waitingForCompressionBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingBucketCount()),
+    const waitingForCompressionBucketCount = sum(
+      Object.values(this.dataLayers).map((dataLayer) =>
+        dataLayer.pushQueue.getPendingBucketCount(),
+      ),
     );
 
-    const outstandingBucketDownloadCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) =>
+    const outstandingBucketDownloadCount = sum(
+      Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.cube.temporalBucketManager.getCount(),
       ),
     );
@@ -323,7 +328,7 @@ export class WebKnossosModel {
         Store.dispatch(saveNowAction());
       }
 
-      await Utils.sleep(WAIT_AFTER_SAVE_TRIGGER);
+      await sleep(WAIT_AFTER_SAVE_TRIGGER);
     }
   };
 
@@ -333,7 +338,7 @@ export class WebKnossosModel {
      */
 
     if (this.dataLayers != null) {
-      _.values(this.dataLayers).forEach((layer) => layer.destroy());
+      Object.values(this.dataLayers).forEach((layer) => layer.destroy());
       this.dataLayers = {};
     }
   }

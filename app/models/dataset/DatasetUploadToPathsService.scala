@@ -73,8 +73,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         newDatasetId,
         parameters.datasetName,
         dataSourceWithLayersToLink.toUnusableWithStatus(DataSourceStatus.notYetUploadedToPaths),
-        None,
-        isVirtual = true
+        isVirtual = true,
+        creationType = DatasetCreationType.UploadToPaths
       )
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
@@ -98,7 +98,6 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                                   requestingUser._organization,
                                                   parameters.pathPrefix)
       _ <- assertValidDataSource(dataSourceWithPaths).toFox
-      _ <- datasetDAO.makeVirtual(dataset._id)
       _ <- datasetDAO.updateDataSource(dataset._id,
                                        dataset._dataStore,
                                        dataSourceWithPaths.hashCode(),

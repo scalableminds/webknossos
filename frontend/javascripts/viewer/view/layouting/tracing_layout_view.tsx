@@ -6,9 +6,9 @@ import Toast from "libs/toast";
 import { document, location } from "libs/window";
 import window from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import debounce from "lodash/debounce";
 import messages from "messages";
-import * as React from "react";
+import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
@@ -31,6 +31,7 @@ import { Store } from "viewer/singletons";
 import { Model } from "viewer/singletons";
 import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
+import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
 import WkContextMenu from "viewer/view/context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
 import {
@@ -79,7 +80,7 @@ type State = {
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
-class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
+class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
   lastTouchTimeStamp: number | null = null;
 
   static getDerivedStateFromError() {
@@ -232,7 +233,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }
   };
 
-  debouncedOnLayoutChange = _.debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
+  debouncedOnLayoutChange = debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
 
   saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(
@@ -335,7 +336,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     };
 
     return (
-      <React.Fragment>
+      <Fragment>
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
@@ -405,16 +406,18 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 )}
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
-                  <React.Fragment>
+                  <Fragment>
                     <FlexLayoutWrapper
                       onLayoutChange={this.onLayoutChange}
                       layoutKey={layoutType}
                       layoutName={activeLayoutName}
                     />
                     <WelcomeToast />
-                  </React.Fragment>
+                  </Fragment>
                 ) : null}
               </div>
+              <AiJobsDrawer isOpen={this.props.aiJobDrawerState !== "invisible"} />
+
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
                   <VersionView />
@@ -423,7 +426,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             </Layout>
           </Layout>
         </NmlUploadZoneContainer>
-      </React.Fragment>
+      </Fragment>
     );
   }
 }
@@ -448,6 +451,7 @@ function mapStateToProps(state: WebknossosState) {
     activeTool: state.uiInformation.activeTool,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
+    aiJobDrawerState: state.uiInformation.aIJobDrawerState,
   };
 }
 

@@ -1,8 +1,9 @@
+import LinkButton from "components/link_button";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { getRandomColor } from "libs/utils";
+import sortBy from "lodash/sortBy";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
@@ -62,7 +63,7 @@ function* getBoundingBoxForFloodFillWhenRestricted(
         "No bounding box encloses the clicked position. Either disable the bounding box restriction or ensure a bounding box exists around the clicked position.",
     };
   }
-  const smallestBbox = _.sortBy(bboxes, (bbox) => new BoundingBox(bbox.boundingBox).getVolume())[0];
+  const smallestBbox = sortBy(bboxes, (bbox) => new BoundingBox(bbox.boundingBox).getVolume())[0];
 
   const maxBboxSize = yield* call(
     getMaximumBoundingBoxSizeForFloodfill,
@@ -155,7 +156,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     return;
   }
 
-  const { position: positionFloat, planeId } = floodFillAction;
+  const { positionInLayerSpace: positionFloat, planeId } = floodFillAction;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   if (volumeTracing.hasEditableMapping) {
     const message = "Volume modification is not allowed when an editable mapping is active.";
@@ -378,9 +379,7 @@ function* notifyUserAboutResult(
           .
           <br />
           {warningDetails} {Unicode.NonBreakingSpace}
-          <a href="#" style={{ pointerEvents: "auto" }} onClick={() => hideBox?.hideFn()}>
-            Close
-          </a>
+          <LinkButton onClick={() => hideBox?.hideFn()}>Close</LinkButton>
         </>,
         {
           successMessageDelay: 10000,
@@ -393,7 +392,7 @@ function* notifyUserAboutResult(
             name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
               ",",
             )}, timestamp=${new Date().getTime()})`,
-            color: Utils.getRandomColor(),
+            color: getRandomColor(),
             isVisible: true,
           }),
         );

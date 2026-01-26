@@ -1,4 +1,5 @@
 import {
+  EllipsisOutlined,
   HourglassOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
@@ -18,6 +19,7 @@ import {
   Col,
   Dropdown,
   Input,
+  type MenuProps,
   Radio,
   Row,
   Select,
@@ -34,8 +36,7 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
-import type { MenuProps } from "rc-menu";
+import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -170,7 +171,7 @@ function DatasetView({
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
         onSelectFolder={onSelectFolder}
-        isUserAdminOrDatasetManager={Utils.isUserAdminOrDatasetManager(user)}
+        isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
@@ -218,11 +219,11 @@ function DatasetView({
     />
   );
 
-  const isUserAdminOrDatasetManager = Utils.isUserAdminOrDatasetManager(user);
+  const isUserAnAdminOrDatasetManager = isUserAdminOrDatasetManager(user);
   const isUserAdminOrDatasetManagerOrTeamManager =
-    isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
-  const search = isUserAdminOrDatasetManager ? (
-    <Space.Compact style={{ display: "flex" }}>
+    isUserAnAdminOrDatasetManager || isUserTeamManager(user);
+  const search = isUserAnAdminOrDatasetManager ? (
+    <Space.Compact>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
@@ -237,12 +238,7 @@ function DatasetView({
   );
 
   const adminHeader = (
-    <div
-      className="pull-right"
-      style={{
-        display: "flex",
-      }}
-    >
+    <Space>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <Fragment>
           <DatasetRefreshButton context={context} />
@@ -250,7 +246,6 @@ function DatasetView({
           {context.activeFolderId != null && (
             <PricingEnforcedButton
               disabled={folder != null && !folder.isEditable}
-              style={{ marginRight: 5 }}
               icon={<PlusOutlined />}
               onClick={() =>
                 context.activeFolderId != null &&
@@ -266,7 +261,7 @@ function DatasetView({
       ) : (
         search
       )}
-    </div>
+    </Space>
   );
 
   const datasets = context.datasets;
@@ -315,18 +310,22 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
   const organizationId = useWkSelector((state) => state.activeOrganization?.id);
 
   return (
-    <FastTooltip
-      title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
-    >
-      <Dropdown.Button
-        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
-        style={{ marginRight: 5 }}
-        onClick={() => context.fetchDatasets()}
-        disabled={context.isChecking}
+    <Space.Compact>
+      <FastTooltip
+        title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
       >
-        {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
-      </Dropdown.Button>
-    </FastTooltip>
+        <Button onClick={() => context.fetchDatasets()} disabled={context.isChecking}>
+          {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+        </Button>
+      </FastTooltip>
+      <Dropdown
+        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
+      >
+        <Button disabled={context.isChecking}>
+          <EllipsisOutlined />
+        </Button>
+      </Dropdown>
+    </Space.Compact>
   );
 }
 
@@ -340,7 +339,6 @@ export function DatasetAddButton({ context }: { context: DatasetCollectionContex
           ? `/datasets/upload?to=${context.activeFolderId}`
           : "/datasets/upload"
       }
-      style={{ marginRight: 5 }}
     >
       <Button type="primary" icon={<PlusOutlined />}>
         Add Dataset
@@ -430,10 +428,10 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   const newJobs = jobs
     .filter(
       (job) =>
-        job.type === "convert_to_wkw" &&
-        dayjs.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
+        job.command === "convert_to_wkw" &&
+        dayjs.duration(now.diff(job.created)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
     )
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .sort((a, b) => b.created - a.created);
 
   if (newJobs.length === 0) {
     return null;
@@ -463,12 +461,12 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
             <Col>
               <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
               {job.state === "SUCCESS" && job.resultLink ? (
-                <Link to={job.resultLink}>{job.datasetName}</Link>
+                <Link to={job.resultLink}>{job.args.datasetName}</Link>
               ) : (
-                job.datasetName || "UNKNOWN"
+                job.args.datasetName || "UNKNOWN"
               )}
               {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
-              <FormattedDate timestamp={job.createdAt} />
+              <FormattedDate timestamp={job.created} />
               <span>)</span>
             </Col>
           </Row>
@@ -490,7 +488,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   );
   return (
     <Alert
-      message={newJobsHeader}
+      title={newJobsHeader}
       description={newJobsList}
       type="info"
       style={{
@@ -521,7 +519,7 @@ function renderPlaceholder(
       : null;
   }
 
-  const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+  const emptyListHintText = isUserAdminOrDatasetManager(user)
     ? "There are no datasets in this folder. Import one or move a dataset from another folder."
     : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
 

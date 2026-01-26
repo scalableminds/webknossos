@@ -32,8 +32,12 @@ import ErrorHandling from "libs/error_handling";
 import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { isUserAdminOrDatasetManager, isUserAdminOrManager, rgbToHex } from "libs/utils";
+import differenceWith from "lodash/differenceWith";
+import isEqual from "lodash/isEqual";
+import mapValues from "lodash/mapValues";
+import minBy from "lodash/minBy";
+import partial from "lodash/partial";
 import {
   type RecommendedConfiguration,
   layerViewConfigurationTooltips,
@@ -48,7 +52,7 @@ import {
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
-  APIJobType,
+  APIJobCommand,
   type APISkeletonLayer,
   AnnotationLayerEnum,
   type AnnotationLayerType,
@@ -62,7 +66,12 @@ import {
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3 } from "viewer/constants";
-import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "viewer/constants";
+import Constants, {
+  ControlModeEnum,
+  IdentityTransform,
+  LongUnitToShortUnitMap,
+  MappingStatusEnum,
+} from "viewer/constants";
 import defaultState from "viewer/default_state";
 import {
   getDefaultValueRangeOfLayer,
@@ -124,7 +133,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/ai_job_modals/materialize_volume_annotation_modal";
+import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
   ColorSetting,
@@ -359,8 +368,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   constructor(props: DatasetSettingsProps) {
     super(props);
-    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
-      _.partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
+    this.onChangeUser = mapValues(this.props.userConfiguration, (__, propertyName) =>
+      partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
     );
   }
 
@@ -709,7 +718,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : null,
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobType.COMPUTE_SEGMENT_INDEX_FILE,
+        APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
       )
         ? {
             label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
@@ -866,9 +875,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }
           min={0.01}
           max={10}
-          roundTo={3}
+          roundToDigit={3}
           value={layerConfiguration.gammaCorrectionValue}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
+          onChange={partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
           defaultValue={defaultSettings.gammaCorrectionValue}
         />
         <Row
@@ -882,8 +891,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Col>
           <Col span={SETTING_MIDDLE_SPAN}>
             <ColorSetting
-              value={Utils.rgbToHex(layerConfiguration.color)}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+              value={rgbToHex(layerConfiguration.color)}
+              onChange={partial(this.props.onChangeLayer, layerName, "color")}
               style={{
                 marginLeft: 6,
               }}
@@ -935,7 +944,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         max={100}
         step={1}
         value={this.props.datasetConfiguration.segmentationPatternOpacity}
-        onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+        onChange={partial(this.props.onChange, "segmentationPatternOpacity")}
         defaultValue={defaultDatasetViewConfiguration.segmentationPatternOpacity}
       />
     );
@@ -1020,7 +1029,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               min={0}
               max={100}
               value={layerConfiguration.alpha}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+              onChange={partial(this.props.onChangeLayer, layerName, "alpha")}
               defaultValue={layerSpecificDefaults.alpha}
             />
             {isColorLayer
@@ -1133,14 +1142,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const volumeTracingMags = segmentationLayer.mags.map((magObj) => magObj.mag);
 
-    const sourceMag = _.minBy(volumeTracingMags, getMaxDim);
+    const sourceMag = minBy(volumeTracingMags, getMaxDim);
     if (sourceMag === undefined) {
       return [];
     }
 
     const possibleMags = volumeTargetMags.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
 
-    const magsToDownsample = _.differenceWith(possibleMags, volumeTracingMags, _.isEqual);
+    const magsToDownsample = differenceWith(possibleMags, volumeTracingMags, isEqual);
 
     return magsToDownsample;
   };
@@ -1169,8 +1178,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getSkeletonLayer = () => {
-    const { controlMode, annotation, onChangeRadius, userConfiguration, onChangeShowSkeletons } =
-      this.props;
+    const {
+      controlMode,
+      annotation,
+      onChangeRadius,
+      userConfiguration,
+      onChangeShowSkeletons,
+      dataset,
+    } = this.props;
     const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
     if (isPublicViewMode || annotation.skeleton == null) {
@@ -1182,6 +1197,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
     const { showSkeletons, tracingId } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
+    const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
     return (
       <React.Fragment>
         <div
@@ -1247,10 +1263,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           >
             <LogSliderSetting
-              label="Node Radius"
+              label={`Node Radius (${unit})`}
               min={userSettings.nodeRadius.minimum}
               max={userSettings.nodeRadius.maximum}
-              roundTo={0}
+              roundToDigit={0}
               value={activeNodeRadius}
               onChange={onChangeRadius}
               disabled={userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
@@ -1258,9 +1274,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             <NumberSliderSetting
               label={
-                userConfiguration.overrideNodeRadius
+                (userConfiguration.overrideNodeRadius
                   ? settings.particleSize
-                  : `Min. ${settings.particleSize}`
+                  : `Min. ${settings.particleSize}`) + ` (${unit})`
               }
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
@@ -1280,8 +1296,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               />
             ) : (
               <LogSliderSetting
-                label={settings.clippingDistance}
-                roundTo={3}
+                label={settings.clippingDistance + ` (${unit})`}
+                roundToDigit={3}
                 min={userSettings.clippingDistance.minimum}
                 max={userSettings.clippingDistance.maximum}
                 value={userConfiguration.clippingDistance}
@@ -1587,8 +1603,8 @@ const mapStateToProps = (state: WebknossosState) => ({
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
-    state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
-  isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
+    state.activeUser != null ? isUserAdminOrDatasetManager(state.activeUser) : false,
+  isAdminOrManager: state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
 });
 

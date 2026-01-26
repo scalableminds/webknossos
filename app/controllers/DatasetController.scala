@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJs
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
   DataSourceStatus,
   ElementClass,
   LayerAttachmentDataformat,
@@ -213,7 +214,8 @@ class DatasetController @Inject()(userService: UserService,
           dataSource,
           folderIdOpt,
           request.identity,
-          isVirtual = true
+          isVirtual = true,
+          creationType = DatasetCreationType.ExploreAndAdd
         ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -235,7 +237,8 @@ class DatasetController @Inject()(userService: UserService,
           request.body.dataSource,
           request.body.folderId,
           user,
-          isVirtual = true
+          isVirtual = true,
+          creationType = DatasetCreationType.ExploreAndAdd
         )
         _ = datasetService.trackNewDataset(dataset,
                                            user,
@@ -345,6 +348,44 @@ class DatasetController @Inject()(userService: UserService,
       usersJs <- Fox.serialCombined(usersFiltered)(u => userService.compactWrites(u))
     } yield Ok(Json.toJson(usersJs))
   }
+
+  def dataSourceForSuperUser(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log() {
+        for {
+          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+        } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
+  def duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log() {
+        for {
+          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+          dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext) ?~> "dataStore.notFound"
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "duplicateToOrga is only possible for virtual datasets"
+          _ <- organizationDAO.findOne(targetOrganizationId)(GlobalAccessContext) ?~> "organization.notFound"
+          newDatasetId = ObjectId.generate
+          newDirectoryName = datasetService.generateDirectoryName(dataset.name, newDatasetId)
+          adaptedDataSource = dataSource.withUpdatedId(DataSourceId(newDirectoryName, targetOrganizationId))
+          _ <- datasetService.createDataset(
+            dataStore,
+            newDatasetId,
+            dataset.name,
+            adaptedDataSource,
+            isVirtual = true,
+            metadata = dataset.metadata,
+            description = dataset.description,
+            creationType = DatasetCreationType.DuplicateToOrga
+          )
+        } yield Ok(Json.toJson(newDatasetId))
+      }
+    }
 
   def read(datasetId: ObjectId,
            // Optional sharing token allowing access to datasets your team does not normally have access to.")
@@ -592,7 +633,6 @@ class DatasetController @Inject()(userService: UserService,
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
             _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-            _ <- Fox.fromBool(request.identity.isAdminOf(dataset._organization)) ?~> "delete.mustBeOrganizationAdmin" ~> FORBIDDEN
             before = Instant.now
             _ = logger.info(
               s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")

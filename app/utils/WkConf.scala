@@ -136,12 +136,12 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
-    val neuronInferralCostPerGVx: BigDecimal = get[BigDecimal]("features.neuronInferralCostPerGVx")
-    val mitochondriaInferralCostPerGVx: BigDecimal =
-      get[BigDecimal]("features.mitochondriaInferralCostPerGVx")
-    val alignmentCostPerGVx: BigDecimal = get[BigDecimal]("features.alignmentCostPerGVx")
-    val costPerCreditInEuro: BigDecimal = get[BigDecimal]("features.costPerCreditInEuro")
-    val costPerCreditInDollar: BigDecimal = get[BigDecimal]("features.costPerCreditInDollar")
+    val neuronInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.neuronInferralCostInMilliCreditsPerGVx")
+    val mitochondriaInferralCostInMilliCreditsPerGVx: Int =
+      get[Int]("features.mitochondriaInferralCostInMilliCreditsPerGVx")
+    val nucleiInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.nucleiInferralCostInMilliCreditsPerGVx")
+    val instancesInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.instancesInferralCostInMilliCreditsPerGVx")
+    val alignmentCostInMilliCreditsPerGVx: Int = get[Int]("features.alignmentCostInMilliCreditsPerGVx")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
@@ -184,6 +184,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val pass: String = get[String]("mail.smtp.pass")
     }
 
+    val supportEmail: String = get[String]("mail.supportEmail")
     val defaultSender: String = get[String]("mail.defaultSender")
     def additionalFooter: String = get[String]("mail.additionalFooter")
 
@@ -225,7 +226,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
   object Jobs {
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
     val workerLivenessReReportInterval: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessReReportInterval")
-    val monthlyFreeCredits: Int = get[Int]("jobs.monthlyFreeCredits")
+    val monthlyFreeMilliCredits: Int = get[Int]("jobs.monthlyFreeMilliCredits")
   }
 
   object Airbrake {

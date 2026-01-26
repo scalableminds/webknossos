@@ -7,10 +7,10 @@ import messages from "messages";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 import { SettingsTitle } from "./helpers/settings_title";
 const FormItem = Form.Item;
 const { Password } = Input;
+import { useDispatch } from "react-redux";
 import PasskeysView from "../auth/passkeys_view";
 import { SettingsCard, type SettingsCardProps } from "./helpers/settings_card";
 
@@ -19,8 +19,9 @@ const MIN_PASSWORD_LENGTH = 8;
 function AccountSecurityView() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const modal = App.useApp();
-  const confirm = modal.modal.confirm;
+  const { modal } = App.useApp();
+  const dispatch = useDispatch();
+
   const [isResetPasswordVisible, setResetPasswordVisible] = useState(false);
 
   async function onFinish(formValues: Record<string, any>) {
@@ -28,7 +29,7 @@ function AccountSecurityView() {
       await changePassword(formValues);
       Toast.success(messages["auth.reset_pw_confirmation"]);
       await logoutUserEverywhere();
-      Store.dispatch(logoutUserAction());
+      dispatch(logoutUserAction());
       navigate("/auth/login");
     } catch (error) {
       console.error("Password change failed:", error);
@@ -134,7 +135,7 @@ function AccountSecurityView() {
         </FormItem>
         <Alert
           type="info"
-          message={messages["auth.reset_logout"]}
+          title={messages["auth.reset_logout"]}
           showIcon
           style={{
             marginBottom: 24,
@@ -155,7 +156,7 @@ function AccountSecurityView() {
   }
 
   const handleLogoutEverywhere = () => {
-    confirm({
+    modal.confirm({
       title: "Confirm Logout",
       content: <p>Are you sure you want to log out on all devices?</p>,
       onOk: handleLogout,
@@ -192,7 +193,7 @@ function AccountSecurityView() {
   async function handleLogout() {
     logoutUserEverywhere()
       .then(() => {
-        Store.dispatch(logoutUserAction());
+        dispatch(logoutUserAction());
         navigate("/auth/login");
       })
       .catch((error) => {

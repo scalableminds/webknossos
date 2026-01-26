@@ -1,12 +1,18 @@
 import dayjs from "dayjs";
-import { V3 } from "libs/mjs";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import window, { location } from "libs/window";
-import _ from "lodash";
+import {
+  getAdaptToTypeFunctionFromList,
+  millisecondsToMinutes,
+  minutesToMilliseconds,
+  parseMaybe,
+  retryAsyncFunction,
+} from "libs/utils";
+import window from "libs/window";
+import memoize from "lodash/memoize";
+import zip from "lodash/zip";
 import messages from "messages";
 import ResumableJS from "resumablejs";
 import {
@@ -32,8 +38,6 @@ import {
   type APIMaybeUnimportedDataset,
   type APIMeshFileInfo,
   type APIOrganization,
-  type APIOrganizationCompact,
-  type APIPricingPlanStatus,
   type APIProject,
   type APIProjectCreator,
   type APIProjectProgressReport,
@@ -78,7 +82,7 @@ import type { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
-import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
+import { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
   type LayerSourceInfo,
@@ -98,12 +102,12 @@ import type {
   PartialDatasetConfiguration,
   SaveQueueEntry,
   StoreAnnotation,
-  TraceOrViewCommand,
   UserConfiguration,
   VolumeTracing,
 } from "viewer/store";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
+import { getOrganization } from "./api/organization";
 import { doWithToken } from "./api/token";
 
 export * from "./api/token";
@@ -352,7 +356,7 @@ export function deleteTeam(teamId: string): Promise<void> {
 // ### Projects
 function transformProject<T extends APIProject | APIProjectWithStatus>(response: T): T {
   return Object.assign({}, response, {
-    expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
+    expectedTime: millisecondsToMinutes(response.expectedTime),
   });
 }
 
@@ -397,7 +401,7 @@ export function deleteProject(projectId: string): Promise<void> {
 }
 export function createProject(project: APIProjectCreator): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
-    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+    expectedTime: minutesToMilliseconds(project.expectedTime),
   });
   return Request.sendJSONReceiveJSON("/api/projects", {
     data: transformedProject,
@@ -405,7 +409,7 @@ export function createProject(project: APIProjectCreator): Promise<APIProject> {
 }
 export function updateProject(projectId: string, project: APIProjectUpdater): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
-    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+    expectedTime: minutesToMilliseconds(project.expectedTime),
   });
   return Request.sendJSONReceiveJSON(`/api/projects/${projectId}`, {
     method: "PUT",
@@ -865,7 +869,7 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
-export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+export const hasSegmentIndexInDataStoreCached = memoize(hasSegmentIndexInDataStore, (...args) =>
   args.join("::"),
 );
 
@@ -1561,24 +1565,17 @@ export async function getDatastores(): Promise<APIDataStore[]> {
   return datastores;
 }
 
-export const getDataStoresCached = _.memoize(getDatastores);
+export const getDataStoresCached = memoize(getDatastores);
 
 export function getTracingstore(): Promise<APITracingStore> {
   return Request.receiveJSON("/api/tracingstore");
 }
 
-export const getTracingStoreCached = _.memoize(getTracingstore);
+export const getTracingStoreCached = memoize(getTracingstore);
 
 // ### Active User
 export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
-}
-
-export function getOrganizationPayingForActiveUser(
-  activeUserId: string,
-  options?: RequestOptions,
-): Promise<string> {
-  return Request.receiveJSON(`/api/user/${activeUserId}/payingOrganization`, options);
 }
 
 export function getUserConfiguration(): Promise<UserConfiguration> {
@@ -1686,163 +1683,6 @@ export async function getAvailableTasksReport(
   assertResponseLimit(availableTasksData);
   return availableTasksData;
 }
-
-// ### Organizations
-export async function getDefaultOrganization(): Promise<APIOrganization | null> {
-  // Only returns an organization if the WEBKNOSSOS instance only has one organization
-  return Request.receiveJSON("/api/organizations/default");
-}
-
-export function joinOrganization(inviteToken: string): Promise<void> {
-  return Request.triggerRequest(`/api/auth/joinOrganization/${inviteToken}`, {
-    method: "POST",
-  });
-}
-
-export async function switchToOrganization(organizationId: string): Promise<void> {
-  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationId}`, {
-    method: "POST",
-  });
-  location.reload();
-}
-
-export async function getUsersOrganizations(): Promise<Array<APIOrganizationCompact>> {
-  const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
-    "/api/organizations?compact=true",
-  );
-  const scmOrganization = organizations.find((org) => org.id === "scalable_minds");
-  if (scmOrganization == null) {
-    return organizations;
-  }
-  // Move scalableminds organization to the front so it appears in the organization switcher
-  // at the top.
-  return [scmOrganization, ...organizations.filter((org) => org.id !== scmOrganization.id)];
-}
-
-export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
-  return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`, {
-    showErrorToast: false,
-  });
-}
-
-export function sendInvitesForOrganization(
-  recipients: Array<string>,
-  autoActivate: boolean,
-): Promise<void> {
-  return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
-    method: "POST",
-    data: {
-      recipients,
-      autoActivate,
-    },
-  });
-}
-
-export async function getOrganization(organizationId: string): Promise<APIOrganization> {
-  const organization = await Request.receiveJSON(`/api/organizations/${organizationId}`);
-  return {
-    ...organization,
-    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
-    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
-    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
-  };
-}
-
-export async function checkAnyOrganizationExists(): Promise<boolean> {
-  return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
-}
-
-export async function deleteOrganization(organizationId: string): Promise<void> {
-  return Request.triggerRequest(`/api/organizations/${organizationId}`, {
-    method: "DELETE",
-  });
-}
-
-export async function updateOrganization(
-  organizationId: string,
-  name: string,
-  newUserMailingList: string,
-): Promise<APIOrganization> {
-  const updatedOrganization = await Request.sendJSONReceiveJSON(
-    `/api/organizations/${organizationId}`,
-    {
-      method: "PATCH",
-      data: {
-        name,
-        newUserMailingList,
-      },
-    },
-  );
-
-  return {
-    ...updatedOrganization,
-    paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
-    includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
-    includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
-  };
-}
-
-export async function isDatasetAccessibleBySwitching(
-  commandType: TraceOrViewCommand,
-): Promise<APIOrganization | null | undefined> {
-  if (commandType.type === ControlModeEnum.TRACE) {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
-      {
-        showErrorToast: false,
-      },
-    );
-  } else {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
-      {
-        showErrorToast: false,
-      },
-    );
-  }
-}
-
-export async function isWorkflowAccessibleBySwitching(
-  workflowHash: string,
-): Promise<APIOrganization | null> {
-  return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
-}
-
-export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUpgrade?requestedPlan=${requestedPlan}`, {
-    method: "POST",
-  });
-}
-
-export async function sendExtendPricingPlanEmail(): Promise<void> {
-  return Request.receiveJSON("/api/pricing/requestExtension", {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestUsers?requestedUsers=${requestedUsers}`, {
-    method: "POST",
-  });
-}
-
-export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
-    method: "POST",
-  });
-}
-
-export async function sendOrderCreditsEmail(requestedCredits: number): Promise<void> {
-  return Request.receiveJSON(`/api/pricing/requestCredits?requestedCredits=${requestedCredits}`, {
-    method: "POST",
-  });
-}
-
-export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
-  return Request.receiveJSON("/api/pricing/status");
-}
-
-export const cachedGetPricingPlanStatus = _.memoize(getPricingPlanStatus);
 
 // ### Health
 export function pingHealthEndpoint(url: string, path: "tracings" | "data"): Promise<void> {
@@ -1958,7 +1798,7 @@ export function computeAdHocMesh(
           // is added here to the position and bbox size.
           position: positionWithPadding, // position is in mag1
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
+          cubeSize, // cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
           voxelSizeFactorInUnit: scaleFactor,
@@ -1967,7 +1807,7 @@ export function computeAdHocMesh(
         },
       },
     );
-    const neighbors = (Utils.parseMaybe(headers.neighbors) as number[] | null) || [];
+    const neighbors = (parseMaybe(headers.neighbors) as number[] | null) || [];
     return {
       buffer,
       neighbors,
@@ -2036,7 +1876,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
-    return Utils.retryAsyncFunction(() =>
+    return retryAsyncFunction(() =>
       Request.receiveArraybuffer(
         `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
         {
@@ -2050,8 +1890,8 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
     );
   });
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
+  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
   return new Map(keyValues);
 }
@@ -2076,7 +1916,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
-    return Utils.retryAsyncFunction(() =>
+    return retryAsyncFunction(() =>
       Request.receiveArraybuffer(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
         {
@@ -2092,9 +1932,9 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   });
 
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = Utils.getAdaptToTypeFunctionFromList(segmentIds);
+  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
 
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
   return new Map(keyValues);
 }
@@ -2270,7 +2110,7 @@ export async function getEdgesForAgglomerateMinCut(
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
-    Utils.retryAsyncFunction(() =>
+    retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
         {
@@ -2305,7 +2145,7 @@ export async function getNeighborsForAgglomerateNode(
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
-    Utils.retryAsyncFunction(() =>
+    retryAsyncFunction(() =>
       Request.sendJSONReceiveJSON(
         `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
         {
@@ -2370,7 +2210,7 @@ export async function getSamMask(
 }
 
 // ### Short links
-export const createShortLink = _.memoize(
+export const createShortLink = memoize(
   (longLink: string): Promise<ShortLink> =>
     Request.sendJSONReceiveJSON("/api/shortLinks", {
       method: "POST",

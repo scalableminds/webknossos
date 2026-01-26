@@ -8,7 +8,7 @@ import { Tag, Typography } from "antd";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import React, { type CSSProperties } from "react";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
@@ -25,6 +25,7 @@ import {
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
+  getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -34,7 +35,7 @@ import {
 
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 
-import { getOrganization } from "admin/rest_api";
+import { getOrganization } from "admin/api/organization";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
@@ -45,7 +46,6 @@ import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_a
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
-import { Store } from "viewer/singletons";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -208,7 +208,9 @@ export function OwningOrganizationRow({ organizationId }: { organizationId: stri
       <div className="info-tab-block">
         <p className="sidebar-label">Organization</p>
         <p>
-          <Tag color="blue">{organizationId === null ? <i>loading...</i> : organizationId}</Tag>
+          <Tag color="blue" variant="outlined">
+            {organizationId === null ? <i>loading...</i> : organizationId}
+          </Tag>
         </p>
       </div>
     </FastTooltip>
@@ -402,7 +404,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={`/datasets/${getReadableURLPart(this.props.dataset)}/view`}
+          to={getViewDatasetURL(this.props.dataset)}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",
@@ -533,12 +535,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const contributorTags =
       contributors.length > 0
         ? contributors.map((user) => (
-            <Tag key={user.id} color="blue">
+            <Tag key={user.id} color="blue" variant="outlined">
               {formatUserName(activeUser, user)}
             </Tag>
           ))
         : [
-            <Tag key="None" color="blue">
+            <Tag key="None" color="blue" variant="outlined">
               None
             </Tag>,
           ];
@@ -548,7 +550,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <div className="info-tab-block">
           <p className="sidebar-label">Owner</p>
           <p>
-            <Tag color="blue">{formatUserName(activeUser, owner)}</Tag>
+            <Tag color="blue" variant="outlined">
+              {formatUserName(activeUser, owner)}
+            </Tag>
           </p>
         </div>
         <div className="info-tab-block">
@@ -664,13 +668,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 }
 
 function DebugInfo() {
+  const dispatch = useDispatch();
   const versionOnClient = useWkSelector((state) => {
     return state.annotation.version;
   });
   return (
     <>
       Version: {versionOnClient}
-      <ReloadOutlined onClick={() => Store.dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
+      <ReloadOutlined onClick={() => dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
     </>
   );
 }

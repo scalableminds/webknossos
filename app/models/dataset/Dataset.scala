@@ -34,6 +34,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.RealPathInfo
 import com.scalableminds.webknossos.schema.Tables._
 import controllers.DatasetUpdateParameters
+import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
@@ -71,6 +72,7 @@ case class Dataset(_id: ObjectId,
                    sortingKey: Instant = Instant.now,
                    metadata: JsArray = JsArray.empty,
                    tags: List[String] = List.empty,
+                   creationType: Option[DatasetCreationType] = None,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
 
@@ -128,6 +130,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
         JsonHelper.parseAs[DatasetViewConfiguration](_).toFox)
       metadata <- JsonHelper.parseAs[JsArray](r.metadata).toFox
+      creationType <- Fox.runOptional(r.creationtype)(DatasetCreationType.fromString(_).toFox)
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -152,6 +155,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         Instant.fromSql(r.sortingkey),
         metadata,
         parseArrayLiteral(r.tags).sorted,
+        creationType,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -626,7 +630,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
                      description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
-                     sharingToken, sortingKey, metadata, tags,
+                     sharingToken, sortingKey, metadata, tags, creationType,
                      created, isDeleted
                    )
                    VALUES(
@@ -635,7 +639,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
                      ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
-                     ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags},
+                     ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
                      ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()
@@ -672,12 +676,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      isUsable = $isUsable,
                      status = $newStatus
                    WHERE _id = $id""".asUpdate)
-    } yield ()
-
-  def makeVirtual(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- assertUpdateAccess(datasetId)
-      _ <- run(q"UPDATE webknossos.datasets SET isVirtual = ${true} WHERE _id = $datasetId".asUpdate)
     } yield ()
 
   def deactivateUnreported(existingDatasetIds: List[ObjectId],
@@ -924,7 +922,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
         case None            => None
       }
-      path <- Fox.runOptional(row.path)(UPath.fromString(_).toFox)
+      realPathWithFallback = row.realpath.orElse(row.path)
+      path <- Fox.runOptional(realPathWithFallback)(UPath.fromString(_).toFox)
     } yield
       MagLocator(
         mag,
@@ -1128,7 +1127,8 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      path <- UPath.fromString(row.path).toFox
+      realPathWithFallback = row.realpath.getOrElse(row.path)
+      path <- UPath.fromString(realPathWithFallback).toFox
     } yield LayerAttachment(row.name, path, dataFormat)
 
   private def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =

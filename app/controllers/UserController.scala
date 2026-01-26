@@ -20,6 +20,7 @@ import play.silhouette.api.exceptions.ProviderException
 import play.silhouette.api.util.Credentials
 import play.silhouette.impl.providers.CredentialsProvider
 import security.WkEnv
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
@@ -29,9 +30,9 @@ class UserController @Inject()(userService: UserService,
                                credentialsProvider: CredentialsProvider,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
-                               teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
+                               conf: WkConf,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -183,7 +184,7 @@ class UserController @Inject()(userService: UserService,
       (__ \ "isActive").readNullable[Boolean] and
       (__ \ "isAdmin").readNullable[Boolean] and
       (__ \ "isDatasetManager").readNullable[Boolean] and
-      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads())) and
+      (__ \ "teams").readNullable[List[TeamMembership]] and
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
@@ -192,9 +193,9 @@ class UserController @Inject()(userService: UserService,
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) =>
         for {
-          _ <- Fox.fromBool(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
-                                                                            team.name,
-                                                                            user.name) ~> FORBIDDEN
+          _ <- Fox.fromBool(user._organization == team._organization) ?~> Messages("team.admin.notPossibleBy",
+                                                                                   team.name,
+                                                                                   user.name) ~> FORBIDDEN
         } yield ()
       case (_, _) =>
         Fox.successful(())
@@ -332,6 +333,7 @@ class UserController @Inject()(userService: UserService,
           _ <- checkNoActivateBeyondLimit(user, isActive)
           _ <- preventZeroAdmins(user, isAdmin)
           _ <- preventZeroOwners(user, isActive)
+          _ <- checkNameUpdatePermissions(user, issuingUser, firstName, lastName)
           teams <- Fox.combined(assignedMemberships.map(t =>
             teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
@@ -358,6 +360,25 @@ class UserController @Inject()(userService: UserService,
         } yield Ok(updatedJs)
     }
   }
+
+  private def checkNameUpdatePermissions(originalUser: User,
+                                         issuingUser: User,
+                                         firstName: String,
+                                         lastName: String): Fox[Unit] =
+    if (firstName.trim == originalUser.firstName && lastName.trim == originalUser.lastName)
+      Fox.successful(())
+    else {
+      if (issuingUser._id == originalUser._id)
+        Fox.successful(())
+      else if (conf.Features.isWkorgInstance) {
+        Fox.failure("On this webknossos instance, users may only change their own names.")
+      } else {
+        if (issuingUser.isAdminOf(originalUser))
+          Fox.successful(())
+        else
+          Fox.failure("Only admins can change the names of other users.")
+      }
+    }
 
   def updateLastTaskTypeId(userId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>

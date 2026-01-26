@@ -3,9 +3,9 @@ import type { FormInstance } from "antd/lib/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { jsonStringify } from "libs/utils";
-import _ from "lodash";
+import omit from "lodash/omit";
 import { type RecommendedConfiguration, settings } from "messages";
-import * as React from "react";
+import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "viewer/constants";
 const FormItem = Form.Item;
@@ -102,7 +102,7 @@ const removeSettings = (
   try {
     const settingsObject = JSON.parse(settingsString);
 
-    const newSettings = _.omit(
+    const newSettings = omit(
       settingsObject,
       Object.keys(getRecommendedConfigByCategory()[settingsKey]),
     );
@@ -125,7 +125,7 @@ export default function RecommendedConfigurationView({
   onChangeEnabled: (arg0: boolean) => void;
 }) {
   const recommendedConfiguration = getDefaultRecommendedConfiguration();
-  const configurationEntries = _.map(recommendedConfiguration, (_value: any, key: string) => {
+  const configurationEntries = Object.entries(recommendedConfiguration).map(([key]) => {
     // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
     const settingsKey: keyof RecommendedConfiguration = key;
     return {
@@ -195,7 +195,7 @@ export default function RecommendedConfigurationView({
     {
       key: "config",
       label: (
-        <React.Fragment>
+        <Fragment>
           <Checkbox
             checked={enabled}
             style={{
@@ -203,7 +203,7 @@ export default function RecommendedConfigurationView({
             }}
           />{" "}
           Add Recommended User Settings
-        </React.Fragment>
+        </Fragment>
       ),
       showArrow: false,
       children: recommendedSettingsView,

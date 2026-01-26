@@ -182,7 +182,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
 
   return (
-    <Space.Compact className="no-borders">
+    <Space.Compact className="no-borders" block>
       <Input
         value={baseUrl}
         size="small"
@@ -206,6 +206,9 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const updateMutation = useUpdatePrivateLink(linkItem.annotation);
 
   const onChange: DatePickerProps["onChange"] = (date) => {
+    if (Array.isArray(date)) {
+      return;
+    }
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(date?.endOf("day")) });
   };
 

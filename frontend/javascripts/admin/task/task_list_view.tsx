@@ -22,22 +22,30 @@ import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Card, Input, Modal, Spin, Tag } from "antd";
+import { Alert, App, Button, Card, Flex, Input, Modal, Space, Spin, Tag } from "antd";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
 import { handleGenericError } from "libs/error_handling";
 import { formatSeconds, formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  getUrlParamValue,
+  hasUrlParam,
+  localeCompareBy,
+} from "libs/utils";
+import isEmpty from "lodash/isEmpty";
+import partial from "lodash/partial";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
 
@@ -68,11 +76,9 @@ function TaskListView({ initialFieldValues }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [tasks, setTasks] = useState<APITask[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUserIdForAssignment, setSelectedUserIdForAssignment] = useState<string | null>(
-    null,
-  );
+  const selectedUserIdForAssignment = useRef<string | null>(null);
   const [isAnonymousTaskLinkModalOpen, setIsAnonymousTaskLinkModalOpen] = useState(
-    Utils.hasUrlParam("showAnonymousLinks"),
+    hasUrlParam("showAnonymousLinks"),
   );
 
   useEffect(() => {
@@ -85,7 +91,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }, [searchQuery]);
 
   async function fetchData(queryObject: QueryObject) {
-    if (!_.isEmpty(queryObject)) {
+    if (!isEmpty(queryObject)) {
       setIsLoading(true);
 
       try {
@@ -123,6 +129,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function assignTaskToUser(task: APITask) {
+    selectedUserIdForAssignment.current = null;
     modal.confirm({
       title: "Manual Task Assignment",
       icon: <UserAddOutlined />,
@@ -132,17 +139,19 @@ function TaskListView({ initialFieldValues }: Props) {
           <div>Please, select a user to manually assign this task to:</div>
           <div style={{ marginTop: 10, marginBottom: 25 }}>
             <UserSelectionComponent
-              handleSelection={(value) => setSelectedUserIdForAssignment(value)}
+              handleSelection={(value) => {
+                selectedUserIdForAssignment.current = value;
+              }}
             />
           </div>
           <Alert
-            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
+            title="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
             type="info"
           />
         </>
       ),
       onOk: async () => {
-        const userId = selectedUserIdForAssignment;
+        const userId = selectedUserIdForAssignment.current;
         if (userId != null) {
           try {
             const updatedTask = await assignTaskToUserAPI(task.id, userId);
@@ -153,7 +162,7 @@ function TaskListView({ initialFieldValues }: Props) {
           } catch (error) {
             handleGenericError(error as Error);
           } finally {
-            setSelectedUserIdForAssignment(null);
+            selectedUserIdForAssignment.current = null;
           }
         }
       },
@@ -161,7 +170,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function getFilteredTasks() {
-    return Utils.filterWithSearchQueryAND(
+    return filterWithSearchQueryAND(
       tasks,
       [
         "team",
@@ -188,7 +197,7 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function getAnonymousTaskLinkModal() {
-    const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
+    const anonymousTaskId = getUrlParamValue("showAnonymousLinks");
 
     if (!isAnonymousTaskLinkModalOpen) {
       return null;
@@ -243,25 +252,21 @@ function TaskListView({ initialFieldValues }: Props) {
     );
   }
 
-  const marginRight = {
-    marginRight: 20,
-  };
-
   const columns: ColumnType<APITask>[] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.id),
-      className: "monospace-id",
-      width: 100,
+      sorter: localeCompareBy<APITask>((task) => task.id),
+      render: (id: string) => <FormattedId id={id} />,
+      width: 120,
     },
     {
       title: "Project",
       dataIndex: "projectName",
       key: "projectName",
       width: 130,
-      sorter: Utils.localeCompareBy<APITask>((task) => task.projectName),
+      sorter: localeCompareBy<APITask>((task) => task.projectName),
       render: (projectName: string) => <a href={`/projects#${projectName}`}>{projectName}</a>,
     },
     {
@@ -269,7 +274,7 @@ function TaskListView({ initialFieldValues }: Props) {
       dataIndex: "type",
       key: "type",
       width: 200,
-      sorter: Utils.localeCompareBy<APITask>((task) => task.type.summary),
+      sorter: localeCompareBy<APITask>((task) => task.type.summary),
       render: (taskType: APITaskType) => (
         <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
       ),
@@ -278,7 +283,7 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "Dataset",
       dataIndex: "datasetName",
       key: "datasetName",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.datasetName),
+      sorter: localeCompareBy<APITask>((task) => task.datasetName),
     },
     {
       title: "Stats",
@@ -339,7 +344,7 @@ function TaskListView({ initialFieldValues }: Props) {
       title: "Experience",
       dataIndex: "neededExperience",
       key: "neededExperience",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.neededExperience.domain),
+      sorter: localeCompareBy<APITask>((task) => task.neededExperience.domain),
       width: 250,
       render: (neededExperience: APITask["neededExperience"]) =>
         neededExperience.domain !== "" || neededExperience.value > 0 ? (
@@ -353,7 +358,7 @@ function TaskListView({ initialFieldValues }: Props) {
       dataIndex: "created",
       key: "created",
       width: 200,
-      sorter: Utils.compareBy<APITask>((task) => task.created),
+      sorter: compareBy<APITask>((task) => task.created),
       render: (created: APITask["created"]) => <FormattedDate timestamp={created} />,
       defaultSortOrder: "descend",
     },
@@ -384,7 +389,7 @@ function TaskListView({ initialFieldValues }: Props) {
           </div>
           {task.status.pending > 0 ? (
             <div>
-              <LinkButton onClick={_.partial(assignTaskToUser, task)} icon={<UserAddOutlined />}>
+              <LinkButton onClick={partial(assignTaskToUser, task)} icon={<UserAddOutlined />}>
                 Manually Assign to User
               </LinkButton>
             </div>
@@ -392,7 +397,6 @@ function TaskListView({ initialFieldValues }: Props) {
           {task.status.finished > 0 ? (
             <div>
               <AsyncLink
-                href="#"
                 onClick={() => {
                   const includesVolumeData = task.type.tracingType !== "skeleton";
                   return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);
@@ -405,7 +409,7 @@ function TaskListView({ initialFieldValues }: Props) {
             </div>
           ) : null}
           <div>
-            <LinkButton onClick={_.partial(deleteTask, task)} icon={<DeleteOutlined />}>
+            <LinkButton onClick={partial(deleteTask, task)} icon={<DeleteOutlined />}>
               Delete
             </LinkButton>
           </div>
@@ -416,28 +420,23 @@ function TaskListView({ initialFieldValues }: Props) {
 
   return (
     <div className="container">
-      <div className="pull-right">
-        <Link to="/tasks/create">
-          <Button icon={<PlusOutlined />} style={marginRight} type="primary">
-            Add Task
-          </Button>
-        </Link>
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </div>
-      <h3
-        style={{
-          display: "inline-block",
-          verticalAlign: "top",
-        }}
-      >
-        Tasks
-      </h3>
+      <Flex justify="space-between" align="flex-start">
+        <h3>Tasks</h3>
+        <Space>
+          <Link to="/tasks/create">
+            <Button icon={<PlusOutlined />} type="primary">
+              Add Task
+            </Button>
+          </Link>
+          <Search
+            style={{
+              width: 200,
+            }}
+            onChange={handleSearch}
+            value={searchQuery}
+          />
+        </Space>
+      </Flex>
       {features().isWkorgInstance ? (
         <>
           <a

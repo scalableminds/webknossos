@@ -1,8 +1,8 @@
 import { LoadingOutlined } from "@ant-design/icons";
 import { Button, type ButtonProps, ConfigProvider } from "antd";
-import * as React from "react";
+import type React from "react";
+import { cloneElement, useEffect, useRef, useState } from "react";
 import FastTooltip from "./fast_tooltip";
-const { useState, useEffect, useRef } = React;
 
 /**
  * Props for the AsyncButton component.
@@ -88,7 +88,7 @@ export function AsyncIconButton(
   },
 ) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  return React.cloneElement(isLoading ? <LoadingOutlined /> : props.icon, { ...props, onClick });
+  return cloneElement(isLoading ? <LoadingOutlined /> : props.icon, { ...props, onClick });
 }
 
 /**

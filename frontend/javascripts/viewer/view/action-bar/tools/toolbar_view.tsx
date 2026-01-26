@@ -16,16 +16,17 @@ import {
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { useCallback } from "react";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
 import {
+  ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,
   NARROW_BUTTON_STYLE,
   RadioButtonWithTooltip,
@@ -39,11 +40,13 @@ import {
   VolumeInterpolationButton,
 } from "./volume_specific_ui";
 
-const handleAddNewUserBoundingBox = () => {
-  Store.dispatch(addUserBoundingBoxAction());
-};
-
 function CreateNewBoundingBoxButton() {
+  const dispatch = useDispatch();
+
+  const handleAddNewUserBoundingBox = useCallback(() => {
+    dispatch(addUserBoundingBoxAction());
+  }, [dispatch]);
+
   return (
     <ButtonComponent
       onClick={handleAddNewUserBoundingBox}
@@ -76,12 +79,8 @@ function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationToo
   return adaptedActiveTool.id;
 }
 
-const handleSetTool = (event: RadioChangeEvent) => {
-  const value = event.target.value as AnnotationToolId;
-  Store.dispatch(setToolAction(AnnotationTool[value]));
-};
-
 export default function ToolbarView() {
+  const dispatch = useDispatch();
   const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
   const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
   const toolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
@@ -96,6 +95,14 @@ export default function ToolbarView() {
     isShiftPressed,
     isControlOrMetaPressed,
     isAltPressed,
+  );
+
+  const handleSetTool = useCallback(
+    (event: RadioChangeEvent) => {
+      const value = event.target.value as AnnotationToolId;
+      dispatch(setToolAction(AnnotationTool[value]));
+    },
+    [dispatch],
   );
 
   return (
@@ -119,8 +126,11 @@ export default function ToolbarView() {
         <FastTooltip
           title={`Some tools behave differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
         >
-          <Tag style={{ marginLeft: 12 }} color="orange">
-            <InfoCircleOutlined style={{ marginRight: 4 }} />
+          <Tag
+            icon={<InfoCircleOutlined />}
+            style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
+            color="orange"
+          >
             Split Workflow
           </Tag>
         </FastTooltip>
@@ -173,21 +183,13 @@ function ToolSpecificSettings({
       {showSkeletonButtons ? <SkeletonSpecificButtons /> : null}
 
       {showNewBoundingBoxButton ? (
-        <Space.Compact
-          style={{
-            marginLeft: 10,
-          }}
-        >
+        <Space.Compact>
           <CreateNewBoundingBoxButton />
         </Space.Compact>
       ) : null}
 
       {showCreateCellButton || showChangeBrushSizeButton ? (
-        <Space.Compact
-          style={{
-            marginLeft: 12,
-          }}
-        >
+        <Space.Compact>
           {showCreateCellButton ? <CreateSegmentButton /> : null}
           {showChangeBrushSizeButton ? <ChangeBrushSizePopover /> : null}
         </Space.Compact>
@@ -200,13 +202,12 @@ function ToolSpecificSettings({
       />
 
       {adaptedActiveTool === AnnotationTool.QUICK_SELECT && (
-        <>
+        <div>
           <ToggleButton
             active={!isQuickSelectHeuristic}
             style={{
               ...NARROW_BUTTON_STYLE,
               opacity: isQuickSelectHeuristic ? 0.5 : 1,
-              marginLeft: 12,
             }}
             onClick={toggleQuickSelectStrategy}
             disabled={!isAISelectAvailable}
@@ -216,7 +217,7 @@ function ToolSpecificSettings({
           </ToggleButton>
 
           <QuickSelectSettingsPopover />
-        </>
+        </div>
       )}
 
       {adaptedActiveTool.hasOverwriteCapabilities ? <VolumeInterpolationButton /> : null}
@@ -244,13 +245,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
     dispatch(setToolAction(AnnotationTool[value]));
   };
   return (
-    <Radio.Group
-      value={activeTool.id}
-      onChange={handleSetMeasurementTool}
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <Radio.Group value={activeTool.id} onChange={handleSetMeasurementTool}>
       <RadioButtonWithTooltip
         title="Measure distances with connected lines by using Left Click."
         style={NARROW_BUTTON_STYLE}

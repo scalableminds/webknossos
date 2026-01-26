@@ -7,7 +7,7 @@ import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_s
 import Store from "viewer/store";
 import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { omit } from "lodash";
+import omit from "lodash/omit";
 
 import {
   createTreeMapFromTreeArray,
@@ -19,7 +19,7 @@ import {
   deleteNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { discardSaveQueueAction } from "viewer/model/actions/save_actions";
-import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
+import { updateTree } from "viewer/model/sagas/volume/update_actions";
 import { TIMESTAMP } from "test/global_mocks";
 
 describe("Saga Integration Tests", () => {
@@ -44,7 +44,7 @@ describe("Saga Integration Tests", () => {
       name: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
     };
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
-      [[UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
+      [[updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
       TIMESTAMP,
       getStats(state.annotation) || undefined,
     );

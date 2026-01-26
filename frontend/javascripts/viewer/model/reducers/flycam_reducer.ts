@@ -1,8 +1,8 @@
 import update from "immutability-helper";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { clamp, map3, mod } from "libs/utils";
+import clone from "lodash/clone";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -63,7 +63,7 @@ function rotateOnAxisWithDistance(
 }
 
 function keepRotationInBounds(rotation: Vector3): Vector3 {
-  const rotationInBounds = Utils.map3((v) => Utils.mod(Math.round(v), 360), rotation);
+  const rotationInBounds = map3((v) => mod(Math.round(v), 360), rotation);
   return rotationInBounds;
 }
 
@@ -134,7 +134,7 @@ function moveReducer(state: WebknossosState, vector: Vector3): WebknossosState {
 
 export function zoomReducer(state: WebknossosState, zoomStep: number): WebknossosState {
   const [min, max] = getValidZoomRangeForUser(state);
-  let newZoomStep = Utils.clamp(min, zoomStep, max);
+  let newZoomStep = clamp(min, zoomStep, max);
 
   if (isNaN(newZoomStep)) {
     newZoomStep = 1;
@@ -151,7 +151,7 @@ export function zoomReducer(state: WebknossosState, zoomStep: number): Webknosso
 }
 export function setDirectionReducer(state: WebknossosState, direction: Vector3) {
   const previousSpaceDirectionOrtho = state.flycam.spaceDirectionOrtho;
-  const spaceDirectionOrtho = Utils.map3((el, index) => {
+  const spaceDirectionOrtho = map3((el, index) => {
     if (el === 0) {
       return previousSpaceDirectionOrtho[index];
     }
@@ -262,7 +262,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       let { values } = action;
 
       const existingAdditionalCoordinates = state.flycam.additionalCoordinates;
-      values = Utils.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
+      values = Object.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
         const fallbackValue =
           (existingAdditionalCoordinates != null
             ? existingAdditionalCoordinates[index]?.value
@@ -272,7 +272,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
           if (specifiedValue) {
             return {
               name,
-              value: Utils.clamp(bounds[0], specifiedValue.value, bounds[1]),
+              value: clamp(bounds[0], specifiedValue.value, bounds[1]),
             };
           }
         }
@@ -318,7 +318,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "MOVE_FLYCAM_ORTHO": {
-      const vector = _.clone(action.vector);
+      const vector = clone(action.vector);
 
       const { planeId } = action;
 

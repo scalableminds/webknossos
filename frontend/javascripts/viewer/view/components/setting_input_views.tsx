@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import {
   Col,
+  Flex,
   Input,
   InputNumber,
   type MenuProps,
@@ -21,8 +22,8 @@ import {
 import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { hexToRgb, numberArrayToVector6, rgbToHex, roundTo, stringToNumberArray } from "libs/utils";
+import isNumber from "lodash/isNumber";
 import messages from "messages";
 import type * as React from "react";
 import { useEffect, useState } from "react";
@@ -32,6 +33,7 @@ import type { Vector3, Vector4, Vector6 } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
+import ButtonComponent from "./button_component";
 
 const ROW_GUTTER = 1;
 
@@ -82,7 +84,7 @@ export function NumberSliderSetting(props: NumberSliderSettingProps) {
       : spans;
 
   const isValueValid = (_value: number | null) =>
-    _.isNumber(_value) && _value >= min && _value <= max;
+    isNumber(_value) && _value >= min && _value <= max;
 
   const _onChange = (_value: number | null) => {
     if (_value != null && isValueValid(_value)) {
@@ -137,7 +139,7 @@ type LogSliderSettingProps = {
   label: string | React.ReactNode;
   max: number;
   min: number;
-  roundTo: number;
+  roundToDigit: number;
   disabled?: boolean;
   spans?: Vector3;
   precision?: number;
@@ -154,7 +156,7 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
     label,
     max,
     min,
-    roundTo = 3,
+    roundToDigit = 3,
     disabled = false,
     spans = [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
     precision,
@@ -188,7 +190,7 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
     const calculatedValue = calculateValue(tooltipValue);
     return calculatedValue >= 10000
       ? calculatedValue.toExponential()
-      : Utils.roundTo(calculatedValue, roundTo);
+      : roundTo(calculatedValue, roundToDigit);
   };
 
   const getSliderValue = () => {
@@ -231,7 +233,7 @@ export function LogSliderSetting(props: LogSliderSettingProps) {
           }}
           step={value / 10}
           precision={precision ?? 2}
-          value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
+          value={roundToDigit != null ? roundTo(value, roundToDigit) : value}
           onChange={onChangeInput}
           disabled={disabled}
           size="small"
@@ -366,6 +368,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
 }
 
 type UserBoundingBoxInputProps = {
+  bboxId: number;
   value: Vector6;
   name: string;
   color: Vector3;
@@ -382,7 +385,11 @@ type UserBoundingBoxInputProps = {
   isLockedByOwner: boolean;
   isOwner: boolean;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-  onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
+  onOpenContextMenu: (
+    menu: MenuProps,
+    event: React.MouseEvent<HTMLDivElement>,
+    bboxId: number,
+  ) => void;
   onHideContextMenu?: () => void;
 };
 
@@ -390,6 +397,7 @@ const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
 export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
+    bboxId,
     value: propValue,
     name: propName,
     color,
@@ -447,12 +455,12 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     const newText = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(newText);
-    const value = Utils.stringToNumberArray(newText);
+    const value = stringToNumberArray(newText);
     const isValidLength = value.length === 6;
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      onBoundingChange(Utils.numberArrayToVector6(value));
+      onBoundingChange(numberArrayToVector6(value));
     }
 
     setText(newText);
@@ -508,10 +516,14 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       Delete
     </>
   );
+
   const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
     isLockedByOwner,
     isOwner,
   );
+  const exportDisallowedExplanation = isLockedByOwner
+    ? editingDisallowedExplanation
+    : "This WEBKNOSSOS instance is not configured to run export jobs.";
 
   const getContextMenu = () => {
     const items: MenuProps["items"] = [
@@ -540,7 +552,7 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         label: isExportEnabled ? (
           exportButton
         ) : (
-          <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
+          <FastTooltip title={exportDisallowedExplanation}>{exportButton}</FastTooltip>
         ),
         disabled: !isExportEnabled,
         onClick: onExport,
@@ -562,97 +574,97 @@ export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
 
   return (
     <div
-      onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+      onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}
       onClick={onHideContextMenu}
     >
-      <Row
+      <Flex
+        gap="middle"
+        justify="flex-start"
         style={{
           marginTop: 10,
           marginBottom: 10,
         }}
       >
-        <Col span={5}>
+        <Flex gap="middle" justify="space-between" align="center">
           <Switch
             size="small"
             onChange={onVisibilityChange}
             checked={isVisible}
-            style={{
-              margin: "auto 0px",
-            }}
             // To prevent centering the bounding box on every edit (e.g. upon visibility change)
             // the click events are stopped from propagating to the parent div.
             onClick={(_value, e) => e.stopPropagation()}
           />
-        </Col>
-
-        <Col span={SETTING_RIGHT_SPAN}>
           <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-            <span>
-              <Input
-                defaultValue={name}
-                placeholder="Bounding Box Name"
-                size="small"
-                value={name}
-                onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
-                  setName(evt.target.value);
-                }}
-                onPressEnter={handleNameChanged}
-                onBlur={handleNameChanged}
-                disabled={disabled}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </span>
+            <ColorSetting
+              value={rgbToHex(upscaledColor)}
+              onChange={handleColorChange}
+              disabled={disabled}
+            />
           </FastTooltip>
-        </Col>
-        <Col span={2}>
-          <div
-            onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-            onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
-          >
-            <EllipsisOutlined style={marginLeftStyle} />
-          </div>
-        </Col>
-      </Row>
-      <Row
+        </Flex>
+        <FastTooltip title={disabled ? editingDisallowedExplanation : null} style={{ flexGrow: 1 }}>
+          <Input
+            defaultValue={name}
+            placeholder="Bounding Box Name"
+            size="small"
+            value={name}
+            onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+              setName(evt.target.value);
+            }}
+            onPressEnter={handleNameChanged}
+            onBlur={handleNameChanged}
+            disabled={disabled}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </FastTooltip>
+        <ButtonComponent
+          title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          disabled={disabled}
+          icon={<DeleteOutlined />}
+          type="text"
+          size="small"
+        />
+      </Flex>
+      <Flex
         style={{
           marginBottom: 10,
         }}
-        align="top"
+        align="flex-start"
+        gap="middle"
+        justify="flex-start"
       >
-        <Col span={5}>
-          <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
-            <label className="settings-label"> Bounds: </label>
-          </FastTooltip>
-        </Col>
-        <Col span={SETTING_RIGHT_SPAN}>
-          <FastTooltip
-            title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
-            placement="top-start"
-          >
-            <Input
-              status={isValid ? "" : "error"}
-              onChange={handleChange}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              value={text}
-              placeholder="0, 0, 0, 512, 512, 512"
-              size="small"
-              disabled={disabled}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </FastTooltip>
-        </Col>
-        <Col span={2}>
-          <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-            <ColorSetting
-              value={Utils.rgbToHex(upscaledColor)}
-              onChange={handleColorChange}
-              style={marginLeftStyle}
-              disabled={disabled}
-            />
-          </FastTooltip>
-        </Col>
-      </Row>
+        <FastTooltip
+          style={{ flex: "0 0 60px" }}
+          title="The top-left corner of the bounding box followed by the width, height, and depth."
+        >
+          <label> Bounds: </label>
+        </FastTooltip>
+        <FastTooltip
+          title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
+          placement="top-start"
+          style={{ flexGrow: 1 }}
+        >
+          <Input
+            status={isValid ? "" : "error"}
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            value={text}
+            placeholder="0, 0, 0, 512, 512, 512"
+            size="small"
+            disabled={disabled}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </FastTooltip>
+        {/* onOpenContextMenu needs event from div*/}
+        <div onClick={(evt) => onOpenContextMenu(getContextMenu(), evt, bboxId)}>
+          <ButtonComponent type="text" size="small" icon={<EllipsisOutlined />} />
+        </div>
+      </Flex>
     </div>
   );
 }
@@ -675,7 +687,7 @@ export function ColorSetting(props: ColorSettingPropTypes) {
   const { value, disabled = false, style } = props;
 
   const onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    props.onChange(Utils.hexToRgb(evt.target.value));
+    props.onChange(hexToRgb(evt.target.value));
   };
 
   return (

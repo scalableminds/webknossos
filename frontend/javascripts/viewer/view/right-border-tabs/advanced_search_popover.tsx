@@ -3,7 +3,8 @@ import { Input, type InputRef, Popover, Space, Tooltip } from "antd";
 import Shortcut from "libs/shortcut_component";
 import { mod } from "libs/utils";
 import memoizeOne from "memoize-one";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent } from "react";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 
@@ -24,9 +25,10 @@ type State = {
   areAllMatchesSelected: boolean;
 };
 
-export default class AdvancedSearchPopover<
-  S extends Record<string, any>,
-> extends React.PureComponent<Props<S>, State> {
+export default class AdvancedSearchPopover<S extends Record<string, any>> extends PureComponent<
+  Props<S>,
+  State
+> {
   state: State = {
     isVisible: false,
     searchQuery: "",
@@ -125,7 +127,7 @@ export default class AdvancedSearchPopover<
         : {};
 
     return (
-      <React.Fragment>
+      <Fragment>
         {provideShortcut ? (
           <DomVisibilityObserver targetId={targetId}>
             {(isVisibleInDom) =>
@@ -153,13 +155,12 @@ export default class AdvancedSearchPopover<
             // This ensures that the component is completely re-mounted when
             // the popover is opened. Thus unnecessary computations are avoided.
             isVisible && (
-              <React.Fragment>
+              <Fragment>
                 <Shortcut supportInputElements keys="escape" onTrigger={this.closeSearchPopover} />
                 <Space.Compact
                   style={{
                     width: 450,
                   }}
-                  className="compact-items compact-icons"
                 >
                   <Input
                     style={{
@@ -182,50 +183,26 @@ export default class AdvancedSearchPopover<
                         areAllMatchesSelected: false,
                       })
                     }
-                    addonAfter={
-                      <div
-                        style={{
-                          minWidth: 25,
-                          color: areAllMatchesSelected
-                            ? "var(--ant-color-text-disabled)"
-                            : undefined,
-                        }}
-                      >
-                        {areAllMatchesSelected
-                          ? "all"
-                          : `${currentPosition + 1}/${numberOfAvailableOptions}`}
-                      </div>
-                    }
                     ref={this.autoFocus}
                     autoFocus
                   />
+                  <ButtonComponent disabled>
+                    {areAllMatchesSelected
+                      ? "all"
+                      : `${currentPosition + 1}/${numberOfAvailableOptions}`}
+                  </ButtonComponent>
                   <Tooltip title="Previous (shift+enter)">
-                    <ButtonComponent
-                      style={{
-                        width: 40,
-                      }}
-                      onClick={this.selectPreviousOption}
-                      disabled={hasNoResults}
-                    >
+                    <ButtonComponent onClick={this.selectPreviousOption} disabled={hasNoResults}>
                       <UpOutlined />
                     </ButtonComponent>
                   </Tooltip>
                   <Tooltip title="Next (enter)">
-                    <ButtonComponent
-                      style={{
-                        width: 40,
-                      }}
-                      onClick={this.selectNextOption}
-                      disabled={hasNoResults}
-                    >
+                    <ButtonComponent onClick={this.selectNextOption} disabled={hasNoResults}>
                       <DownOutlined />
                     </ButtonComponent>
                   </Tooltip>
                   <Tooltip title="Select all matches (except groups)">
                     <ButtonComponent
-                      style={{
-                        width: 40,
-                      }}
                       type={areAllMatchesSelected ? "primary" : "default"}
                       onClick={
                         this.props.onSelectAllMatches != null
@@ -242,13 +219,13 @@ export default class AdvancedSearchPopover<
                     </ButtonComponent>
                   </Tooltip>
                 </Space.Compact>
-              </React.Fragment>
+              </Fragment>
             )
           }
         >
           {children}
         </Popover>
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

@@ -1,5 +1,6 @@
 import { ExperimentOutlined } from "@ant-design/icons";
 import { withAuthentication } from "admin/auth/authentication_modal";
+import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -7,10 +8,11 @@ import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explo
 import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import type { APIDataset, APISegmentationLayer, APIUser } from "types/api_types";
+import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
 import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
@@ -59,6 +61,7 @@ const VersionRestoreWarning = (
 type StateProps = {
   dataset: APIDataset;
   activeUser: APIUser | null | undefined;
+  activeOrganization: APIOrganization | null;
   controlMode: ControlMode;
   showVersionRestore: boolean;
   is2d: boolean;
@@ -144,9 +147,8 @@ function CreateAnnotationButton() {
   const visibleSegmentationLayers = useWkSelector((state) => getVisibleSegmentationLayers(state));
   const segmentationLayers = useWkSelector((state) => getSegmentationLayers(state.dataset));
   const dataset = useWkSelector((state) => state.dataset);
-  const [isLayerSelectionModalVisible, setLayerSelectionModalVisible] =
-    React.useState<boolean>(false);
-  const [selectedLayerName, setSelectedLayerName] = React.useState<string | undefined>(undefined);
+  const [isLayerSelectionModalVisible, setLayerSelectionModalVisible] = useState<boolean>(false);
+  const [selectedLayerName, setSelectedLayerName] = useState<string | undefined>(undefined);
 
   const getUnambiguousSegmentationLayer = () => {
     if (visibleSegmentationLayers?.length === 1) return visibleSegmentationLayers[0];
@@ -262,7 +264,7 @@ function ModesView() {
   );
 }
 
-class ActionBarView extends React.PureComponent<Props, State> {
+class ActionBarView extends PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
   };
@@ -295,14 +297,15 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
-    const isSuperUser = this.props.activeUser?.isSuperUser === true;
+    const orgaHasSomePaidPlan = hasSomePaidPlan(this.props.activeOrganization);
+
     const menuItems = [
       {
         key: "open_ai_inference_button",
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
         label: "Run AI model",
       },
-      ...(isSuperUser
+      ...(orgaHasSomePaidPlan
         ? [
             {
               key: "open_ai_training_button",
@@ -383,7 +386,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <React.Fragment>
+      <Fragment>
         <div className="action-bar">
           {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
@@ -409,7 +412,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             })
           }
         />
-      </React.Fragment>
+      </Fragment>
     );
   }
 }
@@ -417,6 +420,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: WebknossosState): StateProps => ({
   dataset: state.dataset,
   activeUser: state.activeUser,
+  activeOrganization: state.activeOrganization,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
   is2d: is2dDataset(state.dataset),

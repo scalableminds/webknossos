@@ -2,13 +2,14 @@ import { sendAnalyticsEvent } from "admin/rest_api";
 import { Layout } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
-import * as FlexLayout from "flexlayout-react";
-import type { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
+import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
+import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
-import _ from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import messages from "messages";
-import * as React from "react";
+import type React from "react";
+import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { BorderTabType, OrthoView } from "viewer/constants";
@@ -47,8 +48,9 @@ import { LayoutEvents, getLayoutConfig, layoutEmitter } from "./layout_persisten
 
 const { Footer } = Layout;
 
-type Model = InstanceType<typeof FlexLayout.Model>;
-type Action = InstanceType<typeof FlexLayout.Action>;
+// type Model = InstanceType<typeof Model>;
+// type Action = InstanceType<typeof Actions>;
+
 type StateProps = {
   displayScalebars: boolean;
   isUpdateTracingAllowed: boolean;
@@ -70,7 +72,7 @@ type State = {
 const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
 type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
-class FlexLayoutWrapper extends React.PureComponent<Props, State> {
+class FlexLayoutWrapper extends PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
   // This variable stores the border open status that should be active, when no main tab is maximized.
   // It is used to compare with the actual border open status that is stored in the store.
@@ -87,7 +89,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.unbindListeners = [];
     this.addListeners();
     this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
-    props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
+    props.setBorderOpenStatus(cloneDeep(this.borderOpenStatusWhenNotMaximized));
     this.updateToModelStateAndAdjustIt(model);
     this.state = {
       model,
@@ -153,7 +155,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
     const layout = getLayoutConfig(layoutKey, layoutName);
-    const model = FlexLayout.Model.fromJson(layout);
+    const model = Model.fromJson(layout);
     return model;
   }
 
@@ -167,7 +169,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
     const rightBorderModel = (node as TabNode).getExtraData().model;
     if (rightBorderModel == null) return;
-    rightBorderModel.doAction(FlexLayout.Actions.selectTab(tabType.id));
+    rightBorderModel.doAction(Actions.selectTab(tabType.id));
   }
 
   adaptModelToConditionalTabs(model: Model) {
@@ -193,7 +195,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
     if (node && !showConnectomeTab) {
       // Tab exists, but shouldn't. Delete it.
-      rightBorderModel.doAction(FlexLayout.Actions.deleteTab(connectomeTabDescriptor.id));
+      rightBorderModel.doAction(Actions.deleteTab(connectomeTabDescriptor.id));
     } else if (!node && showConnectomeTab) {
       // Tab does not exist, but should. Add it next to the info tab.
       const datasetInfoTabId = BorderTabs.DatasetInfoTabView.id;
@@ -206,10 +208,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
       const targetId = infoTabNode.getParent().getId();
       rightBorderModel.doAction(
-        FlexLayout.Actions.addNode(
+        Actions.addNode(
           connectomeTabDescriptor,
           targetId, // Don't create a new tab set, but add it to the existing one.
-          FlexLayout.DockLocation.CENTER,
+          DockLocation.CENTER,
           -1, // Add it to the end.
           false, // Don't focus it.
         ),
@@ -247,7 +249,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       return;
     }
 
-    const toggleMaximiseAction = FlexLayout.Actions.maximizeToggle(activeNode.getId());
+    const toggleMaximiseAction = Actions.maximizeToggle(activeNode.getId());
     model.doAction(toggleMaximiseAction);
     this.onAction(toggleMaximiseAction);
   };
@@ -387,12 +389,12 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     let { model } = node.getExtraData();
 
     if (model == null) {
-      model = FlexLayout.Model.fromJson(node.getConfig().model);
+      model = Model.fromJson(node.getConfig().model);
       node.getExtraData().model = model;
     }
 
     return (
-      <FlexLayout.Layout
+      <FlexLayoutComponent
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
         titleFactory={(renderedNode) => (
@@ -404,7 +406,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.
           this.state.model.doAction(
-            FlexLayout.Actions.updateNodeAttributes(node.getId(), {
+            Actions.updateNodeAttributes(node.getId(), {
               config: {
                 model: node.getExtraData().model.toJson(),
               },
@@ -439,7 +441,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
-    const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
+    const currentLayoutModel = cloneDeep(this.state.model.toJson());
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
@@ -505,7 +507,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
-    const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
+    const borderOpenStatusCopy = cloneDeep(Store.getState().uiInformation.borderOpenStatus);
 
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
@@ -515,7 +517,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
 
-    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
+    this.state.model.doAction(Actions.selectTab(`${side}-border-tab-container`));
     this.onLayoutChange();
   }
 
@@ -575,9 +577,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   render() {
     const { model } = this.state;
     return (
-      <React.Fragment>
+      <Fragment>
         <div className="flex-layout-container">
-          <FlexLayout.Layout
+          <FlexLayoutComponent
             model={model}
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
@@ -592,7 +594,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
           <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
           <Statusbar />
         </Footer>
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

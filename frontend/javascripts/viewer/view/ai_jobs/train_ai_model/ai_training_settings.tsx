@@ -14,8 +14,8 @@ export const AiTrainingSettings: React.FC = () => {
     comments,
     setComments,
     selectedTask,
-    maxDistanceNm,
-    setMaxDistanceNm,
+    instanceDiameterNm,
+    setInstanceDiameterNm,
   } = useAiTrainingJobContext();
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
@@ -25,15 +25,15 @@ export const AiTrainingSettings: React.FC = () => {
     if ("comments" in changedValues) {
       setComments(changedValues.comments);
     }
-    if ("maxDistanceNm" in changedValues) {
-      setMaxDistanceNm(changedValues.maxDistanceNm);
+    if ("instanceDiameterNm" in changedValues) {
+      setInstanceDiameterNm(changedValues.instanceDiameterNm);
     }
   };
 
   const formFields = [
     { name: ["modelName"], value: modelName },
     { name: ["comments"], value: comments },
-    { name: ["maxDistanceNm"], value: maxDistanceNm },
+    { name: ["instanceDiameterNm"], value: instanceDiameterNm },
   ];
 
   return (
@@ -58,8 +58,8 @@ export const AiTrainingSettings: React.FC = () => {
             </Form.Item>
             {selectedTask?.jobType === APIJobCommand.TRAIN_INSTANCE_MODEL && (
               <Form.Item
-                name="maxDistanceNm"
-                label="Max Distance (nm)"
+                name="instanceDiameterNm"
+                label="Instance Diameter (nm)"
                 rules={[{ required: true, message: "Please enter a positive number" }]}
                 tooltip='The maximum cross-section length ("diameter") for each identified object in nm e.g. Nuclei: 1000nm, Vesicles: 80nm'
               >

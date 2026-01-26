@@ -1,14 +1,14 @@
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Button, Modal } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import * as React from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 
 export default function PresentModernControls() {
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
-  const [isModalVisible, setIsModalVisible] = React.useState(
+  const [isModalVisible, setIsModalVisible] = useState(
     activeUser?.novelUserExperienceInfos.shouldSeeModernControlsModal,
   );
 

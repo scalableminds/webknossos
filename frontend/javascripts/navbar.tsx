@@ -28,14 +28,13 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
-  getUsersOrganizations,
   logoutUser,
   sendAnalyticsEvent,
-  switchToOrganization,
   updateNovelUserExperienceInfos,
 } from "admin/rest_api";
 import type { MenuProps } from "antd";
@@ -46,9 +45,15 @@ import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import {
+  filterWithSearchQueryAND,
+  isUserAdmin,
+  isUserAdminOrManager,
+  isUserAdminOrTeamManager,
+} from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
+import { useDispatch } from "react-redux";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -58,7 +63,6 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -171,8 +175,8 @@ function getCollapsibleMenuTitle(
 }
 
 export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
-  const isAdmin = Utils.isUserAdmin(activeUser);
-  const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
+  const isAdmin = isUserAdmin(activeUser);
+  const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
 
   const adminstrationSubMenuItems = isAdminOrTeamManager
@@ -465,13 +469,14 @@ function NotificationIcon({
   activeUser: APIUser;
   navbarHeight: number;
 }) {
+  const dispatch = useDispatch();
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: new Date().getTime(),
     });
-    Store.dispatch(setActiveUserAction(newUserSync));
+    dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
@@ -566,7 +571,7 @@ function LoggedInAvatar({
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
-  const filteredOrganizations = Utils.filterWithSearchQueryAND(
+  const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
     ["name", "id"],
     organizationFilter,
@@ -631,7 +636,7 @@ function LoggedInAvatar({
               key: "account",
               label: <Link to="/account">Account Settings</Link>,
             },
-            activeOrganization && Utils.isUserAdmin(activeUser)
+            activeOrganization && isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
                   label: <Link to={"/organization/overview"}>Organization Settings</Link>,
@@ -761,6 +766,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
 }
 
 function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
@@ -783,7 +789,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const redirectUrl = await logoutUser();
-    Store.dispatch(logoutUserAction());
+    dispatch(logoutUserAction());
     // Hard navigation
     location.href = redirectUrl;
   };
@@ -805,7 +811,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
 
-  const isAdminOrManager = activeUser != null ? Utils.isUserAdminOrManager(activeUser) : false;
+  const isAdminOrManager = activeUser != null ? isUserAdminOrManager(activeUser) : false;
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
@@ -840,7 +846,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
 
     if (isAdminOrManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
-      if (Utils.isUserAdminOrTeamManager(activeUser)) {
+      if (isUserAdminOrTeamManager(activeUser)) {
         menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
       }
     } else {

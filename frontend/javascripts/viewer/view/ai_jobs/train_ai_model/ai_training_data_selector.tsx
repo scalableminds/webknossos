@@ -31,6 +31,7 @@ const AiTrainingDataSelector = ({
     magnification,
     userBoundingBoxes,
     dataset,
+    volumeTracingMags,
   } = selectedAnnotation;
   const annotationId = annotation.id;
 
@@ -44,10 +45,18 @@ const AiTrainingDataSelector = ({
 
   const availableMagnifications = useMemo(() => {
     if (imageDataLayer && groundTruthLayer) {
-      return getIntersectingMagList(annotation, dataset, groundTruthLayer, imageDataLayer) || [];
+      return (
+        getIntersectingMagList(
+          annotation,
+          dataset,
+          groundTruthLayer,
+          imageDataLayer,
+          volumeTracingMags,
+        ) || []
+      );
     }
     return [];
-  }, [imageDataLayer, groundTruthLayer, annotation, dataset]);
+  }, [imageDataLayer, groundTruthLayer, annotation, dataset, volumeTracingMags]);
 
   const boundingBoxCount = useMemo(() => userBoundingBoxes.length, [userBoundingBoxes]);
   const boundingBoxVolume = useMemo(

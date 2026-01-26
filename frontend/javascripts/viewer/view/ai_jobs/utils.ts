@@ -2,7 +2,8 @@ import type { Rule } from "antd/es/form";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
-import _ from "lodash";
+import groupBy from "lodash/groupBy";
+import toPairs from "lodash/toPairs";
 import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/api_types";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
@@ -143,7 +144,7 @@ export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   dataset: APIDataset;
   volumeTracings: VolumeTracing[];
   userBoundingBoxes: UserBoundingBox[];
-  volumeTracingMags: { mag: Vector3 }[][];
+  volumeTracingMags: Record<string, { mag: Vector3 }[]>;
 };
 
 export function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(
@@ -268,7 +269,7 @@ export function checkBoundingBoxesForErrorsAndWarnings(
 
   if (notMagAlignedBoundingBoxes.length > 0) {
     hasBBoxWarnings = true;
-    const warningsPerAnnotation = _.toPairs(_.groupBy(notMagAlignedBoundingBoxes, "annotationId"))
+    const warningsPerAnnotation = toPairs(groupBy(notMagAlignedBoundingBoxes, "annotationId"))
       .map(([annotationId, boxes]) => {
         let warning = `- Annotation ${annotationId}\n`;
         boxes.forEach(({ name, boundingBox, alignedBoundingBox, trainingMag }) => {
@@ -327,15 +328,27 @@ export const getIntersectingMagList = (
   dataset: APIDataset,
   groundTruthLayerName: string,
   imageDataLayerName: string,
+  volumeTracingMags?: Record<string, { mag: Vector3 }[]>,
 ) => {
   const colorLayers = getColorLayers(dataset);
   const dataLayerMags = getMagsForColorLayer(colorLayers, imageDataLayerName);
-  const segmentationLayer = getSegmentationLayerByHumanReadableName(
-    dataset,
-    annotation,
-    groundTruthLayerName,
-  );
-  const groundTruthLayerMags = getMagInfo(segmentationLayer.mags).getMagList();
+
+  let groundTruthLayerMags: Vector3[] | undefined;
+
+  if (volumeTracingMags) {
+    if (volumeTracingMags[groundTruthLayerName]) {
+      groundTruthLayerMags = volumeTracingMags[groundTruthLayerName].map((m) => m.mag);
+    }
+  }
+
+  if (!groundTruthLayerMags) {
+    const segmentationLayer = getSegmentationLayerByHumanReadableName(
+      dataset,
+      annotation,
+      groundTruthLayerName,
+    );
+    groundTruthLayerMags = getMagInfo(segmentationLayer.mags).getMagList();
+  }
 
   return groundTruthLayerMags.filter((groundTruthMag) =>
     dataLayerMags.find((mag) => V3.equals(mag, groundTruthMag)),

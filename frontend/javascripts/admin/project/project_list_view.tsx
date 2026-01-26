@@ -30,8 +30,14 @@ import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import {
+  compareBy,
+  filterWithSearchQueryAND,
+  localeCompareBy,
+  millisecondsToHours,
+} from "libs/utils";
+import partial from "lodash/partial";
+import uniqBy from "lodash/uniqBy";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -207,7 +213,7 @@ function ProjectListView() {
     },
   ];
 
-  const filteredProjects = Utils.filterWithSearchQueryAND(
+  const filteredProjects = filterWithSearchQueryAND(
     projects,
     ["name", "team", "priority", "owner", "pendingInstances", "tracingTime"],
 
@@ -258,14 +264,14 @@ function ProjectListView() {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy<APIProjectWithStatus>((project) => project.name)}
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.name)}
             width={250}
           />
           <Column
             title="Pending Task Instances"
             dataIndex="pendingInstances"
             key="pendingInstances"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
             filters={greaterThanZeroFilters}
             onFilter={(value, project: APIProjectWithStatus) => {
               if (value === "0") {
@@ -278,9 +284,9 @@ function ProjectListView() {
             title={<Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>}
             dataIndex="tracingTime"
             key="tracingTime"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
             render={(tracingTimeMs) =>
-              Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
+              millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
                 maximumFractionDigits: 1,
               })
             }
@@ -296,8 +302,8 @@ function ProjectListView() {
             title="Team"
             dataIndex="teamName"
             key="teamName"
-            sorter={Utils.localeCompareBy<APIProjectWithStatus>((project) => project.team)}
-            filters={_.uniqBy(
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.team)}
+            filters={uniqBy(
               filteredProjects.map((project) => ({
                 text: project.teamName,
                 value: project.team,
@@ -311,16 +317,14 @@ function ProjectListView() {
             title="Owner"
             dataIndex="owner"
             key="owner"
-            sorter={Utils.localeCompareBy<APIProjectWithStatus>(
-              (project) => project.owner.lastName,
-            )}
+            sorter={localeCompareBy<APIProjectWithStatus>((project) => project.owner.lastName)}
             render={(owner: APIUserBase) => (
               <>
                 <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
                 <div>{owner.email ? `(${owner.email})` : "-"}</div>
               </>
             )}
-            filters={_.uniqBy(
+            filters={uniqBy(
               filteredProjects.map((project) => ({
                 text: `${project.owner.firstName} ${project.owner.lastName}`,
                 value: project.owner.id,
@@ -334,7 +338,7 @@ function ProjectListView() {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.created)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.created)}
             render={(created) => <FormattedDate timestamp={created} />}
             defaultSortOrder="descend"
           />
@@ -342,7 +346,7 @@ function ProjectListView() {
             title="Priority"
             dataIndex="priority"
             key="priority"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.priority)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.priority)}
             render={(priority, project: APIProjectWithStatus) =>
               `${priority} ${project.paused ? "(paused)" : ""}`
             }
@@ -358,7 +362,7 @@ function ProjectListView() {
             title="Time Limit"
             dataIndex="expectedTime"
             key="expectedTime"
-            sorter={Utils.compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
+            sorter={compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
             render={(expectedTime) => `${expectedTime}m`}
           />
           <Column
@@ -384,7 +388,7 @@ function ProjectListView() {
                 {project.paused ? (
                   <div>
                     <a
-                      onClick={_.partial(pauseResumeProject, project, resumeProject)}
+                      onClick={partial(pauseResumeProject, project, resumeProject)}
                       title="Resume Project"
                     >
                       <PlayCircleOutlined className="icon-margin-right" />
@@ -395,7 +399,7 @@ function ProjectListView() {
                 ) : (
                   <div>
                     <a
-                      onClick={_.partial(pauseResumeProject, project, pauseProject)}
+                      onClick={partial(pauseResumeProject, project, pauseProject)}
                       title="Pause Tasks"
                     >
                       <PauseCircleOutlined className="icon-margin-right" />
@@ -410,7 +414,7 @@ function ProjectListView() {
                 </Link>
                 <br />
                 <a
-                  onClick={_.partial(increaseProjectTaskInstances, project)}
+                  onClick={partial(increaseProjectTaskInstances, project)}
                   title="Increase Task Instances"
                 >
                   <PlusSquareOutlined className="icon-margin-right" />
@@ -429,13 +433,13 @@ function ProjectListView() {
                   Download
                 </AsyncLink>
                 <br />
-                <a onClick={_.partial(showActiveUsersModal, project)}>
+                <a onClick={partial(showActiveUsersModal, project)}>
                   <TeamOutlined className="icon-margin-right" />
                   Show active users
                 </a>
                 <br />
                 {project.owner.email === activeUser.email ? (
-                  <a onClick={_.partial(deleteProject, project)}>
+                  <a onClick={partial(deleteProject, project)}>
                     <DeleteOutlined className="icon-margin-right" />
                     Delete
                   </a>

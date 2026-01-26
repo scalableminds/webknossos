@@ -32,8 +32,12 @@ import ErrorHandling from "libs/error_handling";
 import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { isUserAdminOrDatasetManager, isUserAdminOrManager, rgbToHex } from "libs/utils";
+import differenceWith from "lodash/differenceWith";
+import isEqual from "lodash/isEqual";
+import mapValues from "lodash/mapValues";
+import minBy from "lodash/minBy";
+import partial from "lodash/partial";
 import {
   type RecommendedConfiguration,
   layerViewConfigurationTooltips,
@@ -364,8 +368,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   constructor(props: DatasetSettingsProps) {
     super(props);
-    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
-      _.partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
+    this.onChangeUser = mapValues(this.props.userConfiguration, (__, propertyName) =>
+      partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
     );
   }
 
@@ -871,9 +875,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }
           min={0.01}
           max={10}
-          roundTo={3}
+          roundToDigit={3}
           value={layerConfiguration.gammaCorrectionValue}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
+          onChange={partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
           defaultValue={defaultSettings.gammaCorrectionValue}
         />
         <Row
@@ -887,8 +891,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </Col>
           <Col span={SETTING_MIDDLE_SPAN}>
             <ColorSetting
-              value={Utils.rgbToHex(layerConfiguration.color)}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+              value={rgbToHex(layerConfiguration.color)}
+              onChange={partial(this.props.onChangeLayer, layerName, "color")}
               style={{
                 marginLeft: 6,
               }}
@@ -940,7 +944,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         max={100}
         step={1}
         value={this.props.datasetConfiguration.segmentationPatternOpacity}
-        onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+        onChange={partial(this.props.onChange, "segmentationPatternOpacity")}
         defaultValue={defaultDatasetViewConfiguration.segmentationPatternOpacity}
       />
     );
@@ -1025,7 +1029,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               min={0}
               max={100}
               value={layerConfiguration.alpha}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+              onChange={partial(this.props.onChangeLayer, layerName, "alpha")}
               defaultValue={layerSpecificDefaults.alpha}
             />
             {isColorLayer
@@ -1138,14 +1142,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const volumeTracingMags = segmentationLayer.mags.map((magObj) => magObj.mag);
 
-    const sourceMag = _.minBy(volumeTracingMags, getMaxDim);
+    const sourceMag = minBy(volumeTracingMags, getMaxDim);
     if (sourceMag === undefined) {
       return [];
     }
 
     const possibleMags = volumeTargetMags.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
 
-    const magsToDownsample = _.differenceWith(possibleMags, volumeTracingMags, _.isEqual);
+    const magsToDownsample = differenceWith(possibleMags, volumeTracingMags, isEqual);
 
     return magsToDownsample;
   };
@@ -1262,7 +1266,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               label={`Node Radius (${unit})`}
               min={userSettings.nodeRadius.minimum}
               max={userSettings.nodeRadius.maximum}
-              roundTo={0}
+              roundToDigit={0}
               value={activeNodeRadius}
               onChange={onChangeRadius}
               disabled={userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
@@ -1293,7 +1297,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ) : (
               <LogSliderSetting
                 label={settings.clippingDistance + ` (${unit})`}
-                roundTo={3}
+                roundToDigit={3}
                 min={userSettings.clippingDistance.minimum}
                 max={userSettings.clippingDistance.maximum}
                 value={userConfiguration.clippingDistance}
@@ -1599,8 +1603,8 @@ const mapStateToProps = (state: WebknossosState) => ({
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
-    state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
-  isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
+    state.activeUser != null ? isUserAdminOrDatasetManager(state.activeUser) : false,
+  isAdminOrManager: state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
 });
 

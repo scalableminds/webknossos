@@ -2,7 +2,7 @@ import { getPublications } from "admin/rest_api";
 import { Flex, Input, List, Spin } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
-import * as Utils from "libs/utils";
+import { compareBy, filterWithSearchQueryAND } from "libs/utils";
 import type React from "react";
 import { memo, useEffect, useState } from "react";
 import type { APIPublication } from "types/api_types";
@@ -62,7 +62,7 @@ type Props = {
 };
 
 function PublicationView(props: Props) {
-  const filteredPublications = Utils.filterWithSearchQueryAND(
+  const filteredPublications = filterWithSearchQueryAND(
     props.publications,
     [
       (model) => model.description,
@@ -71,7 +71,7 @@ function PublicationView(props: Props) {
         model.datasets.flatMap((dataset) => [dataset.name, dataset.description, dataset.metadata]),
     ],
     props.searchQuery,
-  ).sort(Utils.compareBy<APIPublication>((publication) => publication.publicationDate, false));
+  ).sort(compareBy<APIPublication>((publication) => publication.publicationDate, false));
 
   return (
     <List

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import drop from "lodash/drop";
 import type { Dispatch } from "redux";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Action } from "viewer/model/actions/actions";
@@ -11,7 +11,7 @@ let lastActionName: string | null = null;
 let lastActionCount: number = 0;
 
 const actionBlacklist = [
-  "ADD_TO_LAYER",
+  "ADD_TO_CONTOUR_LIST",
   "MOVE_FLYCAM",
   "MOVE_FLYCAM_ABSOLUTE",
   "MOVE_FLYCAM_ORTHO",
@@ -49,7 +49,7 @@ export default function actionLoggerMiddleware<A extends Action>(): (
         lastActionName = action.type;
 
         const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
-        actionLog = _.drop(actionLog, overflowCount);
+        actionLog = drop(actionLog, overflowCount);
 
         if (WkDevFlags.logActions) {
           console.group(action.type);

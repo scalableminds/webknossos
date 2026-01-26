@@ -51,8 +51,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
-      creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
-        creditTransactionDAO.getCreditBalance(organization._id))
+      milliCreditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+        creditTransactionDAO.getMilliCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -67,7 +67,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
         "ownerName" -> ownerNameOpt,
-        "creditBalance" -> creditBalanceOpt.map(_.toString)
+        "milliCreditBalance" -> milliCreditBalanceOpt
       ) ++ adminOnlyInfo
   }
 
@@ -182,8 +182,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  // Currently disabled as in the credit system trail phase all organizations should be able to start paid jobs.
-  // See tracking issue: https://github.com/scalableminds/webknossos/issues/8458
-  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] = Fox.successful(())
+  def assertOrganizationHasPaidPlan(organization: Organization): Fox[Unit] =
+    for {
+      _ <- Fox.fromBool(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "job.creditTransaction.notPaidPlan"
+    } yield ()
 
 }

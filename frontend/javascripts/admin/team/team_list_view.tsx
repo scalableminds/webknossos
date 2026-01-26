@@ -7,11 +7,11 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
+import partial from "lodash/partial";
 import messages from "messages";
-import * as React from "react";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import EditTeamModalView from "./edit_team_modal_view";
 
@@ -179,11 +179,11 @@ function TeamListView() {
 
   function renderPlaceholder() {
     const teamMessage = (
-      <React.Fragment>
+      <Fragment>
         {"You can "}
         <a onClick={() => setIsTeamCreationModalVisible(true)}>add a team</a>
         {" to control access to specific datasets and manage which users can be assigned to tasks."}
-      </React.Fragment>
+      </Fragment>
     );
     return isLoading ? null : (
       <Alert title="Add more teams" description={teamMessage} type="info" showIcon />
@@ -219,7 +219,7 @@ function TeamListView() {
       <Spin spinning={isLoading} size="large">
         {teams.length <= 1 ? renderPlaceholder() : null}
         <Table
-          dataSource={Utils.filterWithSearchQueryAND(teams, ["name"], searchQuery)}
+          dataSource={filterWithSearchQueryAND(teams, ["name"], searchQuery)}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
@@ -236,7 +236,7 @@ function TeamListView() {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy<APITeam>((team) => team.name)}
+            sorter={localeCompareBy<APITeam>((team) => team.name)}
           />
           <Column
             title="Actions"
@@ -255,7 +255,7 @@ function TeamListView() {
                   </LinkButton>
                 </div>
                 <div>
-                  <LinkButton onClick={_.partial(deleteTeam, team)} icon={<DeleteOutlined />}>
+                  <LinkButton onClick={partial(deleteTeam, team)} icon={<DeleteOutlined />}>
                     Delete
                   </LinkButton>
                 </div>

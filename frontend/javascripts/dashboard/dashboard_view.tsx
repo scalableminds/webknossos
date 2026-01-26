@@ -1,9 +1,6 @@
+import { cachedGetPricingPlanStatus } from "admin/api/organization";
 import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
-import {
-  cachedGetPricingPlanStatus,
-  getUser,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
+import { getUser, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
@@ -13,7 +10,7 @@ import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import invert from "lodash/invert";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -233,7 +230,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     }
 
     const onTabChange = (activeTabKey: string) => {
-      const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
+      const tabKeyToURLMap = invert(urlTokenToTabKeyMap);
 
       const url = tabKeyToURLMap[activeTabKey];
 

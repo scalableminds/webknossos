@@ -36,7 +36,7 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
+import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -171,7 +171,7 @@ function DatasetView({
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
         onSelectFolder={onSelectFolder}
-        isUserAdminOrDatasetManager={Utils.isUserAdminOrDatasetManager(user)}
+        isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
@@ -219,10 +219,10 @@ function DatasetView({
     />
   );
 
-  const isUserAdminOrDatasetManager = Utils.isUserAdminOrDatasetManager(user);
+  const isUserAnAdminOrDatasetManager = isUserAdminOrDatasetManager(user);
   const isUserAdminOrDatasetManagerOrTeamManager =
-    isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
-  const search = isUserAdminOrDatasetManager ? (
+    isUserAnAdminOrDatasetManager || isUserTeamManager(user);
+  const search = isUserAnAdminOrDatasetManager ? (
     <Space.Compact>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
@@ -519,7 +519,7 @@ function renderPlaceholder(
       : null;
   }
 
-  const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+  const emptyListHintText = isUserAdminOrDatasetManager(user)
     ? "There are no datasets in this folder. Import one or move a dataset from another folder."
     : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
 

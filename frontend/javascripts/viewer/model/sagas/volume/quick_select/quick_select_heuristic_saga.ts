@@ -1,5 +1,7 @@
 import PriorityQueue from "js-priority-queue";
-import _ from "lodash";
+import intersectionBy from "lodash/intersectionBy";
+import isEqual from "lodash/isEqual";
+import memoize from "lodash/memoize";
 import moments from "ndarray-moments";
 import ops from "ndarray-ops";
 import {
@@ -60,7 +62,7 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "../helpers";
+import { createSectionLabeler, labelWithVoxelBuffer2D } from "../helpers";
 import { copyNdArray } from "../volume_interpolation_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
@@ -69,7 +71,7 @@ const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 // Used to determine the mean intensity.
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 
-const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
+const warnAboutMultipleColorLayers = memoize((layerName: string) => {
   Toast.info(
     `The quick select tool will use the data of layer ${layerName}. If you want to use another layer, please hide the other non-segmentation layers.`,
   );
@@ -131,7 +133,7 @@ export function* prepareQuickSelect(
     (state) => state.datasetConfiguration.nativelyRenderedLayerName,
   );
   if (
-    !_.isEqual(
+    !isEqual(
       getTransformsForLayer(dataset, colorLayer, nativelyRenderedLayerName),
       getTransformsForLayer(dataset, volumeLayer, nativelyRenderedLayerName),
     )
@@ -148,7 +150,7 @@ export function* prepareQuickSelect(
   const magInfo = getMagInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
-    _.intersectionBy(colorLayer.mags, volumeLayer.mags, (magObj) => magObj.mag.join("-")),
+    intersectionBy(colorLayer.mags, volumeLayer.mags, (magObj) => magObj.mag.join("-")),
   );
   const labeledZoomStep = magInfo.getClosestExistingIndex(
     requestedZoomStep,
@@ -512,10 +514,16 @@ export function* finalizeQuickSelectForSlice(
   skipFinishAnnotationStroke: boolean = false,
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-  const volumeLayer = yield* call(createVolumeLayer, volumeTracing, activeViewport, labeledMag, w);
+  const sectionLabeler = yield* call(
+    createSectionLabeler,
+    volumeTracing,
+    activeViewport,
+    labeledMag,
+    () => w,
+  );
   const sizeUVWInMag = mask.shape;
-  const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
-    V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
+  const voxelBuffer2D = sectionLabeler.createVoxelBuffer2D(
+    V2.floor(sectionLabeler.globalCoordToMag2DFloat(boundingBoxMag1.min)),
     sizeUVWInMag[0],
     sizeUVWInMag[1],
   );

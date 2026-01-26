@@ -3,8 +3,8 @@
 // replacing the actions with updateTree*Group*Visibility actions where
 // appropriate.
 // See compactToggleActions for the high-level logic of the compaction.
-import last from "lodash/last";
-import partition from "lodash/partition";
+import last from "lodash-es/last";
+import partition from "lodash-es/partition";
 import type {
   UpdateActionWithoutIsolationRequirement,
   UpdateSegmentVisibilityVolumeAction,

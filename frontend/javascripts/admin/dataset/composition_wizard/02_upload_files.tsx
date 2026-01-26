@@ -6,7 +6,7 @@ import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
-import zip from "lodash/zip";
+import zip from "lodash-es/zip";
 import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {

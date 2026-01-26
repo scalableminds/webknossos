@@ -1,6 +1,6 @@
 import { Dropdown, type MenuProps, Tag, Tree, type TreeProps } from "antd";
 import { stringToAntdColorPreset } from "libs/format_utils";
-import groupBy from "lodash/groupBy";
+import groupBy from "lodash-es/groupBy";
 import memoizeOne from "memoize-one";
 import React from "react";
 import AutoSizer from "react-virtualized-auto-sizer";

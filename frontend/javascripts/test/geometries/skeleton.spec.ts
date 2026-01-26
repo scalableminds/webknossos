@@ -1,7 +1,7 @@
 // Integration tests for skeleton.ts
 // Ensure singletons are set up
 import "test/helpers/apiHelpers";
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { describe, it, beforeAll, expect } from "vitest";
 import type { Vector3 } from "viewer/constants";

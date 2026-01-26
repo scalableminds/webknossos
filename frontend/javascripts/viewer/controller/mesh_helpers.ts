@@ -1,8 +1,8 @@
 import type { meshApi } from "admin/rest_api";
 import { V3 } from "libs/mjs";
-import sortBy from "lodash/sortBy";
-import sortedIndex from "lodash/sortedIndex";
-import sortedIndexOf from "lodash/sortedIndexOf";
+import sortBy from "lodash-es/sortBy";
+import sortedIndex from "lodash-es/sortedIndex";
+import sortedIndexOf from "lodash-es/sortedIndexOf";
 import type { BufferGeometry } from "three";
 import type { Vector3 } from "viewer/constants";
 

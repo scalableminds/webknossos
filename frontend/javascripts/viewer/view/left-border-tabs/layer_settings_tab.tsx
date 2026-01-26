@@ -33,11 +33,11 @@ import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrManager, rgbToHex } from "libs/utils";
-import differenceWith from "lodash/differenceWith";
-import isEqual from "lodash/isEqual";
-import mapValues from "lodash/mapValues";
-import minBy from "lodash/minBy";
-import partial from "lodash/partial";
+import differenceWith from "lodash-es/differenceWith";
+import isEqual from "lodash-es/isEqual";
+import mapValues from "lodash-es/mapValues";
+import minBy from "lodash-es/minBy";
+import partial from "lodash-es/partial";
 import {
   type RecommendedConfiguration,
   layerViewConfigurationTooltips,

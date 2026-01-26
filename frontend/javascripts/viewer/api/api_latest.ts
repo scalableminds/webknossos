@@ -14,9 +14,9 @@ import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
-import cloneDeep from "lodash/cloneDeep";
-import groupBy from "lodash/groupBy";
-import isNumber from "lodash/isNumber";
+import cloneDeep from "lodash-es/cloneDeep";
+import groupBy from "lodash-es/groupBy";
+import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
@@ -1251,7 +1251,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of the given tree and returns the length in nanometer and in voxels.
+   * Measures the length of the given tree and returns the length in dataset unit and in voxels.
    */
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
@@ -1279,7 +1279,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of all trees and returns the length in nanometer and in voxels.
+   * Measures the length of all trees and returns the length in dataset unit and in voxels.
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);

@@ -11,10 +11,10 @@ import { Form, type FormInstance } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import cloneDeep from "lodash/cloneDeep";
-import extend from "lodash/extend";
-import isEqual from "lodash/isEqual";
-import size from "lodash/size";
+import cloneDeep from "lodash-es/cloneDeep";
+import extend from "lodash-es/extend";
+import isEqual from "lodash-es/isEqual";
+import size from "lodash-es/size";
 import messages from "messages";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -98,7 +98,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
   const fetchData = useCallback(async (): Promise<string | undefined> => {
     try {
       setIsLoading(true);
-      let fetchedDataset = await getDataset(datasetId);
+      let fetchedDataset = await getDataset(datasetId, null, undefined, false);
       const dataSource = fetchedDataset.dataSource;
 
       setSavedDataSourceOnServer(dataSource);

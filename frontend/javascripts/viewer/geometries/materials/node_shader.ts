@@ -1,8 +1,8 @@
 import { M4x4 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
-import each from "lodash/each";
-import range from "lodash/range";
-import template from "lodash/template";
+import each from "lodash-es/each";
+import range from "lodash-es/range";
+import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "viewer/constants";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";

@@ -8,8 +8,8 @@ import {
   TagsOutlined,
 } from "@ant-design/icons";
 import { type MenuProps, notification } from "antd";
-import cloneDeep from "lodash/cloneDeep";
-import difference from "lodash/difference";
+import cloneDeep from "lodash-es/cloneDeep";
+import difference from "lodash-es/difference";
 import type React from "react";
 import { batchActions } from "redux-batched-actions";
 import {

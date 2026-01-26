@@ -1,4 +1,4 @@
-import min from "lodash/min";
+import min from "lodash-es/min";
 import messages from "messages";
 import type { Vector2 } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";

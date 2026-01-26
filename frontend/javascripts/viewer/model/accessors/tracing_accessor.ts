@@ -1,4 +1,4 @@
-import compact from "lodash/compact";
+import compact from "lodash-es/compact";
 import type { TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
 import type { Vector3 } from "viewer/constants";

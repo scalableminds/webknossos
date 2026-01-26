@@ -1,4 +1,4 @@
-import keyBy from "lodash/keyBy";
+import keyBy from "lodash-es/keyBy";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type { APIUser, APIUserBase } from "types/api_types";

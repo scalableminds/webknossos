@@ -35,16 +35,17 @@ import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
-import compact from "lodash/compact";
-import intersection from "lodash/intersection";
-import keyBy from "lodash/keyBy";
-import mapValues from "lodash/mapValues";
-import partial from "lodash/partial";
-import uniqBy from "lodash/uniqBy";
-import without from "lodash/without";
+import compact from "lodash-es/compact";
+import intersection from "lodash-es/intersection";
+import keyBy from "lodash-es/keyBy";
+import mapValues from "lodash-es/mapValues";
+import partial from "lodash-es/partial";
+import uniqBy from "lodash-es/uniqBy";
+import without from "lodash-es/without";
 import messages from "messages";
 import type React from "react";
 import { PureComponent, useContext } from "react";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import {
   type APIAnnotationInfo,
@@ -55,7 +56,6 @@ import {
 import { AnnotationContentTypes } from "viewer/constants";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
 import CategorizationLabel, {
   CategorizationSearch,
 } from "viewer/view/components/categorization_label";
@@ -834,6 +834,7 @@ function TopBar({
   shouldShowArchivedAnnotations: boolean;
   archiveAll: () => void;
 }) {
+  const dispatch = useDispatch();
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
 
@@ -854,7 +855,7 @@ function TopBar({
     <Space>
       <Button
         icon={<UploadOutlined />}
-        onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
+        onClick={() => dispatch(setDropzoneModalVisibilityAction(true))}
       >
         Upload Annotation(s)
       </Button>

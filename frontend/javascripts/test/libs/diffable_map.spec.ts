@@ -1,4 +1,4 @@
-import range from "lodash/range";
+import range from "lodash-es/range";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import { describe, it, expect } from "vitest";
 

@@ -25,7 +25,7 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import Toast, { guardedWithErrorToast } from "libs/toast";
 import { isUserAdminOrDatasetManager } from "libs/utils";
-import uniqBy from "lodash/uniqBy";
+import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
 import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";

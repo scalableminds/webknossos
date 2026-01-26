@@ -1,4 +1,4 @@
-import range from "lodash/range";
+import range from "lodash-es/range";
 import { getBitDepth, getByteCountFromLayer } from "viewer/model/accessors/dataset_accessor";
 import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";

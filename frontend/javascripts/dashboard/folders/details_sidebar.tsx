@@ -16,8 +16,8 @@ import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import keyBy from "lodash/keyBy";
-import uniq from "lodash/uniq";
+import keyBy from "lodash-es/keyBy";
+import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import {

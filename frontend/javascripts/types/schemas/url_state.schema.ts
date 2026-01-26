@@ -1,4 +1,4 @@
-import pick from "lodash/pick";
+import pick from "lodash-es/pick";
 import { layerViewConfiguration } from "./dataset_view_configuration.schema";
 
 export default {

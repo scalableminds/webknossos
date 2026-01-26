@@ -4,13 +4,14 @@ import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
-import capitalize from "lodash/capitalize";
-import compact from "lodash/compact";
-import noop from "lodash/noop";
-import sortBy from "lodash/sortBy";
+import capitalize from "lodash-es/capitalize";
+import compact from "lodash-es/compact";
+import noop from "lodash-es/noop";
+import sortBy from "lodash-es/sortBy";
 import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -21,7 +22,6 @@ import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { Store } from "viewer/singletons";
 import type { UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
@@ -93,6 +93,8 @@ const shortCutDictForTools: Record<string, string> = {
 };
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
+  const dispatch = useDispatch();
+
   const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
@@ -130,7 +132,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         // removing the watermark is a paid feature
         commands.push({
           name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
-          command: () => Store.dispatch(updateUserSettingAction(key, !userConfig[key])),
+          command: () => dispatch(updateUserSettingAction(key, !userConfig[key])),
           color: commandEntryColor,
         });
       }
@@ -305,8 +307,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
           if (theme === "auto") theme = getSystemColorTheme();
 
           const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
-          Store.dispatch(setThemeAction(theme));
-          Store.dispatch(setActiveUserAction(newUser));
+          dispatch(setThemeAction(theme));
+          dispatch(setActiveUserAction(newUser));
         },
         color: commandEntryColor,
       });
@@ -320,7 +322,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     const commands = ViewModeValues.map((mode) => ({
       name: `Switch to ${mode} mode`,
       command: () => {
-        Store.dispatch(setViewModeAction(mode));
+        dispatch(setViewModeAction(mode));
       },
       color: commandEntryColor,
     }));
@@ -342,13 +344,13 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     availableTools.forEach((tool) => {
       commands.push({
         name: `Switch to ${tool.readableName}`,
-        command: () => Store.dispatch(setToolAction(tool)),
+        command: () => dispatch(setToolAction(tool)),
         shortcut: shortCutDictForTools[tool.id] || "",
         color: commandEntryColor,
       });
     });
     return commands;
-  }, [isInAnnotationView, isViewMode, allowUpdate]);
+  }, [isInAnnotationView, isViewMode, allowUpdate, dispatch]);
 
   const tracingMenuItems = useTracingViewMenuItems(props, null);
 

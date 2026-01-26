@@ -1,4 +1,4 @@
-import range from "lodash/range";
+import range from "lodash-es/range";
 import { createBucketResponseFunction, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import Store from "viewer/store";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";

@@ -1,5 +1,5 @@
 import deepFreezeLib from "deep-freeze";
-import identity from "lodash/identity";
+import identity from "lodash-es/identity";
 
 // Do not use the deep-freeze library in production
 // process.env.NODE_ENV is being substituted by webpack

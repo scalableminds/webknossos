@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJsonHelper}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -50,8 +51,14 @@ case class DatasetUpdateParameters(
     tags: Option[List[String]],
     metadata: Option[JsArray],
     folderId: Option[ObjectId],
-    dataSource: Option[UsableDataSource]
+    dataSource: Option[UsableDataSource],
+    layerRenamings: Option[Seq[LayerRenaming]]
 )
+
+case class LayerRenaming(oldName: String, newName: String)
+object LayerRenaming {
+  implicit val jsonFormat: OFormat[LayerRenaming] = Json.format[LayerRenaming]
+}
 
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
@@ -80,6 +87,20 @@ case class ReserveDatasetUploadToPathsForPreliminaryRequest(
 object ReserveDatasetUploadToPathsForPreliminaryRequest {
   implicit val jsonFormat: OFormat[ReserveDatasetUploadToPathsForPreliminaryRequest] =
     Json.format[ReserveDatasetUploadToPathsForPreliminaryRequest]
+}
+
+case class ReserveMagUploadToPathRequest(
+    layerName: String,
+    mag: Vec3Int,
+    axisOrder: Option[AxisOrder],
+    channelIndex: Option[Int],
+    pathPrefix: Option[UPath],
+    overwritePending: Boolean
+)
+
+object ReserveMagUploadToPathRequest {
+  implicit val jsonFormat: OFormat[ReserveMagUploadToPathRequest] =
+    Json.format[ReserveMagUploadToPathRequest]
 }
 
 case class ReserveAttachmentUploadToPathRequest(
@@ -142,6 +163,7 @@ class DatasetController @Inject()(userService: UserService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   usedStorageService: UsedStorageService,
                                   conf: WkConf,
+                                  datasetMagsDAO: DatasetMagsDAO,
                                   slackNotificationService: SlackNotificationService,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
@@ -214,7 +236,8 @@ class DatasetController @Inject()(userService: UserService,
           dataSource,
           folderIdOpt,
           request.identity,
-          isVirtual = true
+          isVirtual = true,
+          creationType = DatasetCreationType.ExploreAndAdd
         ) ?~> "dataset.explore.autoAdd.failed"
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -236,7 +259,8 @@ class DatasetController @Inject()(userService: UserService,
           request.body.dataSource,
           request.body.folderId,
           user,
-          isVirtual = true
+          isVirtual = true,
+          creationType = DatasetCreationType.ExploreAndAdd
         )
         _ = datasetService.trackNewDataset(dataset,
                                            user,
@@ -379,6 +403,7 @@ class DatasetController @Inject()(userService: UserService,
             isVirtual = true,
             metadata = dataset.metadata,
             description = dataset.description,
+            creationType = DatasetCreationType.DuplicateToOrga
           )
         } yield Ok(Json.toJson(newDatasetId))
       }
@@ -432,8 +457,11 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
-        _ <- Fox.runOptional(request.body.dataSource)(dataSourceUpdates =>
-          datasetService.updateDataSourceFromUserChanges(dataset, dataSourceUpdates))
+        _ <- Fox.runOptional(request.body.dataSource)(
+          dataSourceUpdates =>
+            datasetService.updateDataSourceFromUserChanges(dataset,
+                                                           dataSourceUpdates,
+                                                           request.body.layerRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
@@ -579,9 +607,9 @@ class DatasetController @Inject()(userService: UserService,
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
           _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
-          // The maximum depth of 16 also needs to be adapted in the front-end
+          // The maximum depth of 50 also needs to be adapted in the front-end
           // (at the time of writing, in MAX_DEPTH_FOR_SAM in quick_select_settings.tsx).
-          _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.x <= 16) ?~> s"Target-mag selected bbox depth must be at most 16"
+          _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.x <= 50) ?~> s"Target-mag selected bbox depth must be at most 50"
           _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
           _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.BOUNDING_BOX)(
             Fox.fromBool(request.body.selectionTopLeftX.isDefined &&
@@ -645,6 +673,33 @@ class DatasetController @Inject()(userService: UserService,
       for {
         (_, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
+    }
+
+  def reserveMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
+    sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveMagUploadToPath.notVirtual"
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        magPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
+      } yield Ok(Json.toJson(magPath))
+    }
+
+  def finishMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
+    sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName, request.body.mag)
+        dataStoreClient <- datasetService.clientFor(dataset)
+        _ <- Fox.runIf(!dataset.isVirtual) {
+          for {
+            updatedDataSource <- datasetService.usableDataSourceFor(dataset)
+            _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
+          } yield ()
+        }
+        _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+      } yield Ok
     }
 
   def reserveAttachmentUploadToPath(datasetId: ObjectId): Action[ReserveAttachmentUploadToPathRequest] =

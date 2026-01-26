@@ -1,5 +1,5 @@
 import jsonschema from "jsonschema";
-import cloneDeepWith from "lodash/cloneDeepWith";
+import cloneDeepWith from "lodash-es/cloneDeepWith";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
 import DatasourceSchema from "types/schemas/datasource.schema";
 import UrlStateSchema from "types/schemas/url_state.schema";

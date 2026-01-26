@@ -8,13 +8,13 @@ import {
   isWindows,
   map3,
 } from "libs/utils";
-import extend from "lodash/extend";
-import flattenDeep from "lodash/flattenDeep";
-import isEqual from "lodash/isEqual";
-import keyBy from "lodash/keyBy";
-import mapValues from "lodash/mapValues";
-import partition from "lodash/partition";
-import throttle from "lodash/throttle";
+import extend from "lodash-es/extend";
+import flattenDeep from "lodash-es/flattenDeep";
+import isEqual from "lodash-es/isEqual";
+import keyBy from "lodash-es/keyBy";
+import mapValues from "lodash-es/mapValues";
+import partition from "lodash-es/partition";
+import throttle from "lodash-es/throttle";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/globals";
 import { WkDevFlags } from "viewer/api/wk_dev";

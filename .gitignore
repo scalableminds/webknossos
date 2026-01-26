@@ -53,6 +53,7 @@ public/test-bundle
 public/assets
 public/images
 public/wasm
+public/index.html
 
 src/main/scala/rebel.xml
 target/

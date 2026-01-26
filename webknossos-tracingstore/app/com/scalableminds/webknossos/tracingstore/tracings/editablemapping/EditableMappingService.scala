@@ -210,6 +210,7 @@ class EditableMappingService @Inject()(
     val requests = dataRequests.map(
       r =>
         DataServiceDataRequest(None,
+                               None,
                                editableMappingLayer,
                                r.cuboid(editableMappingLayer),
                                r.settings.copy(appliedAgglomerate = None)))
@@ -221,6 +222,7 @@ class EditableMappingService @Inject()(
     val requests = dataRequests.map(
       r =>
         DataServiceDataRequest(None,
+                               None,
                                editableMappingLayer,
                                r.cuboid(editableMappingLayer),
                                r.settings.copy(appliedAgglomerate = None)))
@@ -398,6 +400,7 @@ class EditableMappingService @Inject()(
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(
       implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
     val adHocMeshRequest = AdHocMeshRequest(
+      datasetId = None,
       dataSourceId = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid,

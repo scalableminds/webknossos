@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
+import analyzer from "vite-bundle-analyzer";
 
 import path from "node:path";
 
@@ -24,6 +25,7 @@ export const viteConfig = {
     },
   },
   plugins: [
+    analyzer(),
     react({ skipFastRefresh: true, fastRefresh: false }),
     tsconfigPaths(),
     wasm(),
@@ -45,9 +47,9 @@ export const viteConfig = {
           if (id.includes("node_modules/html2canvas")) {
             return "html2canvas";
           }
-          if (id.includes("node_modules")) {
-            return "vendor";
-          }
+          // if (id.includes("node_modules")) {
+          //   return "vendor";
+          // }
         },
       },
     },

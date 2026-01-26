@@ -1,6 +1,6 @@
 import type React from "react";
-import { type Key, type RefObject, useCallback, useEffect, useRef, useState } from "react";
-import { type DropTargetMonitor, useDrop } from "react-dnd";
+import { type Key, useCallback, useEffect, useRef, useState } from "react";
+import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
   type DatasetCollectionContextValue,
@@ -303,7 +303,7 @@ export function useDatasetDrop(
     canDrop: boolean;
     isOver: boolean;
   },
-  RefObject<HTMLDivElement | null>,
+  ConnectDropTarget,
 ] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
@@ -376,10 +376,8 @@ export function useDatasetDrop(
       isOver: monitor.isOver(),
     }),
   });
-  // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
-  const dropRef = useRef<HTMLDivElement>(null);
-  drop(dropRef);
-  return [collectedProps, dropRef];
+
+  return [collectedProps, drop];
 }
 
 function FolderItemAsDropTarget(props: {
@@ -389,7 +387,11 @@ function FolderItemAsDropTarget(props: {
   isEditable: boolean;
 }) {
   const { folderId, className, isEditable, ...restProps } = props;
-  const [collectedProps, dropRef] = useDatasetDrop(folderId, isEditable);
+  const [collectedProps, drop] = useDatasetDrop(folderId, isEditable);
+
+  // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
+  const dropRef = useRef<HTMLDivElement>(null);
+  drop(dropRef);
 
   const { canDrop, isOver } = collectedProps;
   return (

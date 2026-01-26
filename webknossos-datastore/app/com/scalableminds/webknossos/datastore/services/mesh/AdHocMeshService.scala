@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
@@ -27,7 +28,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
-case class AdHocMeshRequest(dataSourceId: Option[DataSourceId],
+case class AdHocMeshRequest(datasetId: Option[ObjectId],
+                            dataSourceId: Option[DataSourceId],
                             dataLayer: SegmentationLayer,
                             cuboid: Cuboid,
                             segmentId: Long,
@@ -122,6 +124,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
             case Some("HDF5") =>
               binaryDataService.agglomerateServiceOpt.map { agglomerateService =>
                 val dataRequest = DataServiceDataRequest(
+                  request.datasetId,
                   request.dataSourceId,
                   request.dataLayer,
                   request.cuboid,
@@ -181,6 +184,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     val cuboid = request.cuboid
 
     val dataRequest = DataServiceDataRequest(
+      request.datasetId,
       request.dataSourceId,
       request.dataLayer,
       cuboid,

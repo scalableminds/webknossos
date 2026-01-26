@@ -1,4 +1,15 @@
-import { Button, Checkbox, Col, Collapse, type CollapseProps, Form, Input, Row, Table } from "antd";
+import {
+  Button,
+  Checkbox,
+  Col,
+  Collapse,
+  type CollapseProps,
+  Form,
+  Input,
+  Row,
+  Space,
+  Table,
+} from "antd";
 import type { FormInstance } from "antd/lib/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
@@ -164,15 +175,17 @@ export default function RecommendedConfigurationView({
             />
           </FormItem>
         </div>
-        <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
-          Remove Orthogonal-only Settings
-        </Button>
-        <Button className="button-margin" onClick={() => removeSettings(form, "flight")}>
-          Remove Flight/Oblique-only Settings
-        </Button>
-        <Button className="button-margin" onClick={() => removeSettings(form, "volume")}>
-          Remove Volume-only Settings
-        </Button>
+        <Space wrap>
+          <Button onClick={() => removeSettings(form, "orthogonal")}>
+            Remove Orthogonal-only Settings
+          </Button>
+          <Button onClick={() => removeSettings(form, "flight")}>
+            Remove Flight/Oblique-only Settings
+          </Button>
+          <Button onClick={() => removeSettings(form, "volume")}>
+            Remove Volume-only Settings
+          </Button>
+        </Space>
       </Col>
       <Col span={12}>
         Valid settings and their default values: <br />

@@ -151,7 +151,6 @@ function DatasetPositionView() {
           <Vector3Input
             value={position}
             onChange={handleChangePosition}
-            autoSize
             style={positionInputStyle}
             allowDecimals
           />

@@ -40,7 +40,7 @@ function createDistinctBucketAdder(bucketsWithPriorities: Array<[Vector4, number
 }
 
 export default function determineBucketsForFlight(
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   centerPosition: Vector3,
   sphericalCapRadius: number,
   enqueueFunction: EnqueueFunction,
@@ -53,7 +53,7 @@ export default function determineBucketsForFlight(
   const halfWidth = width / 2;
   const cameraVertex: Vector3 = [0, 0, -sphericalCapRadius];
   const fallbackZoomStep = logZoomStep + 1;
-  const isFallbackAvailable = fallbackZoomStep < mags.length;
+  const isFallbackAvailable = fallbackZoomStep < denseMags.length;
 
   const transformToSphereCap = (_vec: Vector3) => {
     const vec = V3.sub(_vec, cameraVertex);
@@ -80,7 +80,7 @@ export default function determineBucketsForFlight(
       const transformedVec = transformAndApplyMatrix([x, y, z]);
       const bucketPos = globalPositionToBucketPositionFloat(
         transformedVec as Vector3,
-        mags,
+        denseMags,
         logZoomStep,
       );
 
@@ -118,7 +118,7 @@ export default function determineBucketsForFlight(
     // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
     // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
     // potential other coordinates.
-    globalPositionToBucketPosition(position, mags, logZoomStep, null),
+    globalPositionToBucketPosition(position, denseMags, logZoomStep, null),
   );
 
   const traverseFallbackBBox = (boundingBoxBuckets: {
@@ -130,12 +130,12 @@ export default function determineBucketsForFlight(
     // use all fallback buckets in bbox
     const min = zoomedAddressToAnotherZoomStep(
       [...boundingBoxBuckets.cornerMin, logZoomStep],
-      mags,
+      denseMags,
       fallbackZoomStep,
     );
     const max = zoomedAddressToAnotherZoomStep(
       [...boundingBoxBuckets.cornerMax, logZoomStep],
-      mags,
+      denseMags,
       fallbackZoomStep,
     );
 

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -90,7 +91,8 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
-  def getSegmentVolume(dataSourceId: DataSourceId,
+  def getSegmentVolume(datasetId: ObjectId,
+                       dataSourceId: DataSourceId,
                        dataLayer: DataLayer,
                        segmentIndexFileKey: SegmentIndexFileKey,
                        agglomerateFileKeyOpt: Option[AgglomerateFileKey],
@@ -104,11 +106,12 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
           mag,
           None, // see #7556
           getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
-          getDataForBucketPositions(dataSourceId, dataLayer, agglomerateFileKeyOpt)
+          getDataForBucketPositions(datasetId, dataSourceId, dataLayer, agglomerateFileKeyOpt)
       )
     )
 
-  def getSegmentBoundingBox(dataSourceId: DataSourceId,
+  def getSegmentBoundingBox(datasetId: ObjectId,
+                            dataSourceId: DataSourceId,
                             dataLayer: DataLayer,
                             segmentIndexFileKey: SegmentIndexFileKey,
                             agglomerateFileKeyOpt: Option[AgglomerateFileKey],
@@ -122,11 +125,12 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
           mag,
           None, // see #7556
           getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
-          getDataForBucketPositions(dataSourceId, dataLayer, agglomerateFileKeyOpt)
+          getDataForBucketPositions(datasetId, dataSourceId, dataLayer, agglomerateFileKeyOpt)
       )
     )
 
-  private def getDataForBucketPositions(dataSourceId: DataSourceId,
+  private def getDataForBucketPositions(datasetId: ObjectId,
+                                        dataSourceId: DataSourceId,
                                         dataLayer: DataLayer,
                                         agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
       bucketPositionsInRequestedMag: Seq[Vec3Int],
@@ -141,6 +145,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
     val bucketRequests = mag1BucketPositions.map(
       mag1BucketPosition =>
         DataServiceDataRequest(
+          datasetId = Some(datasetId),
           dataSourceId = Some(dataSourceId),
           dataLayer = dataLayer,
           cuboid = Cuboid(

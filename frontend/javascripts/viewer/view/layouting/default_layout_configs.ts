@@ -157,6 +157,7 @@ function buildBorder(
     id: `${side}-border`,
     barSize: borderBarSize,
     size: width,
+    enableAutoHide: true,
     children: [
       {
         type: "tab",

@@ -1,5 +1,5 @@
 import { sendAnalyticsEvent } from "admin/rest_api";
-import { Layout } from "antd";
+import { ConfigProvider, Layout } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
@@ -12,6 +12,7 @@ import type React from "react";
 import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
+import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
@@ -589,11 +590,13 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
             classNameMapper={this.classNameMapper}
           />
         </div>
-        <Footer className="statusbar-footer">
-          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
-          <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
-          <Statusbar />
-        </Footer>
+        <ConfigProvider theme={getAntdTheme("dark")}>
+          <Footer className="statusbar-footer">
+            <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
+            <Statusbar />
+            <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
+          </Footer>
+        </ConfigProvider>
       </Fragment>
     );
   }

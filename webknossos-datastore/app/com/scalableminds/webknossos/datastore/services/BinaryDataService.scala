@@ -84,6 +84,7 @@ class BinaryDataService(val dataBaseDir: Path,
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
           dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
+          firstRequest.datasetId,
           dataSourceId,
           s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
           bucketProvider.loadMultiple(readInstructions)
@@ -106,7 +107,8 @@ class BinaryDataService(val dataBaseDir: Path,
                                  conversionFunc: Array[Byte] => Fox[Array[Byte]],
                                  request: DataServiceDataRequest): Fox[Array[Byte]] =
     if (isNecessary) {
-      datasetErrorLoggingService.withErrorLogging(request.dataSourceIdOrVolumeDummy,
+      datasetErrorLoggingService.withErrorLogging(request.datasetId,
+                                                  request.dataSourceIdOrVolumeDummy,
                                                   "converting bucket data",
                                                   conversionFunc(inputArray))
     } else Fox.successful(inputArray)
@@ -197,8 +199,9 @@ class BinaryDataService(val dataBaseDir: Path,
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(dataVaultServiceOpt, dataSourceId, sharedChunkContentsCache))
       datasetErrorLoggingService.withErrorLogging(
+        request.datasetId,
         dataSourceId,
-        s"loading bucket for ${request.dataSourceId} layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
+        s"loading bucket for ${request.datasetId} (${request.dataSourceId}) layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
         bucketProvider.load(readInstruction)
       )
     } else Fox.empty

@@ -14,7 +14,7 @@ import {
 export default function traverse(
   startPosition: Vector3,
   endPosition: Vector3,
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   zoomStep: number,
 ): Vector3[] {
   // The equation of the ray is →u + t→ v for t ≥ 0. The new traversal algorithm breaks down the ray into intervals of t,
@@ -22,11 +22,11 @@ export default function traverse(
   const u = startPosition;
   const v = V3.sub(endPosition, startPosition);
   // The initialization phase begins by identifying the voxel in which the ray origin, → u, is found.
-  const uBucket = globalPositionToBucketPosition(startPosition, mags, zoomStep, null);
-  const lastBucket = globalPositionToBucketPosition(endPosition, mags, zoomStep, null);
+  const uBucket = globalPositionToBucketPosition(startPosition, denseMags, zoomStep, null);
+  const lastBucket = globalPositionToBucketPosition(endPosition, denseMags, zoomStep, null);
   // The integer variables X and Y are initialized to the starting voxel coordinates.
   let [X, Y, Z] = uBucket;
-  const voxelSize = getBucketExtent(mags[zoomStep]);
+  const voxelSize = getBucketExtent(denseMags[zoomStep]);
   // In addition, the variables stepX and stepY are initialized to either 1 or -1 indicating whether X and Y are
   // incremented or decremented as the ray crosses voxel boundaries (this is determined by the sign of the x and y components of → v).
   const [stepX, stepY, stepZ] = v.map((el) => Math.sign(el));

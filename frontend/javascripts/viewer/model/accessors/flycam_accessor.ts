@@ -57,13 +57,16 @@ export const ZOOM_STEP_INTERVAL = 1.1;
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  mags: Array<Vector3>,
-  logZoomStep: number,
+  denseMags: Array<Vector3>,
+  currentMagIndex: number,
   zoomFactor: number,
   viewportRects: OrthoViewRects,
   unzoomedMatrix: Matrix4x4,
   abortLimit: number,
 ) {
+  const mag = denseMags[currentMagIndex];
+  const logZoomStep = Math.log2(Math.max(...mag));
+
   let counter = 0;
 
   const addresses = [];
@@ -81,7 +84,7 @@ function calculateTotalBucketCountForZoomLevel(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      mags,
+      denseMags,
       position,
       enqueueFunction,
       matrix,
@@ -91,7 +94,7 @@ function calculateTotalBucketCountForZoomLevel(
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
-      mags,
+      denseMags,
       position,
       sphericalCapRadius,
       enqueueFunction,
@@ -103,7 +106,7 @@ function calculateTotalBucketCountForZoomLevel(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      mags,
+      denseMags,
       position,
       enqueueFunction,
       matrix,
@@ -378,11 +381,18 @@ export const isRotated = memoizeOne(_isRotated);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
 function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: string]: number } {
+  /*
+   * For each layer, this function returns the index of the active mag.
+   * The index equals log2(max(activeMag)).
+   * For selecting the active mag, the finest mag is chosen which can still be rendered
+   * given the current zoomStep.
+   */
   const magIndices: { [layerName: string]: number } = {};
 
   for (const layer of getDataLayers(state.dataset)) {
     const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
     const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
+    const magInfo = getMagInfo(getLayerByName(state.dataset, layer.name).mags);
 
     // Linearly search for the mag index, for which the zoomFactor
     // is acceptable.
@@ -393,7 +403,9 @@ function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: st
     if (zoomStep === -1) {
       magIndices[layer.name] = maxLogZoomStep;
     } else {
-      magIndices[layer.name] = Math.min(zoomStep, maxLogZoomStep);
+      const closestExistingZoomStep =
+        magInfo.getIndexOrClosestHigherIndex(zoomStep) ?? maxLogZoomStep;
+      magIndices[layer.name] = Math.min(closestExistingZoomStep, maxLogZoomStep);
     }
   }
 

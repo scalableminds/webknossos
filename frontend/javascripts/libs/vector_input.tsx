@@ -15,7 +15,6 @@ type VectorInputProps<T> = Omit<InputProps, "value" | "onChange" | "defaultValue
   changeOnlyOnBlur?: boolean;
   allowDecimals?: boolean;
   disableAutoSize?: boolean;
-  placeHolder?: string;
 };
 
 function vectorToText<T extends number[]>(value: T | string): string {
@@ -52,16 +51,15 @@ function useVectorInput<T extends number[]>(
 
   const sanitizeAndPad = useCallback(
     (inputText: string): T => {
-      const cleaned = inputText.replace(allowDecimals ? /[^0-9,.\-]/g : /[^0-9,\-]/g, "");
-      const parsed = cleaned
-        .split(",")
-        .map((el) => Number.parseFloat(el) || 0)
+      const parsed = stringToNumberArray(inputText);
+      const elements = parsed
+        .map((el) => (allowDecimals ? el : Math.trunc(el)))
         .slice(0, defaultValue.length);
 
-      while (parsed.length < defaultValue.length) {
-        parsed.push(0);
+      while (elements.length < defaultValue.length) {
+        elements.push(0);
       }
-      return parsed as T;
+      return elements as T;
     },
     [allowDecimals, defaultValue.length],
   );
@@ -71,9 +69,14 @@ function useVectorInput<T extends number[]>(
       const newText = evt.target.value;
       setText(newText);
 
+      // only numbers, commas, hyphens and whitespace is allowed
+      const isValidInput = allowDecimals
+        ? /^[\d\s,.-]*$/.test(newText)
+        : /^[\d\s,-]*$/.test(newText);
+
       const parsed = stringToNumberArray(newText);
       // Check if we have the right number of elements
-      const formatValid = parsed.length === defaultValue.length;
+      const formatValid = isValidInput && parsed.length === defaultValue.length;
 
       setIsValid(formatValid);
 
@@ -81,7 +84,7 @@ function useVectorInput<T extends number[]>(
         onChange(parsed as T);
       }
     },
-    [defaultValue.length, changeOnlyOnBlur, onChange],
+    [defaultValue.length, changeOnlyOnBlur, onChange, allowDecimals],
   );
 
   const handleFocus = useCallback(() => {

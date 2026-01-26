@@ -904,29 +904,59 @@ class SegmentsView extends React.Component<Props, State> {
       updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", magIndex),
     );
 
-  getAdHocMeshSettings = () => {
+  getMeshSettings = () => {
     const { preferredQualityForMeshAdHocComputation, magInfoOfVisibleSegmentationLayer: magInfo } =
       this.props;
     return (
       <div>
-        <FastTooltip title="The higher the quality, the more computational resources are required">
-          <Typography.Paragraph>
-            Select the quality for Ad-Hoc Mesh Computation:
-          </Typography.Paragraph>
-        </FastTooltip>
-        <Select
-          value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
-          onChange={this.handleQualityChangeForAdHocGeneration}
-          popupMatchSelectWidth={false}
-        >
-          {magInfo
-            .getMagsWithIndices()
-            .map(([log2Index, mag]: [number, Vector3], index: number) => (
-              <Option value={log2Index} key={log2Index}>
-                {formatMagWithLabel(mag, index)}
-              </Option>
-            ))}
-        </Select>
+        <Typography.Paragraph>
+          Select a precomputed mesh file:
+          <ConfigProvider
+            renderEmpty={renderEmptyMeshFileSelect}
+            theme={{ cssVar: { key: "antd-app-theme" } }}
+          >
+            <Select
+              placeholder="Select a mesh file"
+              value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
+              onChange={this.handleMeshFileSelected}
+              loading={this.props.availableMeshFiles == null}
+              popupMatchSelectWidth={false}
+              style={{ width: "100%" }}
+            >
+              {this.props.availableMeshFiles ? (
+                this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
+                  <Option key={meshFile.name} value={meshFile.name}>
+                    {formatMeshFile(meshFile)}
+                  </Option>
+                ))
+              ) : (
+                <Option value="" disabled>
+                  No files available.
+                </Option>
+              )}
+            </Select>
+          </ConfigProvider>
+        </Typography.Paragraph>
+
+        <Typography.Paragraph>
+          <FastTooltip title="The higher the quality, the more computational resources are required">
+            Select the quality for ad-hoc mesh computation:
+          </FastTooltip>
+          <Select
+            value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
+            onChange={this.handleQualityChangeForAdHocGeneration}
+            popupMatchSelectWidth={false}
+            style={{ width: "100%" }}
+          >
+            {magInfo
+              .getMagsWithIndices()
+              .map(([log2Index, mag]: [number, Vector3], index: number) => (
+                <Option value={log2Index} key={log2Index}>
+                  {formatMagWithLabel(mag, index)}
+                </Option>
+              ))}
+          </Select>
+        </Typography.Paragraph>
       </div>
     );
   };
@@ -999,36 +1029,6 @@ class SegmentsView extends React.Component<Props, State> {
 
   getMeshesHeader = () => (
     <Space.Compact block>
-      <FastTooltip
-        title="Select a mesh file from which precomputed meshes will be loaded."
-        style={{ width: "100%", marginRight: -1 }} // negative margin offset because of border of the <Select> below
-      >
-        <ConfigProvider
-          renderEmpty={renderEmptyMeshFileSelect}
-          theme={{ cssVar: { key: "antd-app-theme" } }}
-        >
-          <Select
-            placeholder="Select a mesh file"
-            value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
-            onChange={this.handleMeshFileSelected}
-            loading={this.props.availableMeshFiles == null}
-            popupMatchSelectWidth={false}
-            style={{ width: "100%" }}
-          >
-            {this.props.availableMeshFiles ? (
-              this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
-                <Option key={meshFile.name} value={meshFile.name}>
-                  {formatMeshFile(meshFile)}
-                </Option>
-              ))
-            ) : (
-              <Option value="" disabled>
-                No files available.
-              </Option>
-            )}
-          </Select>
-        </ConfigProvider>
-      </FastTooltip>
       <ButtonComponent
         title="Refresh list of available Mesh files"
         icon={<ReloadOutlined />}
@@ -1051,8 +1051,8 @@ class SegmentsView extends React.Component<Props, State> {
           icon={<LoadingOutlined />}
         />
       ) : null}
-      <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
-        <ButtonComponent title="Configure ad-hoc mesh computation" icon={<SettingOutlined />} />
+      <Popover content={this.getMeshSettings} trigger="click" placement="bottom">
+        <ButtonComponent title="Configure mesh computation" icon={<SettingOutlined />} />
       </Popover>
     </Space.Compact>
   );

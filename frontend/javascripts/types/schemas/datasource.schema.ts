@@ -21,6 +21,14 @@ export default {
       minItems: 3,
       maxItems: 3,
     },
+    "types::Vector4": {
+      type: "array",
+      items: {
+        type: "number",
+      },
+      minItems: 4,
+      maxItems: 4,
+    },
     "types::BoundingBox": {
       type: "object",
       properties: {
@@ -83,8 +91,8 @@ export default {
             required: ["mag"],
           },
         },
+        required: ["dataFormat", "mags"],
       },
-      required: ["dataFormat", "mags"],
     },
     "types::DataLayerZarrPartial": {
       title: "DataLayerZarr",
@@ -439,6 +447,58 @@ export default {
         },
       },
       required: ["id", "dataLayers", "scale"],
+    },
+    "types::CoordinateTransformations": {
+      items: {
+        anyOf: [
+          {
+            properties: {
+              matrix: {
+                items: {
+                  $ref: "#/definitions/types::Vector4",
+                },
+                maxItems: 4,
+                minItems: 4,
+                type: "array",
+              },
+              type: {
+                const: "affine",
+                type: "string",
+              },
+            },
+            type: "object",
+            required: ["type", "matrix"],
+          },
+          {
+            properties: {
+              correspondences: {
+                properties: {
+                  source: {
+                    items: {
+                      $ref: "#/definitions/types::Vector3",
+                    },
+                    type: "array",
+                  },
+                  target: {
+                    items: {
+                      $ref: "#/definitions/types::Vector3",
+                    },
+                    type: "array",
+                  },
+                },
+                type: "object",
+              },
+              type: {
+                const: "thin_plate_spline",
+                type: "string",
+              },
+            },
+            type: "object",
+            required: ["type", "correspondences"],
+          },
+        ],
+      },
+      type: "array",
     },
   },
 };

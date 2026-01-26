@@ -25,7 +25,7 @@ import type React from "react";
 import { cloneElement, useEffect, useState } from "react";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { syncValidator, validateObjectWithType } from "types/validation";
+import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
@@ -113,28 +113,11 @@ function SimpleDatasetForm({
             name={["dataSource", "coordinateTransformations"]}
             rules={[
               {
-                validator: (_rule, value) => {
-                  const errors = validateObjectWithType("type::TransformationConfig", value); // TODO add schema
-                  return errors.length > 0
-                    ? Promise.reject(new Error(errors[0].message))
-                    : Promise.resolve();
-                },
+                validator: (rule, value) => validateTransformationsJSON(rule, value),
               },
             ]}
           >
-            <Input.TextArea
-              defaultValue={JSON.stringify(
-                dataset?.dataSource.dataLayers.map((layer) => {
-                  return {
-                    name: layer.name,
-                    coordinateTransformations: layer.coordinateTransformations ?? [],
-                  };
-                }),
-                null,
-                2,
-              )}
-              autoSize={{ minRows: 10, maxRows: 20 }}
-            />
+            <Input.TextArea autoSize={{ minRows: 10, maxRows: 20 }} />
           </FormItemWithInfo>
         }
         style={marginBottom}

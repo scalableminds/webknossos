@@ -298,4 +298,3 @@ class Request {
 const requestSingleton = new Request();
 
 export default requestSingleton;
-export type RequestType = typeof requestSingleton;

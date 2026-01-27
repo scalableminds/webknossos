@@ -1,0 +1,46 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": [
+    "-lintignore"
+  ],
+  "entry": [
+    "./frontend/javascripts/main.tsx",
+    "./frontend/stylesheets/main.less"
+  ],
+  "project": [
+    "./frontend/**/*"
+  ],
+  "vite": false,
+  "ignoreFiles": [
+    "vite.config.ts"
+  ],
+  "paths": {
+    "viewer": [
+      "./frontend/javascripts/viewer/*"
+    ],
+    "admin": [
+      "./frontend/javascripts/admin/*"
+    ],
+    "dashboard": [
+      "./frontend/javascripts/dashboard/*"
+    ],
+    "router": [
+      "./frontend/javascripts/router/*"
+    ],
+    "types": [
+      "./frontend/javascripts/types/*"
+    ],
+    "libs": [
+      "./frontend/javascripts/libs/*"
+    ],
+    "messages": [
+      "./frontend/javascripts/messages.tsx"
+    ],
+    "app": [
+      "./frontend/javascripts/app.ts"
+    ],
+    "theme": [
+      "./frontend/javascripts/theme.tsx"
+    ]
+  }
+}

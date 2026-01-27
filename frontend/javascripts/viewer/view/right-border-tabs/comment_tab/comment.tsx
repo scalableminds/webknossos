@@ -54,7 +54,7 @@ function ActiveCommentPopover({
   );
 }
 
-export function Comment({ comment, isActive }: CommentProps) {
+function Comment({ comment, isActive }: CommentProps) {
   const dispatch = useDispatch();
 
   const handleClick = useCallback(() => {

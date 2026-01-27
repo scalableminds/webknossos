@@ -1,13 +1,13 @@
-import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import {
-  getScripts,
-  getScript,
   createScript,
-  updateScript,
   deleteScript,
   getActiveUser,
+  getScript,
+  getScripts,
+  updateScript,
 } from "admin/rest_api";
-import { describe, it, beforeAll, expect } from "vitest";
+import { resetDatabase, setUserAuthToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
+import { beforeAll, describe, expect, it } from "vitest";
 
 describe("Scripts API (E2E)", () => {
   beforeAll(async () => {

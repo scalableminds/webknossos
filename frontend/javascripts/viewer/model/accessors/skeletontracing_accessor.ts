@@ -1,7 +1,7 @@
 import {
-  type APIAnnotation,
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
+  type APIAnnotation,
   type ServerSkeletonTracing,
   type ServerTracing,
 } from "types/api_types";
@@ -16,8 +16,8 @@ import {
 } from "viewer/model/types/tree_types";
 import type { NumberLike, SkeletonTracing, StoreAnnotation, WebknossosState } from "viewer/store";
 import {
-  MISSING_GROUP_ID,
   findGroup,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max } from "../helpers/iterator_utils";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";

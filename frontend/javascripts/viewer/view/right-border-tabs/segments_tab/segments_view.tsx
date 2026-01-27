@@ -2,8 +2,8 @@ import {
   ArrowRightOutlined,
   CloseOutlined,
   DeleteOutlined,
-  DownOutlined,
   DownloadOutlined,
+  DownOutlined,
   ExclamationCircleOutlined,
   ExpandAltOutlined,
   EyeInvisibleOutlined,
@@ -17,9 +17,9 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import {
-  PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { getJobs, startComputeMeshFileJob } from "admin/rest_api";
 import {
@@ -56,7 +56,7 @@ import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
-import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
+import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
@@ -119,8 +119,8 @@ import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu";
 import SegmentListItem from "viewer/view/right-border-tabs/segments_tab/segment_list_item";
 import {
-  type SegmentHierarchyNode,
   getBaseSegmentationName,
+  type SegmentHierarchyNode,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -129,7 +129,6 @@ import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  MISSING_GROUP_ID,
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
@@ -139,6 +138,7 @@ import {
   getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
+  MISSING_GROUP_ID,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 

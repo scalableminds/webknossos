@@ -15,8 +15,8 @@ import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, {
   OrthoViewColors,
-  OrthoViewValues,
   OrthoViews,
+  OrthoViewValues,
   PerformanceMarkEnum,
 } from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";

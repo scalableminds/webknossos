@@ -1,4 +1,5 @@
 import type { RequestOptionsBase } from "libs/request";
+
 type SerializedHeaders = Array<[string, string]>;
 type RequestOptionsWithParsedHeaders = RequestOptionsBase<Headers>;
 type SerializedRequestOptions = RequestOptionsBase<SerializedHeaders>;

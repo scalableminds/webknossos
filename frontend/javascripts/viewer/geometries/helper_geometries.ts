@@ -15,8 +15,8 @@ import {
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
-  RGBAFormat,
   RepeatWrapping,
+  RGBAFormat,
   Vector3 as ThreeVector3,
   Vector2,
 } from "three";

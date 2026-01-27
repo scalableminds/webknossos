@@ -8,11 +8,11 @@ import type { Group } from "three";
 import { all, call, put, take, takeEvery } from "typed-redux-saga";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
+  removeMeshAction,
   type TriggerMeshDownloadAction,
   type TriggerMeshesDownloadAction,
   type UpdateMeshOpacityAction,
   type UpdateMeshVisibilityAction,
-  removeMeshAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";

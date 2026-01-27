@@ -1,8 +1,7 @@
 import app from "app";
 import Toast from "libs/toast";
-import window from "libs/window";
-
 import { rgbToInt } from "libs/utils";
+import window from "libs/window";
 import {
   BoxGeometry,
   BufferGeometry,

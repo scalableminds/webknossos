@@ -15,7 +15,7 @@ import {
   type VoxelyticsWorkflowListing,
   type VoxelyticsWorkflowListingRun,
 } from "types/api_types";
-import { VX_POLLING_INTERVAL, runStateToStatus } from "./utils";
+import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
 
 const { Search } = Input;
 

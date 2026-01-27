@@ -36,10 +36,10 @@ import messages from "messages";
 import type React from "react";
 import { useState } from "react";
 import {
+  type AdditionalAxis,
   type APIDataLayer,
   type APIDataset,
   APIJobCommand,
-  type AdditionalAxis,
   type VoxelSize,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -61,6 +61,7 @@ import { Model } from "viewer/singletons";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
 import { MagSlider } from "viewer/view/action-bar/mag_slider";
 import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
+
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";

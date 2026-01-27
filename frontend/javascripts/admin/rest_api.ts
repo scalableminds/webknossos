@@ -17,6 +17,10 @@ import zip from "lodash-es/zip";
 import messages from "messages";
 import ResumableJS from "resumablejs";
 import {
+  type AdditionalCoordinate,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type AnnotationViewConfiguration,
   type APIAnnotation,
   type APIAnnotationInfo,
   type APIAnnotationType,
@@ -61,10 +65,6 @@ import {
   type APIUserCompact,
   type APIUserLoggedTime,
   type APIUserTheme,
-  type AdditionalCoordinate,
-  type AnnotationLayerDescriptor,
-  AnnotationLayerEnum,
-  type AnnotationViewConfiguration,
   type ExperienceDomainList,
   type LayerLink,
   type MaintenanceInfo,
@@ -86,8 +86,8 @@ import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/const
 import { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
-  type LayerSourceInfo,
   getDataOrTracingStoreUrl,
+  type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
 import {
   parseProtoAnnotation,
@@ -111,9 +111,9 @@ import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_r
 import { getOrganization } from "./api/organization";
 import { doWithToken, refreshToken } from "./api/token";
 
-export * from "./api/token";
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
+export * from "./api/token";
 
 type NewTeam = {
   readonly name: string;

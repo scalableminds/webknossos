@@ -11,9 +11,9 @@ import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   type FileList,
+  tryToFetchDatasetsByNameOrId,
   type WizardComponentProps,
   type WizardContext,
-  tryToFetchDatasetsByNameOrId,
 } from "./common";
 
 const EXPECTED_VALUE_COUNT_PER_CSV_LINE = 8;

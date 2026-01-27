@@ -1,6 +1,6 @@
 import app from "app";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { waitForCondition } from "libs/utils";
 import window from "libs/window";
 import noop from "lodash-es/noop";

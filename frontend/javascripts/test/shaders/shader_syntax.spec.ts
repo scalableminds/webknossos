@@ -1,10 +1,10 @@
+import { parser } from "@shaderfrog/glsl-parser";
+import mags from "test/fixtures/mags";
 import getMainFragmentShader, {
   getMainVertexShader,
   type Params,
 } from "viewer/shaders/main_data_shaders.glsl";
-import mags from "test/fixtures/mags";
-import { describe, it, beforeEach, expect } from "vitest";
-import { parser } from "@shaderfrog/glsl-parser";
+import { beforeEach, describe, expect, it } from "vitest";
 
 type ShaderFunction = (params: Params) => string;
 

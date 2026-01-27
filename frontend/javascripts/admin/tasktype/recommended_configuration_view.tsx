@@ -19,6 +19,7 @@ import { type RecommendedConfiguration, settings } from "messages";
 import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "viewer/constants";
+
 const FormItem = Form.Item;
 
 function getRecommendedConfigByCategory() {

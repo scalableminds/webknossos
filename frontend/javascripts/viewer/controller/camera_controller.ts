@@ -12,8 +12,8 @@ import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
 import {
   OrthoCamerasBaseRotations,
-  OrthoViewValuesWithoutTDView,
   OrthoViews,
+  OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";

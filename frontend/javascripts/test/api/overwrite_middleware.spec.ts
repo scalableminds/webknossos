@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
 // @ts-expect-error
 import configureMockStore from "redux-mock-store";
 import overwriteActionMiddleware, {
   overwriteAction,
   removeOverwrite,
 } from "viewer/model/helpers/overwrite_action_middleware";
+import { describe, expect, it } from "vitest";
 
 const middlewares = [overwriteActionMiddleware];
 const mockStore = configureMockStore(middlewares);

@@ -1,5 +1,6 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
+import { computeBvhAsync } from "libs/compute_bvh_async";
 import forEach from "lodash-es/forEach";
 import get from "lodash-es/get";
 import isEqual from "lodash-es/isEqual";
@@ -21,6 +22,7 @@ import { acceleratedRaycast } from "three-mesh-bvh";
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector2, Vector3 } from "viewer/constants";
+import Constants from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -28,11 +30,8 @@ import {
   getActiveSegmentationTracing,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
-import Store, { type MinCutPartitions } from "viewer/store";
-
-import { computeBvhAsync } from "libs/compute_bvh_async";
-import Constants from "viewer/constants";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
+import Store, { type MinCutPartitions } from "viewer/store";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on

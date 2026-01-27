@@ -1,13 +1,13 @@
-import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { sleep } from "libs/utils";
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import datasetServerObject from "test/fixtures/dataset_server_object";
-import { MagInfo } from "viewer/model/helpers/mag_info";
-import type { Vector3, Vector4 } from "viewer/constants";
-import { assertNonNullBucket, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import DataCube from "viewer/model/bucket_data_handling/data_cube";
+import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import runAsync from "test/helpers/run-async";
+import type { Vector3, Vector4 } from "viewer/constants";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { assertNonNullBucket, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import DataCube from "viewer/model/bucket_data_handling/data_cube";
+import { MagInfo } from "viewer/model/helpers/mag_info";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("viewer/store", () => ({
   default: {

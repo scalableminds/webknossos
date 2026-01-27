@@ -8,6 +8,16 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
+import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  getBuildInfo,
+  logoutUser,
+  sendAnalyticsEvent,
+  updateNovelUserExperienceInfos,
+} from "admin/rest_api";
+import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
@@ -23,23 +33,9 @@ import {
   Tag,
   Tooltip,
 } from "antd";
-import classnames from "classnames";
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-
-import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
-import LoginForm from "admin/auth/login_form";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import {
-  getBuildInfo,
-  logoutUser,
-  sendAnalyticsEvent,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
-import type { MenuProps } from "antd";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import classnames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
@@ -53,7 +49,10 @@ import {
 } from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";

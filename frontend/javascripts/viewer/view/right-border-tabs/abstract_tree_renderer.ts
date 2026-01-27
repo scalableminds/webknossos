@@ -2,6 +2,7 @@ import min from "lodash-es/min";
 import messages from "messages";
 import type { Vector2 } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
+
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;
 const CLICK_TRESHOLD = 6;

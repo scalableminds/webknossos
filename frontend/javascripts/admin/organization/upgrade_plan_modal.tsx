@@ -12,10 +12,9 @@ import {
   sendUpgradePricingPlanUserEmail,
 } from "admin/api/organization";
 import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
+import type { GetRef } from "antd/lib";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
-
-import type { GetRef } from "antd/lib";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -23,8 +22,7 @@ import type React from "react";
 import { useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
-import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
-import { PricingPlanEnum } from "./pricing_plan_utils";
+import { PricingPlanEnum, powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 
 const ModalInformationFooter = (
   <>

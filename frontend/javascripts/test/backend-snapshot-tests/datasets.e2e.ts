@@ -1,3 +1,11 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  writeTypeCheckingFile,
+} from "test/e2e-setup";
 import fs from "node:fs";
 import {
   getDatasetIdFromNameAndOrganization,
@@ -13,13 +21,6 @@ import {
   updateDatasetTeams,
 } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
-import {
-  replaceVolatileValues,
-  resetDatabase,
-  setUserAuthToken,
-  tokenUserA,
-  writeTypeCheckingFile,
-} from "test/e2e-setup";
 import type { APIDataset } from "types/api_types";
 import { beforeAll, describe, expect, it } from "vitest";
 

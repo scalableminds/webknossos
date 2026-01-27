@@ -1,3 +1,11 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  writeTypeCheckingFile,
+} from "test/e2e-setup";
 import {
   createExplorational,
   editAnnotation,
@@ -11,13 +19,6 @@ import {
   sendSaveRequestWithToken,
 } from "admin/rest_api";
 import DiffableMap from "libs/diffable_map";
-import {
-  replaceVolatileValues,
-  resetDatabase,
-  setUserAuthToken,
-  tokenUserA,
-  writeTypeCheckingFile,
-} from "test/e2e-setup";
 import type { APIAnnotation, SkeletonUserState } from "types/api_types";
 import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";
 import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";

@@ -1,3 +1,11 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  writeTypeCheckingFile,
+} from "test/e2e-setup";
 import {
   getActiveUser,
   getAvailableTasksReport,
@@ -7,13 +15,6 @@ import {
 } from "admin/rest_api";
 import dayjs from "dayjs";
 import sortBy from "lodash-es/sortBy";
-import {
-  replaceVolatileValues,
-  resetDatabase,
-  setUserAuthToken,
-  tokenUserA,
-  writeTypeCheckingFile,
-} from "test/e2e-setup";
 import type { APITeam, APIUser } from "types/api_types";
 import { AnnotationStateFilterEnum } from "viewer/constants";
 import { beforeAll, describe, expect, test } from "vitest";

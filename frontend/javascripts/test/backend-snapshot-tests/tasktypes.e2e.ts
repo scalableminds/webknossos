@@ -1,3 +1,5 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import { resetDatabase, setUserAuthToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
 import {
   createTaskType,
   deleteTaskType,
@@ -6,7 +8,6 @@ import {
   getTaskTypes,
   updateTaskType,
 } from "admin/rest_api";
-import { resetDatabase, setUserAuthToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
 import type { APIAllowedMode } from "types/api_types";
 import { beforeAll, describe, expect, it } from "vitest";
 

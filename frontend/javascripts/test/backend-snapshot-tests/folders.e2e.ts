@@ -1,6 +1,4 @@
-import { createFolder, getFolder, getFolderTree, updateFolder } from "admin/api/folders";
-import Request from "libs/request";
-import sortBy from "lodash-es/sortBy";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
   replaceVolatileValues,
   resetDatabase,
@@ -9,6 +7,9 @@ import {
   tokenUserC,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
+import { createFolder, getFolder, getFolderTree, updateFolder } from "admin/api/folders";
+import Request from "libs/request";
+import sortBy from "lodash-es/sortBy";
 import { APIMetadataEnum } from "types/api_types";
 import { beforeAll, describe, expect, it } from "vitest";
 

@@ -1,4 +1,4 @@
-import { getActiveUser, getDatastores, getFeatureToggles } from "admin/rest_api";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
   replaceVolatileValues,
   resetDatabase,
@@ -6,6 +6,7 @@ import {
   tokenUserA,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
+import { getActiveUser, getDatastores, getFeatureToggles } from "admin/rest_api";
 import { beforeAll, describe, it } from "vitest";
 
 describe("Misc APIs (E2E) ", () => {

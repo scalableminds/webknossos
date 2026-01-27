@@ -1,3 +1,5 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import { resetDatabase, setUserAuthToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
 import {
   createScript,
   deleteScript,
@@ -6,7 +8,6 @@ import {
   getScripts,
   updateScript,
 } from "admin/rest_api";
-import { resetDatabase, setUserAuthToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
 import { beforeAll, describe, expect, it } from "vitest";
 
 describe("Scripts API (E2E)", () => {

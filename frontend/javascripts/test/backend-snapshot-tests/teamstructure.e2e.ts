@@ -1,3 +1,13 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import {
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  tokenUserB,
+  tokenUserC,
+  tokenUserD,
+  tokenUserE,
+} from "test/e2e-setup";
 import { getTask } from "admin/api/tasks";
 import {
   createTeam,
@@ -9,15 +19,6 @@ import {
   updateUser,
 } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
-import {
-  resetDatabase,
-  setUserAuthToken,
-  tokenUserA,
-  tokenUserB,
-  tokenUserC,
-  tokenUserD,
-  tokenUserE,
-} from "test/e2e-setup";
 import { beforeAll, describe, expect, test } from "vitest";
 
 function getExpectedErrorObject(errorMessage: string) {

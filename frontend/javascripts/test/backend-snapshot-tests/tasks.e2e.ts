@@ -1,3 +1,5 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import { replaceVolatileValues, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import {
   createTasks,
   deleteTask,
@@ -11,7 +13,6 @@ import {
 } from "admin/api/tasks";
 import isNull from "lodash-es/isNull";
 import omitBy from "lodash-es/omitBy";
-import { replaceVolatileValues, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import type { Vector3 } from "viewer/constants";
 import { beforeAll, describe, expect, test } from "vitest";
 

@@ -54,7 +54,7 @@ A careful review of your annotations can prevent mistakes that might impact mode
     
     ![complete coverage.png](./images/tutorial_trainingdata_03_complete_coverage.png)
     
-    *Data attributions: Motta et a  l., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
+    *Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
     
 - **Gaps and Holes:** Look for any gaps or holes within a segment. Every cell should be annotated as a continuous, complete structure. If you see a darker line that suggests a membrane inside the same cell, it should be annotated; otherwise, an gap will be created.
     

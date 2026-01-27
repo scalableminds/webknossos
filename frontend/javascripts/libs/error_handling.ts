@@ -5,6 +5,7 @@ import pick from "lodash-es/pick";
 import messages from "messages";
 import type { APIUser } from "types/api_types";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
+
 // Note that if you set this value to true for debugging airbrake reporting,
 // you also need to set the values for projectID and projectKey in application.conf
 const LOG_LOCAL_ERRORS = false;

@@ -1,27 +1,27 @@
-import sortBy from "lodash-es/sortBy";
 import {
-  tokenUserA,
-  tokenUserD,
-  setUserAuthToken,
-  replaceVolatileValues,
-  resetDatabase,
-  writeTypeCheckingFile,
-} from "test/e2e-setup";
-import type { APIProject, APIProjectUpdater } from "types/api_types";
-import {
-  getProjects,
-  getProjectsWithStatus,
-  getProject,
   createProject,
   deleteProject,
-  getTeams,
   getActiveUser,
-  updateProject,
+  getProject,
+  getProjects,
+  getProjectsWithStatus,
+  getTeams,
   increaseProjectTaskInstances,
   pauseProject,
   resumeProject,
+  updateProject,
 } from "admin/rest_api";
-import { describe, it, beforeAll, beforeEach } from "vitest";
+import sortBy from "lodash-es/sortBy";
+import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  tokenUserD,
+  writeTypeCheckingFile,
+} from "test/e2e-setup";
+import type { APIProject, APIProjectUpdater } from "types/api_types";
+import { beforeAll, beforeEach, describe, it } from "vitest";
 
 describe("Project API (E2E)", () => {
   beforeAll(() => {

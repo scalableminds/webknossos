@@ -21,17 +21,17 @@ import { useNavigate } from "react-router-dom";
 import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import {
-  EXPECTED_TRANSFORMATION_LENGTH,
   doAllLayersHaveTheSameRotation,
+  EXPECTED_TRANSFORMATION_LENGTH,
   getRotationSettingsFromTransformationIn90DegreeSteps,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import type { DatasetConfiguration } from "viewer/store";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
+import type { DatasetSettingsFormData } from "./dataset_settings_context";
 import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
-import type { DatasetSettingsFormData } from "./dataset_settings_context";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
 

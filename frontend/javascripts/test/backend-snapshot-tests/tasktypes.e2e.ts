@@ -1,14 +1,14 @@
-import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import {
-  getTaskTypes,
-  getTaskType,
   createTaskType,
-  updateTaskType,
   deleteTaskType,
   getActiveUser,
+  getTaskType,
+  getTaskTypes,
+  updateTaskType,
 } from "admin/rest_api";
-import { describe, beforeAll, expect, it } from "vitest";
+import { resetDatabase, setUserAuthToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
 import type { APIAllowedMode } from "types/api_types";
+import { beforeAll, describe, expect, it } from "vitest";
 
 describe("Task Types API (E2E)", () => {
   beforeAll(async () => {

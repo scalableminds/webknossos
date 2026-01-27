@@ -1,15 +1,15 @@
 import update from "immutability-helper";
-import type { WebknossosState } from "viewer/store";
+import type { VoxelSize } from "types/api_types";
+import constants, { Identity4x4, UnitLong, type Vector3 } from "viewer/constants";
+import defaultState from "viewer/default_state";
 import { getMaxZoomStep } from "viewer/model/accessors/dataset_accessor";
 import {
   _getDummyFlycamMatrix,
   _getMaximumZoomForAllMags,
   getActiveMagIndexForLayer,
 } from "viewer/model/accessors/flycam_accessor";
-import constants, { Identity4x4, UnitLong, type Vector3 } from "viewer/constants";
-import { describe, it, expect } from "vitest";
-import defaultState from "viewer/default_state";
-import type { VoxelSize } from "types/api_types";
+import type { WebknossosState } from "viewer/store";
+import { describe, expect, it } from "vitest";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;

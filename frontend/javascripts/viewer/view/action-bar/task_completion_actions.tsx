@@ -8,7 +8,7 @@ import { location } from "libs/window";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { APIAnnotationTypeEnum } from "types/api_types";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
 
 const handleFinishAndGetNextTask = async () => {

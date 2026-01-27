@@ -7,13 +7,14 @@
  * process a "plan". Each plan defines the order of events that happen
  * and the expected result.
  */
-import { describe, it, expect } from "vitest";
+
+import Deferred from "libs/async/deferred";
+import type { BucketDataArray, ElementClass } from "types/api_types";
 import BucketSnapshot, {
   type PendingOperation,
 } from "viewer/model/bucket_data_handling/bucket_snapshot";
-import Deferred from "libs/async/deferred";
-import type { BucketDataArray, ElementClass } from "types/api_types";
 import { uint8ToTypedBuffer } from "viewer/model/helpers/typed_buffer";
+import { describe, expect, it } from "vitest";
 
 /*
  * The MockCompressor provides the async compress and decompress

@@ -1,8 +1,6 @@
 import DiffableMap from "libs/diffable_map";
-import type { AdditionalCoordinate } from "types/api_types";
-import type { MetadataEntryProto } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
-import type { TreeType } from "viewer/constants";
+import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
+import type { TreeType, Vector3 } from "viewer/constants";
 import type EdgeCollection from "viewer/model/edge_collection";
 
 export type MutableCommentType = {

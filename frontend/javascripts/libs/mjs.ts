@@ -1,10 +1,11 @@
 // See
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
 // for all functions in M4x4, V2 and V3.
+
+
+import mjs, { type Matrix4x4, type Vector16 } from "mjs";
 import type { Vector2, Vector3, Vector4 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
-
-import mjs, { type Vector16, type Matrix4x4 } from "mjs";
 
 const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Array);
 

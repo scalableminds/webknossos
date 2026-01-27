@@ -1,5 +1,5 @@
-import ThreeDMap from "libs/ThreeDMap";
 import { M4x4, V3 } from "libs/mjs";
+import ThreeDMap from "libs/ThreeDMap";
 import range from "lodash-es/range";
 import uniqBy from "lodash-es/uniqBy";
 import type { Matrix4x4 } from "mjs";
@@ -10,7 +10,7 @@ import type { EnqueueFunction } from "viewer/model/bucket_data_handling/layer_re
 import { chunk2 } from "viewer/model/helpers/chunk";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
-import { MAX_ZOOM_STEP_DIFF, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
+import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).

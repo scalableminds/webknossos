@@ -1,11 +1,12 @@
 import app from "app";
 import { BufferGeometry, Line, LineBasicMaterial, Vector3 as ThreeVector3 } from "three";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/throttled_store";
+
 type Properties = {
   min?: Vector3;
   max: Vector3;

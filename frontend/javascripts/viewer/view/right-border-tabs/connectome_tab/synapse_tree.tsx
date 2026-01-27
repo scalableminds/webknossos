@@ -9,6 +9,7 @@ import type { Vector3 } from "viewer/constants";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
+
 type BaseSynapse = {
   id: number;
   position: Vector3;

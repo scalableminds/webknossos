@@ -66,8 +66,7 @@ import {
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
-import { api } from "viewer/singletons";
-import { Model } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   Mapping,

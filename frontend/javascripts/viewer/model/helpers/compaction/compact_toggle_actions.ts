@@ -19,11 +19,12 @@ import {
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {
-  MISSING_GROUP_ID,
   createGroupToSegmentsMap,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+
 type GroupNode = {
   children: GroupNode[];
   groupId: number | null | undefined;

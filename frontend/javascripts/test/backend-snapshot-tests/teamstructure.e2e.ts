@@ -1,24 +1,24 @@
+import { getTask } from "admin/api/tasks";
+import {
+  createTeam,
+  deleteProject,
+  deleteTeam,
+  getTaskTypes,
+  getTeams,
+  getUser,
+  updateUser,
+} from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
 import {
+  resetDatabase,
+  setUserAuthToken,
   tokenUserA,
   tokenUserB,
   tokenUserC,
   tokenUserD,
   tokenUserE,
-  setUserAuthToken,
-  resetDatabase,
 } from "test/e2e-setup";
-import { getTask } from "admin/api/tasks";
-import {
-  getTeams,
-  createTeam,
-  deleteTeam,
-  deleteProject,
-  updateUser,
-  getUser,
-  getTaskTypes,
-} from "admin/rest_api";
-import { describe, test, beforeAll, expect } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
 function getExpectedErrorObject(errorMessage: string) {
   return { errors: [JSON.stringify({ messages: [{ error: errorMessage }] })] };

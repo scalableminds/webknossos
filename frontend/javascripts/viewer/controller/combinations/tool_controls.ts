@@ -13,14 +13,12 @@ import {
   type Viewport,
 } from "viewer/constants";
 import {
-  type SelectedEdge,
   createBoundingBoxAndGetEdges,
-  handleMovingBoundingBox,
-} from "viewer/controller/combinations/bounding_box_handlers";
-import {
   getClosestHoveredBoundingBox,
+  handleMovingBoundingBox,
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
+  type SelectedEdge,
 } from "viewer/controller/combinations/bounding_box_handlers";
 import {
   handleMovePlane,
@@ -57,8 +55,7 @@ import {
   handlePickCell,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { isBrushTool } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,

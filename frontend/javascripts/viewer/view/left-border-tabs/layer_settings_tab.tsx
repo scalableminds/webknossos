@@ -39,9 +39,9 @@ import mapValues from "lodash-es/mapValues";
 import minBy from "lodash-es/minBy";
 import partial from "lodash-es/partial";
 import {
-  type RecommendedConfiguration,
-  layerViewConfigurationTooltips,
   layerViewConfigurations,
+  layerViewConfigurationTooltips,
+  type RecommendedConfiguration,
   settings,
   settingsTooltips,
 } from "messages";
@@ -49,13 +49,13 @@ import React, { useCallback } from "react";
 import { connect, useDispatch } from "react-redux";
 import type { Dispatch } from "redux";
 import {
+  AnnotationLayerEnum,
+  type AnnotationLayerType,
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
   APIJobCommand,
   type APISkeletonLayer,
-  AnnotationLayerEnum,
-  type AnnotationLayerType,
   type EditableLayerProperties,
 } from "types/api_types";
 import type { ValueOf } from "types/globals";
@@ -124,7 +124,7 @@ import {
   addLayerToAnnotation,
   deleteAnnotationLayer,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,

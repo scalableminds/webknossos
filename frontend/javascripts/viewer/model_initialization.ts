@@ -1,6 +1,6 @@
 import {
-  PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import {
   getAnnotationCompoundInformation,

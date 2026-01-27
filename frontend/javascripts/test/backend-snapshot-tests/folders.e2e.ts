@@ -1,16 +1,16 @@
+import { createFolder, getFolder, getFolderTree, updateFolder } from "admin/api/folders";
+import Request from "libs/request";
 import sortBy from "lodash-es/sortBy";
 import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
   tokenUserA,
   tokenUserC,
-  setUserAuthToken,
-  resetDatabase,
-  replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import Request from "libs/request";
-import { describe, it, beforeAll, expect } from "vitest";
 import { APIMetadataEnum } from "types/api_types";
-import { createFolder, getFolder, getFolderTree, updateFolder } from "admin/api/folders";
+import { beforeAll, describe, expect, it } from "vitest";
 
 describe("Folder API (E2E)", () => {
   beforeAll(async () => {

@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { setFlightmodeRecordingAction } from "viewer/model/actions/settings_actions";
 import type { WebknossosState } from "viewer/store";
+
 type Props = {
   flightmodeRecording: boolean;
   onChangeFlightmodeRecording: (arg0: boolean) => void;

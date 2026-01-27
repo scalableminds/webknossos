@@ -3,6 +3,7 @@ import constants from "viewer/constants";
 import { getTDViewportSize } from "viewer/model/accessors/view_mode_accessor";
 import type { PartialCameraData } from "viewer/store";
 import Store from "viewer/store";
+
 type SetViewportAction = ReturnType<typeof setViewportAction>;
 type SetTDCameraAction = ReturnType<typeof setTDCameraAction>;
 type CenterTDViewAction = ReturnType<typeof centerTDViewAction>;

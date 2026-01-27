@@ -1,11 +1,11 @@
-import cloneDeep from "lodash-es/cloneDeep";
+import fs from "node:fs";
 // @ts-expect-error
 import deepForEach from "deep-for-each";
-import fs from "node:fs";
+import { JSDOM } from "jsdom";
+import cloneDeep from "lodash-es/cloneDeep";
 import shell from "shelljs";
 import type { ArbitraryObject } from "types/globals";
 import { vi } from "vitest";
-import { JSDOM } from "jsdom";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for the unit tests. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation

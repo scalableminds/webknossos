@@ -1,17 +1,17 @@
+import datasetServerObject from "test/fixtures/dataset_server_object";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
 import type { LabeledVoxelsMap, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import { describe, it, beforeEach, vi, expect } from "vitest";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import { MagInfo } from "viewer/model/helpers/mag_info";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type DataCubeType from "viewer/model/bucket_data_handling/data_cube";
 import { assertNonNullBucket } from "viewer/model/bucket_data_handling/bucket";
+import type DataCubeType from "viewer/model/bucket_data_handling/data_cube";
 import DataCube from "viewer/model/bucket_data_handling/data_cube";
+import { MagInfo } from "viewer/model/helpers/mag_info";
 import sampleVoxelMapToMag, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock modules
 vi.mock("viewer/store", () => {

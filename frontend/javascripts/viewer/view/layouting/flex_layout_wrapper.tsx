@@ -2,8 +2,8 @@ import { sendAnalyticsEvent } from "admin/rest_api";
 import { ConfigProvider, Layout } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
-import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
+import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import cloneDeep from "lodash-es/cloneDeep";
@@ -45,7 +45,7 @@ import {
   getMaximizedItemId,
   getPositionStatusOf,
 } from "./flex_layout_helper";
-import { LayoutEvents, getLayoutConfig, layoutEmitter } from "./layout_persistence";
+import { getLayoutConfig, LayoutEvents, layoutEmitter } from "./layout_persistence";
 
 const { Footer } = Layout;
 

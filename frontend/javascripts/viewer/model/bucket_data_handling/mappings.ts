@@ -1,8 +1,8 @@
 import { message } from "antd";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import Toast from "libs/toast";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { diffMaps } from "libs/utils";
 import size from "lodash-es/size";
 import throttle from "lodash-es/throttle";

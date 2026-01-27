@@ -5,7 +5,7 @@ import Hammer from "libs/hammerjs_wrapper";
 import window, { document } from "libs/window";
 import extend from "lodash-es/extend";
 import noop from "lodash-es/noop";
-import { type Emitter, createNanoEvents } from "nanoevents";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
 import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";

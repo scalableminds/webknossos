@@ -3,6 +3,7 @@ import { stringToColor } from "libs/format_utils";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import { type MouseEventHandler, useEffect } from "react";
+
 type LabelProps = {
   tag: string;
   kind: string;

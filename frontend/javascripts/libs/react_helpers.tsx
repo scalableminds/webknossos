@@ -81,9 +81,9 @@ export function useGuardedFetch<T>(
     }
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(loadData):
   useEffect(() => {
     loadData();
+    // biome-ignore lint/correctness/useExhaustiveDependencies: dynamic dependencies can not be infered by biome
   }, dependencies);
 
   return [value, isLoading];

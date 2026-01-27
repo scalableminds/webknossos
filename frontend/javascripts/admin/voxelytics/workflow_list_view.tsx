@@ -101,7 +101,7 @@ export default function WorkflowListView() {
       : run.hostUserName;
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(getUserDisplayName):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(getUserDisplayName): omitted to maintain stability as the function does not capture reactive state
   const renderRuns: Array<RenderRunInfo> = useMemo(
     () =>
       workflows.map((workflow) => ({

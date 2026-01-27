@@ -212,9 +212,9 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets):
-  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset):
-  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
       supportsFolders: true as const,

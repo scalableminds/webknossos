@@ -14,7 +14,14 @@ import {
 } from "./segment_group_fixtures";
 import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
-import { createSegment1, createSegment2, id1, id2 } from "test/fixtures/segment_merging_fixtures";
+import {
+  createSegment1,
+  createSegment2,
+  createSegment3,
+  id1,
+  id2,
+  id3,
+} from "test/fixtures/segment_merging_fixtures";
 import {
   mergeSegmentsAction,
   updateSegmentAction,
@@ -262,7 +269,7 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
         { key: "identicalKey", stringValue: "identicalValue" },
      * However, segment 1 was edited before the merge.
      * Therefore, we need another update action which transforms from the above
-     * to this (note that last 3 lines are identical):
+     * to this (note that the last 3 lines are identical):
         { key: "someKey1-1", stringValue: "someStringValue - segment 1 - changed" },
         { key: "someKey4", boolValue: true },
 
@@ -293,5 +300,48 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
       },
     ]);
   });
+
+  test("multiple mergeSegments actions should be detected", () => {
+    let newState = initialState;
+    newState = VolumeTracingReducer(newState, createSegment1);
+    newState = VolumeTracingReducer(newState, createSegment2);
+    newState = VolumeTracingReducer(newState, createSegment3);
+
+    const stateBeforeMerge = newState;
+    newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+    newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id3, VOLUME_TRACING_ID));
+    const stateAfterMerge = newState;
+
+    const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
+    const volumeTracing = stateAfterMerge.annotation.volumes[0];
+
+    const updateActions = Array.from(
+      uncachedDiffSegmentLists(
+        VOLUME_TRACING_ID,
+        prevVolumeTracing.segments,
+        volumeTracing.segments,
+        prevVolumeTracing.segmentJournal,
+        volumeTracing.segmentJournal,
+      ),
+    );
+
+    expect(updateActions).toEqual([
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: id1,
+          targetId: id2,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: id1,
+          targetId: id3,
+        },
+      },
+    ]);
+  });
 });
-// todop: try to detect multiple merges?

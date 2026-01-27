@@ -17,8 +17,8 @@ export const createAction = (id: number, properties: Partial<Segment>) =>
     true,
   );
 
-const [id1, id2] = [1, 2];
-export { id1, id2 };
+const [id1, id2, id3] = [1, 2, 3];
+export { id1, id2, id3 };
 export const createSegment1 = createAction(id1, {
   name: "Name 1",
   metadata: [
@@ -34,4 +34,8 @@ export const createSegment2 = createAction(id2, {
     { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
     { key: "identicalKey", stringValue: "identicalValue" },
   ],
+});
+export const createSegment3 = createAction(id3, {
+  name: "Name 3",
+  metadata: [],
 });

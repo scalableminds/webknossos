@@ -4,12 +4,13 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.datavault.ByteRange
 import com.scalableminds.webknossos.datastore.services.{DataStoreAccessTokenService, DatasetCache, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import play.api.http.Writeable
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenService,
@@ -33,9 +34,9 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
                                                                                       mag) ~> NOT_FOUND
           magPath <- dataVaultService.vaultPathFor(magLocator, dataSource.id, dataLayerName)
           requestedPath = magPath / path
-          rangeOpt <- parseRequestedRange(request)
-          data <- requestedPath.readBytes(rangeOpt)
-        } yield Ok(data)
+          byteRange <- ByteRange.fromRequest(request)
+          data <- requestedPath.readBytes(byteRange)
+        } yield resultWithStatus(byteRange.successResponseCode, data)
       }
     }
 
@@ -54,29 +55,22 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
           attachmentName) ~> NOT_FOUND
         attachmentPath <- dataVaultService.vaultPathFor(attachment)
         requestedPath = attachmentPath / path
-        rangeOpt <- parseRequestedRange(request)
-        data <- requestedPath.readBytes(rangeOpt)
-      } yield Ok(data)
+        byteRange <- ByteRange.fromRequest(request)
+        data <- requestedPath.readBytes(byteRange)
+      } yield resultWithStatus(byteRange.successResponseCode, data)
     }
   }
-
-  private lazy val byteRangeRegex = """^bytes=(\d+)-(\d+)$""".r
-
-  private def parseRequestedRange(request: Request[AnyContent])(
-      implicit ec: ExecutionContext): Fox[Option[NumericRange[Long]]] =
-    request.headers.get(RANGE) match {
-      case None => Fox.successful(None)
-      case Some(rangeHeader) =>
-        rangeHeader match {
-          case byteRangeRegex(start, end) => Fox.successful(Some(Range.Long(start.toLong, end.toLong, 1)))
-          case _                          => Fox.failure("Invalid range header, only star-end byte ranges are supported.")
-        }
-    }
 
   private def validatePath(path: String): Fox[Unit] =
     for {
       _ <- Fox.fromBool(!path.contains("..")) ?~> "path must not contain “..”"
       _ <- Fox.fromBool(!path.startsWith("/")) ?~> "path must not start with “/”"
     } yield ()
+
+  private def resultWithStatus[C](statusCode: Int, content: C)(implicit writeable: Writeable[C]): Result =
+    Result(
+      ResponseHeader(statusCode),
+      writeable.toEntity(content)
+    )
 
 }

@@ -36,7 +36,6 @@ import software.amazon.awssdk.services.s3.model.{
 
 import java.net.URI
 import java.util.concurrent.CompletionException
-import scala.collection.immutable.NumericRange
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
@@ -58,11 +57,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   private lazy val clientFox: Fox[S3AsyncClient] =
     S3DataVault.getAmazonS3Client(s3AccessKeyCredential, uri, ws)
 
-  private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
-    GetObjectRequest.builder().bucket(bucketName).key(key).range(s"bytes=${range.start}-${range.end - 1}").build()
+  private def getRangeRequest(bucketName: String, key: String, range: StartEndExclusiveByteRange): GetObjectRequest =
+    GetObjectRequest.builder().bucket(bucketName).key(key).range(range.toHttpHeader).build()
 
-  private def getSuffixRangeRequest(bucketName: String, key: String, length: Long): GetObjectRequest =
-    GetObjectRequest.builder.bucket(bucketName).key(key).range(s"bytes=-$length").build()
+  private def getSuffixRangeRequest(bucketName: String, key: String, range: SuffixLengthByteRange): GetObjectRequest =
+    GetObjectRequest.builder.bucket(bucketName).key(key).range(range.toHttpHeader).build()
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest =
     GetObjectRequest.builder.bucket(bucketName).key(key).build()
@@ -106,15 +105,15 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
     })
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
       objectKey <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       request = range match {
-        case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
-        case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
-        case Complete()      => getRequest(bucketName, objectKey)
+        case r: StartEndExclusiveByteRange => getRangeRequest(bucketName, objectKey, r)
+        case r: SuffixLengthByteRange      => getSuffixRangeRequest(bucketName, objectKey, r)
+        case CompleteByteRange()           => getRequest(bucketName, objectKey)
       }
       (bytes, encodingString) <- performGetObjectRequest(request)
       encoding <- Encoding.fromRfc7231String(encodingString).toFox

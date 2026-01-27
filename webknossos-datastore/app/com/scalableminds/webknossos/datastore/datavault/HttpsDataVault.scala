@@ -16,7 +16,6 @@ import play.api.libs.ws.{WSAuthScheme, WSClient, WSRequest, WSResponse}
 
 import java.net.URI
 import scala.concurrent.duration.DurationInt
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
@@ -31,15 +30,15 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
     val uri = path.toRemoteUriUnsafe
     for {
       response <- range match {
-        case StartEnd(r)          => getWithRange(uri, r)
-        case SuffixLength(length) => getWithSuffixRange(uri, length)
-        case Complete()           => getComplete(uri)
+        case StartEndExclusiveByteRange(start, end) => getWithRange(uri, start, end)
+        case SuffixLengthByteRange(length)          => getWithSuffixRange(uri, length)
+        case CompleteByteRange()                    => getComplete(uri)
       }
       encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
       result <- if (Status.isSuccessful(response.status)) {
@@ -71,12 +70,11 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       }
     )
 
-  private def getWithRange(uri: URI, range: NumericRange[Long])(implicit ec: ExecutionContext,
-                                                                tc: TokenContext): Fox[WSResponse] =
+  private def getWithRange(uri: URI, start: Long, end: Long)(implicit ec: ExecutionContext,
+                                                             tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(
-        buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> s"bytes=$start-$end").get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 

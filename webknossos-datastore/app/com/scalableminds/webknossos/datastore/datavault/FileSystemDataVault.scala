@@ -16,7 +16,7 @@ import scala.jdk.CollectionConverters._
 
 class FileSystemDataVault extends DataVault with FoxImplicits {
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
@@ -24,16 +24,16 @@ class FileSystemDataVault extends DataVault with FoxImplicits {
       bytes <- readBytesLocal(localPath, range)
     } yield (bytes, Encoding.identity)
 
-  private def readBytesLocal(localPath: Path, range: RangeSpecifier)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytesLocal(localPath: Path, range: ByteRange)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     if (Files.exists(localPath)) {
       range match {
-        case Complete() =>
+        case CompleteByteRange() =>
           readAsync(localPath, 0, Math.toIntExact(Files.size(localPath)))
 
-        case StartEnd(r) =>
+        case r: StartEndExclusiveByteRange =>
           readAsync(localPath, r.start, r.length)
 
-        case SuffixLength(length) =>
+        case SuffixLengthByteRange(length) =>
           val fileSize = Files.size(localPath)
           readAsync(localPath, fileSize - length, length)
       }

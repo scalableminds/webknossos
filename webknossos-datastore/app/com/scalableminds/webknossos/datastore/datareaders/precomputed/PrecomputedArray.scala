@@ -4,13 +4,12 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
 
@@ -80,8 +79,9 @@ class PrecomputedArray(vaultPath: VaultPath,
   private def getHashForChunk(chunkIndex: Array[Int]): Long =
     CompressedMortonCode.encode(chunkIndex, header.gridSize)
 
-  override def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] = {
+  override def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] = {
     val chunkIdentifier = getHashForChunk(chunkIndex)
     val minishardInfo = shardingSpecification.getMinishardInfo(chunkIdentifier)
     val shardPath = shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
@@ -89,7 +89,7 @@ class PrecomputedArray(vaultPath: VaultPath,
       _ <- Fox.fromBool(minishardInfo._2 <= Int.MaxValue) ?~> "Minishard number is too large"
       minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?=> f"Could not get minishard index for chunkIndex ${chunkIndex
         .mkString(",")}"
-      chunkRange: NumericRange.Exclusive[Long] <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
+      chunkRange <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex
         .mkString(",")}  with chunkIdentifier $chunkIdentifier in minishard index."
     } yield (shardPath, chunkRange)
   }

@@ -13,15 +13,14 @@ import play.api.libs.json.Reads
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with FoxImplicits {
 
-  def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext,
-                                                          tc: TokenContext): Fox[Array[Byte]] =
+  def readBytes(byteRange: ByteRange = ByteRange.complete)(implicit ec: ExecutionContext,
+                                                           tc: TokenContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range)) ?=> "Failed to read from vault path"
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, byteRange) ?=> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
@@ -30,7 +29,7 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
 
   def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount)) ?=> "Failed to read from vault path"
+      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLengthByteRange(byteCount)) ?=> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 

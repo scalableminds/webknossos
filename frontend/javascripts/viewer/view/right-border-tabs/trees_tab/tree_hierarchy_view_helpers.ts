@@ -293,7 +293,7 @@ export function moveGroupsHelper(
 export function createGroupHelper(
   segmentGroups: TreeGroup[],
   name: string | null | undefined,
-  newGroupId: number | null | undefined,
+  newGroupId: number,
   parentGroupId: number | null | undefined,
 ) {
   if (parentGroupId == null) {
@@ -302,7 +302,6 @@ export function createGroupHelper(
   }
 
   const newSegmentGroups = cloneDeep(segmentGroups);
-  newGroupId = newGroupId ?? getMaximumGroupId(newSegmentGroups) + 1;
   const newGroup = {
     name: name || `Group ${newGroupId}`,
     groupId: newGroupId,

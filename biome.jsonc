@@ -1,10 +1,28 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!**/libs/stl_exporter.ts",
+      "!**/libs/DRACOLoader.ts",
+      "!**/libs/DRACOWorker.worker.js",
+      "!**/libs/BufferGeometryUtils.ts",
+      "!**/libs/parse_stl_buffer.ts",
+      "!**/libs/trackball_controls.ts",
+      "!**/libs/fps_meter.ts",
+      "!**/*.d.ts",
+      "!**/*.json",
+      "!**/__snapshots__",
+      "!**/frontend/javascripts/test/snapshots"
+    ]
+  },
   "assist": {
     "actions": {
       "source": {
         "organizeImports": {
           "level": "on",
+          // use the same import sorting as biome v1 for now.
+          // TODO: remove this in a follow up
           "options": {
             "groups": [
               // Bun modules
@@ -42,7 +60,6 @@
   "linter": {
     "enabled": true,
     "includes": [
-      "**",
       "!**/libs/keyboard.ts",
       "!**/libs/stl_exporter.ts",
       "!**/libs/DRACOLoader.ts",
@@ -52,8 +69,9 @@
       "!**/libs/parse_stl_buffer.ts",
       "!**/libs/trackball_controls.ts",
       "!**/*.d.ts",
+      "!**/*.json",
       "!**/frontend/javascripts/test/snapshots/**/*",
-      "!**/__snapshots__/**"
+      "**"
     ],
     "rules": {
       "recommended": true,
@@ -115,7 +133,8 @@
         "noUnusedVariables": "error",
         "noUnusedImports": "error",
         "noRenderReturnValue": "off",
-        "useHookAtTopLevel": "error"
+        "useHookAtTopLevel": "error",
+        "useExhaustiveDependencies": "warn" // TODO: consider turning this into an error
       },
       "suspicious": {
         "noExplicitAny": "off",
@@ -138,18 +157,10 @@
     "indentStyle": "space",
     "lineWidth": 100,
     "includes": [
-      "**",
-      "!**/libs/keyboard.ts",
-      "!**/libs/stl_exporter.ts",
-      "!**/libs/DRACOLoader.ts",
-      "!**/libs/DRACOWorker.worker.js",
-      "!**/libs/BufferGeometryUtils.ts",
-      "!**/libs/parse_stl_buffer.ts",
-      "!**/libs/trackball_controls.ts",
-      "!**/*.d.ts",
-      "!**/__snapshots__/**"
+     
     ]
   },
+
   "overrides": [
     {
       "includes": [

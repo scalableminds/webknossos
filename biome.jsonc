@@ -3,7 +3,39 @@
   "assist": {
     "actions": {
       "source": {
-        "organizeImports": "on"
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              // Bun modules
+              ":BUN:",
+              // Node.js modules
+              ":NODE:",
+              // Modules imported with the `npm:` protocol
+              [
+                "npm:*",
+                "npm:*/**"
+              ],
+              // Modules imported with another protocol. e.g. `jsr:`
+              ":PACKAGE_WITH_PROTOCOL:",
+              // URLs
+              ":URL:",
+              // Libraries
+              ":PACKAGE:",
+              // Absolute paths
+              [
+                "/**"
+              ],
+              // Sharp aliases
+              [
+                "#*",
+                "#*/**"
+              ],
+              // All other paths
+              ":PATH:"
+            ]
+          }
+        }
       }
     }
   },
@@ -59,7 +91,7 @@
         "useSimplifiedLogicExpression": "off",
         "noForEach": "off",
         "noBannedTypes": "error",
-        "noUselessFragments": "off",
+        "noUselessFragments": "off", // TODO: consider removing
         "useLiteralKeys": "off",
         "useArrowFunction": "off",
         "noStaticOnlyClass": "off",

@@ -82,7 +82,7 @@ function* updateSplitBoundaryMesh() {
   }
 }
 
-export function* splitBoundaryMeshSaga(): Saga<void> {
+function* splitBoundaryMeshSaga(): Saga<void> {
   cleanUpFn = null;
   temporarilyChangedTreeInfo = null;
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");

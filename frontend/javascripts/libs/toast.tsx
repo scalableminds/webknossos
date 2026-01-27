@@ -12,7 +12,7 @@ export type Message = {
   key?: string;
 };
 
-export type ToastConfig = {
+type ToastConfig = {
   sticky?: boolean;
   timeout?: number;
   key?: string;
@@ -21,7 +21,7 @@ export type ToastConfig = {
   className?: string;
 };
 
-export type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
+type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
 
 export function ToastContextMountRoot() {
   const [toastAPI, contextHolder] = notification.useNotification();

@@ -134,7 +134,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   throw new Error("Could not unpack redux action from channel");
 }
 
-export function* manageUndoStates(): Saga<never> {
+function* manageUndoStates(): Saga<never> {
   // At its core, this saga maintains an undo and redo stack to implement
   // undo/redo functionality.
   const undoStack: Array<UndoState> = [];

@@ -19,41 +19,7 @@
   "assist": {
     "actions": {
       "source": {
-        "organizeImports": {
-          "level": "on",
-          // use the same import sorting as biome v1 for now.
-          // TODO: remove this in a follow up
-          "options": {
-            "groups": [
-              // Bun modules
-              ":BUN:",
-              // Node.js modules
-              ":NODE:",
-              // Modules imported with the `npm:` protocol
-              [
-                "npm:*",
-                "npm:*/**"
-              ],
-              // Modules imported with another protocol. e.g. `jsr:`
-              ":PACKAGE_WITH_PROTOCOL:",
-              // URLs
-              ":URL:",
-              // Libraries
-              ":PACKAGE:",
-              // Absolute paths
-              [
-                "/**"
-              ],
-              // Sharp aliases
-              [
-                "#*",
-                "#*/**"
-              ],
-              // All other paths
-              ":PATH:"
-            ]
-          }
-        }
+        "organizeImports": "on"
       }
     }
   },
@@ -106,7 +72,7 @@
         }
       },
       "complexity": {
-        "useSimplifiedLogicExpression": "off",
+        "useSimplifiedLogicExpression": "off", // TODO: consider removing
         "noForEach": "off",
         "noBannedTypes": "error",
         "noUselessFragments": "off", // TODO: consider removing
@@ -142,7 +108,7 @@
         "noShadowRestrictedNames": "off",
         "noImplicitAnyLet": "off",
         "noConfusingVoidType": "off",
-        "noGlobalIsNan": "off",
+        "noGlobalIsNan": "off", // TODO: consider turning this into an error
         "noArrayIndexKey": "off",
         "noConstEnum": "off",
         "noRedeclare": "off",

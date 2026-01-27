@@ -474,7 +474,7 @@ function NotificationIcon({
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
-      lastViewedWhatsNewTimestamp: new Date().getTime(),
+      lastViewedWhatsNewTimestamp: Date.now(),
     });
     dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
@@ -520,7 +520,11 @@ function OrganizationFilterInput({
   onChange,
   isVisible,
   onPressEnter,
-}: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
+}: {
+  onChange: (val: string) => void;
+  isVisible: boolean;
+  onPressEnter: () => void;
+}) {
   const ref = useRef<InputRef>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?

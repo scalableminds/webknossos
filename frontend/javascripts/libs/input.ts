@@ -296,7 +296,7 @@ export class InputKeyboard {
         if (totalDelay >= 0) {
           delayTimeoutId = setTimeout(() => {
             callback.delayed = false;
-            callback.lastTime = new Date().getTime();
+            callback.lastTime = Date.now();
           }, totalDelay);
         }
       },
@@ -335,7 +335,7 @@ export class InputKeyboard {
         const callback = this.keyCallbackMap[key];
 
         if (!callback.delayed) {
-          const curTime = new Date().getTime();
+          const curTime = Date.now();
           // If no lastTime, assume that desired FPS is met
           const lastTime = callback.lastTime || curTime - 1000 / constants.FPS;
           const elapsed = curTime - lastTime;

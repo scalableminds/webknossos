@@ -261,9 +261,7 @@ function* performMinCut(action: Action): Saga<void> {
         boundingBox: newBBox,
         name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
           ",",
-        )}), seedB=(${nodes[1].untransformedPosition.join(
-          ",",
-        )}), timestamp=${new Date().getTime()})`,
+        )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
         color: getRandomColor(),
         isVisible: true,
       }),

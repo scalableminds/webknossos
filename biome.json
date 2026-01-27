@@ -1,6 +1,12 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "linter": {
     "enabled": true,
     "includes": [
@@ -34,7 +40,12 @@
         "useDefaultParameterLast": "off",
         "useAsConstAssertion": "off",
         "noNonNullAssertion": "off",
-        "useConsistentArrayType": { "level": "off", "options": { "syntax": "shorthand" } },
+        "useConsistentArrayType": {
+          "level": "off",
+          "options": {
+            "syntax": "shorthand"
+          }
+        },
         "noRestrictedImports": {
           "level": "error",
           "options": {
@@ -61,7 +72,8 @@
         "useKeyWithClickEvents": "off",
         "useIframeTitle": "off",
         "noAriaHiddenOnFocusable": "off",
-        "noLabelWithoutControl": "off"
+        "noLabelWithoutControl": "off",
+        "noStaticElementInteractions": "off"
       },
       "performance": {
         "noDelete": "off",
@@ -108,7 +120,9 @@
   },
   "overrides": [
     {
-      "includes": ["**/package.json"],
+      "includes": [
+        "**/package.json"
+      ],
       "formatter": {
         "lineWidth": 1
       }

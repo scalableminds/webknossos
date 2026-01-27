@@ -1,4 +1,4 @@
-import min from "lodash/min";
+import min from "lodash-es/min";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "viewer/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "viewer/constants";

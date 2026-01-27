@@ -1,4 +1,4 @@
-import range from "lodash/range";
+import range from "lodash-es/range";
 import { Matrix, solve } from "ml-matrix";
 import type { Vector3 } from "viewer/constants";
 import { V3 } from "./mjs";

@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
-import throttle from "lodash/throttle";
+import throttle from "lodash-es/throttle";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { EmptyObject } from "types/globals";

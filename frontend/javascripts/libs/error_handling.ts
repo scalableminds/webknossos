@@ -1,7 +1,7 @@
 import { Notifier } from "@airbrake/browser";
 import Toast from "libs/toast";
 import window, { document, location } from "libs/window";
-import pick from "lodash/pick";
+import pick from "lodash-es/pick";
 import messages from "messages";
 import type { APIUser } from "types/api_types";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";

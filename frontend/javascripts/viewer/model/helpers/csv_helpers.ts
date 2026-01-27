@@ -1,5 +1,5 @@
 import saveAs from "file-saver";
-import capitalize from "lodash/capitalize";
+import capitalize from "lodash-es/capitalize";
 import { LongUnitToShortUnitMap, type UnitLong } from "viewer/constants";
 import { api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";

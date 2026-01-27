@@ -1,10 +1,10 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
-import forEach from "lodash/forEach";
-import get from "lodash/get";
-import isEqual from "lodash/isEqual";
-import setWith from "lodash/setWith";
-import throttle from "lodash/throttle";
+import forEach from "lodash-es/forEach";
+import get from "lodash-es/get";
+import isEqual from "lodash-es/isEqual";
+import setWith from "lodash-es/setWith";
+import throttle from "lodash-es/throttle";
 import {
   AmbientLight,
   BufferAttribute,

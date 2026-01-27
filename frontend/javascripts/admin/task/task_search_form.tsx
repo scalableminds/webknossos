@@ -4,7 +4,7 @@ import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
 import { Button, Col, Dropdown, Flex, Form, Input, Row, Select } from "antd";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";
-import size from "lodash/size";
+import size from "lodash-es/size";
 import { useEffect, useState } from "react";
 import type { APIProject, APITaskType, APIUser } from "types/api_types";
 const FormItem = Form.Item;

@@ -1,6 +1,6 @@
 import { Select, Spin } from "antd";
 import type { SelectProps } from "antd/es/select";
-import debounce from "lodash/debounce";
+import debounce from "lodash-es/debounce";
 import type React from "react";
 import { useMemo, useRef, useState } from "react";
 
@@ -10,7 +10,7 @@ import { useMemo, useRef, useState } from "react";
 // Quote:
 // A complete multiple select sample with remote search, debounce fetch, ajax callback order flow, and loading state.
 
-export interface AsyncSelectProps<ValueType = any>
+interface AsyncSelectProps<ValueType = any>
   extends Omit<SelectProps<ValueType | ValueType[]>, "options" | "children"> {
   fetchOptions: (search: string) => Promise<ValueType[]>;
   debounceTimeout?: number;

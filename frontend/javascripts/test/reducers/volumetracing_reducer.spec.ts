@@ -312,10 +312,10 @@ describe("VolumeTracing", () => {
         groupId: id1,
         name: "Name 1 and Name 2",
         metadata: [
-          { key: "someKey1-1", stringValue: "someStringValue" },
-          { key: "someKey2", stringListValue: ["list", "value"] },
-          { key: "someKey1-2", stringValue: "someStringValue" },
-          { key: "someKey3", stringListValue: ["list", "value"] },
+          { key: "someKey1-1", stringValue: "someStringValue - segment 1" },
+          { key: "someKey2", stringListValue: ["list", "value", "segment 1"] },
+          { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
+          { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
         ],
         anchorPosition: [1, 1, 1],
       });
@@ -334,8 +334,12 @@ describe("VolumeTracing", () => {
         groupId: id2,
         name: "Segment 1 and Name 2", // Note that "Segment 1" as a fallback got used here.
         metadata: [
-          { key: "someKey1", stringValue: "someStringValue" },
-          { key: "someKey3", stringListValue: ["list", "value"] },
+          { key: "someKey1", stringValue: "someStringValue - segment 2" },
+          { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
+          {
+            key: "identicalKey",
+            stringValue: "identicalValue",
+          },
         ],
         anchorPosition: [2, 2, 2],
       });

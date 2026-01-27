@@ -15,7 +15,11 @@ import {
 import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import { createSegment1, createSegment2, id1, id2 } from "test/fixtures/segment_merging_fixtures";
-import { mergeSegmentsAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  mergeSegmentsAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
+import { ColoredLogger } from "libs/utils";
 
 const createSegment = (
   id: number,
@@ -160,16 +164,18 @@ describe("diffSegmentGroups for volume tracings", () => {
 });
 
 describe("uncachedDiffSegmentLists should diff segment lists", () => {
+  // Each list defines which segment itesm should already exist before
+  // the merge is executed.
   describe.for([[], [id1, id2], [id1], [id2]])(
     "mergeSegment actions should be detected during diffing",
     (segmentItemsToCreateInSetup) => {
       test(`with prepared segments: [${segmentItemsToCreateInSetup}]`, () => {
         let newState = initialState;
         if (segmentItemsToCreateInSetup.includes(id1)) {
-          newState = VolumeTracingReducer(initialState, createSegment1);
+          newState = VolumeTracingReducer(newState, createSegment1);
         }
         if (segmentItemsToCreateInSetup.includes(id1)) {
-          newState = VolumeTracingReducer(initialState, createSegment2);
+          newState = VolumeTracingReducer(newState, createSegment2);
         }
         const stateBeforeMerge = newState;
         newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
@@ -202,6 +208,74 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
     },
   );
 
-  // todop: other updateSegment actions in the same diffing should not get lost
-  // todop: try to detect multiple merges?
+  test.only("mergeSegments should be detected along with another segment update", () => {
+    let newState = initialState;
+    newState = VolumeTracingReducer(newState, createSegment1);
+    newState = VolumeTracingReducer(newState, createSegment2);
+
+    const newSegmentPartial = {
+      metadata: [
+        { key: "someKey1", stringValue: "someStringValue - segment 1 - changed" },
+        { key: "someKey4", boolValue: true },
+      ],
+    };
+
+    let segment1 = newState.annotation.volumes[0].segments.getNullable(1);
+    ColoredLogger.logYellow("segment1 initial", segment1);
+
+    const stateBeforeMerge = newState;
+    newState = VolumeTracingReducer(
+      newState,
+      updateSegmentAction(id1, newSegmentPartial, VOLUME_TRACING_ID),
+    );
+
+    segment1 = newState.annotation.volumes[0].segments.getNullable(1);
+    ColoredLogger.logYellow("segment1 after update", segment1);
+
+    newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+
+    segment1 = newState.annotation.volumes[0].segments.getNullable(1);
+    ColoredLogger.logYellow("segment1 after merge", segment1);
+
+    const stateAfterMerge = newState;
+
+    const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
+    const volumeTracing = stateAfterMerge.annotation.volumes[0];
+
+    const updateActions = Array.from(
+      uncachedDiffSegmentLists(
+        VOLUME_TRACING_ID,
+        prevVolumeTracing.segments,
+        volumeTracing.segments,
+        prevVolumeTracing.segmentJournal,
+        volumeTracing.segmentJournal,
+      ),
+    );
+
+    expect(updateActions).toEqual([
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: id1,
+          targetId: id2,
+        },
+      },
+      {
+        name: "updateMetadataOfSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          id: 1,
+          removeEntriesByKey: ["someKey2", "identicalKey-1", "identicalKey-2"],
+          upsertEntriesByKey: [
+            { key: "someKey1-1", stringValue: "someStringValue - segment 1 - changed" },
+            { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
+            { boolValue: true, key: "someKey4" },
+            { key: "identicalKey", stringValue: "identicalValue" },
+          ],
+        },
+      },
+    ]);
+  });
 });
+// todop: try to detect multiple merges?

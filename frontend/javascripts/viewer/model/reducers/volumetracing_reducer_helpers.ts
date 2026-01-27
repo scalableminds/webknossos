@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import { floor3 } from "libs/utils";
+import { ColoredLogger, floor3 } from "libs/utils";
 import groupBy from "lodash/groupBy";
 import type { Writeable } from "types/type_utils";
 import {
@@ -453,6 +453,10 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   const sourceSegment = segments.getNullable(action.sourceId);
   const targetSegment = segments.getNullable(action.targetId);
 
+  ColoredLogger.logGreen("merging segments");
+  ColoredLogger.logGreen("sourceSegment", sourceSegment);
+  ColoredLogger.logGreen("targetSegment", targetSegment);
+
   let newState = handleRemoveSegment(state, removeSegmentAction(action.targetId, action.layerName));
   const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
@@ -467,78 +471,96 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
     ]),
   });
 
+  const updatedSourceProps = getUpdatedSourcePropsAfterMerge(
+    action.sourceId,
+    action.targetId,
+    sourceSegment,
+    targetSegment,
+  );
+
+  // Even when updatedSourceProps is empty, the following statement is important
+  // because there might be no segment item for sourceId, yet. In that case,
+  // it will be created here.
+  newState = handleUpdateSegment(
+    newState,
+    updateSegmentAction(action.sourceId, updatedSourceProps, action.layerName),
+  );
+
+  return newState;
+}
+
+export function getUpdatedSourcePropsAfterMerge(
+  sourceId: number,
+  targetId: number,
+  sourceSegment: Segment | undefined,
+  targetSegment: Segment | undefined,
+) {
   // Since the target segment is deleted (absorbed by the source segment),
   // we should ensure that no information is lost.
   // However, this is only necessary when the targetSegment is not null.
-  if (targetSegment != null) {
-    const props: Writeable<Partial<Segment>> = {};
-    // Handle `name` by concatening names
-    if (targetSegment.name != null) {
-      // The new segments name should always start with the original
-      // source segment's name. Therefore, we use getSegmentName
-      // so that we have a fallback even when no source segment existed.
-      // This is because of cases like this:
-      // Source segment: {id: 1, name: null}
-      // Target segment: {id: 2, name: "Segment 2 - Custom String"}
-      // Without the fallback logic, the new segment 1 would simply be
-      // "Segment 2 - Custom String" which would be confusing because of the
-      // id mismatch.
-      // The below logic produces this instead:
-      // {id: 1, name: "Segment 1 and Segment 2 - Custom String"}.
-      const sourceName = getSegmentName(
-        sourceSegment ?? { id: action.sourceId, name: undefined },
-        false,
-      );
-      props.name = `${sourceName} and ${targetSegment.name}`;
-    }
+  if (targetSegment == null) {
+    return {};
+  }
+  const props: Writeable<Partial<Segment>> = {};
+  // Handle `name` by concatening names
+  if (targetSegment.name != null) {
+    // The new segments name should always start with the original
+    // source segment's name. Therefore, we use getSegmentName
+    // so that we have a fallback even when no source segment existed.
+    // This is because of cases like this:
+    // Source segment: {id: 1, name: null}
+    // Target segment: {id: 2, name: "Segment 2 - Custom String"}
+    // Without the fallback logic, the new segment 1 would simply be
+    // "Segment 2 - Custom String" which would be confusing because of the
+    // id mismatch.
+    // The below logic produces this instead:
+    // {id: 1, name: "Segment 1 and Segment 2 - Custom String"}.
+    const sourceName = getSegmentName(sourceSegment ?? { id: sourceId, name: undefined }, false);
+    props.name = `${sourceName} and ${targetSegment.name}`;
+  }
 
-    // Handle metadata by concatening the entries. If the resulting keys
-    // would not be unique, the keys are postfixed like this: key-originalSegmentId
-    if (targetSegment.metadata.length > 0) {
-      const sourceMetadata = sourceSegment?.metadata ?? [];
-      const mergedMetadataEntries = sourceMetadata.concat(targetSegment.metadata);
-      // Items of mergedMetadataEntries with index < pivotIndex,
-      // belong to the source segment. The other belong to the
-      // target segment.
-      const pivotIndex = sourceMetadata.length;
-      const keyToEntries = groupBy(mergedMetadataEntries, (entry) => entry.key);
-      const metadataEntriesWithUniqueKeys = mergedMetadataEntries.map((entry, index) => {
-        if (keyToEntries[entry.key].length > 1) {
-          const originalSegmentId = index < pivotIndex ? action.sourceId : action.targetId;
-          return {
-            ...entry,
-            key: `${entry.key}-${originalSegmentId}`,
-          };
-        } else {
-          return entry;
-        }
-      });
-      props.metadata = metadataEntriesWithUniqueKeys;
-    }
+  // Handle metadata by concatening the entries. If the resulting keys
+  // would not be unique, the keys are postfixed like this: key-originalSegmentId
+  if (targetSegment.metadata.length > 0) {
+    ColoredLogger.logGreen("targetSegment.metadata.length", targetSegment.metadata.length);
+    const sourceMetadata = sourceSegment?.metadata ?? [];
+    const mergedMetadataEntries = sourceMetadata.concat(targetSegment.metadata);
+    // Items of mergedMetadataEntries with index < pivotIndex,
+    // belong to the source segment. The other belong to the
+    // target segment.
+    const pivotIndex = sourceMetadata.length;
+    const keyToEntries = groupBy(mergedMetadataEntries, (entry) => entry.key);
+    // todop: if values are identical for identical keys, there's no need to
+    // postfix the id to the key.
+    const metadataEntriesWithUniqueKeys = mergedMetadataEntries.map((entry, index) => {
+      if (keyToEntries[entry.key].length > 1) {
+        const originalSegmentId = index < pivotIndex ? sourceId : targetId;
+        return {
+          ...entry,
+          key: `${entry.key}-${originalSegmentId}`,
+        };
+      } else {
+        return entry;
+      }
+    });
+    props.metadata = metadataEntriesWithUniqueKeys;
+  }
 
-    // For some properties, the data in source segment should simply "win".
-    // However, if the source item didn't exist before, we use the data from targetSegment.
-    if (sourceSegment == null) {
-      if (targetSegment.anchorPosition != null) {
-        props.anchorPosition = targetSegment.anchorPosition;
-      }
-      if (targetSegment.additionalCoordinates != null) {
-        props.additionalCoordinates = targetSegment.additionalCoordinates;
-      }
-      if (targetSegment.groupId != null) {
-        props.groupId = targetSegment.groupId;
-      }
+  // For some properties, the data in source segment should simply "win".
+  // However, if the source item didn't exist before, we use the data from targetSegment.
+  if (sourceSegment == null) {
+    if (targetSegment.anchorPosition != null) {
+      props.anchorPosition = targetSegment.anchorPosition;
     }
-
-    if (Object.keys(props).length > 0) {
-      newState = handleUpdateSegment(
-        newState,
-        updateSegmentAction(action.sourceId, props, action.layerName),
-      );
+    if (targetSegment.additionalCoordinates != null) {
+      props.additionalCoordinates = targetSegment.additionalCoordinates;
+    }
+    if (targetSegment.groupId != null) {
+      props.groupId = targetSegment.groupId;
     }
   }
 
-  return newState;
+  return props;
 }
 
 export function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction) {

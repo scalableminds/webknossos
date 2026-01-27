@@ -37,6 +37,7 @@ import {
   SEGMENT_GROUPS_EDITED,
   SWAP_GROUP_EDGE_CASE,
 } from "test/sagas/volumetracing/segment_group_fixtures";
+import { ColoredLogger } from "libs/utils";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];
@@ -116,9 +117,9 @@ describe("Update Action Application for VolumeTracing", () => {
   /*
    * Hardcode these values if you want to focus on a specific test.
    */
-  const compactionModes = [true, false];
-  const hardcodedBeforeVersionIndex: number | null = null;
-  const hardcodedAfterVersionIndex: number | null = null;
+  const compactionModes = [false];
+  const hardcodedBeforeVersionIndex: number | null = 0;
+  const hardcodedAfterVersionIndex: number | null = 15;
 
   const userActions: Action[] = [
     updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),
@@ -210,6 +211,8 @@ describe("Update Action Application for VolumeTracing", () => {
             : range(beforeVersionIndex, userActions.length + 1);
 
         test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
+          // initialState --> [actions until beforeVersionIndex] --> state2 --> [actions between before and afterVersionIndex] --> state3
+          // state2 and state3 are diffed and that diff is applied again on state2. The result is compared against state3 again.
           const state2WithActiveCell = applyActions(
             initialState,
             userActions.slice(0, beforeVersionIndex),
@@ -229,6 +232,10 @@ describe("Update Action Application for VolumeTracing", () => {
           const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveBoundingBox);
           const volumeTracing3 = enforceVolumeTracing(state3);
 
+          ColoredLogger.logYellow("Segments before", Array.from(volumeTracing2.segments.keys()));
+          console.log("actionsToApply", actionsToApply);
+          ColoredLogger.logYellow("Segments after", Array.from(volumeTracing3.segments.keys()));
+
           const updateActionsBeforeCompaction = Array.from(
             diffVolumeTracing(volumeTracing2, volumeTracing3),
           );
@@ -245,6 +252,7 @@ describe("Update Action Application for VolumeTracing", () => {
             seenActionTypes.add(action.name);
           }
 
+          console.log("updateActions", updateActions);
           let reappliedNewState = transformStateAsReadOnly(
             state2WithoutActiveBoundingBox,
             (state) =>

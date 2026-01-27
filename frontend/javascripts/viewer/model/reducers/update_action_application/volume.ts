@@ -32,6 +32,7 @@ import {
   applyDeleteUserBoundingBox,
   applyUpdateUserBoundingBox,
 } from "./bounding_box";
+import { ColoredLogger } from "libs/utils";
 
 export function applyVolumeUpdateActionsFromServer(
   actions: ApplicableVolumeUpdateAction[],
@@ -59,6 +60,7 @@ function applySingleAction(
   ) => WebknossosState,
   ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
+  ColoredLogger.logGreen("applySingleAction", ua);
   switch (ua.name) {
     case "updateLargestSegmentId": {
       const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
@@ -80,6 +82,7 @@ function applySingleAction(
       const segments = getSegmentsForLayer(state, actionTracingId);
       const segment = segments.getNullable(id);
       if (segment == null) {
+        ColoredLogger.logRed("crashing ua", ua);
         throw new Error(`Cannot find segment with id ${id} during application of update action.`);
       }
       const { metadata } = segment;

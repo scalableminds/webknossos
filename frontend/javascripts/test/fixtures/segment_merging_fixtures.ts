@@ -22,14 +22,16 @@ export { id1, id2 };
 export const createSegment1 = createAction(id1, {
   name: "Name 1",
   metadata: [
-    { key: "someKey1", stringValue: "someStringValue" },
-    { key: "someKey2", stringListValue: ["list", "value"] },
+    { key: "someKey1", stringValue: "someStringValue - segment 1" },
+    { key: "someKey2", stringListValue: ["list", "value", "segment 1"] },
+    { key: "identicalKey", stringValue: "identicalValue" },
   ],
 });
 export const createSegment2 = createAction(id2, {
   name: "Name 2",
   metadata: [
-    { key: "someKey1", stringValue: "someStringValue" },
-    { key: "someKey3", stringListValue: ["list", "value"] },
+    { key: "someKey1", stringValue: "someStringValue - segment 2" },
+    { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
+    { key: "identicalKey", stringValue: "identicalValue" },
   ],
 });

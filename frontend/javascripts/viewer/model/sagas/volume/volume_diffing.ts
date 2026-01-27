@@ -1,5 +1,5 @@
 import { diffDiffableMaps } from "libs/diffable_map";
-import { diffArrays } from "libs/utils";
+import { ColoredLogger, diffArrays } from "libs/utils";
 import isEqual from "lodash/isEqual";
 import keyBy from "lodash/keyBy";
 import sortedIndexBy from "lodash/sortedIndexBy";
@@ -13,6 +13,7 @@ import {
   diffGroupsGranular,
   topologicallySortUpdates,
 } from "viewer/model/helpers/diff_helpers";
+import { getUpdatedSourcePropsAfterMerge } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import {
   type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
@@ -119,20 +120,10 @@ export const cachedDiffSegmentLists = memoizeOne(
     ),
 );
 
-export function* uncachedDiffSegmentLists(
-  tracingId: string,
-  prevSegments: SegmentMap,
-  newSegments: SegmentMap,
-  prevSegmentJournal: Array<SegmentJournalEntry>,
-  segmentJournal: Array<SegmentJournalEntry>,
-): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  const {
-    onlyA: initialDeletedSegmentIds,
-    onlyB: addedSegmentIds,
-    changed: bothSegmentIds,
-  } = diffDiffableMaps(prevSegments, newSegments);
-  const deletedSegmentIdSet = new Set(initialDeletedSegmentIds);
-
+function diffSegmentJournals(
+  prevSegmentJournal: SegmentJournalEntry[],
+  segmentJournal: SegmentJournalEntry[],
+) {
   const prevLatestJournalEntryIndex = prevSegmentJournal.at(-1)?.entryIndex;
   const journalDiff =
     prevLatestJournalEntryIndex == null
@@ -146,37 +137,35 @@ export function* uncachedDiffSegmentLists(
 
           return segmentJournal.slice(splitIndex + 1);
         })();
-  const mergedSourceIds = new Set(journalDiff.map((entry) => entry.sourceId));
+  return journalDiff;
+}
 
-  for (const mergeJournalEntry of journalDiff) {
-    // todop: what about the source segment that got its name changed potentially?
-    // that should (?) be respected so that no updateSegmentPartialVolumeAction
-    // is emitted for that.
-    yield mergeSegmentsVolumeAction(
-      mergeJournalEntry.sourceId,
-      mergeJournalEntry.targetId,
-      tracingId,
-    );
+export function* uncachedDiffSegmentLists(
+  tracingId: string,
+  prevSegments: SegmentMap,
+  newSegments: SegmentMap,
+  prevSegmentJournal: Array<SegmentJournalEntry>,
+  segmentJournal: Array<SegmentJournalEntry>,
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
+  const journalDiff = diffSegmentJournals(prevSegmentJournal, segmentJournal);
+  prevSegments = applyJournalDiffOnSegments(prevSegments, journalDiff);
 
-    // Note that the merge entry doesn't always imply the existence
-    // of targetId in deletedSegmentIdSet. This happens when two agglomerates
-    // were merged, but there was no segment item for the target.
-    // The following line will be a no-op then.
-    deletedSegmentIdSet.delete(mergeJournalEntry.targetId);
+  for (const journalEntry of journalDiff) {
+    yield mergeSegmentsVolumeAction(journalEntry.sourceId, journalEntry.targetId, tracingId);
   }
+
+  const {
+    onlyA: initialDeletedSegmentIds,
+    onlyB: addedSegmentIds,
+    changed: bothSegmentIds,
+  } = diffDiffableMaps(prevSegments, newSegments);
+  const deletedSegmentIdSet = new Set(initialDeletedSegmentIds);
 
   for (const segmentId of deletedSegmentIdSet) {
     yield deleteSegmentVolumeAction(segmentId, tracingId);
   }
 
   for (const segmentId of addedSegmentIds) {
-    if (mergedSourceIds.has(segmentId)) {
-      // Ignore added segment ids if they were a `source` in a journal entry,
-      // because the corresponding mergeSegments update action already reflects
-      // that change.
-      continue;
-    }
-
     const segment = newSegments.getOrThrow(segmentId);
     yield createSegmentVolumeAction(
       segment.id,
@@ -194,12 +183,6 @@ export function* uncachedDiffSegmentLists(
   }
 
   for (const segmentId of bothSegmentIds) {
-    if (mergedSourceIds.has(segmentId)) {
-      // Ignore added segment ids if they were a `source` in a journal entry,
-      // because the corresponding mergeSegments update action already reflects
-      // that change.
-      continue;
-    }
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 
@@ -209,12 +192,14 @@ export function* uncachedDiffSegmentLists(
         changedPropertyNames.add(propertyName);
       }
     }
+    if (changedPropertyNames.has("metadata")) {
+      changedPropertyNames.delete("metadata");
+      yield* diffMetadataOfSegments(segment, prevSegment, tracingId);
+    }
     if (changedPropertyNames.size > 0) {
-      if (changedPropertyNames.has("metadata")) {
-        changedPropertyNames.delete("metadata");
-        yield* diffMetadataOfSegments(segment, prevSegment, tracingId);
-      }
-
+      ColoredLogger.logRed("changedPropertyNames", changedPropertyNames);
+      console.log("  diffed were prevSegment:", prevSegment);
+      console.log("  diffed were segment:", segment);
       yield updateSegmentPartialVolumeAction(
         Object.fromEntries([
           ["id", segment.id],
@@ -339,4 +324,42 @@ function* getOrderedUpsertsForChangedItems(groupDiff: GranularGroupDiff, volumeT
       volumeTracingId,
     );
   }
+}
+
+function applyJournalDiffOnSegments(
+  prevSegments: SegmentMap,
+  journalDiff: SegmentJournalEntry[],
+): SegmentMap {
+  for (const journalEntry of journalDiff) {
+    const sourceSegment = prevSegments.getNullable(journalEntry.sourceId);
+    const updatedSourceProps = getUpdatedSourcePropsAfterMerge(
+      journalEntry.sourceId,
+      journalEntry.targetId,
+      sourceSegment,
+      prevSegments.getNullable(journalEntry.targetId),
+    );
+
+    const newSourceSegment: Segment =
+      sourceSegment != null
+        ? {
+            ...sourceSegment,
+            ...updatedSourceProps,
+          }
+        : {
+            id: journalEntry.sourceId,
+            creationTime: 0,
+            name: null,
+            color: null,
+            groupId: null,
+            isVisible: true,
+            anchorPosition: undefined,
+            metadata: [],
+            ...updatedSourceProps,
+          };
+
+    prevSegments = prevSegments.set(journalEntry.sourceId, newSourceSegment);
+    prevSegments = prevSegments.delete(journalEntry.targetId);
+  }
+
+  return prevSegments;
 }

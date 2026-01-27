@@ -314,6 +314,7 @@ describe("VolumeTracing", () => {
         metadata: [
           { key: "someKey1-1", stringValue: "someStringValue - segment 1" },
           { key: "someKey2", stringListValue: ["list", "value", "segment 1"] },
+          { key: "identicalKey", stringValue: "identicalValue" },
           { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
           { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
         ],

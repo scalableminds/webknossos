@@ -55,6 +55,9 @@ import {
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
+import uniq from "lodash/uniq";
+import uniqBy from "lodash/uniqBy";
+import { isEqual, uniqWith } from "lodash";
 
 export type VolumeTracingReducerAction =
   | VolumeTracingAction
@@ -519,8 +522,13 @@ export function getUpdatedSourcePropsAfterMerge(
     props.name = `${sourceName} and ${targetSegment.name}`;
   }
 
-  // Handle metadata by concatening the entries. If the resulting keys
-  // would not be unique, the keys are postfixed like this: key-originalSegmentId
+  // Handle metadata by concatenating the entries. Special care is taken
+  // to ensure that the keys are still unique.
+  // If both metadata entry sets use a key twice, this "conflict" is used
+  // by checking whether their values are equal. If so, only one metadata
+  // entry is regarded.
+  // If the values are not equal, the keys are postfixed like this: key-originalSegmentId.
+  // Have a look at the "should merge two segments (simple)" unit test for an example.
   if (targetSegment.metadata.length > 0) {
     const sourceMetadata = sourceSegment?.metadata ?? [];
     const mergedMetadataEntries = sourceMetadata.concat(targetSegment.metadata);
@@ -529,19 +537,24 @@ export function getUpdatedSourcePropsAfterMerge(
     // target segment.
     const pivotIndex = sourceMetadata.length;
     const keyToEntries = groupBy(mergedMetadataEntries, (entry) => entry.key);
-    // todop: if values are identical for identical keys, there's no need to
-    // postfix the id to the key.
-    const metadataEntriesWithUniqueKeys = mergedMetadataEntries.map((entry, index) => {
-      if (keyToEntries[entry.key].length > 1) {
-        const originalSegmentId = index < pivotIndex ? sourceId : targetId;
-        return {
-          ...entry,
-          key: `${entry.key}-${originalSegmentId}`,
-        };
-      } else {
+    const metadataEntriesWithUniqueKeys = uniqBy(
+      mergedMetadataEntries.map((entry, index) => {
+        const valuesForKeys = keyToEntries[entry.key];
+        if (valuesForKeys.length > 1) {
+          const uniqValues = uniqWith(valuesForKeys, isEqual);
+          if (uniqValues.length > 1) {
+            const originalSegmentId = index < pivotIndex ? sourceId : targetId;
+            return {
+              ...entry,
+              // Postfix the key to make it unique.
+              key: `${entry.key}-${originalSegmentId}`,
+            };
+          }
+        }
         return entry;
-      }
-    });
+      }),
+      (entry) => entry.key,
+    );
     props.metadata = metadataEntriesWithUniqueKeys;
   }
 

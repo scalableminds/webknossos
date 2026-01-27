@@ -1316,8 +1316,9 @@ function SkeletonTracingReducer(
 export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
   // Workaround for stringList values that are [], even though they
   // should be null. This workaround is necessary because protobuf cannot
-  // distinguish between an empty list and an not existent property.
+  // distinguish between an empty list and a not existent property.
   // Therefore, we clean this up here.
+  // todop: should we also ensure uniqueness here?
   return metadata.map((prop) => {
     // If stringList value is defined, but it's an empty array, it should
     // be switched to undefined

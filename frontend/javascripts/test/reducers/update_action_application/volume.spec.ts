@@ -117,9 +117,9 @@ describe("Update Action Application for VolumeTracing", () => {
   /*
    * Hardcode these values if you want to focus on a specific test.
    */
-  const compactionModes = [false];
-  const hardcodedBeforeVersionIndex: number | null = 0;
-  const hardcodedAfterVersionIndex: number | null = 15;
+  const compactionModes = [false, true];
+  const hardcodedBeforeVersionIndex: number | null = null;
+  const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
     updateSegmentAction(2, { anchorPosition: [1, 2, 3] }, tracingId),

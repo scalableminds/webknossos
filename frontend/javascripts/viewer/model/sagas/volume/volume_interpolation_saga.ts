@@ -164,7 +164,6 @@ const isEqualFromBigUint64: (
   b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
   body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
@@ -207,7 +206,6 @@ const absMax = cwise({
 
 const assign = cwise({
   args: ["array", "array"],
-  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
   body: function body(a: number, b: number) {
     a = b;
   },

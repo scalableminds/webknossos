@@ -1,9 +1,10 @@
+// biome-ignore assist/source/organizeImports: the test apiHelpers need to be imported first otherwise the actual modules are loaded instead of the mocked ones
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import update from "immutability-helper";
 import { call, put, take } from "redux-saga/effects";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_server_objects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { execCall, expectValueDeepEqual } from "test/helpers/sagaHelpers";
 import {
   ContourModeEnum,

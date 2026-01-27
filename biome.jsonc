@@ -12,6 +12,8 @@
       "!**/libs/fps_meter.ts",
       "!**/*.d.ts",
       "!**/*.json",
+      "!**/*.jsonc",
+      "!**/*.ts.snap",
       "!**/__snapshots__",
       "!**/frontend/javascripts/test/snapshots"
     ]

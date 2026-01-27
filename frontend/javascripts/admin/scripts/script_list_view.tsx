@@ -7,7 +7,7 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
-import partial from "lodash/partial";
+import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";

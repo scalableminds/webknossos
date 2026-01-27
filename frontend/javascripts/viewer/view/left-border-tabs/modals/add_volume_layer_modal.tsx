@@ -6,8 +6,8 @@ import {
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
 import Toast from "libs/toast";
-import clone from "lodash/clone";
-import differenceWith from "lodash/differenceWith";
+import clone from "lodash-es/clone";
+import differenceWith from "lodash-es/differenceWith";
 import messages from "messages";
 import type React from "react";
 import { useMemo, useState } from "react";

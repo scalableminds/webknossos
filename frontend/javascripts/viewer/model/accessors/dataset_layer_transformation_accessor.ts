@@ -1,8 +1,8 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import MultiKeyMap from "libs/multi_key_map";
 import { mod } from "libs/utils";
-import isEqual from "lodash/isEqual";
-import memoize from "lodash/memoize";
+import isEqual from "lodash-es/isEqual";
+import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Quaternion, Vector3 as ThreeVector3 } from "three";
 import type {

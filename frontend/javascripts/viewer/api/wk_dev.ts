@@ -2,7 +2,7 @@ import app from "app";
 import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
-import mean from "lodash/mean";
+import mean from "lodash-es/mean";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";

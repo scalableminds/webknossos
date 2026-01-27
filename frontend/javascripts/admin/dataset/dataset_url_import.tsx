@@ -2,7 +2,7 @@ import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import { getDatastores } from "admin/rest_api";
 import { useFetch } from "libs/react_helpers";
 import { getUrlParamsObject } from "libs/utils";
-import has from "lodash/has";
+import has from "lodash-es/has";
 import { useNavigate } from "react-router-dom";
 
 export function DatasetURLImport() {

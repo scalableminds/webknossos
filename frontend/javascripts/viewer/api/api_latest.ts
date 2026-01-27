@@ -14,9 +14,9 @@ import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
-import cloneDeep from "lodash/cloneDeep";
-import groupBy from "lodash/groupBy";
-import isNumber from "lodash/isNumber";
+import cloneDeep from "lodash-es/cloneDeep";
+import groupBy from "lodash-es/groupBy";
+import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
@@ -75,7 +75,6 @@ import {
   getTreeAndNode,
   getTreeAndNodeOrNull,
   getTreeGroupsMap,
-  mapGroups,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import {
@@ -188,6 +187,7 @@ import {
   callDeep,
   createGroupHelper,
   createGroupToSegmentsMap,
+  mapGroups,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 

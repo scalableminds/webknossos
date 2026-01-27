@@ -3,75 +3,20 @@ import { createTasks } from "admin/api/tasks";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import { App, Button, Card, Divider, Form, Input, Progress, Spin, Typography, Upload } from "antd";
 import Toast from "libs/toast";
-import isString from "lodash/isString";
-import uniq from "lodash/uniq";
+import isString from "lodash-es/isString";
+import uniq from "lodash-es/uniq";
 import Messages from "messages";
 import { useState } from "react";
-import type { APITask } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import type { BoundingBoxObject } from "viewer/store";
+import {
+  NUM_TASKS_PER_BATCH,
+  type NewTask,
+  type TaskCreationResponse,
+  normalizeFileEvent,
+} from "./task_create_utils";
 
 const FormItem = Form.Item;
 const { TextArea } = Input;
-
-export const NUM_TASKS_PER_BATCH = 100;
-export type NewTask = {
-  readonly boundingBox: BoundingBoxObject | null | undefined;
-  readonly datasetId: string;
-  readonly editPosition: Vector3;
-  readonly editRotation: Vector3;
-  readonly neededExperience: {
-    readonly domain: string;
-    readonly value: number;
-  };
-  readonly projectName: string;
-  readonly scriptId: string | null | undefined;
-  readonly pendingInstances: number;
-  readonly taskTypeId: string;
-  readonly csvFile?: File;
-  readonly nmlFiles?: File[];
-  readonly baseAnnotation?:
-    | {
-        baseId: string;
-      }
-    | null
-    | undefined;
-};
-
-export type NewNmlTask = Pick<
-  NewTask,
-  | "taskTypeId"
-  | "neededExperience"
-  | "pendingInstances"
-  | "projectName"
-  | "scriptId"
-  | "boundingBox"
->;
-
-export type TaskCreationResponse = {
-  status: number;
-  success?: APITask;
-  error?: string;
-};
-
-export type TaskCreationResponseContainer = {
-  tasks: TaskCreationResponse[];
-  warnings: string[];
-};
-
-export function normalizeFileEvent(
-  event:
-    | File[]
-    | {
-        fileList: File[];
-      },
-) {
-  if (Array.isArray(event)) {
-    return event;
-  }
-
-  return event?.fileList;
-}
 
 function TaskCreateBulkView() {
   const { modal } = App.useApp();

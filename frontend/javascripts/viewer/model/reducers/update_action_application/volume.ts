@@ -1,7 +1,6 @@
 import { ColoredLogger } from "libs/utils";
 import keyBy from "lodash/keyBy";
 import type { MetadataEntryProto } from "types/api_types";
-import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   getSegmentsForLayer,
   getVolumeTracingById,
@@ -21,6 +20,7 @@ import {
   findGroup,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   type VolumeTracingReducerAction,

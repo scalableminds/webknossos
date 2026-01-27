@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import range from "lodash/range";
+import range from "lodash-es/range";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 import { chainReduce } from "test/helpers/chainReducer";

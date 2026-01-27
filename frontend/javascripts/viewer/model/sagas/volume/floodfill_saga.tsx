@@ -3,7 +3,7 @@ import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import { getRandomColor } from "libs/utils";
-import sortBy from "lodash/sortBy";
+import sortBy from "lodash-es/sortBy";
 import { call, put, takeEvery } from "typed-redux-saga";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";

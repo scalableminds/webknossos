@@ -1,9 +1,9 @@
 import { isDatasetAccessibleBySwitching } from "admin/api/organization";
 import { sleep } from "libs/utils";
-import filter from "lodash/filter";
-import max from "lodash/max";
-import reduce from "lodash/reduce";
-import sum from "lodash/sum";
+import filter from "lodash-es/filter";
+import max from "lodash-es/max";
+import reduce from "lodash-es/reduce";
+import sum from "lodash-es/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {

@@ -11,7 +11,7 @@ import type { PopoverProps } from "antd/lib";
 import type { TooltipPlacement } from "antd/lib/tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { rgbToHex } from "libs/utils";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import React from "react";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APIUser } from "types/api_types";

@@ -1,4 +1,4 @@
-import size from "lodash/size";
+import size from "lodash-es/size";
 import type {
   APIAnnotationUserState,
   APIUserBase,

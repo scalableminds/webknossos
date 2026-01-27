@@ -1,5 +1,5 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
 import {
   type WebknossosTestContext,

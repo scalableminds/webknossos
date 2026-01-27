@@ -16,9 +16,9 @@ import {
   isNumberMap,
 } from "libs/utils";
 import window from "libs/window";
-import isEqual from "lodash/isEqual";
-import union from "lodash/union";
-import uniq from "lodash/uniq";
+import isEqual from "lodash-es/isEqual";
+import union from "lodash-es/union";
+import uniq from "lodash-es/uniq";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";

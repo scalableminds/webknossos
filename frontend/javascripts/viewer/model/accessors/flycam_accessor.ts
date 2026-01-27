@@ -1,12 +1,12 @@
 import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import first from "lodash/first";
-import last from "lodash/last";
-import max from "lodash/max";
-import mean from "lodash/mean";
-import range from "lodash/range";
-import sortBy from "lodash/sortBy";
-import uniqBy from "lodash/uniqBy";
+import first from "lodash-es/first";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
+import mean from "lodash-es/mean";
+import range from "lodash-es/range";
+import sortBy from "lodash-es/sortBy";
+import uniqBy from "lodash-es/uniqBy";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { type Euler, MathUtils, Matrix4, Object3D } from "three";
@@ -49,7 +49,6 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -745,3 +744,6 @@ function _getActiveMagInfo(state: WebknossosState) {
 }
 
 export const getActiveMagInfo = reuseInstanceOnEquality(_getActiveMagInfo);
+export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
+  return M4x4.rotate(angle, axis, currentMatrix, []);
+}

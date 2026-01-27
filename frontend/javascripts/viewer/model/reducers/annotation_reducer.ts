@@ -1,9 +1,9 @@
 import update from "immutability-helper";
 import { V3 } from "libs/mjs";
 import { getRandomColor } from "libs/utils";
-import isEqual from "lodash/isEqual";
-import reduce from "lodash/reduce";
-import uniqWith from "lodash/uniqWith";
+import isEqual from "lodash-es/isEqual";
+import reduce from "lodash-es/reduce";
+import uniqWith from "lodash-es/uniqWith";
 import type { AdditionalCoordinate } from "types/api_types";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";

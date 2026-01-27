@@ -1,5 +1,5 @@
-import omitBy from "lodash/omitBy";
-import isNull from "lodash/isNull";
+import omitBy from "lodash-es/omitBy";
+import isNull from "lodash-es/isNull";
 import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
 import {
   getTask,

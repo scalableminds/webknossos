@@ -1,5 +1,5 @@
 import { type Mock, vi, type TestContext as BaseTestContext } from "vitest";
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from "lodash-es/cloneDeep";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";

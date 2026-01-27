@@ -1,4 +1,4 @@
-import uniq from "lodash/uniq";
+import uniq from "lodash-es/uniq";
 
 type VersionSnapshot = {
   map: Map<number, number>;

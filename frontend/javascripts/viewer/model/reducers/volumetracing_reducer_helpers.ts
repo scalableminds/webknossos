@@ -32,13 +32,16 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import { findParentIdForGroupId } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import {
+  findParentIdForGroupId,
+  mapGroups,
+} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import {
   getLayerByName,
   getVisibleSegmentationLayer,
   isInSupportedValueRangeForLayer,
 } from "../accessors/dataset_accessor";
-import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import type {
   FinishMappingInitializationAction,
   SetMappingAction,

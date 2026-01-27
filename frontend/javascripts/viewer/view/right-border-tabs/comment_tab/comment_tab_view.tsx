@@ -24,9 +24,9 @@ import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
-import flatMap from "lodash/flatMap";
-import isEmpty from "lodash/isEmpty";
-import uniq from "lodash/uniq";
+import flatMap from "lodash-es/flatMap";
+import isEmpty from "lodash-es/isEmpty";
+import uniq from "lodash-es/uniq";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 
@@ -48,7 +48,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import { Comment, commentListId } from "viewer/view/right-border-tabs/comment_tab/comment";
+import Comment, { commentListId } from "viewer/view/right-border-tabs/comment_tab/comment";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 

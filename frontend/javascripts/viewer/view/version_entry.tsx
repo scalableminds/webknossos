@@ -15,8 +15,8 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, List } from "antd";
-import groupBy from "lodash/groupBy";
-import max from "lodash/max";
+import groupBy from "lodash-es/groupBy";
+import max from "lodash-es/max";
 import type React from "react";
 
 import classNames from "classnames";

@@ -4,7 +4,7 @@ import Request from "libs/request";
 import { parseMaybe } from "libs/utils";
 import WebworkerPool from "libs/webworker_pool";
 import window from "libs/window";
-import chunk from "lodash/chunk";
+import chunk from "lodash-es/chunk";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";

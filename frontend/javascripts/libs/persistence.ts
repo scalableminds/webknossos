@@ -1,8 +1,8 @@
 import { PropTypes } from "@scalableminds/prop-types";
 import ErrorHandling from "libs/error_handling";
-import extend from "lodash/extend";
-import isEqual from "lodash/isEqual";
-import pick from "lodash/pick";
+import extend from "lodash-es/extend";
+import isEqual from "lodash-es/isEqual";
+import pick from "lodash-es/pick";
 import type { EmptyObject } from "types/type_utils";
 
 class Persistence<T extends Record<string, any>> {

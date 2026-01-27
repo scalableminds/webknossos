@@ -2,12 +2,11 @@ import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
 import { pluralize } from "libs/utils";
-import sum from "lodash/sum";
+import sum from "lodash-es/sum";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { MetadataEntryProto } from "types/api_types";
-import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
   setTreeMetadataAction,
@@ -31,6 +30,7 @@ import {
   getGroupByIdWithSubgroups,
   getNodeKey,
   insertTreesAndTransform,
+  mapGroups,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";

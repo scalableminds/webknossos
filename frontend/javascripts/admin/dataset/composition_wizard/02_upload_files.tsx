@@ -136,8 +136,12 @@ async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardConte
     const [_pointName, enabled, x1, y1, z1, x2, y2, z2] = fields;
 
     if (enabled) {
-      const source = [x1, y1, z1].map((el) => Number.parseInt(el.replaceAll('"', ""), 10)) as Vector3;
-      const target = [x2, y2, z2].map((el) => Number.parseInt(el.replaceAll('"', ""), 10)) as Vector3;
+      const source = [x1, y1, z1].map((el) =>
+        Number.parseInt(el.replaceAll('"', ""), 10),
+      ) as Vector3;
+      const target = [x2, y2, z2].map((el) =>
+        Number.parseInt(el.replaceAll('"', ""), 10),
+      ) as Vector3;
       sourcePoints.push(source);
       targetPoints.push(target);
     }
@@ -158,8 +162,12 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("Expected exactly two NML files.");
   }
 
-  const nmlString1 = await readFileAsText(fileList[0]?.originFileObj!);
-  const nmlString2 = await readFileAsText(fileList[1]?.originFileObj!);
+  if (fileList[0]?.originFileObj == null || fileList[1]?.originFileObj == null) {
+    throw new SoftError("Expected exactly two NML files.");
+  }
+
+  const nmlString1 = await readFileAsText(fileList[0]?.originFileObj);
+  const nmlString2 = await readFileAsText(fileList[1]?.originFileObj);
 
   if (nmlString1 === "" || nmlString2 === "") {
     throw new SoftError("NML files should not be empty.");

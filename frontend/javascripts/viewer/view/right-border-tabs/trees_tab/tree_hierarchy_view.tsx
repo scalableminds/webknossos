@@ -7,7 +7,6 @@ import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { MetadataEntryProto } from "types/api_types";
-import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
   setTreeMetadataAction,
@@ -30,6 +29,7 @@ import {
   getNodeKey,
   insertTreesAndTransform,
   MISSING_GROUP_ID,
+  mapGroups,
   moveGroupsHelper,
   type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";

@@ -48,9 +48,9 @@ import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "v
 import {
   findParentIdForGroupId,
   getGroupNodeKey,
+  mapGroups,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
-import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
 

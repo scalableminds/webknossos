@@ -12,7 +12,7 @@ import { memo, useCallback, useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
-export type SecuredRouteProps = {
+type SecuredRouteProps = {
   children: React.ReactNode;
   requiredPricingPlan?: PricingPlanEnum;
   requiresAdminOrManagerRole?: boolean;

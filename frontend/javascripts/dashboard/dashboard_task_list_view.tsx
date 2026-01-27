@@ -37,7 +37,7 @@ import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const pageLength: number = 1000;
 
-export type TaskModeState = {
+type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>;
   loadedAllTasks: boolean;
   lastLoadedPage: number;

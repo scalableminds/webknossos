@@ -75,7 +75,6 @@ import {
   getTreeAndNode,
   getTreeAndNodeOrNull,
   getTreeGroupsMap,
-  mapGroups,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import {
@@ -187,7 +186,7 @@ import Store from "viewer/store";
 import {
   callDeep,
   createGroupToSegmentsMap,
-  MISSING_GROUP_ID,
+  mapGroups,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 

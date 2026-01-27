@@ -10,7 +10,7 @@ import {
   getRotationInDegrees,
   getRotationInRadian,
   getValidZoomRangeForUser,
-  ZOOM_STEP_INTERVAL,
+  rotateOnAxis,
 } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
@@ -37,10 +37,6 @@ function cloneMatrix(m: Matrix4x4): Matrix4x4 {
     m[14],
     m[15],
   ];
-}
-
-export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
-  return M4x4.rotate(angle, axis, currentMatrix, []);
 }
 
 // Avoid creating new THREE object for some actions.

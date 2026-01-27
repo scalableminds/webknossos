@@ -57,7 +57,7 @@ import {
 } from "viewer/view/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
-export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;

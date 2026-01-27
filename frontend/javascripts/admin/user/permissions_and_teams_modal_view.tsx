@@ -13,7 +13,7 @@ import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
-export enum ROLES {
+enum ROLES {
   teammanager = "teammanager",
   user = "user",
 }

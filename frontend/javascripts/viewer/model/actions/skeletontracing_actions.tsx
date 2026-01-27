@@ -70,7 +70,7 @@ export type BatchableUpdateTreeAction =
   | DeleteTreeAction
   | DeleteTreesAction
   | SetTreeGroupsAction;
-export type BatchUpdateGroupsAndTreesAction = {
+type BatchUpdateGroupsAndTreesAction = {
   type: "BATCH_UPDATE_GROUPS_AND_TREES";
   payload: BatchableUpdateTreeAction[];
   meta: {

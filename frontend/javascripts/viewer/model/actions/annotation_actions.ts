@@ -76,9 +76,6 @@ export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshActio
 export type SetOthersMayEditForAnnotationAction = ReturnType<
   typeof setOthersMayEditForAnnotationAction
 >;
-export type ShowManyBucketUpdatesWarningAction = ReturnType<
-  typeof showManyBucketUpdatesWarningAction
->;
 
 export type AnnotationActionTypes =
   | InitializeAnnotationAction

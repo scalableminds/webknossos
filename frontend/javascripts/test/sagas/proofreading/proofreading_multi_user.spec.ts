@@ -917,7 +917,6 @@ describe("Proofreading (Multi User)", () => {
           name: "Custom Name for 1",
           metadata: [{ key: "key1", stringValue: "value for 1" }],
         },
-        _injected: true,
       },
     ]);
 

@@ -246,7 +246,7 @@ export function* diffMetadataOfSegments(segment: Segment, prevSegment: Segment, 
     metadata.map((m) => m.key),
   );
 
-  const changedKeys = both.filter((key) => metadataDict[key] !== prevMetadataDict[key]);
+  const changedKeys = both.filter((key) => !isEqual(metadataDict[key], prevMetadataDict[key]));
   const upsertEntriesByKey = [
     ...changedKeys.map((key) => metadataDict[key]),
     ...onlyB.map((key) => metadataDict[key]),

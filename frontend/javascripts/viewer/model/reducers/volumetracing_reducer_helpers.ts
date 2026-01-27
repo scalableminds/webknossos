@@ -1,6 +1,9 @@
 import update from "immutability-helper";
 import { ColoredLogger, floor3 } from "libs/utils";
 import groupBy from "lodash/groupBy";
+import isEqual from "lodash/isEqual";
+import uniqBy from "lodash/uniqBy";
+import uniqWith from "lodash/uniqWith";
 import type { Writeable } from "types/type_utils";
 import {
   type ContourMode,
@@ -55,9 +58,6 @@ import {
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
-import uniq from "lodash/uniq";
-import uniqBy from "lodash/uniqBy";
-import { isEqual, uniqWith } from "lodash";
 
 export type VolumeTracingReducerAction =
   | VolumeTracingAction

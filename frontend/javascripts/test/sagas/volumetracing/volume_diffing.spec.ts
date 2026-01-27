@@ -252,6 +252,24 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
       ),
     );
 
+    /*
+     * Only applying mergeSegments on the initial segment items, would produce
+        { key: "someKey1-1", stringValue: "someStringValue - segment 1" },
+        { key: "someKey2", stringListValue: ["list", "value", "segment 1"] },
+
+        { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
+        { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
+        { key: "identicalKey", stringValue: "identicalValue" },
+     * However, segment 1 was edited before the merge.
+     * Therefore, we need another update action which transforms from the above
+     * to this (note that last 3 lines are identical):
+        { key: "someKey1-1", stringValue: "someStringValue - segment 1 - changed" },
+        { key: "someKey4", boolValue: true },
+
+        { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
+        { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
+        { key: "identicalKey", stringValue: "identicalValue" },
+     */
     expect(updateActions).toEqual([
       {
         name: "mergeSegments",
@@ -266,12 +284,10 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
         value: {
           actionTracingId: "volumeTracingId",
           id: 1,
-          removeEntriesByKey: ["someKey2", "identicalKey-1", "identicalKey-2"],
+          removeEntriesByKey: ["someKey2"],
           upsertEntriesByKey: [
             { key: "someKey1-1", stringValue: "someStringValue - segment 1 - changed" },
-            { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
-            { boolValue: true, key: "someKey4" },
-            { key: "identicalKey", stringValue: "identicalValue" },
+            { key: "someKey4", boolValue: true },
           ],
         },
       },

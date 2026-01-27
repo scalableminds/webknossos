@@ -16,7 +16,6 @@ import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 import { UnitLong } from "viewer/constants";
 
 import { put, take, call } from "redux-saga/effects";
-import {} from "viewer/model/actions/save_actions";
 import {
   createEdge,
   updateActiveNode,

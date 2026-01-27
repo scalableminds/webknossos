@@ -367,7 +367,9 @@ class SceneController {
     for (const [tracingId, _boundingBox] of Object.entries(this.taskCubeByTracingId)) {
       let taskCube = this.taskCubeByTracingId[tracingId];
       if (taskCube != null) {
-        taskCube.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
+        taskCube.getMeshes().forEach((mesh) => {
+          this.rootNode.remove(mesh);
+        });
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -385,7 +387,9 @@ class SceneController {
         showCrossSections: true,
         isHighlighted: false,
       });
-      taskCube.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      taskCube.getMeshes().forEach((mesh) => {
+        this.rootNode.add(mesh);
+      });
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
         taskCube?.setVisibility(false);
@@ -415,7 +419,9 @@ class SceneController {
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
-    this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
+    this.userBoundingBoxes.forEach((bbCube) => {
+      bbCube.updateForCam(id);
+    });
     const layerNameToIsDisabled = getLayerNameToIsDisabled(datasetConfiguration);
     Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
       const bbCube = this.layerBoundingBoxes[layerName];
@@ -547,7 +553,9 @@ class SceneController {
         isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
-      bbCube.getMeshes().forEach((mesh) => newUserBoundingBoxGroup.add(mesh));
+      bbCube.getMeshes().forEach((mesh) => {
+        newUserBoundingBoxGroup.add(mesh);
+      });
       return bbCube;
     });
     this.rootNode.remove(this.userBoundingBoxGroup);
@@ -736,9 +744,15 @@ class SceneController {
     this.renderer = null;
 
     this.datasetBoundingBox.destroy();
-    this.userBoundingBoxes.forEach((cube) => cube.destroy());
-    Object.values(this.layerBoundingBoxes).forEach((cube) => cube.destroy());
-    this.forEachTaskCube((cube) => cube.destroy());
+    this.userBoundingBoxes.forEach((cube) => {
+      cube.destroy();
+    });
+    Object.values(this.layerBoundingBoxes).forEach((cube) => {
+      cube.destroy();
+    });
+    this.forEachTaskCube((cube) => {
+      cube.destroy();
+    });
 
     for (const plane of Object.values(this.planes)) {
       plane.destroy();

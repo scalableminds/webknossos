@@ -438,7 +438,7 @@ export async function setupWebknossosForTesting(
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>
-    Model.getAllLayers().map((layer) => {
+    Model.getAllLayers().forEach((layer) => {
       layer.pullQueue.destroy();
     });
   testContext.receivedDataPerSaveRequest = (

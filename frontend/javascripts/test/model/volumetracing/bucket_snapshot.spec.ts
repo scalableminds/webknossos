@@ -244,7 +244,9 @@ describe("BucketSnapshot", () => {
           data[3] = 4;
         },
       ];
-      pendingOperations.forEach((fn) => fn(localData));
+      pendingOperations.forEach((fn) => {
+        fn(localData);
+      });
 
       const backendData = new Uint8Array(8);
       backendData[3] = 3;

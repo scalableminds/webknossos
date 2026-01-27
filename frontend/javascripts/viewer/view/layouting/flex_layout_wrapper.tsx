@@ -150,7 +150,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   }
 
   unbindAllListeners() {
-    this.unbindListeners.forEach((unbind) => unbind());
+    this.unbindListeners.forEach((unbind) => {
+      unbind();
+    });
   }
 
   loadCurrentModel() {

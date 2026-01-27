@@ -158,7 +158,9 @@ class PlaneMaterialFactory {
   }
 
   stopListening() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     this.storePropertyUnsubscribers = [];
   }
 

@@ -704,7 +704,9 @@ class PlaneController extends PureComponent<Props> {
   }
 
   unsubscribeStoreListeners() {
-    this.storePropertyUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.storePropertyUnsubscribers.forEach((unsubscribe) => {
+      unsubscribe();
+    });
     this.storePropertyUnsubscribers = [];
   }
 

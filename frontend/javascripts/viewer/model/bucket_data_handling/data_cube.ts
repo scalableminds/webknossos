@@ -1079,7 +1079,9 @@ class DataCube {
   destroy() {
     this.cubes = {};
     this.buckets = [];
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     this.storePropertyUnsubscribers = [];
   }
 }

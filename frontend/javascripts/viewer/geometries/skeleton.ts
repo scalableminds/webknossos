@@ -429,8 +429,12 @@ class Skeleton {
             const oldIds = oldElements.map((el) => el.nodeId);
             const newIds = newElements.map((el) => el.nodeId);
             const { onlyA: deletedIds, onlyB: createdIds } = diffArrays(oldIds, newIds);
-            createdIds.forEach((id) => callback(id, true));
-            deletedIds.forEach((id) => callback(id, false));
+            createdIds.forEach((id) => {
+              callback(id, true);
+            });
+            deletedIds.forEach((id) => {
+              callback(id, false);
+            });
           };
 
           const treeId = update.value.id;

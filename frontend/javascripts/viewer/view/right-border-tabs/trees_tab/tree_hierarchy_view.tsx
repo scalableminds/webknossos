@@ -143,7 +143,9 @@ function TreeHierarchyView(props: Props) {
         [clickedNode],
         (node) => node.type === GroupTypeEnum.GROUP,
       ).map((node) => node.key as string);
-      subGroupKeys.forEach((key) => expandedKeySet.delete(key));
+      subGroupKeys.forEach((key) => {
+        expandedKeySet.delete(key);
+      });
     }
     setExpandedGroups(expandedKeySet);
   };

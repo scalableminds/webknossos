@@ -75,7 +75,7 @@ function* downloadMeshCellsAsZIP(
         Toast.error(errorMessage, {
           sticky: false,
         });
-        return;
+        return Promise.resolve();
       }
       const stlDataReader = new BlobReader(getSTLBlob(geometry, element.segmentId));
       return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);

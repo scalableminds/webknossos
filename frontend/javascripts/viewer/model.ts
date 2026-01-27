@@ -53,7 +53,9 @@ export class WebKnossosModel {
         const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
-          Object.values(this.dataLayers).forEach((layer) => layer.destroy());
+          Object.values(this.dataLayers).forEach((layer) => {
+            layer.destroy();
+          });
         }
 
         this.dataLayers = dataLayers;
@@ -338,7 +340,9 @@ export class WebKnossosModel {
      */
 
     if (this.dataLayers != null) {
-      Object.values(this.dataLayers).forEach((layer) => layer.destroy());
+      Object.values(this.dataLayers).forEach((layer) => {
+        layer.destroy();
+      });
       this.dataLayers = {};
     }
   }

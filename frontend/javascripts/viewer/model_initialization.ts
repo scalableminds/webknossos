@@ -407,7 +407,7 @@ function initializeAnnotation(
         convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
       ),
     );
-    getServerVolumeTracings(serverTracings).map((volumeTracing) => {
+    getServerVolumeTracings(serverTracings).forEach((volumeTracing) => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],

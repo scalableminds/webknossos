@@ -305,9 +305,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     // an error
     importActionsWithDatasetNames
       .flatMap((el) => el.importActions)
-      .forEach((action) => Store.dispatch(action));
+      .forEach((action) => {
+        Store.dispatch(action);
+      });
   } catch (e) {
-    (Array.isArray(e) ? e : [e]).forEach((err) => Toast.error(err.message));
+    (Array.isArray(e) ? e : [e]).forEach((err) => {
+      Toast.error(err.message);
+    });
   }
 }
 
@@ -446,7 +450,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         // Delete all trees of the current group
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
-        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+        group.children.forEach((subgroup) => {
+          findChildrenRecursively(subgroup);
+        });
       };
 
       findChildrenRecursively(item);

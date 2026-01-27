@@ -692,7 +692,9 @@ function* maintainContourGeometry(): Saga<void> {
       volumeTracing.contourTracingMode === ContourModeEnum.DELETE
         ? CONTOUR_COLOR_DELETE
         : CONTOUR_COLOR_NORMAL;
-    contourList.forEach((p) => contour.addEdgePoint(p));
+    contourList.forEach((p) => {
+      contour.addEdgePoint(p);
+    });
   }
 }
 

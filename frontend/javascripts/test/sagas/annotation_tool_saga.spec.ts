@@ -66,7 +66,9 @@ describe("Annotation Tool Saga", () => {
   const spies = allToolControllers.map((tool) => vi.spyOn(tool, "onToolDeselected"));
 
   beforeEach(() => {
-    spies.forEach((spy) => spy.mockClear());
+    spies.forEach((spy) => {
+      spy.mockClear();
+    });
   });
 
   it("Cycling through the annotation tools should trigger a deselection of the previous tool.", () => {

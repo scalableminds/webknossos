@@ -546,8 +546,12 @@ export function disableMergerMode(segmentationLayerName: string | null | undefin
   }
 
   isCodeActive = false;
-  unsubscribeFunctions.forEach((unsubscribeFunction) => unsubscribeFunction());
-  unregisterKeyHandlers.forEach((unregisterObject) => unregisterObject.unregister());
+  unsubscribeFunctions.forEach((unsubscribeFunction) => {
+    unsubscribeFunction();
+  });
+  unregisterKeyHandlers.forEach((unregisterObject) => {
+    unregisterObject.unregister();
+  });
 
   // Disable the custom merger mode mapping
   if (segmentationLayerName != null) {

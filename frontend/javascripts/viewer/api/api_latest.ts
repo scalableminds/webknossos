@@ -996,7 +996,9 @@ class TracingApi {
           currentSubsegments.map((segment) => segment.id),
         );
         // Also delete the segments of all subgroups
-        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+        group.children.forEach((subgroup) => {
+          findChildrenRecursively(subgroup);
+        });
       };
 
       findChildrenRecursively(item);

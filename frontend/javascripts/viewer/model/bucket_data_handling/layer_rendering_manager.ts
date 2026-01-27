@@ -289,7 +289,9 @@ export default class LayerRenderingManager {
   }
 
   destroy() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     if (this.textureBucketManager != null) {
       // In some tests, this.textureBucketManager is null (even
       // though it should never be null in non-tests).

@@ -124,7 +124,9 @@ class CameraController extends PureComponent<Props> {
   }
 
   componentWillUnmount() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
   }
 
   // Non-TD-View methods

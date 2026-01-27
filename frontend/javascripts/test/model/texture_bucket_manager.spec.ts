@@ -49,7 +49,9 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
 const setActiveBucketsAndWait = (tbm: TextureBucketManager, activeBuckets: DataBucket[]) => {
   tbm.setActiveBuckets(activeBuckets);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case
-  activeBuckets.forEach(() => tbm.processWriterQueue());
+  activeBuckets.forEach(() => {
+    tbm.processWriterQueue();
+  });
 };
 
 const expectBucket = (tbm: TextureBucketManager, bucket: DataBucket, expectedFirstByte: number) => {

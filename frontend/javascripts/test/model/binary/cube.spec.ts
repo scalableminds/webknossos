@@ -245,7 +245,7 @@ describe("DataCube", () => {
     const b2 = cube.getOrCreateBucket([1, 1, 1, 0]);
     const b3 = cube.getOrCreateBucket([2, 2, 2, 0]);
     // No bucket may be collected.
-    [b1, b2, b3].map((b) => {
+    [b1, b2, b3].forEach((b) => {
       assertNonNullBucket(b);
       b.markAsRequested();
     });

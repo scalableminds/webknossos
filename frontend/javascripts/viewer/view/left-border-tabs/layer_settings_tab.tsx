@@ -301,7 +301,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
 function LayerInfoIconWithTooltip({
   layer,
   dataset,
-}: { layer: APIDataLayer; dataset: APIDataset }) {
+}: {
+  layer: APIDataLayer;
+  dataset: APIDataset;
+}) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
     const magInfo = getMagInfo(layer.mags);
@@ -561,9 +564,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
-    Object.keys(layers).forEach((otherLayerName) =>
-      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
-    );
+    Object.keys(layers).forEach((otherLayerName) => {
+      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible);
+    });
   };
 
   isLayerExclusivelyVisible = (layerName: string): boolean => {

@@ -2,7 +2,6 @@ import type { DataNode } from "antd/es/tree";
 import groupBy from "lodash-es/groupBy";
 import orderBy from "lodash-es/orderBy";
 import memoizeOne from "memoize-one";
-import { mapGroupsWithRoot } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
@@ -341,4 +340,31 @@ export function additionallyExpandGroup<T extends string | number>(
     currentGroupId = groupToParentGroupId[currentGroupId];
   }
   return expandedGroups;
+}
+
+export function mapGroupsWithRoot(
+  groups: TreeGroup[],
+  fn: (g: TreeGroup) => TreeGroup,
+): TreeGroup[] {
+  // Add the virtual root group so that the map function can also mutate
+  // the high-level elements (e.g., filtering elements in the first level).
+  return mapGroups(
+    [
+      {
+        name: "Root",
+        groupId: MISSING_GROUP_ID,
+        children: groups,
+      },
+    ],
+    fn,
+  )[0].children; // Read the root group's children again
+}
+
+function mapGroupAndChildrenHelper(group: TreeGroup, fn: (g: TreeGroup) => TreeGroup): TreeGroup {
+  const newChildren = mapGroups(group.children, fn);
+  return fn({ ...group, children: newChildren });
+}
+
+export function mapGroups(groups: TreeGroup[], fn: (g: TreeGroup) => TreeGroup): TreeGroup[] {
+  return groups.map((group) => mapGroupAndChildrenHelper(group, fn));
 }

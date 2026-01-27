@@ -3,7 +3,6 @@ import cloneDeep from "lodash-es/cloneDeep";
 import groupBy from "lodash-es/groupBy";
 import orderBy from "lodash-es/orderBy";
 import memoizeOne from "memoize-one";
-import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";

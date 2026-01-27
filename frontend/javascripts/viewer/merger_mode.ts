@@ -141,7 +141,7 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   const nodes: Array<NodeWithTreeId> = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {
-    const currentTreeId = Number.parseInt(treeId);
+    const currentTreeId = Number.parseInt(treeId, 10);
     const currentTree = trees[currentTreeId];
 
     for (const node of currentTree.nodes.values()) {

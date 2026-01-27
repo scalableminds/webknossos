@@ -98,7 +98,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const version = hasUrlParam("showVersionRestore")
       ? hasUrlParam("version")
-        ? Number.parseInt(getUrlParamValue("version"))
+        ? Number.parseInt(getUrlParamValue("version"), 10)
         : 1
       : undefined;
     Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, version)

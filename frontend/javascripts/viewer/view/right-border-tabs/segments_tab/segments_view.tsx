@@ -1437,14 +1437,14 @@ class SegmentsView extends React.Component<Props, State> {
       if (key.startsWith(groupPrefix)) {
         // Note that negative ids can be found here, which is why Group- is used as a splitter
         const idWithSign = key.split(groupPrefix)[1];
-        if (isNumber(Number.parseInt(idWithSign))) {
-          selectedIds.group = Number.parseInt(idWithSign);
+        if (isNumber(Number.parseInt(idWithSign, 10))) {
+          selectedIds.group = Number.parseInt(idWithSign, 10);
         }
       } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = key.split("-");
-        if (isNumber(Number.parseInt(regexSplit[1]))) {
-          selectedIds.segments.push(Number.parseInt(regexSplit[1]));
+        if (isNumber(Number.parseInt(regexSplit[1], 10))) {
+          selectedIds.segments.push(Number.parseInt(regexSplit[1], 10));
         }
       }
     });

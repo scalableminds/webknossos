@@ -79,7 +79,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleUserUpgrade = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       await sendUpgradePricingPlanUserEmail(requestedUsers);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -123,7 +123,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
-      const requestedStorage = Number.parseInt(storageInputRef.current.value);
+      const requestedStorage = Number.parseInt(storageInputRef.current.value, 10);
       await sendUpgradePricingPlanStorageEmail(requestedStorage);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -319,7 +319,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
 
   const handleOrderCredits = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       try {
         await sendOrderCreditsEmail(requestedUsers);
         Toast.success(messages["organization.credit_request_sent"]);

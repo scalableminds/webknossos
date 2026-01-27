@@ -252,7 +252,7 @@ describe("Proofreading (Multi User)", () => {
           };
         }
         return {
-          segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
+          segmentId: Number.parseInt(segmentInfo.segmentId.toString(), 10),
           neighbors: [],
         };
       },

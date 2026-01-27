@@ -150,7 +150,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
       for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
         const segmentIds = Object.keys(recordsForOneLayer);
         for (const segmentIdAsString of segmentIds) {
-          const segmentId = Number.parseInt(segmentIdAsString);
+          const segmentId = Number.parseInt(segmentIdAsString, 10);
           yield* put(
             updateMeshVisibilityAction(
               layerName,

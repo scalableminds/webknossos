@@ -131,14 +131,14 @@ export function CreateExplorativeRouteWrapper() {
         const magRestrictions: APIMagRestrictions = {};
 
         if (minMag !== undefined) {
-          magRestrictions.min = Number.parseInt(minMag);
+          magRestrictions.min = Number.parseInt(minMag, 10);
 
           if (!isNumber(magRestrictions.min)) {
             throw new Error("Invalid minMag parameter");
           }
 
           if (maxMag !== undefined) {
-            magRestrictions.max = Number.parseInt(maxMag);
+            magRestrictions.max = Number.parseInt(maxMag, 10);
 
             if (!isNumber(magRestrictions.max)) {
               throw new Error("Invalid maxMag parameter");

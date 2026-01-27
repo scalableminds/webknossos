@@ -294,7 +294,7 @@ export default class SegmentMeshController {
     }
 
     forEach(meshGroups, (meshGroup, lodStr) => {
-      const currentLod = Number.parseInt(lodStr);
+      const currentLod = Number.parseInt(lodStr, 10);
 
       if (options && currentLod !== options.lod) {
         // If options.lod is provided, only remove that LOD.
@@ -325,7 +325,7 @@ export default class SegmentMeshController {
 
     if (meshGroups == null) return null;
 
-    const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal)));
+    const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal, 10)));
 
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }

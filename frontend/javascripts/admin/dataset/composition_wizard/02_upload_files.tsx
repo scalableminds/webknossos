@@ -136,8 +136,8 @@ async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardConte
     const [_pointName, enabled, x1, y1, z1, x2, y2, z2] = fields;
 
     if (enabled) {
-      const source = [x1, y1, z1].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
-      const target = [x2, y2, z2].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
+      const source = [x1, y1, z1].map((el) => Number.parseInt(el.replaceAll('"', ""), 10)) as Vector3;
+      const target = [x2, y2, z2].map((el) => Number.parseInt(el.replaceAll('"', ""), 10)) as Vector3;
       sourcePoints.push(source);
       targetPoints.push(target);
     }

@@ -130,20 +130,20 @@ function TaskCreateBulkView() {
     const datasetId = words[0];
     const taskTypeId = words[1];
     const experienceDomain = words[2];
-    const minExperience = Number.parseInt(words[3]);
-    const x = Number.parseInt(words[4]);
-    const y = Number.parseInt(words[5]);
-    const z = Number.parseInt(words[6]);
-    const rotX = Number.parseInt(words[7]);
-    const rotY = Number.parseInt(words[8]);
-    const rotZ = Number.parseInt(words[9]);
-    const pendingInstances = Number.parseInt(words[10]);
-    const boundingBoxX = Number.parseInt(words[11]);
-    const boundingBoxY = Number.parseInt(words[12]);
-    const boundingBoxZ = Number.parseInt(words[13]);
-    const width = Number.parseInt(words[14]);
-    const height = Number.parseInt(words[15]);
-    const depth = Number.parseInt(words[16]);
+    const minExperience = Number.parseInt(words[3], 10);
+    const x = Number.parseInt(words[4], 10);
+    const y = Number.parseInt(words[5], 10);
+    const z = Number.parseInt(words[6], 10);
+    const rotX = Number.parseInt(words[7], 10);
+    const rotY = Number.parseInt(words[8], 10);
+    const rotZ = Number.parseInt(words[9], 10);
+    const pendingInstances = Number.parseInt(words[10], 10);
+    const boundingBoxX = Number.parseInt(words[11], 10);
+    const boundingBoxY = Number.parseInt(words[12], 10);
+    const boundingBoxZ = Number.parseInt(words[13], 10);
+    const width = Number.parseInt(words[14], 10);
+    const height = Number.parseInt(words[15], 10);
+    const depth = Number.parseInt(words[16], 10);
     const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null

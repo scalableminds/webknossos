@@ -12,8 +12,8 @@ GET           /datasets/:datasetId/layers/:dataLayerName/findData               
 GET           /datasets/:datasetId/layers/:dataLayerName/histogram                                                                                    @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.histogram(datasetId: ObjectId, dataLayerName: String)
 
 # Read mag and attachment data via proxy
-GET           /datasets/:datasetId/proxy/layers/:dataLayerName/mags/:mag/*path                                                                        @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyMag(datasetId: String, dataLayerName: String, mag: String, path: String)
-GET           /datasets/:datasetId/proxy/layers/:dataLayerName/attachments/:attachmentName/*path                                                      @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyAttachment(datasetId: String, dataLayerName: String, attachmentName: String, path: String)
+GET           /datasets/:datasetId/proxy/layers/:dataLayerName/mags/:mag/*path                                                                        @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyMag(datasetId: ObjectId, dataLayerName: String, mag: String, path: String)
+GET           /datasets/:datasetId/proxy/layers/:dataLayerName/attachments/:attachmentName/*path                                                      @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyAttachment(datasetId: ObjectId, dataLayerName: String, attachmentName: String, path: String)
 
 # Knossos compatible routes
 GET           /datasets/:datasetId/layers/:dataLayerName/mag:mag/x:x/y:y/z:z/bucket.raw                                                               @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaKnossos(datasetId: ObjectId, dataLayerName: String, mag: Int, x: Int, y: Int, z: Int, cubeSize: Int)

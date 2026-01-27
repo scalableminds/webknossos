@@ -208,7 +208,7 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
     },
   );
 
-  test.only("mergeSegments should be detected along with another segment update", () => {
+  test("mergeSegments should be detected along with another segment update", () => {
     let newState = initialState;
     newState = VolumeTracingReducer(newState, createSegment1);
     newState = VolumeTracingReducer(newState, createSegment2);

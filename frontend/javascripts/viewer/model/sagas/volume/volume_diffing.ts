@@ -147,8 +147,23 @@ export function* uncachedDiffSegmentLists(
   prevSegmentJournal: Array<SegmentJournalEntry>,
   segmentJournal: Array<SegmentJournalEntry>,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
+  /*
+   * This function diffs (a) prevSegments and (b) newSegments and outputs UpdateActions
+   * that transform a to b.
+   * Additionally, the segmentJournals for "prev" and "current" are passed.
+   * These journals are also diffed so that we can infer whether a mergeSegments operation
+   * happened (currently, this can only happen during proofreading).
+   * If such mergeSegments operations were found, `prevSegments` will be transformed
+   * by applying these merge operations.
+   * Afterwards, the "new" `prevSegments` will be diffed against `segments`. This approach
+   * ensures that we can still detect additional changes to segments that were also part of a
+   * mergeSegments operation.
+   * The downside of this approach is that we always assume that a merge operation happened *first*
+   * and only afterwards the segments were edited. In practice, the diff is computed so frequently
+   * that this shouldn't matter, though.
+   */
   const journalDiff = diffSegmentJournals(prevSegmentJournal, segmentJournal);
-  prevSegments = applyJournalDiffOnSegments(prevSegments, journalDiff);
+  prevSegments = applyJournalDiffOnSegments(prevSegments, newSegments, journalDiff);
 
   for (const journalEntry of journalDiff) {
     yield mergeSegmentsVolumeAction(journalEntry.sourceId, journalEntry.targetId, tracingId);
@@ -328,26 +343,37 @@ function* getOrderedUpsertsForChangedItems(groupDiff: GranularGroupDiff, volumeT
 
 function applyJournalDiffOnSegments(
   prevSegments: SegmentMap,
+  newSegments: SegmentMap,
   journalDiff: SegmentJournalEntry[],
 ): SegmentMap {
+  /*
+   * All operations in journalDiff are applied on prevSegments
+   * and a new SegmentMap is returned as a result.
+   * See the docstring in uncachedDiffSegmentLists for an explanation
+   * of the context.
+   * `newSegments` is only needed to provide a safe fallback value
+   * for the creationTime because the timestamp cannot be reliably
+   * reconstructed otherwise.
+   */
   for (const journalEntry of journalDiff) {
-    const sourceSegment = prevSegments.getNullable(journalEntry.sourceId);
+    const prevSourceSegment = prevSegments.getNullable(journalEntry.sourceId);
+    const fallbackCreationTime = newSegments.getNullable(journalEntry.sourceId)?.creationTime;
     const updatedSourceProps = getUpdatedSourcePropsAfterMerge(
       journalEntry.sourceId,
       journalEntry.targetId,
-      sourceSegment,
+      prevSourceSegment,
       prevSegments.getNullable(journalEntry.targetId),
     );
 
     const newSourceSegment: Segment =
-      sourceSegment != null
+      prevSourceSegment != null
         ? {
-            ...sourceSegment,
+            ...prevSourceSegment,
             ...updatedSourceProps,
           }
         : {
             id: journalEntry.sourceId,
-            creationTime: 0,
+            creationTime: fallbackCreationTime ?? 0,
             name: null,
             color: null,
             groupId: null,
@@ -357,6 +383,7 @@ function applyJournalDiffOnSegments(
             ...updatedSourceProps,
           };
 
+    // Note the immutability of set and delete.
     prevSegments = prevSegments.set(journalEntry.sourceId, newSourceSegment);
     prevSegments = prevSegments.delete(journalEntry.targetId);
   }

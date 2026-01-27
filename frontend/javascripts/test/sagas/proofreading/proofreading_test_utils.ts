@@ -1,5 +1,5 @@
 import type { RequestOptionsWithData } from "libs/request";
-import { ColoredLogger, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";

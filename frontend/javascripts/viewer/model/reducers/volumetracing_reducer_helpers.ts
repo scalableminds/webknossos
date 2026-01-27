@@ -522,7 +522,6 @@ export function getUpdatedSourcePropsAfterMerge(
   // Handle metadata by concatening the entries. If the resulting keys
   // would not be unique, the keys are postfixed like this: key-originalSegmentId
   if (targetSegment.metadata.length > 0) {
-    ColoredLogger.logGreen("targetSegment.metadata.length", targetSegment.metadata.length);
     const sourceMetadata = sourceSegment?.metadata ?? [];
     const mergedMetadataEntries = sourceMetadata.concat(targetSegment.metadata);
     // Items of mergedMetadataEntries with index < pivotIndex,

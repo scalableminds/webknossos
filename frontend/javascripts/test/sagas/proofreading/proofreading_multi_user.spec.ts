@@ -816,7 +816,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   });
 
-  it.only("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
     /*
       todop: double check this docstring
       Initial Mapping:

@@ -11,6 +11,7 @@ import {
   getRotationInRadian,
   getValidZoomRangeForUser,
   rotateOnAxis,
+  ZOOM_STEP_INTERVAL,
 } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";

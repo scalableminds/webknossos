@@ -186,6 +186,7 @@ import Store from "viewer/store";
 import {
   callDeep,
   createGroupToSegmentsMap,
+  MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";

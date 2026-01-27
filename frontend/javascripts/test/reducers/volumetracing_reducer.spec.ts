@@ -17,8 +17,7 @@ import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_obj
 import type { WebknossosState, StoreAnnotation, VolumeTracing } from "viewer/store";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 
-// biome-ignore lint/suspicious/noExportsInTest:
-export function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing {
+function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing {
   if (annotation.volumes.length > 0) {
     return annotation.volumes[0];
   }

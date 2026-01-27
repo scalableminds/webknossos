@@ -484,7 +484,7 @@ function SkeletonTracingReducer(
 
       const newTrees = skeletonTracing.trees.clone();
       for (const tree of skeletonTracing.trees.values()) {
-        // @ts-ignore newColors.shift() can be undefined
+        // @ts-expect-error newColors.shift() can be undefined
         newTrees.mutableSet(tree.treeId, { ...tree, color: newColors.shift() });
       }
 

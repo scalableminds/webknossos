@@ -16,7 +16,7 @@ export function select<T>(fn: (state: WebknossosState) => T) {
 export function* take(
   pattern: ActionPattern<Action> | Channel<Action>,
 ): Generator<any, Action, any> {
-  // @ts-ignore TS does not know that _take also accepts Channel<Action>
+  // @ts-expect-error TS does not know that _take also accepts Channel<Action>
   return yield* _take(pattern);
 }
 

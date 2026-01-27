@@ -310,7 +310,7 @@ describe("wkstore_adapter", () => {
 
     const pushQueue = new PushQueue(mockedCube, tracingId);
 
-    // @ts-ignore pushTransaction is a private method
+    // @ts-expect-error pushTransaction is a private method
     return pushQueue.pushTransaction(batch).then(() => {
       expect(Store.dispatch).toHaveBeenCalledTimes(2);
       expect(Store.dispatch).toHaveBeenCalledWith(expectedSaveQueueItems);

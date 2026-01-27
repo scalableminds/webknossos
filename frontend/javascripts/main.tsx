@@ -124,7 +124,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const react_root = createRoot(containerElement);
     react_root.render(
       <ErrorBoundary>
-        {/* @ts-ignore */}
         <Provider store={Store}>
           <PersistQueryClientProvider
             client={reactQueryClient}

@@ -155,7 +155,6 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
   };
 
   const copyLayerUrlMenu: MenuProps = {
-    // @ts-ignore
     onClick: copyTokenToClipboard,
     items: [
       {
@@ -236,7 +235,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(expirationDateTime) });
   };
   const expirationMenu: MenuProps = {
-    // @ts-ignore
+    // @ts-expect-error
     onClick: handleExpirationMenuClick,
     items: [
       {
@@ -284,12 +283,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
         content={
           <>
             <div>
-              <DatePicker
-                onChange={onChange}
-                // @ts-ignore
-                defaultValue={expirationDate}
-                allowClear={false}
-              />
+              <DatePicker onChange={onChange} defaultValue={expirationDate} allowClear={false} />
             </div>
             <Button
               type="link"

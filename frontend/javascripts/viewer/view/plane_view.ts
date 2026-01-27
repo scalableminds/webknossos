@@ -50,7 +50,6 @@ const createDirLight = (
   intensity: number,
   camera: OrthographicCamera,
 ) => {
-  // @ts-ignore
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);

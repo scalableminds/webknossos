@@ -515,7 +515,7 @@ class DataCube {
     const valueSets = this.buckets
       .filter((bucket) => bucket.state === "LOADED")
       .map((bucket) => bucket.getValueSet());
-    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
+    // @ts-expect-error The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);
     return valueSet;
   }

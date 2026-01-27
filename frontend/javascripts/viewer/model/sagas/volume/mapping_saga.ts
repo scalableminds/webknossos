@@ -568,7 +568,7 @@ export function* updateLocalHdf5Mapping(
   // new mapping. See the definition of mutableRemainingEntries.
   const mapping = mutableRemainingEntries as Mapping;
   for (const [key, val] of newEntries.entries()) {
-    // @ts-ignore
+    // @ts-expect-error
     mapping.set(key, val);
   }
 

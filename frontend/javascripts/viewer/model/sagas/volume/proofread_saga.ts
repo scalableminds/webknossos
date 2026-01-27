@@ -195,14 +195,14 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
 }
 
 function proofreadCoarseMagIndex(): number {
-  // @ts-ignore
+  // @ts-expect-error
   return window.__proofreadCoarseResolutionIndex != null
-    ? // @ts-ignore
+    ? // @ts-expect-error
       window.__proofreadCoarseResolutionIndex
     : 3;
 }
 function proofreadUsingMeshes(): boolean {
-  // @ts-ignore
+  // @ts-expect-error
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }
 
@@ -1621,7 +1621,7 @@ export function* splitAgglomerateInMapping(
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
   const splitMapping = new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
-      // @ts-ignore get() is expected to accept the type that segmentId has.
+      // @ts-expect-error get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
         return [segmentId, mappedId];
@@ -1631,7 +1631,7 @@ export function* splitAgglomerateInMapping(
   );
   // Add potentially missing entries of segment in additionalSegmentsToRequest to the new map.
   for (const unmappedId of additionalSegmentsToRequest) {
-    // @ts-ignore get() is expected to accept the type that unmappedId has.
+    // @ts-expect-error get() is expected to accept the type that unmappedId has.
     const mappedId = mappingAfterSplit.get(unmappedId);
     if (mappedId) {
       splitMapping.set(unmappedId, mappedId);

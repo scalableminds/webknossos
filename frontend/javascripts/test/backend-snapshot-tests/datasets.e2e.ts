@@ -228,7 +228,6 @@ describe("Dataset API (E2E)", () => {
 
     const boundary = "----WebKitFormBoundaryAqTsFa4N9FW7zF7I";
     let bodyString = `--${boundary}\r\n`;
-    // @ts-ignore
     for (const [key, value] of formData.entries()) {
       bodyString += `Content-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`;
       bodyString += `--${boundary}\r\n`;

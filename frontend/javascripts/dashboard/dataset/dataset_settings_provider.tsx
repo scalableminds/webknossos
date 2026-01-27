@@ -119,13 +119,13 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
           isPublic: fetchedDataset.isPublic || false,
           description: fetchedDataset.description || undefined,
           allowedTeams: fetchedDataset.allowedTeams || [],
-          // @ts-ignore: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
+          // @ts-expect-error: The Antd DatePicker component requires a daysjs date object instead of plain number timestamp
           sortingKey: dayjs(fetchedDataset.sortingKey as any as Dayjs),
         },
       });
 
       form.setFieldsValue({
-        // @ts-ignore Mismatch between APIDataSource and MutableAPIDataset
+        // @ts-expect-error Mismatch between APIDataSource and MutableAPIDataset
         dataSource,
       });
 

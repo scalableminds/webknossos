@@ -667,14 +667,14 @@ export class DataBucket {
 
   private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
     if (this.cachedValueSet == null) {
-      // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+      // @ts-expect-error The Set constructor accepts null and BigUint64Arrays just fine.
       this.cachedValueSet = new Set(this.data);
     }
   }
 
   containsValue(value: number | bigint): boolean {
     this.ensureValueSet();
-    // @ts-ignore The Set has function accepts number | bigint values just fine, regardless of what's in it.
+    // @ts-expect-error The Set has function accepts number | bigint values just fine, regardless of what's in it.
     return this.cachedValueSet.has(value);
   }
 
@@ -751,7 +751,7 @@ export class DataBucket {
     const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
 
     if (this.zoomedAddress[3] === zoomStep) {
-      // @ts-ignore
+      // @ts-expect-error
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo),
         this.zoomedAddress[3],
@@ -763,7 +763,7 @@ export class DataBucket {
 
   unvisualize() {
     if (this.visualizedMesh != null) {
-      // @ts-ignore
+      // @ts-expect-error
       window.removeBucketMesh(this.visualizedMesh);
       this.visualizedMesh = null;
     }

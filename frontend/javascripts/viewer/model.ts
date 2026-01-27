@@ -65,7 +65,7 @@ export class WebKnossosModel {
           await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
-          // @ts-ignore
+          // @ts-expect-error
           error.organizationToSwitchTo = maybeOrganizationToSwitchTo;
         }
       } catch (accessibleBySwitchingError) {

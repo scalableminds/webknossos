@@ -38,11 +38,11 @@ export function usePrevious<T>(
 }
 
 const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => ({
-  // @ts-ignore
+  // @ts-expect-error
   Shift: event.shiftKey,
-  // @ts-ignore
+  // @ts-expect-error
   Alt: event.altKey, // This is the option key ⌥ on MacOS
-  // @ts-ignore
+  // @ts-expect-error
   ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 

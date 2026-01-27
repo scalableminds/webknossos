@@ -60,7 +60,7 @@ export function DashboardRouteRootWrapper() {
 export function DashboardRouteWrapper() {
   const { tab } = useParams();
   const initialTabKey =
-    // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
+    // @ts-expect-error If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
     tab ? urlTokenToTabKeyMap[tab] : null;
   return <DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} />;
 }

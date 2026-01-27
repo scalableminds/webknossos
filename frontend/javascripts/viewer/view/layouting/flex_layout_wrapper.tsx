@@ -454,7 +454,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     const isMaximizing = this.maximizedItemId != null;
     // If a tab is maximized, this.borderOpenStatusWhenNotMaximized will not change and therefore save the BorderOpenStatus before maximizing.
     Object.entries(this.borderOpenStatusWhenNotMaximized).forEach(
-      // @ts-ignore Typescript doesn't infer the type of side to "left" | "right" but only string, instead
+      // @ts-expect-error Typescript doesn't infer the type of side to "left" | "right" but only string, instead
       ([side, isOpen]: [BorderOpenStatusKeys, boolean]) => {
         if (
           (isOpen && isMaximizing) ||
@@ -489,7 +489,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
           const toggledViewportId = node.getChildren()[0].getId();
 
           if (toggledViewportId in OrthoViews) {
-            // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
+            // @ts-expect-error Typescript doesn't agree that toggledViewportId exists in OrthoViews
             this.props.setActiveViewport(OrthoViews[toggledViewportId]);
           }
         }

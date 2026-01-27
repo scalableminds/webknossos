@@ -174,7 +174,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw error;
         }
 
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
         return undefined;
       }
@@ -200,7 +200,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           ),
         };
       } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
         return undefined;
       }
@@ -266,7 +266,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         await reader.close();
         return nmlImportActions;
       } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as ZIP but failed. ${error.message}`);
         return undefined;
       }

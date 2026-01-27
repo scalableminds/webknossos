@@ -407,7 +407,7 @@ function CommentTabView(props: Props) {
               expandedKeys={expandedTreeIds}
               selectedKeys={highlightedNodeIds}
               onExpand={onExpand}
-              // @ts-ignore
+              // @ts-expect-error
               onSelect={onSelect}
               switcherIcon={<DownOutlined />}
               height={height}

@@ -197,7 +197,7 @@ describe("Volume Tracing", () => {
       expect(readValue, `Voxel should be erased at zoomstep=${zoomStep}`).toBe(0);
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(max(data), "All the data should be 0 (== erased).").toBe(0);
   }
 

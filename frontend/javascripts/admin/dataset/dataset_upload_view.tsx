@@ -323,7 +323,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // @ts-ignore beforeUnload signature is overloaded
+      // @ts-expect-error beforeUnload signature is overloaded
       shouldBlock: beforeUnload,
     });
 
@@ -882,7 +882,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     name="voxelSizeFactor"
                     label="Voxel Size"
                     info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                    // @ts-ignore
+                    // @ts-expect-error
                     disabled={this.state.needsConversion}
                     help="Your dataset is not yet in a WEBKNOSSOS format. Therefore, you need to define the voxel size."
                     rules={[

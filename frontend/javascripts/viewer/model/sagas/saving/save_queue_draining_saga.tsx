@@ -239,7 +239,7 @@ export function* sendSaveRequestToServer(
       }
 
       console.warn("Error during saving. Will retry. Error:", error);
-      // @ts-ignore
+      // @ts-expect-error
       if (error.status === 409 && !shouldFailOnConflict) {
         return { numberOfSentItems: 0, hadConflict: true };
       }
@@ -256,16 +256,15 @@ export function* sendSaveRequestToServer(
 
       // Log the error to airbrake. Also compactedSaveQueue needs to be within an object
       // as otherwise the entries would be spread by the notify function.
-      // @ts-ignore
+      // @ts-expect-error
       yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error, {
         compactedSaveQueue,
         retryCount,
       });
 
-      // @ts-ignore
+      // @ts-expect-error
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
-        // @ts-ignore
         window.onbeforeunload = null;
         yield* call(
           [ErrorHandling, ErrorHandling.notify],

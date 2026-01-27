@@ -72,10 +72,10 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
         } else {
           return false;
         }
-        // @ts-ignore
+        // @ts-expect-error
       } else if (key in userConfiguration && userConfiguration[key] !== value) {
         return true;
-        // @ts-ignore
+        // @ts-expect-error
       } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
         return true;
       }
@@ -113,14 +113,14 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
           }
         }
       } else if (key in userConfiguration) {
-        // @ts-ignore
+        // @ts-expect-error
         yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));
       } else if (key in datasetConfiguration) {
-        // @ts-ignore
+        // @ts-expect-error
         yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
       } else {
         console.warn(
-          // @ts-ignore
+          // @ts-expect-error
           `Cannot apply recommended default for key/value: ${key}/${recommendedConfiguration[key]}`,
         );
       }

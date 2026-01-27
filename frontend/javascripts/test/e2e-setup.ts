@@ -1,5 +1,5 @@
 import cloneDeep from "lodash-es/cloneDeep";
-// @ts-ignore
+// @ts-expect-error
 import deepForEach from "deep-for-each";
 import fs from "node:fs";
 import shell from "shelljs";
@@ -76,7 +76,7 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
       arrOrObj: O,
     ) => {
       if (volatileKeys.includes(key)) {
-        // @ts-ignore Typescript complains that we might change the type of arrOrObj[key] (which we do deliberately)
+        // @ts-expect-error Typescript complains that we might change the type of arrOrObj[key] (which we do deliberately)
         arrOrObj[key] = key;
       }
     },

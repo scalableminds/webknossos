@@ -53,7 +53,6 @@ const M4x4 = {
     if (!Array.isArray(_points[0])) {
       throw new Error("transformVectorsAffine doesn't support typed arrays at the moment.");
     }
-    // @ts-ignore
     return chunk3(M4x4.transformPointsAffine(m, points.flat()));
   },
   // Applies a transformation matrix on an array of points.

@@ -66,9 +66,7 @@ export const NavAndStatusBarTheme = merge(
 );
 
 export function getSystemColorTheme(): Theme {
-  // @ts-ignore
   return window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-    // @ts-ignore
     window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
@@ -122,7 +120,10 @@ export function getAntdTheme(userTheme: Theme) {
 export default function GlobalThemeProvider({
   children,
   isMainProvider = true,
-}: { children?: React.ReactNode; isMainProvider?: boolean }) {
+}: {
+  children?: React.ReactNode;
+  isMainProvider?: boolean;
+}) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const userTheme = getThemeFromUser(activeUser);
   const antdTheme = getAntdTheme(userTheme);

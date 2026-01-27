@@ -87,7 +87,7 @@ describe("Volume Annotation Sampling", () => {
       insert: vi.fn(),
       push: vi.fn(),
     };
-    // @ts-ignore
+    // @ts-expect-error
     cube.initializeWithQueues(pullQueue, pushQueue);
     context = {
       cube,

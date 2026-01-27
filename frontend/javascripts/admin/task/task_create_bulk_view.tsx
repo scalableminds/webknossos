@@ -186,7 +186,7 @@ function TaskCreateBulkView() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
-      // @ts-ignore reader.result is wrongfully typed as ArrayBuffer
+      // @ts-expect-error reader.result is wrongfully typed as ArrayBuffer
       reader.onload = () => resolve(parseText(reader.result));
 
       reader.onerror = reject;
@@ -345,7 +345,7 @@ function TaskCreateBulkView() {
 
                   if (!isValidType) {
                     Toast.error("Only CSV and TXT files are accepted");
-                    // @ts-ignore
+                    // @ts-expect-error
                     file.status = "error";
                   }
 

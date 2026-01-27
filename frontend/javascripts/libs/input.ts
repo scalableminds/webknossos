@@ -534,7 +534,7 @@ export class InputMouse {
     // target (as an example, this avoids that mouse events
     // for input catchers are dispatched when a modal is above
     // the input catchers).
-    // @ts-ignore The `id` property exists on DOM elements
+    // @ts-expect-error The `id` property exists on DOM elements
     if (event?.target?.id !== this.targetId) {
       return false;
     }

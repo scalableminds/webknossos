@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-// @ts-ignore
+// @ts-expect-error
 import configureMockStore from "redux-mock-store";
 import overwriteActionMiddleware, {
   overwriteAction,

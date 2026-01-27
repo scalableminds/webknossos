@@ -151,7 +151,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
 
     const refreshMessageContainer = document.createElement("div");
     refreshMessageContainer.style.display = "grid";
-    // @ts-ignore
+    // @ts-expect-error
     refreshMessageContainer.style["place-items"] = "center";
     refreshMessageContainer.style.height = "75vh";
 

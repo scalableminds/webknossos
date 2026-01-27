@@ -1565,7 +1565,7 @@ export function GenericContextMenuContainer(props: {
           }}
           className="node-context-menu"
           tabIndex={-1}
-          // @ts-ignore
+          // @ts-expect-error
           ref={inputRef}
         />
         {/* Disable animations for the context menu (for performance reasons). */}

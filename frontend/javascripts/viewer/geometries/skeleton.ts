@@ -154,7 +154,7 @@ class Skeleton {
     this.stopStoreListening = () => {};
 
     this.treeColorTexture.dispose();
-    // @ts-ignore
+    // @ts-expect-error
     this.treeColorTexture = undefined;
 
     this.nodes.material.dispose();

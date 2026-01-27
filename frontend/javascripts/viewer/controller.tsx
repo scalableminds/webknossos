@@ -152,7 +152,6 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
           Store.dispatch(saveNowAction());
           // restore the event handler in case a user chose to stay on the page
-          // @ts-ignore
           window.onbeforeunload = beforeUnload;
         }, 500);
 
@@ -167,7 +166,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
     window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // @ts-ignore beforeUnload signature is overloaded
+      // @ts-expect-error beforeUnload signature is overloaded
       shouldBlock: beforeUnload,
     });
 

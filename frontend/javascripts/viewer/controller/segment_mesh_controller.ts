@@ -438,7 +438,7 @@ export default class SegmentMeshController {
     lightPositions.forEach((pos, index) => {
       const light = new DirectionalLight(
         WHITE,
-        // @ts-ignore
+        // @ts-expect-error
         settings[`dirLight${index + 1}Intensity`] || 1,
       );
       light.position.set(...pos).normalize();

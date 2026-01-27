@@ -1158,7 +1158,7 @@ class TracingApi {
       newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
-        // @ts-ignore
+        // @ts-expect-error
         type: newControlMode,
       },
       false,
@@ -2163,7 +2163,7 @@ class DataApi {
           const length = channelCount * (xMax - x);
           // The `set` operation is not problematic, since the BucketDataArray types
           // won't be mixed (either, they are BigInt or they aren't)
-          // @ts-ignore
+          // @ts-expect-error
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
         }

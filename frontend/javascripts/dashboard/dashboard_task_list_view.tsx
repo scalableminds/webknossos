@@ -115,7 +115,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    // @ts-ignore
+    // @ts-expect-error
     this.setState(persistence.load());
     this.fetchNextPage(0);
   }

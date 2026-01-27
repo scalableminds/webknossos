@@ -180,7 +180,7 @@ class Cube {
 
     this.isHighlighted = highlighted;
     this.getMeshes().forEach((mesh) => {
-      // @ts-ignore We don't use material arrays
+      // @ts-expect-error We don't use material arrays
       const meshMaterial: LineBasicMaterial = mesh.material;
       meshMaterial.color.setHex(this.getLineColor());
       meshMaterial.linewidth = this.lineWidth;

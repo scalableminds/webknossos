@@ -11,7 +11,10 @@ import type { UserBoundingBox } from "viewer/store";
 function UserBoundingBoxOption({
   bbox,
   showVolume,
-}: { bbox: UserBoundingBox | null | undefined; showVolume: boolean }) {
+}: {
+  bbox: UserBoundingBox | null | undefined;
+  showVolume: boolean;
+}) {
   if (!bbox) {
     return null;
   }
@@ -50,7 +53,7 @@ export function BoundingBoxSelection({
 }): JSX.Element {
   const filterOption = useCallback(
     (input: string, option?: ArrayElement<SelectProps["options"]>) =>
-      // @ts-ignore: option.label is a React component / React.Node
+      // @ts-expect-error: option.label is a React component / React.Node
       String(option?.label?.key ?? "")
         .toLowerCase()
         .indexOf(input.toLowerCase()) >= 0,

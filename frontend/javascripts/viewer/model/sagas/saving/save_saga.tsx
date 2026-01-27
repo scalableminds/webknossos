@@ -303,7 +303,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     // saga.
     console.error("in save saga, got exception, terminating ...");
     console.warn(exception);
-    // @ts-ignore
+    // @ts-expect-error
     ErrorHandling.notify(exception);
     Toast.error(
       "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",

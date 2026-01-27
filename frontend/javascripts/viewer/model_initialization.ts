@@ -860,11 +860,11 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
       Toast.error(
-        // @ts-ignore
+        // @ts-expect-error
         `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
       );
       console.error(e);
-      // @ts-ignore
+      // @ts-expect-error
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
       });

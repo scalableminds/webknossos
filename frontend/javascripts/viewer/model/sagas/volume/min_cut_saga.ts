@@ -828,9 +828,9 @@ function labelDeletedEdges(
                 }
               }
 
-              // @ts-ignore
+              // @ts-expect-error
               if (window.visualizeRemovedVoxelsOnMinCut) {
-                // @ts-ignore
+                // @ts-expect-error
                 window.addVoxelMesh(position, targetMag);
               }
             }

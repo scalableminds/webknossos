@@ -487,7 +487,7 @@ export async function setupWebknossosForTesting(
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
-    // @ts-ignore
+    // @ts-expect-error
     segmentMeshController: {
       meshesGroupsPerSegmentId: {},
       updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
@@ -523,7 +523,7 @@ export async function setupWebknossosForTesting(
     if (error instanceof Error) {
       throw error;
     } else {
-      // @ts-ignore
+      // @ts-expect-error
       throw new Error(error.message);
     }
   }

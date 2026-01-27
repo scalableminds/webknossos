@@ -153,7 +153,7 @@ class AbstractTreeRenderer {
     } catch (e) {
       console.log("Error:", e);
 
-      // @ts-ignore
+      // @ts-expect-error
       if (e.message === CYCLIC_TREE_ERROR) {
         this.drawErrorMessage(messages["tracing.tree_viewer_no_cyclic_trees"]);
         return;

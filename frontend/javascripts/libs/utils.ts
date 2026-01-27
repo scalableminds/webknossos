@@ -1405,16 +1405,16 @@ export const ColoredLogger = {
     console.log(...args);
   },
   logRed: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgRed(str), ...args);
+    console.log(chalk.bgRed.black(str), ...args);
   },
   logGreen: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgGreen(str), ...args);
+    console.log(chalk.bgGreen.black(str), ...args);
   },
   logYellow: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgYellow(str), ...args);
+    console.log(chalk.bgYellow.black(str), ...args);
   },
   logBlue: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgBlue(str), ...args);
+    console.log(chalk.bgBlue.black(str), ...args);
   },
 };
 

@@ -533,7 +533,7 @@ export function getUrlParamValue(paramName: string): string {
 
 export function hasUrlParam(paramName: string): boolean {
   const params = getUrlParamsObject();
-  return Object.prototype.hasOwnProperty.call(params, paramName);
+  return Object.hasOwn(params, paramName);
 }
 
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {

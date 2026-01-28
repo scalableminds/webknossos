@@ -5,6 +5,7 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
@@ -562,6 +563,66 @@ case class LEGACY_UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActi
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+case class MergeSegmentsVolumeAction(sourceId: Long,
+                                     targetId: Long, // is "swallowed" by source
+                                     actionTracingId: String,
+                                     actionTimestamp: Option[Long] = None,
+                                     actionAuthorId: Option[ObjectId] = None,
+                                     info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction
+    with VolumeUpdateActionHelper {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+    val sourceSegmentOpt = tracing.segments.find(_.segmentId == sourceId)
+    val targetSegmentOpt = tracing.segments.find(_.segmentId == targetId)
+
+    val resultSegment = (sourceSegmentOpt, targetSegmentOpt) match {
+      case (None, None)                => Segment(segmentId = sourceId, creationTime = actionTimestamp, isVisible = Some(true))
+      case (Some(sourceSegment), None) => sourceSegment
+      case (None, Some(targetSegment)) =>
+        Segment(
+          segmentId = sourceId,
+          creationTime = actionTimestamp,
+          isVisible = Some(true),
+          metadata = targetSegment.metadata,
+          anchorPosition = targetSegment.anchorPosition,
+          groupId = targetSegment.groupId,
+          name = mergeSegmentNames(sourceSegmentOpt.flatMap(_.name), targetSegment.name)
+        )
+      case (Some(sourceSegment), Some(targetSegment)) =>
+        sourceSegment.copy(
+          name = mergeSegmentNames(sourceSegmentOpt.flatMap(_.name), targetSegment.name),
+          metadata = mergeSegmentMetadata(sourceSegment, targetSegment)
+        )
+    }
+
+    def sourceSegmentTransform(segment: Segment): Segment =
+      segment.copy()
+
+    val newSegments = mapSegments(tracing, sourceId, sourceSegmentTransform).filter(_.segmentId != targetId)
+
+    tracing.withSegments(newSegments)
+  }
+
+  private def mergeSegmentNames(sourceSegmentNameOpt: Option[String],
+                                targetSegmentNameOpt: Option[String]): Option[String] =
+    (sourceSegmentNameOpt, targetSegmentNameOpt) match {
+      case (None, None)                                       => None
+      case (Some(sourceSegmentName), None)                    => Some(sourceSegmentName)
+      case (None, Some(targetSegmentName))                    => Some(s"Segment $sourceId and $targetSegmentName")
+      case (Some(sourceSegmentName), Some(targetSegmentName)) => Some(s"$sourceSegmentName and $targetSegmentName")
+    }
+
+  private def mergeSegmentMetadata(sourceSegment: Segment, targetSegment: Segment): Seq[MetadataEntryProto] =
+    sourceSegment.metadata // TODO
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =

@@ -89,7 +89,14 @@ async function loadOrganization() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+if (document.readyState === 'loading') {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  // With vite dev server, javascript loaded as <script type="module"> might already be ready
+  initApp();
+}
+
+async function initApp() {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
@@ -145,4 +152,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error("Failed to load WEBKNOSSOS due to the following error", e);
     react_root.render(<FailedToLoadView />);
   }
-});
+}

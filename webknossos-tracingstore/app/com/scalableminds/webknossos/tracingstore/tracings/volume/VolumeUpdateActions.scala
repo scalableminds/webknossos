@@ -591,7 +591,7 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
         Segment(
           segmentId = sourceId,
           creationTime = actionTimestamp,
-          isVisible = Some(true),
+          isVisible = targetSegment.isVisible,
           metadata = targetSegment.metadata,
           anchorPosition = targetSegment.anchorPosition,
           groupId = targetSegment.groupId,
@@ -631,7 +631,7 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
           entry
         } else {
           val originalSegmentId = if (index < pivotIndex) sourceId else targetId
-          entry.copy(key = s"${entry.key}-$originalSegmentId)")
+          entry.copy(key = s"${entry.key}-$originalSegmentId")
         }
     }.distinctBy(_.key)
   }

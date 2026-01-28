@@ -937,7 +937,7 @@ export function TeamTags({
 
   const allowedTeamsById = keyBy(dataset.allowedTeams, "id");
   return (
-    <>
+    <Space>
       {permittedTeams.map((team) => {
         const isCumulative = !allowedTeamsById[team.id];
         return (
@@ -965,7 +965,7 @@ export function TeamTags({
           </Tooltip>
         );
       })}
-    </>
+    </Space>
   );
 }
 

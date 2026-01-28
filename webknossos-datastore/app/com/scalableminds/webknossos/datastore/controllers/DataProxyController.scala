@@ -36,7 +36,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
           requestedPath = magPath / path
           byteRange <- ByteRange.fromRequest(request)
           data <- requestedPath.readBytes(byteRange)
-        } yield resultWithStatus(byteRange.successResponseCode, data)
+        } yield resultWithStatus(byteRange.successResponseCode, data).withHeaders(ACCEPT_RANGES -> "bytes")
       }
     }
 
@@ -57,7 +57,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
         requestedPath = attachmentPath / path
         byteRange <- ByteRange.fromRequest(request)
         data <- requestedPath.readBytes(byteRange)
-      } yield resultWithStatus(byteRange.successResponseCode, data)
+      } yield resultWithStatus(byteRange.successResponseCode, data).withHeaders(ACCEPT_RANGES -> "bytes")
     }
   }
 

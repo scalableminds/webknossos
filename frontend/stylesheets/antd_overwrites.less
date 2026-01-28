@@ -26,15 +26,18 @@ h6 {
   font-size: 12px;
 }
 
+// Default paragraph spacing for body text.
 p {
   margin: 0 0 10px;
 }
 
+// Use themed background color for main <Layout> and <Sider>.
 .ant-layout-sider,
 .ant-layout {
   background-color: var(--ant-color-bg-base);
 }
 
+// Navbar <Header> padding and compact mobile menu spacing.
 .ant-layout-header {
   padding: 0 20px;
 
@@ -48,12 +51,14 @@ p {
   }
 }
 
+// Constrain <Notification> container width for better readability.
 .ant-notification {
   width: auto;
   max-width: 80vw;
 }
 
 // Toast notifications
+// Style embedded iframes and add error animation for toast notifications.
 .ant-notification-notice {
   iframe {
     border: none;
@@ -120,6 +125,7 @@ p {
   }
 }
 
+// Allow long message titles and fix Firefox alignment issue.
 .ant-notification-notice-message {
   white-space: pre-wrap;
 
@@ -129,18 +135,22 @@ p {
   }
 }
 
+// Reduce cell padding for compact Ant Design tables.
 .ant-table-small>.ant-table-content>.ant-table-body>table>.ant-table-tbody>tr>td {
   padding: 1px 8px;
 }
 
+// Utility class for wide tables so content wraps nicely.
 .large-table {
   word-break: break-word;
 }
 
+// Ensure table headers do not break words in the middle.
 .ant-table-column-title {
   word-break: normal;
 }
 
+// Increase clickable area for checkbox labels.
 label.ant-checkbox-wrapper {
   line-height: 1.5;
 }
@@ -152,24 +162,29 @@ label.ant-checkbox-wrapper {
 }
 
 // Remove Chinese Quote font, which is messing up our quotes
+// Force alerts to use the global app font instead of Ant Design’s default.
 .ant-alert {
   font-family: @font-family;
 }
 
+// Add horizontal spacing between alert icon and message text.
 .ant-alert-message {
   margin-left: 5px;
 }
 
+// Make alert banners span full width and float above content.
 .ant-alert-banner {
   position: absolute;
   z-index: 1000;
   width: 100%;
 }
 
-.ant-card {
-  font-family: @font-family;
-}
+// // Ensure <Card>s use the same font family as the rest of the app.
+// .ant-card {
+//   font-family: @font-family;
+// }
 
+// Special styling for AI job selection radio buttons rendered as cards.
 .ant-radio-button-wrapper.aIJobSelection {
   width: auto;
   height: auto;
@@ -180,10 +195,12 @@ label.ant-checkbox-wrapper {
   }
 }
 
+// List variant without bottom borders between items.
 .antd-no-border-list .ant-list-item {
   border-bottom: none;
 }
 
+// Compact navbar menu when header is collapsed (main navigation).
 .collapsed-nav-header .ant-menu:not(.right-navbar) {
 
   .ant-menu-item,
@@ -197,31 +214,35 @@ label.ant-checkbox-wrapper {
   }
 }
 
+// Remove extra spacing inside <Steps> icons to center icons.
 .ant-steps-icon {
   .anticon {
     margin-right: 0;
   }
 }
 
+// Make all <Tooltip>s click-through so that they don't make the underlying
 .ant-tooltip {
-  // Make all tooltips click-through so that they don't make the underlying
   // UI unusable
   pointer-events: none;
 }
 
 // Custom component `LinkButton` renders a button that looks like a link.
 // Antd’s `button type="link"` only gets us halfway there, though, hence, this:
+// Remove button chrome so LinkButton visually resembles a plain text link.
 .link-button {
   border: 0 !important;
   padding: 0 !important;
   height: initial !important;
 }
 
+// Reset icon/text spacing so link-style buttons align like normal links.
 .link-button>.anticon+span,
 .link-button>span+.anticon {
   margin-left: initial;
 }
 
+// Make segment <Tree> titles in the trace view span the full width.
 #segment-list {
   .ant-tree-title {
     // Make the tree elements in the segment list full-width
@@ -229,6 +250,7 @@ label.ant-checkbox-wrapper {
   }
 }
 
+// Make (skeleton) tree list <Tree> titles in the trace view span the full width.
 #tree-list {
   .ant-tree-title {
     // Make the tree elements in the tree list full-width
@@ -243,11 +265,13 @@ label.ant-checkbox-wrapper {
   display: flex;
 }
 
+// Transparent background and flex layout for directory trees.
 .ant-tree-directory {
   background: transparent;
   display: flex;
 }
 
+// Remove padding and use flex to ensure full-width hover / selection.
 .ant-tree-node-content-wrapper {
   display: flex;
   // Set padding to 0 so that the contained title span fills the
@@ -255,44 +279,41 @@ label.ant-checkbox-wrapper {
   padding: 0 !important;
 }
 
+// Round the selection highlight box for directory trees.
 .ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,
 .ant-tree.ant-tree-directory .ant-tree-treenode-selected::before {
   border-radius: 4px;
 }
 
+// Fix vertical alignment of spinning sync icon.
 .anticon.anticon-sync.anticon-spin {
   line-height: 0;
 }
 
+// Deemphasize text color for empty table/list placeholders.
 .ant-table-empty .ant-table-tbody>tr.ant-table-placeholder,
 .ant-list-empty-text {
   color: var(--ant-color-text-tertiary);
 }
 
-.action-bar {
 
-  // UI for additional coordinates should always be in dark mode
-  // since it is located in the navbar's action bar.
-  .ant-input-group-addon {
-    background-color: rgb(58, 61, 72);
-    border-color: #585867;
-    color: #f1f1f1 !important;
-  }
-}
-
+// Add spacing before icons in <Dropdown> menus that use Font Awesome.
 .ant-dropdown-menu-item-icon.fa-icon {
   margin-right: 5px;
 }
 
+// Normalize SVG icon size inside <Dropdown> menu items.
 .ant-dropdown-menu-item-icon>svg {
   width: 15px;
 }
 
+// Visually mute disabled radio button at the start of a group.
 .ant-radio-button-wrapper-disabled:first-child {
   opacity: 0.5;
 }
 
 
+// Utility class to remove padding from any element.
 .no-padding {
   padding: 0 !important;
 }

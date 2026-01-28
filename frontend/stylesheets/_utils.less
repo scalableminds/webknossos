@@ -1,3 +1,4 @@
+// Generic utility to emphasize text via bold weight.
 .bold {
   font-weight: bold;
 }
@@ -7,10 +8,12 @@ td.nowrap * {
   white-space: nowrap;
 }
 
+// Prevent text wrapping for inline or block elements.
 .nowrap {
   white-space: nowrap;
 }
 
+// Flip elements horizontally, e.g. for mirroring icons.
 .flip-horizontally {
   -webkit-transform: scaleX(-1);
   -moz-transform: scaleX(-1);
@@ -21,29 +24,27 @@ td.nowrap * {
   -ms-filter: "FlipH";
 }
 
-.bordered {
-  border: 1px solid var(--ant-color-border);
-  border-radius: 4px;
-  padding: 4px 11px;
-  width: fit-content;
-}
 
 // Layout util classes
+// Display element as inline-block while keeping flow with text.
 .inline-block {
   display: inline-block;
 }
 
+// Flex column layout that grows to fill available space.
 .flex-column {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
 }
 
+// Scrollable flex child that fills remaining vertical space.
 .flex-overflow {
   overflow-y: auto;
   flex-grow: 1;
 }
 
+// Horizontally center and evenly space multiple child items.
 .centered-items {
   display: flex;
   flex-direction: row;
@@ -62,23 +63,9 @@ td.nowrap * {
   }
 }
 
-.pull-right {
-  float: right !important;
-}
 
-.clearfix::before {
-  // sometimes required by .pull-right
-  display: table;
-  content: "";
-}
 
-.clearfix::after {
-  // sometimes required by .pull-right
-  display: table;
-  clear: both;
-  content: "";
-}
-
+// Small circular color indicator, often used as a legend dot.
 .circle {
   display: inline-block;
   width: 10px;
@@ -87,11 +74,13 @@ td.nowrap * {
   margin-right: 5px;
 }
 
+// Distribute two or more children horizontally with space between.
 .flex-container {
   justify-content: space-between;
   display: flex;
 }
 
+// Center a single child (or wrapped children) within a flex box.
 .flex-center-child {
   display: flex;
   justify-content: center;
@@ -99,61 +88,74 @@ td.nowrap * {
   flex-wrap: wrap;
 }
 
+// Flex item that grows to fill remaining space and breaks long words.
 .flex-item {
   display: inline-block;
   flex-grow: 1;
   word-break: break-all;
 }
 
+// Simple helper to make an element consume remaining flex space.
 .flex-grow-1 {
   flex-grow: 1;
 }
 
+// Allow a flex child to shrink below the default min-height.
 .min-height-0 {
   min-height: 0;
 }
 
+// Center text content horizontally.
 .text-center {
   text-align: center;
 }
 
+// Soft gray text color for secondary / deemphasized information.
 .deemphasized {
   color: #989898;
 }
 
+// Render text in italics for subtle emphasis.
 .italic {
   font-style: italic;
 }
 
+// Full-height blue background used on organelles marketing pages.
 .background-organelles {
   height: 100%;
   min-height: calc(100vh - var(--navbar-height));
   background: var(--background-blue-organelles);
 }
 
+// Full viewport-height container that accounts for navbar height.
 .full-viewport-height {
   height: 100%;
   min-height: calc(100vh - var(--navbar-height));
 }
 
+// Cursor style for drag operations on the root element.
 .grabbing {
   cursor: grabbing !important;
 }
 
+// Force grabbing cursor for all descendants while dragging.
 .grabbing * {
   cursor: grabbing !important;
 }
 
+// Visual + behavioral state while something is being dragged.
 .is-dragging {
   cursor: grabbing !important;
   user-select: none;
 }
 
+// Apply dragging behavior to all descendants (no text selection).
 .is-dragging * {
   cursor: grabbing !important;
   user-select: none;
 }
 
+// Vertical split layout with two resizable panes and a drag handle.
 .resizable-two-split-pane {
   display: flex;
   flex-direction: column;

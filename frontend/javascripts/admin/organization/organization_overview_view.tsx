@@ -124,6 +124,7 @@ export function OrganizationOverviewView() {
       title: "Name",
       content: (
         <Typography.Text
+          style={{ fontSize: "var(--ant-font-size-lg)" }}
           editable={{
             onChange: setOrganizationName,
           }}

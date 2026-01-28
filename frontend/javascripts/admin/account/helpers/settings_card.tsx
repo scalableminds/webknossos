@@ -12,11 +12,10 @@ export type SettingsCardProps = {
 export function SettingsCard({ title, content, tooltip, action, style }: SettingsCardProps) {
   return (
     <Card style={{ minHeight: 105, ...style }}>
-      <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+      <Typography.Text type="secondary">
         <Flex justify="space-between">
           <Space size="small">
             {title}
-
             {tooltip != null ? (
               <Popover
                 content={tooltip}
@@ -34,7 +33,7 @@ export function SettingsCard({ title, content, tooltip, action, style }: Setting
           {action}
         </Flex>
       </Typography.Text>
-      <div style={{ fontSize: 16, marginTop: 4 }}>{content}</div>
+      <div style={{ fontSize: "var(--ant-font-size-lg)"}}>{content}</div>
     </Card>
   );
 }

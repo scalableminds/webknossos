@@ -2,7 +2,7 @@
 
 When preparing ground truth data for machine learning, accurate and consistent annotations are essential. The following guidelines will help you create high-quality training data in WEBKNOSSOS.
 
-For detailed instructions on using WEBKNOSSOS for annotation, please watch our [Beginner’s Guide](https://docs.webknossos.org/webknossos/getting_started.html) or our tutorial on [Volume Annotations](https://docs.webknossos.org/webknossos/tutorial_volume_annotation.html).
+For detailed instructions on using WEBKNOSSOS for annotation, please watch our [Beginner’s Guide](https://docs.webknossos.org/webknossos/getting_started.html) and/or our tutorial on [Volume Annotations](https://docs.webknossos.org/webknossos/tutorial_volume_annotation.html).
 
 ---
 

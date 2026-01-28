@@ -77,8 +77,7 @@ export function FolderTreeSidebar({
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
   // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
-  const dropRef = useRef<HTMLDivElement>(null);
-  drop(dropRef);
+  const dropRef = useDropRef(drop);
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
     (keys: React.Key[], { nativeEvent }: { nativeEvent: MouseEvent }) => {
@@ -389,8 +388,7 @@ function FolderItemAsDropTarget(props: {
   const [collectedProps, drop] = useDatasetDrop(folderId, isEditable);
 
   // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
-  const dropRef = useRef<HTMLDivElement>(null);
-  drop(dropRef);
+  const dropRef = useDropRef(drop);
 
   const { canDrop, isOver } = collectedProps;
   return (
@@ -441,4 +439,13 @@ function deriveExpandedTrees(
   }
 
   return Array.from(newExpandedKeySet);
+}
+
+function useDropRef(drop: (element: HTMLDivElement) => void) {
+  // Source: https://github.com/react-dnd/react-dnd/issues/3670
+  return useCallback((element: HTMLDivElement | null) => {
+    if (element) {
+      drop(element);
+    }
+  }, [drop]);
 }

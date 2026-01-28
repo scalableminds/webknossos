@@ -108,7 +108,7 @@ class ErrorHandling {
     // config is inject from backend
     // const scriptTag = document.querySelector("[data-airbrake-project-id]");
     // if (!scriptTag) throw new Error("failed to initialize airbrake");
-    // @ts-expect-error
+    // // @ts-expect-error
     // const { dataset } = scriptTag;
     const projectId = 123; // dataset.airbrakeProjectId;
     const projectKey = "123"; // dataset.airbrakeProjectKey;

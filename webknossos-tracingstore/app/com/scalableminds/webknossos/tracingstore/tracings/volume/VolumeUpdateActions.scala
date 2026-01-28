@@ -604,12 +604,12 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
         )
     }
 
-    def sourceSegmentTransform(segment: Segment): Segment =
-      segment.copy()
+    val withResultSegment =
+      if (sourceSegmentOpt.isDefined) tracing.segments.map { segment: Segment =>
+        if (segment.segmentId == sourceId) resultSegment else segment
+      } else tracing.segments :+ resultSegment
 
-    val newSegments = mapSegments(tracing, sourceId, sourceSegmentTransform).filter(_.segmentId != targetId)
-
-    tracing.withSegments(newSegments)
+    tracing.withSegments(withResultSegment.filter(_.segmentId != targetId))
   }
 
   private def mergeSegmentNames(sourceSegmentNameOpt: Option[String],
@@ -621,8 +621,20 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
       case (Some(sourceSegmentName), Some(targetSegmentName)) => Some(s"$sourceSegmentName and $targetSegmentName")
     }
 
-  private def mergeSegmentMetadata(sourceSegment: Segment, targetSegment: Segment): Seq[MetadataEntryProto] =
-    sourceSegment.metadata // TODO
+  private def mergeSegmentMetadata(sourceSegment: Segment, targetSegment: Segment): Seq[MetadataEntryProto] = {
+    val concat = sourceSegment.metadata ++ targetSegment.metadata
+    val byKey: Map[String, Seq[MetadataEntryProto]] = concat.groupBy(_.key)
+    val pivotIndex = sourceSegment.metadata.length
+    concat.zipWithIndex.map {
+      case (entry, index) =>
+        if (byKey(entry.key).distinct.length == 1) {
+          entry
+        } else {
+          val originalSegmentId = if (index < pivotIndex) sourceId else targetId
+          entry.copy(key = s"${entry.key}-$originalSegmentId)")
+        }
+    }.distinctBy(_.key)
+  }
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
@@ -954,6 +966,9 @@ object UpdateSegmentPartialVolumeAction extends TristateOptionJsonHelper {
 object UpdateMetadataOfSegmentVolumeAction {
   implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =
     Json.format[UpdateMetadataOfSegmentVolumeAction]
+}
+object MergeSegmentsVolumeAction {
+  implicit val jsonFormat: OFormat[MergeSegmentsVolumeAction] = Json.format[MergeSegmentsVolumeAction]
 }
 object DeleteSegmentVolumeAction {
   implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]

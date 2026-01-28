@@ -29,7 +29,7 @@ Before starting the analysis, you need to configure the following settings:
 
 *   **New Dataset Name:** The name of the new dataset that will be created with the segmentation results.
 *   **Image Data Layer:** The image layer from your current dataset that the model will use for analysis.
-*   **Bounding Box:** The region of interest that you want to analyze. You can choose to analyze the full dataset or a specific bounding box that you have created.
+*   **Bounding Box:** The region of interest that you want to analyze. You can choose to analyze the full dataset or a specific bounding box that you have created. Read more about [choosing bounding boxes](./choosing_bounding_boxes.md).
 
 You can also access **Advanced Settings** to further customize the analysis.
 

@@ -1,8 +1,8 @@
-import { call, type Saga } from "viewer/model/sagas/effect-generators";
-import { runSaga } from "redux-saga";
 import processTaskWithPool from "libs/async/task_pool";
-import { describe, it, expect } from "vitest";
 import { sleep } from "libs/utils";
+import { runSaga } from "redux-saga";
+import { call, type Saga } from "viewer/model/sagas/effect-generators";
+import { describe, expect, it } from "vitest";
 
 /*eslint func-names: ["warn", "always", { "generators": "never" }]*/
 type Tasks = Array<() => Saga<void>>;

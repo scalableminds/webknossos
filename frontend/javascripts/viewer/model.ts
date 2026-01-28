@@ -53,7 +53,9 @@ export class WebKnossosModel {
         const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
-          Object.values(this.dataLayers).forEach((layer) => layer.destroy());
+          Object.values(this.dataLayers).forEach((layer) => {
+            layer.destroy();
+          });
         }
 
         this.dataLayers = dataLayers;
@@ -65,7 +67,7 @@ export class WebKnossosModel {
           await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
-          // @ts-ignore
+          // @ts-expect-error
           error.organizationToSwitchTo = maybeOrganizationToSwitchTo;
         }
       } catch (accessibleBySwitchingError) {
@@ -338,7 +340,9 @@ export class WebKnossosModel {
      */
 
     if (this.dataLayers != null) {
-      Object.values(this.dataLayers).forEach((layer) => layer.destroy());
+      Object.values(this.dataLayers).forEach((layer) => {
+        layer.destroy();
+      });
       this.dataLayers = {};
     }
   }

@@ -4,7 +4,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 
 const getInitialHeight = () =>
-  Number.parseInt(UserLocalStorage.getItem("lastPersistedHeightForResizableDetailsPane") ?? "200");
+  Number.parseInt(UserLocalStorage.getItem("lastPersistedHeightForResizableDetailsPane") ?? "200", 10);
 
 export function ResizableSplitPane({
   firstChild,

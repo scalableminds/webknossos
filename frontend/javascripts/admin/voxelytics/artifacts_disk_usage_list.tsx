@@ -1,9 +1,8 @@
 import { Table } from "antd";
-import type React from "react";
-
 import type { ColumnsType } from "antd/lib/table";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { localeCompareBy } from "libs/utils";
+import type React from "react";
 import type { VoxelyticsArtifactConfig, VoxelyticsTaskConfigWithHierarchy } from "types/api_types";
 import { renderArtifactPath } from "./artifacts_view";
 

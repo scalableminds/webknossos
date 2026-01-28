@@ -3,8 +3,8 @@ import {
   ArrowRightOutlined,
   ArrowsAltOutlined,
   DeleteOutlined,
-  DownOutlined,
   DownloadOutlined,
+  DownOutlined,
   ExclamationCircleOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -22,7 +22,7 @@ import {
   ZipWriter,
 } from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
-import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
+import { Dropdown, Empty, type MenuProps, Modal, notification, Space, Spin, Tooltip } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
@@ -51,8 +51,8 @@ import { addUserBoundingBoxesAction } from "viewer/model/actions/annotation_acti
 import { setVersionNumberAction } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
-  type BatchableUpdateTreeAction,
   addTreesAndGroupsAction,
+  type BatchableUpdateTreeAction,
   batchUpdateGroupsAndTreesAction,
   createTreeAction,
   deleteTreesAction,
@@ -81,8 +81,8 @@ import {
   getTreesAsCSV,
 } from "viewer/model/helpers/csv_helpers";
 import {
-  NmlParseError,
   getNmlName,
+  NmlParseError,
   parseNml,
   serializeToNml,
   wrapInNewGroup,
@@ -90,19 +90,18 @@ import {
 import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { MutableTreeMap, Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
-import { Model } from "viewer/singletons";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import TreeHierarchyView from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
   additionallyExpandGroup,
   callDeep,
   createGroupToParentMap,
   createGroupToTreesMap,
+  GroupTypeEnum,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -174,7 +173,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw error;
         }
 
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
         return undefined;
       }
@@ -200,7 +199,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           ),
         };
       } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
         return undefined;
       }
@@ -266,7 +265,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         await reader.close();
         return nmlImportActions;
       } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as ZIP but failed. ${error.message}`);
         return undefined;
       }
@@ -305,9 +304,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     // an error
     importActionsWithDatasetNames
       .flatMap((el) => el.importActions)
-      .forEach((action) => Store.dispatch(action));
+      .forEach((action) => {
+        Store.dispatch(action);
+      });
   } catch (e) {
-    (Array.isArray(e) ? e : [e]).forEach((err) => Toast.error(err.message));
+    (Array.isArray(e) ? e : [e]).forEach((err) => {
+      Toast.error(err.message);
+    });
   }
 }
 
@@ -446,7 +449,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         // Delete all trees of the current group
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
-        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+        group.children.forEach((subgroup) => {
+          findChildrenRecursively(subgroup);
+        });
       };
 
       findChildrenRecursively(item);

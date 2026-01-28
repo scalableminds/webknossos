@@ -21,8 +21,7 @@ import {
 import type { EventDataNode } from "antd/es/tree";
 import useLifecycle from "beautiful-react-hooks/useLifecycle";
 import { InputKeyboard } from "libs/input";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
 import flatMap from "lodash-es/flatMap";
 import isEmpty from "lodash-es/isEmpty";
@@ -407,7 +406,7 @@ function CommentTabView(props: Props) {
               expandedKeys={expandedTreeIds}
               selectedKeys={highlightedNodeIds}
               onExpand={onExpand}
-              // @ts-ignore
+              // @ts-expect-error
               onSelect={onSelect}
               switcherIcon={<DownOutlined />}
               height={height}

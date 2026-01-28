@@ -1,27 +1,24 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import features from "features";
+import { useKeyPress, useWkSelector } from "libs/react_hooks";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-
-import { useKeyPress } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
+  adaptActiveToolToShortcuts,
   MeasurementTools,
   Toolkit,
   Toolkits,
   VolumeTools,
-  adaptActiveToolToShortcuts,
 } from "viewer/model/accessors/tool_accessor";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-
-import FastTooltip from "components/fast_tooltip";
-import features from "features";
-import { useCallback } from "react";
-import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";

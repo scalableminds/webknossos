@@ -103,7 +103,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     this.props.setMapping(this.props.layerName, mappingName, mappingType, false, {
       showLoadingIndicator: true,
     });
-    // @ts-ignore
+    // @ts-expect-error
     if (document.activeElement) document.activeElement.blur();
   };
 

@@ -1,31 +1,32 @@
 // @ts-nocheck
-import { M4x4, V3 } from "libs/mjs";
-import { UnitLong, OrthoViews } from "viewer/constants";
+
 import update from "immutability-helper";
+import { M4x4, V3 } from "libs/mjs";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
+import { OrthoViews, UnitLong } from "viewer/constants";
 import {
+  getLeft,
   getPosition,
   getRotationInDegrees,
   getUp,
-  getLeft,
   getZoomedMatrix,
 } from "viewer/model/accessors/flycam_accessor";
 import {
-  moveFlycamAction,
   moveFlycamAbsoluteAction,
-  setRotationAction,
-  setPositionAction,
-  rotateFlycamAction,
-  pitchFlycamAction,
-  yawFlycamAction,
-  rollFlycamAction,
-  setDirectionAction,
+  moveFlycamAction,
   moveFlycamOrthoAction,
   movePlaneFlycamOrthoAction,
+  pitchFlycamAction,
+  rollFlycamAction,
+  rotateFlycamAction,
   setAdditionalCoordinatesAction,
+  setDirectionAction,
+  setPositionAction,
+  setRotationAction,
+  yawFlycamAction,
 } from "viewer/model/actions/flycam_actions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
-import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 function equalWithEpsilon(a: number[], b: number[], epsilon = 1e-10) {
   expect(a.length).toBe(b.length);

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  APIAiModelCategory,
   type AiModelTrainingAnnotationSpecification,
+  APIAiModelCategory,
   refreshOrganizationCredits,
   runInstanceModelTraining,
   runNeuronTraining,

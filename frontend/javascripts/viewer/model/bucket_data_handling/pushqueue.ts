@@ -92,7 +92,9 @@ class PushQueue {
   }
 
   print(): void {
-    this.pendingBuckets.forEach((e) => console.log(e));
+    this.pendingBuckets.forEach((e) => {
+      console.log(e);
+    });
   }
 
   pushImpl = function* (this: PushQueue) {

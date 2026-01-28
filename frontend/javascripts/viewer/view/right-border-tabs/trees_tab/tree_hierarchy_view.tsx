@@ -19,19 +19,19 @@ import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
-  type TreeNode,
   additionallyExpandGroup,
   createGroupToTreesMap,
   deepFlatFilter,
   findGroup,
   findParentGroupNode,
+  GroupTypeEnum,
   getGroupByIdWithSubgroups,
   getNodeKey,
   insertTreesAndTransform,
+  MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
+  type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
 import { getContextMenuPositionFromEvent } from "../../context_menu";
@@ -40,8 +40,8 @@ import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  type Props,
   onBatchActions,
+  type Props,
   renderGroupNode,
   renderTreeNode,
   selectGroupById,
@@ -143,7 +143,9 @@ function TreeHierarchyView(props: Props) {
         [clickedNode],
         (node) => node.type === GroupTypeEnum.GROUP,
       ).map((node) => node.key as string);
-      subGroupKeys.forEach((key) => expandedKeySet.delete(key));
+      subGroupKeys.forEach((key) => {
+        expandedKeySet.delete(key);
+      });
     }
     setExpandedGroups(expandedKeySet);
   };

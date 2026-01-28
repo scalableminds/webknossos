@@ -3,6 +3,7 @@ import { animationFrame } from "libs/utils";
 import type { Store as StoreType } from "redux";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+
 const MAXIMUM_STORE_UPDATE_DELAY = 10000;
 const listeners: Array<() => void> = [];
 let waitForUpdate = new Deferred();

@@ -5,7 +5,7 @@ import {
   encodeToBase62,
   filterWithSearchQueryAND,
 } from "libs/utils";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("Utils", () => {
   it("filterWithSearchQueryAND: simple case", () => {

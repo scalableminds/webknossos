@@ -6,10 +6,10 @@ import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Quaternion, Vector3 as ThreeVector3 } from "three";
 import type {
+  AffineTransformation,
   APIDataLayer,
   APIDataset,
   APISkeletonLayer,
-  AffineTransformation,
   CoordinateTransformation,
 } from "types/api_types";
 import {
@@ -22,12 +22,12 @@ import {
 import type { WebknossosState } from "viewer/store";
 import type BoundingBox from "../bucket_data_handling/bounding_box";
 import {
-  type Transform,
   chainTransforms,
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
   nestedToFlatMatrix,
+  type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { getLayerByName } from "./dataset_accessor";

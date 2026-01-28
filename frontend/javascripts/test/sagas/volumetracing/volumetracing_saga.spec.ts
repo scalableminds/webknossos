@@ -1,15 +1,18 @@
-import update from "immutability-helper";
-
-import { it, expect, describe, beforeEach, afterEach } from "vitest";
+// biome-ignore assist/source/organizeImports: the test apiHelpers need to be imported first otherwise the actual modules are loaded instead of the mocked ones
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { take, put, call } from "redux-saga/effects";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import update from "immutability-helper";
+import { call, put, take } from "redux-saga/effects";
+import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
+import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
+import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_server_objects";
+import { execCall, expectValueDeepEqual } from "test/helpers/sagaHelpers";
 import {
-  OrthoViews,
   ContourModeEnum,
-  OverwriteModeEnum,
   MappingStatusEnum,
+  OrthoViews,
+  OverwriteModeEnum,
 } from "viewer/constants";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   addToContourListAction,
   finishEditingAction,
@@ -18,21 +21,16 @@ import {
   startEditingAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
-import type { ActiveMappingInfo } from "viewer/store";
-import { askUserForLockingActiveMapping } from "viewer/model/sagas/saga_helpers";
-import { editVolumeLayerAsync, finishSectionLabeler } from "viewer/model/sagas/volumetracing_saga";
-import {
-  requestBucketModificationInVolumeTracing,
-  ensureMaybeActiveMappingIsLocked,
-} from "viewer/model/sagas/saga_helpers";
-import SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
-import { Model, Store } from "viewer/singletons";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_server_objects";
-import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
-import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
+import { askUserForLockingActiveMapping, 
+  ensureMaybeActiveMappingIsLocked,
+  requestBucketModificationInVolumeTracing,} from "viewer/model/sagas/saga_helpers";
+import { editVolumeLayerAsync, finishSectionLabeler } from "viewer/model/sagas/volumetracing_saga";
+import SectionLabeler from "viewer/model/volumetracing/section_labeling";
+import { Model, Store } from "viewer/singletons";
+import type { ActiveMappingInfo } from "viewer/store";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 

@@ -1,11 +1,9 @@
 import { Button, Dropdown, type MenuProps, Space } from "antd";
-import { useCallback } from "react";
-
 import { useWkSelector } from "libs/react_hooks";
 import capitalize from "lodash-es/capitalize";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { type ViewMode, ViewModeValues } from "viewer/constants";
-import constants from "viewer/constants";
+import constants, { type ViewMode, ViewModeValues } from "viewer/constants";
 import {
   setFlightmodeRecordingAction,
   setViewModeAction,

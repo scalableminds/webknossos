@@ -56,9 +56,9 @@ export const getGroundTruthLayoutRect = () => {
       width = dummyExtent;
     }
   } else {
-    // @ts-ignore
+    // @ts-expect-error
     height = mainContainer.offsetHeight;
-    // @ts-ignore
+    // @ts-expect-error
     width = mainContainer.offsetWidth;
   }
 

@@ -141,7 +141,7 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   const nodes: Array<NodeWithTreeId> = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {
-    const currentTreeId = Number.parseInt(treeId);
+    const currentTreeId = Number.parseInt(treeId, 10);
     const currentTree = trees[currentTreeId];
 
     for (const node of currentTree.nodes.values()) {
@@ -546,8 +546,12 @@ export function disableMergerMode(segmentationLayerName: string | null | undefin
   }
 
   isCodeActive = false;
-  unsubscribeFunctions.forEach((unsubscribeFunction) => unsubscribeFunction());
-  unregisterKeyHandlers.forEach((unregisterObject) => unregisterObject.unregister());
+  unsubscribeFunctions.forEach((unsubscribeFunction) => {
+    unsubscribeFunction();
+  });
+  unregisterKeyHandlers.forEach((unregisterObject) => {
+    unregisterObject.unregister();
+  });
 
   // Disable the custom merger mode mapping
   if (segmentationLayerName != null) {

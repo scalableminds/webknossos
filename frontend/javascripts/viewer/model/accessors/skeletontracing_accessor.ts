@@ -1,7 +1,7 @@
 import {
-  type APIAnnotation,
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
+  type APIAnnotation,
   type ServerSkeletonTracing,
   type ServerTracing,
 } from "types/api_types";

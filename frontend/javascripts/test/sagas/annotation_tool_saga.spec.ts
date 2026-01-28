@@ -1,6 +1,6 @@
-import { describe, it, beforeEach, expect, vi } from "vitest";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { initialState } from "test/fixtures/volumetracing_object";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const disabledInfoMock: { [key in any]?: any } = {};
 
@@ -32,20 +32,20 @@ vi.mock("viewer/controller/scene_controller_provider", () => ({
 
 // Import the modules after mocking
 import {
-  MoveToolController,
-  SkeletonToolController,
+  AreaMeasurementToolController,
   BoundingBoxToolController,
   DrawToolController,
   EraseToolController,
   FillCellToolController,
-  VoxelPipetteToolController,
-  QuickSelectToolController,
-  ProofreadToolController,
   LineMeasurementToolController,
-  AreaMeasurementToolController,
+  MoveToolController,
+  ProofreadToolController,
+  QuickSelectToolController,
+  SkeletonToolController,
+  VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
-import UiReducer from "viewer/model/reducers/ui_reducer";
 import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
+import UiReducer from "viewer/model/reducers/ui_reducer";
 import { watchToolDeselection } from "viewer/model/sagas/annotation_tool_saga";
 
 describe("Annotation Tool Saga", () => {
@@ -66,7 +66,9 @@ describe("Annotation Tool Saga", () => {
   const spies = allToolControllers.map((tool) => vi.spyOn(tool, "onToolDeselected"));
 
   beforeEach(() => {
-    spies.forEach((spy) => spy.mockClear());
+    spies.forEach((spy) => {
+      spy.mockClear();
+    });
   });
 
   it("Cycling through the annotation tools should trigger a deselection of the previous tool.", () => {

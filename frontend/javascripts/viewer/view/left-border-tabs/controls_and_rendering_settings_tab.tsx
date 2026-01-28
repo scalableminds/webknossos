@@ -7,7 +7,7 @@ import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
 import Toast from "libs/toast";
 import mapValues from "lodash-es/mapValues";
 import partial from "lodash-es/partial";
-import messages, { settingsTooltips, settings as settingsLabels } from "messages";
+import messages, { settings as settingsLabels, settingsTooltips } from "messages";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";

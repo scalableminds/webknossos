@@ -1,7 +1,7 @@
 // @ts-nocheck
 import Deferred from "libs/async/deferred";
 import runAsync from "test/helpers/run-async";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 function makeGetState(promise) {
   let resolved = false;

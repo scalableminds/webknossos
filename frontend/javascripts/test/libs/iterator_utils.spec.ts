@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { max, min, maxBy, minBy, sum } from "viewer/model/helpers/iterator_utils";
+import { max, maxBy, min, minBy, sum } from "viewer/model/helpers/iterator_utils";
+import { describe, expect, it } from "vitest";
 
 // Helper function to create test number values
 function createNumberMap(): Map<number, number> {

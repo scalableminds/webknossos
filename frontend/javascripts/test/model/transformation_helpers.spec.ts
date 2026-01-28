@@ -1,6 +1,5 @@
-import { describe, it, expect } from "vitest";
-import type { Vector3 } from "viewer/constants";
 import { almostEqual } from "test/libs/transform_spec_helpers";
+import type { Vector3 } from "viewer/constants";
 import {
   chainTransforms,
   createAffineTransform,
@@ -8,6 +7,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
+import { describe, expect, it } from "vitest";
 
 const EPSILON = 0.001;
 

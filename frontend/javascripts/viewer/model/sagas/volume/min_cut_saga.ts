@@ -7,8 +7,7 @@ import memoize from "lodash-es/memoize";
 import range from "lodash-es/range";
 import zip from "lodash-es/zip";
 import { call, put } from "typed-redux-saga";
-import type { APISegmentationLayer } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APISegmentationLayer } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { TypedArray, Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -261,9 +260,7 @@ function* performMinCut(action: Action): Saga<void> {
         boundingBox: newBBox,
         name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
           ",",
-        )}), seedB=(${nodes[1].untransformedPosition.join(
-          ",",
-        )}), timestamp=${new Date().getTime()})`,
+        )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
         color: getRandomColor(),
         isVisible: true,
       }),
@@ -828,9 +825,9 @@ function labelDeletedEdges(
                 }
               }
 
-              // @ts-ignore
+              // @ts-expect-error
               if (window.visualizeRemovedVoxelsOnMinCut) {
-                // @ts-ignore
+                // @ts-expect-error
                 window.addVoxelMesh(position, targetMag);
               }
             }

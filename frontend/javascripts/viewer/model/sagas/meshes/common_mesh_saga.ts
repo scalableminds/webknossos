@@ -8,11 +8,11 @@ import type { Group } from "three";
 import { all, call, put, take, takeEvery } from "typed-redux-saga";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
+  removeMeshAction,
   type TriggerMeshDownloadAction,
   type TriggerMeshesDownloadAction,
   type UpdateMeshOpacityAction,
   type UpdateMeshVisibilityAction,
-  removeMeshAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -75,7 +75,7 @@ function* downloadMeshCellsAsZIP(
         Toast.error(errorMessage, {
           sticky: false,
         });
-        return;
+        return Promise.resolve();
       }
       const stlDataReader = new BlobReader(getSTLBlob(geometry, element.segmentId));
       return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
@@ -150,7 +150,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
       for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
         const segmentIds = Object.keys(recordsForOneLayer);
         for (const segmentIdAsString of segmentIds) {
-          const segmentId = Number.parseInt(segmentIdAsString);
+          const segmentId = Number.parseInt(segmentIdAsString, 10);
           yield* put(
             updateMeshVisibilityAction(
               layerName,

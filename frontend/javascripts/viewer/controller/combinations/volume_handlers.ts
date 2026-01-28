@@ -12,8 +12,8 @@ import {
   globalToLayerTransformedPosition,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import {
-  type PositionWithRounding,
   calculateGlobalPos,
+  type PositionWithRounding,
 } from "viewer/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
@@ -30,7 +30,7 @@ import {
   invertTransform,
   transformPointUnscaled,
 } from "viewer/model/helpers/transformation_helpers";
-import { Model, Store, api } from "viewer/singletons";
+import { api, Model, Store } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {

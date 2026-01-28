@@ -530,7 +530,7 @@ PolyhedronRasterizer.Master = class Master {
   transformAffine(matrix: Matrix4x4): PolyhedronRasterizer {
     const { vertices, indices } = this;
     const transformedPolyhdron = new PolyhedronRasterizer(
-      // @ts-ignore
+      // @ts-expect-error
       M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
       indices,
     );

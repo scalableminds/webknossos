@@ -26,7 +26,6 @@ type GpuSpecs = {
 };
 const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
-  // @ts-ignore
   const canvas = document.createElement("canvas");
   const contextProvider =
     "getContext" in canvas

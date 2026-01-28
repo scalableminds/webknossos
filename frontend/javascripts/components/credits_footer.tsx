@@ -1,5 +1,4 @@
-import { ConfigProvider, Layout } from "antd";
-import { Typography } from "antd";
+import { ConfigProvider, Layout, Typography } from "antd";
 import { Link } from "react-router-dom";
 import { getAntdTheme } from "theme";
 

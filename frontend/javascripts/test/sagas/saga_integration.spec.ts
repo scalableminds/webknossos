@@ -1,26 +1,24 @@
-import { describe, it, beforeEach, afterEach, expect } from "vitest";
+import omit from "lodash-es/omit";
+import { TIMESTAMP } from "test/global_mocks";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getStats } from "viewer/model/accessors/annotation_accessor";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_saga_constants";
-import Store from "viewer/store";
-import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import omit from "lodash-es/omit";
-
-import {
-  createTreeMapFromTreeArray,
-  generateTreeName,
-} from "viewer/model/reducers/skeletontracing_reducer_helpers";
-
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { discardSaveQueueAction } from "viewer/model/actions/save_actions";
 import {
   addTreesAndGroupsAction,
   deleteNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { discardSaveQueueAction } from "viewer/model/actions/save_actions";
+import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
+import {
+  createTreeMapFromTreeArray,
+  generateTreeName,
+} from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_saga_constants";
 import { updateTree } from "viewer/model/sagas/volume/update_actions";
-import { TIMESTAMP } from "test/global_mocks";
+import Store from "viewer/store";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 describe("Saga Integration Tests", () => {
   beforeEach<WebknossosTestContext>(async (context) => {

@@ -1,5 +1,5 @@
-import type { ExpectStatic } from "vitest";
 import type { Vector3 } from "viewer/constants";
+import type { ExpectStatic } from "vitest";
 
 export function almostEqual(
   expect: ExpectStatic,

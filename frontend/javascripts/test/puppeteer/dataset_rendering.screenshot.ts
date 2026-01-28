@@ -1,12 +1,8 @@
 import type { PartialDatasetConfiguration } from "viewer/store";
-import {
-  compareScreenshot,
-  getUrlForScreenshotTests,
-  isPixelEquivalent,
-  SCREENSHOTS_BASE_PATH,
-} from "./screenshot_helpers";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, test } from "vitest";
 import {
   getNewPage,
+  type ScreenshotTestContext,
   screenshotAnnotation,
   screenshotDataset,
   screenshotDatasetWithMapping,
@@ -14,12 +10,16 @@ import {
   screenshotSandboxWithMappingLink,
   setupAfterEach,
   setupBeforeEach,
-  type ScreenshotTestContext,
-  withRetry,
   WK_AUTH_TOKEN,
+  withRetry,
   writeDatasetNameToIdMapping,
 } from "./dataset_rendering_helpers";
-import { describe, it, beforeAll, beforeEach, afterEach, expect, test } from "vitest";
+import {
+  compareScreenshot,
+  getUrlForScreenshotTests,
+  isPixelEquivalent,
+  SCREENSHOTS_BASE_PATH,
+} from "./screenshot_helpers";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");

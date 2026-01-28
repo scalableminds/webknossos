@@ -1,4 +1,5 @@
 import { Modal } from "antd";
+
 const { confirm } = Modal;
 export async function binaryConfirm(title: string, content: string): Promise<boolean> {
   return new Promise((resolve) => {

@@ -1,6 +1,9 @@
 import update from "immutability-helper";
+import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { Vector3 } from "viewer/constants";
+import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
 import {
   addToContourListAction,
   createCellAction,
@@ -9,16 +12,12 @@ import {
   resetContourAction,
   setActiveCellAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
-import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import UiReducer from "viewer/model/reducers/ui_reducer";
-import { describe, it, expect } from "vitest";
-import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import type { WebknossosState, StoreAnnotation, VolumeTracing } from "viewer/store";
-import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
+import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
+import type { StoreAnnotation, VolumeTracing, WebknossosState } from "viewer/store";
+import { describe, expect, it } from "vitest";
 
-// biome-ignore lint/suspicious/noExportsInTest:
-export function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing {
+function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing {
   if (annotation.volumes.length > 0) {
     return annotation.volumes[0];
   }

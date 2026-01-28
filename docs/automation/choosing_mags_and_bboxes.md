@@ -36,7 +36,7 @@ Each bounding box should contain **at least 250,000 voxels in the chosen magnifi
 - Box dimensions should be integer multiples of these values in each dimension
 - Recommended total annotated volume per finetuning: **5–10 million voxels** (in the chosen magnification)
 
-When distributing this volume, **many smaller, well-distributed boxes are preferable to a few large contiguous ones**. For example, ten spatially distributed boxes of size 85 × 85 × 32 voxels usually provide a better results than a single larger volume of size 170 × 425 × 32 voxels.
+When distributing this volume, **many smaller, well-distributed boxes are preferable to a few large contiguous ones**. For example, ten spatially distributed boxes of size 85 × 85 × 32 voxels usually provide better results than a single larger volume of size 170 × 425 × 32 voxels.
 
 - The box dimensions must also be divisible by the magnification.
 - The top-left corner of each bounding box must be divisible by the chosen magnification.

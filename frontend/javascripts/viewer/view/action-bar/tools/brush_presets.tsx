@@ -1,21 +1,19 @@
 import { SettingOutlined } from "@ant-design/icons";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-
-import { useWkSelector } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { Unicode } from "viewer/constants";
+import defaultState from "viewer/default_state";
+import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setMousePositionAction } from "viewer/model/actions/volumetracing_actions";
 import Store, { type BrushPresets } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import { LogSliderSetting } from "viewer/view/components/setting_input_views";
-
-import FastTooltip from "components/fast_tooltip";
-import defaultState from "viewer/default_state";
-import { getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 
 function BrushPresetButton({
   name,

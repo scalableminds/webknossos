@@ -3,8 +3,8 @@ import { copyToClipboad } from "admin/voxelytics/utils";
 import { Tooltip } from "antd";
 import { useFetch } from "libs/react_helpers";
 import { useDebouncedValue, useWkSelector } from "libs/react_hooks";
-import compact from "lodash/compact";
-import range from "lodash/range";
+import compact from "lodash-es/compact";
+import range from "lodash-es/range";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
@@ -26,7 +26,7 @@ import {
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { setVoxelPipetteTooltipPinnedPositionAction } from "viewer/model/actions/ui_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { Store, api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
 
 function VoxelValueEntry({

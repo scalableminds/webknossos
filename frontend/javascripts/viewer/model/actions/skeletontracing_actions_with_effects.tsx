@@ -12,9 +12,9 @@ import RemoveTreeModal from "viewer/view/remove_tree_modal";
 import {
   type DeleteNodeAction,
   type DeleteTreeAction,
-  type NoAction,
   deleteNodeAction,
   deleteTreeAction,
+  type NoAction,
   noAction,
 } from "./skeletontracing_actions";
 

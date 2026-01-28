@@ -58,7 +58,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
       throw error;
     } else {
       // Still log the error to airbrake in view mode.
-      // @ts-ignore
+      // @ts-expect-error
       yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error);
     }
   }

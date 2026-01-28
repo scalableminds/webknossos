@@ -1,22 +1,23 @@
-import sortBy from "lodash/sortBy";
-import dayjs from "dayjs";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
-  tokenUserA,
-  setUserAuthToken,
-  resetDatabase,
-  writeTypeCheckingFile,
   replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  writeTypeCheckingFile,
 } from "test/e2e-setup";
 import {
   getActiveUser,
+  getAvailableTasksReport,
+  getProjectProgressReport,
   getTeams,
   getTimeTrackingForUserSpans,
-  getProjectProgressReport,
-  getAvailableTasksReport,
 } from "admin/rest_api";
-import { describe, test, beforeAll, expect } from "vitest";
+import dayjs from "dayjs";
+import sortBy from "lodash-es/sortBy";
 import type { APITeam, APIUser } from "types/api_types";
 import { AnnotationStateFilterEnum } from "viewer/constants";
+import { beforeAll, describe, expect, test } from "vitest";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;

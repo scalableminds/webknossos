@@ -5,7 +5,7 @@ import { entries, getIsInIframe, keys } from "libs/utils";
  *  - the different layout types which specify which tabs exist in which layout and what their default arrangement is
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
-import memoize from "lodash/memoize";
+import memoize from "lodash-es/memoize";
 import type { BorderTabType, ControlMode, ViewMode } from "viewer/constants";
 import Constants, {
   ArbitraryViews,
@@ -56,9 +56,9 @@ export const getGroundTruthLayoutRect = () => {
       width = dummyExtent;
     }
   } else {
-    // @ts-ignore
+    // @ts-expect-error
     height = mainContainer.offsetHeight;
-    // @ts-ignore
+    // @ts-expect-error
     width = mainContainer.offsetWidth;
   }
 
@@ -157,6 +157,7 @@ function buildBorder(
     id: `${side}-border`,
     barSize: borderBarSize,
     size: width,
+    enableAutoHide: true,
     children: [
       {
         type: "tab",

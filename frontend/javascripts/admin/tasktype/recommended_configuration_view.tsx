@@ -1,13 +1,25 @@
-import { Button, Checkbox, Col, Collapse, type CollapseProps, Form, Input, Row, Table } from "antd";
+import {
+  Button,
+  Checkbox,
+  Col,
+  Collapse,
+  type CollapseProps,
+  Form,
+  Input,
+  Row,
+  Space,
+  Table,
+} from "antd";
 import type { FormInstance } from "antd/lib/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { jsonStringify } from "libs/utils";
-import omit from "lodash/omit";
+import omit from "lodash-es/omit";
 import { type RecommendedConfiguration, settings } from "messages";
 import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "viewer/constants";
+
 const FormItem = Form.Item;
 
 function getRecommendedConfigByCategory() {
@@ -126,7 +138,7 @@ export default function RecommendedConfigurationView({
 }) {
   const recommendedConfiguration = getDefaultRecommendedConfiguration();
   const configurationEntries = Object.entries(recommendedConfiguration).map(([key]) => {
-    // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
+    // @ts-expect-error Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
     const settingsKey: keyof RecommendedConfiguration = key;
     return {
       name: settings[settingsKey],
@@ -164,15 +176,17 @@ export default function RecommendedConfigurationView({
             />
           </FormItem>
         </div>
-        <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
-          Remove Orthogonal-only Settings
-        </Button>
-        <Button className="button-margin" onClick={() => removeSettings(form, "flight")}>
-          Remove Flight/Oblique-only Settings
-        </Button>
-        <Button className="button-margin" onClick={() => removeSettings(form, "volume")}>
-          Remove Volume-only Settings
-        </Button>
+        <Space wrap>
+          <Button onClick={() => removeSettings(form, "orthogonal")}>
+            Remove Orthogonal-only Settings
+          </Button>
+          <Button onClick={() => removeSettings(form, "flight")}>
+            Remove Flight/Oblique-only Settings
+          </Button>
+          <Button onClick={() => removeSettings(form, "volume")}>
+            Remove Volume-only Settings
+          </Button>
+        </Space>
       </Col>
       <Col span={12}>
         Valid settings and their default values: <br />

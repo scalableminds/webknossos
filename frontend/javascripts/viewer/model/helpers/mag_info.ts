@@ -1,10 +1,10 @@
 import { map3, maxValue, minValue } from "libs/utils";
-import head from "lodash/head";
-import isEqual from "lodash/isEqual";
-import keyBy from "lodash/keyBy";
-import range from "lodash/range";
-import sortBy from "lodash/sortBy";
-import uniq from "lodash/uniq";
+import head from "lodash-es/head";
+import isEqual from "lodash-es/isEqual";
+import keyBy from "lodash-es/keyBy";
+import range from "lodash-es/range";
+import sortBy from "lodash-es/sortBy";
+import uniq from "lodash-es/uniq";
 import memoizeOne from "memoize-one";
 import type { Vector3 } from "viewer/constants";
 
@@ -49,7 +49,9 @@ export class MagInfo {
 
   getDenseMags = memoizeOne(() => convertToDenseMags(this.getMagList()));
 
-  getMagList = memoizeOne(() => Array.from(this.magnificationMap.values()));
+  getMagList = memoizeOne(() =>
+    sortBy(Array.from(this.magnificationMap.values()), (mag) => Math.max(...mag)),
+  );
 
   getMagsWithIndices(): Array<[number, Vector3]> {
     return sortBy(
@@ -146,12 +148,12 @@ export class MagInfo {
   }
 
   getCoarsestMag(): Vector3 {
-    // @ts-ignore
+    // @ts-expect-error
     return this.getMagByPowerOf2(this.getCoarsestMagPowerOf2());
   }
 
   getFinestMag(): Vector3 {
-    // @ts-ignore
+    // @ts-expect-error
     return this.getMagByPowerOf2(this.getFinestMagPowerOf2());
   }
 

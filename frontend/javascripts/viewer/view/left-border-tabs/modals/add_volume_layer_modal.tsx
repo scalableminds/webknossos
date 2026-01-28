@@ -6,8 +6,8 @@ import {
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
 import Toast from "libs/toast";
-import clone from "lodash/clone";
-import differenceWith from "lodash/differenceWith";
+import clone from "lodash-es/clone";
+import differenceWith from "lodash-es/differenceWith";
 import messages from "messages";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -27,7 +27,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { pushSaveQueueTransactionIsolated } from "viewer/model/actions/save_actions";
 import { addLayerToAnnotation } from "viewer/model/sagas/volume/update_actions";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import Store, { type StoreAnnotation } from "viewer/store";
 import InputComponent from "viewer/view/components/input_component";
 

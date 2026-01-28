@@ -29,14 +29,14 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import {
-  MAXIMUM_ACTION_COUNT_PER_SAVE,
   MAX_SAVE_RETRY_WAITING_TIME,
+  MAXIMUM_ACTION_COUNT_PER_SAVE,
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
-import { MutexFetchingStrategy, getCurrentMutexFetchingStrategy } from "./save_mutex_saga";
+import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "./save_mutex_saga";
 
 const MAX_ON_CONFLICT_RETRIES = 10;
 
@@ -239,7 +239,7 @@ export function* sendSaveRequestToServer(
       }
 
       console.warn("Error during saving. Will retry. Error:", error);
-      // @ts-ignore
+      // @ts-expect-error
       if (error.status === 409 && !shouldFailOnConflict) {
         return { numberOfSentItems: 0, hadConflict: true };
       }
@@ -256,16 +256,15 @@ export function* sendSaveRequestToServer(
 
       // Log the error to airbrake. Also compactedSaveQueue needs to be within an object
       // as otherwise the entries would be spread by the notify function.
-      // @ts-ignore
+      // @ts-expect-error
       yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error, {
         compactedSaveQueue,
         retryCount,
       });
 
-      // @ts-ignore
+      // @ts-expect-error
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
-        // @ts-ignore
         window.onbeforeunload = null;
         yield* call(
           [ErrorHandling, ErrorHandling.notify],

@@ -34,7 +34,6 @@ export default function renderIndependently(
       }
 
       react_root.render(
-        // @ts-ignore
         <Provider store={Store}>
           <GlobalThemeProvider isMainProvider={false}>{getComponent(destroy)}</GlobalThemeProvider>
         </Provider>,

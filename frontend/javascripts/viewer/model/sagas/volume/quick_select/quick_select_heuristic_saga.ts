@@ -1,9 +1,17 @@
+import { sendAnalyticsEvent } from "admin/rest_api";
+import morphology from "ball-morphology";
 import PriorityQueue from "js-priority-queue";
-import intersectionBy from "lodash/intersectionBy";
-import isEqual from "lodash/isEqual";
-import memoize from "lodash/memoize";
+import { V2, V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { clamp, map3, take2 } from "libs/utils";
+import intersectionBy from "lodash-es/intersectionBy";
+import isEqual from "lodash-es/isEqual";
+import memoize from "lodash-es/memoize";
+import ndarray from "ndarray";
 import moments from "ndarray-moments";
 import ops from "ndarray-ops";
+import { call, put, race, take } from "typed-redux-saga";
+import type { APIDataLayer, APIDataset } from "types/api_types";
 import {
   ContourModeEnum,
   type OrthoView,
@@ -13,15 +21,6 @@ import {
   type Vector2,
   type Vector3,
 } from "viewer/constants";
-
-import { sendAnalyticsEvent } from "admin/rest_api";
-import morphology from "ball-morphology";
-import { V2, V3 } from "libs/mjs";
-import Toast from "libs/toast";
-import { clamp, map3, take2 } from "libs/utils";
-import ndarray from "ndarray";
-import { call, put, race, take } from "typed-redux-saga";
-import type { APIDataLayer, APIDataset } from "types/api_types";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import {
   getDefaultValueRangeOfLayer,

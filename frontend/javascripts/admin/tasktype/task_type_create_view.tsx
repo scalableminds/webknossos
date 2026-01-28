@@ -7,7 +7,7 @@ import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Toolti
 import type { RuleObject } from "antd/es/form";
 import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
-import merge from "lodash/merge";
+import merge from "lodash-es/merge";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {

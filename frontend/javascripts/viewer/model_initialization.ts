@@ -1,6 +1,6 @@
 import {
-  PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import {
   getAnnotationCompoundInformation,
@@ -18,11 +18,11 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { point3ToVector3 } from "libs/utils";
 import { location } from "libs/window";
-import cloneDeep from "lodash/cloneDeep";
-import extend from "lodash/extend";
-import first from "lodash/first";
-import isEqual from "lodash/isEqual";
-import merge from "lodash/merge";
+import cloneDeep from "lodash-es/cloneDeep";
+import extend from "lodash-es/extend";
+import first from "lodash-es/first";
+import isEqual from "lodash-es/isEqual";
+import merge from "lodash-es/merge";
 import messages from "messages";
 import type {
   APIAnnotation,
@@ -407,7 +407,7 @@ function initializeAnnotation(
         convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
       ),
     );
-    getServerVolumeTracings(serverTracings).map((volumeTracing) => {
+    getServerVolumeTracings(serverTracings).forEach((volumeTracing) => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
@@ -860,11 +860,11 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
       Toast.error(
-        // @ts-ignore
+        // @ts-expect-error
         `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
       );
       console.error(e);
-      // @ts-ignore
+      // @ts-expect-error
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
       });

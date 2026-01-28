@@ -32,13 +32,13 @@ import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import { compareBy, localeCompareBy } from "libs/utils";
-import difference from "lodash/difference";
-import keyBy from "lodash/keyBy";
-import minBy from "lodash/minBy";
-import noop from "lodash/noop";
-import partial from "lodash/partial";
-import sortBy from "lodash/sortBy";
-import without from "lodash/without";
+import difference from "lodash-es/difference";
+import keyBy from "lodash-es/keyBy";
+import minBy from "lodash-es/minBy";
+import noop from "lodash-es/noop";
+import partial from "lodash-es/partial";
+import sortBy from "lodash-es/sortBy";
+import without from "lodash-es/without";
 import type React from "react";
 import { Fragment, PureComponent, useContext, useRef } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
@@ -57,7 +57,7 @@ import {
 } from "viewer/view/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
-export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
@@ -249,7 +249,7 @@ const DraggableDatasetRow = ({
 }: DraggableDatasetRowProps) => {
   const ref = useRef<HTMLTableRowElement>(null);
   const theme = useWkSelector((state) => state.uiInformation.theme);
-  // @ts-ignore
+  // @ts-expect-error
 
   const datasetId = restProps["data-row-key"];
   const dragItem: DnDDropItemProps = { index, datasetId };
@@ -476,7 +476,7 @@ class DatasetTable extends PureComponent<Props, State> {
     sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
   ) => {
     this.setState({
-      // @ts-ignore
+      // @ts-expect-error
       sortedInfo: sorter,
     });
   };

@@ -1,9 +1,9 @@
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { document } from "libs/window";
-import max from "lodash/max";
-import memoize from "lodash/memoize";
-import min from "lodash/min";
+import max from "lodash-es/max";
+import memoize from "lodash-es/memoize";
+import min from "lodash-es/min";
 import {
   ByteType,
   FloatType,
@@ -26,7 +26,6 @@ type GpuSpecs = {
 };
 const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
-  // @ts-ignore
   const canvas = document.createElement("canvas");
   const contextProvider =
     "getContext" in canvas

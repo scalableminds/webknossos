@@ -1,9 +1,22 @@
+import uniq from "lodash-es/uniq";
+import type { Action } from "viewer/model/actions/actions";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import {
+  updateLayerSettingAction,
+  updateTemporarySettingAction,
+} from "viewer/model/actions/settings_actions";
+import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  getDtypeConfigForElementClass,
+  getSupportedValueRangeForElementClass,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "viewer/store";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, test } from "vitest";
 import {
   createAnnotationForDatasetScreenshot,
   getNewPage,
-  screenshotDataset,
   type ScreenshotTestContext,
+  screenshotDataset,
   screenshotTracingView,
   setupAfterEach,
   setupBeforeEach,
@@ -16,19 +29,6 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
-import uniq from "lodash/uniq";
-import {
-  getDtypeConfigForElementClass,
-  getSupportedValueRangeForElementClass,
-} from "viewer/model/bucket_data_handling/data_rendering_logic";
-import {
-  updateLayerSettingAction,
-  updateTemporarySettingAction,
-} from "viewer/model/actions/settings_actions";
-import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
-import type { Action } from "viewer/model/actions/actions";
-import { describe, it, beforeAll, beforeEach, afterEach, expect, test } from "vitest";
-import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
 
 const testColor = true;
 const testSegmentation = true;

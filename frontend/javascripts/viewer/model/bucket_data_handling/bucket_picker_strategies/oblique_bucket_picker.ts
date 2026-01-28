@@ -1,7 +1,7 @@
-import ThreeDMap from "libs/ThreeDMap";
 import { M4x4, V3 } from "libs/mjs";
-import range from "lodash/range";
-import uniqBy from "lodash/uniqBy";
+import ThreeDMap from "libs/ThreeDMap";
+import range from "lodash-es/range";
+import uniqBy from "lodash-es/uniqBy";
 import type { Matrix4x4 } from "mjs";
 import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
@@ -10,7 +10,7 @@ import type { EnqueueFunction } from "viewer/model/bucket_data_handling/layer_re
 import { chunk2 } from "viewer/model/helpers/chunk";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
-import { MAX_ZOOM_STEP_DIFF, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
+import { getPriorityWeightForZoomStepDiff, MAX_ZOOM_STEP_DIFF } from "../loading_strategy_logic";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
 // in this use case (only one mag at a time is gathered).
@@ -39,7 +39,7 @@ const ROTATIONS = {
 export default function determineBucketsForOblique(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   position: Vector3,
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
@@ -49,11 +49,11 @@ export default function determineBucketsForOblique(
 ): void {
   let zoomStepDiff = 0;
 
-  while (logZoomStep + zoomStepDiff < mags.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
+  while (logZoomStep + zoomStepDiff < denseMags.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
     addNecessaryBucketsToPriorityQueueOblique(
       loadingStrategy,
       viewMode,
-      mags,
+      denseMags,
       position,
       enqueueFunction,
       matrix,
@@ -69,7 +69,7 @@ export default function determineBucketsForOblique(
 function addNecessaryBucketsToPriorityQueueOblique(
   loadingStrategy: LoadingStrategy,
   viewMode: ViewMode,
-  mags: Array<Vector3>,
+  denseMags: Array<Vector3>,
   position: Vector3,
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
@@ -118,7 +118,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
       [-enlargedHalfExtent[0], -enlargedHalfExtent[1], 0],
       [-enlargedHalfExtent[0], +enlargedHalfExtent[1], 0],
     ]);
-    const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], mags, logZoomStep);
+    const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], denseMags, logZoomStep);
     const steps = stepRateBuckets.length + 1;
     const stepSize = [enlargedExtent[0] / steps, enlargedExtent[1] / steps];
     // This array holds the start and end points
@@ -142,7 +142,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
     );
 
     for (const [a, b] of chunk2(scanLinesPoints)) {
-      for (const bucket of traverse(a, b, mags, logZoomStep)) {
+      for (const bucket of traverse(a, b, denseMags, logZoomStep)) {
         traversedBuckets.push(bucket);
       }
     }
@@ -154,7 +154,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
   // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
   // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
   // potential other coordinates.
-  const centerAddress = globalPositionToBucketPosition(position, mags, logZoomStep, null);
+  const centerAddress = globalPositionToBucketPosition(position, denseMags, logZoomStep, null);
 
   for (const bucketAddress of traversedBucketsVec4) {
     const bucketVector3 = bucketAddress.slice(0, 3) as any as Vector3;

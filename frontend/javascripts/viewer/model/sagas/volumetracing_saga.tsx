@@ -1,28 +1,25 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
+import isEqual from "lodash-es/isEqual";
 import memoizeOne from "memoize-one";
-import type { ContourMode, OverwriteMode } from "viewer/constants";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
-import getSceneController from "viewer/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-
-import isEqual from "lodash/isEqual";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { AnnotationLayerEnum } from "types/api_types";
+import type { ContourMode, OverwriteMode } from "viewer/constants";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
+import getSceneController from "viewer/controller/scene_controller_provider";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import {
+import { AnnotationTool, 
   isBrushTool,
   isTraceTool,
-  isVolumeDrawingTool,
-} from "viewer/model/accessors/tool_accessor";
+  isVolumeDrawingTool,} from "viewer/model/accessors/tool_accessor";
 import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -67,11 +64,11 @@ import {
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import {
-  type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
+  type UpdateActionWithoutIsolationRequirement,
   updateActiveSegmentId,
   updateLargestSegmentId,
   updateMappingName,
@@ -82,7 +79,7 @@ import {
 } from "viewer/model/sagas/volume/update_actions";
 import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
@@ -692,7 +689,9 @@ function* maintainContourGeometry(): Saga<void> {
       volumeTracing.contourTracingMode === ContourModeEnum.DELETE
         ? CONTOUR_COLOR_DELETE
         : CONTOUR_COLOR_NORMAL;
-    contourList.forEach((p) => contour.addEdgePoint(p));
+    contourList.forEach((p) => {
+      contour.addEdgePoint(p);
+    });
   }
 }
 

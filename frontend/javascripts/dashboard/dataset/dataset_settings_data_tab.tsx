@@ -578,7 +578,7 @@ function SimpleLayerForm({
                 >
                   <DelegatePropsToFirstChild>
                     <InputNumber
-                      // @ts-ignore returning undefined does work without problems
+                      // @ts-expect-error returning undefined does work without problems
                       parser={(value: string | undefined) => {
                         if (value == null || value === "") {
                           return undefined;

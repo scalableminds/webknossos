@@ -2,18 +2,18 @@ import { Chalk } from "chalk";
 import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
-import capitalize from "lodash/capitalize";
-import differenceWith from "lodash/differenceWith";
-import flattenDeep from "lodash/flattenDeep";
-import fromPairs from "lodash/fromPairs";
-import isEqual from "lodash/isEqual";
-import last from "lodash/last";
-import max from "lodash/max";
-import min from "lodash/min";
-import once from "lodash/once";
-import toPairs from "lodash/toPairs";
-import uniq from "lodash/uniq";
-import zipObject from "lodash/zipObject";
+import capitalize from "lodash-es/capitalize";
+import differenceWith from "lodash-es/differenceWith";
+import flattenDeep from "lodash-es/flattenDeep";
+import fromPairs from "lodash-es/fromPairs";
+import isEqual from "lodash-es/isEqual";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import once from "lodash-es/once";
+import toPairs from "lodash-es/toPairs";
+import uniq from "lodash-es/uniq";
+import zipObject from "lodash-es/zipObject";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
@@ -106,7 +106,6 @@ function getRecursiveValuesUnflat(obj: ArbitraryObject | Array<any> | string): A
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
-    // @ts-ignore
     return Object.keys(obj).map((key) => getRecursiveValuesUnflat(obj[key]));
   } else {
     return [obj];
@@ -534,7 +533,7 @@ export function getUrlParamValue(paramName: string): string {
 
 export function hasUrlParam(paramName: string): boolean {
   const params = getUrlParamsObject();
-  return Object.prototype.hasOwnProperty.call(params, paramName);
+  return Object.hasOwn(params, paramName);
 }
 
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {
@@ -666,7 +665,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
 }
 
 export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
-  // @ts-ignore
   return arr.filter((el) => el != null);
 }
 
@@ -1247,7 +1245,7 @@ export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) =>
     if (typeof item === "object") {
       // We know that item is an object or array which matches deepIterate's signature.
       // However, TS doesn't infer this.
-      // @ts-ignore
+      // @ts-expect-error
       deepIterate(item, callback);
     }
   });

@@ -1,4 +1,4 @@
-import without from "lodash/without";
+import without from "lodash-es/without";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";

@@ -584,7 +584,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       tags = Some(tags),
       metadata = Some(metadata),
       folderId = Some(folderId),
-      dataSource = None
+      dataSource = None,
+      layerRenamings = None
     )
     updatePartial(datasetId, updateParameters)
   }
@@ -783,8 +784,8 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
     for {
       rows <- run(
-        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId
-       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName"""
+        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId, uploadToPathIsPending
+       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName AND NOT uploadToPathIsPending"""
           .as[DatasetMagsRow])
       magLocators <- Fox.combined(rows.map(parseMagLocator))
     } yield magLocators
@@ -822,11 +823,12 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield storageRelevantMags.toList
 
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
-    val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
+    val clearQuery =
+      q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.mags.map { mag =>
-        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId)
-            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId, uploadToPathIsPending)
+            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId}, ${false})
            """.asUpdate
       }
     }
@@ -933,6 +935,54 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         row.channelindex,
         row.credentialid
       )
+
+  def insertPending(datasetId: ObjectId,
+                    layerName: String,
+                    mag: Vec3Int,
+                    axisOrder: Option[AxisOrder],
+                    channelIndex: Option[Int],
+                    path: UPath): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending)
+          VALUES($datasetId, $layerName, $mag, $path, ${axisOrder.map(Json.toJson(_))}, $channelIndex, ${true})
+         """.asUpdate)
+    } yield ()
+
+  def finishUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""UPDATE webknossos.dataset_mags
+           SET uploadToPathIsPending = ${false}
+           WHERE _dataset = $datasetId
+           AND dataLayerName = $layerName
+           AND mag = $mag::webknossos.VECTOR3
+           AND uploadToPathIsPending""".asUpdate
+      )
+    } yield ()
+
+  def findPendingMagLocatorPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[UPath] =
+    for {
+      rows <- run(q"""SELECT path
+            FROM webknossos.dataset_mags
+            WHERE _dataset = $datasetId
+            AND dataLayerName = $layerName
+            AND mag = $mag::webknossos.VECTOR3
+            AND uploadToPathIsPending
+            AND path IS NOT NULL
+            """.as[String])
+      first <- rows.headOption.toFox
+      firstAsUpath <- UPath.fromString(first).toFox
+    } yield firstAsUpath
+
+  def deletePendingMagLocator(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.dataset_mags
+                   WHERE _dataset = $datasetId
+                   AND dataLayerName = $layerName
+                   AND mag = $mag::webknossos.VECTOR3
+                   AND uploadToPathIsPending""".asUpdate)
+    } yield ()
 
 }
 

@@ -3,8 +3,8 @@ import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
-import clone from "lodash/clone";
-import merge from "lodash/merge";
+import clone from "lodash-es/clone";
+import merge from "lodash-es/merge";
 import type React from "react";
 import { useEffect } from "react";
 import type { APIUser } from "types/api_types";
@@ -66,9 +66,7 @@ export const NavAndStatusBarTheme = merge(
 );
 
 export function getSystemColorTheme(): Theme {
-  // @ts-ignore
   return window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-    // @ts-ignore
     window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
@@ -122,7 +120,10 @@ export function getAntdTheme(userTheme: Theme) {
 export default function GlobalThemeProvider({
   children,
   isMainProvider = true,
-}: { children?: React.ReactNode; isMainProvider?: boolean }) {
+}: {
+  children?: React.ReactNode;
+  isMainProvider?: boolean;
+}) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const userTheme = getThemeFromUser(activeUser);
   const antdTheme = getAntdTheme(userTheme);

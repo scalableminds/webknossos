@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import memoize from "lodash/memoize";
+import memoize from "lodash-es/memoize";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -214,7 +214,9 @@ class Plane {
 
   destroy() {
     this.materialFactory.destroy();
-    this.storePropertyUnsubscribers.forEach((f) => f());
+    this.storePropertyUnsubscribers.forEach((f) => {
+      f();
+    });
     this.storePropertyUnsubscribers = [];
   }
 

@@ -2,7 +2,7 @@ import { InputMouse } from "libs/input";
 import { V3 } from "libs/mjs";
 import TrackballControls from "libs/trackball_controls";
 import { clamp, waitForElementWithId } from "libs/utils";
-import get from "lodash/get";
+import get from "lodash-es/get";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";

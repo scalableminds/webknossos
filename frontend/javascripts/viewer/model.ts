@@ -1,9 +1,9 @@
 import { isDatasetAccessibleBySwitching } from "admin/api/organization";
 import { sleep } from "libs/utils";
-import filter from "lodash/filter";
-import max from "lodash/max";
-import reduce from "lodash/reduce";
-import sum from "lodash/sum";
+import filter from "lodash-es/filter";
+import max from "lodash-es/max";
+import reduce from "lodash-es/reduce";
+import sum from "lodash-es/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -53,7 +53,9 @@ export class WebKnossosModel {
         const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
-          Object.values(this.dataLayers).forEach((layer) => layer.destroy());
+          Object.values(this.dataLayers).forEach((layer) => {
+            layer.destroy();
+          });
         }
 
         this.dataLayers = dataLayers;
@@ -65,7 +67,7 @@ export class WebKnossosModel {
           await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
-          // @ts-ignore
+          // @ts-expect-error
           error.organizationToSwitchTo = maybeOrganizationToSwitchTo;
         }
       } catch (accessibleBySwitchingError) {
@@ -338,7 +340,9 @@ export class WebKnossosModel {
      */
 
     if (this.dataLayers != null) {
-      Object.values(this.dataLayers).forEach((layer) => layer.destroy());
+      Object.values(this.dataLayers).forEach((layer) => {
+        layer.destroy();
+      });
       this.dataLayers = {};
     }
   }

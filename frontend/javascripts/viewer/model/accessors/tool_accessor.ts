@@ -1,4 +1,4 @@
-import without from "lodash/without";
+import without from "lodash-es/without";
 import type { WebknossosState } from "viewer/store";
 
 abstract class AbstractAnnotationTool {

@@ -1,9 +1,8 @@
-import cloneDeep from "lodash/cloneDeep";
-import { describe, it, expect } from "vitest";
-import { validateObjectWithType } from "types/validation";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-
+import cloneDeep from "lodash-es/cloneDeep";
 import DATASET from "test/fixtures/dataset_server_object";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import { validateObjectWithType } from "types/validation";
+import { describe, expect, it } from "vitest";
 
 const datasetViewConfigurationType = "types::DatasetViewConfiguration";
 const CORRECT_DATASET_CONFIGURATION: Record<any, any> = {

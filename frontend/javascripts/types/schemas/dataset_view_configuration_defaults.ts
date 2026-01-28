@@ -1,5 +1,5 @@
-import keys from "lodash/keys";
-import pickBy from "lodash/pickBy";
+import keys from "lodash-es/keys";
+import pickBy from "lodash-es/pickBy";
 import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_types";
 import {
   defaultDatasetViewConfiguration,

@@ -1,6 +1,7 @@
 import { SettingOutlined } from "@ant-design/icons";
 import { getDatasetNameRules } from "admin/dataset/dataset_components";
 import { APIAiModelCategory } from "admin/rest_api";
+import type { FormProps } from "antd";
 import {
   Card,
   Col,
@@ -13,7 +14,6 @@ import {
   Select,
   Space,
 } from "antd";
-import type { FormProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";

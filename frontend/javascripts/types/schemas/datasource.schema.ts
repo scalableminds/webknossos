@@ -91,8 +91,8 @@ export default {
             required: ["mag"],
           },
         },
-        required: ["dataFormat", "mags"],
       },
+      required: ["dataFormat", "mags"],
     },
     "types::DataLayerZarrPartial": {
       title: "DataLayerZarr",

@@ -91,9 +91,7 @@ export type DataLayer = {
     | DataLayerZarr3Partial
   );
 
-export type DataLayerWithTransformations = Partial<
-  Pick<DataLayer, "name"> & Pick<BaseRemoteLayer, "coordinateTransformations">
->;
+export type DataLayerWithTransformations = Pick<DataLayer, "name"> & Pick<BaseRemoteLayer, "coordinateTransformations">;
 
 export type DatasourceConfiguration = {
   id: {

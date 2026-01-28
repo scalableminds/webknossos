@@ -24,7 +24,7 @@ import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect, useState } from "react";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
-import type { DataLayer } from "types/schemas/datasource.types";
+import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
@@ -103,14 +103,37 @@ function SimpleDatasetForm({
     initialTransformationsMode,
   );
 
-  const getDatasetTransformationsModeCard = (dataset: APIDataset | null | undefined) => {
+  function DatasetTransformationsModeCard() {
+
+    useEffect(() => {
+      if (!form
+      ) {
+        return;
+      }
+      const layersWithCoordTransformationsJSON: string | undefined = form.getFieldValue(["coordinateTransformations"]);
+      if (form.getFieldError(["coordinateTransformations"]).length > 0) {
+        return;
+      }
+      const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined = layersWithCoordTransformationsJSON
+        ? JSON.parse(layersWithCoordTransformationsJSON)
+        : undefined;
+      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer) => {
+        const coordinateTransformation = layersWithCoordTransformations?.find(ct => ct.name === layer.name);
+        return {
+          ...layer,
+          coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
+        };
+      });
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    }, []);
+
     return (
       <SettingsCard
         title="Transformation Configuration"
         content={
           <FormItemWithInfo
             info="<Some information about the format>"
-            name={["dataSource", "coordinateTransformations"]}
+            name={["coordinateTransformations"]}
             rules={[
               {
                 validator: (rule, value) => validateTransformationsJSON(rule, value),
@@ -144,7 +167,7 @@ function SimpleDatasetForm({
           />
         );
       case TransformationsMode.ADVANCED:
-        return getDatasetTransformationsModeCard(dataset);
+        return <DatasetTransformationsModeCard />;
       default:
         return null;
     }
@@ -257,7 +280,7 @@ function SimpleDatasetForm({
               </FormItemWithInfo>
             </Col>
             <FormItemWithInfo
-              name={["dataSource", "transformationMode"]}
+              name={["transformationMode"]}
               label="Transformation Mode"
               info="The transformations for the dataset."
             >

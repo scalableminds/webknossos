@@ -13,7 +13,7 @@ WEBKNOSSOS allows you to train your own AI models for image segmentation. This f
 
 Before you can start training, prepare your ground truth annotation(s). The training process requires at least one volume annotation with at least one bounding box.
 
-Here is a step-by-step guide to prepare your data:
+Here is a short, step-by-step guide to prepare your data. For a detailed tutorial and general annotations guidelines, please see [here](../tutorials/tutorial_trainingdata_annotation.md):
 
 1.  **Create an annotation:** Start by creating a new annotation or opening an existing one.
 2.  **Define bounding boxes:** Create one or more bounding boxes that define the areas you want to use for training. 
@@ -37,7 +37,7 @@ In this section, you need to specify the data that will be used for training.
 
 *   **Image Data Layer:** Select the raw image layer.
 *   **Ground Truth Layer:** Select the segmentation layer that you created.
-*   **Magnification:** Choose the magnification that should be used for training.
+*   **Magnification:** Choose the magnification that should be used for training. Read more about [choosing a magnification](./choosing_mags_and_bboxes.md).
 
 You can also add more training data from other annotations by clicking the `+` button and referencing annotations by ID or WEBKNOSSOS URLs.
 

@@ -1,9 +1,12 @@
+import AccountSettingsView from "admin/account/account_settings_view";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
+import VerifyEmailView from "admin/auth/verify_email_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
+import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import JobListView from "admin/job/job_list_view";
 import OrganizationView from "admin/organization/organization_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -13,6 +16,7 @@ import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
+import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
 import TaskListView from "admin/task/task_list_view";
@@ -20,32 +24,28 @@ import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
 import UserListView from "admin/user/user_list_view";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
 import { Layout } from "antd";
+import ErrorBoundary from "components/error_boundary";
 import { Imprint, Privacy } from "components/legal";
 import SecuredRoute from "components/secured_route";
 import DashboardView from "dashboard/dashboard_view";
 import PublicationDetailView from "dashboard/publication_details_view";
+import loadable from "libs/lazy_loader";
 import Navbar from "navbar";
 import {
+  createBrowserRouter,
+  createRoutesFromElements,
   Navigate,
   Outlet,
   Route,
-  createBrowserRouter,
-  createRoutesFromElements,
   redirect,
 } from "react-router-dom";
-
-import AccountSettingsView from "admin/account/account_settings_view";
-import VerifyEmailView from "admin/auth/verify_email_view";
-import { DatasetURLImport } from "admin/dataset/dataset_url_import";
-import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
-import AiModelListView from "admin/voxelytics/ai_model_list_view";
-import ErrorBoundary from "components/error_boundary";
-import loadable from "libs/lazy_loader";
 import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
+
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
 import AccountProfileView from "admin/account/account_profile_view";
 import AccountSecurityView from "admin/account/account_security_view";

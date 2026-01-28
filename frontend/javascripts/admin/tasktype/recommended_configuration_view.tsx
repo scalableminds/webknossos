@@ -19,6 +19,7 @@ import { type RecommendedConfiguration, settings } from "messages";
 import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "viewer/constants";
+
 const FormItem = Form.Item;
 
 function getRecommendedConfigByCategory() {
@@ -137,7 +138,7 @@ export default function RecommendedConfigurationView({
 }) {
   const recommendedConfiguration = getDefaultRecommendedConfiguration();
   const configurationEntries = Object.entries(recommendedConfiguration).map(([key]) => {
-    // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
+    // @ts-expect-error Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
     const settingsKey: keyof RecommendedConfiguration = key;
     return {
       name: settings[settingsKey],

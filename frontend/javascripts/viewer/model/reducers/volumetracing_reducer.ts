@@ -14,7 +14,6 @@ import {
   getVisibleSegments,
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
-import {} from "viewer/model/actions/volumetracing_actions";
 import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
@@ -22,7 +21,6 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "viewer/model/reducers/reducer_helpers";
 import {
-  type VolumeTracingReducerAction,
   addToContourListReducer,
   createCellReducer,
   expandSegmentParents,
@@ -42,6 +40,7 @@ import {
   updateDirectionReducer,
   updateSegments,
   updateVolumeTracing,
+  type VolumeTracingReducerAction,
 } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "viewer/store";
 import {

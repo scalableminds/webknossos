@@ -7,11 +7,11 @@ import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
-  ZOOM_STEP_INTERVAL,
   getRotationInDegrees,
   getRotationInRadian,
   getValidZoomRangeForUser,
   rotateOnAxis,
+  ZOOM_STEP_INTERVAL,
 } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";

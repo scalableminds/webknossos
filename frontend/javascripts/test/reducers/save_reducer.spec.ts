@@ -1,13 +1,12 @@
-import { vi, describe, it, expect } from "vitest";
 import dummyUser from "test/fixtures/dummy_user";
-import type { WebknossosState } from "viewer/store";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
-
+import { TIMESTAMP } from "test/global_mocks";
 import { pushSaveQueueTransaction, shiftSaveQueueAction } from "viewer/model/actions/save_actions";
 import SaveReducer from "viewer/model/reducers/save_reducer";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { createEdge } from "viewer/model/sagas/volume/update_actions";
-import { TIMESTAMP } from "test/global_mocks";
+import type { WebknossosState } from "viewer/store";
+import { describe, expect, it, vi } from "vitest";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 vi.mock("viewer/model/accessors/annotation_accessor", () => ({
   getStats: () => null,

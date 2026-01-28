@@ -214,7 +214,9 @@ class Plane {
 
   destroy() {
     this.materialFactory.destroy();
-    this.storePropertyUnsubscribers.forEach((f) => f());
+    this.storePropertyUnsubscribers.forEach((f) => {
+      f();
+    });
     this.storePropertyUnsubscribers = [];
   }
 

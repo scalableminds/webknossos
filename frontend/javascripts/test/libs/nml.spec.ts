@@ -1,22 +1,22 @@
-import extend from "lodash-es/extend";
-import cloneDeep from "lodash-es/cloneDeep";
-import sortBy from "lodash-es/sortBy";
-import size from "lodash-es/size";
 import update from "immutability-helper";
-import type { SkeletonTracing, WebknossosState } from "viewer/store";
-import type { Node } from "viewer/model/types/tree_types";
-import defaultState from "viewer/default_state";
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "viewer/model/edge_collection";
-import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { describe, it, expect } from "vitest";
+import cloneDeep from "lodash-es/cloneDeep";
+import extend from "lodash-es/extend";
+import size from "lodash-es/size";
+import sortBy from "lodash-es/sortBy";
 import { TreeTypeEnum } from "viewer/constants";
-import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
-import { serializeToNml, getNmlName, parseNml } from "viewer/model/helpers/nml_helpers";
-import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import defaultState from "viewer/default_state";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
+import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
+import EdgeCollection from "viewer/model/edge_collection";
+import { getNmlName, parseNml, serializeToNml } from "viewer/model/helpers/nml_helpers";
+import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import type { Node } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { describe, expect, it } from "vitest";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
+import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 
 const createDummyNode = (id: number): Node => ({
   bitDepth: 8,

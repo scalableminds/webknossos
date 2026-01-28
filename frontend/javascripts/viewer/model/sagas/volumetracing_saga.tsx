@@ -16,8 +16,7 @@ import {
   AnnotationTool,
   isBrushTool,
   isTraceTool,
-  isVolumeDrawingTool,
-} from "viewer/model/accessors/tool_accessor";
+  isVolumeDrawingTool,} from "viewer/model/accessors/tool_accessor";
 import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -64,7 +63,7 @@ import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_se
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
@@ -536,7 +535,9 @@ function* maintainContourGeometry(): Saga<void> {
       volumeTracing.contourTracingMode === ContourModeEnum.DELETE
         ? CONTOUR_COLOR_DELETE
         : CONTOUR_COLOR_NORMAL;
-    contourList.forEach((p) => contour.addEdgePoint(p));
+    contourList.forEach((p) => {
+      contour.addEdgePoint(p);
+    });
   }
 }
 

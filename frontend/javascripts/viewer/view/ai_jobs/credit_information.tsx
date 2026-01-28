@@ -1,6 +1,6 @@
 import { CreditCardOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { type JobCreditCostInfo, getJobCreditCostAndUpdateOrgaCredits } from "admin/rest_api";
+import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
 import { Button, Card, Col, Flex, Row, Space, Spin, Typography } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
@@ -9,7 +9,7 @@ import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { APIJobCommand, type AiModel } from "types/api_types";
+import { type AiModel, APIJobCommand } from "types/api_types";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";

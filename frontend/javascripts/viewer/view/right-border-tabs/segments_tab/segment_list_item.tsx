@@ -7,11 +7,8 @@ import {
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
 import { App, Checkbox, List, type MenuProps } from "antd";
-import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
-import React from "react";
-import { useDispatch } from "react-redux";
-
 import type { MenuItemType } from "antd/es/menu/interface";
+import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import classnames from "classnames";
 import {
   ChangeColorMenuItemContent,
@@ -22,8 +19,9 @@ import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { take3 } from "libs/utils";
-import type { APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import React from "react";
+import { useDispatch } from "react-redux";
+import type { AdditionalCoordinate, APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
 import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";

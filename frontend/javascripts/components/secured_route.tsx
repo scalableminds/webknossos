@@ -1,7 +1,7 @@
 import LoginView from "admin/auth/login_view";
 import {
-  type PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";

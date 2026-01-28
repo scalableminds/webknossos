@@ -3,8 +3,8 @@ import { getVoxelyticsChunkStatistics } from "admin/rest_api";
 import { Button, Flex, Tooltip } from "antd";
 import dayjs from "dayjs";
 import {
-  formatCPU,
   formatCountToDataAmountUnit,
+  formatCPU,
   formatDurationStrict,
   formatNumber,
   formatTimeIntervalStrict,

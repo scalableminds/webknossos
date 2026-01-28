@@ -1,14 +1,23 @@
 import update from "immutability-helper";
+import { ColoredLogger } from "libs/utils";
 import range from "lodash-es/range";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
+import { transformStateAsReadOnly } from "test/helpers/utils";
+import {
+  MOVE_GROUP_EDGE_CASE,
+  SEGMENT_GROUPS,
+  SEGMENT_GROUPS_EDITED,
+  SWAP_GROUP_EDGE_CASE,
+} from "test/sagas/volumetracing/segment_group_fixtures";
 import type { Action } from "viewer/model/actions/actions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
+import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import {
   applyVolumeUpdateActionsFromServerAction,
   createCellAction,
@@ -20,24 +29,15 @@ import {
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import type {
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
+import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { describe, it, expect, test, afterAll } from "vitest";
-import { transformStateAsReadOnly } from "test/helpers/utils";
-import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
-import {
-  MOVE_GROUP_EDGE_CASE,
-  SEGMENT_GROUPS,
-  SEGMENT_GROUPS_EDITED,
-  SWAP_GROUP_EDGE_CASE,
-} from "test/sagas/volumetracing/segment_group_fixtures";
-import { ColoredLogger } from "libs/utils";
+import { afterAll, describe, expect, it, test } from "vitest";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];

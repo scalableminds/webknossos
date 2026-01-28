@@ -1,28 +1,26 @@
 // Integration tests for skeleton.ts
 // Ensure singletons are set up
 import "test/helpers/apiHelpers";
+import { sleep } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { describe, it, beforeAll, expect } from "vitest";
 import type { Vector3 } from "viewer/constants";
-import type { WebknossosState } from "viewer/store";
-import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
-import { convertServerAnnotationToFrontendAnnotation } from "viewer/model/reducers/reducer_helpers";
-import { batchedAnnotationInitializationAction } from "viewer/model/actions/annotation_actions";
-
 import { COLOR_TEXTURE_WIDTH, NodeTypes } from "viewer/geometries/materials/node_shader";
-import Store from "viewer/store";
 import Skeleton from "viewer/geometries/skeleton";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { batchedAnnotationInitializationAction, initializeAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
+  createBranchPointAction,
   createNodeAction,
   createTreeAction,
   deleteNodeAction,
-  createBranchPointAction,
-  setNodeRadiusAction,
   initializeSkeletonTracingAction,
+  setNodeRadiusAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { initializeAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { sleep } from "libs/utils";
+import { convertServerAnnotationToFrontendAnnotation } from "viewer/model/reducers/reducer_helpers";
+import type { WebknossosState } from "viewer/store";
+import Store from "viewer/store";
+import { beforeAll, describe, expect, it } from "vitest";
+import { annotation, tracing } from "../fixtures/skeletontracing_server_objects";
 
 const skeletonCreator = () =>
   new Skeleton((state: WebknossosState) => enforceSkeletonTracing(state.annotation), true);

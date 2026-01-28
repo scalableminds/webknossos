@@ -1,17 +1,17 @@
 import { getSystemColorTheme } from "theme";
 import type { APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import constants from "viewer/constants";
 import Constants, {
   ControlModeEnum,
+  FillModeEnum,
+  InterpolationModeEnum,
   OrthoViews,
   OverwriteModeEnum,
-  FillModeEnum,
   TDViewDisplayModeEnum,
-  InterpolationModeEnum,
   UnitLong,
   ViewModeValues,
 } from "viewer/constants";
-import constants from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
 

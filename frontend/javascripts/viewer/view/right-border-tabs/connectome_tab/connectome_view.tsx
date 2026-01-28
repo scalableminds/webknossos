@@ -2,8 +2,8 @@ import {
   getSynapseDestinations,
   getSynapsePositions,
   getSynapseSources,
-  getSynapseTypes,
   getSynapsesOfAgglomerates,
+  getSynapseTypes,
 } from "admin/rest_api";
 import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
 import DiffableMap from "libs/diffable_map";
@@ -13,8 +13,7 @@ import { diffArrays, map3, safeZipObject, unique } from "libs/utils";
 import React from "react";
 import { connect } from "react-redux";
 import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_types";
-import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import Constants, { MappingStatusEnum } from "viewer/constants";
+import Constants, { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
   getMappingInfo,
@@ -49,6 +48,7 @@ import SynapseTree, {
   convertConnectomeToTreeData,
 } from "viewer/view/right-border-tabs/connectome_tab/synapse_tree";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+
 const connectomeTabId = "connectome-view";
 type StateProps = {
   dataset: APIDataset;
@@ -650,13 +650,13 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   handleChangeActiveSegment = (evt: React.SyntheticEvent) => {
-    // @ts-ignore
+    // @ts-expect-error
     const agglomerateIds = evt.target.value
       .split(",")
       .map((part: string) => Number.parseInt(part, 10))
       .filter((id: number) => !Number.isNaN(id));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
-    // @ts-ignore
+    // @ts-expect-error
     evt.target.blur();
   };
 
@@ -669,7 +669,7 @@ class ConnectomeView extends React.Component<Props, State> {
   handleCheck: TreeProps<TreeNode>["onCheck"] = (checked, { node, checked: isChecked }) => {
     // The trailing ; is important to avoid matching 1234 if the id is 12
     const checkedNodeKeyPrefix = `segment;${node.data.id};`;
-    // @ts-ignore antd's <Tree> component uses objects instead of simple string if "checkable" prop is present
+    // @ts-expect-error antd's <Tree> component uses objects instead of simple string if "checkable" prop is present
     const checkedKeys = checked.checked as string[];
 
     if (isChecked) {

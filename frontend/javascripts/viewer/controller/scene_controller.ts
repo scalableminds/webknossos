@@ -1,8 +1,7 @@
 import app from "app";
 import Toast from "libs/toast";
-import window from "libs/window";
-
 import { rgbToInt } from "libs/utils";
+import window from "libs/window";
 import {
   BoxGeometry,
   BufferGeometry,
@@ -158,7 +157,7 @@ class SceneController {
   setupDebuggingMethods() {
     // These methods are attached to window, since we would run into circular import errors
     // otherwise.
-    // @ts-ignore
+    // @ts-expect-error
     window.addBucketMesh = (
       position: Vector3,
       zoomStep: number,
@@ -184,7 +183,7 @@ class SceneController {
       return cube;
     };
 
-    // @ts-ignore
+    // @ts-expect-error
     window.addVoxelMesh = (position: Vector3, _cubeLength: Vector3, optColor?: string) => {
       // Shrink voxels a bit so that it's easier to identify individual voxels.
       const cubeLength = _cubeLength.map((el) => el * 0.9);
@@ -205,7 +204,7 @@ class SceneController {
     let renderedLines: Line[] = [];
 
     // Utility function for visual debugging
-    // @ts-ignore
+    // @ts-expect-error
     window.addLine = (a: Vector3, b: Vector3) => {
       const material = new LineBasicMaterial({
         color: 0x0000ff,
@@ -220,7 +219,7 @@ class SceneController {
     };
 
     // Utility function for visual debugging
-    // @ts-ignore
+    // @ts-expect-error
     window.removeLines = () => {
       for (const line of renderedLines) {
         this.rootNode.remove(line);
@@ -229,7 +228,7 @@ class SceneController {
       renderedLines = [];
     };
 
-    // @ts-ignore
+    // @ts-expect-error
     window.removeBucketMesh = (mesh: LineSegments) => this.rootNode.remove(mesh);
   }
 
@@ -367,7 +366,9 @@ class SceneController {
     for (const [tracingId, _boundingBox] of Object.entries(this.taskCubeByTracingId)) {
       let taskCube = this.taskCubeByTracingId[tracingId];
       if (taskCube != null) {
-        taskCube.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
+        taskCube.getMeshes().forEach((mesh) => {
+          this.rootNode.remove(mesh);
+        });
       }
       this.taskCubeByTracingId[tracingId] = null;
     }
@@ -385,7 +386,9 @@ class SceneController {
         showCrossSections: true,
         isHighlighted: false,
       });
-      taskCube.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      taskCube.getMeshes().forEach((mesh) => {
+        this.rootNode.add(mesh);
+      });
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
         taskCube?.setVisibility(false);
@@ -415,7 +418,9 @@ class SceneController {
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
-    this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
+    this.userBoundingBoxes.forEach((bbCube) => {
+      bbCube.updateForCam(id);
+    });
     const layerNameToIsDisabled = getLayerNameToIsDisabled(datasetConfiguration);
     Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
       const bbCube = this.layerBoundingBoxes[layerName];
@@ -547,7 +552,9 @@ class SceneController {
         isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
-      bbCube.getMeshes().forEach((mesh) => newUserBoundingBoxGroup.add(mesh));
+      bbCube.getMeshes().forEach((mesh) => {
+        newUserBoundingBoxGroup.add(mesh);
+      });
       return bbCube;
     });
     this.rootNode.remove(this.userBoundingBoxGroup);
@@ -558,7 +565,6 @@ class SceneController {
   private applyTransformToGroup(transform: Transform, group: Group | CustomLOD) {
     if (transform.affineMatrix) {
       const matrix = new Matrix4();
-      // @ts-ignore
       matrix.set(...transform.affineMatrix);
       // We need to disable matrixAutoUpdate as otherwise the update to the matrix will be lost.
       group.matrixAutoUpdate = false;
@@ -643,7 +649,6 @@ class SceneController {
           )?.affineMatrix;
           if (transformMatrix) {
             const matrix = new Matrix4();
-            // @ts-ignore
             matrix.set(...transformMatrix);
             mesh.applyMatrix4(matrix);
           }
@@ -713,15 +718,15 @@ class SceneController {
   }
 
   destroy() {
-    // @ts-ignore
+    // @ts-expect-error
     window.addBucketMesh = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.addVoxelMesh = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.addLine = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.removeLines = undefined;
-    // @ts-ignore
+    // @ts-expect-error
     window.removeBucketMesh = undefined;
 
     for (const skeletonId of Object.keys(this.skeletons)) {
@@ -734,13 +739,19 @@ class SceneController {
     this.storePropertyUnsubscribers = [];
 
     destroyRenderer();
-    // @ts-ignore
+    // @ts-expect-error
     this.renderer = null;
 
     this.datasetBoundingBox.destroy();
-    this.userBoundingBoxes.forEach((cube) => cube.destroy());
-    Object.values(this.layerBoundingBoxes).forEach((cube) => cube.destroy());
-    this.forEachTaskCube((cube) => cube.destroy());
+    this.userBoundingBoxes.forEach((cube) => {
+      cube.destroy();
+    });
+    Object.values(this.layerBoundingBoxes).forEach((cube) => {
+      cube.destroy();
+    });
+    this.forEachTaskCube((cube) => {
+      cube.destroy();
+    });
 
     for (const plane of Object.values(this.planes)) {
       plane.destroy();

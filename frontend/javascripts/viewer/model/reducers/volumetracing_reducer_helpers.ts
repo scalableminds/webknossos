@@ -7,14 +7,14 @@ import uniqWith from "lodash/uniqWith";
 import type { Writeable } from "types/type_utils";
 import {
   type ContourMode,
-  type OrthoViewWithoutTD,
   OrthoViews,
+  type OrthoViewWithoutTD,
   type Vector3,
 } from "viewer/constants";
 import {
   getRequestedOrVisibleSegmentationLayer,
-  getSegmentName,
   getSegmentationLayerForTracing,
+  getSegmentName,
   getSelectedIds,
   getVisibleSegments,
   getVolumeTracingById,
@@ -52,11 +52,11 @@ import {
   type ClickSegmentAction,
   type MergeSegmentsAction,
   type RemoveSegmentAction,
+  removeSegmentAction,
   type SetSegmentsAction,
   type UpdateSegmentAction,
-  type VolumeTracingAction,
-  removeSegmentAction,
   updateSegmentAction,
+  type VolumeTracingAction,
 } from "../actions/volumetracing_actions";
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";

@@ -1,11 +1,11 @@
 import range from "lodash-es/range";
+import type { ElementClass } from "types/api_types";
+import constants from "viewer/constants";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { describe, it, expect } from "vitest";
-import constants from "viewer/constants";
-import type { ElementClass } from "types/api_types";
+import { describe, expect, it } from "vitest";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;

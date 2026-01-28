@@ -17,16 +17,15 @@ import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/upd
 import type { SegmentGroup, WebknossosState } from "viewer/store";
 import {
   createGroupHelper,
-  findGroup,
-  moveGroupsHelper,
+  findGroup,mapGroups, 
+  moveGroupsHelper
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
-  type VolumeTracingReducerAction,
   setLargestSegmentIdReducer,
   setSegmentGroups,
   toggleSegmentGroupReducer,
+  type VolumeTracingReducerAction,
 } from "../volumetracing_reducer_helpers";
 import {
   applyAddUserBoundingBox,

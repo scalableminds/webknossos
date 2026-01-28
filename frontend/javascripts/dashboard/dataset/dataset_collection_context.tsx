@@ -212,9 +212,9 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
       supportsFolders: true as const,
@@ -290,9 +290,9 @@ export default function DatasetCollectionContextProvider({
       updateDatasetMutation,
       selectedDatasets,
       globalSearchQuery,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getActiveSubfolders,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getBreadcrumbs,
       selectedFolder,
       setGlobalSearchQuery,

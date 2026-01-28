@@ -1,5 +1,5 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
-import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
+import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";

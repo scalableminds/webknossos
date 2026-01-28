@@ -1,18 +1,13 @@
 import update from "immutability-helper";
-import { chainReduce } from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "viewer/model/edge_collection";
-import { describe, it, expect } from "vitest";
-import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { WebknossosState } from "viewer/store";
-import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   initialState as defaultState,
-  initialTreeOne,
   initialSkeletonTracing,
+  initialTreeOne,
 } from "test/fixtures/hybridtracing_object";
-import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import { chainReduce } from "test/helpers/chainReducer";
+import { TreeTypeEnum, type Vector3 } from "viewer/constants";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   addTreesAndGroupsAction,
   createBranchPointAction,
@@ -39,15 +34,20 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { max } from "viewer/model/helpers/iterator_utils";
-import {
-  type Node,
-  TreeMap,
-  type MutableNode,
-  type Tree,
-  MutableTreeMap,
-} from "viewer/model/types/tree_types";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
+import EdgeCollection from "viewer/model/edge_collection";
+import { max } from "viewer/model/helpers/iterator_utils";
+import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import {
+  type MutableNode,
+  MutableTreeMap,
+  type Node,
+  type Tree,
+  TreeMap,
+} from "viewer/model/types/tree_types";
+import type { WebknossosState } from "viewer/store";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { describe, expect, it } from "vitest";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {

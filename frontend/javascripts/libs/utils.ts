@@ -106,7 +106,6 @@ function getRecursiveValuesUnflat(obj: ArbitraryObject | Array<any> | string): A
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
-    // @ts-ignore
     return Object.keys(obj).map((key) => getRecursiveValuesUnflat(obj[key]));
   } else {
     return [obj];
@@ -534,7 +533,7 @@ export function getUrlParamValue(paramName: string): string {
 
 export function hasUrlParam(paramName: string): boolean {
   const params = getUrlParamsObject();
-  return Object.prototype.hasOwnProperty.call(params, paramName);
+  return Object.hasOwn(params, paramName);
 }
 
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {
@@ -670,7 +669,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
 }
 
 export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
-  // @ts-ignore
   return arr.filter((el) => el != null);
 }
 
@@ -1251,7 +1249,7 @@ export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) =>
     if (typeof item === "object") {
       // We know that item is an object or array which matches deepIterate's signature.
       // However, TS doesn't infer this.
-      // @ts-ignore
+      // @ts-expect-error
       deepIterate(item, callback);
     }
   });

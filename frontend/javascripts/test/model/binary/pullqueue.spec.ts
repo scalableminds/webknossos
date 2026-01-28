@@ -1,12 +1,12 @@
-import isEqual from "lodash/isEqual";
-import range from "lodash/range";
+import isEqual from "lodash-es/isEqual";
+import range from "lodash-es/range";
 import runAsync from "test/helpers/run-async";
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import "viewer/model";
-import { DataBucket, BucketStateEnum } from "viewer/model/bucket_data_handling/bucket";
 import type { BucketAddress } from "viewer/constants";
+import { BucketStateEnum, DataBucket } from "viewer/model/bucket_data_handling/bucket";
 
 vi.mock("viewer/model/sagas/root_saga", function () {
   return function* () {

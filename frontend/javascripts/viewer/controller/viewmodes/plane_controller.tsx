@@ -2,14 +2,14 @@ import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } 
 import Toast from "libs/toast";
 import { isNoElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
-import intersection from "lodash/intersection";
-import union from "lodash/union";
+import intersection from "lodash-es/intersection";
+import union from "lodash-es/union";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { OrthoView, OrthoViewMap } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { moveU, moveV, moveW, zoom } from "viewer/controller/combinations/move_handlers";
 import {
   moveAlongDirection,
@@ -72,10 +72,10 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
-import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import Dimensions from "viewer/model/dimensions";
+import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action-bar/tools/brush_presets";
@@ -704,7 +704,9 @@ class PlaneController extends PureComponent<Props> {
   }
 
   unsubscribeStoreListeners() {
-    this.storePropertyUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.storePropertyUnsubscribers.forEach((unsubscribe) => {
+      unsubscribe();
+    });
     this.storePropertyUnsubscribers = [];
   }
 

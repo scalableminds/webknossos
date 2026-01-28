@@ -1,9 +1,9 @@
 import handleStatus from "libs/handle_http_status";
-import defaultsDeep from "lodash/defaultsDeep";
-import isArrayBuffer from "lodash/isArrayBuffer";
-import isObject from "lodash/isObject";
-import isString from "lodash/isString";
-import map from "lodash/map";
+import defaultsDeep from "lodash-es/defaultsDeep";
+import isArrayBuffer from "lodash-es/isArrayBuffer";
+import isObject from "lodash-es/isObject";
+import isString from "lodash-es/isString";
+import map from "lodash-es/map";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
 import { createWorker } from "viewer/workers/comlink_wrapper";
@@ -298,4 +298,3 @@ class Request {
 const requestSingleton = new Request();
 
 export default requestSingleton;
-export type RequestType = typeof requestSingleton;

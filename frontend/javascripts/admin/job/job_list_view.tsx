@@ -24,7 +24,7 @@ import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy, pluralize } from "libs/utils";
-import capitalize from "lodash/capitalize";
+import capitalize from "lodash-es/capitalize";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";

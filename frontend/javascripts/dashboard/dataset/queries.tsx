@@ -11,17 +11,17 @@ import { type DatasetUpdater, getDataset, getDatasets, updateDatasetPartial } fr
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { conjugate, diffArrays, pluralize } from "libs/utils";
-import isEqualWith from "lodash/isEqualWith";
-import keyBy from "lodash/keyBy";
+import isEqualWith from "lodash-es/isEqualWith";
+import keyBy from "lodash-es/keyBy";
 import { useEffect, useRef } from "react";
 import {
   type APIDataset,
   type APIDatasetCompact,
+  convertDatasetToCompact,
   type FlatFolderTreeItem,
   type Folder,
   type FolderItem,
   type FolderUpdater,
-  convertDatasetToCompact,
 } from "types/api_types";
 
 export const SEARCH_RESULTS_LIMIT = 100;

@@ -1,4 +1,4 @@
-import mean from "lodash/mean";
+import mean from "lodash-es/mean";
 import type { Matrix4x4 } from "mjs";
 import { Matrix, solve } from "ml-matrix";
 import type { Vector3 } from "viewer/constants";

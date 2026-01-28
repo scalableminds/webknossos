@@ -9,16 +9,15 @@ import {
   mod,
   union,
 } from "libs/utils";
-import keyBy from "lodash/keyBy";
-import once from "lodash/once";
-import { type Emitter, createNanoEvents } from "nanoevents";
+import keyBy from "lodash-es/keyBy";
+import once from "lodash-es/once";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
-import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalAxis, AdditionalCoordinate, BucketDataArray, ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
-import constants, { MappingStatusEnum } from "viewer/constants";
 import Constants from "viewer/constants";
+import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -515,7 +514,7 @@ class DataCube {
     const valueSets = this.buckets
       .filter((bucket) => bucket.state === "LOADED")
       .map((bucket) => bucket.getValueSet());
-    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
+    // @ts-expect-error The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);
     return valueSet;
   }
@@ -1079,7 +1078,9 @@ class DataCube {
   destroy() {
     this.cubes = {};
     this.buckets = [];
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     this.storePropertyUnsubscribers = [];
   }
 }

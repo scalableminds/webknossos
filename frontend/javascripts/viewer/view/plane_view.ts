@@ -4,7 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
-import throttle from "lodash/throttle";
+import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,
@@ -15,8 +15,8 @@ import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, {
   OrthoViewColors,
-  OrthoViewValues,
   OrthoViews,
+  OrthoViewValues,
   PerformanceMarkEnum,
 } from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
@@ -50,7 +50,6 @@ const createDirLight = (
   intensity: number,
   camera: OrthographicCamera,
 ) => {
-  // @ts-ignore
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);

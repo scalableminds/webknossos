@@ -6,12 +6,12 @@ import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 import {
   type BucketOverride,
-  type WebknossosTestContext,
   createBucketResponseFunction,
+  type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import type { APIUpdateActionBatch } from "types/api_types";
-import Constants, { type Vector3, type Vector2 } from "viewer/constants";
+import Constants, { type Vector2, type Vector3 } from "viewer/constants";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";

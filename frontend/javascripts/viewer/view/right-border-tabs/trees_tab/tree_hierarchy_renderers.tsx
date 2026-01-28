@@ -8,8 +8,12 @@ import {
   TagsOutlined,
 } from "@ant-design/icons";
 import { type MenuProps, notification } from "antd";
-import cloneDeep from "lodash/cloneDeep";
-import difference from "lodash/difference";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import FastTooltip from "components/fast_tooltip";
+import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import cloneDeep from "lodash-es/cloneDeep";
+import difference from "lodash-es/difference";
+import messages from "messages";
 import type React from "react";
 import { type BatchActionType, batchActions } from "redux-batched-actions";
 import {
@@ -19,11 +23,6 @@ import {
   type Vector3,
 } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
-
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import FastTooltip from "components/fast_tooltip";
-import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
-import messages from "messages";
 import {
   addTreesAndGroupsAction,
   deleteTreeAction,
@@ -42,18 +41,18 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
-import { Store, api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
-  type TreeNode,
   anySatisfyDeep,
   callDeep,
   createGroupToTreesMap,
+  GroupTypeEnum,
   getGroupByIdWithSubgroups,
   getNodeKey,
+  MISSING_GROUP_ID,
   makeBasicGroupObject,
+  type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";

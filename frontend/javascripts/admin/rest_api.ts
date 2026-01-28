@@ -12,11 +12,15 @@ import {
   retryAsyncFunction,
 } from "libs/utils";
 import window from "libs/window";
-import memoize from "lodash/memoize";
-import zip from "lodash/zip";
+import memoize from "lodash-es/memoize";
+import zip from "lodash-es/zip";
 import messages from "messages";
 import ResumableJS from "resumablejs";
 import {
+  type AdditionalCoordinate,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type AnnotationViewConfiguration,
   type APIAnnotation,
   type APIAnnotationInfo,
   type APIAnnotationType,
@@ -61,10 +65,6 @@ import {
   type APIUserCompact,
   type APIUserLoggedTime,
   type APIUserTheme,
-  type AdditionalCoordinate,
-  type AnnotationLayerDescriptor,
-  AnnotationLayerEnum,
-  type AnnotationViewConfiguration,
   type ExperienceDomainList,
   type LayerLink,
   type MaintenanceInfo,
@@ -86,8 +86,8 @@ import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/const
 import { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
-  type LayerSourceInfo,
   getDataOrTracingStoreUrl,
+  type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
 import {
   parseProtoAnnotation,
@@ -111,9 +111,9 @@ import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_r
 import { getOrganization } from "./api/organization";
 import { doWithToken, refreshToken } from "./api/token";
 
-export * from "./api/token";
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
+export * from "./api/token";
 
 type NewTeam = {
   readonly name: string;
@@ -783,9 +783,9 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove datasetName and organizationId as these should not be used in the front-end, anymore.
+  // @ts-expect-error Remove datasetName and organizationId as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
-  // @ts-ignore
+  // @ts-expect-error
   delete tracing.organizationId;
 
   return tracing;
@@ -1229,11 +1229,11 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
             // Note that "terminalFileError" is an event which is only triggered by WK
             // and not by the ResumableUpload library itself. We merely use the event bus
             // of the ResumableUpload object.
-            // @ts-ignore The type definitions are incorrect. fire accepts these parameters.
+            // @ts-expect-error The type definitions are incorrect. fire accepts these parameters.
             resumable.fire("terminalFileError", file, message);
           });
       } else {
-        // @ts-ignore See above.
+        // @ts-expect-error See above.
         resumable.fire("terminalFileError", file, message);
       }
 
@@ -1804,7 +1804,7 @@ export function setMaintenance(bool: boolean): Promise<void> {
     method: bool ? "POST" : "DELETE",
   });
 }
-// @ts-ignore
+// @ts-expect-error
 window.setMaintenance = setMaintenance;
 
 // Meshes
@@ -1950,7 +1950,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
   const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-ignore
+  // @ts-expect-error
   return new Map(keyValues);
 }
 
@@ -1993,7 +1993,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
 
   const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-ignore
+  // @ts-expect-error
   return new Map(keyValues);
 }
 

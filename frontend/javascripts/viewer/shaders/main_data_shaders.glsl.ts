@@ -1,12 +1,12 @@
 import type TPS3D from "libs/thin_plate_spline";
-import each from "lodash/each";
-import mapValues from "lodash/mapValues";
-import range from "lodash/range";
-import template from "lodash/template";
+import each from "lodash-es/each";
+import mapValues from "lodash-es/mapValues";
+import range from "lodash-es/range";
+import template from "lodash-es/template";
 import type { ElementClass } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import constants, { ViewModeValuesIndices, OrthoViewIndices } from "viewer/constants";
 import Constants from "viewer/constants";
+import constants, { OrthoViewIndices, ViewModeValuesIndices } from "viewer/constants";
 import { PLANE_SUBDIVISION } from "viewer/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
@@ -22,8 +22,8 @@ import {
   convertCellIdToRGB,
   getBrushOverlay,
   getProofreadingCrossHairOverlay,
-  getSegmentId,
   getSegmentationAlphaIncrement,
+  getSegmentId,
 } from "./segmentation.glsl";
 import compileShader from "./shader_module_system";
 import { getColorForCoords } from "./texture_access.glsl";

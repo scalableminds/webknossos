@@ -1,11 +1,11 @@
 import app from "app";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { waitForCondition } from "libs/utils";
 import window from "libs/window";
-import noop from "lodash/noop";
-import range from "lodash/range";
-import uniqBy from "lodash/uniqBy";
+import noop from "lodash-es/noop";
+import range from "lodash-es/range";
+import uniqBy from "lodash-es/uniqBy";
 import type { DataTexture } from "three";
 import type { ElementClass } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -60,11 +60,11 @@ function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
   let idx = 0;
   let srcIdx = 0;
   while (srcIdx < 3 * constants.BUCKET_SIZE) {
-    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
+    // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
-    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
+    // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
-    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
+    // @ts-expect-error BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = 255;
   }
@@ -350,7 +350,7 @@ export default class TextureBucketManager {
       texture.dispose();
     }
     this.dataTextures = [];
-    // @ts-ignore
+    // @ts-expect-error
     this.lookUpCuckooTable = null;
     this.isDestroyed = true;
     this.activeBucketToIndexMap = new Map();

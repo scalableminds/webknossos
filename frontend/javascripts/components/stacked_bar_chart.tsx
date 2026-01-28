@@ -1,4 +1,4 @@
-import sum from "lodash/sum";
+import sum from "lodash-es/sum";
 
 export const colors = {
   finished: "#52c41a",

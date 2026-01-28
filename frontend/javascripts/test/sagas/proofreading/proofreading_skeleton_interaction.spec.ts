@@ -1,7 +1,7 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
@@ -20,8 +20,8 @@ import { Store } from "viewer/singletons";
 import {
   type NumberLike,
   type SkeletonTracing,
-  type WebknossosState,
   startSaga,
+  type WebknossosState,
 } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";

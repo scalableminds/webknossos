@@ -1,15 +1,14 @@
 import Deferred from "libs/async/deferred";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
-import type {
+import type {AdditionalCoordinate, 
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
-  EditableLayerProperties,
+  EditableLayerProperties
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import type {
@@ -76,9 +75,6 @@ export type AddAdHocMeshAction = ReturnType<typeof addAdHocMeshAction>;
 export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshAction>;
 export type SetOthersMayEditForAnnotationAction = ReturnType<
   typeof setOthersMayEditForAnnotationAction
->;
-export type ShowManyBucketUpdatesWarningAction = ReturnType<
-  typeof showManyBucketUpdatesWarningAction
 >;
 
 export type AnnotationActionTypes =

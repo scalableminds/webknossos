@@ -2,8 +2,8 @@ import {
   ArrowRightOutlined,
   CloseOutlined,
   DeleteOutlined,
-  DownOutlined,
   DownloadOutlined,
+  DownOutlined,
   ExclamationCircleOutlined,
   ExpandAltOutlined,
   EyeInvisibleOutlined,
@@ -17,9 +17,9 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import {
-  PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { getJobs, startComputeMeshFileJob } from "admin/rest_api";
 import {
@@ -46,17 +46,17 @@ import { SimpleRow } from "dashboard/folders/metadata_table";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
-import difference from "lodash/difference";
-import isNumber from "lodash/isNumber";
-import memoize from "lodash/memoize";
-import sortBy from "lodash/sortBy";
-import sum from "lodash/sum";
+import difference from "lodash-es/difference";
+import isNumber from "lodash-es/isNumber";
+import memoize from "lodash-es/memoize";
+import sortBy from "lodash-es/sortBy";
+import sum from "lodash-es/sum";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
-import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
+import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
@@ -119,8 +119,8 @@ import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu";
 import SegmentListItem from "viewer/view/right-border-tabs/segments_tab/segment_list_item";
 import {
-  type SegmentHierarchyNode,
   getBaseSegmentationName,
+  type SegmentHierarchyNode,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -129,7 +129,6 @@ import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  MISSING_GROUP_ID,
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
@@ -139,6 +138,7 @@ import {
   getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
+  MISSING_GROUP_ID,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
@@ -1437,14 +1437,14 @@ class SegmentsView extends React.Component<Props, State> {
       if (key.startsWith(groupPrefix)) {
         // Note that negative ids can be found here, which is why Group- is used as a splitter
         const idWithSign = key.split(groupPrefix)[1];
-        if (isNumber(Number.parseInt(idWithSign))) {
-          selectedIds.group = Number.parseInt(idWithSign);
+        if (isNumber(Number.parseInt(idWithSign, 10))) {
+          selectedIds.group = Number.parseInt(idWithSign, 10);
         }
       } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = key.split("-");
-        if (isNumber(Number.parseInt(regexSplit[1]))) {
-          selectedIds.segments.push(Number.parseInt(regexSplit[1]));
+        if (isNumber(Number.parseInt(regexSplit[1], 10))) {
+          selectedIds.segments.push(Number.parseInt(regexSplit[1], 10));
         }
       }
     });

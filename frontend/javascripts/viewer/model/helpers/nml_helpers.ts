@@ -6,17 +6,15 @@ import {
   computeBoundingBoxFromBoundingBoxObject,
 } from "libs/utils";
 import { location } from "libs/window";
-import compact from "lodash/compact";
-import concat from "lodash/concat";
-import size from "lodash/size";
-import zip from "lodash/zip";
+import compact from "lodash-es/compact";
+import concat from "lodash-es/concat";
+import size from "lodash-es/size";
+import zip from "lodash-es/zip";
 import messages from "messages";
 import { SAXParser } from "sax-ts";
-import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import Constants from "viewer/constants";
+import Constants, { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
 import {

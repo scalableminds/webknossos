@@ -15,6 +15,7 @@ import PlaneMaterialFactory, {
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store from "viewer/store";
+
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images
 // are drawn.

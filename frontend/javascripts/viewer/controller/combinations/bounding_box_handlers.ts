@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import { document } from "libs/window";
-import throttle from "lodash/throttle";
+import throttle from "lodash-es/throttle";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Point2, Vector2, Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
@@ -17,7 +17,7 @@ import {
 import type { DimensionIndices, DimensionMap } from "viewer/model/dimensions";
 import Dimension from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import Store, { type WebknossosState, type UserBoundingBox } from "viewer/store";
+import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {

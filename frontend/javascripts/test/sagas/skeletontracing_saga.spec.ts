@@ -1,38 +1,38 @@
+import update from "immutability-helper";
+import DiffableMap from "libs/diffable_map";
+import { TIMESTAMP } from "test/global_mocks";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import type { SkeletonTracing, StoreAnnotation } from "viewer/store";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import Store from "viewer/store";
 
 import { chainReduce } from "test/helpers/chainReducer";
-import DiffableMap from "libs/diffable_map";
+import { TreeTypeEnum } from "viewer/constants";
+import defaultState from "viewer/default_state";
+import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import {
+  createBranchPointAction,
+  createCommentAction,
+  createNodeAction,
+  createTreeAction,
+  deleteNodeAction,
+  deleteTreeAction,
+  mergeTreesAction,
+  setActiveNodeAction,
+  setNodeRadiusAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import defaultState from "viewer/default_state";
-import update from "immutability-helper";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { TreeTypeEnum } from "viewer/constants";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
-import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
-import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
-import {
-  deleteNodeAction,
-  createTreeAction,
-  deleteTreeAction,
-  setNodeRadiusAction,
-  createCommentAction,
-  createBranchPointAction,
-  createNodeAction,
-  mergeTreesAction,
-  setActiveNodeAction,
-} from "viewer/model/actions/skeletontracing_actions";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
-import { TIMESTAMP } from "test/global_mocks";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { Model } from "viewer/singletons";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import type { SkeletonTracing, StoreAnnotation } from "viewer/store";
+import Store from "viewer/store";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 const actionTracingId = "skeletonTracingId";
 

@@ -1,6 +1,7 @@
 import { Checkbox } from "antd";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import type React from "react";
+
 type CheckboxComponentProp = {
   onClick?: (...args: Array<any>) => any;
 };

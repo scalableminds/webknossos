@@ -87,7 +87,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
           ) : (
             <Tooltip placement="top" title="Remove this layout">
               <DeleteOutlined
-                className="clickable-icon sub-menu-item-icon"
+                className="sub-menu-item-icon"
                 onClick={() => onDeleteLayout(layout)}
               />
             </Tooltip>

@@ -1,23 +1,11 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
-  resetDatabase,
   replaceVolatileValues,
+  resetDatabase,
   setUserAuthToken,
   tokenUserA,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import type { APIAnnotation, SkeletonUserState } from "types/api_types";
-import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";
-import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
-import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
-import {
-  updateActiveNode,
-  updateCameraAnnotation,
-  updateMetadataOfAnnotation,
-  updateTree,
-  updateTreeGroups,
-} from "viewer/model/sagas/volume/update_actions";
 import {
   createExplorational,
   editAnnotation,
@@ -30,12 +18,25 @@ import {
   reOpenAnnotation,
   sendSaveRequestWithToken,
 } from "admin/rest_api";
-import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
-import { describe, it, beforeAll, expect } from "vitest";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import type { SaveQueueEntry } from "viewer/store";
 import DiffableMap from "libs/diffable_map";
+import type { APIAnnotation, SkeletonUserState } from "types/api_types";
+import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";
+import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
+import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
+import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { addVersionNumbers } from "viewer/model/sagas/saving/save_queue_draining_saga";
+import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
+import {
+  updateActiveNode,
+  updateCameraAnnotation,
+  updateMetadataOfAnnotation,
+  updateTree,
+  updateTreeGroups,
+} from "viewer/model/sagas/volume/update_actions";
+import type { SaveQueueEntry } from "viewer/store";
+import { beforeAll, describe, expect, it } from "vitest";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 const datasetId = "59e9cfbdba632ac2ab8b23b3";
 

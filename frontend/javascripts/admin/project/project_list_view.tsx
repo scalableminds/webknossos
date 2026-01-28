@@ -36,8 +36,8 @@ import {
   localeCompareBy,
   millisecondsToHours,
 } from "libs/utils";
-import partial from "lodash/partial";
-import uniqBy from "lodash/uniqBy";
+import partial from "lodash-es/partial";
+import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";

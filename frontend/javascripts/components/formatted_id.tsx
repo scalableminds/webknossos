@@ -1,8 +1,7 @@
-import FastTooltip from "./fast_tooltip";
+import { CopyOutlined } from "@ant-design/icons";
 
 import Toast from "libs/toast";
-
-import { CopyOutlined } from "@ant-design/icons";
+import FastTooltip from "./fast_tooltip";
 
 export default function FormattedId({
   id,

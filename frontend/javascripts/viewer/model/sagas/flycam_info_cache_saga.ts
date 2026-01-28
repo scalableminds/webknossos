@@ -1,4 +1,4 @@
-import memoize from "lodash/memoize";
+import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { buffers } from "redux-saga";
@@ -7,8 +7,7 @@ import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
 import constants from "viewer/constants";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { call, select, take } from "viewer/model/sagas/effect-generators";
-import type { WebknossosState } from "viewer/store";
-import type { LoadingStrategy } from "viewer/store";
+import type { LoadingStrategy, WebknossosState } from "viewer/store";
 import AsyncGetMaximumZoomForAllMags from "viewer/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";

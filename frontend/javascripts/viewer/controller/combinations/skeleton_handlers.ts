@@ -1,11 +1,11 @@
 import { V3 } from "libs/mjs";
 import { values } from "libs/utils";
-import min from "lodash/min";
-import pick from "lodash/pick";
+import min from "lodash-es/min";
+import pick from "lodash-es/pick";
 import { Euler, Matrix4, Scene, Vector3 as ThreeVector3 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3, Viewport } from "viewer/constants";
-import { OrthoBaseRotations, OrthoViewToNumber, OrthoViews } from "viewer/constants";
+import { OrthoBaseRotations, OrthoViews, OrthoViewToNumber } from "viewer/constants";
 import { getClosestHoveredBoundingBox } from "viewer/controller/combinations/bounding_box_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
@@ -27,10 +27,10 @@ import {
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
-  type PositionWithRounding,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
   getInputCatcherRect,
+  type PositionWithRounding,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setDirectionAction } from "viewer/model/actions/flycam_actions";
 import {

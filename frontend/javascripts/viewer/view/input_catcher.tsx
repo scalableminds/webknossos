@@ -1,13 +1,11 @@
-import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useKeyPress, useWkSelector } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
-import isEqual from "lodash/isEqual";
+import isEqual from "lodash-es/isEqual";
 import type * as React from "react";
 import { useRef } from "react";
 import type { Rect, Viewport, ViewportRects } from "viewer/constants";
 import { ArbitraryViewport, ArbitraryViews, OrthoViews } from "viewer/constants";
-import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
-import { adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, type AnnotationToolId, adaptActiveToolToShortcuts } from "viewer/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "viewer/model/actions/view_mode_actions";
 import type { BusyBlockingInfo } from "viewer/store";
 import Store from "viewer/store";

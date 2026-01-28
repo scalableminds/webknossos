@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import range from "lodash/range";
+import range from "lodash-es/range";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultSkeletonState } from "test/fixtures/skeletontracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
@@ -44,7 +44,7 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { describe, expect, test, it, afterAll } from "vitest";
+import { afterAll, describe, expect, it, test } from "vitest";
 
 const initialState: WebknossosState = update(defaultSkeletonState, {
   annotation: {

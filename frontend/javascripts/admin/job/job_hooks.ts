@@ -1,7 +1,7 @@
 import { getJob, getJobs } from "admin/rest_api";
 import features from "features";
 import { useEffectOnlyOnce, usePolling } from "libs/react_hooks";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import { useState } from "react";
 import type { APIJob } from "types/api_types";
 

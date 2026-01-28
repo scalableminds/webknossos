@@ -1,7 +1,6 @@
 import { Dropdown, type MenuProps } from "antd";
-import React from "react";
-
 import Shortcut from "libs/shortcut_component";
+import React from "react";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,

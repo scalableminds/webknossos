@@ -1,14 +1,14 @@
 import app from "app";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import identity from "lodash/identity";
-import isEqual from "lodash/isEqual";
-import throttle from "lodash/throttle";
+import type UpdatableTexture from "libs/UpdatableTexture";
+import identity from "lodash-es/identity";
+import isEqual from "lodash-es/isEqual";
+import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import type { DataTexture } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -289,7 +289,9 @@ export default class LayerRenderingManager {
   }
 
   destroy() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     if (this.textureBucketManager != null) {
       // In some tests, this.textureBucketManager is null (even
       // though it should never be null in non-tests).

@@ -1,15 +1,15 @@
-import cloneDeep from "lodash/cloneDeep";
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { ControlModeEnum } from "viewer/constants";
-import {
-  tracing as TRACING,
-  annotation as ANNOTATION,
-} from "../fixtures/skeletontracing_server_objects";
-import DATASET from "../fixtures/dataset_server_object";
-import Model, { type WebKnossosModel } from "viewer/model";
-import { HANDLED_ERROR } from "viewer/model_initialization";
 import Request from "libs/request";
 import { location } from "libs/window";
+import cloneDeep from "lodash-es/cloneDeep";
+import { ControlModeEnum } from "viewer/constants";
+import Model, { type WebKnossosModel } from "viewer/model";
+import { HANDLED_ERROR } from "viewer/model_initialization";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import DATASET from "../fixtures/dataset_server_object";
+import {
+  annotation as ANNOTATION,
+  tracing as TRACING,
+} from "../fixtures/skeletontracing_server_objects";
 
 const ANNOTATION_TYPE = null;
 const ANNOTATION_ID = "annotationIdValue";

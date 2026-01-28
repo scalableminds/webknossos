@@ -1,6 +1,6 @@
 import { Dropdown, type MenuProps, Tag, Tree, type TreeProps } from "antd";
 import { stringToAntdColorPreset } from "libs/format_utils";
-import groupBy from "lodash/groupBy";
+import groupBy from "lodash-es/groupBy";
 import memoizeOne from "memoize-one";
 import React from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -9,6 +9,7 @@ import type { Vector3 } from "viewer/constants";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
+
 type BaseSynapse = {
   id: number;
   position: Vector3;
@@ -131,7 +132,7 @@ function _convertConnectomeToTreeData(
     title: `Segment ${partnerId1}`,
     data: segmentData(+partnerId1, 0),
     children: Object.keys(agglomerates[+partnerId1]).map(
-      // @ts-ignore TypeScript doesn't correctly infer the type of Object.keys, but assumes string instead
+      // @ts-expect-error TypeScript doesn't correctly infer the type of Object.keys, but assumes string instead
       (direction: DirectionCaptionsKeys) => ({
         key: `${direction};segment;${partnerId1};`,
         title: `${directionCaptions[direction]} Synapses`,

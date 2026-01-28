@@ -1,7 +1,7 @@
 import { diffArrays, diffObjects } from "libs/utils";
-import isEmpty from "lodash/isEmpty";
-import isEqual from "lodash/isEqual";
-import keyBy from "lodash/keyBy";
+import isEmpty from "lodash-es/isEmpty";
+import isEqual from "lodash-es/isEqual";
+import keyBy from "lodash-es/keyBy";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
   addUserBoundingBoxInSkeletonTracing,

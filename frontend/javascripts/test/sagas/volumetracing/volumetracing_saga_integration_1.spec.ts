@@ -3,34 +3,34 @@
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */
-import max from "lodash/max";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
+import max from "lodash-es/max";
 import {
-  setupWebknossosForTesting,
   createBucketResponseFunction,
+  setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import Store from "viewer/store";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
+  addToContourListAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
-  removeSegmentAction,
-  setSegmentGroupsAction,
-  updateSegmentAction,
-  setActiveCellAction,
-  addToContourListAction,
-  startEditingAction,
   finishEditingAction,
+  removeSegmentAction,
+  setActiveCellAction,
   setContourTracingModeAction,
+  setSegmentGroupsAction,
+  startEditingAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import Store from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dispatchUndoAsync, dispatchRedoAsync } from "viewer/model/actions/save_actions";
-import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -197,7 +197,7 @@ describe("Volume Tracing", () => {
       expect(readValue, `Voxel should be erased at zoomstep=${zoomStep}`).toBe(0);
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(max(data), "All the data should be 0 (== erased).").toBe(0);
   }
 

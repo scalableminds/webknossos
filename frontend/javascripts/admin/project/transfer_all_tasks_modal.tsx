@@ -5,7 +5,7 @@ import { Modal, Spin, Table } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
-import sortBy from "lodash/sortBy";
+import sortBy from "lodash-es/sortBy";
 import messages from "messages";
 import { useState } from "react";
 import type { APIActiveUser, APIProject, APIUser } from "types/api_types";

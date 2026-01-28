@@ -9,16 +9,15 @@ import { Button, List, Spin } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { chunkIntoTimeWindows } from "libs/utils";
-import flattenDepth from "lodash/flattenDepth";
-import groupBy from "lodash/groupBy";
-import isEqual from "lodash/isEqual";
-import isString from "lodash/isString";
-import mapValues from "lodash/mapValues";
-import max from "lodash/max";
-import memoize from "lodash/memoize";
+import flattenDepth from "lodash-es/flattenDepth";
+import groupBy from "lodash-es/groupBy";
+import isEqual from "lodash-es/isEqual";
+import isString from "lodash-es/isString";
+import mapValues from "lodash-es/mapValues";
+import max from "lodash-es/max";
+import memoize from "lodash-es/memoize";
 import { useEffect, useState } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getCreationTimestamp } from "viewer/model/accessors/annotation_accessor";
@@ -29,12 +28,11 @@ import {
 } from "viewer/model/actions/save_actions";
 import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
 import {
-  type ServerUpdateAction,
   revertToVersion,
+  type ServerUpdateAction,
   serverCreateTracing,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model } from "viewer/singletons";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
 import Store from "viewer/store";
 import VersionEntryGroup from "viewer/view/version_entry_group";

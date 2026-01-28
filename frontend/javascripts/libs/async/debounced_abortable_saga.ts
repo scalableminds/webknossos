@@ -1,6 +1,6 @@
-import { type Channel, buffers, channel, runSaga } from "redux-saga";
+import { buffers, type Channel, channel, runSaga } from "redux-saga";
 import { delay, race, take } from "redux-saga/effects";
-import { type Saga, call } from "viewer/model/sagas/effect-generators";
+import { call, type Saga } from "viewer/model/sagas/effect-generators";
 
 // biome-ignore lint/complexity/noBannedTypes: This is copied from redux-saga because it cannot be imported.
 type NotUndefined = {} | null;

@@ -1,8 +1,7 @@
 import { TreeSelect } from "antd";
-import cloneDeep from "lodash/cloneDeep";
-import { useEffect, useState } from "react";
-
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
+import cloneDeep from "lodash-es/cloneDeep";
+import { useEffect, useState } from "react";
 import type { FolderItem } from "types/api_types";
 
 function addDisabledProperty(tree: FolderItem[]) {

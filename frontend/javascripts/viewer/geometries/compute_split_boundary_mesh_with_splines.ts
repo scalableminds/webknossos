@@ -1,7 +1,7 @@
 import { orderPointsWithMST } from "libs/order_points_with_mst";
-import compact from "lodash/compact";
-import groupBy from "lodash/groupBy";
-import omitBy from "lodash/omitBy";
+import compact from "lodash-es/compact";
+import groupBy from "lodash-es/groupBy";
+import omitBy from "lodash-es/omitBy";
 import {
   BufferGeometry,
   CatmullRomCurve3,

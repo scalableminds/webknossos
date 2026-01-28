@@ -161,6 +161,7 @@ module.exports = function (env = {}) {
       minimizer: [
         new EsbuildPlugin({
           target: buildTarget, // Syntax to transpile to (see options below for possible values)
+          css: true, // Enable CSS minification and comment removal
         }),
       ],
       splitChunks: {

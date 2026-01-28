@@ -13,9 +13,8 @@ import { Fragment, PureComponent, useState } from "react";
 import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
-import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
-import { type ControlMode, MappingStatusEnum, type ViewMode } from "viewer/constants";
-import constants, { ControlModeEnum } from "viewer/constants";
+import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
+import constants, { type ControlMode, ControlModeEnum, MappingStatusEnum, type ViewMode } from "viewer/constants";
 import {
   doesSupportVolumeWithFallback,
   getColorLayers,
@@ -39,13 +38,14 @@ import TracingActionsView, {
 import ViewDatasetActionsView from "viewer/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "viewer/view/action-bar/view_modes_view";
 import {
-  LayoutEvents,
   addNewLayout,
   deleteLayout,
   getLayoutConfig,
+  LayoutEvents,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-// import { StartAIJobModal } from "./action-bar/ai_job_modals/start_ai_job_modal";
+import { ACTIONBAR_MARGIN_LEFT } from "./action-bar/tools/tool_helpers";
+
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
@@ -128,14 +128,14 @@ function AdditionalCoordinatesInputView() {
           })}
         </div>
       }
+      placement="bottom"
     >
       <ArbitraryVectorInput
-        autoSize
         vectorLength={additionalCoordinates.length}
         value={additionalCoordinates.map((el) => el.value)}
         onChange={changeAdditionalCoordinatesFromVector}
-        style={{ marginLeft: 10, marginRight: 10 }}
-        addonBefore={additionalCoordinates.map((coord) => coord.name).join("")}
+        style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
+        vectorLabel={additionalCoordinates.map((coord) => coord.name).join("")}
       />
     </Popover>
   );

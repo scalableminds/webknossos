@@ -12,10 +12,9 @@ import {
   sendUpgradePricingPlanUserEmail,
 } from "admin/api/organization";
 import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
+import type { GetRef } from "antd/lib";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
-
-import type { GetRef } from "antd/lib";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -23,8 +22,7 @@ import type React from "react";
 import { useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
-import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
-import { PricingPlanEnum } from "./pricing_plan_utils";
+import { PricingPlanEnum, powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 
 const ModalInformationFooter = (
   <>
@@ -79,7 +77,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleUserUpgrade = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       await sendUpgradePricingPlanUserEmail(requestedUsers);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -123,7 +121,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
-      const requestedStorage = Number.parseInt(storageInputRef.current.value);
+      const requestedStorage = Number.parseInt(storageInputRef.current.value, 10);
       await sendUpgradePricingPlanStorageEmail(requestedStorage);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -319,7 +317,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
 
   const handleOrderCredits = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       try {
         await sendOrderCreditsEmail(requestedUsers);
         Toast.success(messages["organization.credit_request_sent"]);

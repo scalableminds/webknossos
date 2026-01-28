@@ -1,4 +1,4 @@
-import { type FixedTask, call, fork, join } from "typed-redux-saga";
+import { call, type FixedTask, fork, join } from "typed-redux-saga";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 
 /*

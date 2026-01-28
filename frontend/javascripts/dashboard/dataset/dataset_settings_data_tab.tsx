@@ -22,10 +22,10 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
-import { cloneElement, useEffect } from "react";
+import { cloneElement, useEffect, useState } from "react";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
-import type { DataLayer } from "types/schemas/datasource.types";
-import { syncValidator } from "types/validation";
+import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
+import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
@@ -79,6 +79,109 @@ function SimpleDatasetForm({
   };
   const marginBottom: React.CSSProperties = {
     marginBottom: 24,
+  };
+
+  enum TransformationsMode {
+    NONE = "none",
+    SIMPLE = "simple",
+    ADVANCED = "advanced",
+  }
+
+  const transformationItems = [
+    { value: TransformationsMode.NONE, label: "None" },
+    { value: TransformationsMode.SIMPLE, label: "Simple" },
+    { value: TransformationsMode.ADVANCED, label: "Advanced" },
+  ];
+
+  const doesDatasetHaveAdvancedTransformations = dataSource?.dataLayers?.some( // TODOc how to actually find that out?
+    (layer) => (layer.coordinateTransformations?.length ?? 0) > 0,
+  );
+  const initialTransformationsMode = doesDatasetHaveAdvancedTransformations
+    ? TransformationsMode.ADVANCED
+    : TransformationsMode.SIMPLE;
+  const [transformationsMode, setTransformationsMode] = useState<TransformationsMode>(
+    initialTransformationsMode,
+  );
+  const coordinateTransformationsJSON = Form.useWatch(["coordinateTransformations"], form);
+
+  useEffect(() => {
+    if (transformationsMode === TransformationsMode.ADVANCED) {
+      const dataLayersWithTransformations: DataLayerWithTransformations[] = dataSource?.dataLayers?.map((layer: DataLayer) => ({
+        name: layer.name,
+        coordinateTransformations: layer.coordinateTransformations || [],
+      })) || [];
+      const layersWithCoordTransformationsJSON = JSON.stringify(dataLayersWithTransformations, null, 2);
+      form.setFieldValue(["coordinateTransformations"], layersWithCoordTransformationsJSON);
+    }
+  }, [transformationsMode]);
+
+  useEffect(() => {
+    if (!form || coordinateTransformationsJSON == null
+    ) {
+      return;
+    }
+    if (form.getFieldError(["coordinateTransformations"]).length > 0) {
+      return;
+    }
+    const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined = coordinateTransformationsJSON
+      ? JSON.parse(coordinateTransformationsJSON)
+      : undefined;
+    const dataLayersWithUpdatedTransforms = form.getFieldValue(["dataSource", "dataLayers"])?.map((layer: DataLayer) => {
+      const coordinateTransformation = layersWithCoordTransformations?.find(ct => ct.name === layer.name);
+      return {
+        ...layer,
+        coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
+      };
+    });
+    form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+  }, [coordinateTransformationsJSON, form]);
+
+  function DatasetTransformationsModeCard() {
+    return (
+      <SettingsCard
+        title="Transformation Configuration"
+        content={
+          <FormItemWithInfo
+            info="<Some information about the format>"
+            name={["coordinateTransformations"]}
+            label="Coordinate Transformations JSON"
+            rules={[
+              {
+                validator: (rule, value) => validateTransformationsJSON(rule, value),
+              },
+            ]}
+          >
+            <Input.TextArea autoSize={{ minRows: 10, maxRows: 20 }} />
+          </FormItemWithInfo>
+        }
+        style={marginBottom}
+      />
+    );
+  };
+
+  const getTransformationSettings = () => {
+    switch (transformationsMode) {
+      case TransformationsMode.NONE:
+        return null;
+      case TransformationsMode.SIMPLE:
+        return (
+          <SettingsCard
+            title="Axis Rotation"
+            style={marginBottom}
+            content={
+              <Row gutter={[24, 24]}>
+                <Col span={24}>
+                  <AxisRotationSettingForDataset form={form} />
+                </Col>
+              </Row>
+            }
+          />
+        );
+      case TransformationsMode.ADVANCED:
+        return <DatasetTransformationsModeCard />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -187,21 +290,23 @@ function SimpleDatasetForm({
                 />
               </FormItemWithInfo>
             </Col>
+            <FormItemWithInfo
+              name={["transformationMode"]}
+              label="Transformation Mode"
+              info="The transformations for the dataset."
+            >
+              <Select
+                options={transformationItems}
+                value={transformationsMode}
+                onChange={setTransformationsMode}
+                defaultValue={initialTransformationsMode}
+              />
+            </FormItemWithInfo>
           </Row>
         }
       />
 
-      <SettingsCard
-        title="Axis Rotation"
-        style={marginBottom}
-        content={
-          <Row gutter={[24, 24]}>
-            <Col span={24}>
-              <AxisRotationSettingForDataset form={form} />
-            </Col>
-          </Row>
-        }
-      />
+      {getTransformationSettings()}
 
       {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
         // the layer name may change in this view, the order does not, so idx is the right key choice here

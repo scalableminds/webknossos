@@ -15,6 +15,7 @@ import { __setFeatures } from "features";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
+import flattenDeep from "lodash-es/flattenDeep";
 import dummyOrga from "test/fixtures/dummy_organization";
 import dummyUser from "test/fixtures/dummy_user";
 import {
@@ -36,12 +37,11 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
-import flattenDeep from "lodash-es/flattenDeep";
-import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
+import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import UrlManager from "viewer/controller/url_manager";

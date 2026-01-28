@@ -63,7 +63,7 @@ import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_se
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
 import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import type { TransformedSectionLabeler } from "viewer/model/volumetracing/section_labeling";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";

@@ -14,7 +14,6 @@ import {
   getVisibleSegments,
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
-import {} from "viewer/model/actions/volumetracing_actions";
 import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,

@@ -10,10 +10,10 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import {
   ColoredLogger,
-  SoftError,
   getAdaptToTypeFunction,
   isEditableEventTarget,
   isNumberMap,
+  SoftError,
 } from "libs/utils";
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";

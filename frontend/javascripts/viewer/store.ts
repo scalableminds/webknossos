@@ -28,6 +28,7 @@ import type {
   TracingType,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
+import { ensureExactKeys } from "types/type_utils";
 import type {AdditionalCoordinate, BLEND_MODES, 
   ContourMode,
   ControlMode,ControlModeEnum, 
@@ -48,8 +49,6 @@ import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
-
-import { ensureExactKeys } from "types/type_utils";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
 import reduceReducers from "viewer/model/helpers/reduce_reducers";

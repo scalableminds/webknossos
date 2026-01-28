@@ -6,21 +6,21 @@ import sortedIndexBy from "lodash/sortedIndexBy";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
 import {
-  type GranularGroupDiff,
-  type ParentUpdate,
   buildOrderDependencies,
   diffBoundingBoxes,
   diffGroupsGranular,
+  type GranularGroupDiff,
+  type ParentUpdate,
   topologicallySortUpdates,
 } from "viewer/model/helpers/diff_helpers";
 import { getUpdatedSourcePropsAfterMerge } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import {
-  type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
   deleteSegmentGroupUpdateAction,
   deleteSegmentVolumeAction,
   mergeSegmentsVolumeAction,
   removeFallbackLayer,
+  type UpdateActionWithoutIsolationRequirement,
   updateActiveSegmentId,
   updateLargestSegmentId,
   updateMappingName,

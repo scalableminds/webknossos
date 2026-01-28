@@ -1,10 +1,11 @@
 import { call, put } from "redux-saga/effects";
 import {
+  getFlattenedUpdateActions,
   setupWebknossosForTesting,
   type WebknossosTestContext,
-  getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -21,7 +22,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "../proofreading/proofreading_test_utils";
-import type { Vector3 } from "viewer/constants";
 
 describe("Collaborative editing of segment items", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

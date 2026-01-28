@@ -1,4 +1,19 @@
+import { ColoredLogger } from "libs/utils";
+import {
+  createSegment1,
+  createSegment2,
+  createSegment3,
+  id1,
+  id2,
+  id3,
+} from "test/fixtures/segment_merging_fixtures";
+import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { MetadataEntryProto } from "types/api_types";
+import {
+  mergeSegmentsAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
+import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import { updateMetadataOfSegmentUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import {
   diffMetadataOfSegments,
@@ -12,21 +27,6 @@ import {
   SEGMENT_GROUPS,
   SEGMENT_GROUPS_EDITED,
 } from "./segment_group_fixtures";
-import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
-import {
-  createSegment1,
-  createSegment2,
-  createSegment3,
-  id1,
-  id2,
-  id3,
-} from "test/fixtures/segment_merging_fixtures";
-import {
-  mergeSegmentsAction,
-  updateSegmentAction,
-} from "viewer/model/actions/volumetracing_actions";
-import { ColoredLogger } from "libs/utils";
 
 const createSegment = (
   id: number,

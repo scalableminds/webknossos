@@ -1,4 +1,11 @@
 import update from "immutability-helper";
+import {
+  createSegment1,
+  createSegment2,
+  getSegment,
+  id1,
+  id2,
+} from "test/fixtures/segment_merging_fixtures";
 import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { Vector3 } from "viewer/constants";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
@@ -14,13 +21,6 @@ import {
   setActiveCellAction,
 } from "viewer/model/actions/volumetracing_actions";
 import UiReducer from "viewer/model/reducers/ui_reducer";
-import {
-  createSegment1,
-  createSegment2,
-  getSegment,
-  id1,
-  id2,
-} from "test/fixtures/segment_merging_fixtures";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { StoreAnnotation, VolumeTracing, WebknossosState } from "viewer/store";
 import { describe, expect, it } from "vitest";

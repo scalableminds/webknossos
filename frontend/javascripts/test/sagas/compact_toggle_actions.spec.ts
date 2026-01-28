@@ -12,7 +12,9 @@ import {
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
-import { type Tree, TreeMap, type TreeGroup } from "viewer/model/types/tree_types";
+import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import type { Segment, SegmentGroup, WebknossosState } from "viewer/store";
+import { describe, expect, it } from "vitest";
 
 const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({
   treeId: id,

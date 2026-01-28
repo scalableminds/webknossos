@@ -1,5 +1,5 @@
-import { writeFileSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { AgglomerateMapping } from "./agglomerate_mapping_helper";
 

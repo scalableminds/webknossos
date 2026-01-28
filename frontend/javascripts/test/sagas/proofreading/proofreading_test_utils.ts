@@ -4,7 +4,6 @@ import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
-import { combinedReducer } from "viewer/store";
 import {
   type BucketOverride,
   createBucketResponseFunction,
@@ -13,12 +12,15 @@ import {
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import type { APIUpdateActionBatch } from "types/api_types";
 import Constants, { type Vector2, type Vector3 } from "viewer/constants";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
+import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
+import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type {
@@ -28,15 +30,13 @@ import type {
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import type { SaveQueueEntry, WebknossosState } from "viewer/store";
+import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping } from "./proofreading_fixtures";
 import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
-import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,

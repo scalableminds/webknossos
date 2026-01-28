@@ -1,4 +1,4 @@
-// biome-ignore assist/source/organizeImports: apiHelpers need to be iomported first for proper mocking of modules
+// biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   type WebknossosTestContext,
   setupWebknossosForTesting,

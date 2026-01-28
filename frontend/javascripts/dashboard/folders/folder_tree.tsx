@@ -394,7 +394,8 @@ function FolderItemAsDropTarget(props: {
   return (
     <div
       className={classNames("folder-item", className, {
-        "valid-drop-target": isOver && canDrop,
+        // "valid-drop-target": isOver && canDrop,
+        "valid-drop-target":  canDrop,
       })}
       ref={dropRef}
       style={{ cursor: "pointer" }}

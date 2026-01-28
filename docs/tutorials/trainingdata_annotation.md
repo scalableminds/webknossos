@@ -1,8 +1,8 @@
 # Tutorial: Annotating Ground Truth Data for ML in WEBKNOSSOS
 
-When preparing ground truth data for machine learning, accurate and consistent annotations are essential. The following guidelines will help you create high-quality training data in WEBKNOSSOS.
+When preparing ground truth data for machine learning, accurate and consistent annotations are essential. The following guidelines will help you create high-quality training data in WEBKNOSSOS for [training AI models](./../automation/ai_training.md) for segmentation.
 
-For detailed instructions on using WEBKNOSSOS for annotation, please watch our [Beginner’s Guide](https://docs.webknossos.org/webknossos/getting_started.html) and/or our tutorial on [Volume Annotations](https://docs.webknossos.org/webknossos/tutorial_volume_annotation.html).
+For detailed instructions on using WEBKNOSSOS for annotation, please watch our [Beginner’s Guide](../getting_started.md) and/or our tutorial on [Volume Annotations](./volume_annotation.md).
 
 ---
 

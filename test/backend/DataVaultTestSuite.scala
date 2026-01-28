@@ -6,22 +6,22 @@ import org.scalatestplus.play.PlaySpec
 
 import java.net.URI
 import com.scalableminds.webknossos.datastore.datavault.{
+  ByteRange,
   DataVault,
   Encoding,
   GoogleCloudDataVault,
   HttpsDataVault,
-  RangeSpecifier,
   S3DataVault,
+  StartEndExclusiveByteRange,
   VaultPath
 }
-import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, CredentializedUPath}
+import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
 import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
 import java.util.UUID
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
@@ -33,7 +33,7 @@ class DataVaultTestSuite extends PlaySpec {
 
   "Data vault" when {
     "using Range requests" when {
-      val range: NumericRange[Long] = Range.Long(0, 100, 1)
+      val range: StartEndExclusiveByteRange = ByteRange.startEndExclusive(0, 100)
       val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584" // when accessed via range request, the response body is 1024 bytes long, otherwise 124.8 KB
 
       "using HTTP Vault" should {
@@ -44,7 +44,7 @@ class DataVaultTestSuite extends PlaySpec {
               new VaultPath(upath, HttpsDataVault.create(CredentializedUPath(upath, None), ws, dummyDataStoreHost))
             val bytes =
               (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
-                .readBytes(Some(range))(globalExecutionContext, emptyTokenContext)
+                .readBytes(range)(globalExecutionContext, emptyTokenContext)
                 .get(handleFoxJustification)
 
             assert(bytes.length == range.length)
@@ -59,7 +59,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
 
           val bytes = (vaultPath / dataKey)
-            .readBytes(Some(range))(globalExecutionContext, emptyTokenContext)
+            .readBytes(range)(globalExecutionContext, emptyTokenContext)
             .get(handleFoxJustification)
 
           assert(bytes.length == range.length)
@@ -78,7 +78,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return failure" when {
           "requesting invalid range" in {
             val result = (vaultPath / dataKey)
-              .readBytes(Some(Range.Long(-5, -10, 1)))(globalExecutionContext, emptyTokenContext)
+              .readBytes(ByteRange.startEndExclusive(-5, -10))(globalExecutionContext, emptyTokenContext)
               .await(handleFoxJustification)
             assertBoxFailure(result)
           }
@@ -92,7 +92,7 @@ class DataVaultTestSuite extends PlaySpec {
                     Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org")))))
               )
             val result = (vaultPath / dataKey)
-              .readBytes(Some(Range.Long(-10, 10, 1)))(globalExecutionContext, emptyTokenContext)
+              .readBytes(ByteRange.startEndExclusive(-10, 10))(globalExecutionContext, emptyTokenContext)
               .await(handleFoxJustification)
             assertBoxFailure(result)
           }
@@ -107,7 +107,7 @@ class DataVaultTestSuite extends PlaySpec {
               new VaultPath(upath, S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext))
             val bytes =
               (vaultPath / "s0/5/5/5")
-                .readBytes(Some(range))(globalExecutionContext, emptyTokenContext)
+                .readBytes(range)(globalExecutionContext, emptyTokenContext)
                 .get(handleFoxJustification)
             assert(bytes.length == range.length)
             assert(bytes.take(10).sameElements(Array(0, 0, 0, 3, 0, 0, 0, 64, 0, 0)))
@@ -221,7 +221,7 @@ class DataVaultTestSuite extends PlaySpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+        override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
             implicit ec: ExecutionContext,
             tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = ???
 

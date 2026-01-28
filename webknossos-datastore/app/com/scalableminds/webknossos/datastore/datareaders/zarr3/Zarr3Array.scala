@@ -2,15 +2,14 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 object Zarr3Array extends LazyLogging with FoxImplicits {
@@ -135,7 +134,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext) =
     shardingCodec match {
       case Some(codec) if codec.index_location == IndexLocationSetting.start =>
-        shardPath.readBytes(Some(Range.Long(0, getShardIndexSize.toLong, 1)))
+        shardPath.readBytes(ByteRange.startEndExclusive(0, getShardIndexSize.toLong))
       case Some(codec) if codec.index_location == IndexLocationSetting.end => shardPath.readLastBytes(getShardIndexSize)
       case _                                                               => Fox.failure("No sharding codec found")
     }
@@ -167,8 +166,9 @@ class Zarr3Array(vaultPath: VaultPath,
       chunkIndex.zip(header.chunkShape).map { case (i, s) => i.toLong * s }
     )
 
-  override protected def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] =
+  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox
       shardFilename = getChunkFilename(shardCoordinates)
@@ -179,6 +179,6 @@ class Zarr3Array(vaultPath: VaultPath,
       _ <- if (chunkOffset == -1 && chunkLength == -1) {
         Fox.empty // -1 signifies empty/missing chunk
       } else Fox.successful(())
-      range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
+      range = ByteRange.startEndExclusive(chunkOffset, chunkOffset + chunkLength)
     } yield (shardPath, range)
 }

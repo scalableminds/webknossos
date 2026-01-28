@@ -3,12 +3,11 @@ package com.scalableminds.webknossos.datastore.datareaders.n5
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 // N5 allows for a 'varmode' which means that the number of elements in the chunk can deviate from the set chunk size.
@@ -20,7 +19,7 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
 
   private val dataExtractor: N5DataExtractor = new N5DataExtractor
 
-  override protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
+  override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] = {
 

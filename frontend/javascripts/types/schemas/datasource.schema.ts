@@ -500,5 +500,20 @@ export default {
       },
       type: "array",
     },
+    "types::DataLayerWithTransformations": {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+          },
+          coordinateTransformations: {
+            $ref: "#/definitions/types::CoordinateTransformations",
+          },
+        },
+        required: ["name"],
+      },
+    }
   },
 };

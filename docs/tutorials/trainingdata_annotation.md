@@ -62,7 +62,7 @@ A careful review of your annotations can prevent mistakes that might impact mode
     
     *Image attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
     
-- **Disconnected Regions:** Ensure that segments which are not connected or directly adjacent within the bounding box have distinct segment IDs—even if they appear to be part of the same process.
+- **Disconnected Regions:** Ensure that segments which are not connected or directly adjacent within the bounding box have distinct segment IDs — even if they appear to be part of the same process.
     
     ![segment touching outside of box.png](./images/tutorial_trainingdata_05_membranes_unannotated.png)
     

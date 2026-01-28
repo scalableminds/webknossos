@@ -1,19 +1,20 @@
-import omitBy from "lodash-es/omitBy";
-import isNull from "lodash-es/isNull";
-import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import { replaceVolatileValues, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import {
+  createTasks,
+  deleteTask,
+  getAnnotationsForTask,
   getTask,
   getTasks,
   peekNextTasks,
-  getAnnotationsForTask,
-  transferTask,
-  deleteTask,
   requestTask,
-  createTasks,
+  transferTask,
   updateTask,
 } from "admin/api/tasks";
-import { describe, test, beforeAll, expect } from "vitest";
+import isNull from "lodash-es/isNull";
+import omitBy from "lodash-es/omitBy";
 import type { Vector3 } from "viewer/constants";
+import { beforeAll, describe, expect, test } from "vitest";
 
 describe("Task API  (E2E)", () => {
   beforeAll(async () => {

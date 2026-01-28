@@ -4,9 +4,9 @@ import {
   hasSegmentIndexInDataStoreCached,
   sendAnalyticsEvent,
 } from "admin/rest_api";
-import ThreeDMap from "libs/ThreeDMap";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
+import ThreeDMap from "libs/ThreeDMap";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import get from "lodash-es/get";
@@ -30,10 +30,10 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
-  type RefreshMeshAction,
-  type RemoveMeshAction,
   addAdHocMeshAction,
   finishedLoadingMeshAction,
+  type RefreshMeshAction,
+  type RemoveMeshAction,
   removeMeshAction,
   startedLoadingMeshAction,
 } from "viewer/model/actions/annotation_actions";

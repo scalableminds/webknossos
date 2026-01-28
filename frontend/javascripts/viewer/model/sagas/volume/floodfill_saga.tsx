@@ -391,7 +391,7 @@ function* notifyUserAboutResult(
             boundingBox: coveredBoundingBox,
             name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
               ",",
-            )}, timestamp=${new Date().getTime()})`,
+            )}, timestamp=${Date.now()})`,
             color: getRandomColor(),
             isVisible: true,
           }),

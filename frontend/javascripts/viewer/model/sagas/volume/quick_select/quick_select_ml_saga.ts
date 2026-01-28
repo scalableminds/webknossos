@@ -6,7 +6,7 @@ import { map3, sleep } from "libs/utils";
 import range from "lodash-es/range";
 import ndarray, { type NdArray } from "ndarray";
 import { call, cancel, fork, put } from "typed-redux-saga";
-import type { APIDataset, AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { OrthoView, TypedArrayWithoutBigInt, Vector3 } from "viewer/constants";
 import type {

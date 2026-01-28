@@ -31,7 +31,7 @@ const validateWithSchemaSync = (type: string, value: string) => {
       );
     }
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     throw new Error(`Invalid JSON: ${e.message}`);
   }
 };

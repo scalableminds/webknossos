@@ -57,7 +57,7 @@ import {
 } from "viewer/view/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
-export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
@@ -249,7 +249,7 @@ const DraggableDatasetRow = ({
 }: DraggableDatasetRowProps) => {
   const ref = useRef<HTMLTableRowElement>(null);
   const theme = useWkSelector((state) => state.uiInformation.theme);
-  // @ts-ignore
+  // @ts-expect-error
 
   const datasetId = restProps["data-row-key"];
   const dragItem: DnDDropItemProps = { index, datasetId };
@@ -476,7 +476,7 @@ class DatasetTable extends PureComponent<Props, State> {
     sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
   ) => {
     this.setState({
-      // @ts-ignore
+      // @ts-expect-error
       sortedInfo: sorter,
     });
   };

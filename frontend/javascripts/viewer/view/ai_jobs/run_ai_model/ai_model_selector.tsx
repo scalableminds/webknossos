@@ -6,7 +6,7 @@ import { useGuardedFetch } from "libs/react_helpers";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
-import { APIJobCommand, type AiModel } from "types/api_types";
+import { type AiModel, APIJobCommand } from "types/api_types";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;

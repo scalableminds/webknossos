@@ -28,8 +28,7 @@ import isEqual from "lodash-es/isEqual";
 import noop from "lodash-es/noop";
 import uniq from "lodash-es/uniq";
 import type React from "react";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type APIDataset,
   type APIMetadataEntry,

@@ -80,7 +80,6 @@ export const ArbitraryViewsToName = {
   arbitraryViewport: "Arbitrary View",
   TDView: "3D",
 };
-export type ArbitraryView = keyof typeof ArbitraryViews;
 export type Viewport = OrthoView | typeof ArbitraryViewport;
 export const allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
 export type ViewportMap<T> = Record<Viewport, T>;

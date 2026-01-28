@@ -148,12 +148,12 @@ export class MagInfo {
   }
 
   getCoarsestMag(): Vector3 {
-    // @ts-ignore
+    // @ts-expect-error
     return this.getMagByPowerOf2(this.getCoarsestMagPowerOf2());
   }
 
   getFinestMag(): Vector3 {
-    // @ts-ignore
+    // @ts-expect-error
     return this.getMagByPowerOf2(this.getFinestMagPowerOf2());
   }
 

@@ -1,8 +1,8 @@
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { sleep } from "libs/utils";
-import { describe, it, expect } from "vitest";
-import debounce from "lodash-es/debounce";
 import { createDebouncedAbortableCallable } from "libs/async/debounced_abortable_saga";
+import { sleep } from "libs/utils";
+import debounce from "lodash-es/debounce";
+import type { Saga } from "viewer/model/sagas/effect-generators";
+import { describe, expect, it } from "vitest";
 
 const createAbortableFnWithProtocol = () => {
   const protocol: string[] = [];

@@ -3,6 +3,7 @@ import app from "app";
 import type { WebKnossosModel } from "viewer/model";
 import createApiLatest, { type ApiInterface } from "./api_latest";
 import WkDev from "./wk_dev";
+
 const latestVersion = 3;
 
 class ApiLoader {

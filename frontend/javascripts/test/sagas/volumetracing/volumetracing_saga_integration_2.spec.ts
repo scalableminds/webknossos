@@ -1,4 +1,9 @@
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { V3 } from "libs/mjs";
+import {
+  createBucketResponseFunction,
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import Constants, {
   ContourModeEnum,
   FillModeEnum,
@@ -6,28 +11,23 @@ import Constants, {
   OverwriteModeEnum,
   type Vector3,
 } from "viewer/constants";
-import {
-  setupWebknossosForTesting,
-  createBucketResponseFunction,
-  type WebknossosTestContext,
-} from "test/helpers/apiHelpers";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import Store from "viewer/store";
-import { V3 } from "libs/mjs";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
-  setActiveCellAction,
   addToContourListAction,
   dispatchFloodfillAsync,
-  startEditingAction,
   finishEditingAction,
+  setActiveCellAction,
   setContourTracingModeAction,
+  startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import Store from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dispatchUndoAsync, dispatchRedoAsync } from "viewer/model/actions/save_actions";
-import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {

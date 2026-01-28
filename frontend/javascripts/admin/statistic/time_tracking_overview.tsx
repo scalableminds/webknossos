@@ -18,8 +18,7 @@ import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { isUserAdminOrTeamManager } from "libs/utils";
-import { compareBy, localeCompareBy } from "libs/utils";
+import { compareBy, isUserAdminOrTeamManager, localeCompareBy } from "libs/utils";
 import messages from "messages";
 import { useState } from "react";
 import type { APITimeTrackingPerUser } from "types/api_types";
@@ -27,6 +26,7 @@ import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/cons
 import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
+
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];

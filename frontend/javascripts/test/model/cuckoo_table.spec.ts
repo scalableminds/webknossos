@@ -1,12 +1,12 @@
-import { describe, it, expect } from "vitest";
-import range from "lodash-es/range";
 import mean from "lodash-es/mean";
+import range from "lodash-es/range";
 import type { Vector3 } from "viewer/constants";
+import { describe, expect, it } from "vitest";
 
 import "test/mocks/updatable_texture.mock";
-import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
+import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 
 type Entry = [number, Vector3];
 

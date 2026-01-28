@@ -27,9 +27,9 @@ vi.mock("hammerjs", () => {
     destroy: vi.fn(),
   }));
 
-  // @ts-ignore
+  // @ts-expect-error
   HammerMock.TouchInput = vi.fn();
-  // @ts-ignore
+  // @ts-expect-error
   HammerMock.DIRECTION_ALL = 30;
 
   return {

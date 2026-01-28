@@ -11,15 +11,13 @@ import lodashMax from "lodash-es/max";
 import random from "lodash-es/random";
 import sortedIndex from "lodash-es/sortedIndex";
 import without from "lodash-es/without";
-import type {
+import type {AdditionalCoordinate, 
   MetadataEntryProto,
   ServerBranchPoint,
   ServerNode,
-  ServerSkeletonTracingTree,
+  ServerSkeletonTracingTree
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
-import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import Constants, { NODE_ID_REF_REGEX } from "viewer/constants";
+import Constants, { NODE_ID_REF_REGEX, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
@@ -28,7 +26,6 @@ import {
   getActiveTreeGroup,
   getSkeletonTracing,
   getTree,
-  mapGroups,
   mapGroupsToGenerator,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -50,6 +47,7 @@ import {
 } from "viewer/model/types/tree_types";
 import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
+import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {

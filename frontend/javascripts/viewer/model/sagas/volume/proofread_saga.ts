@@ -1,14 +1,14 @@
 import {
-  type MinCutTargetEdge,
-  type NeighborInfo,
   getAgglomeratesForSegmentsFromTracingstore,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
+  type MinCutTargetEdge,
+  type NeighborInfo,
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, getAdaptToTypeFunction, isEditableEventTarget, isNumberMap } from "libs/utils";
+import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
@@ -50,8 +50,8 @@ import {
   type MinCutPartitionsAction,
   type ProofreadAtPositionAction,
   type ProofreadMergeAction,
-  type ToggleSegmentInPartitionAction,
   resetMultiCutToolPartitionsAction,
+  type ToggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import {
@@ -59,22 +59,22 @@ import {
   loadPrecomputedMeshAction,
 } from "viewer/model/actions/segmentation_actions";
 import {
-  type UpdateUserSettingAction,
   setMappingAction,
   setMappingNameAction,
+  type UpdateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import {
   type CreateNodeAction,
   type DeleteNodeAction,
-  type SetNodePositionAction,
   deleteEdgeAction,
+  type SetNodePositionAction,
   setTreeNameAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
-  type EnterAction,
-  type EscapeAction,
   allowSagaWhileBusyAction,
   disallowSagaWhileBusyAction,
+  type EnterAction,
+  type EscapeAction,
 } from "viewer/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
@@ -86,11 +86,11 @@ import {
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import {
-  type UpdateActionWithoutIsolationRequirement,
   mergeAgglomerate,
   splitAgglomerate,
+  type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model, Store, api } from "viewer/singletons";
+import { api, Model, Store } from "viewer/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
 import { getCurrentMag } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
@@ -195,14 +195,14 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
 }
 
 function proofreadCoarseMagIndex(): number {
-  // @ts-ignore
+  // @ts-expect-error
   return window.__proofreadCoarseResolutionIndex != null
-    ? // @ts-ignore
+    ? // @ts-expect-error
       window.__proofreadCoarseResolutionIndex
     : 3;
 }
 function proofreadUsingMeshes(): boolean {
-  // @ts-ignore
+  // @ts-expect-error
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }
 
@@ -1621,7 +1621,7 @@ export function* splitAgglomerateInMapping(
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
   const splitMapping = new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
-      // @ts-ignore get() is expected to accept the type that segmentId has.
+      // @ts-expect-error get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
         return [segmentId, mappedId];
@@ -1631,7 +1631,7 @@ export function* splitAgglomerateInMapping(
   );
   // Add potentially missing entries of segment in additionalSegmentsToRequest to the new map.
   for (const unmappedId of additionalSegmentsToRequest) {
-    // @ts-ignore get() is expected to accept the type that unmappedId has.
+    // @ts-expect-error get() is expected to accept the type that unmappedId has.
     const mappedId = mappingAfterSplit.get(unmappedId);
     if (mappedId) {
       splitMapping.set(unmappedId, mappedId);

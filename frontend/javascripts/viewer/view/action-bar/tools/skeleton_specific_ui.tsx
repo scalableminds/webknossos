@@ -1,9 +1,10 @@
 import { ExportOutlined } from "@ant-design/icons";
 import { Badge, Space } from "antd";
+import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-
-import { useWkSelector } from "libs/react_hooks";
+import { APIJobCommand } from "types/api_types";
 import { getActiveTree } from "viewer/model/accessors/skeletontracing_accessor";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
@@ -14,9 +15,6 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-
-import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
-import { APIJobCommand } from "types/api_types";
 import {
   ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,

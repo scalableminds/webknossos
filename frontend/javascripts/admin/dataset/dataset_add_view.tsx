@@ -17,7 +17,7 @@ const { Content, Sider } = Layout;
 // Used for the tab keys as well as for
 // distinguishing between the add type after
 // successful import.
-export enum DatasetAddType {
+enum DatasetAddType {
   UPLOAD = "upload",
   REMOTE = "remote",
   COMPOSE = "compose",

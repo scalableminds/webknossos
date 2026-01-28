@@ -480,7 +480,7 @@ function UserListView() {
             filtered
             filteredValue={activationFilter}
             filterMultiple
-            // @ts-ignore
+            // @ts-expect-error
             onFilter={(
               value: "activated" | "deactivated" | "verified" | "unverified",
               user: APIUser,

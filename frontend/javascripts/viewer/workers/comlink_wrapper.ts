@@ -66,7 +66,7 @@ export function createWorker<T extends (...args: any[]) => any>(
 
   // this URL is relative to <root>/frontend/javascripts/viewer/workers
   const url = new URL(pathToWorker, import.meta.url);
-  // @ts-ignore
+  // @ts-expect-error
   return wrap(new Worker(url, { type: "module" }));
 }
 export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
@@ -76,7 +76,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
 
   // In a node context (e.g., when executing tests), we don't create web workers.
   // Therefore, we simply return the passed function.
-  // @ts-ignore
+  // @ts-expect-error
   return fn;
 }
 

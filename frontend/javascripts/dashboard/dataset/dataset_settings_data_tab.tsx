@@ -93,7 +93,7 @@ function SimpleDatasetForm({
     { value: TransformationsMode.ADVANCED, label: "Advanced" },
   ];
 
-  const doesDatasetHaveAdvancedTransformations = dataset?.dataSource.dataLayers.some(
+  const doesDatasetHaveAdvancedTransformations = dataSource?.dataLayers?.some( // TODOc how to actually find that out?
     (layer) => (layer.coordinateTransformations?.length ?? 0) > 0,
   );
   const initialTransformationsMode = doesDatasetHaveAdvancedTransformations
@@ -102,31 +102,41 @@ function SimpleDatasetForm({
   const [transformationsMode, setTransformationsMode] = useState<TransformationsMode>(
     initialTransformationsMode,
   );
+  const coordinateTransformationsJSON = Form.useWatch(["coordinateTransformations"], form);
+
+  useEffect(() => {
+    if (transformationsMode === TransformationsMode.ADVANCED) {
+      const dataLayersWithTransformations: DataLayerWithTransformations[] = dataSource?.dataLayers?.map((layer: DataLayer) => ({
+        name: layer.name,
+        coordinateTransformations: layer.coordinateTransformations || [],
+      })) || [];
+      const layersWithCoordTransformationsJSON = JSON.stringify(dataLayersWithTransformations, null, 2);
+      form.setFieldValue(["coordinateTransformations"], layersWithCoordTransformationsJSON);
+    }
+  }, [transformationsMode]);
+
+  useEffect(() => {
+    if (!form || coordinateTransformationsJSON == null
+    ) {
+      return;
+    }
+    if (form.getFieldError(["coordinateTransformations"]).length > 0) {
+      return;
+    }
+    const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined = coordinateTransformationsJSON
+      ? JSON.parse(coordinateTransformationsJSON)
+      : undefined;
+    const dataLayersWithUpdatedTransforms = form.getFieldValue(["dataSource", "dataLayers"])?.map((layer: DataLayer) => {
+      const coordinateTransformation = layersWithCoordTransformations?.find(ct => ct.name === layer.name);
+      return {
+        ...layer,
+        coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
+      };
+    });
+    form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+  }, [coordinateTransformationsJSON, form]);
 
   function DatasetTransformationsModeCard() {
-
-    useEffect(() => {
-      if (!form
-      ) {
-        return;
-      }
-      const layersWithCoordTransformationsJSON: string | undefined = form.getFieldValue(["coordinateTransformations"]);
-      if (form.getFieldError(["coordinateTransformations"]).length > 0) {
-        return;
-      }
-      const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined = layersWithCoordTransformationsJSON
-        ? JSON.parse(layersWithCoordTransformationsJSON)
-        : undefined;
-      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer) => {
-        const coordinateTransformation = layersWithCoordTransformations?.find(ct => ct.name === layer.name);
-        return {
-          ...layer,
-          coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
-        };
-      });
-      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
-    }, []);
-
     return (
       <SettingsCard
         title="Transformation Configuration"
@@ -134,6 +144,7 @@ function SimpleDatasetForm({
           <FormItemWithInfo
             info="<Some information about the format>"
             name={["coordinateTransformations"]}
+            label="Coordinate Transformations JSON"
             rules={[
               {
                 validator: (rule, value) => validateTransformationsJSON(rule, value),

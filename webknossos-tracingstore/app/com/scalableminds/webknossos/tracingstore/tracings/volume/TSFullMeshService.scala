@@ -37,11 +37,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     with FoxImplicits
     with LazyLogging {
 
-  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest)(
+  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
@@ -58,6 +58,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
         fullMeshRequest.copy(mappingName = baseMappingName,
                              editableMappingTracingId = Some(tracingId),
+                             editableMappingVersion = Some(tracing.version),
                              mappingType = Some("HDF5"))
       else fullMeshRequest
       array <- remoteDatastoreClient.loadFullMeshStl(remoteFallbackLayer, fullMeshRequestAdapted)
@@ -109,6 +110,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         mag,
         mappingName,
         volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        tracing.version,
         fullMeshRequest.additionalCoordinates
       )
       bucketPositions = bucketPositionsRaw.toSeq

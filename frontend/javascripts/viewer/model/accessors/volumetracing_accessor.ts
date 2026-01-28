@@ -727,6 +727,39 @@ function getMeshOpacity(
   return meshData[segmentId].opacity;
 }
 
+export function isProofreadingAuxiliaryMeshLoaded(
+  state: WebknossosState,
+  segmentId: number,
+  layerName: string,
+): boolean {
+  const additionalCoords = state.flycam.additionalCoordinates;
+  const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
+  const localSegmentationData = state.localSegmentationData[layerName];
+  if (localSegmentationData?.meshes == null) return false;
+  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  if (meshData == null || meshData[segmentId] == null) return false;
+  return meshData[segmentId].isProofreadingAuxiliaryMesh;
+}
+
+export function getAllLoadedProofreadingAuxiliaryMeshes(
+  state: WebknossosState,
+  layerName: string,
+): Set<number> {
+  const loadedMeshIds = new Set<number>();
+  const additionalCoords = state.flycam.additionalCoordinates;
+  const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
+  const localSegmentationData = state.localSegmentationData[layerName];
+  if (localSegmentationData?.meshes == null) return loadedMeshIds;
+  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  if (meshData == null) return loadedMeshIds;
+  Object.values(meshData).forEach((meshInfo) => {
+    if (meshInfo.isProofreadingAuxiliaryMesh) {
+      loadedMeshIds.add(meshInfo.segmentId);
+    }
+  });
+  return loadedMeshIds;
+}
+
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
   state: WebknossosState,

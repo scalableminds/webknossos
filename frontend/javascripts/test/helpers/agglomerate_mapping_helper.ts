@@ -1,3 +1,4 @@
+import cloneDeep from "lodash-es/cloneDeep";
 import uniq from "lodash-es/uniq";
 
 export class AgglomerateMapping {
@@ -151,6 +152,12 @@ export class AgglomerateMapping {
     if (version == null || version < 0 || version > this.currentVersion)
       throw new RangeError(`Invalid version: ${version}`);
     return this.versions[version];
+  }
+
+  // Returns a copy of the current adjacency list. It is a deep clone to avoid direct manipulation from outside.
+  // AdjacencyList is currently unversioned.
+  getAdjacencyList(): Map<number, Set<number>> {
+    return cloneDeep(this.adjacencyList);
   }
 
   private resetVersionCounter(initialVersion: number) {

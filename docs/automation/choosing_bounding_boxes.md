@@ -31,7 +31,7 @@ Box dimensions are always interpreted **relative to the chosen magnification**. 
 Each bounding box should contain **at least 250,000 voxels in the chosen magnification**. 
 
 - Minimum effective box size:
-    - For neuron fintuning: **85 × 85 × 32 voxels**
+    - For neuron finetuning: **85 × 85 × 32 voxels**
     - For instance segmentation: minimum effective box size is **32 x 32 x 32 voxels** in the chosen magnification.
 - Box dimensions should be integer multiples of these values in each dimension
 - Recommended total annotated volume per finetuning: **5–10 million voxels** (in the chosen magnification)

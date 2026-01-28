@@ -22,7 +22,7 @@ For detailed instructions on using WEBKNOSSOS for annotation, please watch our [
 
 - **Unique Segment IDs:** Each cell within the bounding box should be annotated with its own distinct segment ID.
 - **Sequential Approach:**
-    - Start at a top corner of the bounding box.
+    - Start at the corner at the top, left and front of the bounding box.
     - Annotate the cell in that area, following its structure across all sections.
     - Once completed, return to the top and assign a new segment ID for the next cell. We advise you to leave the **cell membranes unannotated**.
 

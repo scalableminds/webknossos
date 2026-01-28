@@ -56,7 +56,7 @@ export function serverVolumeToClientVolumeTracing(
   activeUser: APIUserBase | null | undefined,
   owner: APIUserBase | null | undefined,
 ): VolumeTracing {
-  // As the frontend doesn't know all cells, we have to keep track of the highest id
+  // As the frontend doesn't know all segments, we have to keep track of the highest id
   // and cannot compute it
   const largestSegmentId = tracing.largestSegmentId;
   const userState = getUserStateForTracing(tracing, activeUser, owner);

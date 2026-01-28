@@ -93,7 +93,7 @@ A careful review of your annotations can prevent mistakes that might impact mode
     
     *This method is especially relevant when using automated segmentation as the base for ground truth annotation, since it may generate new segments within the bounding box that you do not directly control.*
     
-    [segment registration and check example.mp4](./images/tutorial_trainingdata_09_segment_registration_and_check_example.mp4)
+    ![youtube-video](https://www.youtube.com/embed/J4wkm55gnDQ)
     
     *Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
     

@@ -1,8 +1,8 @@
 import {
-  type ServerVolumeTracing,
-  type APIAnnotation,
   AnnotationLayerEnum,
+  type APIAnnotation,
   type APITracingStoreAnnotation,
+  type ServerVolumeTracing,
 } from "types/api_types";
 
 export const VOLUME_TRACING_ID = "volumeTracingId";

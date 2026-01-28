@@ -18,7 +18,7 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
-import { PricingPlanEnum, getActiveUserCount } from "./pricing_plan_utils";
+import { getActiveUserCount, PricingPlanEnum } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;

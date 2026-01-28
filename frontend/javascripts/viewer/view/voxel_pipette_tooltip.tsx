@@ -26,7 +26,7 @@ import {
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { setVoxelPipetteTooltipPinnedPositionAction } from "viewer/model/actions/ui_actions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { Store, api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import { getTooltipPosition, isPositionStillInPlane } from "./viewport_tooltip_helpers";
 
 function VoxelValueEntry({

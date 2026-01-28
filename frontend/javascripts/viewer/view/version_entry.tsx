@@ -1,8 +1,8 @@
 import {
   ArrowsAltOutlined,
   BackwardOutlined,
-  CodeSandboxOutlined,
   CodepenOutlined,
+  CodeSandboxOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -15,13 +15,12 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, List } from "antd";
-import groupBy from "lodash-es/groupBy";
-import max from "lodash-es/max";
-import type React from "react";
-
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
 import { useWkSelector } from "libs/react_hooks";
+import groupBy from "lodash-es/groupBy";
+import max from "lodash-es/max";
+import type React from "react";
 import { Fragment } from "react";
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
@@ -65,13 +64,13 @@ import type {
   UpdateMetadataOfAnnotationUpdateAction,
   UpdateMetadataOfSegmentUpdateAction,
   UpdateNodeUpdateAction,
-  UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
   UpdateSegmentPartialUpdateAction,
+  UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
-  UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeGroupsExpandedStateAction,
+  UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
   UpdateUserBoundingBoxInSkeletonTracingAction,
@@ -82,6 +81,7 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+
 type Description = {
   description: string;
   icon: React.ReactNode;

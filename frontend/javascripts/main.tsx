@@ -1,29 +1,28 @@
-import { message } from "antd";
-import window, { document } from "libs/window";
-import { createRoot } from "react-dom/client";
-import { Provider } from "react-redux";
-import { warnIfEmailIsUnverified } from "viewer/model/sagas/user_saga";
-import UnthrottledStore, { startSaga } from "viewer/store";
-
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { getActiveUser } from "admin/rest_api";
+import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
 import { RootForFastTooltips } from "components/fast_tooltip";
 import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
+import window, { document } from "libs/window";
 import { compress, decompress } from "lz-string";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
 import { setupApi } from "viewer/api/internal_api";
 import Model from "viewer/model";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setHasOrganizationsAction, setThemeAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { warnIfEmailIsUnverified } from "viewer/model/sagas/user_saga";
 import { setModel, setStore } from "viewer/singletons";
+import UnthrottledStore, { startSaga } from "viewer/store";
 import Store from "viewer/throttled_store";
 
 import "../stylesheets/main.less";
@@ -124,7 +123,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const react_root = createRoot(containerElement);
     react_root.render(
       <ErrorBoundary>
-        {/* @ts-ignore */}
         <Provider store={Store}>
           <PersistQueryClientProvider
             client={reactQueryClient}

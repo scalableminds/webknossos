@@ -3,7 +3,7 @@ import Date from "libs/date";
 import chunk from "lodash-es/chunk";
 import isEqual from "lodash-es/isEqual";
 import sumBy from "lodash-es/sumBy";
-import { type TracingStats, getStats } from "viewer/model/accessors/annotation_accessor";
+import { getStats, type TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";

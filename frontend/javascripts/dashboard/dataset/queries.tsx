@@ -17,11 +17,11 @@ import { useEffect, useRef } from "react";
 import {
   type APIDataset,
   type APIDatasetCompact,
+  convertDatasetToCompact,
   type FlatFolderTreeItem,
   type Folder,
   type FolderItem,
   type FolderUpdater,
-  convertDatasetToCompact,
 } from "types/api_types";
 
 export const SEARCH_RESULTS_LIMIT = 100;

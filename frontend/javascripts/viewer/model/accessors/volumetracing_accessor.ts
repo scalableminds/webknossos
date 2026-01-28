@@ -3,13 +3,13 @@ import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type {
+  AdditionalCoordinate,
+  AnnotationLayerDescriptor,
   APIAnnotation,
   APIAnnotationInfo,
   APIDataLayer,
   APIDataset,
   APISegmentationLayer,
-  AdditionalCoordinate,
-  AnnotationLayerDescriptor,
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
@@ -54,8 +54,8 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import {
-  MISSING_GROUP_ID,
   getGroupByIdWithSubgroups,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";

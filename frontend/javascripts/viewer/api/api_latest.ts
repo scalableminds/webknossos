@@ -21,8 +21,8 @@ import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
 import TWEEN from "tween.js";
-import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { Writeable } from "types/type_utils";
 import type {
@@ -36,10 +36,10 @@ import type {
 } from "viewer/constants";
 import Constants, {
   ControlModeEnum,
+  EMPTY_OBJECT,
+  MappingStatusEnum,
   OrthoViews,
   TDViewDisplayModeEnum,
-  MappingStatusEnum,
-  EMPTY_OBJECT,
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
 import { loadAgglomerateSkeletonForSegmentId } from "viewer/controller/combinations/segmentation_handlers";
@@ -169,7 +169,7 @@ import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_s
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -184,10 +184,10 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import {
-  MISSING_GROUP_ID,
   callDeep,
   createGroupHelper,
   createGroupToSegmentsMap,
+  MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -980,7 +980,9 @@ class TracingApi {
           currentSubsegments.map((segment) => segment.id),
         );
         // Also delete the segments of all subgroups
-        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+        group.children.forEach((subgroup) => {
+          findChildrenRecursively(subgroup);
+        });
       };
 
       findChildrenRecursively(item);
@@ -1142,7 +1144,7 @@ class TracingApi {
       newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
-        // @ts-ignore
+        // @ts-expect-error
         type: newControlMode,
       },
       false,
@@ -2147,7 +2149,7 @@ class DataApi {
           const length = channelCount * (xMax - x);
           // The `set` operation is not problematic, since the BucketDataArray types
           // won't be mixed (either, they are BigInt or they aren't)
-          // @ts-ignore
+          // @ts-expect-error
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
         }

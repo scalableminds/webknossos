@@ -16,8 +16,7 @@ import {
   AnnotationTool,
   isBrushTool,
   isTraceTool,
-  isVolumeDrawingTool,
-} from "viewer/model/accessors/tool_accessor";
+  isVolumeDrawingTool,} from "viewer/model/accessors/tool_accessor";
 import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -536,7 +535,9 @@ function* maintainContourGeometry(): Saga<void> {
       volumeTracing.contourTracingMode === ContourModeEnum.DELETE
         ? CONTOUR_COLOR_DELETE
         : CONTOUR_COLOR_NORMAL;
-    contourList.forEach((p) => contour.addEdgePoint(p));
+    contourList.forEach((p) => {
+      contour.addEdgePoint(p);
+    });
   }
 }
 

@@ -6,7 +6,7 @@ import { ColoredLogger, sleep } from "libs/utils";
 import compact from "lodash-es/compact";
 import flattenDeep from "lodash-es/flattenDeep";
 import sum from "lodash-es/sum";
-import { type Channel, buffers } from "redux-saga";
+import { buffers, type Channel } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -14,11 +14,11 @@ import { SagaIdentifier } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
 import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
 import {
-  type EnsureHasNewestVersionAction,
-  type NotifyAboutUpdatedBucketsAction,
   dispatchEnsureTracingsWereDiffedToSaveQueueAction,
+  type EnsureHasNewestVersionAction,
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
+  type NotifyAboutUpdatedBucketsAction,
   prepareRebaseAction,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
@@ -320,7 +320,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     // saga.
     console.error("in save saga, got exception, terminating ...");
     console.warn(exception);
-    // @ts-ignore
+    // @ts-expect-error
     ErrorHandling.notify(exception);
     Toast.error(
       "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",

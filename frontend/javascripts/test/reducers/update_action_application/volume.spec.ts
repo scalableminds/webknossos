@@ -9,6 +9,7 @@ import {
   changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
+import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import {
   applyVolumeUpdateActionsFromServerAction,
   createCellAction,
@@ -20,7 +21,6 @@ import {
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import type {
   ApplicableVolumeUpdateAction,

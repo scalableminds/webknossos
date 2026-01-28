@@ -1,11 +1,11 @@
 import type DiffableMap from "libs/diffable_map";
-import { type Middleware, applyMiddleware, createStore } from "redux";
+import type { Matrix4x4 } from "libs/mjs";
+import { applyMiddleware, createStore, type Middleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
-
-// Type imports
-import type { Matrix4x4 } from "libs/mjs";
 import type {
+  AdditionalAxis,
+  AnnotationLayerDescriptor,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIConnectomeFile,
@@ -23,16 +23,14 @@ import type {
   APIUser,
   APIUserBase,
   APIUserCompact,
-  AdditionalAxis,
-  AdditionalCoordinate,
-  AnnotationLayerDescriptor,
   MetadataEntryProto,
   ServerEditableMapping,
   TracingType,
 } from "types/api_types";
-import type {
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
+import type {AdditionalCoordinate, BLEND_MODES, 
   ContourMode,
-  ControlMode,
+  ControlMode,ControlModeEnum, 
   FillMode,
   InterpolationMode,
   MappingStatus,
@@ -44,20 +42,14 @@ import type {
   TDViewDisplayMode,
   Vector2,
   Vector3,
-  ViewMode,
+  ViewMode
 } from "viewer/constants";
-import type { BLEND_MODES, ControlModeEnum } from "viewer/constants";
+import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Toolkit } from "./model/accessors/tool_accessor";
-import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 
-import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import { ensureExactKeys } from "types/type_utils";
-// Value imports
-import defaultState from "viewer/default_state";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
 import reduceReducers from "viewer/model/helpers/reduce_reducers";
@@ -73,10 +65,15 @@ import UiReducer from "viewer/model/reducers/ui_reducer";
 import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
+import type { UpdateAction,  } from "viewer/model/sagas/volume/update_actions";
+import type { Toolkit,  } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
+import type { 
+  TreeGroup,
+  TreeMap,} from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
 
 export type { BoundingBoxObject } from "types/bounding_box";

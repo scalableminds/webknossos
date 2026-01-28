@@ -377,7 +377,9 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   unsubscribeStoreListeners() {
-    this.storePropertyUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.storePropertyUnsubscribers.forEach((unsubscribe) => {
+      unsubscribe();
+    });
     this.storePropertyUnsubscribers = [];
   }
 

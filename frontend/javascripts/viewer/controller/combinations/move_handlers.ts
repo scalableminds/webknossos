@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { calculateGlobalPos, getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";

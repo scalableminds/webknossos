@@ -1,18 +1,18 @@
-import { describe, it, expect } from "vitest";
-import UrlManager, {
-  updateTypeAndId,
-  encodeUrlHash,
-  type UrlManagerState,
-  getDatasetNameFromLocation,
-  getUpdatedPathnameWithNewDatasetName,
-} from "viewer/controller/url_manager";
-import { location } from "libs/window";
-import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
-import defaultState from "viewer/default_state";
 import update from "immutability-helper";
-import DATASET from "../fixtures/dataset_server_object";
+import { location } from "libs/window";
 import clone from "lodash-es/clone";
 import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
+import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
+import UrlManager, {
+  encodeUrlHash,
+  getDatasetNameFromLocation,
+  getUpdatedPathnameWithNewDatasetName,
+  type UrlManagerState,
+  updateTypeAndId,
+} from "viewer/controller/url_manager";
+import defaultState from "viewer/default_state";
+import { describe, expect, it } from "vitest";
+import DATASET from "../fixtures/dataset_server_object";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {

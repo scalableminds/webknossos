@@ -7,8 +7,8 @@ import uniqWith from "lodash/uniqWith";
 import type { Writeable } from "types/type_utils";
 import {
   type ContourMode,
-  type OrthoViewWithoutTD,
   OrthoViews,
+  type OrthoViewWithoutTD,
   type Vector3,
 } from "viewer/constants";
 import {

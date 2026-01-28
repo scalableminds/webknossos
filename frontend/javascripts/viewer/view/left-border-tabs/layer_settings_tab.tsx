@@ -39,9 +39,9 @@ import mapValues from "lodash-es/mapValues";
 import minBy from "lodash-es/minBy";
 import partial from "lodash-es/partial";
 import {
-  type RecommendedConfiguration,
-  layerViewConfigurationTooltips,
   layerViewConfigurations,
+  layerViewConfigurationTooltips,
+  type RecommendedConfiguration,
   settings,
   settingsTooltips,
 } from "messages";
@@ -49,13 +49,13 @@ import React, { useCallback } from "react";
 import { connect, useDispatch } from "react-redux";
 import type { Dispatch } from "redux";
 import {
+  AnnotationLayerEnum,
+  type AnnotationLayerType,
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
   APIJobCommand,
   type APISkeletonLayer,
-  AnnotationLayerEnum,
-  type AnnotationLayerType,
   type EditableLayerProperties,
 } from "types/api_types";
 import {
@@ -124,7 +124,7 @@ import {
   addLayerToAnnotation,
   deleteAnnotationLayer,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -301,7 +301,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
 function LayerInfoIconWithTooltip({
   layer,
   dataset,
-}: { layer: APIDataLayer; dataset: APIDataset }) {
+}: {
+  layer: APIDataLayer;
+  dataset: APIDataset;
+}) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
     const magInfo = getMagInfo(layer.mags);
@@ -561,9 +564,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
-    Object.keys(layers).forEach((otherLayerName) =>
-      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
-    );
+    Object.keys(layers).forEach((otherLayerName) => {
+      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible);
+    });
   };
 
   isLayerExclusivelyVisible = (layerName: string): boolean => {

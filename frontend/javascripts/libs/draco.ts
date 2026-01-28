@@ -18,7 +18,7 @@ export function getDracoLoader(): CustomDRACOLoader {
   if (_dracoLoader) {
     return _dracoLoader;
   }
-  // @ts-ignore
+  // @ts-expect-error
   _dracoLoader = new CustomDRACOLoader();
 
   _dracoLoader.setDecoderPath("/assets/wasm/");

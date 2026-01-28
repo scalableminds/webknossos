@@ -51,8 +51,8 @@ import {
 import { type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import {
-  GroupTypeEnum,
   additionallyExpandGroup,
+  GroupTypeEnum,
   getNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
@@ -484,7 +484,7 @@ function SkeletonTracingReducer(
 
       const newTrees = skeletonTracing.trees.clone();
       for (const tree of skeletonTracing.trees.values()) {
-        // @ts-ignore newColors.shift() can be undefined
+        // @ts-expect-error newColors.shift() can be undefined
         newTrees.mutableSet(tree.treeId, { ...tree, color: newColors.shift() });
       }
 

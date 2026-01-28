@@ -1,9 +1,10 @@
-import { call, put, take } from "redux-saga/effects";
+// biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   type WebknossosTestContext,
   setupWebknossosForTesting,
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
+import { call, put, take } from "redux-saga/effects";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,

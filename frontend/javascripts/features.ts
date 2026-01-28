@@ -1,5 +1,6 @@
 import { getFeatureToggles } from "admin/rest_api";
 import type { APIFeatureToggles } from "types/api_types";
+
 let features: APIFeatureToggles | null = null;
 
 export async function load() {

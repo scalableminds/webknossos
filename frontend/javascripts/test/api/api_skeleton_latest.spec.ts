@@ -1,12 +1,9 @@
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { setMappingEnabledAction } from "viewer/model/actions/settings_actions";
-import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_actions";
-import { userSettings } from "types/schemas/user_settings.schema";
-import Store from "viewer/store";
-import { vi, describe, it, expect, beforeEach } from "vitest";
 import { Keyboard } from "keyboardjs";
-
+import { map3 } from "libs/utils";
+import testRotations from "test/fixtures/test_rotations";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import { Euler, MathUtils, Matrix4, Quaternion } from "three";
+import { userSettings } from "types/schemas/user_settings.schema";
 import {
   OrthoBaseRotations,
   OrthoViewToNumber,
@@ -14,15 +11,17 @@ import {
   type Vector3,
 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
-import { MathUtils, Matrix4, Euler, Quaternion } from "three";
+import { setMappingEnabledAction } from "viewer/model/actions/settings_actions";
+import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_actions";
+import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
 } from "viewer/model/helpers/rotation_helpers";
-import testRotations from "test/fixtures/test_rotations";
-import { map3 } from "libs/utils";
+import Store from "viewer/store";
+import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const toRadian = (arr: Vector3): Vector3 => [
   MathUtils.degToRad(arr[0]),

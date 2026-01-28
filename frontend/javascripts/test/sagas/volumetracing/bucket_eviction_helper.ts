@@ -1,18 +1,18 @@
 import range from "lodash-es/range";
 import { createBucketResponseFunction, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import Store from "viewer/store";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import type { Vector3 } from "viewer/constants";
 import { OrthoViews } from "viewer/constants";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
-import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import {
-  setActiveCellAction,
   addToContourListAction,
-  startEditingAction,
   finishEditingAction,
+  setActiveCellAction,
+  startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Vector3 } from "viewer/constants";
+import Store from "viewer/store";
 import { vi } from "vitest";
 
 export async function testLabelingManyBuckets(

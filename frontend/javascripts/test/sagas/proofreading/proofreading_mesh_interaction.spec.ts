@@ -1,11 +1,12 @@
-import type { MinCutTargetEdge } from "admin/rest_api";
-import isEqual from "lodash-es/isEqual";
-import { call, put, take } from "redux-saga/effects";
+// biome-ignore assist/source/organizeImports: apiHelpers need to be iomported first for proper mocking of modules
 import {
   type WebknossosTestContext,
   setupWebknossosForTesting,
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
+import type { MinCutTargetEdge } from "admin/rest_api";
+import isEqual from "lodash-es/isEqual";
+import { call, put, take } from "redux-saga/effects";
 import { delay } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
@@ -29,8 +30,8 @@ import { Store } from "viewer/singletons";
 import {
   type ActiveMappingInfo,
   type NumberLike,
-  type WebknossosState,
   startSaga,
+  type WebknossosState,
 } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";

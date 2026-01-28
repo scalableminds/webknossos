@@ -44,9 +44,9 @@ export function useFetch<T>(
     setValue(fetchedValue);
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
   useEffect(() => {
     fetchValue();
+    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
   }, dependencies);
   return value;
 }
@@ -81,9 +81,9 @@ export function useGuardedFetch<T>(
     }
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(loadData):
   useEffect(() => {
     loadData();
+    // biome-ignore lint/correctness/useExhaustiveDependencies: dynamic dependencies can not be infered by biome
   }, dependencies);
 
   return [value, isLoading];

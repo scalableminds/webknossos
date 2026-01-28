@@ -1,19 +1,19 @@
 import path from "node:path";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import { updateDatasetDefaultConfiguration } from "admin/rest_api";
+import type { BLEND_MODES } from "viewer/constants";
+import { encodeUrlHash } from "viewer/controller/url_manager";
+import type { DatasetConfiguration } from "viewer/store";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   getDefaultRequestOptions,
   getNewPage,
-  screenshotDatasetView,
   type ScreenshotTestContext,
+  screenshotDatasetView,
   setupAfterEach,
   setupBeforeEach,
   withRetry,
 } from "./dataset_rendering_helpers";
-import { encodeUrlHash } from "viewer/controller/url_manager";
-import { describe, it, beforeEach, afterEach, expect } from "vitest";
-import { updateDatasetDefaultConfiguration } from "admin/rest_api";
-import type { DatasetConfiguration } from "viewer/store";
-import type { BLEND_MODES } from "viewer/constants";
+import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");

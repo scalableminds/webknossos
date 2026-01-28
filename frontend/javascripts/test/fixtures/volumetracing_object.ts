@@ -1,14 +1,14 @@
 import update from "immutability-helper";
 import Constants, { ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
-import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
-import { combinedReducer } from "viewer/store";
 import { setDatasetAction } from "viewer/model/actions/dataset_actions";
 import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
-import { apiDatasetForVolumeTracing } from "./dataset_server_object";
 import { tracing as serverVolumeTracing, VOLUME_TRACING_ID } from "./volumetracing_server_objects";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { preprocessDataset } from "viewer/model_initialization";
+import { combinedReducer } from "viewer/store";
+import { apiDatasetForVolumeTracing } from "./dataset_server_object";
+import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
 
 export { VOLUME_TRACING_ID };
 

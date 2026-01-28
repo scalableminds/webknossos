@@ -1,9 +1,11 @@
-import { actionChannel, call, flush, put, take } from "redux-saga/effects";
+// biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   type WebknossosTestContext,
   setupWebknossosForTesting,
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
+import type { NeighborInfo } from "admin/rest_api";
+import { actionChannel, call, flush, put, take } from "redux-saga/effects";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -31,7 +33,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import type { NeighborInfo } from "admin/rest_api";
 import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
@@ -450,7 +451,7 @@ describe("Proofreading (Multi User)", () => {
           };
         }
         return {
-          segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
+          segmentId: Number.parseInt(segmentInfo.segmentId.toString(), 10),
           neighbors: [],
         };
       },

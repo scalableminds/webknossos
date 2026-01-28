@@ -12,18 +12,17 @@ import uniqWith from "lodash-es/uniqWith";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type {
+  AdditionalAxis,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
   APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
-  AdditionalAxis,
   ElementClass,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { LongUnitToShortUnitMap, Unicode, type Vector3, type ViewMode } from "viewer/constants";
-import constants, { ViewModeValues, Vector3Indices, MappingStatusEnum } from "viewer/constants";
+import constants, { LongUnitToShortUnitMap, MappingStatusEnum, Unicode, type Vector3, Vector3Indices, type ViewMode, ViewModeValues } from "viewer/constants";
 import type {
   ActiveMappingInfo,
   BoundingBoxObject,
@@ -34,7 +33,7 @@ import type {
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
-import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
+import { convertToDenseMags, MagInfo } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 const { ThinSpace } = Unicode;

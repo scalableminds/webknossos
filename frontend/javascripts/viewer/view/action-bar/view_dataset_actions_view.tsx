@@ -1,7 +1,7 @@
 import {
   CameraOutlined,
-  DownOutlined,
   DownloadOutlined,
+  DownOutlined,
   ShareAltOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";

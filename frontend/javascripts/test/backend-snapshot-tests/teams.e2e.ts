@@ -1,7 +1,8 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import { resetDatabase, setUserAuthToken, tokenUserA, writeTypeCheckingFile } from "test/e2e-setup";
+import { createTeam, deleteTeam, getEditableTeams, getTeams } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
-import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
-import { getTeams, getEditableTeams, createTeam, deleteTeam } from "admin/rest_api";
-import { describe, beforeAll, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 describe("Teams API (E2E)", () => {
   beforeAll(async () => {

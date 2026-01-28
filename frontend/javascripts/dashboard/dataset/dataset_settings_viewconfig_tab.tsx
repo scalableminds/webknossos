@@ -137,7 +137,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
     max: 255,
     intensityRange: [0, 255],
   }).map(([key, defaultValue]: [string, any]) => {
-    // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
+    // @ts-expect-error Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
     const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
     const name = layerViewConfigurations[layerViewConfigurationKey];
     const comment = comments[layerViewConfigurationKey];

@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import runAsync from "test/helpers/run-async";
 import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
-import runAsync from "test/helpers/run-async";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock dependencies
 vi.mock("viewer/model/sagas/root_saga", () => {

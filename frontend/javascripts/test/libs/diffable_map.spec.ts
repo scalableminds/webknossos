@@ -1,6 +1,6 @@
-import range from "lodash-es/range";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import { describe, it, expect } from "vitest";
+import range from "lodash-es/range";
+import { describe, expect, it } from "vitest";
 
 function sort(arr: Array<number>) {
   return arr.sort((a, b) => a - b);

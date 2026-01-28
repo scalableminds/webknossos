@@ -138,7 +138,7 @@ class ConnectomeFilters extends React.Component<Props, State> {
     const { availableSynapseTypes } = this.props;
     const { filters } = this.state;
     const synapseDirectionOptions = Object.keys(directionCaptions).map(
-      // @ts-ignore
+      // @ts-expect-error
       (direction: DirectionCaptionsKeys) => ({
         label: directionCaptions[direction],
         value: direction,

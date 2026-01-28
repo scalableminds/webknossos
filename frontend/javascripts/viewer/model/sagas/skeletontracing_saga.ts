@@ -330,10 +330,10 @@ function* getAgglomerateSkeletonTracing(
 
     return parsedTracing;
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
-      // @ts-ignore
+      // @ts-expect-error
       const agglomerateTooLargeMessages = e.messages
         .filter(
           (message: Message) =>
@@ -345,7 +345,7 @@ function* getAgglomerateSkeletonTracing(
 
       if (agglomerateTooLargeMessages.length > 0) {
         throw {
-          // @ts-ignore
+          // @ts-expect-error
           ...e,
           messages: [
             {
@@ -430,7 +430,7 @@ export function* loadAgglomerateSkeletonWithId(
         },
       ),
     );
-    // @ts-ignore TS infers usedTreeIds to be never, but it should be number[] if its not null
+    // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
     if (usedTreeIds == null || usedTreeIds.length !== 1) {
       throw new Error(
         "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
@@ -439,7 +439,7 @@ export function* loadAgglomerateSkeletonWithId(
   } catch (e) {
     // Hide the progress notification and handle the error
     hideFn();
-    // @ts-ignore
+    // @ts-expect-error
     handleAgglomerateLoadingError(e);
     return null;
   }
@@ -469,7 +469,7 @@ function* loadConnectomeAgglomerateSkeletonWithId(
       addConnectomeTreesAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
     );
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     handleAgglomerateLoadingError(e);
   }
 }

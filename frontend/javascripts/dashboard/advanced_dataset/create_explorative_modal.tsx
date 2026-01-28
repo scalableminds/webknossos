@@ -59,7 +59,7 @@ export function NewVolumeLayerSelection({
       </Tooltip>
       <Radio.Group
         onChange={(e) => {
-          const index = Number.parseInt(e.target.value);
+          const index = Number.parseInt(e.target.value, 10);
           setSelectedSegmentationLayerName(
             index !== -1 ? segmentationLayers[index].name : undefined,
           );

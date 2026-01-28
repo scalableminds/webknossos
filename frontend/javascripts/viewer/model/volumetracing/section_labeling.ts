@@ -5,7 +5,7 @@ import clone from "lodash-es/clone";
 import messages from "messages";
 import { Matrix4, Vector3 as Vector3Three } from "three";
 import type { OrthoView, Vector2, Vector3 } from "viewer/constants";
-import Constants, { OrthoViews, Vector3Indices, Vector2Indices } from "viewer/constants";
+import Constants, { OrthoViews, Vector2Indices, Vector3Indices } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
@@ -19,8 +19,8 @@ import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
 import { invertAndTranspose } from "../accessors/dataset_layer_transformation_accessor";
 import {
-  type Transform,
   invertTransform,
+  type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 

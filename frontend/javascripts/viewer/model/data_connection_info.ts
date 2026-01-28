@@ -1,5 +1,7 @@
 import window from "libs/window";
-import _ from "lodash";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import sum from "lodash-es/sum";
 
 const CONSIDERED_TIMESPAN_IN_STATS = 5000;
 
@@ -59,11 +61,11 @@ class DataConnectionInfo {
     if (this.data.length === 0) {
       return { ...defaultStats, accumulatedDownloadedBytes: this.accumulatedDownloadedBytes };
     }
-    const sumOfDownloadBytes = _.sum(this.data.map((entry) => entry.loadedBytes));
+    const sumOfDownloadBytes = sum(this.data.map((entry) => entry.loadedBytes));
     const avgRoundTripTime =
-      _.sum(this.data.map((entry) => entry.endTime - entry.startTime)) / this.data.length;
-    const startingTime = _.min(this.data.map((entry) => entry.startTime)) || 1;
-    const endTime = _.max(this.data.map((entry) => entry.endTime)) || 1;
+      sum(this.data.map((entry) => entry.endTime - entry.startTime)) / this.data.length;
+    const startingTime = min(this.data.map((entry) => entry.startTime)) || 1;
+    const endTime = max(this.data.map((entry) => entry.endTime)) || 1;
     const totalDuration = (endTime - startingTime) / 1000;
     const avgDownloadSpeedInBytesPerS = sumOfDownloadBytes / totalDuration;
     return {

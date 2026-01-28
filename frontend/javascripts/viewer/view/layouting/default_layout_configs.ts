@@ -5,7 +5,7 @@ import { entries, getIsInIframe, keys } from "libs/utils";
  *  - the different layout types which specify which tabs exist in which layout and what their default arrangement is
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
 import type { BorderTabType, ControlMode, ViewMode } from "viewer/constants";
 import Constants, {
   ArbitraryViews,
@@ -56,9 +56,9 @@ export const getGroundTruthLayoutRect = () => {
       width = dummyExtent;
     }
   } else {
-    // @ts-ignore
+    // @ts-expect-error
     height = mainContainer.offsetHeight;
-    // @ts-ignore
+    // @ts-expect-error
     width = mainContainer.offsetWidth;
   }
 
@@ -157,6 +157,7 @@ function buildBorder(
     id: `${side}-border`,
     barSize: borderBarSize,
     size: width,
+    enableAutoHide: true,
     children: [
       {
         type: "tab",
@@ -299,7 +300,7 @@ const _getDefaultLayouts = () => {
   };
 };
 
-const getDefaultLayouts = _.memoize(_getDefaultLayouts);
+const getDefaultLayouts = memoize(_getDefaultLayouts);
 
 export const resetDefaultLayouts = () => {
   // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message

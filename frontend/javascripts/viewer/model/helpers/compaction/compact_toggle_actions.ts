@@ -3,7 +3,8 @@
 // replacing the actions with updateTree*Group*Visibility actions where
 // appropriate.
 // See compactToggleActions for the high-level logic of the compaction.
-import _ from "lodash";
+import last from "lodash-es/last";
+import partition from "lodash-es/partition";
 import type {
   UpdateActionWithoutIsolationRequirement,
   UpdateSegmentVisibilityVolumeAction,
@@ -18,11 +19,12 @@ import {
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {
-  MISSING_GROUP_ID,
   createGroupToSegmentsMap,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+
 type GroupNode = {
   children: GroupNode[];
   groupId: number | null | undefined;
@@ -120,7 +122,7 @@ function findCommonAncestor(
     }
   }
 
-  return _.last(commonPath);
+  return last(commonPath);
 }
 
 function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
@@ -151,7 +153,7 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
           );
   }
 
-  const [visibleItems, invisibleItems] = _.partition(allItemsOfAncestor, (tree) => tree.isVisible);
+  const [visibleItems, invisibleItems] = partition(allItemsOfAncestor, (tree) => tree.isVisible);
 
   const affectedItemCount = allItemsOfAncestor.length;
   let commonVisibility;
@@ -177,7 +179,7 @@ export default function compactToggleActions(
   tracing: SkeletonTracing | VolumeTracing,
 ): UpdateActionWithoutIsolationRequirement[] {
   // Extract the toggleActions which we are interested in
-  const [toggleActions, remainingActions] = _.partition<UpdateActionWithoutIsolationRequirement>(
+  const [toggleActions, remainingActions] = partition<UpdateActionWithoutIsolationRequirement>(
     updateActions,
     (ua) => ua.name === "updateTreeVisibility" || ua.name === "updateSegmentVisibility",
   );

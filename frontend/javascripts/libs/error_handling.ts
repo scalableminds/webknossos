@@ -1,10 +1,11 @@
 import { Notifier } from "@airbrake/browser";
 import Toast from "libs/toast";
 import window, { document, location } from "libs/window";
-import _ from "lodash";
+import pick from "lodash-es/pick";
 import messages from "messages";
 import type { APIUser } from "types/api_types";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
+
 // Note that if you set this value to true for debugging airbrake reporting,
 // you also need to set the values for projectID and projectKey in application.conf
 const LOG_LOCAL_ERRORS = false;
@@ -106,7 +107,7 @@ class ErrorHandling {
     // config is inject from backend
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     if (!scriptTag) throw new Error("failed to initialize airbrake");
-    // @ts-ignore
+    // @ts-expect-error
     const { dataset } = scriptTag;
     const projectId = dataset.airbrakeProjectId;
     const projectKey = dataset.airbrakeProjectKey;
@@ -158,7 +159,7 @@ class ErrorHandling {
 
     // Report Content Security Policy (CSP) errors
     document.addEventListener("securitypolicyviolation", (e: SecurityPolicyViolationEvent) => {
-      const additionalProperties = _.pick(e, [
+      const additionalProperties = pick(e, [
         "blockedURI",
         "violatedDirective",
         "originalPolicy",
@@ -299,7 +300,7 @@ class ErrorHandling {
   setCurrentUser(user: APIUser) {
     this.airbrake.addFilter((notice) => {
       notice.context = notice.context || {};
-      notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
+      notice.context.user = pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
       return notice;
     });
   }

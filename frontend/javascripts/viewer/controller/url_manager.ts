@@ -3,14 +3,17 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { coalesce, map3, numberArrayToVector3, roundTo } from "libs/utils";
 import window, { location } from "libs/window";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
+import partition from "lodash-es/partition";
+import size from "lodash-es/size";
+import throttle from "lodash-es/throttle";
 import messages from "messages";
+import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
-import type { APIDataset, AdditionalCoordinate } from "types/api_types";
 import type { Mutable } from "types/globals";
 import { validateUrlStateJSON } from "types/validation";
 import type { Vector3, ViewMode } from "viewer/constants";
-import constants, { ViewModeValues, MappingStatusEnum } from "viewer/constants";
+import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
@@ -154,7 +157,7 @@ class UrlManager {
     this.updateUnthrottled();
   }
 
-  update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
+  update = throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
 
   updateUnthrottled() {
     const url = this.buildUrl();
@@ -221,7 +224,7 @@ class UrlManager {
     }
 
     const commaSeparatedValues = urlHash.split(",");
-    const [baseValues, keyValuePairStrings] = _.partition(
+    const [baseValues, keyValuePairStrings] = partition(
       commaSeparatedValues,
       (value) => !value.includes("="),
     );
@@ -293,7 +296,7 @@ class UrlManager {
     const flycamRotation = map3((e) => roundTo(e, 2), state.flycam.rotation);
     const rotation = {
       // Keep rotation state empty if no rotation is active to have shorter url hashes.
-      rotation: _.isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
+      rotation: isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
     };
     const activeNode = state.annotation.skeleton?.activeNodeId;
     const activeNodeOptional = activeNode != null ? { activeNode } : {};
@@ -371,7 +374,7 @@ class UrlManager {
     }
 
     const stateByLayerOptional =
-      _.size(stateByLayer) > 0
+      size(stateByLayer) > 0
         ? {
             stateByLayer,
           }

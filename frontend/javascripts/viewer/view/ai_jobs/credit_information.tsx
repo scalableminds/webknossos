@@ -1,14 +1,15 @@
 import { CreditCardOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { type JobCreditCostInfo, getJobCreditCostAndUpdateOrgaCredits } from "admin/rest_api";
-import { Button, Card, Col, Row, Space, Spin, Typography } from "antd";
+import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
+import { Button, Card, Col, Flex, Row, Space, Spin, Typography } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeVolumeFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { useCallback, useMemo } from "react";
-import { APIJobCommand, type AiModel } from "types/api_types";
+import { Link } from "react-router-dom";
+import { type AiModel, APIJobCommand } from "types/api_types";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
@@ -31,7 +32,7 @@ export const RunAiModelCreditInformation: React.FC = () => {
       selectedJobType={selectedJobType}
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
-      startButtonTitle="Start Analysis"
+      startButtonTitle="Start analysis"
       areParametersValid={areParametersValid}
     />
   );
@@ -48,7 +49,7 @@ export const AlignmentCreditInformation: React.FC = () => {
       selectedJobType={selectJobType}
       selectedBoundingBox={selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
-      startButtonTitle="Start Alignment"
+      startButtonTitle="Start alignment"
       areParametersValid={areParametersValid}
     />
   );
@@ -93,7 +94,7 @@ export const TrainingCreditInformation: React.FC = () => {
       selectedJobType={selectedJobType}
       selectedBoundingBox={trainingBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
-      startButtonTitle="Start Training"
+      startButtonTitle="Start training"
       areParametersValid={areParametersValid}
     />
   );
@@ -172,6 +173,10 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
           Credit Information
         </Space>
       }
+      style={{
+        position: "sticky",
+        top: 0,
+      }}
     >
       <Row justify="space-between" align="middle">
         <Col>
@@ -223,27 +228,36 @@ export const CreditInformation: React.FC<CreditInformationProps> = ({
             <Spin size="small" />
           ) : (
             <Text strong>
-              {costInCredits != null ? formatMilliCreditsString(costInCredits) : "-"}
+              {costInCredits != null ? `${formatMilliCreditsString(costInCredits)} credits` : "-"}
             </Text>
           )}
         </Col>
       </Row>
-      <Button
-        type="primary"
-        block
-        size="large"
-        style={{ marginTop: "24px" }}
-        disabled={
-          !selectedModel ||
-          !selectedBoundingBox ||
-          !jobCreditCostInfo?.hasEnoughCredits ||
-          boundingBoxVolume === 0 ||
-          !areParametersValid
-        }
-        onClick={handleStartAnalysis}
-      >
-        {startButtonTitle}
-      </Button>
+      <Flex vertical gap="small">
+        <Button
+          type="primary"
+          block
+          size="large"
+          style={{ marginTop: "24px" }}
+          disabled={
+            isFetching ||
+            !selectedModel ||
+            !selectedBoundingBox ||
+            !jobCreditCostInfo?.hasEnoughCredits ||
+            boundingBoxVolume === 0 ||
+            !areParametersValid
+          }
+          onClick={handleStartAnalysis}
+        >
+          {startButtonTitle}
+          {jobCreditCostInfo?.hasEnoughCredits === false ? " (not enough credits)" : ""}
+        </Button>
+        {jobCreditCostInfo?.hasEnoughCredits === false && (
+          <Link to={"/organization"}>
+            <Button block>Order more Credits</Button>
+          </Link>
+        )}
+      </Flex>
     </Card>
   );
 };

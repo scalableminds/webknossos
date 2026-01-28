@@ -6,14 +6,15 @@ import {
   computeBoundingBoxFromBoundingBoxObject,
 } from "libs/utils";
 import { location } from "libs/window";
-import _ from "lodash";
+import compact from "lodash-es/compact";
+import concat from "lodash-es/concat";
+import size from "lodash-es/size";
+import zip from "lodash-es/zip";
 import messages from "messages";
 import { SAXParser } from "sax-ts";
-import type { APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIBuildInfoWk, MetadataEntryProto } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import Constants from "viewer/constants";
+import Constants, { IdentityTransform, type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
 import {
@@ -86,7 +87,7 @@ function serializeTagWithChildren(
   children: string[],
 ): string[] {
   // If there are no children, the tag will be self-closing
-  return _.compact([
+  return compact([
     serializeTag(name, properties, children.length === 0),
     ...indent(children),
     children.length === 0 ? null : `</${name}>`,
@@ -146,7 +147,7 @@ export function serializeToNml(
   return [
     "<things>",
     ...indent(
-      _.concat(
+      concat(
         serializeMetaInformation(state, annotation, buildInfo),
         serializeParameters(state, annotation, tracing, applyTransform),
         serializeTrees(state, visibleTrees, applyTransform),
@@ -166,7 +167,7 @@ function serializeMetaInformation(
   annotation: StoreAnnotation,
   buildInfo: APIBuildInfoWk,
 ): string[] {
-  return _.compact([
+  return compact([
     serializeTag("meta", {
       name: "writer",
       content: "nml_helpers.js",
@@ -254,7 +255,7 @@ function serializeParameters(
   return [
     "<parameters>",
     ...indent(
-      _.compact([
+      compact([
         serializeTag("experiment", {
           datasetId: state.dataset.id,
           name: state.dataset.directoryName,
@@ -337,7 +338,7 @@ function serializeTransform(state: WebknossosState): string[] {
       }),
     ];
   } else {
-    const correspondences = _.zip(
+    const correspondences = zip(
       transform.scaledTps.unscaledSourcePoints,
       transform.scaledTps.unscaledTargetPoints,
     ) as Array<[Vector3, Vector3]>;
@@ -1189,7 +1190,7 @@ export function parseNml(nmlString: string): Promise<{
         .forEach((tree) => {
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
 
-          const newTreesSize = _.size(newTrees);
+          const newTreesSize = size(newTrees);
 
           if (newTreesSize > 1) {
             trees.mutableDelete(tree.treeId);

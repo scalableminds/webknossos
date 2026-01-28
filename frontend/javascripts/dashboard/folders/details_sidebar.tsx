@@ -16,7 +16,8 @@ import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import _ from "lodash";
+import keyBy from "lodash-es/keyBy";
+import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import {
@@ -224,7 +225,7 @@ function DatasetsDetails({
   const numberOfUndeletableDatasets = selectedDatasets.length - deletableDatasets.length;
 
   const updateAndInvalidateQueries = (deletedIds: string[]) => {
-    const uniqueFolderIds = _.uniq(deletableDatasets.map((ds) => ds.folderId));
+    const uniqueFolderIds = uniq(deletableDatasets.map((ds) => ds.folderId));
     uniqueFolderIds.forEach((folderId) => {
       queryClient.setQueryData(
         ["datasetsByFolder", folderId],
@@ -433,7 +434,7 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
   if (folder.allowedTeamsCumulative.length === 0) {
     return <Tag variant="outlined">Administrators & Dataset Managers</Tag>;
   }
-  const allowedTeamsById = _.keyBy(folder.allowedTeams, "id");
+  const allowedTeamsById = keyBy(folder.allowedTeams, "id");
 
   return (
     <>

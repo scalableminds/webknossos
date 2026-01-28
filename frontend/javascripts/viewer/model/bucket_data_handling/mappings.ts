@@ -1,10 +1,11 @@
 import { message } from "antd";
-import type UpdatableTexture from "libs/UpdatableTexture";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import Toast from "libs/toast";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { diffMaps } from "libs/utils";
-import _ from "lodash";
+import size from "lodash-es/size";
+import throttle from "lodash-es/throttle";
 import memoizeOne from "memoize-one";
 import {
   getElementClass,
@@ -47,7 +48,7 @@ export const setCacheResultForDiffMappings = (
   cachedDiffMappings(mappingA, mappingB, cacheResult);
 };
 
-const throttledCapacityWarning = _.throttle(() => {
+const throttledCapacityWarning = throttle(() => {
   const msg =
     "The mapping is becoming too large and will only be partially applied. Please zoom further in to avoid that too many segment ids are present. Also consider refreshing the page.";
   console.warn(msg);
@@ -105,7 +106,7 @@ class Mappings {
         ? cachedDiffMappings(this.previousMapping, mapping)
         : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys() as Iterable<number>) };
 
-    const totalUpdateCount = _.size(changed) + _.size(onlyA) + _.size(onlyB);
+    const totalUpdateCount = size(changed) + size(onlyA) + size(onlyB);
     const doFullTextureUpdate = totalUpdateCount > 10000;
     if (doFullTextureUpdate) {
       this.cuckooTable.disableAutoTextureUpdate();
@@ -156,7 +157,9 @@ class Mappings {
   }
 
   destroy() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     this.storePropertyUnsubscribers = [];
   }
 }

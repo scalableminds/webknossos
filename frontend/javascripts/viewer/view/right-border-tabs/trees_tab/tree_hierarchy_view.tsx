@@ -2,11 +2,11 @@ import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
 import { pluralize } from "libs/utils";
-import _ from "lodash";
+import sum from "lodash-es/sum";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { MetadataEntryProto } from "types/api_types";
-import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
   setTreeMetadataAction,
@@ -18,20 +18,20 @@ import {
 import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import { Store } from "viewer/singletons";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
-  type TreeNode,
   additionallyExpandGroup,
   createGroupToTreesMap,
   deepFlatFilter,
   findGroup,
   findParentGroupNode,
+  GroupTypeEnum,
   getGroupByIdWithSubgroups,
   getNodeKey,
   insertTreesAndTransform,
+  MISSING_GROUP_ID,
+  mapGroups,
   moveGroupsHelper,
+  type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
 import { getContextMenuPositionFromEvent } from "../../context_menu";
@@ -40,8 +40,8 @@ import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  type Props,
   onBatchActions,
+  type Props,
   renderGroupNode,
   renderTreeNode,
   selectGroupById,
@@ -49,19 +49,8 @@ import {
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
 
-const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
-  const { id, type } = info.node;
-
-  if (type === GroupTypeEnum.TREE) {
-    Store.dispatch(toggleTreeAction(id));
-  } else if (id === MISSING_GROUP_ID) {
-    Store.dispatch(toggleAllTreesAction());
-  } else {
-    Store.dispatch(toggleTreeGroupAction(id));
-  }
-};
-
 function TreeHierarchyView(props: Props) {
+  const dispatch = useDispatch();
   const [expandedNodeKeys, setExpandedNodeKeys] = useState<string[]>([]);
   const [UITreeData, setUITreeData] = useState<TreeNode[]>([]);
 
@@ -154,7 +143,9 @@ function TreeHierarchyView(props: Props) {
         [clickedNode],
         (node) => node.type === GroupTypeEnum.GROUP,
       ).map((node) => node.key as string);
-      subGroupKeys.forEach((key) => expandedKeySet.delete(key));
+      subGroupKeys.forEach((key) => {
+        expandedKeySet.delete(key);
+      });
     }
     setExpandedGroups(expandedKeySet);
   };
@@ -217,6 +208,21 @@ function TreeHierarchyView(props: Props) {
       selectGroupById(props.deselectAllTrees, groupId);
     }
   }
+
+  const onCheck = useCallback<NonNullable<TreeProps<TreeNode>["onCheck"]>>(
+    (_checkedKeysValue, info) => {
+      const { id, type } = info.node;
+
+      if (type === GroupTypeEnum.TREE) {
+        dispatch(toggleTreeAction(id));
+      } else if (id === MISSING_GROUP_ID) {
+        dispatch(toggleAllTreesAction());
+      } else {
+        dispatch(toggleTreeGroupAction(id));
+      }
+    },
+    [dispatch],
+  );
 
   function onDrop(info: { node: TreeNode; dragNode: TreeNode }) {
     const { dragNode: draggedNode, node: dragTargetNode } = info;
@@ -383,10 +389,6 @@ function TreeHierarchyView(props: Props) {
   );
 }
 
-const setMetadata = (tree: Tree, newProperties: MetadataEntryProto[]) => {
-  Store.dispatch(setTreeMetadataAction(newProperties, tree.treeId));
-};
-
 const DetailsForSelection = memo(
   ({
     trees,
@@ -401,6 +403,15 @@ const DetailsForSelection = memo(
     readOnly: boolean;
     activeGroupId: number | null | undefined;
   }) => {
+    const dispatch = useDispatch();
+
+    const setMetadata = useCallback(
+      (tree: Tree, newProperties: MetadataEntryProto[]) => {
+        dispatch(setTreeMetadataAction(newProperties, tree.treeId));
+      },
+      [dispatch],
+    );
+
     if (selectedTreeIds.length === 1) {
       const tree = trees.getNullable(selectedTreeIds[0]);
 
@@ -419,7 +430,7 @@ const DetailsForSelection = memo(
               value={
                 <InputWithUpdateOnBlur
                   value={tree.name || ""}
-                  onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
+                  onChange={(newValue) => dispatch(setTreeNameAction(newValue, tree.treeId))}
                 />
               }
             />
@@ -468,7 +479,7 @@ const DetailsForSelection = memo(
                 />
                 <SimpleRow
                   label="Tree Count (all children)"
-                  value={_.sum(
+                  value={sum(
                     groupWithSubgroups.map((groupId) => groupToTreesMap[groupId]?.length ?? 0),
                   )}
                 />

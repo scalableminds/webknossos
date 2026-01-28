@@ -1,5 +1,5 @@
 import { call, put } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -10,13 +10,8 @@ import {
 import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
-import { type SkeletonTracing, type WebknossosState, startSaga } from "viewer/store";
+import { type SkeletonTracing, startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  initializeMappingAndTool,
-  makeMappingEditableHelper,
-  mockInitialBucketAndAgglomerateData,
-} from "./proofreading_test_utils";
 import {
   loadAgglomerateSkeletons,
   mockEdgesForAgglomerateMinCut,
@@ -24,6 +19,11 @@ import {
   performMinCutWithNodesProofreading,
   performSplitTreesProofreading,
 } from "./proofreading_skeleton_test_utils";
+import {
+  initializeMappingAndTool,
+  makeMappingEditableHelper,
+  mockInitialBucketAndAgglomerateData,
+} from "./proofreading_test_utils";
 
 describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

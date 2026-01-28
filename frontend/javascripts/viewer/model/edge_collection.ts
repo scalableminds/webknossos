@@ -1,6 +1,5 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import { diffArrays, diffNumberArrays } from "libs/utils";
-import _ from "lodash";
 import type { Edge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;
@@ -182,7 +181,7 @@ export function diffEdgeCollections(
   );
 
   const getEdgesForNodes = (nodeIds: number[], diffableMap: EdgeMap) =>
-    _.flatten(nodeIds.map((nodeId) => diffableMap.getOrThrow(nodeId)));
+    nodeIds.flatMap((nodeId) => diffableMap.getOrThrow(nodeId));
 
   const edgeDiff = {
     onlyA: getEdgesForNodes(mapDiff.onlyA, edgeCollectionA.outMap),

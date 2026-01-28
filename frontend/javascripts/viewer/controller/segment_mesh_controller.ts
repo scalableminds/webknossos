@@ -1,6 +1,11 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
-import _ from "lodash";
+import { computeBvhAsync } from "libs/compute_bvh_async";
+import forEach from "lodash-es/forEach";
+import get from "lodash-es/get";
+import isEqual from "lodash-es/isEqual";
+import setWith from "lodash-es/setWith";
+import throttle from "lodash-es/throttle";
 import {
   AmbientLight,
   BufferAttribute,
@@ -17,6 +22,7 @@ import { acceleratedRaycast } from "three-mesh-bvh";
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector2, Vector3 } from "viewer/constants";
+import Constants from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -24,11 +30,8 @@ import {
   getActiveSegmentationTracing,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
-import Store, { type MinCutPartitions } from "viewer/store";
-
-import { computeBvhAsync } from "libs/compute_bvh_async";
-import Constants from "viewer/constants";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
+import Store, { type MinCutPartitions } from "viewer/store";
 import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
@@ -214,13 +217,9 @@ export default class SegmentMeshController {
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordinatesString, layerName, segmentId, lod];
-    const isNewlyAddedMesh = _.get(this.meshesGroupsPerSegmentId, keys) == null;
-    const targetGroup: SceneGroupForMeshes = _.get(
-      this.meshesGroupsPerSegmentId,
-      keys,
-      new Group(),
-    );
-    _.setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
+    const isNewlyAddedMesh = get(this.meshesGroupsPerSegmentId, keys) == null;
+    const targetGroup: SceneGroupForMeshes = get(this.meshesGroupsPerSegmentId, keys, new Group());
+    setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
     let layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
       | CustomLOD
       | undefined;
@@ -293,8 +292,8 @@ export default class SegmentMeshController {
       return;
     }
 
-    _.forEach(meshGroups, (meshGroup, lodStr) => {
-      const currentLod = Number.parseInt(lodStr);
+    forEach(meshGroups, (meshGroup, lodStr) => {
+      const currentLod = Number.parseInt(lodStr, 10);
 
       if (options && currentLod !== options.lod) {
         // If options.lod is provided, only remove that LOD.
@@ -325,7 +324,7 @@ export default class SegmentMeshController {
 
     if (meshGroups == null) return null;
 
-    const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal)));
+    const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal, 10)));
 
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }
@@ -337,7 +336,7 @@ export default class SegmentMeshController {
     additionalCoordinates?: AdditionalCoordinate[] | null,
   ): void {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    _.forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
+    forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
       meshGroup.visible = visibility;
     });
   }
@@ -438,7 +437,7 @@ export default class SegmentMeshController {
     lightPositions.forEach((pos, index) => {
       const light = new DirectionalLight(
         WHITE,
-        // @ts-ignore
+        // @ts-expect-error
         settings[`dirLight${index + 1}Intensity`] || 1,
       );
       light.position.set(...pos).normalize();
@@ -456,7 +455,7 @@ export default class SegmentMeshController {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordKey, layerName, segmentId, lod];
 
-    return _.get(this.meshesGroupsPerSegmentId, keys, null);
+    return get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
   private getMeshGroups(
@@ -465,7 +464,7 @@ export default class SegmentMeshController {
     segmentId: number,
   ): Record<number, Group> | null {
     const keys = [additionalCoordKey, layerName, segmentId];
-    return _.get(this.meshesGroupsPerSegmentId, keys, null);
+    return get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
   private addMeshToMeshGroups(
@@ -521,7 +520,7 @@ export default class SegmentMeshController {
     let highlightEntriesToReset: HighlightEntry[] = [];
 
     if (isHovered != null) {
-      if (!_.isEqual(mesh.hoveredState, highlightState)) {
+      if (!isEqual(mesh.hoveredState, highlightState)) {
         if (mesh.hoveredState != null && mesh.hoveredState !== "full") {
           highlightEntriesToReset = highlightEntriesToReset.concat(mesh.hoveredState);
         }
@@ -531,7 +530,7 @@ export default class SegmentMeshController {
     }
 
     if (isActiveUnmappedSegment != null) {
-      if (!_.isEqual(mesh.activeState, highlightState)) {
+      if (!isEqual(mesh.activeState, highlightState)) {
         if (mesh.activeState != null && mesh.activeState !== "full") {
           highlightEntriesToReset = highlightEntriesToReset.concat(mesh.activeState);
         }
@@ -541,7 +540,7 @@ export default class SegmentMeshController {
     }
 
     if (partitioned != null) {
-      if (!_.isEqual(mesh.partitionedState, highlightState)) {
+      if (!isEqual(mesh.partitionedState, highlightState)) {
         if (mesh.partitionedState != null && mesh.partitionedState !== "full") {
           highlightEntriesToReset = highlightEntriesToReset.concat(mesh.partitionedState);
         }
@@ -700,7 +699,7 @@ export default class SegmentMeshController {
     });
   };
 
-  throttledUpdateActiveUnmappedSegmentIdHighlighting = _.throttle(
+  throttledUpdateActiveUnmappedSegmentIdHighlighting = throttle(
     this.updateActiveUnmappedSegmentIdHighlighting,
     150,
   );

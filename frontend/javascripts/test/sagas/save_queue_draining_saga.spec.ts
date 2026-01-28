@@ -1,25 +1,35 @@
-import { describe, expect, vi, it } from "vitest";
-import { alert } from "libs/window";
-import { doneSavingAction, setSaveBusyAction } from "viewer/model/actions/save_actions";
+import { sendSaveRequestWithToken } from "admin/rest_api";
 import DiffableMap from "libs/diffable_map";
+import { alert } from "libs/window";
+import { call, put, take } from "redux-saga/effects";
+import { TIMESTAMP } from "test/global_mocks";
+import { UnitLong } from "viewer/constants";
+import {
+  doneSavingAction,
+  saveNowAction,
+  setLastSaveTimestampAction,
+  setSaveBusyAction,
+  setVersionNumberAction,
+  shiftSaveQueueAction,
+} from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import { expectValueDeepEqual } from "../helpers/sagaHelpers";
-import { UnitLong } from "viewer/constants";
-
-import { put, take, call } from "redux-saga/effects";
-import * as SaveActions from "viewer/model/actions/save_actions";
-import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
 import {
+  addVersionNumbers,
   pushSaveQueueAsync,
   sendSaveRequestToServer,
-  toggleErrorHighlighting,
-  addVersionNumbers,
   synchronizeAnnotationWithBackend,
+  toggleErrorHighlighting,
 } from "viewer/model/sagas/saving/save_queue_draining_saga";
-import { TIMESTAMP } from "test/global_mocks";
-import { sendSaveRequestWithToken } from "admin/rest_api";
+import {
+  createEdge,
+  updateActiveNode,
+  updateActiveSegmentId,
+  updateCameraAnnotation,
+} from "viewer/model/sagas/volume/update_actions";
+import { describe, expect, it, vi } from "vitest";
+import { expectValueDeepEqual } from "../helpers/sagaHelpers";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import "test/helpers/apiHelpers"; // ensures Store is available
 import { MutexFetchingStrategy } from "viewer/model/sagas/saving/save_mutex_saga";
 
@@ -78,13 +88,13 @@ describe("Save Saga", () => {
   it("should compact multiple updateTracing update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateActiveNode(initialState.annotation)],
-        [UpdateActions.updateActiveSegmentId(3, initialState.annotation.tracingId)],
-        [UpdateActions.updateCameraAnnotation([1, 2, 3], null, [1, 2, 3], 1)],
+        [updateActiveNode(initialState.annotation)],
+        [updateActiveSegmentId(3, initialState.annotation.tracingId)],
+        [updateCameraAnnotation([1, 2, 3], null, [1, 2, 3], 1)],
 
-        [UpdateActions.updateActiveNode(initialState.annotation)],
-        [UpdateActions.updateActiveSegmentId(4, initialState.annotation.tracingId)],
-        [UpdateActions.updateCameraAnnotation([2, 2, 3], null, [1, 2, 3], 1)],
+        [updateActiveNode(initialState.annotation)],
+        [updateActiveSegmentId(4, initialState.annotation.tracingId)],
+        [updateCameraAnnotation([2, 2, 3], null, [1, 2, 3], 1)],
       ],
       TIMESTAMP,
     );
@@ -92,10 +102,7 @@ describe("Save Saga", () => {
   });
 
   it("should send update actions", () => {
-    const updateActions = [
-      [UpdateActions.createEdge(1, 0, 1, tracingId)],
-      [UpdateActions.createEdge(1, 1, 2, tracingId)],
-    ];
+    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
     expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
@@ -109,7 +116,7 @@ describe("Save Saga", () => {
     expectValueDeepEqual(
       expect,
       saga.next({
-        forcePush: SaveActions.saveNowAction(),
+        forcePush: saveNowAction(),
       }),
       put(setSaveBusyAction(true)),
     );
@@ -155,10 +162,7 @@ describe("Save Saga", () => {
   });
 
   it("should dispatch doneSavingAction when mutex fetching strategy is ad hoc", () => {
-    const updateActions = [
-      [UpdateActions.createEdge(1, 0, 1, tracingId)],
-      [UpdateActions.createEdge(1, 1, 2, tracingId)],
-    ];
+    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
     expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
@@ -170,7 +174,7 @@ describe("Save Saga", () => {
     saga.next(); // race
 
     saga.next({
-      forcePush: SaveActions.saveNowAction(),
+      forcePush: saveNowAction(),
     });
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
@@ -200,7 +204,7 @@ describe("Save Saga", () => {
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendSaga.next([]),
-      put(SaveActions.doneSavingAction()),
+      put(doneSavingAction()),
     );
     expectValueDeepEqual(
       expect,
@@ -215,10 +219,7 @@ describe("Save Saga", () => {
 
   it("should send request to server", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
-      [
-        [UpdateActions.createEdge(1, 0, 1, tracingId)],
-        [UpdateActions.createEdge(1, 1, 2, tracingId)],
-      ],
+      [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]],
       TIMESTAMP,
     );
     const saga = sendSaveRequestToServer(true);
@@ -249,10 +250,7 @@ describe("Save Saga", () => {
 
   it("should retry update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
-      [
-        [UpdateActions.createEdge(1, 0, 1, tracingId)],
-        [UpdateActions.createEdge(1, 1, 2, tracingId)],
-      ],
+      [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]],
       TIMESTAMP,
     );
     const [saveQueueWithVersions, versionIncrement] = addVersionNumbers(saveQueue, LAST_VERSION);
@@ -286,10 +284,7 @@ describe("Save Saga", () => {
 
   it("should escalate on permanent client error update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
-      [
-        [UpdateActions.createEdge(1, 0, 1, tracingId)],
-        [UpdateActions.createEdge(1, 1, 2, tracingId)],
-      ],
+      [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]],
       TIMESTAMP,
     );
     const saga = sendSaveRequestToServer(true);
@@ -331,10 +326,7 @@ describe("Save Saga", () => {
   });
 
   it("should send update actions right away and try to reach a state where all updates are saved", () => {
-    const updateActions = [
-      [UpdateActions.createEdge(1, 0, 1, tracingId)],
-      [UpdateActions.createEdge(1, 1, 2, tracingId)],
-    ];
+    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
     expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
@@ -346,7 +338,7 @@ describe("Save Saga", () => {
     saga.next(); // race
 
     saga.next({
-      forcePush: SaveActions.saveNowAction(),
+      forcePush: saveNowAction(),
     }); // put setSaveBusyAction
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
@@ -390,10 +382,7 @@ describe("Save Saga", () => {
   });
 
   it("should not try to reach state with all actions being saved when saving is triggered by a timeout", () => {
-    const updateActions = [
-      [UpdateActions.createEdge(1, 0, 1, tracingId)],
-      [UpdateActions.createEdge(1, 1, 2, tracingId)],
-    ];
+    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
     const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
     const saga = pushSaveQueueAsync();
     expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
@@ -444,10 +433,7 @@ describe("Save Saga", () => {
 
   it("should remove the correct update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
-      [
-        [UpdateActions.updateActiveNode(initialState.annotation)],
-        [UpdateActions.updateActiveNode(initialState.annotation)],
-      ],
+      [[updateActiveNode(initialState.annotation)], [updateActiveNode(initialState.annotation)]],
       TIMESTAMP,
     );
     const saga = sendSaveRequestToServer(true);
@@ -458,17 +444,17 @@ describe("Save Saga", () => {
     saga.next(annotationId);
     saga.next(TRACINGSTORE_URL);
 
-    expectValueDeepEqual(expect, saga.next(), put(SaveActions.setVersionNumberAction(3)));
-    expectValueDeepEqual(expect, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
-    expectValueDeepEqual(expect, saga.next(), put(SaveActions.shiftSaveQueueAction(2)));
+    expectValueDeepEqual(expect, saga.next(), put(setVersionNumberAction(3)));
+    expectValueDeepEqual(expect, saga.next(), put(setLastSaveTimestampAction()));
+    expectValueDeepEqual(expect, saga.next(), put(shiftSaveQueueAction(2)));
   });
 
   it("should set the correct version numbers", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.createEdge(1, 0, 1, tracingId)],
-        [UpdateActions.createEdge(1, 1, 2, tracingId)],
-        [UpdateActions.createEdge(2, 3, 4, tracingId)],
+        [createEdge(1, 0, 1, tracingId)],
+        [createEdge(1, 1, 2, tracingId)],
+        [createEdge(2, 3, 4, tracingId)],
       ],
       TIMESTAMP,
     );
@@ -480,21 +466,17 @@ describe("Save Saga", () => {
     saga.next(annotationId);
     saga.next(TRACINGSTORE_URL);
 
-    expectValueDeepEqual(
-      expect,
-      saga.next(),
-      put(SaveActions.setVersionNumberAction(LAST_VERSION + 3)),
-    );
-    expectValueDeepEqual(expect, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
-    expectValueDeepEqual(expect, saga.next(), put(SaveActions.shiftSaveQueueAction(3)));
+    expectValueDeepEqual(expect, saga.next(), put(setVersionNumberAction(LAST_VERSION + 3)));
+    expectValueDeepEqual(expect, saga.next(), put(setLastSaveTimestampAction()));
+    expectValueDeepEqual(expect, saga.next(), put(shiftSaveQueueAction(3)));
   });
 
   it("should set the correct version numbers if the save queue was compacted", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateActiveNode(initialState.annotation)],
-        [UpdateActions.updateActiveNode(initialState.annotation)],
-        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [updateActiveNode(initialState.annotation)],
+        [updateActiveNode(initialState.annotation)],
+        [updateActiveNode(initialState.annotation)],
       ],
       TIMESTAMP,
     );
@@ -507,21 +489,17 @@ describe("Save Saga", () => {
     saga.next(TRACINGSTORE_URL);
 
     // two of the updateTracing update actions are removed by compactSaveQueue
-    expectValueDeepEqual(
-      expect,
-      saga.next(),
-      put(SaveActions.setVersionNumberAction(LAST_VERSION + 1)),
-    );
-    expectValueDeepEqual(expect, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
-    expectValueDeepEqual(expect, saga.next(), put(SaveActions.shiftSaveQueueAction(3)));
+    expectValueDeepEqual(expect, saga.next(), put(setVersionNumberAction(LAST_VERSION + 1)));
+    expectValueDeepEqual(expect, saga.next(), put(setLastSaveTimestampAction()));
+    expectValueDeepEqual(expect, saga.next(), put(shiftSaveQueueAction(3)));
   });
 
   it("addVersionNumbers should set the correct version numbers", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.createEdge(1, 0, 1, tracingId)],
-        [UpdateActions.createEdge(1, 1, 2, tracingId)],
-        [UpdateActions.createEdge(2, 3, 4, tracingId)],
+        [createEdge(1, 0, 1, tracingId)],
+        [createEdge(1, 1, 2, tracingId)],
+        [createEdge(2, 3, 4, tracingId)],
       ],
 
       TIMESTAMP,

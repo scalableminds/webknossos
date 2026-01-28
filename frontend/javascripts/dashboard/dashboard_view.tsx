@@ -10,7 +10,7 @@ import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import invert from "lodash-es/invert";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -230,7 +230,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     }
 
     const onTabChange = (activeTabKey: string) => {
-      const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
+      const tabKeyToURLMap = invert(urlTokenToTabKeyMap);
 
       const url = tabKeyToURLMap[activeTabKey];
 

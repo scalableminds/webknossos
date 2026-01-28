@@ -9,6 +9,7 @@ import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
 import { useCallback, useRef } from "react";
+import { useDispatch } from "react-redux";
 import { LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
@@ -42,6 +43,7 @@ function DatasetPositionView() {
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const task = useWkSelector((state) => state.task);
   const maybeErrorMessageRef = useRef<string | null>(null);
+  const dispatch = useDispatch();
 
   const copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(flycam)).join(", ");
@@ -49,9 +51,12 @@ function DatasetPositionView() {
     Toast.success("Position copied to clipboard");
   };
 
-  const handleChangePosition = (position: Vector3) => {
-    Store.dispatch(setPositionAction(position));
-  };
+  const handleChangePosition = useCallback(
+    (position: Vector3) => {
+      dispatch(setPositionAction(position));
+    },
+    [dispatch],
+  );
 
   const isPositionOutOfBounds = (position: Vector3) => {
     const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
@@ -146,7 +151,6 @@ function DatasetPositionView() {
           <Vector3Input
             value={position}
             onChange={handleChangePosition}
-            autoSize
             style={positionInputStyle}
             allowDecimals
           />

@@ -4,7 +4,7 @@ import Request from "libs/request";
 import { parseMaybe } from "libs/utils";
 import WebworkerPool from "libs/webworker_pool";
 import window from "libs/window";
-import _ from "lodash";
+import chunk from "lodash-es/chunk";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { BucketAddress, Vector3 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
@@ -249,11 +249,11 @@ export async function requestFromStore(
   } catch (errorResponse) {
     const errorMessage = `Requesting data from layer "${layerInfo.name}" failed. Some rendered areas might remain empty. Retrying...`;
     const detailedError =
-      // @ts-ignore
+      // @ts-expect-error
       errorResponse.status != null
-        ? // @ts-ignore
+        ? // @ts-expect-error
           `Status code ${errorResponse.status} - "${errorResponse.statusText}" - URL: ${errorResponse.url}.`
-        : // @ts-ignore
+        : // @ts-expect-error
           errorResponse.message;
     console.error(`${errorMessage} ${detailedError}`);
     console.error(errorResponse);
@@ -291,9 +291,9 @@ function sliceBufferIntoPieces(
 export async function createCompressedUpdateBucketActions(
   batch: Array<DataBucket>,
 ): Promise<UpdateActionWithoutIsolationRequirement[]> {
-  return _.flatten(
+  return (
     await Promise.all(
-      _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
+      chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
         const byteArrays = batchSubset.map((bucket) => {
           const data = bucket.getCopyOfData();
           return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
@@ -306,6 +306,6 @@ export async function createCompressedUpdateBucketActions(
           return updateBucket(bucketInfo, compressedBase64, bucket.getTracingId());
         });
       }),
-    ),
-  );
+    )
+  ).flat();
 }

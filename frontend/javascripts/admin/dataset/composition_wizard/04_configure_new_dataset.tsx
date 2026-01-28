@@ -19,13 +19,13 @@ import {
 } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
+import ErrorHandling from "libs/error_handling";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { formatNumber } from "libs/format_utils";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
-import Toast, { guardedWithErrorToast } from "libs/toast";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager } from "libs/utils";
-import _ from "lodash";
+import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useState } from "react";
 import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
@@ -38,6 +38,16 @@ import { checkLandmarksForThinPlateSpline } from "viewer/model/helpers/transform
 import type { WizardComponentProps } from "./common";
 
 const FormItem = Form.Item;
+
+async function guardedWithErrorToast(fn: () => Promise<any>) {
+  try {
+    await fn();
+  } catch (error) {
+    Toast.error("An unexpected error occurred. Please check the console for details");
+    console.error(error);
+    ErrorHandling.notify(error as Error);
+  }
+}
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
   const formRef = React.useRef<FormInstance<any>>(null);
@@ -66,7 +76,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
   const handleTransformImport = async () => {
     const newLinks: LayerLink[] = (
-      _.flatMap(linkedDatasets, (dataset) =>
+      linkedDatasets.flatMap((dataset) =>
         dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
       ) as [APIDataset, APIDataLayer][]
     ).map(
@@ -173,7 +183,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         layers: layersWithTransforms,
       });
 
-      const uniqueDatasets = _.uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
+      const uniqueDatasets = uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
       const datasetMarkdownLinks = uniqueDatasets
         .map(
           (el) =>

@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import _ from "lodash";
+import range from "lodash-es/range";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { OrthoView, Vector2, Vector3, Vector4 } from "viewer/constants";
 import constants from "viewer/constants";
@@ -140,9 +140,9 @@ class BoundingBox {
       mod(start[2], chunkBorderAlignments[2]),
     ];
 
-    for (const x of _.range(start[0] - startAdjust[0], start[0] + size[0], chunkSize[0])) {
-      for (const y of _.range(start[1] - startAdjust[1], start[1] + size[1], chunkSize[1])) {
-        for (const z of _.range(start[2] - startAdjust[2], start[2] + size[2], chunkSize[2])) {
+    for (const x of range(start[0] - startAdjust[0], start[0] + size[0], chunkSize[0])) {
+      for (const y of range(start[1] - startAdjust[1], start[1] + size[1], chunkSize[1])) {
+        for (const z of range(start[2] - startAdjust[2], start[2] + size[2], chunkSize[2])) {
           const newMin: Vector3 = [x, y, z];
           yield this.intersectedWith(
             new BoundingBox({

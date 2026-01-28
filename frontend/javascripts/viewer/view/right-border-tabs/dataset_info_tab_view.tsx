@@ -4,20 +4,27 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import { getOrganization } from "admin/api/organization";
 import { Tag, Typography } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
+import { useWkSelector } from "libs/react_hooks";
+import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
+import messages from "messages";
 import React, { type CSSProperties } from "react";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
+import type { EmptyObject } from "types/globals";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
-  type TracingStats,
   getSkeletonStats,
   getStats,
-  getVolumeStats,
+  getVolumeStats,mayEditAnnotationProperties, 
+  type TracingStats
 } from "viewer/model/accessors/annotation_accessor";
 import {
   getDatasetExtentAsString,
@@ -28,25 +35,14 @@ import {
   getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
   setAnnotationDescriptionAction,
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
-
-import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
-
-import { getOrganization } from "admin/api/organization";
-import FastTooltip from "components/fast_tooltip";
-import { useWkSelector } from "libs/react_hooks";
-import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
-import messages from "messages";
-import type { EmptyObject } from "types/globals";
-import { WkDevFlags } from "viewer/api/wk_dev";
-import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
-import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
-import { Store } from "viewer/singletons";
+import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -478,9 +474,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <Typography.Text>
               {description}
               <FastTooltip title="Edit">
-                {/* biome-ignore lint/a11y/useFocusableInteractive: <explanation> */}
+                {/* biome-ignore lint/a11y/useFocusableInteractive: don't use <button> to not mess with its default styles */}
+                {/* biome-ignore lint/a11y/useSemanticElements: don't use <button> to not mess with its default styles */}
                 <div
-                  // biome-ignore lint/a11y/useSemanticElements: <explanation>
                   role="button"
                   className="ant-typography-edit"
                   style={{
@@ -669,13 +665,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 }
 
 function DebugInfo() {
+  const dispatch = useDispatch();
   const versionOnClient = useWkSelector((state) => {
     return state.annotation.version;
   });
   return (
     <>
       Version: {versionOnClient}
-      <ReloadOutlined onClick={() => Store.dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
+      <ReloadOutlined onClick={() => dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
     </>
   );
 }

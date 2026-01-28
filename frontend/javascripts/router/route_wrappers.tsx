@@ -12,7 +12,7 @@ import features from "features";
 import { useWkSelector } from "libs/react_hooks";
 import { coalesce, getUrlParamsObjectFromString } from "libs/utils";
 import window from "libs/window";
-import { isNumber } from "lodash";
+import isNumber from "lodash-es/isNumber";
 import { useEffect } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { APICompoundTypeEnum, type APIMagRestrictions, TracingTypeEnum } from "types/api_types";
@@ -60,7 +60,7 @@ export function DashboardRouteRootWrapper() {
 export function DashboardRouteWrapper() {
   const { tab } = useParams();
   const initialTabKey =
-    // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
+    // @ts-expect-error If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
     tab ? urlTokenToTabKeyMap[tab] : null;
   return <DashboardView userId={null} isAdminView={false} initialTabKey={initialTabKey} />;
 }
@@ -131,14 +131,14 @@ export function CreateExplorativeRouteWrapper() {
         const magRestrictions: APIMagRestrictions = {};
 
         if (minMag !== undefined) {
-          magRestrictions.min = Number.parseInt(minMag);
+          magRestrictions.min = Number.parseInt(minMag, 10);
 
           if (!isNumber(magRestrictions.min)) {
             throw new Error("Invalid minMag parameter");
           }
 
           if (maxMag !== undefined) {
-            magRestrictions.max = Number.parseInt(maxMag);
+            magRestrictions.max = Number.parseInt(maxMag, 10);
 
             if (!isNumber(magRestrictions.max)) {
               throw new Error("Invalid maxMag parameter");

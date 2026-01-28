@@ -8,6 +8,16 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
+import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  getBuildInfo,
+  logoutUser,
+  sendAnalyticsEvent,
+  updateNovelUserExperienceInfos,
+} from "admin/rest_api";
+import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
@@ -23,23 +33,9 @@ import {
   Tag,
   Tooltip,
 } from "antd";
-import classnames from "classnames";
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-
-import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
-import LoginForm from "admin/auth/login_form";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import {
-  getBuildInfo,
-  logoutUser,
-  sendAnalyticsEvent,
-  updateNovelUserExperienceInfos,
-} from "admin/rest_api";
-import type { MenuProps } from "antd";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import classnames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
@@ -53,6 +49,10 @@ import {
 } from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
 import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
@@ -62,7 +62,6 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store from "viewer/store";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -469,13 +468,14 @@ function NotificationIcon({
   activeUser: APIUser;
   navbarHeight: number;
 }) {
+  const dispatch = useDispatch();
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
-      lastViewedWhatsNewTimestamp: new Date().getTime(),
+      lastViewedWhatsNewTimestamp: Date.now(),
     });
-    Store.dispatch(setActiveUserAction(newUserSync));
+    dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
@@ -519,7 +519,11 @@ function OrganizationFilterInput({
   onChange,
   isVisible,
   onPressEnter,
-}: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
+}: {
+  onChange: (val: string) => void;
+  isVisible: boolean;
+  onPressEnter: () => void;
+}) {
   const ref = useRef<InputRef>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
@@ -765,6 +769,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
 }
 
 function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
@@ -787,7 +792,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const redirectUrl = await logoutUser();
-    Store.dispatch(logoutUserAction());
+    dispatch(logoutUserAction());
     // Hard navigation
     location.href = redirectUrl;
   };

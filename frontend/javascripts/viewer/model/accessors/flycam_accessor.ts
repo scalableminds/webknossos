@@ -1,6 +1,12 @@
 import { M4x4, V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import _ from "lodash";
+import first from "lodash-es/first";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
+import mean from "lodash-es/mean";
+import range from "lodash-es/range";
+import sortBy from "lodash-es/sortBy";
+import uniqBy from "lodash-es/uniqBy";
 import memoizeOne from "memoize-one";
 import type { Matrix4x4 } from "mjs";
 import { type Euler, MathUtils, Matrix4, Object3D } from "three";
@@ -38,12 +44,11 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import {
-  type Transform,
   chainTransforms,
   invertTransform,
+  type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -51,13 +56,16 @@ export const ZOOM_STEP_INTERVAL = 1.1;
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  mags: Array<Vector3>,
-  logZoomStep: number,
+  denseMags: Array<Vector3>,
+  currentMagIndex: number,
   zoomFactor: number,
   viewportRects: OrthoViewRects,
   unzoomedMatrix: Matrix4x4,
   abortLimit: number,
 ) {
+  const mag = denseMags[currentMagIndex];
+  const logZoomStep = Math.log2(Math.max(...mag));
+
   let counter = 0;
 
   const addresses = [];
@@ -75,7 +83,7 @@ function calculateTotalBucketCountForZoomLevel(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      mags,
+      denseMags,
       position,
       enqueueFunction,
       matrix,
@@ -85,7 +93,7 @@ function calculateTotalBucketCountForZoomLevel(
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
-      mags,
+      denseMags,
       position,
       sphericalCapRadius,
       enqueueFunction,
@@ -97,7 +105,7 @@ function calculateTotalBucketCountForZoomLevel(
     determineBucketsForOblique(
       viewMode,
       loadingStrategy,
-      mags,
+      denseMags,
       position,
       enqueueFunction,
       matrix,
@@ -255,7 +263,7 @@ export function getNewPositionAndZoomChangeFromTransformationChange(
   const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
   const newSecondPosition = transformPointUnscaled(changeInAppliedTransformation)(secondPosition);
 
-  const scaleChange = _.mean(
+  const scaleChange = mean(
     // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
     V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
   );
@@ -372,23 +380,31 @@ export const isRotated = memoizeOne(_isRotated);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
 function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: string]: number } {
+  /*
+   * For each layer, this function returns the index of the active mag.
+   * The index equals log2(max(activeMag)).
+   * For selecting the active mag, the finest mag is chosen which can still be rendered
+   * given the current zoomStep.
+   */
   const magIndices: { [layerName: string]: number } = {};
 
   for (const layer of getDataLayers(state.dataset)) {
     const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
     const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
+    const magInfo = getMagInfo(getLayerByName(state.dataset, layer.name).mags);
 
     // Linearly search for the mag index, for which the zoomFactor
     // is acceptable.
-    const zoomStep = _.findIndex(
-      maximumZoomSteps,
+    const zoomStep = maximumZoomSteps.findIndex(
       (maximumZoomStep) => state.flycam.zoomStep <= maximumZoomStep,
     );
 
     if (zoomStep === -1) {
       magIndices[layer.name] = maxLogZoomStep;
     } else {
-      magIndices[layer.name] = Math.min(zoomStep, maxLogZoomStep);
+      const closestExistingZoomStep =
+        magInfo.getIndexOrClosestHigherIndex(zoomStep) ?? maxLogZoomStep;
+      magIndices[layer.name] = Math.min(closestExistingZoomStep, maxLogZoomStep);
     }
   }
 
@@ -442,16 +458,16 @@ export function getCurrentMagIndex(
 }
 
 function _getValidZoomRangeForUser(state: WebknossosState): [number, number] {
-  const maxOfLayers = _.max(
+  const maxOfLayers = max(
     getDataLayers(state.dataset).map((layer) => {
       const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
-      return _.last(maximumZoomSteps);
+      return last(maximumZoomSteps);
     }),
   );
 
-  const [min, taskAwareMax] = getValidTaskZoomRange(state);
-  const max = maxOfLayers != null ? Math.min(taskAwareMax, maxOfLayers) : 1;
-  return [min, max];
+  const [zoomMin, taskAwareMax] = getValidTaskZoomRange(state);
+  const zoomMax = maxOfLayers != null ? Math.min(taskAwareMax, maxOfLayers) : 1;
+  return [zoomMin, zoomMax];
 }
 
 export const getValidZoomRangeForUser = reuseInstanceOnEquality(_getValidZoomRangeForUser);
@@ -485,11 +501,11 @@ function getValidZoomRangeForMag(
     return [null, null];
   }
 
-  const max = maximumZoomSteps[targetMagIndex];
-  const min = targetMagIndex > 0 ? maximumZoomSteps[targetMagIndex - 1] : 0;
-  // Since the min of the requested range is derived from the max of the previous range,
+  const zoomMax = maximumZoomSteps[targetMagIndex];
+  const zoomMin = targetMagIndex > 0 ? maximumZoomSteps[targetMagIndex - 1] : 0;
+  // Since the zoomMin of the requested range is derived from the zoomMax of the previous range,
   // we add a small delta so that the returned range is inclusive.
-  return [min + Number.EPSILON, max];
+  return [zoomMin + Number.EPSILON, zoomMax];
 }
 
 export function getZoomValue(flycam: Flycam): number {
@@ -508,7 +524,7 @@ export function getValidTaskZoomRange(
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
   // Tracked in #6926.
-  const firstColorLayerNameMaybe = _.first(getColorLayers(state.dataset))?.name;
+  const firstColorLayerNameMaybe = first(getColorLayers(state.dataset))?.name;
 
   if (!respectRestriction || !firstColorLayerNameMaybe) {
     return defaultRange;
@@ -538,7 +554,7 @@ export function isMagRestrictionViolated(state: WebknossosState): boolean {
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
   // Tracked in #6926.
-  const firstColorLayerName = _.first(getColorLayers(state.dataset))?.name;
+  const firstColorLayerName = first(getColorLayers(state.dataset))?.name;
   if (!firstColorLayerName) {
     return false;
   }
@@ -665,7 +681,7 @@ function _getUnrenderableLayerInfosForCurrentZoom(
       // The current mag is missing and fallback rendering
       // is activated. Thus, check whether one of the fallback
       // zoomSteps can be rendered.
-      return !_.range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {
+      return !range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {
         const fallbackZoomStep = activeMagIdx + diff;
         return magInfo.hasIndex(fallbackZoomStep);
       });
@@ -695,7 +711,7 @@ function _getActiveMagInfo(state: WebknossosState) {
   );
 
   const isActiveMagGlobal =
-    _.uniqBy(Object.values(activeMagOfEnabledLayers), (mag) => (mag != null ? mag.join("-") : null))
+    uniqBy(Object.values(activeMagOfEnabledLayers), (mag) => (mag != null ? mag.join("-") : null))
       .length === 1;
   let representativeMag: Vector3 | undefined | null;
   if (isActiveMagGlobal) {
@@ -709,9 +725,9 @@ function _getActiveMagInfo(state: WebknossosState) {
     // even though all mags have the same minimum.
     const activeMagsWithSorted = activeMags.map((mag) => ({
       mag, // e.g., 4, 4, 1
-      sortedMag: _.sortBy(mag), // e.g., 1, 4, 4
+      sortedMag: sortBy(mag), // e.g., 1, 4, 4
     }));
-    representativeMag = _.sortBy(
+    representativeMag = sortBy(
       activeMagsWithSorted,
       ({ sortedMag }) => sortedMag[0],
       ({ sortedMag }) => sortedMag[1],
@@ -728,3 +744,6 @@ function _getActiveMagInfo(state: WebknossosState) {
 }
 
 export const getActiveMagInfo = reuseInstanceOnEquality(_getActiveMagInfo);
+export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
+  return M4x4.rotate(angle, axis, currentMatrix, []);
+}

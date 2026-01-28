@@ -35,10 +35,17 @@ import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import { compareBy, filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import compact from "lodash-es/compact";
+import intersection from "lodash-es/intersection";
+import keyBy from "lodash-es/keyBy";
+import mapValues from "lodash-es/mapValues";
+import partial from "lodash-es/partial";
+import uniqBy from "lodash-es/uniqBy";
+import without from "lodash-es/without";
 import messages from "messages";
 import type React from "react";
 import { PureComponent, useContext } from "react";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import {
   type APIAnnotationInfo,
@@ -49,7 +56,6 @@ import {
 import { AnnotationContentTypes } from "viewer/constants";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import Store from "viewer/store";
 import CategorizationLabel, {
   CategorizationSearch,
 } from "viewer/view/components/categorization_label";
@@ -209,7 +215,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           // If the user archives a annotation, the annotation is already moved to the archived
           // state. Switching to the archived tab for the first time, will download the annotation
           // again which is why we need to deduplicate here.
-          annotations: _.uniqBy(
+          annotations: uniqBy(
             previousAnnotations.concat(annotations),
             (annotation) => annotation.id,
           ),
@@ -417,10 +423,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           },
           unarchivedModeState: {
             ...prevState.unarchivedModeState,
-            annotations: _.without(
-              prevState.unarchivedModeState.annotations,
-              ...selectedAnnotations,
-            ),
+            annotations: without(prevState.unarchivedModeState.annotations, ...selectedAnnotations),
           },
         }));
       },
@@ -459,7 +462,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             }
           } else {
             // remove the tag from an annotation
-            const newTags = _.without(t.tags, tag);
+            const newTags = without(t.tags, tag);
 
             newAnnotation = update(t, {
               tags: {
@@ -542,7 +545,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       return filteredAnnotations;
     }
 
-    return filteredAnnotations.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
+    return filteredAnnotations.filter((el) => intersection(this.state.tags, el.tags).length > 0);
   }
 
   renderNameWithDescription(annotation: APIAnnotationInfo) {
@@ -578,12 +581,12 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       return formatUserName(owner);
     };
 
-    const ownerFilters = _.uniqBy(
+    const ownerFilters = uniqBy(
       // Prepend user's name to the front so that this is listed at the top
       [
         { formattedName: formatUserName(this.props.activeUser), id: this.props.activeUser.id },
       ].concat(
-        _.compact(
+        compact(
           filteredAndSortedAnnotations.map((annotation) =>
             annotation.owner != null
               ? { formattedName: formatUserName(annotation.owner), id: annotation.owner.id }
@@ -593,8 +596,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       ),
       "id",
     ).map(({ formattedName, id }) => ({ text: formattedName, value: id }));
-    const teamFilters = _.uniqBy(
-      _.flatMap(filteredAndSortedAnnotations, (annotation) => annotation.teams),
+    const teamFilters = uniqBy(
+      filteredAndSortedAnnotations.flatMap((annotation) => annotation.teams),
       "id",
     ).map((team) => ({ text: team.name, value: team.id }));
 
@@ -685,8 +688,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         width: 150,
         render: (__: any, annotation: APIAnnotationInfo) => (
           <AnnotationStats
-            stats={_.mapValues(
-              _.keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
+            stats={mapValues(
+              keyBy(annotation.annotationLayers, (layer) => layer.tracingId),
               (layer) => layer.stats,
             )}
             asInfoBlock={false}
@@ -703,8 +706,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
               <CategorizationLabel
                 key={tag}
                 kind="annotations"
-                onClick={_.partial(this.addTagToSearch, tag)}
-                onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
+                onClick={partial(this.addTagToSearch, tag)}
+                onClose={partial(this.editTagFromAnnotation, annotation, false, tag)}
                 tag={tag}
                 closable={
                   !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
@@ -715,7 +718,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             {this.state.shouldShowArchivedAnnotations ? null : (
               <EditableTextIcon
                 icon={<PlusOutlined />}
-                onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
+                onChange={partial(this.editTagFromAnnotation, annotation, true)}
               />
             )}
           </Space>
@@ -831,6 +834,7 @@ function TopBar({
   shouldShowArchivedAnnotations: boolean;
   archiveAll: () => void;
 }) {
+  const dispatch = useDispatch();
   const activeTab = useContext(ActiveTabContext);
   const renderingTab = useContext(RenderingTabContext);
 
@@ -851,7 +855,7 @@ function TopBar({
     <Space>
       <Button
         icon={<UploadOutlined />}
-        onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
+        onClick={() => dispatch(setDropzoneModalVisibilityAction(true))}
       >
         Upload Annotation(s)
       </Button>

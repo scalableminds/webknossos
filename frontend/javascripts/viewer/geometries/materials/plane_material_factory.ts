@@ -8,12 +8,17 @@ import {
   isWindows,
   map3,
 } from "libs/utils";
-import _ from "lodash";
+import extend from "lodash-es/extend";
+import flattenDeep from "lodash-es/flattenDeep";
+import isEqual from "lodash-es/isEqual";
+import keyBy from "lodash-es/keyBy";
+import mapValues from "lodash-es/mapValues";
+import partition from "lodash-es/partition";
+import throttle from "lodash-es/throttle";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/globals";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "viewer/constants";
-import { MappingStatusEnum, OrthoViewValues, OrthoViews, ViewModeValues } from "viewer/constants";
+import { BLEND_MODES, Identity4x4, MappingStatusEnum, type OrthoView, OrthoViews, OrthoViewValues, type Vector3, ViewModeValues } from "viewer/constants";
 import {
   getColorLayers,
   getDataLayers,
@@ -39,8 +44,7 @@ import {
   getZoomValue,
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { isBrushTool } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
@@ -104,9 +108,9 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
   const layers = getDataLayers(dataset);
 
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
-  const layersObject = _.keyBy(layers, (layer) => sanitizeName(layer.name));
+  const layersObject = keyBy(layers, (layer) => sanitizeName(layer.name));
 
-  return _.mapValues(layersObject, (layer): ValueOf<Params["textureLayerInfos"]> => {
+  return mapValues(layersObject, (layer): ValueOf<Params["textureLayerInfos"]> => {
     const elementClass = getElementClass(dataset, layer.name);
     const dtypeConfig = getDtypeConfigForElementClass(elementClass);
     return {
@@ -152,7 +156,9 @@ class PlaneMaterialFactory {
   }
 
   stopListening() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     this.storePropertyUnsubscribers = [];
   }
 
@@ -285,7 +291,7 @@ class PlaneMaterialFactory {
         ),
       };
       this.uniforms[`${layerName}_has_transform`] = {
-        value: !_.isEqual(
+        value: !isEqual(
           getTransformsForLayer(dataset, layer, nativelyRenderedLayerName).affineMatrix,
           Identity4x4,
         ),
@@ -450,7 +456,7 @@ class PlaneMaterialFactory {
       this.uniforms[name] = value;
     }
     this.material = new ShaderMaterial(
-      _.extend(options, {
+      extend(options, {
         uniforms: this.uniforms,
         vertexShader: this.getVertexShader(),
         fragmentShader,
@@ -528,7 +534,7 @@ class PlaneMaterialFactory {
           const allDenseMags = Object.values(magInfosByLayer).map((magInfo) =>
             magInfo.getDenseMags(),
           );
-          const flatMags = _.flattenDeep(allDenseMags);
+          const flatMags = flattenDeep(allDenseMags);
           this.uniforms.allMagnifications = {
             value: flatMags,
           };
@@ -784,7 +790,7 @@ class PlaneMaterialFactory {
             return (
               getMappingInfoForSupportedLayer(storeState).mappingStatus ===
                 MappingStatusEnum.ENABLED &&
-              _.isEqual(getBucketRetrievalSourceFn(layer.name)(storeState).slice(0, 2), [
+              isEqual(getBucketRetrievalSourceFn(layer.name)(storeState).slice(0, 2), [
                 "REQUESTED-WITHOUT-MAPPING",
                 "LOCAL-MAPPING-APPLIED",
               ])
@@ -858,7 +864,7 @@ class PlaneMaterialFactory {
             }
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
-            const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
+            const hasTransform = !isEqual(affineMatrix, Identity4x4);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };
@@ -914,7 +920,7 @@ class PlaneMaterialFactory {
       const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);
       const suitableMag = suitableMagIndex != null ? magInfo.getMagByIndex(suitableMagIndex) : null;
 
-      const hasTransform = !_.isEqual(
+      const hasTransform = !isEqual(
         getTransformsForLayer(state.dataset, layer, nativelyRenderedLayerName).affineMatrix,
         Identity4x4,
       );
@@ -979,7 +985,7 @@ class PlaneMaterialFactory {
     return this.material;
   }
 
-  recomputeShaders = _.throttle(() => {
+  recomputeShaders = throttle(() => {
     if (this.material == null) {
       return;
     }
@@ -1067,7 +1073,7 @@ class PlaneMaterialFactory {
       .slice(0, maximumLayerCountToRender)
       .sort();
 
-    const [sanitizedColorLayerNames, sanitizedSegmentationLayerNames] = _.partition(
+    const [sanitizedColorLayerNames, sanitizedSegmentationLayerNames] = partition(
       names,
       ({ isSegmentationLayer }) => !isSegmentationLayer,
     ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
@@ -1139,7 +1145,7 @@ class PlaneMaterialFactory {
     const allDenseMags = Object.values(getMagInfoByLayer(storeState.dataset)).map((magInfo) =>
       magInfo.getDenseMags(),
     );
-    const flatMags = _.flatten(allDenseMags);
+    const flatMags = allDenseMags.flat();
     return flatMags.length;
   }
 

@@ -1,12 +1,13 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
-  tokenUserA,
-  setUserAuthToken,
   replaceVolatileValues,
   resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import * as api from "admin/rest_api";
-import { describe, it, beforeAll } from "vitest";
+import { getActiveUser, getDatastores, getFeatureToggles } from "admin/rest_api";
+import { beforeAll, describe, it } from "vitest";
 
 describe("Misc APIs (E2E) ", () => {
   beforeAll(async () => {
@@ -16,7 +17,7 @@ describe("Misc APIs (E2E) ", () => {
   });
 
   it("datastores()", async ({ expect }) => {
-    const datastores = await api.getDatastores();
+    const datastores = await getDatastores();
 
     writeTypeCheckingFile(datastores, "datastore", "APIDataStore", {
       isArray: true,
@@ -26,7 +27,7 @@ describe("Misc APIs (E2E) ", () => {
   });
 
   it("activeUser()", async ({ expect }) => {
-    const activeUser = await api.getActiveUser();
+    const activeUser = await getActiveUser();
 
     writeTypeCheckingFile(activeUser, "activeUser", "APIUser");
     // replaceVolatileValues should not be needed here since the database is freshly reset
@@ -37,7 +38,7 @@ describe("Misc APIs (E2E) ", () => {
   });
 
   it("getFeatureToggles()", async ({ expect }) => {
-    const features = await api.getFeatureToggles();
+    const features = await getFeatureToggles();
 
     writeTypeCheckingFile(features, "feature-toggles", "APIFeatureToggles");
 

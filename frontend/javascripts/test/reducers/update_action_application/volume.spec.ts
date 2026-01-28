@@ -1,26 +1,35 @@
 import update from "immutability-helper";
-import _ from "lodash";
+import range from "lodash-es/range";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 import { chainReduce } from "test/helpers/chainReducer";
+import { transformStateAsReadOnly } from "test/helpers/utils";
 import type { Action } from "viewer/model/actions/actions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
-import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
+import {
+  applyVolumeUpdateActionsFromServerAction,
+  createCellAction,
+  removeSegmentAction,
+  setActiveCellAction,
+  setLargestSegmentIdAction,
+  setSegmentGroupsAction,
+  toggleSegmentGroupAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import type {
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
+import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, test } from "vitest";
-import { transformStateAsReadOnly } from "test/helpers/utils";
 
 const enforceVolumeTracing = (state: WebknossosState) => {
   const tracing = state.annotation.volumes[0];
@@ -88,9 +97,9 @@ describe("Update Action Application for VolumeTracing", () => {
   const hardcodedAfterVersionIndex: number | null = null;
 
   const userActions: Action[] = [
-    VolumeTracingActions.updateSegmentAction(2, { somePosition: [1, 2, 3] }, tracingId),
-    VolumeTracingActions.updateSegmentAction(3, { somePosition: [3, 4, 5] }, tracingId),
-    VolumeTracingActions.updateSegmentAction(
+    updateSegmentAction(2, { somePosition: [1, 2, 3] }, tracingId),
+    updateSegmentAction(3, { somePosition: [3, 4, 5] }, tracingId),
+    updateSegmentAction(
       3,
       {
         name: "name",
@@ -112,26 +121,22 @@ describe("Update Action Application for VolumeTracing", () => {
     }),
     changeUserBoundingBoxAction(1, { name: "Updated Name" }),
     deleteUserBoundingBoxAction(1),
-    VolumeTracingActions.setSegmentGroupsAction(
+    setSegmentGroupsAction(
       [makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")],
       tracingId,
     ),
-    VolumeTracingActions.updateSegmentAction(3, { isVisible: false }, tracingId),
+    updateSegmentAction(3, { isVisible: false }, tracingId),
     // Needs to be visible again for the toggleSegmentGroupAction to turn all segments invisible and thus trigger a compact updateSegmentGroupVisibilityAction.
-    VolumeTracingActions.updateSegmentAction(3, { isVisible: true }, tracingId),
+    updateSegmentAction(3, { isVisible: true }, tracingId),
     // The group with id 3 needs at least one visible cells for the reducer to make to toggle it.
-    VolumeTracingActions.updateSegmentAction(2, { groupId: 3 }, tracingId),
+    updateSegmentAction(2, { groupId: 3 }, tracingId),
     // Moreover, at least two are needed to make the compaction evict a updateSegmentGroupVisibilityAction.
-    VolumeTracingActions.createCellAction(4, 4),
-    VolumeTracingActions.setActiveCellAction(4),
-    VolumeTracingActions.updateSegmentAction(
-      4,
-      { groupId: 3, somePosition: [7, 8, 9], isVisible: true },
-      tracingId,
-    ),
-    VolumeTracingActions.toggleSegmentGroupAction(3, tracingId),
-    VolumeTracingActions.removeSegmentAction(3, tracingId),
-    VolumeTracingActions.setLargestSegmentIdAction(10000),
+    createCellAction(4, 4),
+    setActiveCellAction(4),
+    updateSegmentAction(4, { groupId: 3, somePosition: [7, 8, 9], isVisible: true }, tracingId),
+    toggleSegmentGroupAction(3, tracingId),
+    removeSegmentAction(3, tracingId),
+    setLargestSegmentIdAction(10000),
   ];
 
   test("User actions for test should not contain no-ops", () => {
@@ -147,7 +152,7 @@ describe("Update Action Application for VolumeTracing", () => {
   const beforeVersionIndices =
     hardcodedBeforeVersionIndex != null
       ? [hardcodedBeforeVersionIndex]
-      : _.range(0, userActions.length);
+      : range(0, userActions.length);
 
   describe.each(compactionModes)(
     "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
@@ -156,7 +161,7 @@ describe("Update Action Application for VolumeTracing", () => {
         const afterVersionIndices =
           hardcodedAfterVersionIndex != null
             ? [hardcodedAfterVersionIndex]
-            : _.range(beforeVersionIndex, userActions.length + 1);
+            : range(beforeVersionIndex, userActions.length + 1);
 
         test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
           const state2WithActiveCell = applyActions(
@@ -198,7 +203,7 @@ describe("Update Action Application for VolumeTracing", () => {
             state2WithoutActiveBoundingBox,
             (state) =>
               applyActions(state, [
-                VolumeTracingActions.applyVolumeUpdateActionsFromServerAction(updateActions),
+                applyVolumeUpdateActionsFromServerAction(updateActions),
                 setActiveUserBoundingBoxId(null),
               ]),
           );

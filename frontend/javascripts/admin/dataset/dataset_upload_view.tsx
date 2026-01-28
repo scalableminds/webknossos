@@ -6,6 +6,28 @@ import {
   InfoCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
+import { BlobReader, ZipReader } from "@zip.js/zip.js";
+import {
+  AllowedTeamsFormItem,
+  CardContainer,
+  DatasetNameFormItem,
+  DatastoreFormItem,
+} from "admin/dataset/dataset_components";
+import {
+  getLeftOverStorageBytes,
+  hasPricingPlanExceededStorage,
+} from "admin/organization/pricing_plan_utils";
+import {
+  cancelDatasetUpload,
+  createResumableUpload,
+  finishDatasetUpload,
+  getUnfinishedUploads,
+  reserveDatasetUpload,
+  sendAnalyticsEvent,
+  sendFailedRequestAnalyticsEvent,
+  startConvertToWkwJob,
+  type UnfinishedUpload,
+} from "admin/rest_api";
 import {
   Alert,
   Avatar,
@@ -22,34 +44,10 @@ import {
   Spin,
   Tooltip,
 } from "antd";
-import dayjs from "dayjs";
-import React from "react";
-import { connect } from "react-redux";
-
-import {
-  AllowedTeamsFormItem,
-  CardContainer,
-  DatasetNameFormItem,
-  DatastoreFormItem,
-} from "admin/dataset/dataset_components";
-import {
-  getLeftOverStorageBytes,
-  hasPricingPlanExceededStorage,
-} from "admin/organization/pricing_plan_utils";
-import {
-  type UnfinishedUpload,
-  cancelDatasetUpload,
-  createResumableUpload,
-  finishDatasetUpload,
-  getUnfinishedUploads,
-  reserveDatasetUpload,
-  sendAnalyticsEvent,
-  sendFailedRequestAnalyticsEvent,
-  startConvertToWkwJob,
-} from "admin/rest_api";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
+import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -57,10 +55,15 @@ import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager }
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import Zip from "libs/zipjs_wrapper";
-import _ from "lodash";
+import countBy from "lodash-es/countBy";
+import difference from "lodash-es/difference";
+import throttle from "lodash-es/throttle";
+import uniqBy from "lodash-es/uniqBy";
+import without from "lodash-es/without";
 import messages from "messages";
+import React from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
+import { connect } from "react-redux";
 import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
@@ -73,12 +76,12 @@ import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import type { WebknossosState } from "viewer/store";
-import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
+import { confirmAsync, FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
-const logRetryToAnalytics = _.throttle((datasetName: string) => {
+const logRetryToAnalytics = throttle((datasetName: string) => {
   ErrorHandling.notify(new Error(`Warning: Upload of dataset ${datasetName} was retried.`));
 }, REPORT_THROTTLE_THRESHOLD);
 
@@ -319,7 +322,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // @ts-ignore beforeUnload signature is overloaded
+      // @ts-expect-error beforeUnload signature is overloaded
       shouldBlock: beforeUnload,
     });
 
@@ -431,7 +434,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     resumableUpload.on("filesAdded", () => {
       resumableUpload.upload();
     });
-    resumableUpload.on("fileError", (_file: FileWithPath, message: string) => {
+    // terminalFileError is triggered by the RestApi when a normal fileError could not be
+    // recovered by refreshing the user token.
+    resumableUpload.on("terminalFileError", (_file: FileWithPath, message: string) => {
       Toast.error(message);
       this.setState({
         isUploading: false,
@@ -557,7 +562,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       if (fileExtension === "zip") {
         try {
-          const reader = new Zip.ZipReader(new Zip.BlobReader(file));
+          const reader = new ZipReader(new BlobReader(file));
           const entries = await reader.getEntries();
           await reader.close();
           for (const entry of entries) {
@@ -585,7 +590,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       }
     }
 
-    const countedFileExtensions = _.countBy(fileExtensions, (str) => str);
+    const countedFileExtensions = countBy(fileExtensions, (str) => str);
     const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
     if (containsExtension("nml")) {
@@ -876,7 +881,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     name="voxelSizeFactor"
                     label="Voxel Size"
                     info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                    // @ts-ignore
+                    // @ts-expect-error
                     disabled={this.state.needsConversion}
                     help="Your dataset is not yet in a WEBKNOSSOS format. Therefore, you need to define the voxel size."
                     rules={[
@@ -1039,7 +1044,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                       const filePaths = files.map((file) => file.path || "");
                       return (
                         unfinishedUploadToContinue.filePaths.length === filePaths.length &&
-                        _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
+                        difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
                       );
                     },
                     "The selected files do not match the files of the unfinished upload. Please select the same files as before." +
@@ -1099,11 +1104,11 @@ function FileUploadArea({
 }) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
-    onChange(_.uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
+    onChange(uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
   };
 
   const removeFile = (file: FileWithPath) => {
-    onChange(_.without(fileList, file));
+    onChange(without(fileList, file));
   };
 
   const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({

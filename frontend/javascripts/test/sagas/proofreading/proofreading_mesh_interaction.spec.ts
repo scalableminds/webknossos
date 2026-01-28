@@ -1,7 +1,7 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -20,8 +20,8 @@ import { Store } from "viewer/singletons";
 import {
   type ActiveMappingInfo,
   type NumberLike,
-  type WebknossosState,
   startSaga,
+  type WebknossosState,
 } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
@@ -202,7 +202,7 @@ describe("Proofreading (with mesh actions)", () => {
           throw new Error("Unexpected version of min cut request:" + version);
         }
         const { agglomerateId, partition1, partition2 } = segmentsInfo;
-        if (agglomerateId === 6 && _.isEqual(partition1, [1337]) && _.isEqual(partition2, [1338])) {
+        if (agglomerateId === 6 && isEqual(partition1, [1337]) && isEqual(partition2, [1338])) {
           return [
             {
               position1: [1337, 1337, 1337],

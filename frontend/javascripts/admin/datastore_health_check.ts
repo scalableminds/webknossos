@@ -7,7 +7,9 @@ import {
   pingHealthEndpoint,
 } from "admin/rest_api";
 import Toast from "libs/toast";
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
+import throttle from "lodash-es/throttle";
+import uniq from "lodash-es/uniq";
 import messages from "messages";
 import type { APIBuildInfoDatastore, APIBuildInfoWk } from "types/api_types";
 
@@ -15,7 +17,7 @@ import type { APIBuildInfoDatastore, APIBuildInfoWk } from "types/api_types";
 // That way, each datastore is checked for health in a throttled and isolated manner
 const memoizedThrottle = <F extends (...args: Array<any>) => any>(func: F, wait = 0): F => {
   // Memoize the creation of a throttling function
-  const mem = _.memoize((..._args: any[]) => _.throttle(func, wait));
+  const mem = memoize((..._args: any[]) => throttle(func, wait));
 
   return ((...args: Parameters<F>) => {
     // look up (or create) the throttling function and invoke it
@@ -106,7 +108,7 @@ async function checkVersionMismatchInDataStore(datastoreUrl: string) {
 const extractUrls = (str: string): Array<string> => {
   const urlMatcher =
     /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}(\.[a-z]{2,6})?\b([-a-zA-Z0-9@:%_+.~#?&\\=]*)/g;
-  return _.uniq(str.match(urlMatcher) || []);
+  return uniq(str.match(urlMatcher) || []);
 };
 
 export const pingMentionedDataStores = (str: string): void => {

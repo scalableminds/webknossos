@@ -1,6 +1,5 @@
 import { V3 } from "libs/mjs";
 import { waitForElementWithId } from "libs/utils";
-import _ from "lodash";
 import { PureComponent } from "react";
 import {
   Euler,
@@ -13,8 +12,8 @@ import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
 import {
   OrthoCamerasBaseRotations,
-  OrthoViewValuesWithoutTDView,
   OrthoViews,
+  OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
@@ -103,7 +102,7 @@ class CameraController extends PureComponent<Props> {
     );
     const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
-    for (const cam of _.values(this.props.cameras)) {
+    for (const cam of Object.values(this.props.cameras)) {
       cam.near = 0;
       cam.far = far;
     }
@@ -125,7 +124,9 @@ class CameraController extends PureComponent<Props> {
   }
 
   componentWillUnmount() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
   }
 
   // Non-TD-View methods

@@ -36,7 +36,8 @@ import {
   localeCompareBy,
   millisecondsToHours,
 } from "libs/utils";
-import _ from "lodash";
+import partial from "lodash-es/partial";
+import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -302,7 +303,7 @@ function ProjectListView() {
             dataIndex="teamName"
             key="teamName"
             sorter={localeCompareBy<APIProjectWithStatus>((project) => project.team)}
-            filters={_.uniqBy(
+            filters={uniqBy(
               filteredProjects.map((project) => ({
                 text: project.teamName,
                 value: project.team,
@@ -323,7 +324,7 @@ function ProjectListView() {
                 <div>{owner.email ? `(${owner.email})` : "-"}</div>
               </>
             )}
-            filters={_.uniqBy(
+            filters={uniqBy(
               filteredProjects.map((project) => ({
                 text: `${project.owner.firstName} ${project.owner.lastName}`,
                 value: project.owner.id,
@@ -387,7 +388,7 @@ function ProjectListView() {
                 {project.paused ? (
                   <div>
                     <a
-                      onClick={_.partial(pauseResumeProject, project, resumeProject)}
+                      onClick={partial(pauseResumeProject, project, resumeProject)}
                       title="Resume Project"
                     >
                       <PlayCircleOutlined className="icon-margin-right" />
@@ -398,7 +399,7 @@ function ProjectListView() {
                 ) : (
                   <div>
                     <a
-                      onClick={_.partial(pauseResumeProject, project, pauseProject)}
+                      onClick={partial(pauseResumeProject, project, pauseProject)}
                       title="Pause Tasks"
                     >
                       <PauseCircleOutlined className="icon-margin-right" />
@@ -413,7 +414,7 @@ function ProjectListView() {
                 </Link>
                 <br />
                 <a
-                  onClick={_.partial(increaseProjectTaskInstances, project)}
+                  onClick={partial(increaseProjectTaskInstances, project)}
                   title="Increase Task Instances"
                 >
                   <PlusSquareOutlined className="icon-margin-right" />
@@ -432,13 +433,13 @@ function ProjectListView() {
                   Download
                 </AsyncLink>
                 <br />
-                <a onClick={_.partial(showActiveUsersModal, project)}>
+                <a onClick={partial(showActiveUsersModal, project)}>
                   <TeamOutlined className="icon-margin-right" />
                   Show active users
                 </a>
                 <br />
                 {project.owner.email === activeUser.email ? (
-                  <a onClick={_.partial(deleteProject, project)}>
+                  <a onClick={partial(deleteProject, project)}>
                     <DeleteOutlined className="icon-margin-right" />
                     Delete
                   </a>

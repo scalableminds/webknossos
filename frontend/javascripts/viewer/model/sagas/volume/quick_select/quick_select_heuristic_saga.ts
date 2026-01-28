@@ -1,7 +1,17 @@
+import { sendAnalyticsEvent } from "admin/rest_api";
+import morphology from "ball-morphology";
 import PriorityQueue from "js-priority-queue";
-import _ from "lodash";
+import { V2, V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { clamp, map3, take2 } from "libs/utils";
+import intersectionBy from "lodash-es/intersectionBy";
+import isEqual from "lodash-es/isEqual";
+import memoize from "lodash-es/memoize";
+import ndarray from "ndarray";
 import moments from "ndarray-moments";
 import ops from "ndarray-ops";
+import { call, put, race, take } from "typed-redux-saga";
+import type { APIDataLayer, APIDataset } from "types/api_types";
 import {
   ContourModeEnum,
   type OrthoView,
@@ -11,15 +21,6 @@ import {
   type Vector2,
   type Vector3,
 } from "viewer/constants";
-
-import { sendAnalyticsEvent } from "admin/rest_api";
-import morphology from "ball-morphology";
-import { V2, V3 } from "libs/mjs";
-import Toast from "libs/toast";
-import { clamp, map3, take2 } from "libs/utils";
-import ndarray from "ndarray";
-import { call, put, race, take } from "typed-redux-saga";
-import type { APIDataLayer, APIDataset } from "types/api_types";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import {
   getDefaultValueRangeOfLayer,
@@ -69,7 +70,7 @@ const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 // Used to determine the mean intensity.
 const CENTER_RECT_SIZE_PERCENTAGE = 1 / 10;
 
-const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
+const warnAboutMultipleColorLayers = memoize((layerName: string) => {
   Toast.info(
     `The quick select tool will use the data of layer ${layerName}. If you want to use another layer, please hide the other non-segmentation layers.`,
   );
@@ -131,7 +132,7 @@ export function* prepareQuickSelect(
     (state) => state.datasetConfiguration.nativelyRenderedLayerName,
   );
   if (
-    !_.isEqual(
+    !isEqual(
       getTransformsForLayer(dataset, colorLayer, nativelyRenderedLayerName),
       getTransformsForLayer(dataset, volumeLayer, nativelyRenderedLayerName),
     )
@@ -148,7 +149,7 @@ export function* prepareQuickSelect(
   const magInfo = getMagInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
-    _.intersectionBy(colorLayer.mags, volumeLayer.mags, (magObj) => magObj.mag.join("-")),
+    intersectionBy(colorLayer.mags, volumeLayer.mags, (magObj) => magObj.mag.join("-")),
   );
   const labeledZoomStep = magInfo.getClosestExistingIndex(
     requestedZoomStep,

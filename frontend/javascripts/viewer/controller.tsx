@@ -7,13 +7,13 @@ import { getUrlParamValue, hasUrlParam, isNoElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import extend from "lodash-es/extend";
 import messages from "messages";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { BlockerFunction } from "react-router-dom";
-import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import type { APIOrganization, APIUser } from "types/api_types";
+import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";
 import type { ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
@@ -98,7 +98,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const version = hasUrlParam("showVersionRestore")
       ? hasUrlParam("version")
-        ? Number.parseInt(getUrlParamValue("version"))
+        ? Number.parseInt(getUrlParamValue("version"), 10)
         : 1
       : undefined;
     Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, version)
@@ -152,7 +152,6 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
           Store.dispatch(saveNowAction());
           // restore the event handler in case a user chose to stay on the page
-          // @ts-ignore
           window.onbeforeunload = beforeUnload;
         }, 500);
 
@@ -167,7 +166,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
     window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // @ts-ignore beforeUnload signature is overloaded
+      // @ts-expect-error beforeUnload signature is overloaded
       shouldBlock: beforeUnload,
     });
 
@@ -223,7 +222,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     const keyboardControls = {};
 
     if (controlMode !== ControlModeEnum.VIEW) {
-      _.extend(keyboardControls, {
+      extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
         "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
@@ -270,7 +269,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
     let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
 
-    _.extend(keyboardControls, {
+    extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
         let segmentationLayer = Model.getVisibleSegmentationLayer();

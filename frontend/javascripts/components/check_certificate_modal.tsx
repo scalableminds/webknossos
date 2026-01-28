@@ -1,7 +1,7 @@
 import { isCertificateValid } from "admin/api/certificate_validation";
 import { Col, Modal, Result, Row } from "antd";
 import { useInterval } from "libs/react_helpers";
-import _ from "lodash";
+import noop from "lodash-es/noop";
 import { useEffect, useState } from "react";
 import FormattedDate from "./formatted_date";
 
@@ -30,7 +30,7 @@ export function CheckCertificateModal() {
       open={true}
       closable={false}
       footer={null}
-      onCancel={_.noop}
+      onCancel={noop}
       width={"max(70%, 600px)"}
       keyboard={false}
       maskClosable={false}

@@ -1,5 +1,5 @@
 import { diffArrays } from "libs/utils";
-import _ from "lodash";
+import range from "lodash-es/range";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -9,15 +9,15 @@ import {
   LineSegments,
   Object3D,
   Points,
-  RGBAFormat,
   type RawShaderMaterial,
+  RGBAFormat,
 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import EdgeShader from "viewer/geometries/materials/edge_shader";
 import NodeShader, {
-  NodeTypes,
   COLOR_TEXTURE_WIDTH,
+  NodeTypes,
 } from "viewer/geometries/materials/node_shader";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { sum } from "viewer/model/helpers/iterator_utils";
@@ -58,7 +58,7 @@ const NodeBufferHelperType = {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 3), 3));
 
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
-    for (const idx of _.range(0, additionalCoordLength)) {
+    for (const idx of range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
         new BufferAttribute(new Float32Array(capacity), 1),
@@ -83,7 +83,7 @@ const EdgeBufferHelperType = {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 2 * 3), 3));
 
     const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
-    for (const idx of _.range(0, additionalCoordLength)) {
+    for (const idx of range(0, additionalCoordLength)) {
       geometry.setAttribute(
         `additionalCoord_${idx}`,
         new BufferAttribute(new Float32Array(capacity * 2), 1),
@@ -154,7 +154,7 @@ class Skeleton {
     this.stopStoreListening = () => {};
 
     this.treeColorTexture.dispose();
-    // @ts-ignore
+    // @ts-expect-error
     this.treeColorTexture = undefined;
 
     this.nodes.material.dispose();
@@ -430,8 +430,12 @@ class Skeleton {
             const oldIds = oldElements.map((el) => el.nodeId);
             const newIds = newElements.map((el) => el.nodeId);
             const { onlyA: deletedIds, onlyB: createdIds } = diffArrays(oldIds, newIds);
-            createdIds.forEach((id) => callback(id, true));
-            deletedIds.forEach((id) => callback(id, false));
+            createdIds.forEach((id) => {
+              callback(id, true);
+            });
+            deletedIds.forEach((id) => {
+              callback(id, false);
+            });
           };
 
           const treeId = update.value.id;
@@ -565,7 +569,7 @@ class Skeleton {
       attributes.position.set(untransformedPosition, index * 3);
 
       if (node.additionalCoordinates) {
-        for (const idx of _.range(0, node.additionalCoordinates.length)) {
+        for (const idx of range(0, node.additionalCoordinates.length)) {
           const attributeAdditionalCoordinates =
             buffer.geometry.attributes[`additionalCoord_${idx}`];
           attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
@@ -577,7 +581,7 @@ class Skeleton {
       attributes.isCommented.array[index] = false;
       attributes.nodeId.array[index] = node.id;
       attributes.treeId.array[index] = treeId;
-      return _.values(attributes);
+      return Object.values(attributes);
     });
   }
 
@@ -621,7 +625,7 @@ class Skeleton {
       attribute.set(position, index * 3);
 
       if (additionalCoordinates) {
-        for (const idx of _.range(0, additionalCoordinates.length)) {
+        for (const idx of range(0, additionalCoordinates.length)) {
           const attributeAdditionalCoordinates =
             buffer.geometry.attributes[`additionalCoord_${idx}`];
           attributeAdditionalCoordinates.set([additionalCoordinates[idx].value], index);
@@ -691,7 +695,7 @@ class Skeleton {
 
       const changedAttributes = [];
       if (source.additionalCoordinates && target.additionalCoordinates) {
-        for (const idx of _.range(0, source.additionalCoordinates.length)) {
+        for (const idx of range(0, source.additionalCoordinates.length)) {
           const additionalCoordAttribute = attributes[`additionalCoord_${idx}`];
 
           additionalCoordAttribute.set([source.additionalCoordinates[idx].value], 2 * index);

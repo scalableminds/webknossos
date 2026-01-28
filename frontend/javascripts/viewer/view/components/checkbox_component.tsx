@@ -1,6 +1,7 @@
 import { Checkbox } from "antd";
-import _ from "lodash";
+import noop from "lodash-es/noop";
 import type React from "react";
+
 type CheckboxComponentProp = {
   onClick?: (...args: Array<any>) => any;
 };
@@ -10,7 +11,7 @@ type CheckboxComponentProp = {
  */
 
 function CheckboxComponent(props: CheckboxComponentProp) {
-  const { onClick = _.noop, ...restProps } = props;
+  const { onClick = noop, ...restProps } = props;
 
   const handleClick: React.MouseEventHandler<HTMLElement> = (e) => {
     // For antd checkboxs e.target seems to be the span with the checkbox description, whereas

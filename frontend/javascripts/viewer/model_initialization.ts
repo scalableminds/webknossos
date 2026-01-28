@@ -1,6 +1,6 @@
 import {
-  PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import {
   getAnnotationCompoundInformation,
@@ -18,7 +18,11 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { point3ToVector3 } from "libs/utils";
 import { location } from "libs/window";
-import _ from "lodash";
+import cloneDeep from "lodash-es/cloneDeep";
+import extend from "lodash-es/extend";
+import first from "lodash-es/first";
+import isEqual from "lodash-es/isEqual";
+import merge from "lodash-es/merge";
 import messages from "messages";
 import type {
   APIAnnotation,
@@ -174,8 +178,7 @@ export async function initialize(
             // Only when the newest version is requested (version==null),
             // the stats are available in unversionedAnnotation.
             version == null
-              ? (_.find(
-                  unversionedAnnotation.annotationLayers,
+              ? (unversionedAnnotation.annotationLayers.find(
                   (layer) => layer.tracingId === protoLayer.tracingId,
                 )?.stats ?? {})
               : {},
@@ -371,7 +374,7 @@ function initializeAnnotation(
   let annotation = _annotation;
   const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
-  _.extend(annotation.settings, {
+  extend(annotation.settings, {
     allowedModes,
     preferredMode,
   });
@@ -404,7 +407,7 @@ function initializeAnnotation(
         convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
       ),
     );
-    getServerVolumeTracings(serverTracings).map((volumeTracing) => {
+    getServerVolumeTracings(serverTracings).forEach((volumeTracing) => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
@@ -499,7 +502,7 @@ function initializeDataset(initialFetch: boolean, dataset: StoreDataset): void {
   // Make sure subsequent fetch calls are always for the same dataset
   if (!initialFetch) {
     ErrorHandling.assert(
-      _.isEqual(dataset.id, Store.getState().dataset.id),
+      isEqual(dataset.id, Store.getState().dataset.id),
       messages["dataset.changed_without_reload"],
     );
   }
@@ -604,8 +607,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     //    and a new layer is created and added.
     // 2) The volume layer should be based on a fallback layer. In that case, merge the original fallbackLayer
     //    with the new volume layer.
-    const fallbackLayerIndex = _.findIndex(
-      originalLayers,
+    const fallbackLayerIndex = originalLayers.findIndex(
       (layer) => layer.name === tracing.fallbackLayer,
     );
 
@@ -698,7 +700,7 @@ function determineDefaultState(
 
   // someTracing should only be used if no userState exists (this is the case
   // for annotations that were not touched after #8542 was deployed).
-  const someTracing = _.first(tracings);
+  const someTracing = first(tracings);
 
   if (defaultPosition != null) {
     position = defaultPosition;
@@ -858,11 +860,11 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
       Toast.error(
-        // @ts-ignore
+        // @ts-expect-error
         `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
       );
       console.error(e);
-      // @ts-ignore
+      // @ts-expect-error
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
       });
@@ -1022,8 +1024,7 @@ function applyAnnotationSpecificViewConfiguration(
    * not exist in this view / annotation. In this case, the nativelyRenderedLayerName should be set to null.
    */
 
-  const initialDatasetSettings: Mutable<DatasetConfiguration> =
-    _.cloneDeep(originalDatasetSettings);
+  const initialDatasetSettings: Mutable<DatasetConfiguration> = cloneDeep(originalDatasetSettings);
 
   if (originalDatasetSettings.nativelyRenderedLayerName) {
     const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
@@ -1044,7 +1045,7 @@ function applyAnnotationSpecificViewConfiguration(
     // The annotation already contains a viewConfiguration. Merge that into the
     // dataset settings.
     for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
-      _.merge(
+      merge(
         initialDatasetSettings.layers[layerName],
         annotation.viewConfiguration.layers[layerName],
       );
@@ -1056,7 +1057,7 @@ function applyAnnotationSpecificViewConfiguration(
   // annotation was opened for the very first time).
   // Make the first volume layer visible and turn the other segmentation layers invisible,
   // since only one segmentation layer can be visible currently.
-  const firstVolumeLayer = _.first(
+  const firstVolumeLayer = first(
     annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
   );
   if (!firstVolumeLayer) {

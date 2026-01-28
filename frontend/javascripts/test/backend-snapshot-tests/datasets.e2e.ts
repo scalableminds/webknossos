@@ -1,31 +1,32 @@
-import _ from "lodash";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
-  tokenUserA,
-  setUserAuthToken,
-  resetDatabase,
-  writeTypeCheckingFile,
   replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  writeTypeCheckingFile,
 } from "test/e2e-setup";
-import type { APIDataset } from "types/api_types";
-import { describe, it, beforeAll, expect } from "vitest";
-import {
-  getOrganizationForDataset,
-  getDatasetIdFromNameAndOrganization,
-} from "admin/api/disambiguate_legacy_routes";
 import fs from "node:fs";
 import {
-  getDatasets,
+  getDatasetIdFromNameAndOrganization,
+  getOrganizationForDataset,
+} from "admin/api/disambiguate_legacy_routes";
+import {
   getActiveDatasetsOfMyOrganization,
-  getDatasetAccessList,
-  updateDatasetTeams,
-  getEditableTeams,
   getDataset,
+  getDatasetAccessList,
+  getDatasets,
+  getEditableTeams,
   triggerDatasetCheck,
+  updateDatasetTeams,
 } from "admin/rest_api";
+import sortBy from "lodash-es/sortBy";
+import type { APIDataset } from "types/api_types";
+import { beforeAll, describe, expect, it } from "vitest";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await getActiveDatasetsOfMyOrganization();
-  const dataset = _.sortBy(datasets, (d) => d.name)[0];
+  const dataset = sortBy(datasets, (d) => d.name)[0];
 
   return dataset;
 }
@@ -47,7 +48,7 @@ describe("Dataset API (E2E)", () => {
       retry++;
     }
 
-    datasets = _.sortBy(datasets, (d) => d.name);
+    datasets = sortBy(datasets, (d) => d.name);
     writeTypeCheckingFile(datasets, "dataset", "APIDatasetCompact", {
       isArray: true,
     });
@@ -57,14 +58,14 @@ describe("Dataset API (E2E)", () => {
 
   it("getActiveDatasets", async () => {
     let datasets = await getActiveDatasetsOfMyOrganization();
-    datasets = _.sortBy(datasets, (d) => d.name);
+    datasets = sortBy(datasets, (d) => d.name);
 
     expect(replaceVolatileValues(datasets)).toMatchSnapshot();
   });
 
   it("getDatasetAccessList", async () => {
     const dataset = await getFirstDataset();
-    const accessList = _.sortBy(await getDatasetAccessList(dataset), (user) => user.id);
+    const accessList = sortBy(await getDatasetAccessList(dataset), (user) => user.id);
 
     expect(replaceVolatileValues(accessList)).toMatchSnapshot();
   });
@@ -228,7 +229,6 @@ describe("Dataset API (E2E)", () => {
 
     const boundary = "----WebKitFormBoundaryAqTsFa4N9FW7zF7I";
     let bodyString = `--${boundary}\r\n`;
-    // @ts-ignore
     for (const [key, value] of formData.entries()) {
       bodyString += `Content-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`;
       bodyString += `--${boundary}\r\n`;

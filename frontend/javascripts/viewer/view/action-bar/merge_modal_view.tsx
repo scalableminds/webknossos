@@ -24,6 +24,7 @@ import { api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputComponent from "viewer/view/components/input_component";
+
 type ProjectInfo = {
   id: string;
   label: string;

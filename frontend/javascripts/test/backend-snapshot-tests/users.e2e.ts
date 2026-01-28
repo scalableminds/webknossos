@@ -1,14 +1,24 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
   tokenUserA,
   tokenUserE,
   tokenUserF,
-  setUserAuthToken,
-  resetDatabase,
-  replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import * as api from "admin/rest_api";
-import { describe, it, beforeAll, expect, beforeEach } from "vitest";
+import {
+  getActiveUser,
+  getAdminUsers,
+  getAuthToken,
+  getEditableUsers,
+  getLoggedTimes,
+  getUser,
+  getUsers,
+  updateUser,
+} from "admin/rest_api";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 describe("Users API (E2E)", () => {
   beforeAll(async () => {
@@ -21,7 +31,7 @@ describe("Users API (E2E)", () => {
   });
 
   it("getUsers() Orga X", async () => {
-    const users = await api.getUsers();
+    const users = await getUsers();
     writeTypeCheckingFile(users, "user", "APIUser", {
       isArray: true,
     });
@@ -30,47 +40,47 @@ describe("Users API (E2E)", () => {
 
   it("getUsers() Orga Y", async () => {
     setUserAuthToken(tokenUserE);
-    const users = await api.getUsers();
+    const users = await getUsers();
     expect(replaceVolatileValues(users)).toMatchSnapshot();
   });
 
   it("getUsers() Orga Z", async () => {
     setUserAuthToken(tokenUserF);
-    const users = await api.getUsers();
+    const users = await getUsers();
     expect(replaceVolatileValues(users)).toMatchSnapshot();
   });
 
   it("getAdminUsers()", async () => {
-    const adminUsers = await api.getAdminUsers();
+    const adminUsers = await getAdminUsers();
     expect(replaceVolatileValues(adminUsers)).toMatchSnapshot();
   });
 
   it("getEditableUsers()", async () => {
-    const editableUsers = await api.getEditableUsers();
+    const editableUsers = await getEditableUsers();
     expect(editableUsers).toMatchSnapshot();
   });
 
   it("getUser()", async () => {
-    const activeUser = await api.getActiveUser();
-    const user = await api.getUser(activeUser.id);
+    const activeUser = await getActiveUser();
+    const user = await getUser(activeUser.id);
     expect(replaceVolatileValues(user)).toMatchSnapshot();
   });
 
   it("updateUser()", async () => {
-    const activeUser = await api.getActiveUser();
+    const activeUser = await getActiveUser();
     const newUser = Object.assign({}, activeUser, {
       firstName: "UpdatedFirstName",
     });
-    const updatedUser = await api.updateUser(newUser);
+    const updatedUser = await updateUser(newUser);
     expect(replaceVolatileValues(updatedUser)).toMatchSnapshot();
 
-    const oldUser = await api.updateUser(activeUser);
+    const oldUser = await updateUser(activeUser);
     expect(replaceVolatileValues(oldUser)).toMatchSnapshot();
   });
 
   it("getLoggedTimes()", async () => {
-    const activeUser = await api.getActiveUser();
-    const loggedTimes = await api.getLoggedTimes(activeUser.id);
+    const activeUser = await getActiveUser();
+    const loggedTimes = await getLoggedTimes(activeUser.id);
     writeTypeCheckingFile(loggedTimes, "logged-times", "APITimeInterval", {
       isArray: true,
     });
@@ -78,14 +88,14 @@ describe("Users API (E2E)", () => {
   });
 
   it("getAuthToken()", async () => {
-    const authToken = await api.getAuthToken();
+    const authToken = await getAuthToken();
     expect(authToken).toMatchSnapshot();
   });
 
   it("revokeAuthToken()", async () => {
     // Don't revoke the authToken or all test will fail!!!
     // Leave the test anyway to remind everyone of this.
-    // await api.revokeAuthToken();
+    // await revokeAuthToken();
     expect(true).toBe(true); // Just pass the test
   });
 });

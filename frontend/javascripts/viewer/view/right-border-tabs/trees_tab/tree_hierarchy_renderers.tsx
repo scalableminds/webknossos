@@ -8,7 +8,12 @@ import {
   TagsOutlined,
 } from "@ant-design/icons";
 import { type MenuProps, notification } from "antd";
-import _ from "lodash";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import FastTooltip from "components/fast_tooltip";
+import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import cloneDeep from "lodash-es/cloneDeep";
+import difference from "lodash-es/difference";
+import messages from "messages";
 import type React from "react";
 import { batchActions } from "redux-batched-actions";
 import {
@@ -18,11 +23,6 @@ import {
   type Vector3,
 } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
-
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import FastTooltip from "components/fast_tooltip";
-import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
-import messages from "messages";
 import {
   addTreesAndGroupsAction,
   deleteTreeAction,
@@ -41,18 +41,18 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
-import { Store, api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
-  type TreeNode,
   anySatisfyDeep,
   callDeep,
   createGroupToTreesMap,
+  GroupTypeEnum,
   getGroupByIdWithSubgroups,
   getNodeKey,
+  MISSING_GROUP_ID,
   makeBasicGroupObject,
+  type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
@@ -155,7 +155,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       {
         key: "duplicateTree",
         onClick: () => {
-          const copyOfTree = { ..._.cloneDeep(tree), name: `${tree.name} (copy)` };
+          const copyOfTree = { ...cloneDeep(tree), name: `${tree.name} (copy)` };
           const treeMap = new TreeMap([[tree.treeId, copyOfTree]]);
           Store.dispatch(addTreesAndGroupsAction(treeMap, null, undefined, false));
           hideContextMenu();
@@ -277,7 +277,7 @@ const createMenuForTreeGroup = (
   const labelForActiveItems = getLabelForActiveItems();
 
   function createGroup(groupId: number) {
-    const newTreeGroups = _.cloneDeep(props.treeGroups);
+    const newTreeGroups = cloneDeep(props.treeGroups);
 
     const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
     const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
@@ -361,7 +361,7 @@ const createMenuForTreeGroup = (
         const parentGroupNode = getNodeKey(GroupTypeEnum.GROUP, parentGroup.id);
         // If the subgroups should be collapsed, do not collapse the group itself, if it was expanded before.
         const subGroupsWithoutParent = subGroups.filter((groupKey) => groupKey !== parentGroupNode);
-        const newExpandedKeys = _.difference(expandedNodeKeys, subGroupsWithoutParent);
+        const newExpandedKeys = difference(expandedNodeKeys, subGroupsWithoutParent);
         setExpandedGroups(new Set(newExpandedKeys));
       }
     }

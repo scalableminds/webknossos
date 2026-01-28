@@ -33,11 +33,15 @@ import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrManager, rgbToHex } from "libs/utils";
-import _ from "lodash";
+import differenceWith from "lodash-es/differenceWith";
+import isEqual from "lodash-es/isEqual";
+import mapValues from "lodash-es/mapValues";
+import minBy from "lodash-es/minBy";
+import partial from "lodash-es/partial";
 import {
-  type RecommendedConfiguration,
-  layerViewConfigurationTooltips,
   layerViewConfigurations,
+  layerViewConfigurationTooltips,
+  type RecommendedConfiguration,
   settings,
   settingsTooltips,
 } from "messages";
@@ -45,13 +49,13 @@ import React, { useCallback } from "react";
 import { connect, useDispatch } from "react-redux";
 import type { Dispatch } from "redux";
 import {
+  AnnotationLayerEnum,
+  type AnnotationLayerType,
   APIAnnotationTypeEnum,
   type APIDataLayer,
   type APIDataset,
   APIJobCommand,
   type APISkeletonLayer,
-  AnnotationLayerEnum,
-  type AnnotationLayerType,
   type EditableLayerProperties,
 } from "types/api_types";
 import type { ValueOf } from "types/globals";
@@ -120,7 +124,7 @@ import {
   addLayerToAnnotation,
   deleteAnnotationLayer,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -297,7 +301,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
 function LayerInfoIconWithTooltip({
   layer,
   dataset,
-}: { layer: APIDataLayer; dataset: APIDataset }) {
+}: {
+  layer: APIDataLayer;
+  dataset: APIDataset;
+}) {
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
     const magInfo = getMagInfo(layer.mags);
@@ -364,8 +371,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   constructor(props: DatasetSettingsProps) {
     super(props);
-    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
-      _.partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
+    this.onChangeUser = mapValues(this.props.userConfiguration, (__, propertyName) =>
+      partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
     );
   }
 
@@ -557,9 +564,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
-    Object.keys(layers).forEach((otherLayerName) =>
-      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
-    );
+    Object.keys(layers).forEach((otherLayerName) => {
+      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible);
+    });
   };
 
   isLayerExclusivelyVisible = (layerName: string): boolean => {
@@ -873,7 +880,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           max={10}
           roundToDigit={3}
           value={layerConfiguration.gammaCorrectionValue}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
+          onChange={partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
           defaultValue={defaultSettings.gammaCorrectionValue}
         />
         <Row
@@ -888,7 +895,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <Col span={SETTING_MIDDLE_SPAN}>
             <ColorSetting
               value={rgbToHex(layerConfiguration.color)}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+              onChange={partial(this.props.onChangeLayer, layerName, "color")}
               style={{
                 marginLeft: 6,
               }}
@@ -940,7 +947,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         max={100}
         step={1}
         value={this.props.datasetConfiguration.segmentationPatternOpacity}
-        onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+        onChange={partial(this.props.onChange, "segmentationPatternOpacity")}
         defaultValue={defaultDatasetViewConfiguration.segmentationPatternOpacity}
       />
     );
@@ -1025,7 +1032,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               min={0}
               max={100}
               value={layerConfiguration.alpha}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+              onChange={partial(this.props.onChangeLayer, layerName, "alpha")}
               defaultValue={layerSpecificDefaults.alpha}
             />
             {isColorLayer
@@ -1138,14 +1145,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const volumeTracingMags = segmentationLayer.mags.map((magObj) => magObj.mag);
 
-    const sourceMag = _.minBy(volumeTracingMags, getMaxDim);
+    const sourceMag = minBy(volumeTracingMags, getMaxDim);
     if (sourceMag === undefined) {
       return [];
     }
 
     const possibleMags = volumeTargetMags.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
 
-    const magsToDownsample = _.differenceWith(possibleMags, volumeTracingMags, _.isEqual);
+    const magsToDownsample = differenceWith(possibleMags, volumeTracingMags, isEqual);
 
     return magsToDownsample;
   };

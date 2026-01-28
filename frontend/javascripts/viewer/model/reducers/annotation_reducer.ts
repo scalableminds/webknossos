@@ -1,7 +1,9 @@
 import update from "immutability-helper";
 import { V3 } from "libs/mjs";
 import { getRandomColor } from "libs/utils";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
+import reduce from "lodash-es/reduce";
+import uniqWith from "lodash-es/uniqWith";
 import type { AdditionalCoordinate } from "types/api_types";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
@@ -250,12 +252,12 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         ...bb,
         id: highestBoundingBoxId + index + 1,
       }));
-      const mergedUserBoundingBoxes = _.uniqWith(
+      const mergedUserBoundingBoxes = uniqWith(
         [...tracing.userBoundingBoxes, ...additionalUserBoundingBoxes],
         (bboxWithId1, bboxWithId2) => {
           const { id: _id1, ...bbox1 } = bboxWithId1;
           const { id: _id2, ...bbox2 } = bboxWithId2;
-          return _.isEqual(bbox1, bbox2);
+          return isEqual(bbox1, bbox2);
         },
       );
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
@@ -305,7 +307,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const meshDict = state.localSegmentationData[layerName].meshes;
       if (meshDict == null) return state;
       const currentAdditionalCoordinates = Object.keys(meshDict || {});
-      const updatedMeshes = _.reduce(
+      const updatedMeshes = reduce(
         currentAdditionalCoordinates,
         (updatedMeshesDict, additionalCoordKey) => {
           const meshes = updatedMeshesDict[additionalCoordKey];

@@ -3,10 +3,10 @@ import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import {
   type APIMetadataWithError,
-  InnerMetadataTable,
-  MetadataValueInput,
   getTypeSelectDropdownMenu,
   getUsedTagsWithinMetadata,
+  InnerMetadataTable,
+  MetadataValueInput,
 } from "dashboard/folders/metadata_table";
 import { memo } from "react";
 import { type APIMetadataEntry, APIMetadataEnum, type MetadataEntryProto } from "types/api_types";

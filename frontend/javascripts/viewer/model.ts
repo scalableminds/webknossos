@@ -1,6 +1,9 @@
 import { isDatasetAccessibleBySwitching } from "admin/api/organization";
 import { sleep } from "libs/utils";
-import _ from "lodash";
+import filter from "lodash-es/filter";
+import max from "lodash-es/max";
+import reduce from "lodash-es/reduce";
+import sum from "lodash-es/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -50,7 +53,9 @@ export class WebKnossosModel {
         const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
-          _.values(this.dataLayers).forEach((layer) => layer.destroy());
+          Object.values(this.dataLayers).forEach((layer) => {
+            layer.destroy();
+          });
         }
 
         this.dataLayers = dataLayers;
@@ -62,7 +67,7 @@ export class WebKnossosModel {
           await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
-          // @ts-ignore
+          // @ts-expect-error
           error.organizationToSwitchTo = maybeOrganizationToSwitchTo;
         }
       } catch (accessibleBySwitchingError) {
@@ -81,7 +86,7 @@ export class WebKnossosModel {
   }
 
   getColorLayers(): Array<DataLayer> {
-    return _.filter(
+    return filter(
       this.dataLayers,
       (dataLayer) => getLayerByName(Store.getState().dataset, dataLayer.name).category === "color",
     );
@@ -242,7 +247,7 @@ export class WebKnossosModel {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
 
-    const pushQueuesSaved = _.reduce(
+    const pushQueuesSaved = reduce(
       this.dataLayers,
       (saved, dataLayer) => saved && dataLayer.pushQueue.stateSaved(),
       true,
@@ -253,26 +258,26 @@ export class WebKnossosModel {
 
   getLongestPushQueueWaitTime() {
     return (
-      _.max(
+      max(
         Object.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
       ) || 0
     );
   }
 
   getPushQueueStats = () => {
-    const compressingBucketCount = _.sum(
+    const compressingBucketCount = sum(
       Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.pushQueue.getCompressingBucketCount(),
       ),
     );
 
-    const waitingForCompressionBucketCount = _.sum(
+    const waitingForCompressionBucketCount = sum(
       Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.pushQueue.getPendingBucketCount(),
       ),
     );
 
-    const outstandingBucketDownloadCount = _.sum(
+    const outstandingBucketDownloadCount = sum(
       Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.cube.temporalBucketManager.getCount(),
       ),
@@ -333,7 +338,9 @@ export class WebKnossosModel {
      */
 
     if (this.dataLayers != null) {
-      _.values(this.dataLayers).forEach((layer) => layer.destroy());
+      Object.values(this.dataLayers).forEach((layer) => {
+        layer.destroy();
+      });
       this.dataLayers = {};
     }
   }

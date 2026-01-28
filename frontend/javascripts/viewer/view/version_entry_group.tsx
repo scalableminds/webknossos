@@ -1,7 +1,8 @@
 import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 import { Avatar, List } from "antd";
 import FormattedDate from "components/formatted_date";
-import _ from "lodash";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
 import { Component, Fragment } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import VersionEntry from "viewer/view/version_entry";
@@ -27,8 +28,8 @@ function GroupHeader({
   expanded: boolean;
   batches: APIUpdateActionBatch[];
 }) {
-  const lastTimestamp = _.max(batches[0].value.map((action) => action.value.actionTimestamp)) || 0;
-  const lastVersion = _.last(batches)?.version || 0;
+  const lastTimestamp = max(batches[0].value.map((action) => action.value.actionTimestamp)) || 0;
+  const lastVersion = last(batches)?.version || 0;
   return (
     <List.Item
       style={{

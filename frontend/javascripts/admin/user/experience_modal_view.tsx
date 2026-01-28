@@ -1,12 +1,15 @@
 import { CloseOutlined, DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
 import { updateUser } from "admin/rest_api";
-import { Badge, InputNumber, Modal, Table, Tag, Tooltip } from "antd";
+import { Badge, Button, InputNumber, Modal, Space, Table, Tag, Tooltip } from "antd";
 import HighlightableRow from "components/highlightable_row";
 import SelectExperienceDomain from "components/select_experience_domain";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import { localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import fromPairs from "lodash-es/fromPairs";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import union from "lodash-es/union";
 import { useState } from "react";
 import type { APIUser, ExperienceDomainList } from "types/api_types";
 
@@ -51,7 +54,7 @@ function ExperienceModalView({
   function getTableEntries(users: APIUser[]): TableEntry[] {
     if (users.length <= 1) {
       return sortEntries(
-        _.map(users[0].experiences, (value, domain) => ({
+        Object.entries(users[0].experiences).map(([domain, value]) => ({
           domain,
           value,
           lowestValue: -1,
@@ -63,7 +66,7 @@ function ExperienceModalView({
     }
 
     // find all existing experience domains
-    const allDomains: string[] = _.union(...users.map((user) => Object.keys(user.experiences)));
+    const allDomains: string[] = union(...users.map((user) => Object.keys(user.experiences)));
 
     // adds the number of users with this domain (sharedByCount) to all domains
     const allDomainsWithCount = allDomains.map((domain) => {
@@ -82,17 +85,17 @@ function ExperienceModalView({
     const tableEntries = allDomainsWithCount.map((entry) => {
       const usersValues = users.map((user) => user.experiences[entry.domain]);
 
-      const min = _.min(usersValues);
+      const minVal = min(usersValues);
 
-      const max = _.max(usersValues);
+      const maxVal = max(usersValues);
 
       const isShared = entry.sharedByCount === users.length;
-      const value = isShared && max === min ? min : -1;
+      const value = isShared && maxVal === minVal ? minVal : -1;
       return {
         domain: entry.domain,
         value,
-        lowestValue: min,
-        highestValue: max,
+        lowestValue: minVal,
+        highestValue: maxVal,
         sharedByCount: entry.sharedByCount,
         changed: false,
       };
@@ -106,7 +109,7 @@ function ExperienceModalView({
     const newUserPromises: Array<Promise<APIUser>> = selectedUsers.map((user: APIUser) => {
       const newExperiences = {
         ...user.experiences,
-        ..._.fromPairs(relevantEntries.map((entry) => [entry.domain, entry.value])),
+        ...fromPairs(relevantEntries.map((entry) => [entry.domain, entry.value])),
       };
       removedDomains.forEach((domain) => {
         if (domain in newExperiences) {
@@ -283,7 +286,6 @@ function ExperienceModalView({
           <Column
             title="User Count"
             width="18%"
-            className="centered-table-item"
             render={(record: TableEntry) => {
               const isSharedByAll = record.sharedByCount === selectedUsers.length;
               return (
@@ -340,11 +342,11 @@ function ExperienceModalView({
                 />
                 {record.changed ? (
                   <Tooltip placement="top" title="Revert Changes">
-                    <RollbackOutlined
+                    <Button
+                      icon={<RollbackOutlined />}
                       style={{
                         marginLeft: 15,
                       }}
-                      className="clickable-icon"
                       onClick={() => revertChangesOfEntry(index)}
                     />
                   </Tooltip>
@@ -356,14 +358,12 @@ function ExperienceModalView({
         <Column
           width={multipleUsers ? "7%" : "20%"}
           render={(record) => (
-            <span>
-              <Tooltip placement="top" title="Remove Entry">
-                <DeleteOutlined
-                  className="clickable-icon"
-                  onClick={() => removeEntryFromTable(record.domain)}
-                />
-              </Tooltip>
-            </span>
+            <Tooltip placement="top" title="Remove Entry">
+              <Button
+                icon={<DeleteOutlined />}
+                onClick={() => removeEntryFromTable(record.domain)}
+              />
+            </Tooltip>
           )}
         />
       </Table>
@@ -375,29 +375,29 @@ function ExperienceModalView({
         >
           These experience domains will be removed from all selected users:
           <br />
-          {removedDomains.map((domain: string) => (
-            <Tooltip
-              key={domain}
-              placement="top"
-              title="Click here if you don't want to remove this domain from all selected users."
-            >
-              <Tag
-                style={{
-                  margin: 8,
-                  marginTop: 10,
-                }}
-                variant="outlined"
-                className="clickable-icon"
-                onClick={() => {
-                  setRemovedDomains(
-                    removedDomains.filter((currentDomain) => currentDomain !== domain),
-                  );
-                }}
+          <Space>
+            {removedDomains.map((domain: string) => (
+              <Tooltip
+                key={domain}
+                placement="top"
+                title="Click here if you don't want to remove this domain from all selected users."
               >
-                {domain} <CloseOutlined />
-              </Tag>
-            </Tooltip>
-          ))}
+                <Tag
+                  style={{
+                    cursor: "pointer",
+                  }}
+                  variant="outlined"
+                  onClick={() => {
+                    setRemovedDomains(
+                      removedDomains.filter((currentDomain) => currentDomain !== domain),
+                    );
+                  }}
+                >
+                  {domain} <CloseOutlined />
+                </Tag>
+              </Tooltip>
+            ))}
+          </Space>
         </div>
       ) : null}
       <SelectExperienceDomain

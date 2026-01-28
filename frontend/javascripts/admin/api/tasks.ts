@@ -3,7 +3,7 @@ import type {
   NewNmlTask,
   NewTask,
   TaskCreationResponseContainer,
-} from "admin/task/task_create_bulk_view";
+} from "admin/task/task_create_utils";
 import type { QueryObject } from "admin/task/task_search_form";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";

@@ -1,11 +1,12 @@
-import { describe, it, expect } from "vitest";
-import _ from "lodash";
+import mean from "lodash-es/mean";
+import range from "lodash-es/range";
 import type { Vector3 } from "viewer/constants";
+import { describe, expect, it } from "vitest";
 
 import "test/mocks/updatable_texture.mock";
-import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
+import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 
 type Entry = [number, Vector3];
 
@@ -55,8 +56,8 @@ describe("CuckooTableVec3", () => {
 
   it("Speed should be alright", () => {
     const RUNS = 100;
-    const hashSets = _.range(RUNS).map(() => generateRandomCuckooEntrySet(generateRandomEntry));
-    const tables = _.range(RUNS).map(() => CuckooTableVec3.fromCapacity(hashSets[0].length));
+    const hashSets = range(RUNS).map(() => generateRandomCuckooEntrySet(generateRandomEntry));
+    const tables = range(RUNS).map(() => CuckooTableVec3.fromCapacity(hashSets[0].length));
 
     const durations = [];
     for (let idx = 0; idx < RUNS; idx++) {
@@ -70,7 +71,7 @@ describe("CuckooTableVec3", () => {
       }
     }
 
-    expect(_.mean(durations)).toBeLessThan(0.1);
+    expect(mean(durations)).toBeLessThan(0.1);
   });
 
   it("Repeated sets should work", () => {

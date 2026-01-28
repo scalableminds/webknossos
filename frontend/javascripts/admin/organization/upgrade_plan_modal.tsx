@@ -12,21 +12,17 @@ import {
   sendUpgradePricingPlanUserEmail,
 } from "admin/api/organization";
 import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
+import type { GetRef } from "antd/lib";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
-import features from "features";
-import { formatCurrency } from "libs/format_utils";
-
-import type { GetRef } from "antd/lib";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
-import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
-import { PricingPlanEnum } from "./pricing_plan_utils";
+import { PricingPlanEnum, powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 
 const ModalInformationFooter = (
   <>
@@ -81,7 +77,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleUserUpgrade = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       await sendUpgradePricingPlanUserEmail(requestedUsers);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -125,7 +121,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
-      const requestedStorage = Number.parseInt(storageInputRef.current.value);
+      const requestedStorage = Number.parseInt(storageInputRef.current.value, 10);
       await sendUpgradePricingPlanStorageEmail(requestedStorage);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -317,24 +313,11 @@ export function orderWebknossosCredits() {
 
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
-  const defaultCostPerCreditInEuro = formatCurrency(features().costPerCreditInEuro, "€");
-  const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "$");
-  const [creditCostAsString, setCreditCostAsString] = useState<string>(
-    `${defaultCostPerCreditInEuro}€/${defaultCostPerCreditInDollar}$`,
-  );
   const [creditAmount, setCreditAmount] = useState<number | null>(1);
-  useEffect(() => {
-    if (creditAmount == null) {
-      return;
-    }
-    const totalCostInEuro = creditAmount * features().costPerCreditInEuro;
-    const totalCostInDollar = creditAmount * features().costPerCreditInDollar;
-    setCreditCostAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
-  }, [creditAmount]);
 
   const handleOrderCredits = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       try {
         await sendOrderCreditsEmail(requestedUsers);
         Toast.success(messages["organization.credit_request_sent"]);
@@ -349,8 +332,8 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title="Buy more WEBKNOSSOS Credits"
-      okText={`Buy more WEBKNOSSOS Credits for ${creditCostAsString}`}
+      title="Order more WEBKNOSSOS Credits"
+      okText="Request an Email Quote"
       onOk={handleOrderCredits}
       onCancel={destroy}
       width={800}
@@ -358,8 +341,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
     >
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "5%" }}>
-          You can buy new WEBKNOSSOS credits to pay for premium jobs and services. Each credit costs{" "}
-          {defaultCostPerCreditInEuro} or {defaultCostPerCreditInDollar}.
+          You can order new WEBKNOSSOS credits for premium AI jobs and services.
         </p>
         <div>Amount of credits to order:</div>
         <div>
@@ -373,7 +355,6 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             value={creditAmount}
           />
         </div>
-        Total resulting cost: {creditCostAsString}
         <>
           <Divider style={{ marginTop: 40 }} />
           <p style={{ color: "#aaa", fontSize: 12 }}>

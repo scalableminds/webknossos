@@ -2,6 +2,7 @@ import { presetPalettes } from "@ant-design/colors";
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import type { Duration } from "dayjs/plugin/duration";
 import duration from "dayjs/plugin/duration";
 import localeData from "dayjs/plugin/localeData";
 import localizedFormat from "dayjs/plugin/localizedFormat";
@@ -9,12 +10,9 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
-import _ from "lodash";
-import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
-import { Unicode } from "viewer/constants";
-
-import type { Duration } from "dayjs/plugin/duration";
+import memoize from "lodash-es/memoize";
 import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_types";
+import { LongUnitToShortUnitMap, Unicode, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
 import { hexToRgb, map3, roundTo } from "./utils";
 
@@ -117,7 +115,7 @@ export function stringToAntdColorPreset(string: string): keyof typeof presetPale
 export function stringToAntdColorPresetRgb(string: string): Vector3 {
   const presetString = stringToAntdColorPreset(string);
   // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
-  // @ts-ignore
+  // @ts-expect-error
   return hexToRgb(presetPalettes[presetString].primary);
 }
 
@@ -348,7 +346,7 @@ export function formatCountToDataAmountUnit(
   );
 }
 
-const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
+const getSortedFactorsAndUnits = memoize((unitMap: Map<number, string>) =>
   Array.from(unitMap.entries()).sort((a, b) => a[0] - b[0]),
 );
 
@@ -586,8 +584,4 @@ export function formatMilliCreditsString(credits: number): string {
   const paddedMillis = millis.padStart(3, "0");
   const paddedMillisWithoutTrailingZeros = paddedMillis.replace(/0+$/, "");
   return `${fullCredits}.${paddedMillisWithoutTrailingZeros}`;
-}
-
-export function formatCurrency(amount: number, currency: string): string {
-  return `${amount.toFixed(2)}${ThinSpace}${currency}`;
 }

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import shuffle from "lodash-es/shuffle";
 import type { Vector3 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
 
@@ -84,7 +84,7 @@ const ColorGenerator = {
       remainingColorCount -= batchSize;
     }
 
-    return _.shuffle(shuffledColors);
+    return shuffle(shuffledColors);
   },
 };
 

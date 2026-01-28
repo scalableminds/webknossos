@@ -3,8 +3,9 @@ import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
 import window, { document } from "libs/window";
-import _ from "lodash";
-import { type Emitter, createNanoEvents } from "nanoevents";
+import extend from "lodash-es/extend";
+import noop from "lodash-es/noop";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
 import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
@@ -114,16 +115,16 @@ export class InputKeyboardNoLoop {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
+      this.attach(EXTENDED_COMMAND_KEYS, noop, noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
-        this.attach(key, callback, _.noop, true);
+        this.attach(key, callback, noop, true);
       }
     }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
+      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : noop;
       this.attach(key, callback, keyUpCallback);
     }
   }
@@ -159,7 +160,7 @@ export class InputKeyboardNoLoop {
   attach(
     key: KeyboardKey,
     keyDownCallback: KeyboardHandler,
-    keyUpCallback: KeyboardHandler = _.noop,
+    keyUpCallback: KeyboardHandler = noop,
     isExtendedCommand: boolean = false,
   ) {
     const binding: KeyboardBindingPress = [
@@ -295,7 +296,7 @@ export class InputKeyboard {
         if (totalDelay >= 0) {
           delayTimeoutId = setTimeout(() => {
             callback.delayed = false;
-            callback.lastTime = new Date().getTime();
+            callback.lastTime = Date.now();
           }, totalDelay);
         }
       },
@@ -334,7 +335,7 @@ export class InputKeyboard {
         const callback = this.keyCallbackMap[key];
 
         if (!callback.delayed) {
-          const curTime = new Date().getTime();
+          const curTime = Date.now();
           // If no lastTime, assume that desired FPS is met
           const lastTime = callback.lastTime || curTime - 1000 / constants.FPS;
           const elapsed = curTime - lastTime;
@@ -533,7 +534,7 @@ export class InputMouse {
     // target (as an example, this avoids that mouse events
     // for input catchers are dispatched when a modal is above
     // the input catchers).
-    // @ts-ignore The `id` property exists on DOM elements
+    // @ts-expect-error The `id` property exists on DOM elements
     if (event?.target?.id !== this.targetId) {
       return false;
     }
@@ -709,7 +710,7 @@ export class InputMouse {
     };
     // Don't use {...boundingRect, }, because boundingRect is a DOMRect
     // which isn't compatible with the spreading, apparently.
-    return _.extend({}, boundingRect, {
+    return extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,
     });

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import keyBy from "lodash-es/keyBy";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type { APIUser, APIUserBase } from "types/api_types";
@@ -22,7 +22,7 @@ export function formatUserName(
   return `${user.firstName} ${user.lastName}${maybeYouHint}`;
 }
 
-const keyContributors = memoizeOne((contributors: APIUserBase[]) => _.keyBy(contributors, "id"));
+const keyContributors = memoizeOne((contributors: APIUserBase[]) => keyBy(contributors, "id"));
 
 export function getContributorById(
   userId: string | undefined,

@@ -51,7 +51,7 @@ import java.io.File
 import java.net.URI
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class PathValidationResult(
     path: UPath,
@@ -595,6 +595,7 @@ class DataSourceController @Inject()(
             agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _))
           volumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
             segmentIndexFileService.getSegmentVolume(
+              datasetId,
               dataSource.id,
               dataLayer,
               segmentIndexFileKey,
@@ -616,7 +617,8 @@ class DataSourceController @Inject()(
           agglomerateFileKeyOpt <- Fox.runOptional(request.body.mappingName)(
             agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, _))
           boxes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            segmentIndexFileService.getSegmentBoundingBox(dataSource.id,
+            segmentIndexFileService.getSegmentBoundingBox(datasetId,
+                                                          dataSource.id,
                                                           dataLayer,
                                                           segmentIndexFileKey,
                                                           agglomerateFileKeyOpt,
@@ -654,7 +656,7 @@ class DataSourceController @Inject()(
               _ =>
                 for {
                   data: Array[Byte] <- fullMeshService
-                    .loadFor(dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+                    .loadFor(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
                   surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
                 } yield surfaceArea
             )
@@ -711,7 +713,10 @@ class DataSourceController @Inject()(
   def invalidateCache(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
       datasetCache.invalidateCache(datasetId)
-      Future.successful(Ok)
+      for {
+        dataSourceBox <- datasetCache.getById(datasetId).shiftBox
+        _ = dataSourceBox.foreach(clearCachesOfDataSource(datasetId, _, layerName = None))
+      } yield Ok
     }
   }
 
@@ -724,7 +729,7 @@ class DataSourceController @Inject()(
           dataSourceService.dataSourceFromDir(
             dataSourceService.dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName),
             dataSourceId.organizationId,
-            resolveMagPaths = true
+            resolvePaths = true
           ))
       } else None
       _ <- Fox.runOptional(dataSourceFromDirOpt)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))

@@ -1,38 +1,38 @@
+import type { MinCutTargetEdge } from "admin/rest_api";
+import isEqual  from "lodash-es/isEqual";
+import sortBy  from "lodash-es/sortBy";
+import { Root } from "protobufjs";
+import type { WebknossosTestContext } from "test/helpers/apiHelpers";
+import { put } from "typed-redux-saga";
 import type {
   ServerNode,
   ServerSkeletonTracing,
   ServerSkeletonTracingTree,
   ServerTracing,
 } from "types/api_types";
-
-import { Root } from "protobufjs";
-import { TreeTypeEnum, type Vector3, type TreeType } from "viewer/constants";
-import { PROTO_FILES, PROTO_TYPES } from "viewer/model/helpers/proto_helpers";
-import type { Edge, TreeMap } from "viewer/model/types/tree_types";
-import type { WebknossosTestContext } from "test/helpers/apiHelpers";
+import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
-import { expect, vi } from "vitest";
-import { type Saga, take, call, select } from "viewer/model/sagas/effect-generators";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
+import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
+import {
+  setActiveCellAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
+import { PROTO_FILES, PROTO_TYPES } from "viewer/model/helpers/proto_helpers";
+import { call, type Saga, select, take } from "viewer/model/sagas/effect-generators";
+import type { Edge, TreeMap } from "viewer/model/types/tree_types";
+import type { NumberLike, SkeletonTracing, WebknossosState } from "viewer/store";
+import { expect, vi } from "vitest";
+import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";
 import {
   getAllCurrentlyLoadedMeshIds,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
 } from "./proofreading_test_utils";
-import { put } from "typed-redux-saga";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
-import { mergeTreesAction, deleteEdgeAction } from "viewer/model/actions/skeletontracing_actions";
-import {
-  updateSegmentAction,
-  setActiveCellAction,
-} from "viewer/model/actions/volumetracing_actions";
-import type { WebknossosState, SkeletonTracing, NumberLike } from "viewer/store";
-import { initialMapping, expectedMappingAfterMerge } from "./proofreading_fixtures";
-import _ from "lodash";
-import type { MinCutTargetEdge } from "admin/rest_api";
 
 export function encodeServerTracing(
   tracing: ServerTracing,
@@ -201,7 +201,7 @@ function* loadInitialMeshes(context: WebknossosTestContext) {
   yield loadAgglomerateMeshes([4, 6, 1]);
 
   const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-  expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+  expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 }
 
 export function* performMergeTreesProofreading(
@@ -361,7 +361,7 @@ export const mockEdgesForAgglomerateMinCut = (
         );
       }
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
-      if (agglomerateId === 1 && _.isEqual(partition1, [3]) && _.isEqual(partition2, [2])) {
+      if (agglomerateId === 1 && isEqual(partition1, [3]) && isEqual(partition2, [2])) {
         return [
           {
             position1: [3, 3, 3],

@@ -10,12 +10,12 @@ import {
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
-import every from "lodash/every";
+import every from "lodash-es/every";
 import messages from "messages";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { type APIDataLayer, APIJobCommand, type AiModel } from "types/api_types";
+import { type AiModel, type APIDataLayer, APIJobCommand } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { hasEmptyTrees } from "viewer/model/accessors/skeletontracing_accessor";

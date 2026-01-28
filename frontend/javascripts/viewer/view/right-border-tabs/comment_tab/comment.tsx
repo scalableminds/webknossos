@@ -1,13 +1,12 @@
 import { Popover } from "antd";
-import type * as React from "react";
-
 import classNames from "classnames";
 import { document } from "libs/window";
+import type * as React from "react";
 import { useCallback } from "react";
+import { useDispatch } from "react-redux";
 import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "viewer/constants";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import type { CommentType } from "viewer/model/types/tree_types";
-import Store from "viewer/store";
 import { MarkdownWrapper } from "viewer/view/components/markdown_modal";
 
 function linkify(comment: string) {
@@ -54,10 +53,12 @@ function ActiveCommentPopover({
   );
 }
 
-export function Comment({ comment, isActive }: CommentProps) {
+function Comment({ comment, isActive }: CommentProps) {
+  const dispatch = useDispatch();
+
   const handleClick = useCallback(() => {
-    Store.dispatch(setActiveNodeAction(comment.nodeId));
-  }, [comment.nodeId]);
+    dispatch(setActiveNodeAction(comment.nodeId));
+  }, [comment.nodeId, dispatch]);
 
   const liClassName = classNames("markdown", "markdown-small", "nowrap");
 

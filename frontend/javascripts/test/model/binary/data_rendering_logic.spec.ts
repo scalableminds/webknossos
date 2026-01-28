@@ -1,11 +1,11 @@
-import _ from "lodash";
+import range from "lodash-es/range";
+import type { ElementClass } from "types/api_types";
+import constants from "viewer/constants";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
-import { describe, it, expect } from "vitest";
-import constants from "viewer/constants";
-import type { ElementClass } from "types/api_types";
+import { describe, expect, it } from "vitest";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
@@ -49,8 +49,8 @@ const createVolumeLayer = () => ({
 });
 
 function createLayers(grayscaleCount: number, volumeCount: number) {
-  const grayscaleLayers = _.range(0, grayscaleCount).map(() => createGrayscaleLayer());
-  const volumeLayers = _.range(0, volumeCount).map(() => createVolumeLayer());
+  const grayscaleLayers = range(0, grayscaleCount).map(() => createGrayscaleLayer());
+  const volumeLayers = range(0, volumeCount).map(() => createVolumeLayer());
   return grayscaleLayers.concat(volumeLayers);
 }
 

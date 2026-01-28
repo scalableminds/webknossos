@@ -1,4 +1,4 @@
-import _ from "lodash";
+import template from "lodash-es/template";
 import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,
@@ -111,13 +111,13 @@ export default {
     "An unknown error occurred. Please try again or check the console for more details.",
   offline:
     "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
-  "datastore.health": _.template(
+  "datastore.health": template(
     "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
-  "datastore.version.too_new": _.template(
+  "datastore.version.too_new": template(
     "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this WEBKNOSSOS instance",
   ),
-  "datastore.version.too_old": _.template(
+  "datastore.version.too_old": template(
     "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
   "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
@@ -141,10 +141,10 @@ A reload is necessary to return to a valid state.`,
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
-  "download.python_do_not_share": _.template(
+  "download.python_do_not_share": template(
     "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
   ),
-  "download.export_as_tiff": _.template(
+  "download.export_as_tiff": template(
     "Export this <%- typeName %> as TIFF image(s). This may take a few moments depending on the size of your configured export.",
   ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
@@ -225,7 +225,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "The tree(s) you want to delete contain(s) the initial node. Do you really want to proceed with the deletion?",
-  "tracing.delete_multiple_trees": _.template(
+  "tracing.delete_multiple_trees": template(
     "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
   ),
   "tracing.group_deletion_message": "Do you want to delete the selected group?",
@@ -279,7 +279,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The WebGL context was lost. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "webgl.context_recovery":
     "The WebGL context has been recovered. If you experience unusual behavior, consider reloading the page.",
-  "webgl.too_many_active_layers": _.template(
+  "webgl.too_many_active_layers": template(
     "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
@@ -287,7 +287,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_description": "You are now annotating a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
   "task.request_new": "Do you really want another task?",
-  "task.peek_next": _.template(
+  "task.peek_next": template(
     "The next task will most likely be part of project <%- projectName %>",
   ),
   "task.confirm_reset": "Do you really want to reset this task?",
@@ -300,7 +300,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
     "If you reopen your old annotation, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
-  "annotation.acquiringMutexFailed": _.template(
+  "annotation.acquiringMutexFailed": template(
     "This annotation is currently being edited by <%- userName %>. To avoid conflicts, you can only view it. If you want to edit it, please ask <%- userName %> to finish their work first.",
   ),
   "annotation.acquiringMutexFailed.noUser":
@@ -320,10 +320,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": _.template(
+  "dataset.clear_cache_success": template(
     "The dataset <%- datasetName %> was reloaded successfully.",
   ),
-  "dataset.delete_success": _.template(
+  "dataset.delete_success": template(
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
@@ -476,17 +476,17 @@ instead. Only enable this option if you understand its effect. All layers will n
   "users.multiple_selected_users":
     "You selected more than one user. To change the organization permissions of users you need to select them individually.",
   "users.change_permissions_title": "Do you really want to change the permissions of this user?",
-  "users.revoke_all_permissions": _.template(
+  "users.revoke_all_permissions": template(
     "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular WEBKNOSSOS member, access to datasets will be determined by the user's team memberships.",
   ),
-  "users.set_dataset_manager": _.template(
+  "users.set_dataset_manager": template(
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
   ),
-  "users.set_admin": _.template(
+  "users.set_admin": template(
     "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capabilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
-  "users.change_email": _.template(
+  "users.change_email": template(
     "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",
   ),
   "users.change_email_confirmation": "The email has been changed",

@@ -6,7 +6,7 @@ import {
 } from "admin/rest_api";
 import Toast from "libs/toast";
 import { computeBoundingBoxFromBoundingBoxObject, point3ToVector3 } from "libs/utils";
-import { type APIAnnotation, AnnotationLayerEnum, type ServerVolumeTracing } from "types/api_types";
+import { AnnotationLayerEnum, type APIAnnotation, type ServerVolumeTracing } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { convertUserBoundingBoxesFromServerToFrontend } from "viewer/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";

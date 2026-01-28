@@ -14,10 +14,10 @@ import {
   createMutableTreeMapFromTreeArray,
   getMaximumTreeId,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type { Node } from "viewer/model/types/tree_types";
+import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type { NumberLikeMap, ProofreadingActionInfo, SkeletonTracing } from "viewer/store";
-import { type Saga, call, select } from "../../effect-generators";
+import { call, type Saga, select } from "../../effect-generators";
 import { diffSkeletonTracing, getAgglomerateSkeletonTracing } from "../../skeletontracing_saga";
 import {
   type ApplicableSkeletonServerUpdateAction,

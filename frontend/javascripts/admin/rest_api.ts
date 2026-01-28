@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
@@ -11,10 +12,15 @@ import {
   retryAsyncFunction,
 } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
+import zip from "lodash-es/zip";
 import messages from "messages";
 import ResumableJS from "resumablejs";
 import {
+  type AdditionalCoordinate,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type AnnotationViewConfiguration,
   type APIAnnotation,
   type APIAnnotationInfo,
   type APIAnnotationType,
@@ -59,10 +65,6 @@ import {
   type APIUserCompact,
   type APIUserLoggedTime,
   type APIUserTheme,
-  type AdditionalCoordinate,
-  type AnnotationLayerDescriptor,
-  AnnotationLayerEnum,
-  type AnnotationViewConfiguration,
   type ExperienceDomainList,
   type LayerLink,
   type MaintenanceInfo,
@@ -84,8 +86,8 @@ import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/const
 import { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
-  type LayerSourceInfo,
   getDataOrTracingStoreUrl,
+  type LayerSourceInfo,
 } from "viewer/model/bucket_data_handling/wkstore_helper";
 import {
   parseProtoAnnotation,
@@ -107,11 +109,11 @@ import type {
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
-import { doWithToken } from "./api/token";
+import { doWithToken, refreshToken } from "./api/token";
 
-export * from "./api/token";
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
+export * from "./api/token";
 
 type NewTeam = {
   readonly name: string;
@@ -781,9 +783,9 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove datasetName and organizationId as these should not be used in the front-end, anymore.
+  // @ts-expect-error Remove datasetName and organizationId as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
-  // @ts-ignore
+  // @ts-expect-error
   delete tracing.organizationId;
 
   return tracing;
@@ -868,7 +870,7 @@ export function hasSegmentIndexInDataStore(
   );
 }
 
-export const hasSegmentIndexInDataStoreCached = _.memoize(hasSegmentIndexInDataStore, (...args) =>
+export const hasSegmentIndexInDataStoreCached = memoize(hasSegmentIndexInDataStore, (...args) =>
   args.join("::"),
 );
 
@@ -1041,17 +1043,32 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
   return datasets;
 }
 
-export function getDataset(
+export async function getDataset(
   datasetId: string,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
+  filterZeroMagLayers: boolean = true,
 ): Promise<APIDataset> {
   const params = new URLSearchParams();
   if (sharingToken != null) {
     params.set("sharingToken", String(sharingToken));
   }
 
-  return Request.receiveJSON(`/api/datasets/${datasetId}?${params}`, options);
+  const dataset: APIDataset = await Request.receiveJSON(
+    `/api/datasets/${datasetId}?${params}`,
+    options,
+  );
+
+  if (!filterZeroMagLayers || !("dataLayers" in (dataset.dataSource ?? {}))) {
+    return dataset;
+  }
+  return update(dataset, {
+    dataSource: {
+      dataLayers: {
+        $set: dataset.dataSource.dataLayers.filter((layer) => layer.mags.length > 0),
+      },
+    },
+  });
 }
 
 export async function getDatasetLegacy(
@@ -1170,22 +1187,64 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     return `${uploadId}/${file.path || file.name}`;
   };
 
-  return doWithToken(
-    (token) =>
-      // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
-      new ResumableJS({
-        testChunks: true,
-        target: `${datastoreUrl}/data/datasets?token=${token}`,
-        chunkSize: 10 * 1024 * 1024, // 10MB
-        permanentErrors: [400, 403, 404, 409, 415, 500, 501],
-        simultaneousUploads: 3,
-        chunkRetryInterval: 2000,
-        maxChunkRetries: undefined,
-        xhrTimeout: 10 * 60 * 1000, // 10m
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
-        generateUniqueIdentifier,
-      }),
-  );
+  return doWithToken(async (initialToken) => {
+    let activeToken = initialToken;
+    const handleInvalidToken = async () => {
+      const newToken = await refreshToken();
+      activeToken = newToken;
+    };
+
+    const resumable = new ResumableJS({
+      testChunks: true,
+      target: `${datastoreUrl}/data/datasets`,
+      query: function () {
+        return {
+          token: activeToken,
+        };
+      },
+      chunkSize: 10 * 1024 * 1024, // 10MB
+      simultaneousUploads: 3,
+      chunkRetryInterval: 2000,
+      maxChunkRetries: undefined,
+      xhrTimeout: 10 * 60 * 1000, // 10m
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
+      generateUniqueIdentifier,
+      // The following errors only tell ResumableJS to not
+      // retry automatically when they appear.
+      // 403 is explicitly listed because we want to get a fileError
+      // event. Then, we can invalidate the token and trigger
+      // a retry ourselves (see below).
+      permanentErrors: [400, 403, 404, 409, 415, 500, 501],
+    });
+
+    let lastFileErrorTimestamp: number | null = null;
+    resumable.on("fileError", function (file, message) {
+      // When a file could not be uploaded, assume that the token is invalid. Then,
+      // refresh the token (unless we already did this in the last hour) and
+      // retry the file upload.
+      const ONE_HOUR_MS = 3600 * 1000;
+      if (lastFileErrorTimestamp == null || Date.now() - lastFileErrorTimestamp > ONE_HOUR_MS) {
+        handleInvalidToken()
+          .then(() => {
+            file.retry();
+          })
+          .catch(() => {
+            // Note that "terminalFileError" is an event which is only triggered by WK
+            // and not by the ResumableUpload library itself. We merely use the event bus
+            // of the ResumableUpload object.
+            // @ts-expect-error The type definitions are incorrect. fire accepts these parameters.
+            resumable.fire("terminalFileError", file, message);
+          });
+      } else {
+        // @ts-expect-error See above.
+        resumable.fire("terminalFileError", file, message);
+      }
+
+      lastFileErrorTimestamp = Date.now();
+    });
+
+    return resumable;
+  });
 }
 type ReserveUploadInformation = {
   uploadId: string;
@@ -1567,13 +1626,13 @@ export async function getDatastores(): Promise<APIDataStore[]> {
   return datastores;
 }
 
-export const getDataStoresCached = _.memoize(getDatastores);
+export const getDataStoresCached = memoize(getDatastores);
 
 export function getTracingstore(): Promise<APITracingStore> {
   return Request.receiveJSON("/api/tracingstore");
 }
 
-export const getTracingStoreCached = _.memoize(getTracingstore);
+export const getTracingStoreCached = memoize(getTracingstore);
 
 // ### Active User
 export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
@@ -1748,7 +1807,7 @@ export function setMaintenance(bool: boolean): Promise<void> {
     method: bool ? "POST" : "DELETE",
   });
 }
-// @ts-ignore
+// @ts-expect-error
 window.setMaintenance = setMaintenance;
 
 // Meshes
@@ -1896,8 +1955,8 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   });
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-ignore
+  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-expect-error
   return new Map(keyValues);
 }
 
@@ -1939,8 +1998,8 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
 
-  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-ignore
+  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-expect-error
   return new Map(keyValues);
 }
 
@@ -2215,7 +2274,7 @@ export async function getSamMask(
 }
 
 // ### Short links
-export const createShortLink = _.memoize(
+export const createShortLink = memoize(
   (longLink: string): Promise<ShortLink> =>
     Request.sendJSONReceiveJSON("/api/shortLinks", {
       method: "POST",

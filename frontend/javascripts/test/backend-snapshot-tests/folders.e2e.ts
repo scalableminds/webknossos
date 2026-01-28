@@ -1,16 +1,17 @@
-import _ from "lodash";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
   tokenUserA,
   tokenUserC,
-  setUserAuthToken,
-  resetDatabase,
-  replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import Request from "libs/request";
-import { describe, it, beforeAll, expect } from "vitest";
-import { APIMetadataEnum } from "types/api_types";
 import { createFolder, getFolder, getFolderTree, updateFolder } from "admin/api/folders";
+import Request from "libs/request";
+import sortBy from "lodash-es/sortBy";
+import { APIMetadataEnum } from "types/api_types";
+import { beforeAll, describe, expect, it } from "vitest";
 
 describe("Folder API (E2E)", () => {
   beforeAll(async () => {
@@ -20,7 +21,7 @@ describe("Folder API (E2E)", () => {
   });
 
   it("getFolderTree", async () => {
-    const folderTree = _.sortBy(await getFolderTree(), (folderWithParent) => folderWithParent.name);
+    const folderTree = sortBy(await getFolderTree(), (folderWithParent) => folderWithParent.name);
 
     writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
       isArray: true,

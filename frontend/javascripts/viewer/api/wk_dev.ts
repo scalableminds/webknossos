@@ -2,7 +2,7 @@ import app from "app";
 import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
-import _ from "lodash";
+import mean from "lodash-es/mean";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
 import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";
@@ -208,7 +208,7 @@ export default class WkDev {
     if (this.benchmarkHistory.MOVE.length > 1) {
       console.log(
         `Mean of all ${this.benchmarkHistory.MOVE.length} benchmark runs:`,
-        _.mean(this.benchmarkHistory.MOVE),
+        mean(this.benchmarkHistory.MOVE),
       );
     }
   }
@@ -250,7 +250,7 @@ export default class WkDev {
     if (this.benchmarkHistory.ROTATE.length > 1) {
       console.log(
         `Mean of all ${this.benchmarkHistory.ROTATE.length} benchmark runs:`,
-        _.mean(this.benchmarkHistory.ROTATE),
+        mean(this.benchmarkHistory.ROTATE),
       );
     }
   }
@@ -267,7 +267,7 @@ export default class WkDev {
       if (this.benchmarkHistory.SEGMENTS_SCROLL.length > 1) {
         console.log(
           `Mean of all ${this.benchmarkHistory.SEGMENTS_SCROLL.length} benchmark runs:`,
-          _.mean(this.benchmarkHistory.SEGMENTS_SCROLL),
+          mean(this.benchmarkHistory.SEGMENTS_SCROLL),
         );
       }
     });

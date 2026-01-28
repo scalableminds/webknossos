@@ -2,7 +2,7 @@ import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash-es/throttle";
 import {
   Matrix4,
   Object3D,
@@ -308,7 +308,7 @@ class ArbitraryView {
   };
 
   // throttle resize to avoid annoying flickering
-  resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
+  resizeThrottled = throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
     this.camera.near = ARBITRARY_CAM_DISTANCE - value;

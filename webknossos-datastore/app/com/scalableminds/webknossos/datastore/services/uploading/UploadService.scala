@@ -314,7 +314,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId) ?~> "dataset.upload.fileSizeCheck.failed"
-      _ <- checkAllChunksUploaded(uploadId) ?~> "dataset.upload.allChunnksUploadedCheck.failed"
+      _ <- checkAllChunksUploaded(uploadId) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackToDir = unpackToDirFor(dataSourceId)
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir, datasetId).shiftBox

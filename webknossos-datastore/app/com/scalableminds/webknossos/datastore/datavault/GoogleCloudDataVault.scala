@@ -36,7 +36,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
 
@@ -45,7 +45,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     for {
       bytes <- try {
         range match {
-          case StartEnd(r) =>
+          case r: StartEndExclusiveByteRange =>
             val blobReader = storage.reader(blobId)
             blobReader.seek(r.start)
             blobReader.limit(r.end)
@@ -55,7 +55,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
             bb.position(0)
             bb.get(arr)
             Fox.successful(arr)
-          case SuffixLength(l) =>
+          case SuffixLengthByteRange(l) =>
             val blobReader = storage.reader(blobId)
             blobReader.seek(-l)
             val bb = ByteBuffer.allocateDirect(l)
@@ -64,7 +64,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
             bb.position(0)
             bb.get(arr)
             Fox.successful(arr)
-          case Complete() => Fox.successful(storage.readAllBytes(bucket, objName))
+          case CompleteByteRange() => Fox.successful(storage.readAllBytes(bucket, objName))
         }
       } catch {
         case s: StorageException =>

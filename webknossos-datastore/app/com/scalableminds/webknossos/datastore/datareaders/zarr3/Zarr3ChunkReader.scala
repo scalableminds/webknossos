@@ -3,14 +3,13 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class Zarr3ChunkReader(header: DatasetHeader, array: Zarr3Array) extends ChunkReader(header) {
 
-  override protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
+  override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {

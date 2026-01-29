@@ -4,12 +4,18 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 
 const getInitialHeight = () =>
-  Number.parseInt(UserLocalStorage.getItem("lastPersistedHeightForResizableDetailsPane") ?? "200", 10);
+  Number.parseInt(
+    UserLocalStorage.getItem("lastPersistedHeightForResizableDetailsPane") ?? "200",
+    10,
+  );
 
 export function ResizableSplitPane({
   firstChild,
   secondChild,
-}: { firstChild: React.ReactElement; secondChild: React.ReactElement | null }) {
+}: {
+  firstChild: React.ReactElement;
+  secondChild: React.ReactElement | null;
+}) {
   const [heightForSecondChild, setHeightForSecondChild] = useState(getInitialHeight());
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);

@@ -1,5 +1,5 @@
 import type React from "react";
-import { forwardRef, useState } from "react";
+import { useState } from "react";
 import { type Blocker, type BlockerFunction, useBlocker } from "react-router-dom";
 
 export type WithBlockerProps = {
@@ -15,31 +15,29 @@ export type WithBlockerProps = {
  */
 export function withBlocker<TProps extends WithBlockerProps>(
   WrappedComponent: React.ComponentType<TProps>,
-): React.ForwardRefExoticComponent<
-  React.PropsWithoutRef<Omit<TProps, keyof WithBlockerProps>> & React.RefAttributes<any>
-> {
-  const WithBlockerComponent = forwardRef<any, Omit<TProps, keyof WithBlockerProps>>(
-    (props, ref) => {
-      // State to control blocking behavior
-      const [shouldBlockState, setShouldBlockState] = useState<{
-        shouldBlock: boolean | BlockerFunction;
-      }>({
-        shouldBlock: false,
-      });
+): React.ComponentType<Omit<TProps, keyof WithBlockerProps> & { ref?: any }> {
+  const WithBlockerComponent = (props: Omit<TProps, keyof WithBlockerProps> & { ref?: any }) => {
+    const { ref, ...restProps } = props;
 
-      // Use the useBlocker hook
-      const blocker = useBlocker(shouldBlockState.shouldBlock);
+    // State to control blocking behavior
+    const [shouldBlockState, setShouldBlockState] = useState<{
+      shouldBlock: boolean | BlockerFunction;
+    }>({
+      shouldBlock: false,
+    });
 
-      // Create props object with the blocker and control function
-      const enhancedProps = {
-        ...props,
-        blocker,
-        setBlocking: setShouldBlockState,
-      } as unknown as TProps;
+    // Use the useBlocker hook
+    const blocker = useBlocker(shouldBlockState.shouldBlock);
 
-      return <WrappedComponent {...enhancedProps} ref={ref} />;
-    },
-  );
+    // Create props object with the blocker and control function
+    const enhancedProps = {
+      ...restProps,
+      blocker,
+      setBlocking: setShouldBlockState,
+    } as unknown as TProps;
+
+    return <WrappedComponent {...enhancedProps} ref={ref} />;
+  };
 
   return WithBlockerComponent;
 }

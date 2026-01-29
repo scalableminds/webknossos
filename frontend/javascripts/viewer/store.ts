@@ -642,7 +642,7 @@ export const combinedReducer = reduceReducers(
   OrganizationReducer,
 ) as Reducer;
 
-const store = createStore<WebknossosState, Action, unknown, unknown>(
+const store = createStore<WebknossosState, Action>(
   enableBatching(combinedReducer as any),
   defaultState,
   applyMiddleware(

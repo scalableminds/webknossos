@@ -104,7 +104,13 @@ export function FolderTreeSidebar({
   };
   const titleRender = useCallback(
     (nodeData: FolderItem) => {
-      return <ItemTitle context={context} folder={nodeData} setFolderIdForEditModal={setFolderIdForEditModal} />;
+      return (
+        <ItemTitle
+          context={context}
+          folder={nodeData}
+          setFolderIdForEditModal={setFolderIdForEditModal}
+        />
+      );
     },
     [context, setFolderIdForEditModal],
   );
@@ -131,7 +137,8 @@ export function FolderTreeSidebar({
           context.queries.moveFolderMutation.mutateAsync([sourceId, targetId]);
         } else {
           Toast.warning(
-            `You don't have the necessary permissions to move this folder${sourceAllowed ? " to the specified target" : ""
+            `You don't have the necessary permissions to move this folder${
+              sourceAllowed ? " to the specified target" : ""
             }.`,
           );
         }
@@ -258,14 +265,12 @@ export function generateSettingsForFolder(
 }
 
 type ItemTitleProps = {
-  context: DatasetCollectionContextValue,
-  folder: FolderItem,
-  setFolderIdForEditModal: (folderId: string) => void,
-}
+  context: DatasetCollectionContextValue;
+  folder: FolderItem;
+  setFolderIdForEditModal: (folderId: string) => void;
+};
 
-const ItemTitle: React.FC<ItemTitleProps> = (
-  props,
-) => {
+const ItemTitle: React.FC<ItemTitleProps> = (props) => {
   const { context, folder, setFolderIdForEditModal } = props;
   const { key: id, title, isEditable } = folder;
 
@@ -287,14 +292,14 @@ const ItemTitle: React.FC<ItemTitleProps> = (
       trigger={["contextMenu"]}
     >
       {/* this div is needed to make Dropdown and react-dnd work */}
-      <div> 
+      <div>
         <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
           {title}
         </FolderItemAsDropTarget>
       </div>
     </Dropdown>
   );
-}
+};
 
 export type DnDDropItemProps = {
   datasetId: string;
@@ -304,12 +309,12 @@ export function useDatasetDrop(
   folderId: string,
   canDrop: boolean,
 ): [
-    {
-      canDrop: boolean;
-      isOver: boolean;
-    },
-    ConnectDropTarget,
-  ] {
+  {
+    canDrop: boolean;
+    isOver: boolean;
+  },
+  ConnectDropTarget,
+] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [collectedProps, drop] = useDrop<
@@ -450,9 +455,12 @@ function deriveExpandedTrees(
 
 function useDropRef(drop: (element: HTMLDivElement) => void) {
   // Source: https://github.com/react-dnd/react-dnd/issues/3670
-  return useCallback((element: HTMLDivElement | null) => {
-    if (element) {
-      drop(element);
-    }
-  }, [drop]);
+  return useCallback(
+    (element: HTMLDivElement | null) => {
+      if (element) {
+        drop(element);
+      }
+    },
+    [drop],
+  );
 }

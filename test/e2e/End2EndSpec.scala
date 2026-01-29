@@ -33,7 +33,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
       runFrontendBuild()
       ensureTestDataset()
 
-      val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)
+      val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort/api/health").get(), 2 seconds)
       resp.status === 200
 
       runWebdriverTests === 0

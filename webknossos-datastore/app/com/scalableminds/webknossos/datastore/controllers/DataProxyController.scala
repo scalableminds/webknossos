@@ -4,11 +4,15 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.ByteRange
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerAttachments, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataStoreAccessTokenService, DatasetCache, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.http.Writeable
 import play.api.i18n.Messages
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}
 
 import scala.concurrent.ExecutionContext
@@ -60,6 +64,34 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
       } yield resultWithStatus(byteRange.successResponseCode, data).withHeaders(ACCEPT_RANGES -> "bytes")
     }
   }
+
+  def proxyDatasource(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
+      for {
+        dataSource <- datasetCache.getById(datasetId) ?~> "dataSource.notFound" ~> NOT_FOUND
+        dataSourceWithAdaptedPaths = adaptPathsForDataSource(dataSource)
+      } yield Ok(Json.toJson(dataSourceWithAdaptedPaths))
+    }
+  }
+
+  private def adaptPathsForDataSource(dataSource: UsableDataSource) =
+    dataSource.copy(
+      dataLayers = dataSource.dataLayers.map(
+        layer =>
+          layer.mapped(magMapping = mag => adaptPathForMag(mag, layer.name),
+                       attachmentMapping = attachments => adaptPathsForAttachments(attachments, layer.name)))
+    )
+
+  private def adaptPathForMag(mag: MagLocator, layerName: String): MagLocator =
+    mag.copy(
+      path = Some(UPath.fromStringUnsafe(s"./layers/$layerName/mags/${mag.mag.toMagLiteral(allowScalar = true)}")))
+
+  private def adaptPathsForAttachments(attachments: DataLayerAttachments, layerName: String): DataLayerAttachments =
+    attachments.mapped(
+      attachment =>
+        attachment.copy(
+          path = UPath.fromStringUnsafe(s"./layers/$layerName/attachments/${attachment.name}")
+      ))
 
   private def validatePath(path: String): Fox[Unit] =
     for {

@@ -120,246 +120,243 @@ describe("Dataset Rendering", () => {
     expect(allRetrieved).toBe(true);
   });
 
-  test.sequential.for(datasetNames)(
-    "should render dataset %s correctly",
-    async (datasetName, context) => {
-      // Type assertion to ensure context has browser property
-      const { browser } = context as ScreenshotTestContext;
+  test.sequential.for(
+    datasetNames,
+  )("should render dataset %s correctly", async (datasetName, context) => {
+    // Type assertion to ensure context has browser property
+    const { browser } = context as ScreenshotTestContext;
 
-      await withRetry(
-        3,
-        async () => {
-          const page = await getNewPage(browser);
+    await withRetry(
+      3,
+      async () => {
+        const page = await getNewPage(browser);
 
-          const { screenshot, width, height } = await screenshotDataset(
-            page,
-            URL,
-            datasetNameToId[datasetName],
-            undefined,
-            {
-              viewOverride: viewOverrides[datasetName],
-              datasetConfigOverride: datasetConfigOverrides[datasetName],
-            },
-          );
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            SCREENSHOTS_BASE_PATH,
-            datasetName,
-          );
-          await page.close();
+        const { screenshot, width, height } = await screenshotDataset(
+          page,
+          URL,
+          datasetNameToId[datasetName],
+          undefined,
+          {
+            viewOverride: viewOverrides[datasetName],
+            datasetConfigOverride: datasetConfigOverrides[datasetName],
+          },
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          SCREENSHOTS_BASE_PATH,
+          datasetName,
+        );
+        await page.close();
 
-          return isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          expect(
-            condition,
-            `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
-          ).toBe(true);
-        },
-      );
-    },
-  );
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      (condition) => {
+        expect(
+          condition,
+          `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+        ).toBe(true);
+      },
+    );
+  });
 
-  test.sequential.for(annotationSpecs)(
-    "should render an annotation for %s with fallback_layer=%s correctly",
-    async ([datasetName, fallbackLayerName], context) => {
-      const fallbackLabel = fallbackLayerName ?? "without_fallback";
-      // Type assertion to ensure context has browser property
-      const { browser } = context as ScreenshotTestContext;
+  test.sequential.for(
+    annotationSpecs,
+  )("should render an annotation for %s with fallback_layer=%s correctly", async ([
+    datasetName,
+    fallbackLayerName,
+  ], context) => {
+    const fallbackLabel = fallbackLayerName ?? "without_fallback";
+    // Type assertion to ensure context has browser property
+    const { browser } = context as ScreenshotTestContext;
 
-      console.log(
-        `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
-      );
+    console.log(
+      `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
+    );
 
-      await withRetry(
-        3,
-        async () => {
-          const page = await getNewPage(browser);
+    await withRetry(
+      3,
+      async () => {
+        const page = await getNewPage(browser);
 
-          const { screenshot, width, height } = await screenshotAnnotation(
-            page,
-            URL,
-            datasetNameToId[datasetName],
-            fallbackLayerName,
-            {
-              viewOverride: viewOverrides[datasetName],
-              datasetConfigOverride: datasetConfigOverrides[datasetName],
-            },
-          );
+        const { screenshot, width, height } = await screenshotAnnotation(
+          page,
+          URL,
+          datasetNameToId[datasetName],
+          fallbackLayerName,
+          {
+            viewOverride: viewOverrides[datasetName],
+            datasetConfigOverride: datasetConfigOverrides[datasetName],
+          },
+        );
 
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            SCREENSHOTS_BASE_PATH,
-            `annotation_${datasetName}_${fallbackLabel}`,
-          );
-          await page.close();
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          SCREENSHOTS_BASE_PATH,
+          `annotation_${datasetName}_${fallbackLabel}`,
+        );
+        await page.close();
 
-          return isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          expect(
-            condition,
-            `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
-          ).toBe(true);
-        },
-      );
-    },
-  );
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      (condition) => {
+        expect(
+          condition,
+          `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
+        ).toBe(true);
+      },
+    );
+  });
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset with mappings correctly",
-    async ({ browser }) => {
-      const datasetName = "ROI2017_wkw";
-      const mappingName = "astrocyte";
+  it.sequential<ScreenshotTestContext>("should render a dataset with mappings correctly", async ({
+    browser,
+  }) => {
+    const datasetName = "ROI2017_wkw";
+    const mappingName = "astrocyte";
 
-      await withRetry(
-        3,
-        async () => {
-          const page = await getNewPage(browser);
+    await withRetry(
+      3,
+      async () => {
+        const page = await getNewPage(browser);
 
-          const { screenshot, width, height } = await screenshotDatasetWithMapping(
-            page,
-            URL,
-            datasetNameToId[datasetName],
-            mappingName,
-          );
+        const { screenshot, width, height } = await screenshotDatasetWithMapping(
+          page,
+          URL,
+          datasetNameToId[datasetName],
+          mappingName,
+        );
 
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            SCREENSHOTS_BASE_PATH,
-            `${datasetName}_with_mapping_${mappingName}`,
-          );
-          await page.close();
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          SCREENSHOTS_BASE_PATH,
+          `${datasetName}_with_mapping_${mappingName}`,
+        );
+        await page.close();
 
-          return isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          expect(
-            condition,
-            `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
-          ).toBe(true);
-        },
-      );
-    },
-  );
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      (condition) => {
+        expect(
+          condition,
+          `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
+        ).toBe(true);
+      },
+    );
+  });
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset linked to with an active mapping and agglomerate skeleton correctly",
-    async ({ browser }) => {
-      const datasetName = "test-agglomerate-file";
-      const viewOverride = viewOverrides[datasetName];
+  it.sequential<ScreenshotTestContext>("should render a dataset linked to with an active mapping and agglomerate skeleton correctly", async ({
+    browser,
+  }) => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides[datasetName];
 
-      await withRetry(
-        3,
-        async () => {
-          const page = await getNewPage(browser);
+    await withRetry(
+      3,
+      async () => {
+        const page = await getNewPage(browser);
 
-          const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
-            page,
-            URL,
-            datasetNameToId[datasetName],
-            viewOverride,
-          );
+        const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
+          page,
+          URL,
+          datasetNameToId[datasetName],
+          viewOverride,
+        );
 
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            SCREENSHOTS_BASE_PATH,
-            `${datasetName}_with_mapping_link`,
-          );
-          await page.close();
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          SCREENSHOTS_BASE_PATH,
+          `${datasetName}_with_mapping_link`,
+        );
+        await page.close();
 
-          return isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          expect(
-            condition,
-            `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
-          ).toBe(true);
-        },
-      );
-    },
-  );
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      (condition) => {
+        expect(
+          condition,
+          `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
+        ).toBe(true);
+      },
+    );
+  });
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset sandbox linked to with an active mapping and agglomerate skeleton correctly",
-    async ({ browser }) => {
-      const datasetName = "test-agglomerate-file";
-      const viewOverride = viewOverrides[datasetName];
+  it.sequential<ScreenshotTestContext>("should render a dataset sandbox linked to with an active mapping and agglomerate skeleton correctly", async ({
+    browser,
+  }) => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides[datasetName];
 
-      await withRetry(
-        3,
-        async () => {
-          const page = await getNewPage(browser);
-          const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
-            page,
-            URL,
-            datasetNameToId[datasetName],
-            viewOverride,
-          );
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
-            `${datasetName}_with_mapping_link`,
-          );
-          await page.close();
-          return isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          expect(
-            condition,
-            `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
-          ).toBe(true);
-        },
-      );
-    },
-  );
+    await withRetry(
+      3,
+      async () => {
+        const page = await getNewPage(browser);
+        const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
+          page,
+          URL,
+          datasetNameToId[datasetName],
+          viewOverride,
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
+          `${datasetName}_with_mapping_link`,
+        );
+        await page.close();
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      (condition) => {
+        expect(
+          condition,
+          `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
+        ).toBe(true);
+      },
+    );
+  });
 
-  it.sequential<ScreenshotTestContext>(
-    "should render a dataset linked to with ad-hoc and precomputed meshes correctly",
-    async ({ browser }) => {
-      const datasetName = "test-agglomerate-file";
-      const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
+  it.sequential<ScreenshotTestContext>("should render a dataset linked to with ad-hoc and precomputed meshes correctly", async ({
+    browser,
+  }) => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
 
-      await withRetry(
-        3,
-        async () => {
-          const page = await getNewPage(browser);
-          const { screenshot, width, height } = await screenshotDataset(
-            page,
-            URL,
-            datasetNameToId[datasetName],
-            undefined,
-            {
-              viewOverride: viewOverride,
-            },
-          );
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            SCREENSHOTS_BASE_PATH,
-            `${datasetName}_with_meshes_link`,
-          );
-          await page.close();
-          return isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          expect(
-            condition,
-            `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
-          ).toBe(true);
-        },
-      );
-    },
-  );
+    await withRetry(
+      3,
+      async () => {
+        const page = await getNewPage(browser);
+        const { screenshot, width, height } = await screenshotDataset(
+          page,
+          URL,
+          datasetNameToId[datasetName],
+          undefined,
+          {
+            viewOverride: viewOverride,
+          },
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          SCREENSHOTS_BASE_PATH,
+          `${datasetName}_with_meshes_link`,
+        );
+        await page.close();
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      (condition) => {
+        expect(
+          condition,
+          `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
+        ).toBe(true);
+      },
+    );
+  });
 });

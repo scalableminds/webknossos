@@ -163,66 +163,63 @@ describe("Update Action Application for SkeletonTracing", () => {
       ? [hardcodedBeforeVersionIndex]
       : range(0, userActions.length);
 
-  describe.each(compactionModes)(
-    "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
-    (withCompaction) => {
-      describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
-        const afterVersionIndices =
-          hardcodedAfterVersionIndex != null
-            ? [hardcodedAfterVersionIndex]
-            : range(beforeVersionIndex, userActions.length + 1);
+  describe.each(
+    compactionModes,
+  )("[Compaction=%s]: should re-apply update actions from complex diff and get same state", (withCompaction) => {
+    describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
+      const afterVersionIndices =
+        hardcodedAfterVersionIndex != null
+          ? [hardcodedAfterVersionIndex]
+          : range(beforeVersionIndex, userActions.length + 1);
 
-        test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
-          const state2WithActiveTree = applyActions(
-            initialState,
-            userActions.slice(0, beforeVersionIndex),
-          );
+      test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
+        const state2WithActiveTree = applyActions(
+          initialState,
+          userActions.slice(0, beforeVersionIndex),
+        );
 
-          const state2WithoutActiveBoundingBox = applyActions(state2WithActiveTree, [
-            setActiveUserBoundingBoxId(null),
-          ]);
+        const state2WithoutActiveBoundingBox = applyActions(state2WithActiveTree, [
+          setActiveUserBoundingBoxId(null),
+        ]);
 
-          const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
-          const state3 = applyActions(
-            state2WithActiveTree,
-            actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
-          );
-          expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
+        const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
+        const state3 = applyActions(
+          state2WithActiveTree,
+          actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
+        );
+        expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
 
-          const skeletonTracing2 = enforceSkeletonTracing(
-            state2WithoutActiveBoundingBox.annotation,
-          );
-          const skeletonTracing3 = enforceSkeletonTracing(state3.annotation);
+        const skeletonTracing2 = enforceSkeletonTracing(state2WithoutActiveBoundingBox.annotation);
+        const skeletonTracing3 = enforceSkeletonTracing(state3.annotation);
 
-          const updateActionsBeforeCompaction = Array.from(
-            diffSkeletonTracing(skeletonTracing2, skeletonTracing3),
-          );
-          const maybeCompact = withCompaction
-            ? compactUpdateActions
-            : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
+        const updateActionsBeforeCompaction = Array.from(
+          diffSkeletonTracing(skeletonTracing2, skeletonTracing3),
+        );
+        const maybeCompact = withCompaction
+          ? compactUpdateActions
+          : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
 
-          const updateActions = addMissingTimestampProp(
-            maybeCompact(updateActionsBeforeCompaction, skeletonTracing2, skeletonTracing3),
-          );
+        const updateActions = addMissingTimestampProp(
+          maybeCompact(updateActionsBeforeCompaction, skeletonTracing2, skeletonTracing3),
+        );
 
-          for (const action of updateActions) {
-            seenActionTypes.add(action.name);
-          }
+        for (const action of updateActions) {
+          seenActionTypes.add(action.name);
+        }
 
-          const reappliedNewState = transformStateAsReadOnly(
-            state2WithoutActiveBoundingBox,
-            (state) =>
-              applyActions(state, [
-                applySkeletonUpdateActionsFromServerAction(updateActions),
-                setActiveUserBoundingBoxId(null),
-              ]),
-          );
+        const reappliedNewState = transformStateAsReadOnly(
+          state2WithoutActiveBoundingBox,
+          (state) =>
+            applyActions(state, [
+              applySkeletonUpdateActionsFromServerAction(updateActions),
+              setActiveUserBoundingBoxId(null),
+            ]),
+        );
 
-          expect(reappliedNewState).toEqual(state3);
-        });
+        expect(reappliedNewState).toEqual(state3);
       });
-    },
-  );
+    });
+  });
 
   it("should clear the active node if it was deleted", () => {
     const createNode = createNodeAction(position, null, rotation, viewport, mag);

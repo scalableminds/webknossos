@@ -7,11 +7,13 @@ import {
   type WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
-import constants, {ARBITRARY_CAM_DISTANCE, 
-  ArbitraryViewport,type OrthoView, 
+import constants, {
+  ARBITRARY_CAM_DISTANCE,
+  ArbitraryViewport,
+  type OrthoView,
   OrthoViewColors,
   OrthoViews,
-  OrthoViewValues
+  OrthoViewValues,
 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";

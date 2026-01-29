@@ -7,7 +7,7 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
 import type React from "react";
-import { type Key, useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, type Key, useCallback, useEffect, useRef, useState } from "react";
 import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import type { FolderItem } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
@@ -76,6 +76,8 @@ export function FolderTreeSidebar({
     accept: DraggableDatasetType,
     collect: (monitor: DropTargetMonitor) => monitor.canDrop(),
   });
+  // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
+  const dropRef = useDropRef(drop);
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
     (keys: React.Key[], { nativeEvent }: { nativeEvent: MouseEvent }) => {
@@ -102,7 +104,7 @@ export function FolderTreeSidebar({
   };
   const titleRender = useCallback(
     (nodeData: FolderItem) => {
-      return generateTitle(context, nodeData, setFolderIdForEditModal);
+      return <ItemTitle context={context} folder={nodeData} setFolderIdForEditModal={setFolderIdForEditModal} />;
     },
     [context, setFolderIdForEditModal],
   );
@@ -129,8 +131,7 @@ export function FolderTreeSidebar({
           context.queries.moveFolderMutation.mutateAsync([sourceId, targetId]);
         } else {
           Toast.warning(
-            `You don't have the necessary permissions to move this folder${
-              sourceAllowed ? " to the specified target" : ""
+            `You don't have the necessary permissions to move this folder${sourceAllowed ? " to the specified target" : ""
             }.`,
           );
         }
@@ -159,7 +160,7 @@ export function FolderTreeSidebar({
       className={isDraggingDataset ? "highlight-folder-sidebar" : ""}
     >
       <div
-        ref={drop}
+        ref={dropRef}
         style={{
           marginRight: 4,
           borderRadius: 2,
@@ -256,11 +257,16 @@ export function generateSettingsForFolder(
   };
 }
 
-function generateTitle(
+type ItemTitleProps = {
   context: DatasetCollectionContextValue,
   folder: FolderItem,
   setFolderIdForEditModal: (folderId: string) => void,
-) {
+}
+
+const ItemTitle = forwardRef<unknown, ItemTitleProps>((
+  props, ref,
+) => {
+  const { context, folder, setFolderIdForEditModal } = props;
   const { key: id, title, isEditable } = folder;
 
   function editFolder(): void {
@@ -270,6 +276,7 @@ function generateTitle(
   const menu = generateSettingsForFolder(folder, context, editFolder);
 
   return (
+    // removing this dropdown fixes dnd
     <Dropdown
       menu={menu}
       placement="bottom"
@@ -280,26 +287,27 @@ function generateTitle(
       autoDestroy
       trigger={["contextMenu"]}
     >
-      <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
+      <FolderItemAsDropTarget folderId={id} isEditable={isEditable} ref={ref}>
         {title}
       </FolderItemAsDropTarget>
     </Dropdown>
   );
-}
+})
 
 export type DnDDropItemProps = {
   datasetId: string;
 } & ArbitraryObject;
+
 export function useDatasetDrop(
   folderId: string,
   canDrop: boolean,
 ): [
-  {
-    canDrop: boolean;
-    isOver: boolean;
-  },
-  ConnectDropTarget,
-] {
+    {
+      canDrop: boolean;
+      isOver: boolean;
+    },
+    ConnectDropTarget,
+  ] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [collectedProps, drop] = useDrop<
@@ -371,6 +379,7 @@ export function useDatasetDrop(
       isOver: monitor.isOver(),
     }),
   });
+
   return [collectedProps, drop];
 }
 
@@ -383,13 +392,17 @@ function FolderItemAsDropTarget(props: {
   const { folderId, className, isEditable, ...restProps } = props;
   const [collectedProps, drop] = useDatasetDrop(folderId, isEditable);
 
+  // Workaround for React 19 and react-dnd 16 https://github.com/react-dnd/react-dnd/issues/3655
+  const dropRef = useDropRef(drop);
+
   const { canDrop, isOver } = collectedProps;
   return (
     <div
       className={classNames("folder-item", className, {
-        "valid-drop-target": isOver && canDrop,
+        // "valid-drop-target": isOver && canDrop,
+        "valid-drop-target": canDrop,
       })}
-      ref={drop}
+      ref={dropRef}
       style={{ cursor: "pointer" }}
       {...restProps}
     >
@@ -432,4 +445,13 @@ function deriveExpandedTrees(
   }
 
   return Array.from(newExpandedKeySet);
+}
+
+function useDropRef(drop: (element: HTMLDivElement) => void) {
+  // Source: https://github.com/react-dnd/react-dnd/issues/3670
+  return useCallback((element: HTMLDivElement | null) => {
+    if (element) {
+      drop(element);
+    }
+  }, [drop]);
 }

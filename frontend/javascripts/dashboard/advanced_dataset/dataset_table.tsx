@@ -40,7 +40,7 @@ import partial from "lodash-es/partial";
 import sortBy from "lodash-es/sortBy";
 import without from "lodash-es/without";
 import type React from "react";
-import { Fragment, PureComponent, useContext, useRef } from "react";
+import { Fragment, PureComponent, useCallback, useContext, useRef } from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router-dom";
@@ -247,10 +247,9 @@ const DraggableDatasetRow = ({
   rowKey,
   ...restProps
 }: DraggableDatasetRowProps) => {
-  const ref = useRef<HTMLTableRowElement>(null);
   const theme = useWkSelector((state) => state.uiInformation.theme);
-  // @ts-expect-error
 
+  // @ts-expect-error
   const datasetId = restProps["data-row-key"];
   const dragItem: DnDDropItemProps = { index, datasetId };
   const [, drag, preview] = useDrag({
@@ -259,16 +258,20 @@ const DraggableDatasetRow = ({
     canDrag: () => isADataset,
   });
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
-
+  const combinedRef = useCallback((node: HTMLTableRowElement | null) => {
+    if (node) {
+      drag(node);
+      drop(node);
+    }
+  }, [drag, drop]);
   const { canDrop, isOver } = collectedProps;
-  drop(drag(ref));
   const fileIcon = DragPreviewProvider.getProvider().getIcon(theme);
   const styleWithMaybeMoveCursor = isADataset
     ? { ...style, cursor: "move" }
     : { ...style, cursor: "not-allowed !important" };
   return (
     <tr
-      ref={ref}
+      ref={combinedRef}
       className={classNames(className, { "highlight-folder-sidebar": canDrop && isOver })}
       style={styleWithMaybeMoveCursor}
       {...restProps}

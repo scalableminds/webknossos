@@ -15,7 +15,7 @@ import cloneDeep from "lodash-es/cloneDeep";
 import difference from "lodash-es/difference";
 import messages from "messages";
 import type React from "react";
-import { batchActions } from "redux-batched-actions";
+import { type BatchActionType, batchActions } from "redux-batched-actions";
 import {
   LongUnitToShortUnitMap,
   type TreeType,
@@ -56,6 +56,15 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
+
+type BatchActionsType = {
+  type: BatchActionType;
+  payload: Action[];
+  [extraProps: string]: unknown;
+  meta: {
+    batch: true;
+  };
+};
 
 export type Props = {
   activeTreeId: number | null | undefined;
@@ -510,7 +519,7 @@ function setTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
 }
 
 export function onBatchActions(actions: Action[], actionName: string) {
-  Store.dispatch(batchActions(actions, actionName));
+  Store.dispatch(batchActions(actions, actionName) as unknown as BatchActionsType);
 }
 
 export function setUpdateTreeGroups(treeGroups: TreeGroup[]) {

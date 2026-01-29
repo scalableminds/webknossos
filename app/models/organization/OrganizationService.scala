@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
-import models.team.{PricingPlan, Team, TeamDAO}
+import models.team.{Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
@@ -62,6 +62,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "enableAutoVerify" -> organization.enableAutoVerify,
         "name" -> organization.name,
         "pricingPlan" -> organization.pricingPlan,
+        "aiPlan" -> organization.aiPlan,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
@@ -124,6 +125,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationName,
         initialPricingParameters._1,
         None,
+        None,
         initialPricingParameters._2,
         initialPricingParameters._3,
         organizationRootFolder._id
@@ -182,9 +184,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  def assertOrganizationHasPaidPlan(organization: Organization): Fox[Unit] =
+  def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "job.creditTransaction.notPaidPlan"
+      isSuperUser <- userService.isSuperUser(user._multiUser)
+      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> "job.creditTransaction.noAiPlan"
     } yield ()
 
 }

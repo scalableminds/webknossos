@@ -17,6 +17,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
+import models.organization.PricingPlan
 
 import scala.concurrent.ExecutionContext
 

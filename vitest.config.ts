@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config";
 
 // This config object is intentionally left under-specified (see config.test.include).
@@ -6,8 +6,7 @@ import viteConfig from "./vite.config";
 // the --config property (see scripts package.json). This avoids that e2e tests are
 // accidentally executed (e.g., if the user executes `yarn vitest`) which would drop
 // the current database content.
-export const config = {
-  ...viteConfig,
+export const config = mergeConfig(viteConfig, {
   test: {
     globals: true,
     setupFiles: ["./frontend/javascripts/test/global_mocks.ts"],
@@ -29,6 +28,6 @@ export const config = {
       "lz4-wasm": "lz4-wasm-nodejs",
     },
   },
-};
+});
 
 export default defineConfig(config);

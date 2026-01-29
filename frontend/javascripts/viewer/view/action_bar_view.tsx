@@ -14,7 +14,12 @@ import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
-import constants, { type ControlMode, ControlModeEnum, MappingStatusEnum, type ViewMode } from "viewer/constants";
+import constants, {
+  type ControlMode,
+  ControlModeEnum,
+  MappingStatusEnum,
+  type ViewMode,
+} from "viewer/constants";
 import {
   doesSupportVolumeWithFallback,
   getColorLayers,

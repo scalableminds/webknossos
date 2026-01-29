@@ -33,7 +33,11 @@ function VoxelValueEntry({
   layerName,
   value,
   category,
-}: { layerName: string; value: number[]; category: "color" | "segmentation" }) {
+}: {
+  layerName: string;
+  value: number[];
+  category: "color" | "segmentation";
+}) {
   const valueString = value.join(", ");
   return (
     <div>

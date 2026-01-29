@@ -7,7 +7,7 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
 import type React from "react";
-import { forwardRef, type Key, useCallback, useEffect, useRef, useState } from "react";
+import { type Key, useCallback, useEffect, useRef, useState } from "react";
 import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import type { FolderItem } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
@@ -263,8 +263,8 @@ type ItemTitleProps = {
   setFolderIdForEditModal: (folderId: string) => void,
 }
 
-const ItemTitle = forwardRef<unknown, ItemTitleProps>((
-  props, ref,
+const ItemTitle: React.FC<ItemTitleProps> = (
+  props,
 ) => {
   const { context, folder, setFolderIdForEditModal } = props;
   const { key: id, title, isEditable } = folder;
@@ -276,7 +276,6 @@ const ItemTitle = forwardRef<unknown, ItemTitleProps>((
   const menu = generateSettingsForFolder(folder, context, editFolder);
 
   return (
-    // removing this dropdown fixes dnd
     <Dropdown
       menu={menu}
       placement="bottom"
@@ -287,12 +286,15 @@ const ItemTitle = forwardRef<unknown, ItemTitleProps>((
       autoDestroy
       trigger={["contextMenu"]}
     >
-      <FolderItemAsDropTarget folderId={id} isEditable={isEditable} ref={ref}>
-        {title}
-      </FolderItemAsDropTarget>
+      {/* this div is needed to make Dropdown and react-dnd work */}
+      <div> 
+        <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
+          {title}
+        </FolderItemAsDropTarget>
+      </div>
     </Dropdown>
   );
-})
+}
 
 export type DnDDropItemProps = {
   datasetId: string;
@@ -399,8 +401,7 @@ function FolderItemAsDropTarget(props: {
   return (
     <div
       className={classNames("folder-item", className, {
-        // "valid-drop-target": isOver && canDrop,
-        "valid-drop-target": canDrop,
+        "valid-drop-target": isOver && canDrop,
       })}
       ref={dropRef}
       style={{ cursor: "pointer" }}

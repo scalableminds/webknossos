@@ -24,3 +24,4 @@ _dataset,dataLayerName,mag,path,realPath,hasLocalData,channelIndex,credentialId,
 '59e9cfbdba632ac2ab8b23b5','segmentation','(4,4,1)','./segmentation/4-4-1',,false,,,,false
 '59e9cfbdba632ac2ab8b23b5','segmentation','(8,8,2)','./segmentation/8-8-2',,false,,,,false
 '59e9cfbdba632ac2ab8b23b5','segmentation','(16,16,4)','./segmentation/16-16-4',,false,,,,false
+'05c85a876c4c979ef53752b4','color','(1,1,1)','s3://gs-public-zarr-archive/tubhiswt-4D.ome.zarr/0',,false,,,,false

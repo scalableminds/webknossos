@@ -19,7 +19,14 @@ import com.scalableminds.util.tools.Full
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, DataSourceId, ElementClass, StaticColorLayer, StaticSegmentationLayer, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataFormat,
+  DataSourceId,
+  ElementClass,
+  StaticColorLayer,
+  StaticSegmentationLayer,
+  UsableDataSource
+}
 import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
@@ -84,6 +91,7 @@ Samplecountry
       "/assets/images/logo.svg",
       "Sample Organization",
       PricingPlan.Custom,
+      None,
       None,
       None,
       None,

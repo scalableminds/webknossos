@@ -39,7 +39,7 @@ class Persistence<T extends Record<string, any>> {
       } catch (e) {
         // Reset the persisted state and log the error to airbrake so we learn whether and how often this happens
         this.persist({}, {});
-        // @ts-ignore
+        // @ts-expect-error
         ErrorHandling.notify(e);
         return {};
       }

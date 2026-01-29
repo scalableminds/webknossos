@@ -53,7 +53,7 @@ export function CheckTermsOfServices() {
     }
 
     const lastWarningString = UserLocalStorage.getItem(LAST_TERMS_OF_SERVICE_WARNING_KEY);
-    const lastWarning = dayjs(lastWarningString ? Number.parseInt(lastWarningString) : 0);
+    const lastWarning = dayjs(lastWarningString ? Number.parseInt(lastWarningString, 10) : 0);
     const isLastWarningOld = dayjs().diff(lastWarning, "days") > SNOOZE_DURATION_IN_DAYS;
     setIsModalOpen(isLastWarningOld);
   }, [acceptanceInfo]);

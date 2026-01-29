@@ -1,34 +1,34 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import update from "immutability-helper";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { call, put, take } from "redux-saga/effects";
-import { startSaga } from "viewer/store";
-import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading_test_utils";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import type { ServerSkeletonTracing, ServerVolumeTracing } from "types/api_types";
-import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
-import { select } from "viewer/model/sagas/effect-generators";
-import {
-  updateSegmentAction,
-  setActiveCellAction,
-} from "viewer/model/actions/volumetracing_actions";
-import { tracing as volumeTracing } from "test/fixtures/volumetracing_server_objects";
-import { Store } from "viewer/singletons";
 import { sleep } from "libs/utils";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { setToolAction } from "viewer/model/actions/ui_actions";
+import { call, put, take } from "redux-saga/effects";
 import { powerOrga } from "test/fixtures/dummy_organization";
+import { tracing as volumeTracing } from "test/fixtures/volumetracing_server_objects";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import type { ServerSkeletonTracing, ServerVolumeTracing } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { restartSagaAction } from "viewer/model/actions/actions";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { WkDevFlags } from "viewer/api/wk_dev";
-import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
+import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
 import {
   doneSavingAction,
   ensureHasAnnotationMutexAction,
 } from "viewer/model/actions/save_actions";
-import { restartSagaAction } from "viewer/model/actions/actions";
+import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
+import {
+  setActiveCellAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
+import { select } from "viewer/model/sagas/effect-generators";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { Store } from "viewer/singletons";
+import { startSaga } from "viewer/store";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading_test_utils";
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -413,55 +413,54 @@ describe("Save Mutex Saga", () => {
     AnnotationTool.BOUNDING_BOX,
   ];
 
-  describe.each(ToolsAllowedInProofreadingModeWithoutLiveCollabSupport)(
-    "[With AnnotationTool=%s]:",
-    (annotationToolWithoutLiveCollabSupport) => {
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = false and liveCollab enabled should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
-        WkDevFlags.liveCollab = true;
-        await setupWebknossosForTestingWithRestrictions(context, false, true, true);
-        mockInitialBucketAndAgglomerateData(context);
-        // Give mutex saga time to potentially acquire the mutex. This should not happen!
-        await sleep(100);
-        expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
-        await sleep(100);
-        expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-      });
+  describe.each(
+    ToolsAllowedInProofreadingModeWithoutLiveCollabSupport,
+  )("[With AnnotationTool=%s]:", (annotationToolWithoutLiveCollabSupport) => {
+    it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = false and liveCollab enabled should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
+      WkDevFlags.liveCollab = true;
+      await setupWebknossosForTestingWithRestrictions(context, false, true, true);
+      mockInitialBucketAndAgglomerateData(context);
+      // Give mutex saga time to potentially acquire the mutex. This should not happen!
+      await sleep(100);
+      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+      Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
+      await sleep(100);
+      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    });
 
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
-        WkDevFlags.liveCollab = true;
-        await setupWebknossosForTestingWithRestrictions(context, true, true, true);
-        mockInitialBucketAndAgglomerateData(context);
-        // Give mutex saga time to potentially acquire the mutex. This should not happen!
-        await sleep(100);
-        expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
-        await sleep(100);
-        expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
-      });
+    it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should not try to instantly acquire the mutex only after the user switches to a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.id}.`, async (context: WebknossosTestContext) => {
+      WkDevFlags.liveCollab = true;
+      await setupWebknossosForTestingWithRestrictions(context, true, true, true);
+      mockInitialBucketAndAgglomerateData(context);
+      // Give mutex saga time to potentially acquire the mutex. This should not happen!
+      await sleep(100);
+      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+      Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
+      await sleep(100);
+      expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+    });
 
-      it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should no longer try to continuously acquire the mutex when switching from ${annotationToolWithoutLiveCollabSupport.id} to Move Tool.`, async (context: WebknossosTestContext) => {
-        WkDevFlags.liveCollab = true;
-        await setupWebknossosForTestingWithRestrictions(context, true, true, true);
-        mockInitialBucketAndAgglomerateData(context);
-        // Switch to tool without live collab support.
-        Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
-        await sleep(100);
-        expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
-        expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
-        // Switch to move tool which has live collab support.
-        Store.dispatch(setToolAction(AnnotationTool.MOVE));
-        await sleep(1);
-        expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
-        context.mocks.acquireAnnotationMutex.mockReset();
-        context.mocks.releaseAnnotationMutex.mockReset();
-        await sleep(1000);
-        // Due to move tool being active, the saga should not try to acquire the mutex.
-        expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-        expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
-      });
-    },
-  );
+    it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with othersMayEdit = true and liveCollab enabled should no longer try to continuously acquire the mutex when switching from ${annotationToolWithoutLiveCollabSupport.id} to Move Tool.`, async (context: WebknossosTestContext) => {
+      WkDevFlags.liveCollab = true;
+      await setupWebknossosForTestingWithRestrictions(context, true, true, true);
+      mockInitialBucketAndAgglomerateData(context);
+      // Switch to tool without live collab support.
+      Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport));
+      await sleep(100);
+      expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+      expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+      // Switch to move tool which has live collab support.
+      Store.dispatch(setToolAction(AnnotationTool.MOVE));
+      await sleep(1);
+      expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
+      context.mocks.acquireAnnotationMutex.mockReset();
+      context.mocks.releaseAnnotationMutex.mockReset();
+      await sleep(1000);
+      // Due to move tool being active, the saga should not try to acquire the mutex.
+      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+      expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+    });
+  });
 
   const othersMayEditValues = [true, false];
   describe.each(othersMayEditValues)("[With othersMayEdit=%s]:", (othersMayEdit) => {

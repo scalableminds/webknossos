@@ -12,14 +12,18 @@ import random from "lodash-es/random";
 import sortedIndex from "lodash-es/sortedIndex";
 import without from "lodash-es/without";
 import type {
+  AdditionalCoordinate,
   MetadataEntryProto,
   ServerBranchPoint,
   ServerNode,
   ServerSkeletonTracingTree,
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
-import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import Constants, { NODE_ID_REF_REGEX } from "viewer/constants";
+import Constants, {
+  NODE_ID_REF_REGEX,
+  type TreeType,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,

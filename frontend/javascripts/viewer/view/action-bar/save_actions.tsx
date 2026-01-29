@@ -14,7 +14,7 @@ import UrlManager from "viewer/controller/url_manager";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action-bar/save_button";
 import ButtonComponent from "viewer/view/components/button_component";

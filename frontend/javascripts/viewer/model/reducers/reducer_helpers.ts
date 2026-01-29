@@ -8,9 +8,9 @@ import {
   point3ToVector3,
 } from "libs/utils";
 import type {
-  APIAnnotation,
   AdditionalAxis,
   AdditionalAxisProto,
+  APIAnnotation,
   BoundingBoxProto,
   SkeletonUserState,
   UserBoundingBoxProto,

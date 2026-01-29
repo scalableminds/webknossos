@@ -1,11 +1,11 @@
-import { vi, it, expect, beforeEach, describe } from "vitest";
 import { waitForCondition } from "libs/utils";
 import {
-  setupWebknossosForTesting,
   createBucketResponseFunction,
+  setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
 
 describe("Bucket Eviction With Saving", () => {

@@ -27,7 +27,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { pushSaveQueueTransactionIsolated } from "viewer/model/actions/save_actions";
 import { addLayerToAnnotation } from "viewer/model/sagas/volume/update_actions";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import Store, { type StoreAnnotation } from "viewer/store";
 import InputComponent from "viewer/view/components/input_component";
 

@@ -1,17 +1,17 @@
 /* eslint no-await-in-loop: 0 */
-import urljoin from "url-join";
 
-import type { Browser, Page } from "puppeteer-core";
-import puppeteer from "puppeteer-core";
-import type { PartialDatasetConfiguration } from "viewer/store";
+import type { RequestOptions } from "libs/request";
+import { sleep } from "libs/utils";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
-import type { RequestOptions } from "libs/request";
-import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-import { createExplorational, updateDatasetConfiguration } from "../../admin/rest_api";
-import { sleep } from "libs/utils";
+import type { Browser, Page } from "puppeteer-core";
+import puppeteer from "puppeteer-core";
 import type { APIAnnotation } from "types/api_types";
-import { vi, type TestContext } from "vitest";
+import urljoin from "url-join";
+import type { PartialDatasetConfiguration } from "viewer/store";
+import { type TestContext, vi } from "vitest";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/rest_api";
+import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for the unit tests. In the screenshot tests, we actually want to run the proper fetch calls so we revert to the original implementation

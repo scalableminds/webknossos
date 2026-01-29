@@ -2,11 +2,11 @@ import { WarningOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
 import { usePolledState } from "libs/react_helpers";
 import isEqual from "lodash-es/isEqual";
+import { useState } from "react";
 import { getUnrenderableLayerInfosForCurrentZoom } from "viewer/model/accessors/flycam_accessor";
 import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import type { SmallerOrHigherInfo } from "viewer/model/helpers/mag_info";
 
-import { useState } from "react";
 type UnrenderableLayerNamesInfo = {
   layerName: string;
   smallerOrHigherInfo: SmallerOrHigherInfo;

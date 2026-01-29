@@ -1,6 +1,7 @@
-import { useDispatch } from "react-redux";
-
+import FastTooltip from "components/fast_tooltip";
+import features from "features";
 import { useWkSelector } from "libs/react_hooks";
+import { useDispatch } from "react-redux";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import {
@@ -8,11 +9,8 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import type { WebknossosState } from "viewer/store";
-
-import FastTooltip from "components/fast_tooltip";
-import features from "features";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
+import type { WebknossosState } from "viewer/store";
 import { IMG_STYLE_FOR_SPACEY_ICONS, ToolRadioButton } from "./tool_helpers";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };

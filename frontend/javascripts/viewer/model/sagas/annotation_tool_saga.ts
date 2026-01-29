@@ -1,25 +1,23 @@
-import { call, put, take } from "typed-redux-saga";
+import { type ActionPattern, delay, fork } from "redux-saga/effects";
+import { call, put, take, takeEvery } from "typed-redux-saga";
 import { getToolControllerForAnnotationTool } from "viewer/controller/combinations/tool_controls";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { AnnotationTool, MeasurementTools, Toolkit } from "viewer/model/accessors/tool_accessor";
 import {
   type CycleToolAction,
-  type SetToolAction,
   hideMeasurementTooltipAction,
+  type SetToolAction,
   setIsMeasuringAction,
 } from "viewer/model/actions/ui_actions";
 import { getNextTool } from "viewer/model/reducers/reducer_helpers";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import { ensureWkInitialized } from "./ready_sagas";
-
-import { type ActionPattern, delay, fork } from "redux-saga/effects";
-import { takeEvery } from "typed-redux-saga";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import { Toolkits } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";
 import { updateUserSettingAction } from "../actions/settings_actions";
 import { setToolAction } from "../actions/ui_actions";
+import { ensureWkInitialized } from "./ready_sagas";
 
 function* ensureActiveToolIsInToolkit() {
   const activeToolkit = yield* select((state) => state.userConfiguration.activeToolkit);

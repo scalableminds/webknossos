@@ -6,6 +6,28 @@ import {
   InfoCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
+import { BlobReader, ZipReader } from "@zip.js/zip.js";
+import {
+  AllowedTeamsFormItem,
+  CardContainer,
+  DatasetNameFormItem,
+  DatastoreFormItem,
+} from "admin/dataset/dataset_components";
+import {
+  getLeftOverStorageBytes,
+  hasPricingPlanExceededStorage,
+} from "admin/organization/pricing_plan_utils";
+import {
+  cancelDatasetUpload,
+  createResumableUpload,
+  finishDatasetUpload,
+  getUnfinishedUploads,
+  reserveDatasetUpload,
+  sendAnalyticsEvent,
+  sendFailedRequestAnalyticsEvent,
+  startConvertToWkwJob,
+  type UnfinishedUpload,
+} from "admin/rest_api";
 import {
   Alert,
   Avatar,
@@ -22,35 +44,10 @@ import {
   Spin,
   Tooltip,
 } from "antd";
-import dayjs from "dayjs";
-import React from "react";
-import { connect } from "react-redux";
-
-import { BlobReader, ZipReader } from "@zip.js/zip.js";
-import {
-  AllowedTeamsFormItem,
-  CardContainer,
-  DatasetNameFormItem,
-  DatastoreFormItem,
-} from "admin/dataset/dataset_components";
-import {
-  getLeftOverStorageBytes,
-  hasPricingPlanExceededStorage,
-} from "admin/organization/pricing_plan_utils";
-import {
-  type UnfinishedUpload,
-  cancelDatasetUpload,
-  createResumableUpload,
-  finishDatasetUpload,
-  getUnfinishedUploads,
-  reserveDatasetUpload,
-  sendAnalyticsEvent,
-  sendFailedRequestAnalyticsEvent,
-  startConvertToWkwJob,
-} from "admin/rest_api";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
+import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -64,7 +61,9 @@ import throttle from "lodash-es/throttle";
 import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
 import messages from "messages";
+import React from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
+import { connect } from "react-redux";
 import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
@@ -77,7 +76,7 @@ import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import type { WebknossosState } from "viewer/store";
-import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
+import { confirmAsync, FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -323,7 +322,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // @ts-ignore beforeUnload signature is overloaded
+      // @ts-expect-error beforeUnload signature is overloaded
       shouldBlock: beforeUnload,
     });
 
@@ -882,7 +881,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     name="voxelSizeFactor"
                     label="Voxel Size"
                     info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                    // @ts-ignore
+                    // @ts-expect-error
                     disabled={this.state.needsConversion}
                     help="Your dataset is not yet in a WEBKNOSSOS format. Therefore, you need to define the voxel size."
                     rules={[

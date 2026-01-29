@@ -3,13 +3,13 @@ import noop from "lodash-es/noop";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import type {
+  AdditionalCoordinate,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
   EditableLayerProperties,
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";
 import type {

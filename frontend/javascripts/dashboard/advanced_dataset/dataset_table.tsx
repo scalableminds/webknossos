@@ -249,7 +249,7 @@ const DraggableDatasetRow = ({
 }: DraggableDatasetRowProps) => {
   const ref = useRef<HTMLTableRowElement>(null);
   const theme = useWkSelector((state) => state.uiInformation.theme);
-  // @ts-ignore
+  // @ts-expect-error
 
   const datasetId = restProps["data-row-key"];
   const dragItem: DnDDropItemProps = { index, datasetId };
@@ -259,7 +259,6 @@ const DraggableDatasetRow = ({
     canDrag: () => isADataset,
   });
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
-
   const { canDrop, isOver } = collectedProps;
   drop(drag(ref));
   const fileIcon = DragPreviewProvider.getProvider().getIcon(theme);
@@ -476,7 +475,7 @@ class DatasetTable extends PureComponent<Props, State> {
     sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
   ) => {
     this.setState({
-      // @ts-ignore
+      // @ts-expect-error
       sortedInfo: sorter,
     });
   };
@@ -937,7 +936,7 @@ export function TeamTags({
 
   const allowedTeamsById = keyBy(dataset.allowedTeams, "id");
   return (
-    <>
+    <Space>
       {permittedTeams.map((team) => {
         const isCumulative = !allowedTeamsById[team.id];
         return (
@@ -965,7 +964,7 @@ export function TeamTags({
           </Tooltip>
         );
       })}
-    </>
+    </Space>
   );
 }
 

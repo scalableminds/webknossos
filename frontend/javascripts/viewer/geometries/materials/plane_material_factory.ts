@@ -18,8 +18,16 @@ import throttle from "lodash-es/throttle";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
 import type { ValueOf } from "types/globals";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "viewer/constants";
-import { MappingStatusEnum, OrthoViewValues, OrthoViews, ViewModeValues } from "viewer/constants";
+import {
+  BLEND_MODES,
+  Identity4x4,
+  MappingStatusEnum,
+  type OrthoView,
+  OrthoViews,
+  OrthoViewValues,
+  type Vector3,
+  ViewModeValues,
+} from "viewer/constants";
 import {
   getColorLayers,
   getDataLayers,
@@ -45,8 +53,7 @@ import {
   getZoomValue,
   isRotated,
 } from "viewer/model/accessors/flycam_accessor";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { isBrushTool } from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
@@ -158,7 +165,9 @@ class PlaneMaterialFactory {
   }
 
   stopListening() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
     this.storePropertyUnsubscribers = [];
   }
 

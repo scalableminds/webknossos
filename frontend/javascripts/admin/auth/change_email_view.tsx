@@ -3,10 +3,9 @@ import { logoutUserEverywhere, updateUser } from "admin/rest_api";
 import { Alert, Button, Form, Input, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { logoutUserAction } from "viewer/model/actions/user_actions";
-
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { logoutUserAction } from "viewer/model/actions/user_actions";
 import { handleResendVerificationEmail } from "./verify_email_view";
 
 const FormItem = Form.Item;

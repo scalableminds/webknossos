@@ -23,12 +23,7 @@ import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
-import {
-  type APIDataLayer,
-  type APIDataSource,
-  type APIDataset,
-  APIJobCommand,
-} from "types/api_types";
+import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
@@ -36,7 +31,6 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
-import { getRotationFromCoordinateTransformations } from "./dataset_settings_provider";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
@@ -125,33 +119,17 @@ function SimpleDatasetForm({
   const coordinateTransformationsJSON = Form.useWatch(["coordinateTransformations"], form);
 
   useEffect(() => {
-    if (!form || !dataSource?.dataLayers) {
+    if (!form) {
       return;
     }
     if (transformationsMode === TransformationsMode.NONE) {
-      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer: DataLayer) => {
+      const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
         return {
           ...layer,
           coordinateTransformations: [],
         };
       });
       form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
-      // Clear the rotation form fields
-      form.setFieldValue(["datasetRotation"], undefined);
-    } else if (transformationsMode === TransformationsMode.SIMPLE) {
-      // When switching to SIMPLE mode, recalculate datasetRotation from current transformations
-      const tempDataSource: APIDataSource = {
-        ...dataSource,
-        dataLayers: dataSource.dataLayers as APIDataLayer[],
-      } as APIDataSource;
-      const rotationSettings = getRotationFromCoordinateTransformations(tempDataSource);
-      form.setFieldValue(["datasetRotation"], rotationSettings);
-    }
-  }, [transformationsMode, dataSource, form]);
-
-  useEffect(() => {
-    if (!form) {
-      return;
     }
     if (form.getFieldError(["coordinateTransformations"]).length > 0) {
       return;
@@ -253,6 +231,13 @@ function SimpleDatasetForm({
                   </Tooltip>
                 </Space.Compact>
               </FormItemWithInfo>
+              <FormItemWithInfo
+                name={["transformationsMode"]}
+                label="Transformation Mode"
+                info="The transformations for the dataset."
+              >
+                <Select options={transformationItems} style={{ width: LEFT_COLUMN_ITEMS_WIDTH }} />
+              </FormItemWithInfo>
             </Col>
             <Col span={24} xl={12}>
               <FormItemWithInfo
@@ -303,13 +288,6 @@ function SimpleDatasetForm({
                 />
               </FormItemWithInfo>
             </Col>
-            <FormItemWithInfo
-              name={["transformationsMode"]}
-              label="Transformation Mode"
-              info="The transformations for the dataset."
-            >
-              <Select options={transformationItems} />
-            </FormItemWithInfo>
           </Row>
         }
       />

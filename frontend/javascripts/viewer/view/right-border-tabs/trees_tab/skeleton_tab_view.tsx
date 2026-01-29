@@ -940,7 +940,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <Space.Compact block className="compact-wrap">
+                <Space.Compact
+                  block
+                  className="compact-wrap"
+                  style={{ marginBottom: "var(--ant-margin-sm)" }}
+                >
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}

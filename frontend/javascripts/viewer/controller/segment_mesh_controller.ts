@@ -324,7 +324,9 @@ export default class SegmentMeshController {
 
     if (meshGroups == null) return null;
 
-    const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal, 10)));
+    const bestLod = Math.min(
+      ...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal, 10)),
+    );
 
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }

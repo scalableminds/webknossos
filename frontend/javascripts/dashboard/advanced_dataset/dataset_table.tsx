@@ -258,12 +258,15 @@ const DraggableDatasetRow = ({
     canDrag: () => isADataset,
   });
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
-  const combinedRef = useCallback((node: HTMLTableRowElement | null) => {
-    if (node) {
-      drag(node);
-      drop(node);
-    }
-  }, [drag, drop]);
+  const combinedRef = useCallback(
+    (node: HTMLTableRowElement | null) => {
+      if (node) {
+        drag(node);
+        drop(node);
+      }
+    },
+    [drag, drop],
+  );
   const { canDrop, isOver } = collectedProps;
   const fileIcon = DragPreviewProvider.getProvider().getIcon(theme);
   const styleWithMaybeMoveCursor = isADataset
@@ -940,7 +943,7 @@ export function TeamTags({
 
   const allowedTeamsById = keyBy(dataset.allowedTeams, "id");
   return (
-    <>
+    <Space>
       {permittedTeams.map((team) => {
         const isCumulative = !allowedTeamsById[team.id];
         return (
@@ -968,7 +971,7 @@ export function TeamTags({
           </Tooltip>
         );
       })}
-    </>
+    </Space>
   );
 }
 

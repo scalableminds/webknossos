@@ -233,7 +233,6 @@ function ExperienceModalView({
   const multipleUsers = selectedUsersCount > 1;
   return (
     <Modal
-      className="experience-change-modal"
       title={
         multipleUsers
           ? `Change Experiences of ${selectedUsersCount} Users`

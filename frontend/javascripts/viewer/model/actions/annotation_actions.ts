@@ -2,7 +2,8 @@ import Deferred from "libs/async/deferred";
 import noop from "lodash-es/noop";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
-import type {AdditionalCoordinate, 
+import type {
+  AdditionalCoordinate,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
@@ -18,11 +19,13 @@ import type {
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "viewer/store";
+import type { Action } from "./actions";
 import type { InitializeSkeletonTracingAction } from "./skeletontracing_actions";
 import type {
   InitializeEditableMappingAction,
   InitializeVolumeTracingAction,
 } from "./volumetracing_actions";
+import { ColoredLogger } from "libs/utils";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type InitializationAction =
@@ -114,7 +117,7 @@ export type UserBoundingBoxAction =
   | AddUserBoundingBoxesAction
   | FinishedResizingUserBoundingBoxAction;
 
-export const AllUserBoundingBoxActions = [
+export const AllUserBoundingBoxActions: Action["type"][] = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_NEW_USER_BOUNDING_BOX",
   "CHANGE_USER_BOUNDING_BOX",

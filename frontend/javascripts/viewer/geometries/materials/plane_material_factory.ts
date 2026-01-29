@@ -16,7 +16,7 @@ import mapValues from "lodash-es/mapValues";
 import partition from "lodash-es/partition";
 import throttle from "lodash-es/throttle";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
-import type { ValueOf } from "types/globals";
+import type { ValueOf } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { BLEND_MODES, Identity4x4, MappingStatusEnum, type OrthoView, OrthoViews, OrthoViewValues, type Vector3, ViewModeValues } from "viewer/constants";
 import {

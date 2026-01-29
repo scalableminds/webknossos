@@ -1128,8 +1128,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         clickedSegmentId,
         {
           isVisible: true,
-          somePosition: globalPosition,
-          someAdditionalCoordinates: additionalCoordinates,
+          anchorPosition: globalPosition,
+          additionalCoordinates: additionalCoordinates,
         },
         visibleSegmentationLayer.name,
         undefined,
@@ -2042,10 +2042,10 @@ const Actions = {
   setActiveCell(
     dispatch: Dispatch<any>,
     segmentId: number,
-    somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    anchorPosition?: Vector3,
+    additionalCoordinates?: AdditionalCoordinate[],
   ) {
-    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, anchorPosition, additionalCoordinates));
   },
 
   setBoundingBoxName(dispatch: Dispatch<any>, id: number, name: string) {

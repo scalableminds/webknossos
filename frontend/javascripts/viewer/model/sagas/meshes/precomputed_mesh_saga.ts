@@ -6,7 +6,7 @@ import { mergeGeometries } from "libs/BufferGeometryUtils";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
 import Toast from "libs/toast";
-import { chunkDynamically } from "libs/utils";
+import { chunkDynamically, ColoredLogger } from "libs/utils";
 import sortBy from "lodash-es/sortBy";
 import zip from "lodash-es/zip";
 import messages from "messages";
@@ -492,9 +492,10 @@ function* loadPrecomputedMeshesInChunksForLod(
 export default function* precomputedMeshSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   fetchDeferredsPerLayer = {};
-  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
+  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
 
+  // todop: reactivate
   yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);

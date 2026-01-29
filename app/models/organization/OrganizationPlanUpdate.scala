@@ -2,7 +2,7 @@ package models.organization
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TristateOptionJsonHelper
-import models.team.PricingPlan.PricingPlan
+import PricingPlan.PricingPlan
 import play.api.libs.json.{Json, OFormat}
 
 case class OrganizationPlanUpdate(

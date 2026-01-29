@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { AgglomerateMapping } from "./agglomerate_mapping_helper";
+import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
 
 type RenderFormat = "dot" | "svg" | "png";
 
@@ -12,7 +13,10 @@ interface RenderOptions {
 }
 
 export class MappingVisualizer {
-  constructor(private readonly mapping: AgglomerateMapping) {}
+  private readonly mapping: AgglomerateMapping
+  constructor(private readonly backendMock: BackendMock) {
+    this.mapping = backendMock.agglomerateMapping;
+  }
 
   renderVersion(version: number, options: RenderOptions = {}): void {
     const { outputPath = `mapping_v${version}.svg`, format = "svg", rankdir = "LR" } = options;
@@ -56,20 +60,31 @@ export class MappingVisualizer {
     const lines: string[] = [];
 
     lines.push("digraph G {");
+
+    // lines.push(`  label="${updateAction}";`);
+    // lines.push(`  labelloc="t";`);
+    // lines.push(`  labeljust="l";`);
+    // lines.push(`  fontsize=14;`);
+    // lines.push(`  margin=0.3;`);
+
     lines.push(`  rankdir=${rankdir};`);
     lines.push("  compound=true;");
-    lines.push("  node [shape=circle, fontsize=10];");
+    lines.push("  node [shape=circle, fontsize=10, style=filled];");
     lines.push("  edge [fontsize=9];");
     lines.push("");
 
     // clusters per component
     for (const [componentId, segmentIds] of components.entries()) {
+      const segmentItem = this.backendMock.getState(version).annotation.volumes[0].segments.getNullable(componentId);
+      const color = segmentItem != null ? "#7ce468" : "#000000"
       lines.push(`  subgraph cluster_${componentId} {`);
       lines.push(`    label="Agglomerate ${componentId}";`);
+      lines.push(`    fontcolor="${color}";`);
       lines.push("    fontsize=12;");
       lines.push("    style=rounded;");
 
       for (const segmentId of segmentIds) {
+        // lines.push(`    ${segmentId};`);
         lines.push(`    ${segmentId};`);
       }
 

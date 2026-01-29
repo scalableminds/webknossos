@@ -252,7 +252,6 @@ describe("Update Action Application for VolumeTracing", () => {
             seenActionTypes.add(action.name);
           }
 
-          console.log("updateActions", updateActions);
           let reappliedNewState = transformStateAsReadOnly(
             state2WithoutActiveBoundingBox,
             (state) =>

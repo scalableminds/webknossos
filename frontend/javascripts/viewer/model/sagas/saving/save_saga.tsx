@@ -292,12 +292,6 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     yield* call(diffTracingsAndPrepareRebase);
   }
 
-  ColoredLogger.logRed("needsRebasing", needsRebasing);
-  ColoredLogger.logRed(
-    "local saveQueueEntries",
-    flattenDeep(saveQueueEntries.map((entry) => entry.actions)),
-  );
-
   try {
     // ColoredLogger.logRed("apply from server", missingUpdateActions);
     if (missingUpdateActions.length > 0) {

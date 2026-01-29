@@ -13,7 +13,7 @@ import {
 import app from "app";
 import { __setFeatures } from "features";
 import Request, { type RequestOptions } from "libs/request";
-import { sleep } from "libs/utils";
+import { ColoredLogger, sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import flattenDeep from "lodash-es/flattenDeep";
 import dummyOrga from "test/fixtures/dummy_organization";
@@ -31,6 +31,7 @@ import {
 import type {
   APIAnnotation,
   APIDataset,
+  APIMeshFileInfo,
   APITracingStoreAnnotation,
   ElementClass,
   ServerSkeletonTracing,
@@ -50,6 +51,7 @@ import Model from "viewer/model";
 import {
   resetStoreAction,
   restartSagaAction,
+  sceneControllerInitializedAction,
   wkInitializedAction,
 } from "viewer/model/actions/actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
@@ -77,6 +79,10 @@ import {
   annotationProto as VOLUME_ANNOTATION_PROTO,
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
+import { MeshSegmentInfo } from "admin/api/mesh";
+import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
+import SegmentMeshController from "viewer/controller/segment_mesh_controller";
+import flattenDepth from "lodash-es/flattenDepth";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -110,6 +116,18 @@ export function getFlattenedUpdateActions(context: WebknossosTestContext) {
       saveQueueEntries.map((entry) => entry.actions),
     ),
   );
+}
+
+export function getNestedUpdateActions(context: WebknossosTestContext) {
+  const versions = []
+  for (const saveQueueEntries of context.receivedDataPerSaveRequest) {
+    for (const entry of saveQueueEntries) {
+
+      versions.push(entry.actions)
+    }
+  }
+
+  return versions;
 }
 
 // Create mock objects
@@ -183,12 +201,17 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
+  const getMeshfilesForDatasetLayer = vi.fn(async () => {
+    return [dummyMeshFile];
+  })
+
   return {
     ...actual,
     getDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
     getMappingsForDatasetLayer: vi.fn(() => []),
+    getMeshfilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
@@ -237,6 +260,22 @@ vi.mock("admin/rest_api.ts", async () => {
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock("admin/api/mesh", async () => {
+  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
+  const getMeshfileChunksForSegment = async (..._args: any[]): Promise<MeshSegmentInfo> => {
+    return {
+      meshFormat: "draco",
+      lods: [],
+      chunkScale: [1, 1, 1]
+    }
+  }
+
+  return {
+    ...actual,
+    getMeshfileChunksForSegment
+  }
+})
 
 vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
@@ -496,10 +535,12 @@ export async function setupWebknossosForTesting(
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-expect-error
-    segmentMeshController: {
-      meshesGroupsPerSegmentId: {},
-      updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
-    },
+    segmentMeshController: new SegmentMeshController(),
+    // segmentMeshController: {
+    //   meshesGroupsPerSegmentId: {},
+    //   updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
+    //   getLODGroupOfLayer: vi.fn(),
+    // },
   });
 
   __setFeatures({});
@@ -525,6 +566,7 @@ export async function setupWebknossosForTesting(
     if (!options?.dontDispatchWkInitialized) {
       // Dispatch the wkInitializedAction, so the sagas are started
       Store.dispatch(wkInitializedAction());
+      Store.dispatch(sceneControllerInitializedAction());
     }
   } catch (error) {
     console.error("model.fetch() failed", error);

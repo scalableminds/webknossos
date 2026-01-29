@@ -28,6 +28,10 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
+import { sleep } from "libs/utils";
+import { MappingVisualizer } from "test/helpers/mapping_visualizer";
+import range from "lodash-es/range";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -102,7 +106,7 @@ describe("Proofreading (Single User)", () => {
 
   it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -145,9 +149,13 @@ describe("Proofreading (Single User)", () => {
       expect(mapping1).toEqual(expectedMappingAfterSplit);
 
       yield call(() => api.tracing.save());
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.slice(-1)).toEqual([
+      // console.log("receivedUpdateActions", receivedUpdateActions);
+
+      expect(receivedUpdateActions.slice(-2)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -157,7 +165,29 @@ describe("Proofreading (Single User)", () => {
             segmentId2: 2,
           },
         },
+        {
+          "name": "createSegment",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "additionalCoordinates": undefined,
+            "anchorPosition": [2, 2, 2,],
+            "color": null,
+            "creationTime": 1494695001688,
+            "groupId": null,
+            "id": 1339,
+            "metadata": [],
+            "name": null,
+          },
+        },
       ]);
+
+      // const viz = new MappingVisualizer(backendMock);
+
+      // for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
+      //   viz.renderVersion(version, {
+      //     outputPath: `debug/mapping-${version}.svg`,
+      //   });
+      // }
     });
 
     await task.toPromise();

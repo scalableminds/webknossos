@@ -212,9 +212,6 @@ export function* uncachedDiffSegmentLists(
       yield* diffMetadataOfSegments(segment, prevSegment, tracingId);
     }
     if (changedPropertyNames.size > 0) {
-      ColoredLogger.logRed("changedPropertyNames", changedPropertyNames);
-      console.log("  diffed were prevSegment:", prevSegment);
-      console.log("  diffed were segment:", segment);
       yield updateSegmentPartialVolumeAction(
         Object.fromEntries([
           ["id", segment.id],

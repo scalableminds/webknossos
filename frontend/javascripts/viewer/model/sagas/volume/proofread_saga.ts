@@ -224,6 +224,7 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
+  ColoredLogger.logGreen("clickSegmentAction for id=", segmentId);
   yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
 
   const autoRenderMeshInProofreading = yield* select(
@@ -606,6 +607,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     );
   } else {
     // A merge happened. Remove the segment that doesn't exist anymore.
+    ColoredLogger.logRed("removeSegmentAction", targetAgglomerateId)
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
@@ -1069,7 +1071,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     if (sourceAgglomerateId !== targetAgglomerateId) {
       const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
       const additionalErrorExplanation = isOthersMayEditEnabled
-        ? " Maybe another user already splitted the agglomerate in the meantime."
+        ? " Maybe another user already split the agglomerate in the meantime."
         : "";
       Toast.error(
         `The selected positions are not part of the same agglomerate and cannot be split.${additionalErrorExplanation}`,
@@ -1502,6 +1504,7 @@ function* refreshAffectedSegmentItemsAndMeshes(
     nodePosition: Vector3;
   }>,
 ) {
+  ColoredLogger.logBlue("refreshAffectedSegmentItemsAndMeshes", items);
   // ATTENTION: This saga should usually be called with `spawn` to avoid that the user
   // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
 
@@ -1521,6 +1524,7 @@ function* refreshAffectedSegmentItemsAndMeshes(
       removedIds.add(item.agglomerateId);
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
+      ColoredLogger.logGreen("ensureSegmentItemAndLoadCoarseMesh for", item.newAgglomerateId);
       yield* call(
         ensureSegmentItemAndLoadCoarseMesh,
         layerName,

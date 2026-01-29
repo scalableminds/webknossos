@@ -332,7 +332,7 @@ describe("VolumeTracing", () => {
       expect(segment1).toMatchObject({
         id: id1,
         groupId: id2,
-        name: "Segment 1 and Name 2", // Note that "Segment 1" as a fallback got used here.
+        name: "Segment 1 and Name 2", // Note that "Segment 1" got used here as a fallback name.
         metadata: [
           { key: "someKey1", stringValue: "someStringValue - segment 2" },
           { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },

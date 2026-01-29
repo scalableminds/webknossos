@@ -72,7 +72,7 @@ export function* initializeMappingAndTool(
   yield take("FINISH_MAPPING_INITIALIZATION");
 }
 
-class BackendMock {
+export class BackendMock {
   typedArrayClass = Uint16Array;
   fillValue = 1;
   requestDelay = 5;
@@ -97,23 +97,26 @@ class BackendMock {
     );
   }
 
-  getState() {
+  getState(requestedVersion: number | null = null): WebknossosState {
     let state = this.initialState;
     if (state == null) {
-      return null;
+      throw new Error("Unexpected getState on BackendMock.");
     }
-    for (const version of this.updateActionLog) {
+    for (const actionBatch of this.updateActionLog) {
+      if (requestedVersion != null && actionBatch.version > requestedVersion) {
+        break;
+      }
       state = combinedReducer(
         state,
         applySkeletonUpdateActionsFromServerAction(
-          version.value as ApplicableSkeletonServerUpdateAction[],
+          actionBatch.value as ApplicableSkeletonServerUpdateAction[],
           true,
         ),
       );
       state = combinedReducer(
         state,
         applyVolumeUpdateActionsFromServerAction(
-          version.value as ApplicableVolumeUpdateAction[],
+          actionBatch.value as ApplicableVolumeUpdateAction[],
           true,
         ),
       );

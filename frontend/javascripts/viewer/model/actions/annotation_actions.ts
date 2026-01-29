@@ -2,7 +2,8 @@ import Deferred from "libs/async/deferred";
 import noop from "lodash-es/noop";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
-import type {AdditionalCoordinate, 
+import type {
+  AdditionalCoordinate,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
@@ -24,6 +25,7 @@ import type {
   InitializeEditableMappingAction,
   InitializeVolumeTracingAction,
 } from "./volumetracing_actions";
+import { ColoredLogger } from "libs/utils";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type InitializationAction =

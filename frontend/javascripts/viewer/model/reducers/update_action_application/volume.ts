@@ -59,7 +59,6 @@ function applySingleAction(
   ) => WebknossosState,
   ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
-  ColoredLogger.logGreen("applySingleAction", ua);
   switch (ua.name) {
     case "updateLargestSegmentId": {
       const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);

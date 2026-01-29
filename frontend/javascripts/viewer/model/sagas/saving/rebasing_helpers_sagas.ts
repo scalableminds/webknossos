@@ -182,7 +182,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
     .map((saveQueueEntry): SaveQueueEntry | null => {
       const newActions = saveQueueEntry.actions
         .map((action) => {
-          ColoredLogger.logYellow("trying to update action", action);
           switch (action.name) {
             case "mergeAgglomerate":
             case "splitAgglomerate": {

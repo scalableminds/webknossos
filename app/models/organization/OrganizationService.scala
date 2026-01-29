@@ -184,9 +184,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  def assertOrganizationHasPaidPlan(organization: Organization): Fox[Unit] =
+  def assertOrganizationHasAiPlan(organization: Organization): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "job.creditTransaction.notPaidPlan"
+      _ <- Fox.fromBool(organization.aiPlan.isDefined) ?~> "job.creditTransaction.noAiPlan"
     } yield ()
 
 }

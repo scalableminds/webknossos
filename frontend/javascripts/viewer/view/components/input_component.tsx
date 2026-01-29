@@ -22,7 +22,7 @@ import {
  *   while it's focused (mainly necessary when mutating the value on arrow-keypresses)
  */
 
-const InputComponent = forwardRef<InputRef, InputProps>((props, ref) => {
+const InputComponent: React.FC<InputComponentProps> = (props) => {
   const {
     title,
     style,
@@ -36,9 +36,6 @@ const InputComponent = forwardRef<InputRef, InputProps>((props, ref) => {
   } = props;
   const inputRef = useRef<InputRef>(null);
   const [currentValue, setCurrentValue] = useState(value);
-
-  // Forward the ref to the internal inputRef if provided
-  useImperativeHandle(ref, () => inputRef.current as InputRef, []);
 
   useEffect(() => {
     setCurrentValue(value);
@@ -114,5 +111,5 @@ const InputComponent = forwardRef<InputRef, InputProps>((props, ref) => {
   ) : (
     input
   );
-});
+};
 export default InputComponent;

@@ -117,7 +117,9 @@
         "noFallthroughSwitchClause": "off",
         "noAssignInExpressions": "off"
       },
-      "nursery": {}
+      "nursery": {
+        "noReactForwardRef": "error"
+      }
     }
   },
   "formatter": {

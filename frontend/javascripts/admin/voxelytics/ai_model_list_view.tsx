@@ -171,7 +171,11 @@ function EditModelSharedOrganizationsModal({
   model,
   onClose,
   owningOrganization,
-}: { model: AiModel; onClose: () => void; owningOrganization: string }) {
+}: {
+  model: AiModel;
+  onClose: () => void;
+  owningOrganization: string;
+}) {
   const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<string[]>(
     model.sharedOrganizationIds || [owningOrganization],
   );

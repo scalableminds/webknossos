@@ -184,9 +184,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  def assertOrganizationHasAiPlan(organization: Organization): Fox[Unit] =
+  def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(organization.aiPlan.isDefined) ?~> "job.creditTransaction.noAiPlan"
+      isSuperUser <- userService.isSuperUser(user._multiUser)
+      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> "job.creditTransaction.noAiPlan"
     } yield ()
 
 }

@@ -7,7 +7,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
-import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationPlanUpdate, OrganizationService, PricingPlan}
+import models.organization.{
+  FreeCreditTransactionService,
+  OrganizationDAO,
+  OrganizationPlanUpdate,
+  OrganizationService,
+  PricingPlan
+}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._

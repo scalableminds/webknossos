@@ -146,7 +146,7 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           request.identity._organization)
-        _ <- organizationService.assertOrganizationHasAiPlan(organization)
+        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
         _ <- Fox.fromBool(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
@@ -200,7 +200,7 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           request.identity._organization)
-        _ <- organizationService.assertOrganizationHasAiPlan(organization)
+        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
         _ <- Fox.fromBool(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox

@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 import analyzer from "vite-bundle-analyzer";
-import { visualizer } from "rollup-plugin-visualizer";
 
 import path from "node:path";
 
@@ -26,7 +25,7 @@ export const viteConfig = {
     },
   },
   plugins: [
-    analyzer(),
+    // analyzer(),
     react({ skipFastRefresh: true, fastRefresh: false }),
     tsconfigPaths(),
     wasm(),
@@ -43,12 +42,6 @@ export const viteConfig = {
     emptyOutDir: false,
     sourcemap: true,
     rollupOptions: {
-      plugins: [
-        visualizer({
-          // filename: "stats.html",
-          template: "network",
-        }),
-      ],
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/html2canvas")) {
@@ -66,7 +59,7 @@ export const viteConfig = {
     cors: true,
     proxy: {
       // You can add more routes here, e.g. "^/(api|binary|auth)"
-      "^/(api|data|tracings)": {
+      "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,
       },

@@ -21,6 +21,7 @@ const BLACKLISTED_ERROR_MESSAGES = [
   "Uncaught TypeError: Cannot read property 'path' of null",
   "WebGLContextLost",
 ];
+
 type ErrorHandlingOptions = {
   throwAssertions: boolean;
 };
@@ -105,13 +106,13 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    const scriptTag = document.querySelector("[data-airbrake-project-id]");
-    if (!scriptTag) throw new Error("failed to initialize airbrake");
-    // @ts-expect-error
-    const { dataset } = scriptTag;
-    const projectId = dataset.airbrakeProjectId;
-    const projectKey = dataset.airbrakeProjectKey;
-    const envName = dataset.airbrakeEnvironmentName;
+    // const scriptTag = document.querySelector("[data-airbrake-project-id]");
+    // if (!scriptTag) throw new Error("failed to initialize airbrake");
+    // // @ts-expect-error
+    // const { dataset } = scriptTag;
+    const projectId = 123; // dataset.airbrakeProjectId;
+    const projectKey = "123"; // dataset.airbrakeProjectKey;
+    const envName = "development"; // dataset.airbrakeEnvironmentName;
     this.airbrake = new Notifier({
       projectId,
       projectKey,
@@ -214,7 +215,7 @@ class ErrorHandling {
     optParams: Record<string, any> = {},
     severity: "error" | "warning" = "error",
   ) {
-    if (process.env.IS_TESTING) {
+    if (import.meta.env.MODE === "test") {
       return;
     }
 

@@ -13,6 +13,6 @@ WHERE EXISTS (
       AND u.userConfiguration ->> 'useLegacyBindings' = 'true'
 );
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 150;
+UPDATE webknossos.releaseInformation SET schemaVersion = 151;
 
 COMMIT TRANSACTION;

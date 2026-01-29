@@ -7,7 +7,7 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
 import type React from "react";
-import { type Key, useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, type Key, useCallback, useEffect, useRef, useState } from "react";
 import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import type { FolderItem } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
@@ -104,7 +104,7 @@ export function FolderTreeSidebar({
   };
   const titleRender = useCallback(
     (nodeData: FolderItem) => {
-      return generateTitle(context, nodeData, setFolderIdForEditModal);
+      return <ItemTitle context={context} folder={nodeData} setFolderIdForEditModal={setFolderIdForEditModal} />;
     },
     [context, setFolderIdForEditModal],
   );
@@ -131,8 +131,7 @@ export function FolderTreeSidebar({
           context.queries.moveFolderMutation.mutateAsync([sourceId, targetId]);
         } else {
           Toast.warning(
-            `You don't have the necessary permissions to move this folder${
-              sourceAllowed ? " to the specified target" : ""
+            `You don't have the necessary permissions to move this folder${sourceAllowed ? " to the specified target" : ""
             }.`,
           );
         }
@@ -258,11 +257,16 @@ export function generateSettingsForFolder(
   };
 }
 
-function generateTitle(
+type ItemTitleProps = {
   context: DatasetCollectionContextValue,
   folder: FolderItem,
   setFolderIdForEditModal: (folderId: string) => void,
-) {
+}
+
+const ItemTitle = forwardRef<unknown, ItemTitleProps>((
+  props, ref,
+) => {
+  const { context, folder, setFolderIdForEditModal } = props;
   const { key: id, title, isEditable } = folder;
 
   function editFolder(): void {
@@ -272,6 +276,7 @@ function generateTitle(
   const menu = generateSettingsForFolder(folder, context, editFolder);
 
   return (
+    // removing this dropdown fixes dnd
     <Dropdown
       menu={menu}
       placement="bottom"
@@ -282,12 +287,12 @@ function generateTitle(
       autoDestroy
       trigger={["contextMenu"]}
     >
-      <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
+      <FolderItemAsDropTarget folderId={id} isEditable={isEditable} ref={ref}>
         {title}
       </FolderItemAsDropTarget>
     </Dropdown>
   );
-}
+})
 
 export type DnDDropItemProps = {
   datasetId: string;
@@ -297,12 +302,12 @@ export function useDatasetDrop(
   folderId: string,
   canDrop: boolean,
 ): [
-  {
-    canDrop: boolean;
-    isOver: boolean;
-  },
-  ConnectDropTarget,
-] {
+    {
+      canDrop: boolean;
+      isOver: boolean;
+    },
+    ConnectDropTarget,
+  ] {
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [collectedProps, drop] = useDrop<
@@ -395,7 +400,7 @@ function FolderItemAsDropTarget(props: {
     <div
       className={classNames("folder-item", className, {
         // "valid-drop-target": isOver && canDrop,
-        "valid-drop-target":  canDrop,
+        "valid-drop-target": canDrop,
       })}
       ref={dropRef}
       style={{ cursor: "pointer" }}

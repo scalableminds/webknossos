@@ -37,10 +37,10 @@ import {
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
-import type {
-  ApplicableSkeletonServerUpdateAction,
-  ApplicableSkeletonUpdateAction,
-  UpdateActionWithoutIsolationRequirement,
+import {
+  type ApplicableSkeletonServerUpdateAction,
+  ApplicableSkeletonUpdateActionNamesHelperNamesList,
+  type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -86,34 +86,6 @@ const addMissingTimestampProp = (
 };
 
 const applyActions = chainReduce(combinedReducer);
-
-// This helper dict exists so that we can ensure via typescript that
-// the list contains all members of ApplicableSkeletonUpdateAction. As soon as
-// ApplicableSkeletonUpdateAction is extended with another action, TS will complain
-// if the following dictionary doesn't contain that action.
-const actionNamesHelper: Record<ApplicableSkeletonUpdateAction["name"], true> = {
-  updateTree: true,
-  createTree: true,
-  updateNode: true,
-  createNode: true,
-  createEdge: true,
-  deleteTree: true,
-  deleteEdge: true,
-  deleteNode: true,
-  moveTreeComponent: true,
-  updateTreeGroups: true,
-  updateTreeGroupsExpandedState: true,
-  updateTreeEdgesVisibility: true,
-  addUserBoundingBoxInSkeletonTracing: true,
-  updateUserBoundingBoxInSkeletonTracing: true,
-  updateUserBoundingBoxVisibilityInSkeletonTracing: true,
-  deleteUserBoundingBoxInSkeletonTracing: true,
-  updateActiveNode: true,
-  updateTreeVisibility: true,
-  updateTreeGroupVisibility: true,
-  updateActiveTree: true,
-};
-const actionNamesList = Object.keys(actionNamesHelper);
 
 describe("Update Action Application for SkeletonTracing", () => {
   const seenActionTypes = new Set<string>();
@@ -319,7 +291,7 @@ describe("Update Action Application for SkeletonTracing", () => {
 
   afterAll(() => {
     // Ensure that each possible action is included in the testing at least once
-    expect(seenActionTypes).toEqual(new Set(actionNamesList));
+    expect(seenActionTypes).toEqual(new Set(ApplicableSkeletonUpdateActionNamesHelperNamesList));
   });
 });
 

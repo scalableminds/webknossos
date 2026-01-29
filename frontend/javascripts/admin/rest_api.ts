@@ -880,6 +880,7 @@ export function getSegmentVolumes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  // TODOM: Add versioning parameter editableMappingVersion. -> backend supports this already
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
@@ -905,6 +906,7 @@ export function getSegmentSurfaceArea(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  // TODOM: Add versioning parameter annotationVersion. -> backend supports this already
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
@@ -931,6 +933,7 @@ export function getSegmentBoundingBoxes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  // TODOM: Add versioning parameter editableMappingVersion. -> backend supports this already
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
@@ -1823,6 +1826,7 @@ type MeshRequest = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
+  version: number;
 };
 
 export function computeAdHocMesh(
@@ -1880,6 +1884,7 @@ export function getBucketPositionsForAdHocMesh(
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  tracingVersion: number,
 ): Promise<Vector3[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
@@ -1893,6 +1898,7 @@ export function getBucketPositionsForAdHocMesh(
           mag,
           additionalCoordinates,
           mappingName,
+          editableMappingVersion: tracingVersion,
         },
         method: "POST",
       },

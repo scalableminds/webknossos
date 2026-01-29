@@ -2593,6 +2593,8 @@ class DataApi {
       }
     }
 
+    const isProofreadingAuxiliaryMesh = false;
+
     Store.dispatch(
       loadPrecomputedMeshAction(
         segmentId,
@@ -2600,6 +2602,7 @@ class DataApi {
         seedAdditionalCoordinates,
         meshFileName,
         undefined,
+        isProofreadingAuxiliaryMesh,
         effectiveLayerName,
       ),
     );
@@ -2618,7 +2621,15 @@ class DataApi {
     seedPosition: Vector3,
     seedAdditionalCoordinates?: AdditionalCoordinate[],
   ) {
-    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, seedAdditionalCoordinates));
+    const isProofreadingAuxiliaryMesh = false;
+    Store.dispatch(
+      loadAdHocMeshAction(
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        isProofreadingAuxiliaryMesh,
+      ),
+    );
   }
 
   /**

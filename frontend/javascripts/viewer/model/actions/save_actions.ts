@@ -8,7 +8,7 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
+import type { ProofreadingPostProcessingInfo, SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 import { areSetsEqual } from "libs/utils";
@@ -45,6 +45,9 @@ export type UpdateMappingRebaseInformationAction = ReturnType<
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
 >;
+export type SetPendingProofreadingOperationInfoAction = ReturnType<
+  typeof setPendingProofreadingOperationInfoAction
+>;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
 
 export type SaveAction =
@@ -69,6 +72,7 @@ export type SaveAction =
   | FinishedRebaseAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
+  | SetPendingProofreadingOperationInfoAction
   | ReplaceSaveQueueAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
@@ -264,6 +268,13 @@ export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: st
 export const finishedApplyingMissingUpdatesAction = () =>
   ({
     type: "FINISHED_APPLYING_MISSING_UPDATES",
+  }) as const;
+export const setPendingProofreadingOperationInfoAction = (
+  proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | null | undefined,
+) =>
+  ({
+    type: "SET_PENDING_PROOFREADING_OPERATION_INFO",
+    proofreadingPostProcessingInfo,
   }) as const;
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>

@@ -1,0 +1,66 @@
+{
+  "branchPoints": [],
+  "color": [
+    0.6784313725490196,
+    0.1411764705882353,
+    0.050980392156862744,
+  ],
+  "comments": [],
+  "edges": EdgeCollection {
+    "__notEnumerableByObject": true,
+    "edgeCount": 0,
+    "inMap": DiffableMap {
+      "__notEnumerableByObject": true,
+      "chunks": [
+        Map {},
+      ],
+      "entryCount": 0,
+      "itemsPerBatch": 1000,
+    },
+    "outMap": DiffableMap {
+      "__notEnumerableByObject": true,
+      "chunks": [
+        Map {},
+      ],
+      "entryCount": 0,
+      "itemsPerBatch": 1000,
+    },
+  },
+  "edgesAreVisible": true,
+  "groupId": undefined,
+  "isVisible": true,
+  "metadata": [],
+  "name": "agglomerate 1 (volumeTracingId)",
+  "nodes": DiffableMap {
+    "__notEnumerableByObject": true,
+    "chunks": [
+      Map {
+        4 => {
+          "additionalCoordinates": [],
+          "bitDepth": 8,
+          "id": 4,
+          "interpolation": false,
+          "mag": 1,
+          "radius": 1,
+          "rotation": [
+            0,
+            0,
+            0,
+          ],
+          "timestamp": 1494695001688,
+          "untransformedPosition": [
+            1,
+            1,
+            1,
+          ],
+          "viewport": 0,
+        },
+      },
+    ],
+    "entryCount": 1,
+    "itemsPerBatch": 1000,
+  },
+  "timestamp": 1494695001688,
+  "treeId": 3,
+  "type": "AGGLOMERATE",
+}

@@ -73,10 +73,14 @@ class DSRemoteTracingstoreClient @Inject()(
   def getZGroup(tracingId: String, tracingStoreUri: String)(implicit tc: TokenContext): Fox[JsObject] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zgroup").withTokenFromContext.getWithJsonResponse[JsObject]
 
-  def getEditableMappingSegmentIdsForAgglomerate(tracingStoreUri: String, tracingId: String, agglomerateId: Long)(
-      implicit tc: TokenContext): Fox[EditableMappingSegmentListResult] =
+  def getEditableMappingSegmentIdsForAgglomerate(
+      tracingStoreUri: String,
+      tracingId: String,
+      annotationVersionOpt: Option[Long],
+      agglomerateId: Long)(implicit tc: TokenContext): Fox[EditableMappingSegmentListResult] =
     rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
       .addQueryParam("agglomerateId", agglomerateId)
+      .addQueryParam("version", annotationVersionOpt)
       .withTokenFromContext
       .silent
       .getWithJsonResponse[EditableMappingSegmentListResult]

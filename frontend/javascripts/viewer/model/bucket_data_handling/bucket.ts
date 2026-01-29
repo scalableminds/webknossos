@@ -616,7 +616,7 @@ export class DataBucket {
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo = // Disable this conditional if you need verbose output here.
-        process.env.IS_TESTING
+        import.meta.env.MODE === "test"
           ? " (<omitted>)"
           : {
               arrayBuffer,

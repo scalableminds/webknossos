@@ -253,7 +253,22 @@ function ExperienceModalView({
         scroll={{
           y: 350,
         }}
-        className="user-experience-table"
+        styles={{
+          root: {
+            marginBottom: 24,
+          },
+          header: {
+            wrapper: {
+              overflowY: "auto",
+              paddingBottom: 0,
+            },
+          },
+          body: {
+            wrapper: {
+              overflowY: "auto",
+            },
+          },
+        }}
         components={{
           body: {
             row: HighlightableRow,

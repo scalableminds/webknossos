@@ -327,7 +327,7 @@ function DatasetsDetails({
 
   return (
     <div style={{ textAlign: "center" }}>
-      <Space direction="vertical" size="large" style={{ display: "flex" }}>
+      <Space orientation="vertical" size="large">
         <div>
           Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
           with drag and drop.
@@ -437,7 +437,7 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
   const allowedTeamsById = keyBy(folder.allowedTeams, "id");
 
   return (
-    <>
+    <Space>
       {folder.allowedTeamsCumulative.map((team) => {
         const isCumulative = !allowedTeamsById[team.id];
         return (
@@ -465,6 +465,6 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
           </Tooltip>
         );
       })}
-    </>
+    </Space>
   );
 }

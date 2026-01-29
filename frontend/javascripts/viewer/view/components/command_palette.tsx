@@ -35,6 +35,7 @@ const commandEntryColor = "#5660ff";
 type ExtendedCommand = Command & {
   shortcut?: string;
   highlight?: string;
+  aliases?: string;
 };
 
 type CommandWithoutId = Omit<ExtendedCommand, "id">;
@@ -43,6 +44,28 @@ enum DynamicCommands {
   viewDataset = "View Dataset ",
   viewAnnotation = "View Annotation ",
 }
+
+type CommandAliasConfig = Record<string, string[]>;
+
+const COMMAND_ALIASES: CommandAliasConfig = {
+  "Jobs": ["long-running jobs", "worker", "worker jobs"],
+  "Workflows": ["voxelytics", "voxelytics reports", "workflow reports"],
+  "Add Dataset": ["upload dataset"],
+  "Task": ["add task"],
+  "Tasktypes": ["add task type"],
+  "Project": ["add project"],
+};
+
+const getAliasesForCommand = (commandName: string): string => {
+  // Check if the command name matches any key in COMMAND_ALIASES
+  // Support partial matching (e.g., "Go to Processing Jobs" matches "Processing Jobs")
+  for (const [key, aliases] of Object.entries(COMMAND_ALIASES)) {
+    if (commandName.includes(key)) {
+      return aliases.join(" ");
+    }
+  }
+  return "";
+};
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
   if ("title" in action && action.title != null) {
@@ -61,10 +84,13 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
         return null;
       }
       const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : noop;
+      const commandName = getLabelForAction(action);
+      const aliases = getAliasesForCommand(commandName);
       return {
-        name: getLabelForAction(action),
+        name: commandName,
         command: onClickAction,
         color: commandEntryColor,
+        aliases: aliases || undefined,
       };
     }),
   );
@@ -277,12 +303,15 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     ];
 
     navigationEntries.forEach((entry) => {
+      const commandName = `Go to ${entry.name}`;
+      const aliases = getAliasesForCommand(entry.name);
       commands.push({
-        name: `Go to ${entry.name}`,
+        name: commandName,
         command: () => {
           navigate(entry.path);
         },
         color: commandEntryColor,
+        aliases: aliases || undefined,
       });
     });
 
@@ -403,6 +432,9 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       resetInputOnOpen
       onRequestClose={() => setCommands(allStaticCommands)}
       closeOnSelect={false}
+      options={{
+        keys: ["name", "aliases"],
+      }}
       renderCommand={(command) => {
         const { shortcut, highlight: maybeDirtyString, name } = command as ExtendedCommand;
         const cleanString = cleanStringOfMostHTML(maybeDirtyString);

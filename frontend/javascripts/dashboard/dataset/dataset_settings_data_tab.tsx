@@ -39,7 +39,6 @@ export default function DatasetSettingsDataTab() {
   return (
     <div>
       <SettingsTitle title="Data Source" description="Configure the data source" />
-
       <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
     </div>
   );
@@ -82,12 +81,18 @@ function DatasetTransformationsModeCard() {
   );
 }
 
+  export enum TransformationsMode {
+    NONE = "none",
+    SIMPLE = "simple",
+    ADVANCED = "advanced",
+  }
+
 function SimpleDatasetForm({
   dataSource,
   form,
   dataset,
 }: {
-  dataSource: Record<string, any>;
+  dataSource: Record<string, any>; //datasource stored in form. todo_c maybe rename or refactor so this is clear
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
@@ -104,37 +109,24 @@ function SimpleDatasetForm({
     });
   };
 
-  enum TransformationsMode {
-    NONE = "none",
-    SIMPLE = "simple",
-    ADVANCED = "advanced",
-  }
-
   const transformationItems = [
     { value: TransformationsMode.NONE, label: "None" },
     { value: TransformationsMode.SIMPLE, label: "Simple" },
     { value: TransformationsMode.ADVANCED, label: "Advanced" },
   ];
 
-  const doesDatasetHaveAdvancedTransformations = dataSource?.dataLayers?.some( // TODOc how to actually find that out?
-    (layer) => (layer.coordinateTransformations?.length ?? 0) > 0,
-  );
-  const initialTransformationsMode = doesDatasetHaveAdvancedTransformations
-    ? TransformationsMode.ADVANCED
-    : TransformationsMode.SIMPLE;
-  const [transformationsMode, setTransformationsMode] = useState<TransformationsMode>(
-    initialTransformationsMode,
-  );
+  const transformationsMode = Form.useWatch(["transformationsMode"], form);
   const coordinateTransformationsJSON = Form.useWatch(["coordinateTransformations"], form);
 
   useEffect(() => {
-    if (transformationsMode === TransformationsMode.ADVANCED) {
-      const dataLayersWithTransformations: DataLayerWithTransformations[] = dataSource?.dataLayers?.map((layer: DataLayer) => ({
-        name: layer.name,
-        coordinateTransformations: layer.coordinateTransformations || [],
-      })) || [];
-      const layersWithCoordTransformationsJSON = JSON.stringify(dataLayersWithTransformations, null, 2);
-      form.setFieldValue(["coordinateTransformations"], layersWithCoordTransformationsJSON);
+    if(transformationsMode === TransformationsMode.NONE) {
+      const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
+      return {
+        ...layer,
+        coordinateTransformations: [],
+      };
+    });
+    form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
     }
   }, [transformationsMode]);
 
@@ -149,7 +141,7 @@ function SimpleDatasetForm({
     const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined = coordinateTransformationsJSON
       ? JSON.parse(coordinateTransformationsJSON)
       : undefined;
-    const dataLayersWithUpdatedTransforms = form.getFieldValue(["dataSource", "dataLayers"])?.map((layer: DataLayer) => {
+    const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
       const coordinateTransformation = layersWithCoordTransformations?.find(ct => ct.name === layer.name);
       return {
         ...layer,
@@ -157,7 +149,7 @@ function SimpleDatasetForm({
       };
     });
     form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
-  }, [coordinateTransformationsJSON, form]);
+  }, [coordinateTransformationsJSON, form, dataSource]);
 
   const getTransformationSettings = () => {
     switch (transformationsMode) {
@@ -291,15 +283,12 @@ function SimpleDatasetForm({
               </FormItemWithInfo>
             </Col>
             <FormItemWithInfo
-              name={["transformationMode"]}
+              name={["transformationsMode"]}
               label="Transformation Mode"
               info="The transformations for the dataset."
             >
               <Select
                 options={transformationItems}
-                value={transformationsMode}
-                onChange={setTransformationsMode}
-                defaultValue={initialTransformationsMode}
               />
             </FormItemWithInfo>
           </Row>

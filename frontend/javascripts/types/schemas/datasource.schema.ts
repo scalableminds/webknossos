@@ -514,6 +514,6 @@ export default {
         },
         required: ["name"],
       },
-    }
+    },
   },
 };

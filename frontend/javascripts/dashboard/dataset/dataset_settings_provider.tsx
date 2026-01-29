@@ -137,18 +137,22 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         datasetRotation: initialRotationSettings,
       });
 
-      const dataLayersWithTransformations: DataLayerWithTransformations[] = dataSource.dataLayers.map((layer: APIDataLayer) => ({
-        name: layer.name,
-        coordinateTransformations: layer.coordinateTransformations || [],
-      })) || [];
-      const layersWithCoordTransformationsJSON = JSON.stringify(dataLayersWithTransformations, null, 2);
+      const dataLayersWithTransformations: DataLayerWithTransformations[] =
+        dataSource.dataLayers.map((layer: APIDataLayer) => ({
+          name: layer.name,
+          coordinateTransformations: layer.coordinateTransformations || [],
+        })) || [];
+      const layersWithCoordTransformationsJSON = JSON.stringify(
+        dataLayersWithTransformations,
+        null,
+        2,
+      );
       form.setFieldsValue({
         coordinateTransformations: layersWithCoordTransformationsJSON,
-      })
+      });
 
-      const initialTransformationsMode = initialRotationSettings == null
-        ? TransformationsMode.ADVANCED
-        : TransformationsMode.SIMPLE;
+      const initialTransformationsMode =
+        initialRotationSettings == null ? TransformationsMode.ADVANCED : TransformationsMode.SIMPLE;
       form.setFieldValue("transformationsMode", initialTransformationsMode);
 
       const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);

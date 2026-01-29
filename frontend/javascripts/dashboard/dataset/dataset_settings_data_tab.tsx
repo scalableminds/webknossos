@@ -22,8 +22,13 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
-import { cloneElement, useEffect, useState } from "react";
-import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
+import { cloneElement, useEffect } from "react";
+import {
+  type APIDataLayer,
+  type APIDataSource,
+  type APIDataset,
+  APIJobCommand,
+} from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
@@ -31,6 +36,7 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
+import { getRotationFromCoordinateTransformations } from "./dataset_settings_provider";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
@@ -81,11 +87,11 @@ function DatasetTransformationsModeCard() {
   );
 }
 
-  export enum TransformationsMode {
-    NONE = "none",
-    SIMPLE = "simple",
-    ADVANCED = "advanced",
-  }
+export enum TransformationsMode {
+  NONE = "none",
+  SIMPLE = "simple",
+  ADVANCED = "advanced",
+}
 
 function SimpleDatasetForm({
   dataSource,
@@ -119,37 +125,52 @@ function SimpleDatasetForm({
   const coordinateTransformationsJSON = Form.useWatch(["coordinateTransformations"], form);
 
   useEffect(() => {
-    if(transformationsMode === TransformationsMode.NONE) {
-      const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
-      return {
-        ...layer,
-        coordinateTransformations: [],
-      };
-    });
-    form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    if (!form || !dataSource?.dataLayers) {
+      return;
     }
-  }, [transformationsMode]);
+    if (transformationsMode === TransformationsMode.NONE) {
+      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer: DataLayer) => {
+        return {
+          ...layer,
+          coordinateTransformations: [],
+        };
+      });
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+      // Clear the rotation form fields
+      form.setFieldValue(["datasetRotation"], undefined);
+    } else if (transformationsMode === TransformationsMode.SIMPLE) {
+      // When switching to SIMPLE mode, recalculate datasetRotation from current transformations
+      const tempDataSource: APIDataSource = {
+        ...dataSource,
+        dataLayers: dataSource.dataLayers as APIDataLayer[],
+      } as APIDataSource;
+      const rotationSettings = getRotationFromCoordinateTransformations(tempDataSource);
+      form.setFieldValue(["datasetRotation"], rotationSettings);
+    }
+  }, [transformationsMode, dataSource, form]);
 
   useEffect(() => {
-    if (!form || coordinateTransformationsJSON == null
-    ) {
+    if (!form) {
       return;
     }
     if (form.getFieldError(["coordinateTransformations"]).length > 0) {
       return;
     }
-    const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined = coordinateTransformationsJSON
-      ? JSON.parse(coordinateTransformationsJSON)
-      : undefined;
-    const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
-      const coordinateTransformation = layersWithCoordTransformations?.find(ct => ct.name === layer.name);
-      return {
-        ...layer,
-        coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
-      };
-    });
-    form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
-  }, [coordinateTransformationsJSON, form, dataSource]);
+    if (transformationsMode === TransformationsMode.ADVANCED) {
+      const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined =
+        coordinateTransformationsJSON ? JSON.parse(coordinateTransformationsJSON) : undefined;
+      const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
+        const coordinateTransformation = layersWithCoordTransformations?.find(
+          (ct) => ct.name === layer.name,
+        );
+        return {
+          ...layer,
+          coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
+        };
+      });
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    }
+  }, [coordinateTransformationsJSON, form, dataSource, transformationsMode]);
 
   const getTransformationSettings = () => {
     switch (transformationsMode) {
@@ -287,9 +308,7 @@ function SimpleDatasetForm({
               label="Transformation Mode"
               info="The transformations for the dataset."
             >
-              <Select
-                options={transformationItems}
-              />
+              <Select options={transformationItems} />
             </FormItemWithInfo>
           </Row>
         }

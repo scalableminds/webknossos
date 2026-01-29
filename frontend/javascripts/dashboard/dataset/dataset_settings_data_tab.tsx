@@ -55,6 +55,32 @@ function copyDatasetID(datasetId: string | null | undefined) {
 
 const LEFT_COLUMN_ITEMS_WIDTH = 408;
 const COPY_ICON_BUTTON_WIDTH = 32;
+const MARGIN_BOTTOM: React.CSSProperties = {
+  marginBottom: 24,
+};
+
+function DatasetTransformationsModeCard() {
+  return (
+    <SettingsCard
+      title="Transformation Configuration"
+      content={
+        <FormItemWithInfo
+          info="<Some information about the format>"
+          name={["coordinateTransformations"]}
+          label="Coordinate Transformations JSON"
+          rules={[
+            {
+              validator: (rule, value) => validateTransformationsJSON(rule, value),
+            },
+          ]}
+        >
+          <Input.TextArea autoSize={{ minRows: 10, maxRows: 20 }} />
+        </FormItemWithInfo>
+      }
+      style={MARGIN_BOTTOM}
+    />
+  );
+}
 
 function SimpleDatasetForm({
   dataSource,
@@ -76,9 +102,6 @@ function SimpleDatasetForm({
         dataLayers: newLayers,
       },
     });
-  };
-  const marginBottom: React.CSSProperties = {
-    marginBottom: 24,
   };
 
   enum TransformationsMode {
@@ -136,29 +159,6 @@ function SimpleDatasetForm({
     form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
   }, [coordinateTransformationsJSON, form]);
 
-  function DatasetTransformationsModeCard() {
-    return (
-      <SettingsCard
-        title="Transformation Configuration"
-        content={
-          <FormItemWithInfo
-            info="<Some information about the format>"
-            name={["coordinateTransformations"]}
-            label="Coordinate Transformations JSON"
-            rules={[
-              {
-                validator: (rule, value) => validateTransformationsJSON(rule, value),
-              },
-            ]}
-          >
-            <Input.TextArea autoSize={{ minRows: 10, maxRows: 20 }} />
-          </FormItemWithInfo>
-        }
-        style={marginBottom}
-      />
-    );
-  };
-
   const getTransformationSettings = () => {
     switch (transformationsMode) {
       case TransformationsMode.NONE:
@@ -167,7 +167,7 @@ function SimpleDatasetForm({
         return (
           <SettingsCard
             title="Axis Rotation"
-            style={marginBottom}
+            style={MARGIN_BOTTOM}
             content={
               <Row gutter={[24, 24]}>
                 <Col span={24}>
@@ -188,7 +188,7 @@ function SimpleDatasetForm({
     <div>
       <SettingsCard
         title="General Dataset Settings"
-        style={marginBottom}
+        style={MARGIN_BOTTOM}
         content={
           <Row gutter={[24, 24]}>
             <Col span={24} xl={12}>
@@ -314,7 +314,7 @@ function SimpleDatasetForm({
           <Col span={24}>
             <SettingsCard
               title={`Layer: ${layer.name}`}
-              style={marginBottom}
+              style={MARGIN_BOTTOM}
               content={
                 <SimpleLayerForm
                   dataset={dataset}

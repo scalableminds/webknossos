@@ -148,6 +148,7 @@ class DataSourceController @Inject()(
    */
   def uploadChunk(): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
+      throw new Exception("boom!")
       log(Some(slackNotificationService.noticeFailedUploadRequest)) {
         val uploadForm = Form(
           tuple(

@@ -268,7 +268,9 @@ const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is API
 // to ensure the metadata is displayed and saved correctly.
 export default function MetadataTable({
   datasetOrFolder,
-}: { datasetOrFolder: APIDataset | Folder }) {
+}: {
+  datasetOrFolder: APIDataset | Folder;
+}) {
   const context = useDatasetCollectionContext();
   const [metadata, metadataRef, setMetadata] = useStateWithRef<APIMetadataWithError[]>(
     datasetOrFolder?.metadata?.map((entry) => ({ ...entry, error: null })) || [],
@@ -549,7 +551,11 @@ export function SimpleRow({
   label, // must not be called "key" as this is reserved in react
   value,
   isTableHead,
-}: { label: React.ReactNode; value: React.ReactNode; isTableHead?: boolean }) {
+}: {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  isTableHead?: boolean;
+}) {
   if (isTableHead) {
     return (
       <tr>

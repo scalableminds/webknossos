@@ -7,7 +7,10 @@ const FormItem = Form.Item;
 export function CollapsibleWorkflowYamlEditor({
   isActive = false,
   setActive,
-}: { isActive: boolean; setActive: (active: boolean) => void }) {
+}: {
+  isActive: boolean;
+  setActive: (active: boolean) => void;
+}) {
   const handleCollapseChange = useCallback(() => setActive(!isActive), [isActive, setActive]);
 
   return (

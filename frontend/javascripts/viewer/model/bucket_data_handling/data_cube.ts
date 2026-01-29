@@ -13,7 +13,12 @@ import keyBy from "lodash-es/keyBy";
 import once from "lodash-es/once";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { type Mesh, Ray, Raycaster, Vector3 as ThreeVector3 } from "three";
-import type { AdditionalAxis, AdditionalCoordinate, BucketDataArray, ElementClass } from "types/api_types";
+import type {
+  AdditionalAxis,
+  AdditionalCoordinate,
+  BucketDataArray,
+  ElementClass,
+} from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { BucketAddress, LabelMasksByBucketAndW, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";

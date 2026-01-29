@@ -3,11 +3,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import Toast from "libs/toast";
 import FastTooltip from "./fast_tooltip";
 
-export default function FormattedId({
-  id,
-}: {
-  id: string;
-}) {
+export default function FormattedId({ id }: { id: string }) {
   const _shortId = id.slice(-6);
 
   return (

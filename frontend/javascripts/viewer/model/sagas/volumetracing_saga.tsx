@@ -16,10 +16,12 @@ import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { AnnotationTool, 
+import {
+  AnnotationTool,
   isBrushTool,
   isTraceTool,
-  isVolumeDrawingTool,} from "viewer/model/accessors/tool_accessor";
+  isVolumeDrawingTool,
+} from "viewer/model/accessors/tool_accessor";
 import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,

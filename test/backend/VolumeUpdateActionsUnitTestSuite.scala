@@ -2,7 +2,9 @@ package backend
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.Color
-import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.MetadataEntry
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -12,6 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   DeleteSegmentVolumeAction,
   LEGACY_UpdateSegmentGroupsVolumeAction,
   LEGACY_UpdateSegmentVolumeAction,
+  MergeSegmentsVolumeAction,
   UpdateActionSegmentGroup,
   UpdateMetadataOfSegmentVolumeAction,
   UpdateSegmentPartialVolumeAction,
@@ -60,6 +63,79 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
                        SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
                    Some(true))
     ))
+
+  private val segmentWithMetadata1 = Segment(
+    segmentId = 1,
+    name = Some("Name 1"),
+    metadata = Seq(
+      MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 1")),
+      MetadataEntryProto(key = "someKey2", stringListValue = Seq("list", "value", "segment 1")),
+      MetadataEntryProto(key = "identicalKey", stringValue = Some("identicalValue"))
+    ),
+    anchorPosition = Some(Vec3IntProto(1, 1, 1)),
+    groupId = Some(1)
+  )
+
+  private val segmentWithMetadata2 = Segment(
+    segmentId = 2,
+    name = Some("Name 2"),
+    metadata = Seq(
+      MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2")),
+      MetadataEntryProto(key = "someKey3", stringListValue = Seq("list", "value", "segment 2")),
+      MetadataEntryProto(key = "identicalKey", stringValue = Some("identicalValue"))
+    ),
+    anchorPosition = Some(Vec3IntProto(2, 2, 2)),
+    groupId = Some(2)
+  )
+
+  "MergeSegmentsVolumeAction" should {
+    "merge two segments (simple)" in {
+      val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)
+      val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1, segmentWithMetadata2)))
+
+      assert(
+        result.segments == Seq(Segment(
+          segmentId = 1,
+          name = Some("Name 1 and Name 2"),
+          metadata = Seq(
+            MetadataEntryProto(key = "someKey1-1", stringValue = Some("someStringValue - segment 1")),
+            MetadataEntryProto(key = "someKey2", stringListValue = Seq("list", "value", "segment 1")),
+            MetadataEntryProto(key = "identicalKey", stringValue = Some("identicalValue")),
+            MetadataEntryProto(key = "someKey1-2", stringValue = Some("someStringValue - segment 2")),
+            MetadataEntryProto(key = "someKey3", stringListValue = Seq("list", "value", "segment 2")),
+          ),
+          anchorPosition = Some(Vec3IntProto(1, 1, 1)),
+          groupId = Some(1),
+        )))
+    }
+
+    "merge two segments (segment 1 doesn't exist, though)" in {
+      val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)
+      val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata2)))
+
+      assert(
+        result.segments == Seq(
+          Segment(
+            segmentId = 1,
+            name = Some("Segment 1 and Name 2"), // Note that "Segment 1" as a fallback got used here.
+            metadata = Seq(
+              MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2")),
+              MetadataEntryProto(key = "someKey3", stringListValue = Seq("list", "value", "segment 2")),
+              MetadataEntryProto(key = "identicalKey", stringValue = Some("identicalValue"))
+            ),
+            anchorPosition = Some(Vec3IntProto(2, 2, 2)),
+            groupId = Some(2)
+          ))
+      )
+    }
+
+    "merge two segments (segment 2 doesn't exist, though)" in {
+      val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)
+      val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1)))
+
+      assert(result.segments == Seq(segmentWithMetadata1))
+    }
+  }
 
   "CreateSegmentVolumeAction" should {
     "add the specified segment" in {

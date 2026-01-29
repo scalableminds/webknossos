@@ -12,7 +12,13 @@ import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
 import memoize from "lodash-es/memoize";
 import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_types";
-import { LongUnitToShortUnitMap, Unicode, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
+import {
+  LongUnitToShortUnitMap,
+  Unicode,
+  UnitShort,
+  type Vector3,
+  type Vector6,
+} from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
 import { hexToRgb, map3, roundTo } from "./utils";
 

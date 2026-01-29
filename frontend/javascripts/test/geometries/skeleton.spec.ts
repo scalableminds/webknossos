@@ -7,7 +7,10 @@ import type { Vector3 } from "viewer/constants";
 import { COLOR_TEXTURE_WIDTH, NodeTypes } from "viewer/geometries/materials/node_shader";
 import Skeleton from "viewer/geometries/skeleton";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { batchedAnnotationInitializationAction, initializeAnnotationAction } from "viewer/model/actions/annotation_actions";
+import {
+  batchedAnnotationInitializationAction,
+  initializeAnnotationAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   createBranchPointAction,
   createNodeAction,

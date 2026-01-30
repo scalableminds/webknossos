@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { Resumable, ResumableFile, ResumableChunk } from "./resumable";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Resumable, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
 
 // Helper to mock Fetch API
 function mockFetch(status = 200, ok = true, text = "success") {
@@ -333,56 +333,6 @@ describe("Resumable", () => {
       const newQuery = { token: "abc123" };
       resumable.updateQuery(newQuery);
       expect(resumable.opts.query).toEqual(newQuery);
-    });
-  });
-
-  describe("DOM Integration", () => {
-    it("should assign browse to input element", () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      resumable.assignBrowse(input);
-
-      expect(input.hasAttribute("multiple")).toBe(true);
-    });
-
-    it("should assign browse to button element", () => {
-      const button = document.createElement("button");
-      resumable.assignBrowse(button);
-
-      const input = button.querySelector('input[type="file"]');
-      expect(input).not.toBeNull();
-    });
-
-    it("should set accept attribute for file types", () => {
-      const r = new Resumable({
-        fileType: ["image/png", ".pdf"],
-      });
-      const input = document.createElement("input");
-      input.type = "file";
-      r.assignBrowse(input);
-
-      expect(input.getAttribute("accept")).toContain("image/png");
-      expect(input.getAttribute("accept")).toContain(".pdf");
-    });
-
-    it("should assign drop zone", () => {
-      const dropZone = document.createElement("div");
-      // Create spies on the element
-      const addSpy = vi.spyOn(dropZone, "addEventListener");
-
-      resumable.assignDrop(dropZone);
-
-      expect(addSpy).toHaveBeenCalledWith("drop", expect.any(Function), false);
-    });
-
-    it("should unassign drop zone", () => {
-      const dropZone = document.createElement("div");
-      const removeSpy = vi.spyOn(dropZone, "removeEventListener");
-
-      resumable.assignDrop(dropZone);
-      resumable.unAssignDrop(dropZone);
-
-      expect(removeSpy).toHaveBeenCalledWith("drop", expect.any(Function));
     });
   });
 });

@@ -40,7 +40,7 @@ export interface ConfigurationHash {
   permanentErrors?: number[];
   maxFiles?: number;
   withCredentials?: boolean;
-  xhrTimeout?: number;
+  fetchTimeout?: number;
   clearInput?: boolean;
   chunkFormat?: "blob" | "base64";
   setChunkTypeFromFile?: boolean;
@@ -74,7 +74,7 @@ const helpers = {
     e.preventDefault();
   },
 
-  generateUniqueIdentifier(file: File, event?: Event): string {
+  generateUniqueIdentifier(file: File, _event?: Event): string {
     const relativePath =
       (file as any).webkitRelativePath || (file as any).relativePath || file.name;
     const size = file.size;
@@ -608,11 +608,12 @@ export class ResumableFile {
       const preprocess = this.getOpt("preprocessFile");
       if (typeof preprocess === "function") {
         switch (this.preprocessState) {
-          case 0:
+          case 0: {
             this.preprocessState = 1;
             const result = preprocess(this);
             if (result instanceof Promise) result.catch(() => {});
             return true;
+          }
           case 1:
             return true;
           case 2:
@@ -697,29 +698,31 @@ export class Resumable implements EventTarget {
       permanentErrors: [400, 401, 403, 404, 409, 415, 500, 501],
       maxFiles: undefined,
       withCredentials: false,
-      xhrTimeout: 0,
+      fetchTimeout: 0,
       clearInput: true,
       chunkFormat: "blob",
       setChunkTypeFromFile: false,
-      maxFilesErrorCallback: (files: File[], errorCount: number) => {
+      maxFilesErrorCallback: () => {
         const maxFiles = this.getOpt("maxFiles");
-        alert(`Please upload no more than ${maxFiles} file${maxFiles === 1 ? "" : "s"} at a time.`);
+        console.error(
+          `Please upload no more than ${maxFiles} file${maxFiles === 1 ? "" : "s"} at a time.`,
+        );
       },
       minFileSize: 1,
-      minFileSizeErrorCallback: (file: File, errorCount: number) => {
-        alert(
+      minFileSizeErrorCallback: (file: File) => {
+        console.error(
           `${file.name} is too small, please upload files larger than ${helpers.formatSize(this.getOpt("minFileSize") as number)}.`,
         );
       },
       maxFileSize: undefined,
-      maxFileSizeErrorCallback: (file: File, errorCount: number) => {
-        alert(
+      maxFileSizeErrorCallback: (file: File) => {
+        console.error(
           `${file.name} is too large, please upload files less than ${helpers.formatSize(this.getOpt("maxFileSize") as number)}.`,
         );
       },
       fileType: [],
-      fileTypeErrorCallback: (file: File, errorCount: number) => {
-        alert(
+      fileTypeErrorCallback: (file: File) => {
+        console.error(
           `${file.name} has type not allowed, please upload files of type ${this.getOpt("fileType")}.`,
         );
       },
@@ -771,43 +774,15 @@ export class Resumable implements EventTarget {
     }
   }
 
-  // --- Drag and Drop Handlers ---
-  private onDrop = (e: DragEvent): void => {
-    (e.currentTarget as HTMLElement)?.classList.remove(this.getOpt("dragOverClass") as string);
-    helpers.stopEvent(e);
-    if (e.dataTransfer?.items) {
-      this.loadFiles(e.dataTransfer.items, e);
-    } else if (e.dataTransfer?.files) {
-      this.loadFiles(e.dataTransfer.files, e);
-    }
-  };
-
-  private onDragLeave = (e: DragEvent): void => {
-    (e.currentTarget as HTMLElement)?.classList.remove(this.getOpt("dragOverClass") as string);
-  };
-
-  private onDragOverEnter = (e: DragEvent): void => {
-    e.preventDefault();
-    const dt = e.dataTransfer;
-    if (dt && dt.types.includes("Files")) {
-      e.stopPropagation();
-      dt.dropEffect = "copy";
-      dt.effectAllowed = "copy";
-      (e.currentTarget as HTMLElement)?.classList.add(this.getOpt("dragOverClass") as string);
-    } else if (dt) {
-      dt.dropEffect = "none";
-      dt.effectAllowed = "none";
-    }
-  };
-
-  private processItem(item: any, path: string, items: ExtendedFile[], cb: () => void): void {
+  private processItem(item: any, path: string, items: ExtendedFile[], callback: () => void): void {
     let entry: any;
     if (item.isFile) {
-      return item.file((file: File) => {
+      item.file((file: File) => {
         (file as ExtendedFile).relativePath = path + file.name;
         items.push(file as ExtendedFile);
-        cb();
+        callback();
       });
+      return;
     } else if (item.isDirectory) {
       entry = item;
     } else if (item instanceof File) {
@@ -816,8 +791,9 @@ export class Resumable implements EventTarget {
     if (typeof item.webkitGetAsEntry === "function") {
       entry = item.webkitGetAsEntry();
     }
-    if (entry && entry.isDirectory) {
-      return this.processDirectory(entry, path + entry.name + "/", items, cb);
+    if (entry?.isDirectory) {
+      this.processDirectory(entry, path + entry.name + "/", items, callback);
+      return;
     }
     if (typeof item.getAsFile === "function") {
       item = item.getAsFile();
@@ -826,13 +802,19 @@ export class Resumable implements EventTarget {
         items.push(item);
       }
     }
-    cb();
+    callback();
   }
 
-  private processCallbacks(items: Array<(cb: () => void) => void>, cb: () => void): void {
-    if (!items || items.length === 0) return cb();
+  private processCallbacks(
+    items: Array<(callback: () => void) => void>,
+    callback: () => void,
+  ): void {
+    if (!items || items.length === 0) {
+      callback();
+      return;
+    }
     items[0](() => {
-      this.processCallbacks(items.slice(1), cb);
+      this.processCallbacks(items.slice(1), callback);
     });
   }
 
@@ -840,7 +822,7 @@ export class Resumable implements EventTarget {
     directory: any,
     path: string,
     items: ExtendedFile[],
-    cb: () => void,
+    callback: () => void,
   ): void {
     const dirReader = directory.createReader();
     const allEntries: any[] = [];
@@ -852,26 +834,11 @@ export class Resumable implements EventTarget {
         }
         this.processCallbacks(
           allEntries.map((entry) => this.processItem.bind(this, entry, path, items)),
-          cb,
+          callback,
         );
       });
     };
     readEntries();
-  }
-
-  private loadFiles(items: DataTransferItemList | FileList, event: Event): void {
-    if (!items.length) return;
-    this.dispatch("beforeAdd");
-    const files: ExtendedFile[] = [];
-    this.processCallbacks(
-      Array.from(items).map((item: any) => {
-        const entry = typeof item.webkitGetAsEntry === "function" ? item.webkitGetAsEntry() : item;
-        return this.processItem.bind(this, entry, "", files);
-      }),
-      () => {
-        if (files.length) this.appendFilesFromFileList(files, event);
-      },
-    );
   }
 
   private appendFilesFromFileList(fileList: File[], event: Event): void {
@@ -1014,85 +981,6 @@ export class Resumable implements EventTarget {
     return false;
   }
 
-  assignBrowse(domNodes: Element | Element[], isDirectory = false): void {
-    const nodes = Array.isArray(domNodes) ? domNodes : [domNodes];
-    for (const domNode of nodes) {
-      let input: HTMLInputElement;
-      if (domNode.tagName === "INPUT" && (domNode as HTMLInputElement).type === "file") {
-        input = domNode as HTMLInputElement;
-      } else {
-        input = document.createElement("input");
-        input.setAttribute("type", "file");
-        input.style.display = "none";
-        domNode.addEventListener(
-          "click",
-          () => {
-            input.style.opacity = "0";
-            input.style.display = "block";
-            input.focus();
-            input.click();
-            input.style.display = "none";
-          },
-          false,
-        );
-        domNode.appendChild(input);
-      }
-      const maxFiles = this.getOpt("maxFiles");
-      if (typeof maxFiles === "undefined" || maxFiles !== 1) {
-        input.setAttribute("multiple", "multiple");
-      } else {
-        input.removeAttribute("multiple");
-      }
-      if (isDirectory) {
-        input.setAttribute("webkitdirectory", "webkitdirectory");
-      } else {
-        input.removeAttribute("webkitdirectory");
-      }
-      const fileTypes = this.getOpt("fileType") as string[];
-      if (typeof fileTypes !== "undefined" && fileTypes.length >= 1) {
-        input.setAttribute(
-          "accept",
-          fileTypes
-            .map((e) => {
-              e = e.replace(/\s/g, "").toLowerCase();
-              return e.match(/^[^.][^/]+$/) ? "." + e : e;
-            })
-            .join(","),
-        );
-      } else {
-        input.removeAttribute("accept");
-      }
-      input.addEventListener(
-        "change",
-        (e) => {
-          this.appendFilesFromFileList(Array.from((e.target as HTMLInputElement).files || []), e);
-          if (this.getOpt("clearInput")) (e.target as HTMLInputElement).value = "";
-        },
-        false,
-      );
-    }
-  }
-
-  assignDrop(domNodes: Element | Element[]): void {
-    const nodes = Array.isArray(domNodes) ? domNodes : [domNodes];
-    for (const domNode of nodes) {
-      domNode.addEventListener("dragover", this.onDragOverEnter as EventListener, false);
-      domNode.addEventListener("dragenter", this.onDragOverEnter as EventListener, false);
-      domNode.addEventListener("dragleave", this.onDragLeave as EventListener, false);
-      domNode.addEventListener("drop", this.onDrop as EventListener, false);
-    }
-  }
-
-  unAssignDrop(domNodes: Element | Element[]): void {
-    const nodes = Array.isArray(domNodes) ? domNodes : [domNodes];
-    for (const domNode of nodes) {
-      domNode.removeEventListener("dragover", this.onDragOverEnter as EventListener);
-      domNode.removeEventListener("dragenter", this.onDragOverEnter as EventListener);
-      domNode.removeEventListener("dragleave", this.onDragLeave as EventListener);
-      domNode.removeEventListener("drop", this.onDrop as EventListener);
-    }
-  }
-
   isUploading(): boolean {
     return this.files.some((file) => file.isUploading());
   }
@@ -1154,16 +1042,6 @@ export class Resumable implements EventTarget {
     let totalSize = 0;
     for (const file of this.files) totalSize += file.size;
     return totalSize;
-  }
-
-  handleDropEvent(e: DragEvent): void {
-    this.onDrop(e);
-  }
-
-  handleChangeEvent(e: Event): void {
-    const target = e.target as HTMLInputElement;
-    this.appendFilesFromFileList(Array.from(target.files || []), e);
-    target.value = "";
   }
 
   updateQuery(query: Record<string, any>): void {

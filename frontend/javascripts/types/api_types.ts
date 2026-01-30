@@ -327,7 +327,6 @@ export type APIUserBase = APIUserCompact & {
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   hasSeenSegmentAnythingWithDepth?: boolean;
-  shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;

@@ -204,10 +204,6 @@ const helpers = {
     return size + "-" + relativePath.replace(/[^0-9a-zA-Z_-]/gim, "");
   },
 
-  contains<T>(array: T[], test: T): boolean {
-    return array.includes(test);
-  },
-
   formatSize(size: number): string {
     if (size < 1024) {
       return size + " bytes";
@@ -301,7 +297,6 @@ export class ResumableChunk {
 
   async test(): Promise<void> {
     this.abortController = new AbortController();
-    this._status = "uploading";
 
     const params: string[] = [];
     const parameterNamespace = this.getOpt("parameterNamespace") as string;
@@ -354,9 +349,8 @@ export class ResumableChunk {
       this.tested = true;
 
       if (response.ok || response.status === 200) {
-        this._status = "success";
         this._message = await response.text();
-        this.callback("success", this._message);
+        // this.callback("success", this._message);
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();
@@ -491,7 +485,7 @@ export class ResumableChunk {
         this.callback("success", this._message);
         this.resumableObj.uploadNextChunk();
       } else if (
-        helpers.contains(this.getOpt("permanentErrors") as number[], response.status) ||
+        (this.getOpt("permanentErrors") as number[]).includes(response.status) ||
         this.retries >= (this.getOpt("maxChunkRetries") as number)
       ) {
         this._status = "error";
@@ -813,10 +807,6 @@ export class ResumableFile {
  */
 export class Resumable implements EventTarget {
   /**
-   * A boolean value indicator whether or not Resumable.js is supported by the current browser.
-   */
-  support: boolean;
-  /**
    * An array of `ResumableFile` file objects added by the user.
    */
   files: ResumableFile[] = [];
@@ -831,14 +821,6 @@ export class Resumable implements EventTarget {
 
   constructor(opts: Partial<ConfigurationHash> = {}) {
     this._eventTarget = new EventTarget();
-
-    this.support =
-      typeof File !== "undefined" &&
-      typeof Blob !== "undefined" &&
-      typeof FileList !== "undefined" &&
-      !!Blob.prototype.slice &&
-      typeof fetch !== "undefined" &&
-      typeof AbortController !== "undefined";
 
     this.defaults = {
       chunkSize: 1 * 1024 * 1024,

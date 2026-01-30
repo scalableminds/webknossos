@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
+import Resumable from "libs/resumable-upload";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import {
@@ -109,7 +110,6 @@ import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
 import { doWithToken, refreshToken } from "./api/token";
-import Resumable from "libs/resumable-upload";
 
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";

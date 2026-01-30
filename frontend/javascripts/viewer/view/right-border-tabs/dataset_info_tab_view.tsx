@@ -23,8 +23,9 @@ import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   getSkeletonStats,
   getStats,
-  getVolumeStats,mayEditAnnotationProperties, 
-  type TracingStats
+  getVolumeStats,
+  mayEditAnnotationProperties,
+  type TracingStats,
 } from "viewer/model/accessors/annotation_accessor";
 import {
   getDatasetExtentAsString,

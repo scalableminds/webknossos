@@ -201,102 +201,99 @@ describe("Update Action Application for VolumeTracing", () => {
       ? [hardcodedBeforeVersionIndex]
       : range(0, userActions.length);
 
-  describe.each(compactionModes)(
-    "[Compaction=%s]: should re-apply update actions from complex diff and get same state",
-    (withCompaction) => {
-      describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
-        const afterVersionIndices =
-          hardcodedAfterVersionIndex != null
-            ? [hardcodedAfterVersionIndex]
-            : range(beforeVersionIndex, userActions.length + 1);
+  describe.each(
+    compactionModes,
+  )("[Compaction=%s]: should re-apply update actions from complex diff and get same state", (withCompaction) => {
+    describe.each(beforeVersionIndices)("From v=%i", (beforeVersionIndex: number) => {
+      const afterVersionIndices =
+        hardcodedAfterVersionIndex != null
+          ? [hardcodedAfterVersionIndex]
+          : range(beforeVersionIndex, userActions.length + 1);
 
-        test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
-          // initialState --> [actions until beforeVersionIndex] --> state2 --> [actions between before and afterVersionIndex] --> state3
-          // state2 and state3 are diffed and that diff is applied again on state2. The result is compared against state3 again.
-          const state2WithActiveCell = applyActions(
-            initialState,
-            userActions.slice(0, beforeVersionIndex),
-          );
+      test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
+        // initialState --> [actions until beforeVersionIndex] --> state2 --> [actions between before and afterVersionIndex] --> state3
+        // state2 and state3 are diffed and that diff is applied again on state2. The result is compared against state3 again.
+        const state2WithActiveCell = applyActions(
+          initialState,
+          userActions.slice(0, beforeVersionIndex),
+        );
 
-          const state2WithoutActiveBoundingBox = applyActions(state2WithActiveCell, [
+        const state2WithoutActiveBoundingBox = applyActions(state2WithActiveCell, [
+          setActiveUserBoundingBoxId(null),
+        ]);
+
+        const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
+        let state3 = applyActions(
+          state2WithActiveCell,
+          actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
+        );
+        expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
+
+        const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveBoundingBox);
+        const volumeTracing3 = enforceVolumeTracing(state3);
+
+        ColoredLogger.logYellow("Segments before", Array.from(volumeTracing2.segments.keys()));
+        console.log("actionsToApply", actionsToApply);
+        ColoredLogger.logYellow("Segments after", Array.from(volumeTracing3.segments.keys()));
+
+        const updateActionsBeforeCompaction = Array.from(
+          diffVolumeTracing(volumeTracing2, volumeTracing3),
+        );
+        const maybeCompact = withCompaction
+          ? compactUpdateActions
+          : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
+        const updateActions = maybeCompact(
+          updateActionsBeforeCompaction,
+          volumeTracing2,
+          volumeTracing3,
+        ) as ApplicableVolumeUpdateAction[];
+
+        for (const action of updateActions) {
+          seenActionTypes.add(action.name);
+        }
+
+        let reappliedNewState = transformStateAsReadOnly(state2WithoutActiveBoundingBox, (state) =>
+          applyActions(state, [
+            applyVolumeUpdateActionsFromServerAction(updateActions),
             setActiveUserBoundingBoxId(null),
-          ]);
+          ]),
+        );
 
-          const actionsToApply = userActions.slice(beforeVersionIndex, afterVersionIndex + 1);
-          let state3 = applyActions(
-            state2WithActiveCell,
-            actionsToApply.concat([setActiveUserBoundingBoxId(null)]),
-          );
-          expect(state2WithoutActiveBoundingBox !== state3).toBeTruthy();
-
-          const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveBoundingBox);
-          const volumeTracing3 = enforceVolumeTracing(state3);
-
-          ColoredLogger.logYellow("Segments before", Array.from(volumeTracing2.segments.keys()));
-          console.log("actionsToApply", actionsToApply);
-          ColoredLogger.logYellow("Segments after", Array.from(volumeTracing3.segments.keys()));
-
-          const updateActionsBeforeCompaction = Array.from(
-            diffVolumeTracing(volumeTracing2, volumeTracing3),
-          );
-          const maybeCompact = withCompaction
-            ? compactUpdateActions
-            : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
-          const updateActions = maybeCompact(
-            updateActionsBeforeCompaction,
-            volumeTracing2,
-            volumeTracing3,
-          ) as ApplicableVolumeUpdateAction[];
-
-          for (const action of updateActions) {
-            seenActionTypes.add(action.name);
-          }
-
-          let reappliedNewState = transformStateAsReadOnly(
-            state2WithoutActiveBoundingBox,
-            (state) =>
-              applyActions(state, [
-                applyVolumeUpdateActionsFromServerAction(updateActions),
-                setActiveUserBoundingBoxId(null),
-              ]),
-          );
-
-          // fixing activeUnmappedSegmentId mismatch as the frontend supports a createCellAction,
-          // which sets activeUnmappedSegmentId to null but the matching annotation update action equivalent
-          // "updateActiveSegmentId" sets activeUnmappedSegmentId to undefined.
-          if (
-            reappliedNewState.annotation.volumes[0].activeUnmappedSegmentId == null &&
-            state3.annotation.volumes[0].activeUnmappedSegmentId == null
-          ) {
-            reappliedNewState = update(reappliedNewState, {
-              annotation: {
-                volumes: {
-                  [0]: {
-                    activeUnmappedSegmentId: {
-                      $set: state3.annotation.volumes[0].activeUnmappedSegmentId,
-                    },
+        // fixing activeUnmappedSegmentId mismatch as the frontend supports a createCellAction,
+        // which sets activeUnmappedSegmentId to null but the matching annotation update action equivalent
+        // "updateActiveSegmentId" sets activeUnmappedSegmentId to undefined.
+        if (
+          reappliedNewState.annotation.volumes[0].activeUnmappedSegmentId == null &&
+          state3.annotation.volumes[0].activeUnmappedSegmentId == null
+        ) {
+          reappliedNewState = update(reappliedNewState, {
+            annotation: {
+              volumes: {
+                [0]: {
+                  activeUnmappedSegmentId: {
+                    $set: state3.annotation.volumes[0].activeUnmappedSegmentId,
                   },
                 },
               },
-            });
-          }
-          // Currently, the segment journal cannot be reconstructed by diffing two arbitrary states (see example).
-          // Therefore, we ignore the journal in the following assertion.
-          // Example:
-          // The segmentJournal currently only contains MERGE_SEGMENTS entries. Consider, the following states:
-          // state A: no segments
-          // state B: segment 1 and 2
-          // state C: segment 1 (because 2 was merged into 1)
-          // When diffing C with A, no deletion is detected (because only segment 1 was added in the diff). Therefore,
-          // no merge will be detected (even though the merge journal also contains a MERGE_SEGMENTS operation).
-          reappliedNewState = withClearedSegmentJournal(reappliedNewState);
-          state3 = withClearedSegmentJournal(state3);
+            },
+          });
+        }
+        // Currently, the segment journal cannot be reconstructed by diffing two arbitrary states (see example).
+        // Therefore, we ignore the journal in the following assertion.
+        // Example:
+        // The segmentJournal currently only contains MERGE_SEGMENTS entries. Consider, the following states:
+        // state A: no segments
+        // state B: segment 1 and 2
+        // state C: segment 1 (because 2 was merged into 1)
+        // When diffing C with A, no deletion is detected (because only segment 1 was added in the diff). Therefore,
+        // no merge will be detected (even though the merge journal also contains a MERGE_SEGMENTS operation).
+        reappliedNewState = withClearedSegmentJournal(reappliedNewState);
+        state3 = withClearedSegmentJournal(state3);
 
-          expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
-        });
+        expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
       });
-    },
-  );
+    });
+  });
 
   it("should be able to apply actions basic group editing", () => {
     const state1 = applyActions(initialState, [setSegmentGroupsAction(SEGMENT_GROUPS, tracingId)]);

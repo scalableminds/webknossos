@@ -22,7 +22,15 @@ import type {
   ElementClass,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import constants, { LongUnitToShortUnitMap, MappingStatusEnum, Unicode, type Vector3, Vector3Indices, type ViewMode, ViewModeValues } from "viewer/constants";
+import constants, {
+  LongUnitToShortUnitMap,
+  MappingStatusEnum,
+  Unicode,
+  type Vector3,
+  Vector3Indices,
+  type ViewMode,
+  ViewModeValues,
+} from "viewer/constants";
 import type {
   ActiveMappingInfo,
   BoundingBoxObject,
@@ -312,11 +320,7 @@ export function getDatasetExtentAsString(
     formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
   );
 }
-function getDatasetExtentAsProduct(extent: {
-  width: number;
-  height: number;
-  depth: number;
-}) {
+function getDatasetExtentAsProduct(extent: { width: number; height: number; depth: number }) {
   return extent.width * extent.height * extent.depth;
 }
 export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {

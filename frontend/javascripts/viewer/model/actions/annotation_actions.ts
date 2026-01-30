@@ -8,7 +8,7 @@ import type {
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
-  EditableLayerProperties
+  EditableLayerProperties,
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import Constants from "viewer/constants";

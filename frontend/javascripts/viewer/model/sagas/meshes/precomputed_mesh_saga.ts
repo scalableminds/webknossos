@@ -12,7 +12,12 @@ import zip from "lodash-es/zip";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-saga";
-import type { AdditionalCoordinate, APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  APIDataset,
+  APIMeshFileInfo,
+  APISegmentationLayer,
+} from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {

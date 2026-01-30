@@ -37,12 +37,13 @@ import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils"
 import messages from "messages";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
-import type {AdditionalCoordinate, 
+import type {
+  AdditionalCoordinate,
   APIConnectomeFile,
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
-  VoxelSize
+  VoxelSize,
 } from "types/api_types";
 import {
   AltOrOptionKey,

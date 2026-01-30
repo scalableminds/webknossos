@@ -1,6 +1,10 @@
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import type { AdditionalCoordinate, MetadataEntryProto, ServerSkeletonTracing } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  MetadataEntryProto,
+  ServerSkeletonTracing,
+} from "types/api_types";
 import type { TreeType, Vector3 } from "viewer/constants";
 import {
   type AddNewUserBoundingBox,

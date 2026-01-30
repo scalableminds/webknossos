@@ -102,7 +102,8 @@
         "noUnusedImports": "error",
         "noRenderReturnValue": "off",
         "useHookAtTopLevel": "error",
-        "useExhaustiveDependencies": "warn" // TODO: consider turning this into an error
+        "useExhaustiveDependencies": "warn", // TODO: consider turning this into an error
+        "noReactPropAssignments": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",
@@ -123,10 +124,7 @@
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "lineWidth": 100,
-    "includes": [
-     
-    ]
+    "lineWidth": 100
   },
 
   "overrides": [

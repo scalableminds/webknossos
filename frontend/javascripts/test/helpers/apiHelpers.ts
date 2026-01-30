@@ -14,10 +14,9 @@ import {
 import app from "app";
 import { __setFeatures } from "features";
 import Request, { type RequestOptions } from "libs/request";
-import { ColoredLogger, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import flattenDeep from "lodash-es/flattenDeep";
-import flattenDepth from "lodash-es/flattenDepth";
 import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
 import dummyOrga from "test/fixtures/dummy_organization";
 import dummyUser from "test/fixtures/dummy_user";
@@ -34,7 +33,6 @@ import {
 import type {
   APIAnnotation,
   APIDataset,
-  APIMeshFileInfo,
   APITracingStoreAnnotation,
   ElementClass,
   ServerSkeletonTracing,

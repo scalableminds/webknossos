@@ -1,5 +1,5 @@
 import { diffDiffableMaps } from "libs/diffable_map";
-import { ColoredLogger, diffArrays } from "libs/utils";
+import { diffArrays } from "libs/utils";
 import isEqual from "lodash/isEqual";
 import keyBy from "lodash/keyBy";
 import sortedIndexBy from "lodash/sortedIndexBy";

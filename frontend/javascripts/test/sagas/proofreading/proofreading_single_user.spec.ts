@@ -29,9 +29,6 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
-import { sleep } from "libs/utils";
-import { MappingVisualizer } from "test/helpers/mapping_visualizer";
-import range from "lodash-es/range";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {

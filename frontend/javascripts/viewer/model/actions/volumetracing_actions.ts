@@ -330,18 +330,16 @@ export const removeSegmentAction = (
   segmentId: NumberLike,
   layerName: string,
   timestamp: number = Date.now(),
-) =>
-  {
-    debugger;
-    ColoredLogger.logRed("removeSegment action", segmentId);
-    return ({
-      type: "REMOVE_SEGMENT",
-      // TODO: Proper 64 bit support (#6921)
-      segmentId: Number(segmentId),
-      layerName,
-      timestamp,
-    }) as const;
-  };
+) => {
+  ColoredLogger.logRed("removeSegment action", segmentId);
+  return {
+    type: "REMOVE_SEGMENT",
+    // TODO: Proper 64 bit support (#6921)
+    segmentId: Number(segmentId),
+    layerName,
+    timestamp,
+  } as const;
+};
 
 export const deleteSegmentDataAction = (
   segmentId: number,

@@ -407,8 +407,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const { sourceNodeId, targetNodeId } = action;
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
   const { trees } = skeletonTracing;
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
-  const targetTree = findTreeByNodeId(trees, targetNodeId);
+  let sourceTree = findTreeByNodeId(trees, sourceNodeId);
+  let targetTree = findTreeByNodeId(trees, targetNodeId);
 
   if (sourceTree == null || targetTree == null) {
     return;
@@ -589,6 +589,20 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     call(getDataValue, sourceNodePosition, newMapping),
     call(getDataValue, targetNodePosition, newMapping),
   ]);
+
+  if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
+    // The other actions are handled after the trees were already mutated by the reducer.
+    // However, in case of the min-cut, we need to update the tree variables.
+    const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
+    const { trees } = skeletonTracing;
+    sourceTree = findTreeByNodeId(trees, sourceNodeId);
+    targetTree = findTreeByNodeId(trees, targetNodeId);
+    if (sourceTree == null || targetTree == null) {
+      console.error("Couldn't find trees for nodes. Details:", { sourceNodeId, sourceTree, targetNodeId, targetTree })
+      throw new Error("Couldn't find trees for source and/or tree nodes. See console for details")
+    }
+  }
+
 
   /* Rename agglomerate skeleton(s) according to their new id and mapping name */
   yield* put(

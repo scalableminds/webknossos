@@ -15,7 +15,7 @@ export type MeshLodInfo = {
   transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
 };
 
-type MeshSegmentInfo = {
+export type MeshSegmentInfo = {
   meshFormat: "draco";
   lods: Array<MeshLodInfo>;
   chunkScale: Vector3;

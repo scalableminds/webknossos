@@ -497,9 +497,10 @@ function* loadPrecomputedMeshesInChunksForLod(
 export default function* precomputedMeshSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   fetchDeferredsPerLayer = {};
-  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
+  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
 
+  // todop: reactivate
   yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);

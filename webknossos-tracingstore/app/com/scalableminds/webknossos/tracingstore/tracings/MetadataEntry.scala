@@ -16,6 +16,46 @@ case class MetadataEntry(key: String,
     numberValue,
     stringListValue.getOrElse(Seq.empty)
   )
+
+  // TODOM: The advantage of this implementation: Only one of the optional fields is set
+  // Disadvantage: wordiness. Discuss which option to choose
+  def update(that: MetadataEntry): MetadataEntry =
+    if (this.key != that.key) {
+      this
+    } else {
+      that match {
+        case m if m.stringValue.isDefined =>
+          this.copy(
+            stringValue = m.stringValue,
+            boolValue = None,
+            numberValue = None,
+            stringListValue = None,
+          )
+        case m if m.boolValue.isDefined =>
+          this.copy(
+            stringValue = None,
+            boolValue = m.boolValue,
+            numberValue = None,
+            stringListValue = None,
+          )
+        case m if m.numberValue.isDefined =>
+          this.copy(
+            stringValue = None,
+            boolValue = None,
+            numberValue = m.numberValue,
+            stringListValue = None,
+          )
+        case m if m.stringListValue.isDefined =>
+          this.copy(
+            stringValue = None,
+            boolValue = None,
+            numberValue = None,
+            stringListValue = m.stringListValue,
+          )
+        case _ => this
+      }
+    }
+
 }
 
 object MetadataEntry {

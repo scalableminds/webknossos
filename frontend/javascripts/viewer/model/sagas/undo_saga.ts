@@ -120,7 +120,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     return {
       batchUpdateGroupsAndSegments: action,
     };
-  } else if (UndoRedoRelevantBoundingBoxActions.includes(action.type)) {
+  } else if ((UndoRedoRelevantBoundingBoxActions as string[]).includes(action.type)) {
     return {
       userBoundingBoxAction: action as any as UserBoundingBoxAction,
     };

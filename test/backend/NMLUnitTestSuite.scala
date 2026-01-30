@@ -115,7 +115,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
   }
 
   "NML writing and parsing" should {
-    "should add missing isExpanded props with a default of true" in {
+    "add missing isExpanded props with a default of true" in {
       val treeGroupsWithOmittedIsExpanded = dummyTracing.treeGroups.map(
         treeGroup =>
           new TreeGroup(name = treeGroup.name,

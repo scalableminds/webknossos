@@ -1,5 +1,10 @@
+// biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
+import {
+  type WebknossosTestContext,
+  setupWebknossosForTesting,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { call, put, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,
@@ -23,6 +28,7 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -52,7 +58,7 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Execute the actual merge and wait for the finished mapping.
@@ -68,9 +74,17 @@ describe("Proofreading (Single User)", () => {
 
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(receivedUpdateActions).toEqual([
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1,
+            targetId: 4,
+          },
+        },
         {
           name: "mergeAgglomerate",
           value: {
@@ -89,7 +103,7 @@ describe("Proofreading (Single User)", () => {
 
   it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -105,7 +119,7 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Prepare the server's reply for the upcoming split.
@@ -132,10 +146,13 @@ describe("Proofreading (Single User)", () => {
       expect(mapping1).toEqual(expectedMappingAfterSplit);
 
       yield call(() => api.tracing.save());
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+      // console.log("receivedUpdateActions", receivedUpdateActions);
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(receivedUpdateActions.slice(-2)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -145,7 +162,29 @@ describe("Proofreading (Single User)", () => {
             segmentId2: 2,
           },
         },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [2, 2, 2],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
+            metadata: [],
+            name: null,
+          },
+        },
       ]);
+
+      // const viz = new MappingVisualizer(backendMock);
+
+      // for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
+      //   viz.renderVersion(version, {
+      //     outputPath: `debug/mapping-${version}.svg`,
+      //   });
+      // }
     });
 
     await task.toPromise();

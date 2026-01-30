@@ -1,6 +1,9 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { getAdaptToTypeFunction } from "libs/utils";
+import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
+import flattenDeep from "lodash/flattenDeep";
+import omitBy from "lodash/omitBy";
 import { call, put } from "typed-redux-saga";
+import type { APIUpdateActionBatch } from "types/api_types";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -10,6 +13,7 @@ import type {
   MergeAgglomerateUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
+  UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
@@ -132,12 +136,25 @@ export function* addMissingSegmentsToLoadedMappings(
   }
 }
 
-// Gathers mapped info for segment ids from proofreading actions where the mapping is unknown.
+// During rebasing, the front-end rolls back to the last version that is known to be saved on the server
+// (pending update actions are "stashed").
+// Then, the front-end is forwarded to the newest state known to the server.
+// Afterwards, the stashed update actions need to be applied again. However, these update actions
+// need to be adapted to the newest state.
+// This adaption takes place in the following saga.
+//
+// For proofreading actions, this saga gathers mapped info for segment ids from proofreading actions
+// where the mapping is unknown.
 // This happens in case of mesh proofreading actions. To re-apply the user's changes in the rebasing
 // up-to-date mapping info is needed for all segments in all proofreading actions. Thus, the missing info
 // is first loaded and then the save queue update actions are remapped to update their agglomerate id infos
 // to apply them correctly during rebasing. Lastly, the save queue is replaced with the updated save queue entries.
-export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
+export function* updateSaveQueueEntriesToStateAfterRebase(
+  // appliedBackendUpdateActions contains the backend actions that were used to forward the local state
+  // during rebase. These actions can be used as additional information to adapt the local, pending
+  // save queue entries to the rebase.
+  appliedBackendUpdateActions: APIUpdateActionBatch[],
+): Saga<
   | {
       success: false;
       updatedSaveQueue: undefined;
@@ -153,75 +170,197 @@ export function* updateSaveQueueEntriesToStateAfterRebase(): Saga<
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
+  const annotationBeforeUpdate = yield* select((state) => state.annotation);
+
+  ColoredLogger.logRed(
+    "adapt actions during rebase",
+    flattenDeep(saveQueue.map((entry) => entry.actions)),
+  );
 
   let success = true;
-  const updatedSaveQueue = saveQueue.map((saveQueueEntry) => ({
-    ...saveQueueEntry,
-    actions: saveQueueEntry.actions
-      .map((action) => {
-        switch (action.name) {
-          case "mergeAgglomerate":
-          case "splitAgglomerate": {
-            const { segmentId1, segmentId2, actionTracingId } = action.value;
-            const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
-            if (!mappingSyncedWithBackend) {
-              console.error(
-                "Found proofreading action without matching mapping in save queue. This should never happen.",
-                action,
+  const updatedSaveQueue = saveQueue
+    .map((saveQueueEntry): SaveQueueEntry | null => {
+      const newActions = saveQueueEntry.actions
+        .map((action) => {
+          switch (action.name) {
+            case "mergeAgglomerate":
+            case "splitAgglomerate": {
+              const { segmentId1, segmentId2, actionTracingId } = action.value;
+              const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
+              if (!mappingSyncedWithBackend) {
+                console.error(
+                  "Found proofreading action without matching mapping in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+              if (segmentId1 == null || segmentId2 == null) {
+                console.error(
+                  "Found proofreading action without given segmentIds in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+
+              const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
+              let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(segmentId1),
               );
-              success = false;
-              return null;
+              let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(segmentId2),
+              );
+              if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
+                console.error(
+                  "Found proofreading action without loaded agglomerate ids. This should never occur.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+              if (action.name === "mergeAgglomerate") {
+                return {
+                  name: action.name,
+                  value: {
+                    ...action.value,
+                    agglomerateId1: Number(upToDateAgglomerateId1),
+                    agglomerateId2: Number(upToDateAgglomerateId2),
+                  },
+                } satisfies MergeAgglomerateUpdateAction;
+              } else {
+                return {
+                  name: action.name,
+                  value: {
+                    ...action.value,
+                    agglomerateId: Number(upToDateAgglomerateId1),
+                  },
+                } satisfies SplitAgglomerateUpdateAction;
+              }
             }
-            if (segmentId1 == null || segmentId2 == null) {
-              console.error(
-                "Found proofreading action without given segmentIds in save queue. This should never happen.",
-                action,
+            case "createSegment": {
+              console.log("adapting createSegment action?", action);
+
+              const { actionTracingId } = action.value;
+
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
               );
-              success = false;
-              return null;
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                return action;
+              }
+
+              // The local user created a segment, but after rebase the segment already exists
+              // (probably because another user also created that segment).
+              // Let's only update the properties that are not null.
+              const newAction: UpdateSegmentPartialUpdateAction = {
+                name: "updateSegmentPartial",
+                value: {
+                  ...omitBy(action.value, (value) => value == null),
+                  actionTracingId: action.value.actionTracingId,
+                  id: action.value.id,
+                },
+              };
+              return newAction;
+            }
+            case "updateSegmentPartial": {
+              // ColoredLogger.logGreen("adapting updateSegment action?", action);
+
+              const { actionTracingId } = action.value;
+
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                // Another user removed the segment. The update action of the current user gets lost now.
+                return null;
+              }
+
+              // Since the update action precisely encodes what changed within the segment,
+              // we don't need to adapt the action itself.
+              return action;
+            }
+            case "deleteSegment": {
+              const { actionTracingId } = action.value;
+              const tracing = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              if (!maybeExistingSegment) {
+                // Another user removed the segment. The update action of the current user gets lost now.
+                return null;
+              }
+              return action;
+            }
+            case "mergeSegments": {
+              const mergeActions = appliedBackendUpdateActions
+                .flatMap((batch) => batch.value)
+                .filter((action) => action.name === "mergeSegments");
+
+              // After partialMapping is constructed, it contains the information
+              // how segment ids were changed by the most recent backend actions. A key-value pair
+              // denotes that segment $key was mapped to $value (potentially, as a result of
+              // multiple update actions)
+              // Keys that don't exist in partialMapping denote an identity mapping (i.e., key === value).
+              const partialMapping = new Map<number, number>();
+              for (const mergeAction of mergeActions) {
+                // sourceId "swallows" targetId (i.e., targetId will be overwritten
+                // with sourceId)
+                const { sourceId, targetId } = mergeAction.value;
+                if (partialMapping.get(targetId) == null) {
+                  // targetId wasn't mapped yet. Do that now.
+                  partialMapping.set(targetId, sourceId);
+                }
+                // Iterate through all entries to see whether the value
+                // needs to be adapted.
+                for (const [key, value] of partialMapping.entries()) {
+                  if (value === targetId) {
+                    partialMapping.set(key, sourceId);
+                  }
+                }
+              }
+
+              const newSourceId =
+                partialMapping.get(action.value.sourceId) ?? action.value.sourceId;
+              const newTargetId =
+                partialMapping.get(action.value.targetId) ?? action.value.targetId;
+
+              ColoredLogger.logYellow("Adapting mergeSegments from", action.value, "to", {
+                newSourceId,
+                newTargetId,
+              });
+
+              return {
+                ...action,
+                value: {
+                  ...action.value,
+                  sourceId: newSourceId,
+                  targetId: newTargetId,
+                },
+              };
             }
 
-            const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
-            let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
-              adaptToType(segmentId1),
-            );
-            let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
-              adaptToType(segmentId2),
-            );
-            if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
-              console.error(
-                "Found proofreading action without loaded agglomerate ids. This should never occur.",
-                action,
-              );
-              success = false;
-              return null;
-            }
-            if (action.name === "mergeAgglomerate") {
-              return {
-                name: action.name,
-                value: {
-                  ...action.value,
-                  agglomerateId1: Number(upToDateAgglomerateId1),
-                  agglomerateId2: Number(upToDateAgglomerateId2),
-                },
-              } satisfies MergeAgglomerateUpdateAction;
-            } else {
-              return {
-                name: action.name,
-                value: {
-                  ...action.value,
-                  agglomerateId: Number(upToDateAgglomerateId1),
-                },
-              } satisfies SplitAgglomerateUpdateAction;
-            }
+            default:
+              return action;
           }
-          default:
-            return action;
-        }
-      })
-      .filter((a) => a != null),
-  }));
+        })
+        .filter((a) => a != null);
+      if (newActions.length === 0) {
+        return null;
+      }
+      return {
+        ...saveQueueEntry,
+        actions: newActions,
+      };
+    })
+    .filter((a) => a != null);
   if (success) {
+    // ColoredLogger.logRed("new updatedSaveQueue", updatedSaveQueue);
     yield put(replaceSaveQueueAction(updatedSaveQueue));
     return { success: true, updatedSaveQueue };
   }

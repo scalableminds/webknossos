@@ -17,7 +17,7 @@ import { connect, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {

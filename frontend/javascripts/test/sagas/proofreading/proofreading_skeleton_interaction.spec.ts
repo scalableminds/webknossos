@@ -1,7 +1,14 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
+import { ColoredLogger } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
+import range from "lodash-es/range";
 import { call, put, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  getNestedUpdateActions,
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
+import { MappingVisualizer } from "test/helpers/mapping_visualizer";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
@@ -26,6 +33,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";
 import {
+  expectMapping,
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
@@ -37,23 +45,17 @@ function* performMergeTreesProofreading(
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield call(createEditableMapping);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -83,11 +85,7 @@ function* performMergeTreesProofreading(
 
   yield take("FINISH_MAPPING_INITIALIZATION");
 
-  const mappingAfterOptimisticUpdate = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-
-  expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
+  yield* expectMapping(tracingId, expectedMappingAfterMerge);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 }
 
@@ -96,23 +94,18 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield call(createEditableMapping);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
+
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -146,23 +139,17 @@ function* performMinCutWithNodesProofreading(
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield call(createEditableMapping);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -560,7 +547,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      // Agglomerate 1 was splitted twice between 2 and 3.
+      // Agglomerate 1 was split twice between 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],
@@ -650,7 +637,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
   it("should try to min cut agglomerate via node ids but interfering merge adds new edge. Resulting mapping should be correct.", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]], Store.getState());
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
     mockEdgesForAgglomerateMinCut(context.mocks);
 
@@ -698,6 +685,19 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 6],
         ]),
       );
+      const viz = new MappingVisualizer(backendMock);
+
+      for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
+        ColoredLogger.logYellow("rendering version", version);
+        viz.renderVersion(version, {
+          outputPath: `debug/mapping-${version}.svg`,
+        });
+      }
+      const nestedUpdateActions = getNestedUpdateActions(context);
+      // console.log("nestedUpdateActions", nestedUpdateActions)
+      for (const [index, action] of nestedUpdateActions.entries()) {
+        console.log(index + 2, action);
+      }
     });
 
     await task.toPromise();

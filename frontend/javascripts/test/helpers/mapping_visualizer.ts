@@ -1,8 +1,8 @@
 import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { AgglomerateMapping } from "./agglomerate_mapping_helper";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
+import type { AgglomerateMapping } from "./agglomerate_mapping_helper";
 
 type RenderFormat = "dot" | "svg" | "png";
 
@@ -13,7 +13,7 @@ interface RenderOptions {
 }
 
 export class MappingVisualizer {
-  private readonly mapping: AgglomerateMapping
+  private readonly mapping: AgglomerateMapping;
   constructor(private readonly backendMock: BackendMock) {
     this.mapping = backendMock.agglomerateMapping;
   }
@@ -75,8 +75,10 @@ export class MappingVisualizer {
 
     // clusters per component
     for (const [componentId, segmentIds] of components.entries()) {
-      const segmentItem = this.backendMock.getState(version).annotation.volumes[0].segments.getNullable(componentId);
-      const color = segmentItem != null ? "#7ce468" : "#000000"
+      const segmentItem = this.backendMock
+        .getState(version)
+        .annotation.volumes[0].segments.getNullable(componentId);
+      const color = segmentItem != null ? "#7ce468" : "#000000";
       lines.push(`  subgraph cluster_${componentId} {`);
       lines.push(`    label="Agglomerate ${componentId}";`);
       lines.push(`    fontcolor="${color}";`);

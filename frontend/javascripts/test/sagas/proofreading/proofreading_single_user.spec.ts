@@ -166,17 +166,17 @@ describe("Proofreading (Single User)", () => {
           },
         },
         {
-          "name": "createSegment",
-          "value": {
-            "actionTracingId": "volumeTracingId",
-            "additionalCoordinates": undefined,
-            "anchorPosition": [2, 2, 2,],
-            "color": null,
-            "creationTime": 1494695001688,
-            "groupId": null,
-            "id": 1339,
-            "metadata": [],
-            "name": null,
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [2, 2, 2],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
+            metadata: [],
+            name: null,
           },
         },
       ]);

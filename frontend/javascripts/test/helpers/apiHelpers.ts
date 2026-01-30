@@ -1,3 +1,4 @@
+import type { MeshSegmentInfo } from "admin/api/mesh";
 import {
   acquireAnnotationMutex,
   getDataset,
@@ -16,6 +17,8 @@ import Request, { type RequestOptions } from "libs/request";
 import { ColoredLogger, sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import flattenDeep from "lodash-es/flattenDeep";
+import flattenDepth from "lodash-es/flattenDepth";
+import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
 import dummyOrga from "test/fixtures/dummy_organization";
 import dummyUser from "test/fixtures/dummy_user";
 import {
@@ -43,8 +46,8 @@ import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
-
 import { setSceneController } from "viewer/controller/scene_controller_provider";
+import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
@@ -79,10 +82,6 @@ import {
   annotationProto as VOLUME_ANNOTATION_PROTO,
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
-import { MeshSegmentInfo } from "admin/api/mesh";
-import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
-import SegmentMeshController from "viewer/controller/segment_mesh_controller";
-import flattenDepth from "lodash-es/flattenDepth";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -119,11 +118,10 @@ export function getFlattenedUpdateActions(context: WebknossosTestContext) {
 }
 
 export function getNestedUpdateActions(context: WebknossosTestContext) {
-  const versions = []
+  const versions = [];
   for (const saveQueueEntries of context.receivedDataPerSaveRequest) {
     for (const entry of saveQueueEntries) {
-
-      versions.push(entry.actions)
+      versions.push(entry.actions);
     }
   }
 
@@ -203,7 +201,7 @@ vi.mock("admin/rest_api.ts", async () => {
 
   const getMeshfilesForDatasetLayer = vi.fn(async () => {
     return [dummyMeshFile];
-  })
+  });
 
   return {
     ...actual,
@@ -267,15 +265,15 @@ vi.mock("admin/api/mesh", async () => {
     return {
       meshFormat: "draco",
       lods: [],
-      chunkScale: [1, 1, 1]
-    }
-  }
+      chunkScale: [1, 1, 1],
+    };
+  };
 
   return {
     ...actual,
-    getMeshfileChunksForSegment
-  }
-})
+    getMeshfileChunksForSegment,
+  };
+});
 
 vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;

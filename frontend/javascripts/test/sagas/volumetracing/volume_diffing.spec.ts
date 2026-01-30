@@ -173,47 +173,49 @@ describe("diffSegmentGroups for volume tracings", () => {
 describe("uncachedDiffSegmentLists should diff segment lists", () => {
   // Each list defines which segment itesm should already exist before
   // the merge is executed.
-  describe.for([[], [id1, id2], [id1], [id2]])(
-    "mergeSegment actions should be detected during diffing",
-    (segmentItemsToCreateInSetup) => {
-      test(`with prepared segments: [${segmentItemsToCreateInSetup}]`, () => {
-        let newState = initialState;
-        if (segmentItemsToCreateInSetup.includes(id1)) {
-          newState = VolumeTracingReducer(newState, createSegment1);
-        }
-        if (segmentItemsToCreateInSetup.includes(id1)) {
-          newState = VolumeTracingReducer(newState, createSegment2);
-        }
-        const stateBeforeMerge = newState;
-        newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
-        const stateAfterMerge = newState;
+  describe.for([
+    [],
+    [id1, id2],
+    [id1],
+    [id2],
+  ])("mergeSegment actions should be detected during diffing", (segmentItemsToCreateInSetup) => {
+    test(`with prepared segments: [${segmentItemsToCreateInSetup}]`, () => {
+      let newState = initialState;
+      if (segmentItemsToCreateInSetup.includes(id1)) {
+        newState = VolumeTracingReducer(newState, createSegment1);
+      }
+      if (segmentItemsToCreateInSetup.includes(id1)) {
+        newState = VolumeTracingReducer(newState, createSegment2);
+      }
+      const stateBeforeMerge = newState;
+      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+      const stateAfterMerge = newState;
 
-        const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
-        const volumeTracing = stateAfterMerge.annotation.volumes[0];
+      const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
+      const volumeTracing = stateAfterMerge.annotation.volumes[0];
 
-        const updateActions = Array.from(
-          uncachedDiffSegmentLists(
-            VOLUME_TRACING_ID,
-            prevVolumeTracing.segments,
-            volumeTracing.segments,
-            prevVolumeTracing.segmentJournal,
-            volumeTracing.segmentJournal,
-          ),
-        );
+      const updateActions = Array.from(
+        uncachedDiffSegmentLists(
+          VOLUME_TRACING_ID,
+          prevVolumeTracing.segments,
+          volumeTracing.segments,
+          prevVolumeTracing.segmentJournal,
+          volumeTracing.segmentJournal,
+        ),
+      );
 
-        expect(updateActions).toEqual([
-          {
-            name: "mergeSegments",
-            value: {
-              actionTracingId: VOLUME_TRACING_ID,
-              sourceId: id1,
-              targetId: id2,
-            },
+      expect(updateActions).toEqual([
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            sourceId: id1,
+            targetId: id2,
           },
-        ]);
-      });
-    },
-  );
+        },
+      ]);
+    });
+  });
 
   test("mergeSegments should be detected along with another segment update", () => {
     let newState = initialState;

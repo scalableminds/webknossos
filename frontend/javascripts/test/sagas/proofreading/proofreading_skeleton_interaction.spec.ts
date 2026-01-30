@@ -1,7 +1,16 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
+import { ColoredLogger } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
+import range from "lodash-es/range";
 import { call, put, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext, getNestedUpdateActions, getFlattenedUpdateActions } from "test/helpers/apiHelpers";
+import {
+  getFlattenedUpdateActions,
+  getNestedUpdateActions,
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
+import { MappingVisualizer } from "test/helpers/mapping_visualizer";
+import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
@@ -30,10 +39,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { MappingVisualizer } from "test/helpers/mapping_visualizer";
-import range from "lodash-es/range";
-import { ColoredLogger } from "libs/utils";
-import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 
 function* performMergeTreesProofreading(
   context: WebknossosTestContext,
@@ -667,7 +672,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
       // yield call(waitUntilNotBusy);
 
-
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -688,7 +692,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       const viz = new MappingVisualizer(backendMock);
 
       for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
-        ColoredLogger.logYellow("rendering version", version)
+        ColoredLogger.logYellow("rendering version", version);
         viz.renderVersion(version, {
           outputPath: `debug/mapping-${version}.svg`,
         });
@@ -697,11 +701,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // console.log("nestedUpdateActions", nestedUpdateActions)
       for (const [index, action] of nestedUpdateActions.entries()) {
         console.log(index + 1, action);
-
-
       }
     });
-
 
     await task.toPromise();
   }, 8000);

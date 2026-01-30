@@ -607,7 +607,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     );
   } else {
     // A merge happened. Remove the segment that doesn't exist anymore.
-    ColoredLogger.logRed("removeSegmentAction", targetAgglomerateId)
+    ColoredLogger.logRed("removeSegmentAction", targetAgglomerateId);
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 

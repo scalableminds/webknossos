@@ -1,4 +1,5 @@
 import Deferred from "libs/async/deferred";
+import { ColoredLogger } from "libs/utils";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import type {
@@ -330,13 +331,17 @@ export const removeSegmentAction = (
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
-  ({
-    type: "REMOVE_SEGMENT",
-    // TODO: Proper 64 bit support (#6921)
-    segmentId: Number(segmentId),
-    layerName,
-    timestamp,
-  }) as const;
+  {
+    debugger;
+    ColoredLogger.logRed("removeSegment action", segmentId);
+    return ({
+      type: "REMOVE_SEGMENT",
+      // TODO: Proper 64 bit support (#6921)
+      segmentId: Number(segmentId),
+      layerName,
+      timestamp,
+    }) as const;
+  };
 
 export const deleteSegmentDataAction = (
   segmentId: number,

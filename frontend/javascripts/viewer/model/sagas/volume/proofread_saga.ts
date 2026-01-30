@@ -206,7 +206,7 @@ function proofreadCoarseMagIndex(): number {
   // @ts-expect-error
   return window.__proofreadCoarseResolutionIndex != null
     ? // @ts-expect-error
-      window.__proofreadCoarseResolutionIndex
+    window.__proofreadCoarseResolutionIndex
     : 3;
 }
 
@@ -431,7 +431,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   } else if (!isProofreadingToolActive && isModifyingAnyAgglomerateSkeletons) {
     Toast.warning(
       "In order to edit the active mapping by deleting or adding edges of agglomerate skeletons, the proofreading tool needs to be active." +
-        " If you want to edit the active mapping, activate the proofreading tool and then redo the action.",
+      " If you want to edit the active mapping, activate the proofreading tool and then redo the action.",
       { timeout: 12000 },
     );
     return;
@@ -541,11 +541,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   sourceAgglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
-      sourceAgglomerateId,
+    sourceAgglomerateId,
   );
   targetAgglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
-      targetAgglomerateId,
+    targetAgglomerateId,
   );
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
@@ -763,7 +763,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   agglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(partitions[1][0])) ??
-      agglomerateId,
+    agglomerateId,
   );
 
   const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
@@ -893,17 +893,17 @@ function* performCutFromNeighbors(
 
   const edgesToRemove: Array<
     | {
-        position1: Vector3;
-        position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
-      }
+      position1: Vector3;
+      position2: Vector3;
+      segmentId1: number;
+      segmentId2: number;
+    }
     | {
-        position1: null;
-        position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
-      }
+      position1: null;
+      position2: Vector3;
+      segmentId1: number;
+      segmentId2: number;
+    }
   > = neighborInfo.neighbors.map(
     (neighbor) =>
       ({
@@ -1263,7 +1263,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   targetAgglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetSegmentId)) ??
-      targetAgglomerateId,
+    targetAgglomerateId,
   );
 
   const newAnnotationVersion = yield* select((state) => state.annotation.version);
@@ -1373,9 +1373,9 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
 
   const agglomerateFileMag = isSkeletonProofreading
     ? // In case of skeleton proofreading, the finest mag should be used.
-      magInfo.getFinestMag()
+    magInfo.getFinestMag()
     : // For non-skeleton proofreading, the active mag suffices
-      currentMag;
+    currentMag;
   if (agglomerateFileMag == null) {
     return null;
   }
@@ -1416,7 +1416,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     const mappedId = isNumberMap(mappingToAccess)
       ? mappingToAccess.get(Number(segmentId))
       : // TODO: Proper 64 bit support (#6921)
-        Number(mappingToAccess.get(BigInt(segmentId)));
+      Number(mappingToAccess.get(BigInt(segmentId)));
     if (mappedId == null) {
       // It could happen that the user tries to perform a proofreading operation
       // that involves an id for which the mapped id wasn't fetched yet.
@@ -1435,7 +1435,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     const agglomerateId = isNumberMap(mapping)
       ? mapping.get(unmappedId)
       : // TODO: Proper 64 bit support (#6921)
-        Number(mapping.get(BigInt(unmappedId)));
+      Number(mapping.get(BigInt(unmappedId)));
 
     if (agglomerateId == null) {
       // It could happen that the user tries to perform a proofreading operation
@@ -1556,8 +1556,7 @@ function getDeleteEdgeActionForEdgePositions(
 
   if (!firstNodeId || !secondNodeId) {
     Toast.warning(
-      `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
-        !secondNodeId ? [", ", edge.position2] : null
+      `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${!secondNodeId ? [", ", edge.position2] : null
       } in ${sourceTree.name}.`,
     );
     return null;

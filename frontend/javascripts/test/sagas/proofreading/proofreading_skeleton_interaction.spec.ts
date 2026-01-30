@@ -4,13 +4,11 @@ import isEqual from "lodash-es/isEqual";
 import range from "lodash-es/range";
 import { call, put, take } from "redux-saga/effects";
 import {
-  getFlattenedUpdateActions,
   getNestedUpdateActions,
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { MappingVisualizer } from "test/helpers/mapping_visualizer";
-import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
@@ -700,7 +698,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       const nestedUpdateActions = getNestedUpdateActions(context);
       // console.log("nestedUpdateActions", nestedUpdateActions)
       for (const [index, action] of nestedUpdateActions.entries()) {
-        console.log(index + 1, action);
+        console.log(index + 2, action);
       }
     });
 

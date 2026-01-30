@@ -14,7 +14,12 @@ import _ from "lodash";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
-import { MappingStatusEnum, SagaIdentifier, TreeTypeEnum, type Vector3 } from "viewer/constants";
+import Constants, {
+  MappingStatusEnum,
+  SagaIdentifier,
+  TreeTypeEnum,
+  type Vector3,
+} from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
@@ -112,6 +117,7 @@ import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
+import processTaskWithPool from "libs/async/task_pool";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -654,10 +660,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
   let updatedSkeletonTracing = yield* select((state) => state.annotation.skeleton);
   if (!updatedSkeletonTracing) {
-    console.warn(
-      "Could not reload skeleton tracing to update the tree names after proofreading action via agglomerate trees.",
+    Toast.error(
+      "Could not reload skeleton tracing to update the tree names and refresh the auxiliary meshes after proofreading action via agglomerate trees.",
     );
-    updatedSkeletonTracing = skeletonTracing;
+    return;
   }
 
   // Reload sourceTree & targetTree as applying newest actions from the backend might have modified the skeleton.
@@ -701,8 +707,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
-  const pack = (agglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
-    agglomerateId,
+  const pack = (oldAgglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
+    oldAgglomerateId,
     newAgglomerateId,
     nodePosition,
   });
@@ -951,12 +957,12 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
-      agglomerateId: agglomerateIdBeforeSplit,
+      oldAgglomerateId: agglomerateIdBeforeSplit,
       newAgglomerateId: newAgglomerateIdFromPartition1,
       nodePosition: meshLoadingPositionForPartition1,
     },
     {
-      agglomerateId: agglomerateIdBeforeSplit,
+      oldAgglomerateId: agglomerateIdBeforeSplit,
       newAgglomerateId: newAgglomerateIdFromPartition2,
       nodePosition: meshLoadingPositionForPartition2,
     },
@@ -1218,7 +1224,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
   }
   // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
-  // Thus the sourceAgglomerateId and targetAgglomerateId might be outdated. Therefore, we reload them.
+  // Thus, the sourceAgglomerateId and targetAgglomerateId might be outdated. Therefore, we reload them.
   yield* call(reloadMappingAndAggloIds);
 
   annotationVersion = yield* select((state) => state.annotation.version);
@@ -1264,8 +1270,14 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
     yield* put(removeSegmentAction(targetInfo.agglomerateId, volumeTracingId));
-
-    yield* call(syncAgglomerateSkeletonsAfterMergeAction, sourceInfo, targetInfo, volumeTracingId);
+    // Reload the agglomerate skeletons affected by the merge if they are loaded.
+    yield* call(
+      syncAgglomerateSkeletonsAfterMergeAction,
+      sourceInfo.agglomerateId,
+      targetInfo.agglomerateId,
+      sourceAgglomerateId,
+      volumeTracingId,
+    );
   }
 
   /* Reload meshes */
@@ -1302,19 +1314,18 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
-      agglomerateId: sourceInfo.agglomerateId,
+      oldAgglomerateId: sourceInfo.agglomerateId,
       newAgglomerateId: sourceAgglomerateId,
       nodePosition: sourceInfo.position,
     },
     {
-      agglomerateId: targetInfo.agglomerateId,
+      oldAgglomerateId: targetInfo.agglomerateId,
       newAgglomerateId: targetAgglomerateId,
       nodePosition: targetInfo.position,
     },
   ]);
 }
-// Naming: PendingProofreadingOperationInfo für store info.
-//
+
 function* handleProofreadCutFromNeighbors(action: Action) {
   // Actually, action is CutAgglomerateFromNeighborsAction but the
   // takeEveryUnlessBusy wrapper does not understand this.
@@ -1460,12 +1471,12 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   /* Reload meshes */
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
-      agglomerateId: targetAgglomerateIdBeforeSplit,
+      oldAgglomerateId: targetAgglomerateIdBeforeSplit,
       newAgglomerateId: newTargetAgglomerateId,
       nodePosition: targetPosition,
     },
     ...neighborInfo.neighbors.map((neighbor, idx) => ({
-      agglomerateId: targetAgglomerateIdBeforeSplit,
+      oldAgglomerateId: targetAgglomerateIdBeforeSplit,
       newAgglomerateId: newNeighborAgglomerateIds[idx],
       nodePosition: neighbor.position,
     })),
@@ -1643,7 +1654,7 @@ function* getAgglomerateInfos(
 export function* refreshAffectedMeshes(
   layerName: string,
   items: Array<{
-    agglomerateId: number;
+    oldAgglomerateId?: number;
     newAgglomerateId: number;
     nodePosition: Vector3;
   }>,
@@ -1665,25 +1676,29 @@ export function* refreshAffectedMeshes(
   const meshLoadingEffects = [];
   for (const item of items) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
-    if (!removedIds.has(item.agglomerateId)) {
-      yield* put(removeMeshAction(layerName, Number(item.agglomerateId)));
-      removedIds.add(item.agglomerateId);
+    if (item.oldAgglomerateId && !removedIds.has(item.oldAgglomerateId)) {
+      yield* put(removeMeshAction(layerName, Number(item.oldAgglomerateId)));
+      removedIds.add(item.oldAgglomerateId);
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
-      meshLoadingEffects.push(
-        call(
+      meshLoadingEffects.push(function* load() {
+        yield* call(
           loadCoarseMesh,
           layerName,
           Number(item.newAgglomerateId),
           item.nodePosition,
           additionalCoordinates,
-        ),
-      );
+        );
+      });
       newlyLoadedIds.add(item.newAgglomerateId);
     }
   }
   // Do all mesh loadings in parallel for more speed.
-  yield* all(meshLoadingEffects);
+  yield* call(
+    processTaskWithPool,
+    meshLoadingEffects,
+    Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT,
+  );
 }
 
 function getDeleteEdgeActionForEdgePositions(

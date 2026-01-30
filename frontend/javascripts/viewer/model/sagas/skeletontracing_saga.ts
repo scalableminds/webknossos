@@ -430,11 +430,13 @@ export function* loadAgglomerateSkeletonWithId(
       // Fetch agglomerate skeleton in parallel to updating to latest version to make syncing with the server faster.
       // We already sync here to make the save after adding the agglomerate skeleton a fast forward like update,
       // which then only sends the whole save queue to the server.
-      const { parsedTracing } = yield* all({
-        updateToLatestVersion: call(dispatchEnsureHasNewestVersionAsync, Store.dispatch),
-        parsedTracing: call(getAgglomerateSkeletonTracing, layerName, mappingName, agglomerateId),
-      });
-      agglomerateSkeleton = parsedTracing;
+      yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+      agglomerateSkeleton = yield* call(
+        getAgglomerateSkeletonTracing,
+        layerName,
+        mappingName,
+        agglomerateId,
+      );
     } else {
       agglomerateSkeleton = yield* call(
         getAgglomerateSkeletonTracing,
@@ -604,27 +606,33 @@ function* diffEdges(
 }
 
 function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: boolean): boolean {
-  return useDeepEqualityCheck
-    ? // branchPoints and comments are arrays and therefore checked for
-      // equality. This avoids unnecessary updates in certain cases (e.g.,
-      // when two trees are merged, the comments are concatenated, even
-      // if one of them is empty; thus, resulting in new instances).
-      !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
-        !_.isEqual(prevTree.comments, tree.comments) ||
-        !_.isEqual(prevTree.color, tree.color) ||
-        prevTree.name !== tree.name ||
-        prevTree.timestamp !== tree.timestamp ||
-        prevTree.groupId !== tree.groupId ||
-        prevTree.type !== tree.type ||
-        !_.isEqual(prevTree.metadata, tree.metadata)
-    : !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
-        !_.isEqual(prevTree.comments, tree.comments) ||
-        prevTree.color !== tree.color ||
-        prevTree.name !== tree.name ||
-        prevTree.timestamp !== tree.timestamp ||
-        prevTree.groupId !== tree.groupId ||
-        prevTree.type !== tree.type ||
-        prevTree.metadata !== tree.metadata;
+  const doPrimitivesDiffer =
+    prevTree.color !== tree.color ||
+    prevTree.name !== tree.name ||
+    prevTree.timestamp !== tree.timestamp ||
+    prevTree.groupId !== tree.groupId ||
+    prevTree.type !== tree.type ||
+    prevTree.metadata !== tree.metadata;
+  if (doPrimitivesDiffer) {
+    return true;
+  }
+  // branchPoints and comments are arrays and therefore checked for
+  // equality. This avoids unnecessary updates in certain cases (e.g.,
+  // when two trees are merged, the comments are concatenated, even
+  // if one of them is empty; thus, resulting in new instances).
+  const doDifferShallowly =
+    doPrimitivesDiffer ||
+    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    !_.isEqual(prevTree.comments, tree.comments);
+  if (!useDeepEqualityCheck) {
+    return doDifferShallowly;
+  }
+  // If doing a deep diff, we also want to deep diff the missing property arrays color and metadata.
+  return (
+    doDifferShallowly ||
+    !_.isEqual(prevTree.color, tree.color) ||
+    !_.isEqual(prevTree.metadata, tree.metadata)
+  );
 }
 
 export function* diffTrees(

@@ -138,7 +138,9 @@ function compactMovedNodesAndEdges(
         const newNode = tracing.trees.getNullable(newTreeId)?.nodes.getNullable(nodeId);
         const oldNode = prevTracing.trees.getNullable(oldTreeId)?.nodes.getNullable(nodeId);
 
-        if (newNode != null && (oldNode == null || updateNodePredicate(oldNode, newNode))) {
+        // As this code handles compacting moving nodes, both newNode and oldNode should exists.
+        // An update should only be created if they actually differ to avoid noop updates.
+        if (newNode != null && oldNode != null && updateNodePredicate(oldNode, newNode)) {
           compactedActions.push(updateNode(newTreeId, newNode, actionTracingId));
         }
       }

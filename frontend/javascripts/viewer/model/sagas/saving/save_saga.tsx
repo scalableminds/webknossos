@@ -209,8 +209,8 @@ const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 // This info can then be used to trigger side effects after saving is done to e.g. reload the newest auxiliary agglomerate meshes.
 
 type ApplyingUpdateArtifacts = {
-  agglomerateIdsWithOutdatedMeshes: Set<number>;
-  agglomerateIdsToReloadMeshesFor: Set<number>;
+  meshIdsToRemove: Set<number>;
+  meshIdsToLoad: Set<number>;
 };
 
 type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
@@ -218,15 +218,15 @@ type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateAr
 const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
   success: false,
   artifactInfos: {
-    agglomerateIdsWithOutdatedMeshes: new Set<number>(),
-    agglomerateIdsToReloadMeshesFor: new Set<number>(),
+    meshIdsToRemove: new Set<number>(),
+    meshIdsToLoad: new Set<number>(),
   },
 };
 const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
   success: true,
   artifactInfos: {
-    agglomerateIdsWithOutdatedMeshes: new Set<number>(),
-    agglomerateIdsToReloadMeshesFor: new Set<number>(),
+    meshIdsToRemove: new Set<number>(),
+    meshIdsToLoad: new Set<number>(),
   },
 };
 
@@ -527,8 +527,8 @@ export function* tryToIncorporateActions(
   // Maps from the old agglomerate id to a potentially new one.
   // Duplicates are later ignored when refreshing the meshes.
   const activeVolumeTracingId = (yield* select(getVisibleSegmentationLayer))?.tracingId;
-  const agglomerateIdsWithOutdatedMeshes = new Set<number>();
-  const agglomerateIdsToReloadMeshesFor = new Set<number>();
+  const meshIdsToRemove = new Set<number>();
+  const meshIdsToLoad = new Set<number>();
 
   for (const actionBatch of newerActions) {
     const agglomerateIdsToRefresh = new Set<NumberLike>();
@@ -676,11 +676,11 @@ export function* tryToIncorporateActions(
           // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
           // Track outdated and updated agglomerateIds to refresh after applying updates.
 
-          agglomerateIdsWithOutdatedMeshes.add(agglomerateId1);
-          agglomerateIdsWithOutdatedMeshes.add(agglomerateId2);
+          meshIdsToRemove.add(agglomerateId1);
+          meshIdsToRemove.add(agglomerateId2);
           // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
-          agglomerateIdsToReloadMeshesFor.delete(agglomerateId2);
-          agglomerateIdsToReloadMeshesFor.add(agglomerateId1);
+          meshIdsToLoad.delete(agglomerateId2);
+          meshIdsToLoad.add(agglomerateId1);
           break;
         }
         case "splitAgglomerate": {
@@ -715,7 +715,6 @@ export function* tryToIncorporateActions(
 
         case "updateMappingName": {
           // TODO migrate to applyVolumeUpdateActionsFromServerAction.
-          // Refactor mapping activation first before implementing this.
           const { actionTracingId, mappingName, isEditable, isLocked } = action.value;
           let mappingType = undefined;
           if (mappingName) {
@@ -723,8 +722,9 @@ export function* tryToIncorporateActions(
               getSegmentationLayerByName(state.dataset, actionTracingId),
             );
             if (volumeDataLayer.mappings == null || volumeDataLayer.agglomerates == null) {
+              const setMappingsChannel = yield* actionChannel("SET_LAYER_MAPPINGS");
               yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
-              yield* take("SET_LAYER_MAPPINGS");
+              yield* take(setMappingsChannel);
             }
             mappingType =
               (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
@@ -797,7 +797,7 @@ export function* tryToIncorporateActions(
 
       if (splitMappingInfo == null) {
         const message =
-          "Failed to apply split mapping action from other user. Please refresh the page to resync and loose as less of your work as possible.";
+          "Failed to apply an agglomerate split action from other user. Please refresh the page to resync.";
         console.error(message);
         Toast.error(message);
         return FailedIncorporateActionsReturnValue;
@@ -824,8 +824,8 @@ export function* tryToIncorporateActions(
         const loadedProofreadingAuxiliaryMeshesOfSplitAction =
           loadedProofreadingAuxiliaryMeshes.intersection(oldAgglomerateIds);
         if (loadedProofreadingAuxiliaryMeshesOfSplitAction.size > 0) {
-          oldAgglomerateIds.forEach((aggloId) => agglomerateIdsWithOutdatedMeshes.add(aggloId));
-          newAgglomerateIds.forEach((aggloId) => agglomerateIdsToReloadMeshesFor.add(aggloId));
+          oldAgglomerateIds.forEach((aggloId) => meshIdsToRemove.add(aggloId));
+          newAgglomerateIds.forEach((aggloId) => meshIdsToLoad.add(aggloId));
         }
       }
     }
@@ -834,7 +834,7 @@ export function* tryToIncorporateActions(
   yield* call(finalize);
   return {
     success: true,
-    artifactInfos: { agglomerateIdsWithOutdatedMeshes, agglomerateIdsToReloadMeshesFor },
+    artifactInfos: { meshIdsToRemove, meshIdsToLoad },
   };
 }
 
@@ -846,41 +846,25 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
   }
   yield* call(
     removeOutdatedMeshes,
-    artifactInfos.agglomerateIdsWithOutdatedMeshes,
-    activeVolumeTracingId,
-  );
 
-  yield* spawn(
-    reloadMeshes,
-    artifactInfos.agglomerateIdsWithOutdatedMeshes,
-    artifactInfos.agglomerateIdsToReloadMeshesFor,
+    artifactInfos.meshIdsToRemove,
     activeVolumeTracingId,
   );
+  yield* spawn(reloadMeshes, artifactInfos.meshIdsToLoad, activeVolumeTracingId);
 }
 
-function* removeOutdatedMeshes(
-  agglomerateIdsWithOutdatedMeshes: Set<number>,
-  activeVolumeTracingId: string,
-) {
+function* removeOutdatedMeshes(meshIdsToRemove: Set<number>, activeVolumeTracingId: string) {
   // Remove all outdated meshes.
-  console.log("Start removing outdated meshes", ...Array.from(agglomerateIdsWithOutdatedMeshes));
-  for (const aggloId of agglomerateIdsWithOutdatedMeshes) {
+  console.log("Start removing outdated meshes", ...Array.from(meshIdsToRemove));
+  for (const aggloId of meshIdsToRemove) {
     yield* put(removeMeshAction(activeVolumeTracingId, Number(aggloId)));
   }
-  console.log("Finished removing outdated meshes", ...Array.from(agglomerateIdsWithOutdatedMeshes));
+  console.log("Finished removing outdated meshes", ...Array.from(meshIdsToRemove));
 }
 
 // Potentially waits until saving is done. Thus, !must be called with spawn!.
-function* reloadMeshes(
-  agglomerateIdsWithOutdatedMeshes: Set<number>,
-  agglomerateIdsToReloadMeshesFor: Set<number>,
-  activeVolumeTracingId: string,
-) {
-  const someAgglomerateIdToRemove = agglomerateIdsWithOutdatedMeshes.values().next()?.value || 0;
-  // construct refreshAffectedMeshes parameters.
-  // As all outdated meshes were already removed, someAgglomerateIdToRemove can be used in every refresh list item.
+function* reloadMeshes(meshIdsToReload: Set<number>, activeVolumeTracingId: string) {
   const refreshList: Array<{
-    agglomerateId: number;
     newAgglomerateId: number;
     nodePosition: Vector3;
   }> = [];
@@ -889,12 +873,11 @@ function* reloadMeshes(
   );
   const segments = yield* select((state) => getSegmentsForLayer(state, activeVolumeTracingId));
 
-  for (const agglomerateId of agglomerateIdsToReloadMeshesFor) {
+  for (const agglomerateId of meshIdsToReload) {
     const segmentPosition = segments.getNullable(agglomerateId)?.somePosition;
     // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
     if (segmentPosition || hasSegmentIndex) {
       refreshList.push({
-        agglomerateId: someAgglomerateIdToRemove,
         newAgglomerateId: agglomerateId,
         nodePosition: segmentPosition ?? [0, 0, 0],
       });

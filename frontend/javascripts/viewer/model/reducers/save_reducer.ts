@@ -286,23 +286,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_PENDING_PROOFREADING_OPERATION_INFO": {
-      if (action.proofreadingPostProcessingInfo == null) {
-        return update(state, {
-          save: {
-            proofreadingPostProcessingInfo: { $set: null },
-          },
-        });
-      }
-      const { sourceInfo, targetInfo, tracingId } = action.proofreadingPostProcessingInfo;
       return update(state, {
         save: {
-          proofreadingPostProcessingInfo: {
-            $set: {
-              sourceInfo,
-              targetInfo,
-              tracingId,
-            },
-          },
+          proofreadingPostProcessingInfo: { $set: action.proofreadingPostProcessingInfo },
         },
       });
     }

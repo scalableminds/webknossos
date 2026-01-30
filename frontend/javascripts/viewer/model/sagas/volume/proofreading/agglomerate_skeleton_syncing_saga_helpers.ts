@@ -1,5 +1,4 @@
 import DiffableMap from "libs/diffable_map";
-import { getAdaptToTypeFunction } from "libs/utils";
 import { all, put } from "typed-redux-saga";
 import { TreeTypeEnum } from "viewer/constants";
 import {
@@ -16,7 +15,7 @@ import {
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type { Node } from "viewer/model/types/tree_types";
-import type { NumberLikeMap, ProofreadingActionInfo, SkeletonTracing } from "viewer/store";
+import type { SkeletonTracing } from "viewer/store";
 import { type Saga, call, select } from "../../effect-generators";
 import { diffSkeletonTracing, getAgglomerateSkeletonTracing } from "../../skeletontracing_saga";
 import {
@@ -42,11 +41,11 @@ function* agglomerateTreesToSkeleton(trees: Tree[]): Saga<SkeletonTracing> {
   for (const tree of trees) {
     treeMapWithOldAggloTrees = treeMapWithOldAggloTrees.set(tree.treeId, tree);
   }
-  const tracingWitTreesReplaced = {
+  const tracingWithTreesReplaced = {
     ...skeletonTracing,
     trees: treeMapWithOldAggloTrees,
   };
-  return tracingWitTreesReplaced;
+  return tracingWithTreesReplaced;
 }
 
 function* getAgglomerateTreesAsSkeleton(agglomerateIds: number[], mappingName: string) {
@@ -114,8 +113,8 @@ function remapNodeIdsWithPositionMap(
   positionToIdMap: PositionToIdMap,
   skeletonTracing: SkeletonTracing,
 ): Tree[] {
-  let newNodeId = skeletonTracing.cachedMaxNodeId;
-  const getNextFreeNodeId = () => ++newNodeId;
+  let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
+  const getNextFreeNodeId = () => newNodeId++;
   return trees.map((tree) => {
     let updatedNodes = new DiffableMap<number, Node>();
     let updatedEdges = new EdgeCollection();
@@ -145,7 +144,7 @@ function remapNodeIdsWithPositionMap(
   });
 }
 
-function deepDiffSkeletonTracings(
+function deepDiffTreesInSkeletonTracings(
   prevSkeleton: SkeletonTracing,
   newSkeletonWithUpdatedIds: SkeletonTracing,
 ): UpdateActionWithoutIsolationRequirement[] {
@@ -156,55 +155,24 @@ function deepDiffSkeletonTracings(
   return Array.from(diffSkeletonTracing(prevSkeleton, newSkeletonWithCorrectProps, true));
 }
 
-export function* syncAgglomerateSkeletonsAfterMergeAction(
-  sourceInfo: ProofreadingActionInfo,
-  targetInfo: ProofreadingActionInfo,
-  tracingId: string,
-): Saga<void> {
+function* getMappingAndSkeleton(tracingId: string) {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
   const skeletonTracing = yield* select((state) => state.annotation.skeleton);
-  const { mappingName } = activeMapping;
-  if (!skeletonTracing || mappingName == null) {
-    return;
-  }
-  const tracingWithOldAggloTrees = yield* call(
-    getAgglomerateTreesAsSkeleton,
-    [sourceInfo.agglomerateId, targetInfo.agglomerateId],
-    mappingName,
-  );
-  if (!tracingWithOldAggloTrees) {
-    return;
-  }
-  const positionToIdMap = createPositionToIdMap(tracingWithOldAggloTrees.trees.values());
+  return { activeMapping, skeletonTracing };
+}
 
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  const latestSourceAgglomerateId = Number(
-    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
-      sourceInfo.agglomerateId,
-  );
-  const maybeSourceAgglomerateTree = getAgglomerateTreeIfExists(
-    sourceInfo.agglomerateId,
-    mappingName,
-    tracingWithOldAggloTrees.trees,
-  );
-  const assignedTreeIds = maybeSourceAgglomerateTree
-    ? [maybeSourceAgglomerateTree.treeId]
-    : [getMaximumTreeId(skeletonTracing.trees) + 1];
-
-  const updatedAgglomerateSkeleton = yield* call(
-    getAllAgglomerateTreesFromServerAndRemap,
-    [latestSourceAgglomerateId],
-    positionToIdMap,
-    assignedTreeIds,
-    tracingId,
-    mappingName,
-  );
-
-  const diffActions = deepDiffSkeletonTracings(
+// Applies the missing update needed to transform tracingWithOldAggloTrees into the skeleton tracing updatedAgglomerateSkeleton.
+// This is done via diffing the tracings and locally applying their updates.
+// The skeleton diffing saga will output the necessary update actions into the save queue.
+function* updateAffectedAgglomerateTrees(
+  tracingWithOldAggloTrees: SkeletonTracing,
+  tracingWithUpdatedAggloTrees: SkeletonTracing,
+) {
+  const diffActions = deepDiffTreesInSkeletonTracings(
     tracingWithOldAggloTrees,
-    updatedAgglomerateSkeleton,
+    tracingWithUpdatedAggloTrees,
   );
   const diffActionsWithMissingServerFields = diffActions
     .filter((a) => ApplicableSkeletonUpdateActionNamesHelperNamesList.includes(a.name))
@@ -224,15 +192,58 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
   yield* put(applySkeletonUpdateActionsFromServerAction(diffActionsWithMissingServerFields));
 }
 
+export function* syncAgglomerateSkeletonsAfterMergeAction(
+  sourceAgglomerateIdBeforeMerge: number,
+  targetAgglomerateIdBeforeMerge: number,
+  newSourceAgglomerateId: number,
+  tracingId: string,
+): Saga<void> {
+  const { skeletonTracing, activeMapping } = yield* call(getMappingAndSkeleton, tracingId);
+  const { mappingName } = activeMapping;
+  if (!skeletonTracing || mappingName == null) {
+    return;
+  }
+  const tracingWithOldAggloTrees = yield* call(
+    getAgglomerateTreesAsSkeleton,
+    [sourceAgglomerateIdBeforeMerge, targetAgglomerateIdBeforeMerge],
+    mappingName,
+  );
+  if (!tracingWithOldAggloTrees) {
+    return;
+  }
+  const positionToIdMap = createPositionToIdMap(tracingWithOldAggloTrees.trees.values());
+
+  const maybeOutdatedSourceAgglomerateTree = getAgglomerateTreeIfExists(
+    sourceAgglomerateIdBeforeMerge,
+    mappingName,
+    tracingWithOldAggloTrees.trees,
+  );
+  const assignedTreeIds = maybeOutdatedSourceAgglomerateTree
+    ? [maybeOutdatedSourceAgglomerateTree.treeId]
+    : [getMaximumTreeId(skeletonTracing.trees) + 1];
+
+  const tracingWithUpdatedAggloTrees = yield* call(
+    getAllAgglomerateTreesFromServerAndRemap,
+    [newSourceAgglomerateId],
+    positionToIdMap,
+    assignedTreeIds,
+    tracingId,
+    mappingName,
+  );
+
+  yield* call(
+    updateAffectedAgglomerateTrees,
+    tracingWithOldAggloTrees,
+    tracingWithUpdatedAggloTrees,
+  );
+}
+
 export function* syncAgglomerateSkeletonsAfterSplitAction(
   newAgglomerateIds: number[],
   oldAgglomerateIds: number[],
   tracingId: string,
 ): Saga<void> {
-  const activeMapping = yield* select(
-    (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
-  );
-  const skeletonTracing = yield* select((state) => state.annotation.skeleton);
+  const { skeletonTracing, activeMapping } = yield* call(getMappingAndSkeleton, tracingId);
   const { mappingName } = activeMapping;
   if (!skeletonTracing || mappingName == null) {
     return;
@@ -253,7 +264,7 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
     .map((id) => getAgglomerateTreeIfExists(id, mappingName, tracingWithOldAggloTrees.trees))
     .map((tree) => (tree ? tree.treeId : newTreeId++));
 
-  const updatedAgglomerateSkeleton = yield* call(
+  const tracingWithUpdatedAggloTrees = yield* call(
     getAllAgglomerateTreesFromServerAndRemap,
     newAgglomerateIds,
     positionToIdMap,
@@ -262,23 +273,9 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
     mappingName,
   );
 
-  const diffActions = deepDiffSkeletonTracings(
+  yield* call(
+    updateAffectedAgglomerateTrees,
     tracingWithOldAggloTrees,
-    updatedAgglomerateSkeleton,
+    tracingWithUpdatedAggloTrees,
   );
-  const diffActionsWithMissingServerFields = diffActions
-    .filter((a) => ApplicableSkeletonUpdateActionNamesHelperNamesList.includes(a.name))
-    .map(
-      (a) =>
-        ({
-          ...a,
-          value: {
-            ...a.value,
-            actionTimestamp: 0, // ignored anyway
-            actionAuthorId: "me",
-          } as const,
-        }) as const,
-    ) as ApplicableSkeletonServerUpdateAction[];
-
-  yield* put(applySkeletonUpdateActionsFromServerAction(diffActionsWithMissingServerFields));
 }

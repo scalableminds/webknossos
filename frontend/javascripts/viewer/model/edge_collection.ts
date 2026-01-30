@@ -164,7 +164,7 @@ export default class EdgeCollection implements NotEnumerableByObject {
 } // Given two EdgeCollections, this function returns an object holding:
 // onlyA: An array of edges, which only exists in A
 // onlyB: An array of edges, which only exists in B
-// If useDeepEqualityCheck is set to true, the diff might include edges which are not instance equal to on of the passed maps!
+// If useDeepEqualityCheck is set to true, the diff might include edges which are not instance equal to one of the passed maps!
 // See more details below in the if-useDeepEqualityCheck block.
 export function diffEdgeCollections(
   edgeCollectionA: EdgeCollection,
@@ -195,16 +195,14 @@ export function diffEdgeCollections(
     // So, check for each outgoing edge whether it only exists in A or B
     let outgoingEdgesDiff;
     if (useDeepEqualityCheck) {
-      // In case of a deep equality check, diff by outgoing edges as source will always be changedNodeIndex.
-      // A normal implementation diff for deep edge comparison would be slow.
+      // In case of a deep equality check, we diff by outgoing edges.
       // The edges are then recreated based on the returned diff.
-      // If in some later time instance equality is needed, thi should be fairly easy to implement here.
+      // If in some later time instance equality is needed, this should be fairly easy to implement here.
       const targetDiff = Utils.diffNumberArrays(
         edgeCollectionA.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
         edgeCollectionB.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
       );
       outgoingEdgesDiff = {
-        changed: [], // unused thus ignored.
         onlyA: targetDiff.onlyA.map((target) => ({ source: changedNodeIndex, target })),
         onlyB: targetDiff.onlyB.map((target) => ({ source: changedNodeIndex, target })),
       };

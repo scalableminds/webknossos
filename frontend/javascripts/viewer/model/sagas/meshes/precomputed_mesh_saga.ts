@@ -49,8 +49,8 @@ import Store from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
+import Constants from "viewer/constants";
 
-const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 32;
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
 // Avoid redundant fetches of mesh files for the same layer by
@@ -451,7 +451,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   );
 
   try {
-    yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+    yield* call(processTaskWithPool, tasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
     Toast.warning(`Some mesh chunks could not be loaded for segment ${segmentId}.`);
     console.error(exception);

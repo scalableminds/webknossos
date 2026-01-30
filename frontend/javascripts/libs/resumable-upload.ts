@@ -2,54 +2,177 @@
  * Configuration options for the Resumable instance.
  */
 export interface ConfigurationHash {
+  /**
+   * The size in bytes of each uploaded chunk of data. The last uploaded chunk will be at least this size and up to two the size. (Default: `1*1024*1024`)
+   */
   chunkSize?: number;
+  /**
+   * Force all chunks to be less or equal than chunkSize. Otherwise, the last chunk will be greater than or equal to `chunkSize`. (Default: `false`)
+   */
   forceChunkSize?: boolean;
+  /**
+   * Number of simultaneous uploads (Default: `3`)
+   */
   simultaneousUploads?: number;
+  /**
+   * The name of the multipart request parameter to use for the file chunk (Default: `file`)
+   */
   fileParameterName?: string;
+  /**
+   * The name of the chunk index (base-1) in the current upload POST parameter to use for the file chunk (Default: `resumableChunkNumber`)
+   */
   chunkNumberParameterName?: string;
+  /**
+   * The name of the general chunk size POST parameter to use for the file chunk (Default: `resumableChunkSize`)
+   */
   chunkSizeParameterName?: string;
+  /**
+   * The name of the current chunk size POST parameter to use for the file chunk (Default: `resumableCurrentChunkSize`)
+   */
   currentChunkSizeParameterName?: string;
+  /**
+   * The name of the total file size number POST parameter to use for the file chunk (Default: `resumableTotalSize`)
+   */
   totalSizeParameterName?: string;
+  /**
+   * The name of the file type POST parameter to use for the file chunk (Default: `resumableType`)
+   */
   typeParameterName?: string;
+  /**
+   * The name of the unique identifier POST parameter to use for the file chunk (Default: `resumableIdentifier`)
+   */
   identifierParameterName?: string;
+  /**
+   * The name of the original file name POST parameter to use for the file chunk (Default: `resumableFilename`)
+   */
   fileNameParameterName?: string;
+  /**
+   * The name of the file's relative path POST parameter to use for the file chunk (Default: `resumableRelativePath`)
+   */
   relativePathParameterName?: string;
+  /**
+   * The name of the total number of chunks POST parameter to use for the file chunk (Default: `resumableTotalChunks`)
+   */
   totalChunksParameterName?: string;
+  /**
+   * The class name to add on drag over an assigned drop zone. (Default: `dragover`)
+   */
   dragOverClass?: string;
   throttleProgressCallbacks?: number;
+  /**
+   * Extra parameters to include in the multipart request with data. This can be an object or a function. If a function, it will be passed a ResumableFile and a ResumableChunk object (Default: `{}`)
+   */
   query?:
     | Record<string, any>
     | ((file: ResumableFile, chunk?: ResumableChunk) => Record<string, any>);
+  /**
+   * Extra headers to include in the multipart POST with data. This can be an `object` or a `function` that allows you to construct and return a value, based on supplied `file` (Default: `{}`)
+   */
   headers?:
     | Record<string, string>
     | ((file: ResumableFile, chunk?: ResumableChunk) => Record<string, string>);
+  /**
+   * Optional function to process each chunk before testing & sending. Function is passed the chunk as parameter, and should call the `preprocessFinished` method on the chunk when finished. (Default: `null`)
+   */
   preprocess?: ((chunk: ResumableChunk) => Promise<void> | void) | null;
+  /**
+   * Optional function to process each file before testing & sending the corresponding chunks. Function is passed the file as parameter, and should call the `preprocessFinished` method on the file when finished. (Default: `null`)
+   */
   preprocessFile?: ((file: ResumableFile) => Promise<void> | void) | null;
+  /**
+   * Method to use when sending chunks to the server (`multipart` or `octet`) (Default: `multipart`)
+   */
   method?: "multipart" | "octet";
+  /**
+   * HTTP method to use when sending chunks to the server (`POST`, `PUT`, `PATCH`) (Default: `POST`)
+   */
   uploadMethod?: string;
+  /**
+   * Method for chunk test request. (Default: `'GET'`)
+   */
   testMethod?: string;
+  /**
+   * Prioritize first and last chunks of all files. This can be handy if you can determine if a file is valid for your service from only the first or last chunk. For example, photo or video meta data is usually located in the first part of a file, making it easy to test support from only the first chunk. (Default: `false`)
+   */
   prioritizeFirstAndLastChunk?: boolean;
+  /**
+   * The target URL for the multipart POST request. This can be a `string` or a `function` that allows you you to construct and return a value, based on supplied `params`. (Default: `/`)
+   */
   target?: string | ((params?: any) => string);
+  /**
+   * The target URL for the GET request to the server for each chunk to see if it already exists. This can be a `string` or a `function` that allows you you to construct and return a value, based on supplied `params`. (Default: `null`)
+   */
   testTarget?: string | null;
+  /**
+   * Extra prefix added before the name of each parameter included in the multipart POST or in the test GET. (Default: `''`)
+   */
   parameterNamespace?: string;
+  /**
+   * Make a GET request to the server for each chunks to see if it already exists. If implemented on the server-side, this will allow for upload resumes even after a browser crash or even a computer restart. (Default: `true`)
+   */
   testChunks?: boolean;
+  /**
+   * Override the function that generates unique identifiers for each file.
+   */
   generateUniqueIdentifier?: ((file: File, event?: Event) => string | Promise<string>) | null;
   getTarget?: ((request: string, params: any) => string) | null;
+  /**
+   * The maximum number of retries for a chunk before the upload is failed. Valid values are any positive integer and `undefined` for no limit. (Default: `undefined`)
+   */
   maxChunkRetries?: number;
+  /**
+   * The number of milliseconds to wait before retrying a chunk on a non-permanent error. Valid values are any positive integer and `undefined` for immediate retry. (Default: `undefined`)
+   */
   chunkRetryInterval?: number;
+  /**
+   * List of HTTP status codes that define if the chunk upload was a permanent error and should not retry the upload. (Default: `[400, 404, 409, 415, 500, 501]`)
+   */
   permanentErrors?: number[];
+  /**
+   * Indicates how many files can be uploaded in a single session. Valid values are any positive integer and `undefined` for no limit. (Default: `undefined`)
+   */
   maxFiles?: number;
+  /**
+   * Standard CORS requests do not send or set any cookies by default. In order to include cookies as part of the request, you need to set the `withCredentials` property to true. (Default: `false`)
+   */
   withCredentials?: boolean;
+  /**
+   * The timeout in milliseconds for each request (Default: `0`)
+   */
   fetchTimeout?: number;
   clearInput?: boolean;
   chunkFormat?: "blob" | "base64";
+  /**
+   * Set chunk content-type from original file.type. (Default: `false`, if `false` default Content-Type: `application/octet-stream`)
+   */
   setChunkTypeFromFile?: boolean;
+  /**
+   * A function which displays the *please upload n file(s) at a time* message. (Default: displays an alert box with the message *Please n one file(s) at a time.*)
+   */
   maxFilesErrorCallback?: (files: File[], errorCount: number) => void;
+  /**
+   * The minimum allowed file size. (Default: `undefined`)
+   */
   minFileSize?: number;
+  /**
+   * A function which displays an error a selected file is smaller than allowed. (Default: displays an alert for every bad file.)
+   */
   minFileSizeErrorCallback?: (file: File, errorCount: number) => void;
+  /**
+   * The maximum allowed file size. (Default: `undefined`)
+   */
   maxFileSize?: number;
+  /**
+   * A function which displays an error a selected file is larger than allowed. (Default: displays an alert for every bad file.)
+   */
   maxFileSizeErrorCallback?: (file: File, errorCount: number) => void;
+  /**
+   * The file types allowed to upload. An empty array allow any file type. (Default: `[]`)
+   */
   fileType?: string[];
+  /**
+   * A function which displays an error a selected file has type not allowed. (Default: displays an alert for every bad file.)
+   */
   fileTypeErrorCallback?: (file: File, errorCount: number) => void;
 }
 
@@ -437,12 +560,33 @@ export class ResumableChunk {
  */
 export class ResumableFile {
   opts: Partial<ConfigurationHash> = {};
+  /**
+   * A back-reference to the parent `Resumable` object.
+   */
   resumableObj: Resumable;
+  /**
+   * The correlating HTML5 `File` object.
+   */
   file: File;
+  /**
+   * The name of the file.
+   */
   fileName: string;
+  /**
+   * Size in bytes of the file.
+   */
   size: number;
+  /**
+   * The relative path to the file (defaults to file name if relative path doesn't exist)
+   */
   relativePath: string;
+  /**
+   * A unique identifier assigned to this file object. This value is included in uploads to the server for reference, but can also be used in CSS classes etc when building your upload UI.
+   */
   uniqueIdentifier: string;
+  /**
+   * An array of `ResumableChunk` items. You shouldn't need to dig into these.
+   */
   chunks: ResumableChunk[] = [];
   container: EventTarget | null = null;
   preprocessState: 0 | 1 | 2 = 0;
@@ -495,6 +639,9 @@ export class ResumableFile {
     }
   }
 
+  /**
+   * Abort uploading the file.
+   */
   abort(): void {
     let abortCount = 0;
     for (const c of this.chunks) {
@@ -508,6 +655,9 @@ export class ResumableFile {
     }
   }
 
+  /**
+   * Abort uploading the file and delete it from the list of files to upload.
+   */
   cancel(): void {
     const chunks = this.chunks;
     this.chunks = [];
@@ -521,6 +671,9 @@ export class ResumableFile {
     this.resumableObj.dispatch("fileProgress", { file: this });
   }
 
+  /**
+   * Retry uploading the file.
+   */
   retry(): void {
     this.bootstrap();
     const handler = (e: Event) => {
@@ -533,6 +686,9 @@ export class ResumableFile {
     this.resumableObj.addEventListener("chunkingComplete", handler);
   }
 
+  /**
+   * Rebuild the state of a `ResumableFile` object, including reassigning chunks and XMLHttpRequest instances.
+   */
   bootstrap(): void {
     this.abort();
     this._error = false;
@@ -559,6 +715,9 @@ export class ResumableFile {
     }, 0);
   }
 
+  /**
+   * Returns a float between 0 and 1 indicating the current upload progress of the file. If `relative` is `true`, the value is returned relative to all files in the Resumable.js instance.
+   */
   progress(): number {
     if (this._error) return 1;
     let returnValue = 0;
@@ -573,10 +732,16 @@ export class ResumableFile {
     return returnValue;
   }
 
+  /**
+   * Returns a boolean indicating whether file chunks is uploading.
+   */
   isUploading(): boolean {
     return this.chunks.some((chunk) => chunk.status() === "uploading");
   }
 
+  /**
+   * Returns a boolean indicating whether the file has completed uploading and received a server response.
+   */
   isComplete(): boolean {
     if (this.preprocessState === 1) return false;
     let outstanding = false;
@@ -631,6 +796,9 @@ export class ResumableFile {
     return false;
   }
 
+  /**
+   * starts upload from the next chunk number while marking all previous chunks complete. Must be called before upload() method
+   */
   markChunksCompleted(chunkNumber: number): void {
     if (!this.chunks || this.chunks.length <= chunkNumber) return;
     for (let num = 0; num < chunkNumber; num++) {
@@ -644,9 +812,18 @@ export class ResumableFile {
  * Implements EventTarget via composition to ensure compatibility.
  */
 export class Resumable implements EventTarget {
+  /**
+   * A boolean value indicator whether or not Resumable.js is supported by the current browser.
+   */
   support: boolean;
+  /**
+   * An array of `ResumableFile` file objects added by the user.
+   */
   files: ResumableFile[] = [];
   defaults: Required<ConfigurationHash>;
+  /**
+   * A hash object of the configuration of the Resumable.js instance.
+   */
   opts: Partial<ConfigurationHash>;
   version = 1.0;
 
@@ -731,7 +908,9 @@ export class Resumable implements EventTarget {
     this.opts = opts;
   }
 
-  // EventTarget Implementation via Composition
+  /**
+   * Listen for event from Resumable
+   */
   addEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,
@@ -981,10 +1160,16 @@ export class Resumable implements EventTarget {
     return false;
   }
 
+  /**
+   * Returns a boolean indicating whether or not the instance is currently uploading anything.
+   */
   isUploading(): boolean {
     return this.files.some((file) => file.isUploading());
   }
 
+  /**
+   * Start or resume uploading.
+   */
   upload(): void {
     if (this.isUploading()) return;
     this.dispatch("uploadStart");
@@ -993,17 +1178,26 @@ export class Resumable implements EventTarget {
     }
   }
 
+  /**
+   * Pause uploading.
+   */
   pause(): void {
     for (const file of this.files) file.abort();
     this.dispatch("pause");
   }
 
+  /**
+   * Cancel upload of all `ResumableFile` objects and remove them from the list.
+   */
   cancel(): void {
     this.dispatch("beforeCancel");
     for (let i = this.files.length - 1; i >= 0; i--) this.files[i].cancel();
     this.dispatch("cancel");
   }
 
+  /**
+   * Returns a float between 0 and 1 indicating the current upload progress of all files.
+   */
   progress(): number {
     let totalDone = 0;
     let totalSize = 0;
@@ -1014,22 +1208,34 @@ export class Resumable implements EventTarget {
     return totalSize > 0 ? totalDone / totalSize : 0;
   }
 
+  /**
+   * Add a HTML5 File object to the list of files.
+   */
   addFile(file: File, event?: Event): void {
     this.dispatch("beforeAdd");
     this.appendFilesFromFileList([file], event || new Event("addFile"));
   }
 
+  /**
+   * Add an Array of HTML5 File objects to the list of files.
+   */
   addFiles(files: File[], event?: Event): void {
     this.dispatch("beforeAdd");
     this.appendFilesFromFileList(files, event || new Event("addFiles"));
   }
 
+  /**
+   * Cancel upload of a specific `ResumableFile` object on the list from the list.
+   */
   removeFile(file: ResumableFile): void {
     for (let i = this.files.length - 1; i >= 0; i--) {
       if (this.files[i] === file) this.files.splice(i, 1);
     }
   }
 
+  /**
+   * Look up a `ResumableFile` object by its unique identifier.
+   */
   getFromUniqueIdentifier(uniqueIdentifier: string): ResumableFile | false {
     let returnValue: ResumableFile | false = false;
     for (const file of this.files) {
@@ -1038,6 +1244,9 @@ export class Resumable implements EventTarget {
     return returnValue;
   }
 
+  /**
+   * Returns the total size of the upload in bytes.
+   */
   getSize(): number {
     let totalSize = 0;
     for (const file of this.files) totalSize += file.size;

@@ -359,7 +359,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload,
       datastoreUrl,
     });
-    resumableUpload.on("complete", () => {
+    resumableUpload.addEventListener("complete", () => {
       const newestForm = this.formRef.current;
 
       if (!newestForm) {
@@ -431,24 +431,27 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         },
       );
     });
-    resumableUpload.on("filesAdded", () => {
+    resumableUpload.addEventListener("filesAdded", () => {
       resumableUpload.upload();
     });
     // terminalFileError is triggered by the RestApi when a normal fileError could not be
     // recovered by refreshing the user token.
-    resumableUpload.on("terminalFileError", (_file: FileWithPath, message: string) => {
-      Toast.error(message);
-      this.setState({
-        isUploading: false,
-      });
-    });
-    resumableUpload.on("progress", () => {
+    resumableUpload.addEventListener(
+      "terminalFileError",
+      (_file: FileWithPath, message: string) => {
+        Toast.error(message);
+        this.setState({
+          isUploading: false,
+        });
+      },
+    );
+    resumableUpload.addEventListener("progress", () => {
       this.setState({
         isRetrying: false,
         uploadProgress: resumableUpload.progress(),
       });
     });
-    resumableUpload.on("fileRetry", () => {
+    resumableUpload.addEventListener("fileRetry", () => {
       logRetryToAnalytics(newDatasetName);
       this.setState({
         isRetrying: true,

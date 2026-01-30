@@ -15,7 +15,6 @@ import window from "libs/window";
 import memoize from "lodash-es/memoize";
 import zip from "lodash-es/zip";
 import messages from "messages";
-import ResumableJS from "resumablejs";
 import {
   type AdditionalCoordinate,
   type AnnotationLayerDescriptor,
@@ -110,6 +109,7 @@ import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
 import { doWithToken, refreshToken } from "./api/token";
+import Resumable from "libs/resumable-upload";
 
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
@@ -1171,7 +1171,7 @@ export function createDatasetComposition(
   );
 }
 
-export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<any> {
+export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<Resumable> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
     if (file.path == null) {
@@ -1191,7 +1191,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       activeToken = newToken;
     };
 
-    const resumable = new ResumableJS({
+    const resumable = new Resumable({
       testChunks: true,
       target: `${datastoreUrl}/data/datasets`,
       query: function () {
@@ -1203,10 +1203,9 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       simultaneousUploads: 3,
       chunkRetryInterval: 2000,
       maxChunkRetries: undefined,
-      xhrTimeout: 10 * 60 * 1000, // 10m
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
+      fetchTimeout: 10 * 60 * 1000, // 10m
       generateUniqueIdentifier,
-      // The following errors only tell ResumableJS to not
+      // The following errors only tell Resumable-upload to not
       // retry automatically when they appear.
       // 403 is explicitly listed because we want to get a fileError
       // event. Then, we can invalidate the token and trigger
@@ -1215,7 +1214,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     });
 
     let lastFileErrorTimestamp: number | null = null;
-    resumable.on("fileError", function (file, message) {
+    resumable.addEventListener("fileError", function (file, message) {
       // When a file could not be uploaded, assume that the token is invalid. Then,
       // refresh the token (unless we already did this in the last hour) and
       // retry the file upload.
@@ -1229,12 +1228,10 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
             // Note that "terminalFileError" is an event which is only triggered by WK
             // and not by the ResumableUpload library itself. We merely use the event bus
             // of the ResumableUpload object.
-            // @ts-expect-error The type definitions are incorrect. fire accepts these parameters.
-            resumable.fire("terminalFileError", file, message);
+            resumable.dispatch("terminalFileError", { file, message });
           });
       } else {
-        // @ts-expect-error See above.
-        resumable.fire("terminalFileError", file, message);
+        resumable.dispatch("terminalFileError", { file, message });
       }
 
       lastFileErrorTimestamp = Date.now();

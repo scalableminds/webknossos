@@ -249,9 +249,6 @@ function ExperienceModalView({
         dataSource={tableEntries}
         rowKey="domain"
         pagination={false}
-        scroll={{
-          y: 350,
-        }}
         styles={{
           root: {
             marginBottom: 24,

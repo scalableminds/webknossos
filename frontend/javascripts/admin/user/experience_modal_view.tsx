@@ -233,7 +233,6 @@ function ExperienceModalView({
   const multipleUsers = selectedUsersCount > 1;
   return (
     <Modal
-      className="experience-change-modal"
       title={
         multipleUsers
           ? `Change Experiences of ${selectedUsersCount} Users`
@@ -250,10 +249,22 @@ function ExperienceModalView({
         dataSource={tableEntries}
         rowKey="domain"
         pagination={false}
-        scroll={{
-          y: 350,
+        styles={{
+          root: {
+            marginBottom: 24,
+          },
+          header: {
+            wrapper: {
+              overflowY: "auto",
+              paddingBottom: 0,
+            },
+          },
+          body: {
+            wrapper: {
+              overflowY: "auto",
+            },
+          },
         }}
-        className="user-experience-table"
         components={{
           body: {
             row: HighlightableRow,

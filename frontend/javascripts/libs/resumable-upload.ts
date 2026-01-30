@@ -561,16 +561,16 @@ export class ResumableFile {
 
   progress(): number {
     if (this._error) return 1;
-    let ret = 0;
+    let returnValue = 0;
     let error = false;
     for (const c of this.chunks) {
       if (c.status() === "error") error = true;
-      ret += c.progress(true);
+      returnValue += c.progress(true);
     }
-    ret = error ? 1 : ret > 0.99999 ? 1 : ret;
-    ret = Math.max(this._prevProgress, ret);
-    this._prevProgress = ret;
-    return ret;
+    returnValue = error ? 1 : returnValue > 0.99999 ? 1 : returnValue;
+    returnValue = Math.max(this._prevProgress, returnValue);
+    this._prevProgress = returnValue;
+    return returnValue;
   }
 
   isUploading(): boolean {
@@ -1031,11 +1031,11 @@ export class Resumable implements EventTarget {
   }
 
   getFromUniqueIdentifier(uniqueIdentifier: string): ResumableFile | false {
-    let ret: ResumableFile | false = false;
-    for (const f of this.files) {
-      if (f.uniqueIdentifier === uniqueIdentifier) ret = f;
+    let returnValue: ResumableFile | false = false;
+    for (const file of this.files) {
+      if (file.uniqueIdentifier === uniqueIdentifier) returnValue = file;
     }
-    return ret;
+    return returnValue;
   }
 
   getSize(): number {

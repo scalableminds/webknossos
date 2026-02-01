@@ -1,97 +1,57 @@
 [
-  {
-    "actions": [
-      {
-        "name": "createTree",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "branchPoints": [],
-          "color": [
-            0,
-            1,
-            0.7568627450980392,
-          ],
-          "comments": [],
-          "edgesAreVisible": true,
-          "groupId": undefined,
-          "id": 4,
-          "isVisible": true,
-          "metadata": [],
-          "name": "explorative_2017-05-13_First_Name_Last_Name_004",
-          "timestamp": 1494695001688,
-          "type": "AGGLOMERATE",
-          "updatedId": 4,
-        },
-      },
-      {
-        "name": "moveTreeComponent",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "nodeIds": [
-            6,
-          ],
-          "sourceId": 3,
-          "targetId": 4,
-        },
-      },
-      {
-        "name": "deleteEdge",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 5,
-          "target": 6,
-          "treeId": 3,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["SET_VERSION_NUMBER","SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","DELETE_EDGE","SET_BUSY_BLOCKING_INFO_ACTION"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 2,
-        "nodeCount": 6,
-        "treeCount": 4,
-      },
-      "volumeTracingId": {
-        "segmentCount": 1,
+  [
+    {
+      "name": "createTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "branchPoints": [],
+        "color": [
+          0,
+          1,
+          0.7568627450980392,
+        ],
+        "comments": [],
+        "edgesAreVisible": true,
+        "groupId": undefined,
+        "id": 4,
+        "isVisible": true,
+        "metadata": [],
+        "name": "explorative_2017-05-13_First_Name_Last_Name_004",
+        "timestamp": 1494695001688,
+        "type": "AGGLOMERATE",
+        "updatedId": 4,
       },
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 9,
-  },
-  {
-    "actions": [
-      {
-        "name": "splitAgglomerate",
-        "value": {
-          "actionTracingId": "volumeTracingId",
-          "agglomerateId": 1,
-          "segmentId1": 2,
-          "segmentId2": 3,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","DELETE_EDGE","SET_BUSY_BLOCKING_INFO_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 2,
-        "nodeCount": 6,
-        "treeCount": 4,
-      },
-      "volumeTracingId": {
-        "segmentCount": 1,
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          6,
+        ],
+        "sourceId": 3,
+        "targetId": 4,
       },
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 10,
-  },
+    {
+      "name": "deleteEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 5,
+        "target": 6,
+        "treeId": 3,
+      },
+    },
+  ],
+  [
+    {
+      "name": "splitAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId": 1,
+        "segmentId1": 2,
+        "segmentId2": 3,
+      },
+    },
+  ],
 ]

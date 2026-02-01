@@ -1,5 +1,9 @@
 import { call, put } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import {
+  type WebknossosTestContext,
+  getNestedUpdateActions,
+  setupWebknossosForTesting,
+} from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -78,7 +82,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       const shouldSaveAfterLoadingTrees = false;
       yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const loadTreesAndMergeUpdateActions = context.receivedDataPerSaveRequest[2];
+      const loadTreesAndMergeUpdateActions = getNestedUpdateActions(context).slice(-4)!;
       yield expect(loadTreesAndMergeUpdateActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/perform_merge_trees_proofreading_update_actions.json",
       );
@@ -112,7 +116,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(9);
       // Includes loading of agglomerate trees and tree merging operation & agglomerate merge update
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-2)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_simple.json",
       );
@@ -164,7 +168,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(9);
       // Should include agglomerate tree updates & mergeAgglomerate action.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-2)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_interfered.json",
       );
@@ -212,12 +216,13 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     const task = startSaga(function* task() {
       const shouldSaveAfterLoadingTrees = true;
       yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
-      console.error("requests length", context.receivedDataPerSaveRequest.length);
       const injectedMergeRequest = context.receivedDataPerSaveRequest.at(4)![0];
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(9);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      const latestUpdateActionRequestPayload1 = getNestedUpdateActions(context).at(-1)!;
+      const latestUpdateActionRequestPayload2 = context.receivedDataPerSaveRequest;
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-2)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_interfered_no-op.json",
       );
@@ -243,13 +248,13 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("performSplitTreesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
+  it("performSplitTreesProofreading should apply correct update actions when loading agglomerate trees", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context, false);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const loadAgglomerateTreeUpdateActions = context.receivedDataPerSaveRequest[2];
+      const loadAgglomerateTreeUpdateActions = getNestedUpdateActions(context).at(5);
       yield expect(loadAgglomerateTreeUpdateActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/load_agglomerate_tree_update_actions.json",
       );
@@ -283,7 +288,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedSplit]);
       expect(injectedMergeRequest.version).toEqual(8);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.slice(4)!;
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-7)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_simple.json",
       );
@@ -319,6 +324,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         agglomerateId1: 1339,
         agglomerateId2: 6,
       },
+      // TODOM: Maybe needed tree updates
     };
     backendMock.planVersionInjection(8, [injectedMerge]);
 
@@ -332,7 +338,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(8);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.slice(4);
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-6);
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_merge.json",
       );
@@ -380,7 +386,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedSplit]);
       expect(injectedMergeRequest.version).toEqual(8);
       // This includes the split action of the split agglomerate tree.
-      const ownSplitAndReloadSkeletonUpdates = context.receivedDataPerSaveRequest.at(4)!;
+      const ownSplitAndReloadSkeletonUpdates = getNestedUpdateActions(context).slice(-2)!;
       yield expect(ownSplitAndReloadSkeletonUpdates).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_no-op.json",
       );
@@ -414,8 +420,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     const task = startSaga(function* task() {
       yield performMinCutWithNodesProofreading(context, false);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const loadAgglomerateTreeUpdateActions = context.receivedDataPerSaveRequest[2];
-      yield expect(loadAgglomerateTreeUpdateActions).toMatchFileSnapshot(
+      const loadAgglomerateTreesAndSplitUpdateActions = getNestedUpdateActions(context).slice(-3);
+      yield expect(loadAgglomerateTreesAndSplitUpdateActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/perform_min_cut_with_nodes_proofreading.json",
       );
     });
@@ -438,6 +444,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         agglomerateId1: 4,
         agglomerateId2: 6,
       },
+      // TODOM: tree updates
     };
     backendMock.planVersionInjection(8, [injectedMerge]);
 
@@ -450,7 +457,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(8);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
-        context.receivedDataPerSaveRequest.slice(4);
+        getNestedUpdateActions(context).slice(-3);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_simple.json",
       );
@@ -572,8 +579,9 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       const injectedMergeRequest = context.receivedDataPerSaveRequest.at(3)![0];
       expect(injectedMergeRequest.actions[0]).toEqual(injectedMerge);
       expect(injectedMergeRequest.version).toEqual(8);
+
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
-        context.receivedDataPerSaveRequest.slice(4);
+        getNestedUpdateActions(context).slice(-3);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_more_complex.json",
       );
@@ -617,6 +625,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         agglomerateId1: 1,
         agglomerateId2: 1,
       },
+      // TODO: Skeleton changes
     };
     backendMock.planVersionInjection(8, [injectedMerge]);
 
@@ -629,7 +638,9 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(8);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
-        context.receivedDataPerSaveRequest.slice(4);
+        getNestedUpdateActions(context).slice(-2);
+
+      const splitTreeAndAgglomerateAndDeleteSegmentActions2 = getNestedUpdateActions(context);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
       );

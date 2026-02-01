@@ -1,5 +1,9 @@
 import { type ActionPattern, call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import {
+  type WebknossosTestContext,
+  getNestedUpdateActions,
+  setupWebknossosForTesting,
+} from "test/helpers/apiHelpers";
 import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateWithPositionAction,
@@ -88,7 +92,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       const versionAfterSkeletonLoading = yield select((state) => state.annotation.version);
       // Check that the local version was bumped.
       expect(versionAfterSkeletonLoading - versionBeforeSkeletonLoading).toBeGreaterThan(0);
-      const agglomerateSkeletonUpdates = context.receivedDataPerSaveRequest.at(-1)!;
+      const agglomerateSkeletonUpdates = getNestedUpdateActions(context).at(-1)!;
       yield expect(agglomerateSkeletonUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/should_auto_push_skeleton_updates_in_live_collab.json",
       );
@@ -145,7 +149,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           [5, 5, 5],
         ]);
 
-        const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
+        const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).at(-1)!;
         yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
@@ -260,12 +264,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1);
         expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
 
-        const addAgglomerateSkeletonAndSplitUpdate = context.receivedDataPerSaveRequest.at(2)!;
-        const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(3)!;
-        yield expect([
-          addAgglomerateSkeletonAndSplitUpdate,
-          agglomerateSkeletonReloadingUpdates,
-        ]).toMatchFileSnapshot(
+        const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-3);
+        yield expect(splittingAndAgglomerateReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/split_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
       });
@@ -328,7 +328,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           [5, 5, 5],
         ]);
 
-        const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
+        const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).at(-1)!;
         yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/split_should_not_refresh_unaffected_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
@@ -604,7 +604,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         [7, 7, 7],
       ]);
 
-      const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
+      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-2)!;
       yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );
@@ -718,7 +718,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1339_after_injected_split_and_merge.json",
       );
 
-      const agglomerateSkeletonReloadingUpdates = context.receivedDataPerSaveRequest.at(-1)!;
+      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
       yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_split_should_refresh_agglomerate_skeletons.json",
       );

@@ -719,6 +719,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
   it("should reload agglomerate meshes correctly when merging two agglomerate skeletons and incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
+    // TODOM: skeleton updates are missing
     const injectedMerge = {
       name: "mergeAgglomerate" as const,
       value: {
@@ -758,6 +759,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ((action: Action) =>
           action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
       );
+
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
       expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);

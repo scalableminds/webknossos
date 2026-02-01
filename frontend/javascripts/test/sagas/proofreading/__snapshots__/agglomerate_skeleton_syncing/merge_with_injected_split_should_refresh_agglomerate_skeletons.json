@@ -1,119 +1,59 @@
 [
-  {
-    "actions": [
-      {
-        "name": "deleteSegment",
-        "value": {
-          "actionTracingId": "volumeTracingId",
-          "id": 1,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["SHIFT_SAVE_QUEUE","DONE_SAVING","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE * 4","DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO","REMOVE_SEGMENT","REMOVE_MESH"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 4,
-        "nodeCount": 10,
-        "treeCount": 6,
-      },
-      "volumeTracingId": {
-        "segmentCount": 1,
+  [
+    {
+      "name": "deleteSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "id": 1,
       },
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 12,
-  },
-  {
-    "actions": [
-      {
-        "name": "moveTreeComponent",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "nodeIds": [
-            4,
-          ],
-          "sourceId": 3,
-          "targetId": 5,
-        },
-      },
-      {
-        "name": "deleteTree",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "id": 3,
-        },
-      },
-      {
-        "name": "createEdge",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 4,
-          "target": 9,
-          "treeId": 5,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO","REMOVE_SEGMENT","REMOVE_MESH","APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER","REMOVE_MESH","SET_BUSY_BLOCKING_INFO_ACTION","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","REMOVE_MESH","MAYBE_FETCH_MESH_FILES"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 5,
-        "nodeCount": 10,
-        "treeCount": 5,
-      },
-      "volumeTracingId": {
-        "segmentCount": 1,
+  ],
+  [
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          4,
+        ],
+        "sourceId": 3,
+        "targetId": 5,
       },
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 13,
-  },
-  {
-    "actions": [
-      {
-        "name": "createSegment",
-        "value": {
-          "actionTracingId": "volumeTracingId",
-          "anchorPosition": [
-            4,
-            4,
-            4,
-          ],
-          "color": null,
-          "creationTime": 1494695001688,
-          "groupId": null,
-          "id": 4,
-          "metadata": [],
-          "name": null,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["REMOVE_MESH","MAYBE_FETCH_MESH_FILES","UPDATE_MESH_FILE_LIST","UPDATE_CURRENT_MESH_FILE","LOAD_PRECOMPUTED_MESH_ACTION","REMOVE_MESH","ADD_PRECOMPUTED_MESH","UPDATE_SEGMENT","STARTED_LOADING_MESH","MAYBE_FETCH_MESH_FILES"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 5,
-        "nodeCount": 10,
-        "treeCount": 5,
-      },
-      "volumeTracingId": {
-        "segmentCount": 2,
+    {
+      "name": "deleteTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "id": 3,
       },
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 14,
-  },
+    {
+      "name": "createEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 4,
+        "target": 9,
+        "treeId": 5,
+      },
+    },
+  ],
+  [
+    {
+      "name": "createSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "anchorPosition": [
+          4,
+          4,
+          4,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 4,
+        "metadata": [],
+        "name": null,
+      },
+    },
+  ],
 ]

@@ -1,52 +1,30 @@
 [
   {
-    "actions": [
-      {
-        "name": "moveTreeComponent",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "nodeIds": [
-            7,
-            8,
-          ],
-          "sourceId": 4,
-          "targetId": 3,
-        },
-      },
-      {
-        "name": "deleteTree",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "id": 4,
-        },
-      },
-      {
-        "name": "createEdge",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 4,
-          "target": 7,
-          "treeId": 3,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_PENDING_PROOFREADING_OPERATION_INFO","REMOVE_SEGMENT","REMOVE_MESH","APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER","REMOVE_MESH","SET_BUSY_BLOCKING_INFO_ACTION","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","REMOVE_MESH","MAYBE_FETCH_MESH_FILES"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 6,
-        "nodeCount": 10,
-        "treeCount": 4,
-      },
-      "volumeTracingId": {
-        "segmentCount": 1,
-      },
+    "name": "moveTreeComponent",
+    "value": {
+      "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+      "nodeIds": [
+        7,
+        8,
+      ],
+      "sourceId": 4,
+      "targetId": 3,
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 11,
+  },
+  {
+    "name": "deleteTree",
+    "value": {
+      "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+      "id": 4,
+    },
+  },
+  {
+    "name": "createEdge",
+    "value": {
+      "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+      "source": 4,
+      "target": 7,
+      "treeId": 3,
+    },
   },
 ]

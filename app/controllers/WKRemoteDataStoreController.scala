@@ -14,7 +14,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
-  LinkedLayerIdentifier,
   ReportDatasetUploadParameters,
   ReserveAdditionalInformation,
   ReserveUploadInformation

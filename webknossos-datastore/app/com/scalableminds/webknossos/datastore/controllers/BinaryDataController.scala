@@ -233,6 +233,7 @@ class BinaryDataController @Inject()(
             request.body.mappingType,
             request.body.additionalCoordinates,
             request.body.findNeighbors,
+            request.body.annotationVersion,
           )
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.

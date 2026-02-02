@@ -1828,7 +1828,7 @@ type MeshRequest = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
-  version: number;
+  annotationVersion: number;
 };
 
 export function computeAdHocMesh(

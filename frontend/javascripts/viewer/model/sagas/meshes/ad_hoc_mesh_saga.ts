@@ -534,7 +534,7 @@ function* maybeLoadMeshChunk(
           cubeSize: paddedCubeSize,
           scaleFactor,
           findNeighbors,
-          version: annotationVersion,
+          annotationVersion,
           ...meshExtraInfo,
         },
       );

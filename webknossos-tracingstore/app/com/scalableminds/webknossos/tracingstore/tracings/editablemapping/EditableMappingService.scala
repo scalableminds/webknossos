@@ -409,7 +409,8 @@ class EditableMappingService @Inject()(
       tokenContext = tc,
       mapping = None,
       mappingType = None,
-      findNeighbors = request.findNeighbors
+      findNeighbors = request.findNeighbors,
+      annotationVersion = request.annotationVersion,
     )
     adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
   }

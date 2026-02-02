@@ -55,7 +55,7 @@ describe("Resumable", () => {
     });
 
     it("should get multiple options as array", () => {
-      const opts = resumable.getOpt(["target", "chunkSize"]);
+      const opts = resumable.getOpts(["target", "chunkSize"]);
       expect(opts).toEqual({
         target: "/upload",
         chunkSize: 1024 * 1024,

@@ -147,7 +147,7 @@ export interface ConfigurationHash {
   /**
    * The minimum allowed file size. (Default: 1)
    */
-  minFileSize?: number | null;
+  minFileSize?: number;
   /**
    * A function which displays an error a selected file is smaller than allowed. (Default: displays an alert for every bad file.)
    */
@@ -197,6 +197,7 @@ const helpers = {
     const relativePath =
       (file as any).webkitRelativePath || (file as any).relativePath || file.name;
     const size = file.size;
+
     return size + "-" + relativePath.replace(/[^0-9a-zA-Z_-]/gim, "");
   },
 
@@ -217,12 +218,10 @@ const helpers = {
 
   getTargetURI(resumable: Resumable, request: string, params: Record<string, any>): string {
     let target = resumable.getOpt("target");
+    const testTarget = resumable.getOpt("testTarget");
 
-    if (request === "test" && resumable.getOpt("testTarget")) {
-      target =
-        resumable.getOpt("testTarget") === "/"
-          ? resumable.getOpt("target")
-          : resumable.getOpt("testTarget");
+    if (request === "test" && testTarget !== null) {
+      target = testTarget === "/" ? resumable.getOpt("target") : testTarget;
     }
 
     if (typeof target === "function") {
@@ -240,6 +239,7 @@ const helpers = {
 
 /**
  * Represents a single chunk of a file to be uploaded.
+ * @param preprocessState 0 = unprocessed, 1 = processing, 2 = finished
  */
 export class ResumableChunk {
   opts: Partial<ConfigurationHash> = {};
@@ -248,12 +248,12 @@ export class ResumableChunk {
   fileObjSize: number;
   fileObjType: string;
   offset: number;
-  callback: (event: string, message?: string) => void;
+  callback: (event: "progress" | "success" | "error" | "retry", message?: string) => void;
   lastProgressCallback: Date;
   tested = false;
   retries = 0;
   pendingRetry = false;
-  preprocessState: 0 | 1 | 2 = 0;
+  preprocessState: 0 | 1 | 2 = 0; // 0 = unprocessed, 1 = processing, 2 = finished
   markComplete = false;
   startByte: number;
   endByte: number;
@@ -266,7 +266,7 @@ export class ResumableChunk {
     resumableObj: Resumable,
     fileObj: ResumableFile,
     offset: number,
-    callback: (event: string, message?: string) => void,
+    callback: (event: "progress" | "success" | "error" | "retry", message?: string) => void,
   ) {
     this.resumableObj = resumableObj;
     this.fileObj = fileObj;
@@ -285,9 +285,9 @@ export class ResumableChunk {
     }
   }
 
-  getOpt(key: keyof ConfigurationHash): any {
-    if (typeof this.opts[key] !== "undefined") {
-      return this.opts[key];
+  getOpt<T extends keyof ConfigurationHash>(key: T): Required<ConfigurationHash>[T] {
+    if (this.opts[key] !== undefined) {
+      return this.opts[key] as Required<ConfigurationHash>[T];
     }
     return this.fileObj.getOpt(key);
   }
@@ -326,9 +326,10 @@ export class ResumableChunk {
     try {
       const response = await fetch(targetUrl, {
         method: this.getOpt("testMethod") as string,
-        headers: customHeaders as Record<string, string>,
+        headers: customHeaders,
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
+        // TODO: add timeout
       });
 
       this.tested = true;
@@ -336,7 +337,7 @@ export class ResumableChunk {
       if (response.ok) {
         this._message = await response.text();
         this.callback("success", this._message);
-        this.markComplete = true;
+        this.markComplete = true; // Tom added this.
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();
@@ -352,6 +353,7 @@ export class ResumableChunk {
     this.send();
   }
 
+  // send() uploads the actual data in a POST call
   async send(): Promise<void> {
     const preprocess = this.getOpt("preprocess");
     if (typeof preprocess === "function") {
@@ -377,25 +379,17 @@ export class ResumableChunk {
     this.pendingRetry = false;
     this.callback("progress");
 
-    const queryParameters: Record<string, any> = [
-      ["chunkNumberParameterName", this.offset + 1],
-      ["chunkSizeParameterName", this.getOpt("chunkSize")],
-      ["currentChunkSizeParameterName", this.endByte - this.startByte],
-      ["totalSizeParameterName", this.fileObjSize],
-      ["typeParameterName", this.fileObjType],
-      ["identifierParameterName", this.fileObj.uniqueIdentifier],
-      ["fileNameParameterName", this.fileObj.fileName],
-      ["relativePathParameterName", this.fileObj.relativePath],
-      ["totalChunksParameterName", this.fileObj.chunks.length],
-    ]
-      .filter((pair) => this.getOpt(pair[0] as keyof ConfigurationHash))
-      .reduce(
-        (query, pair) => {
-          query[this.getOpt(pair[0] as keyof ConfigurationHash) as string] = pair[1];
-          return query;
-        },
-        {} as Record<string, any>,
-      );
+    const queryParameters: Partial<Record<keyof ConfigurationHash, any>> = {
+      chunkNumberParameterName: this.offset + 1,
+      chunkSizeParameterName: this.getOpt("chunkSize"),
+      currentChunkSizeParameterName: this.endByte - this.startByte,
+      totalSizeParameterName: this.fileObjSize,
+      typeParameterName: this.fileObjType,
+      identifierParameterName: this.fileObj.uniqueIdentifier,
+      fileNameParameterName: this.fileObj.fileName,
+      relativePathParameterName: this.fileObj.relativePath,
+      totalChunksParameterName: this.fileObj.chunks.length,
+    };
 
     let customQueryParameters = this.getOpt("query");
     if (typeof customQueryParameters === "function") {
@@ -409,7 +403,7 @@ export class ResumableChunk {
       this.getOpt("setChunkTypeFromFile") ? this.fileObj.file.type : "",
     );
 
-    let body: FormData | Blob | string;
+    let data: FormData | Blob | string;
 
     const headers: Record<string, string> = {};
     let customHeaders = this.getOpt("headers");
@@ -419,26 +413,28 @@ export class ResumableChunk {
     Object.assign(headers, customHeaders);
 
     if (this.getOpt("method") === "octet") {
-      body = bytes;
+      data = bytes;
       headers["Content-Type"] = "application/octet-stream";
     } else {
       const formData = new FormData();
+      // Add data from the query options
       Object.entries(queryParameters).forEach(([k, v]) => {
         formData.append(k, v);
       });
 
       if (this.getOpt("chunkFormat") === "blob") {
-        formData.append(this.getOpt("fileParameterName") as string, bytes, this.fileObj.fileName);
-        body = formData;
+        formData.append(this.getOpt("fileParameterName"), bytes, this.fileObj.fileName);
+        data = formData;
       } else {
+        // chunkFormat == base64
         const readPromise = new Promise<string>((resolve) => {
           const fr = new FileReader();
           fr.onload = () => resolve(fr.result as string);
           fr.readAsDataURL(bytes);
         });
         const base64Data = await readPromise;
-        formData.append(this.getOpt("fileParameterName") as string, base64Data);
-        body = formData;
+        formData.append(this.getOpt("fileParameterName"), base64Data);
+        data = formData;
       }
     }
 
@@ -448,9 +444,10 @@ export class ResumableChunk {
       const response = await fetch(targetUrl, {
         method: this.getOpt("uploadMethod") as string,
         headers,
-        body,
+        body: data,
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
+        // TODO: add timeout
       });
 
       if (response.ok) {
@@ -459,8 +456,8 @@ export class ResumableChunk {
         this.callback("success", this._message);
         this.resumableObj.uploadNextChunk();
       } else if (
-        (this.getOpt("permanentErrors") as number[]).includes(response.status) ||
-        this.retries >= (this.getOpt("maxChunkRetries") as number)
+        this.getOpt("permanentErrors").includes(response.status) ||
+        this.retries >= this.getOpt("maxChunkRetries")
       ) {
         this._status = "error";
         this._message = await response.text();
@@ -480,9 +477,9 @@ export class ResumableChunk {
       this.retries++;
 
       const retryInterval = this.getOpt("chunkRetryInterval");
-      if (retryInterval !== undefined) {
+      if (retryInterval != null) {
         this.pendingRetry = true;
-        setTimeout(() => this.send(), retryInterval as number);
+        setTimeout(() => this.send(), retryInterval);
       } else {
         this.send();
       }
@@ -498,6 +495,8 @@ export class ResumableChunk {
   }
 
   status(): "pending" | "uploading" | "success" | "error" {
+    // if pending retry then that's effectively the same as actively uploading,
+    // there might just be a slight delay before the retry starts
     if (this.pendingRetry) return "uploading";
     if (this.markComplete) return "success";
     return this._status;
@@ -508,8 +507,12 @@ export class ResumableChunk {
   }
 
   progress(relative = false): number {
-    const factor = relative ? (this.endByte - this.startByte) / this.fileObjSize : 1;
+    // NOTE: the fetch API doesn't provide a way to get the progress of the upload so we need to track the uploaded bytes ourselves
+    let factor = relative ? (this.endByte - this.startByte) / this.fileObjSize : 1;
     if (this.pendingRetry) return 0;
+    if ((!this.abortController || !this.abortController.signal.aborted) && !this.markComplete)
+      factor *= 0.95; // TODO: is this really necessary?
+
     const s = this.status();
     switch (s) {
       case "success":
@@ -557,7 +560,7 @@ export class ResumableFile {
    */
   chunks: ResumableChunk[] = [];
   container: EventTarget | null = null;
-  preprocessState: 0 | 1 | 2 = 0;
+  preprocessState: 0 | 1 | 2 = 0; // 0 = unprocessed, 1 = processing, 2 = finished
   private _prevProgress = 0;
   private _pause = false;
   private _error: boolean;
@@ -576,14 +579,15 @@ export class ResumableFile {
     this.bootstrap();
   }
 
-  getOpt(key: keyof ConfigurationHash): any {
-    if (typeof this.opts[key] !== "undefined") {
-      return this.opts[key];
+  getOpt<T extends keyof ConfigurationHash>(key: T): Required<ConfigurationHash>[T] {
+    if (this.opts[key] !== undefined) {
+      return this.opts[key] as Required<ConfigurationHash>[T];
     }
     return this.resumableObj.getOpt(key);
   }
 
-  private chunkEvent(event: string, message?: string): void {
+  // Callback when something happens within the chunk
+  private chunkEvent(event: "progress" | "success" | "error" | "retry", message?: string): void {
     switch (event) {
       case "progress":
         this.resumableObj.dispatch("fileProgress", { file: this, message });
@@ -612,9 +616,9 @@ export class ResumableFile {
    */
   abort(): void {
     let abortCount = 0;
-    for (const c of this.chunks) {
-      if (c.status() === "uploading") {
-        c.abort();
+    for (const chunk of this.chunks) {
+      if (chunk.status() === "uploading") {
+        chunk.abort();
         abortCount++;
       }
     }
@@ -624,14 +628,14 @@ export class ResumableFile {
   }
 
   /**
-   * Abort uploading the file and delete it from the list of files to upload.
+   * Abort uploading the file and delete it from the list of files to upload (reset).
    */
   cancel(): void {
     const chunks = this.chunks;
     this.chunks = [];
-    for (const c of chunks) {
-      if (c.status() === "uploading") {
-        c.abort();
+    for (const chunk of chunks) {
+      if (chunk.status() === "uploading") {
+        chunk.abort();
         this.resumableObj.uploadNextChunk();
       }
     }
@@ -664,8 +668,9 @@ export class ResumableFile {
     this._prevProgress = 0;
 
     const round = this.getOpt("forceChunkSize") ? Math.ceil : Math.floor;
-    const maxOffset = Math.max(round(this.file.size / (this.getOpt("chunkSize") as number)), 1);
+    const maxOffset = Math.max(round(this.file.size / this.getOpt("chunkSize")), 1);
 
+    // Rebuild stack of chunks from file
     for (let offset = 0; offset < maxOffset; offset++) {
       this.chunks.push(
         new ResumableChunk(this.resumableObj, this, offset, (event, message) =>
@@ -688,14 +693,15 @@ export class ResumableFile {
    */
   progress(): number {
     if (this._error) return 1;
+
     let returnValue = 0;
     let error = false;
-    for (const c of this.chunks) {
-      if (c.status() === "error") error = true;
-      returnValue += c.progress(true);
+    for (const chunk of this.chunks) {
+      if (chunk.status() === "error") error = true;
+      returnValue += chunk.progress(true); // get chunk progress relative to entire file
     }
     returnValue = error ? 1 : returnValue > 0.99999 ? 1 : returnValue;
-    returnValue = Math.max(this._prevProgress, returnValue);
+    returnValue = Math.max(this._prevProgress, returnValue); // We don't want to lose percentages when an upload is paused
     this._prevProgress = returnValue;
     return returnValue;
   }
@@ -712,19 +718,17 @@ export class ResumableFile {
    */
   isComplete(): boolean {
     if (this.preprocessState === 1) return false;
-    let outstanding = false;
-    for (const chunk of this.chunks) {
-      const status = chunk.status();
-      if (status === "pending" || status === "uploading" || chunk.preprocessState === 1) {
-        outstanding = true;
-        break;
-      }
-    }
-    return !outstanding;
+
+    return !this.chunks.some(
+      (chunk) =>
+        chunk.status() === "uploading" ||
+        chunk.status() === "pending" ||
+        chunk.preprocessState === 1,
+    );
   }
 
   pause(pause?: boolean): void {
-    this._pause = typeof pause === "undefined" ? !this._pause : pause;
+    this._pause = pause === undefined ? !this._pause : pause;
   }
 
   isPaused(): boolean {
@@ -769,6 +773,7 @@ export class ResumableFile {
    */
   markChunksCompleted(chunkNumber: number): void {
     if (!this.chunks || this.chunks.length <= chunkNumber) return;
+
     for (let num = 0; num < chunkNumber; num++) {
       if (this.chunks[num]) this.chunks[num].markComplete = true;
     }
@@ -890,15 +895,21 @@ export class Resumable implements EventTarget {
     this._eventTarget.removeEventListener(type, callback, options);
   }
 
-  getOpt(o: keyof ConfigurationHash | (keyof ConfigurationHash)[]): any {
-    if (Array.isArray(o)) {
-      const options: Partial<ConfigurationHash> = {};
-      o.forEach((option) => {
-        options[option] = this.getOpt(option);
-      });
-      return options;
-    }
-    return typeof this.opts[o] !== "undefined" ? this.opts[o] : this.defaults[o];
+  getOpts<T extends keyof ConfigurationHash>(
+    options: T[],
+  ): { [K in T]: ReturnType<typeof this.getOpt<K>> } {
+    return options.reduce(
+      (acc, opt) => {
+        acc[opt] = this.getOpt(opt);
+        return acc;
+      },
+      {} as { [K in T]: ReturnType<typeof this.getOpt<K>> },
+    );
+  }
+
+  getOpt<T extends keyof ConfigurationHash>(option: T): Required<ConfigurationHash>[T] {
+    const value = this.opts[option];
+    return (value !== undefined ? value : this.defaults[option]) as Required<ConfigurationHash>[T];
   }
 
   dispatch(event: string, detail: ResumableEventDetail = {}): void {
@@ -906,7 +917,9 @@ export class Resumable implements EventTarget {
       event === "error"
         ? new ResumableUploadErrorEvent(event, { detail })
         : new CustomEvent(event, { detail });
+
     this.dispatchEvent(e);
+
     if (event === "fileError") {
       this.dispatch("error", { error: detail.message, file: detail.file });
     }
@@ -914,7 +927,13 @@ export class Resumable implements EventTarget {
       this.dispatch("progress");
     }
   }
-
+  /**
+   * processes a single upload item (file or directory)
+   * @param item item to upload, may be file or directory entry
+   * @param path current file path
+   * @param items list of files to append new items to
+   * @param callback callback invoked when item is processed
+   */
   private processItem(item: any, path: string, items: ExtendedFile[], callback: () => void): void {
     let entry: any;
     if (item.isFile) {
@@ -933,32 +952,50 @@ export class Resumable implements EventTarget {
       entry = item.webkitGetAsEntry();
     }
     if (entry?.isDirectory) {
+      // directory provided, process it
       this.processDirectory(entry, path + entry.name + "/", items, callback);
       return;
     }
     if (typeof item.getAsFile === "function") {
+      // item represents a File object, convert it
       item = item.getAsFile();
       if (item instanceof File) {
         (item as ExtendedFile).relativePath = path + item.name;
         items.push(item);
       }
     }
-    callback();
+    callback(); // indicate processing is done
   }
 
+  /**
+   * cps-style list iteration.
+   * invokes all functions in list and waits for their callback to be
+   * triggered.
+   * @param items list of functions expecting callback parameter
+   * @param callback callback to trigger after the last callback has been invoked
+   */
   private processCallbacks(
     items: Array<(callback: () => void) => void>,
     callback: () => void,
   ): void {
     if (!items || items.length === 0) {
+      // empty or no list, invoke callback
       callback();
       return;
     }
+    // invoke current function, pass the next part as continuation
     items[0](() => {
       this.processCallbacks(items.slice(1), callback);
     });
   }
 
+  /**
+   * recursively traverse directory and collect files to upload
+   * @param directory directory to process
+   * @param path current path
+   * @param items target list of items
+   * @param callback callback invoked after traversing directory
+   */
   private processDirectory(
     directory: any,
     path: string,
@@ -973,18 +1010,27 @@ export class Resumable implements EventTarget {
           allEntries.push(...entries);
           return readEntries();
         }
+
+        // process all conversion callbacks, finally invoke own one
         this.processCallbacks(
           allEntries.map((entry) => this.processItem.bind(this, entry, path, items)),
           callback,
         );
       });
     };
+
     readEntries();
   }
 
+  /**
+   * append files from a file list
+   * @param fileList list of files to append
+   * @param event event that triggered the file append
+   */
   private appendFilesFromFileList(fileList: File[], event: Event): void {
+    // check for uploading too many files
     let errorCount = 0;
-    const o = this.getOpt([
+    const options = this.getOpts([
       "maxFiles",
       "minFileSize",
       "maxFileSize",
@@ -993,13 +1039,16 @@ export class Resumable implements EventTarget {
       "maxFileSizeErrorCallback",
       "fileType",
       "fileTypeErrorCallback",
-    ]) as any;
+    ]);
 
-    if (o.maxFiles < fileList.length + this.files.length) {
-      if (o.maxFiles === 1 && this.files.length === 1 && fileList.length === 1) {
+    if ((options.maxFiles as number) < fileList.length + this.files.length) {
+      if (options.maxFiles === 1 && this.files.length === 1 && fileList.length === 1) {
         this.removeFile(this.files[0]);
       } else {
-        o.maxFilesErrorCallback(fileList, errorCount++);
+        (options.maxFilesErrorCallback as (files: File[], errorCount: number) => void)(
+          fileList,
+          errorCount++,
+        );
         return;
       }
     }
@@ -1010,7 +1059,10 @@ export class Resumable implements EventTarget {
 
     const decreaseRemaining = (): void => {
       if (!--remaining) {
-        if (!files.length && !filesSkipped.length) return;
+        // all files processed, trigger event
+        if (!files.length && !filesSkipped.length)
+          // no succeeded files, just skip
+          return;
         setTimeout(() => {
           this.dispatch("filesAdded", { files: files, skippedFiles: filesSkipped });
         }, 0);
@@ -1021,13 +1073,17 @@ export class Resumable implements EventTarget {
       const fileName = file.name;
       const fileType = file.type;
 
-      if (o.fileType.length > 0) {
+      if (options.fileType.length > 0) {
         let fileTypeFound = false;
-        for (const index in o.fileType) {
-          const typeDef = o.fileType[index].replace(/\s/g, "").toLowerCase();
+        for (const index in options.fileType) {
+          // For good behaviour we do some inital sanitizing. Remove spaces and lowercase all
+          const typeDef = options.fileType[index].replace(/\s/g, "").toLowerCase();
+          // Allowing for both [extension, .extension, mime/type, mime/*]
           let extension = typeDef.match(/^[^.][^/]+$/) ? "." + typeDef : typeDef;
+
           if (
             fileName.substr(-1 * extension.length).toLowerCase() === extension ||
+            //If MIME type, check for wildcard or if extension matches the files tiletype
             (extension.indexOf("/") !== -1 &&
               ((extension.indexOf("*") !== -1 &&
                 fileType.substr(0, extension.indexOf("*")) ===
@@ -1039,17 +1095,23 @@ export class Resumable implements EventTarget {
           }
         }
         if (!fileTypeFound) {
-          o.fileTypeErrorCallback(file, errorCount++);
+          options.fileTypeErrorCallback(file, errorCount++);
           continue;
         }
       }
 
-      if (file.size < o.minFileSize) {
-        o.minFileSizeErrorCallback(file, errorCount++);
+      if (file.size < (options.minFileSize as number)) {
+        (options.minFileSizeErrorCallback as (file: File, errorCount: number) => void)(
+          file,
+          errorCount++,
+        );
         continue;
       }
-      if (file.size > o.maxFileSize) {
-        o.maxFileSizeErrorCallback(file, errorCount++);
+      if (file.size > (options.maxFileSize as number)) {
+        (options.maxFileSizeErrorCallback as (file: File, errorCount: number) => void)(
+          file,
+          errorCount++,
+        );
         continue;
       }
 
@@ -1069,14 +1131,17 @@ export class Resumable implements EventTarget {
         decreaseRemaining();
       };
 
+      // directories have size == 0
       const uniqueIdentifier = helpers.generateUniqueIdentifier(file, event);
       const customGenerator = this.getOpt("generateUniqueIdentifier");
 
       if (typeof customGenerator === "function") {
         const result = customGenerator(file, event);
         if (result && typeof (result as any).then === "function") {
+          // Promise or Promise-like object provided as unique identifier
           (result as Promise<string>).then(addFile).catch(decreaseRemaining);
         } else {
+          // non-Promise provided as unique identifier, process synchronously
           addFile(result as string);
         }
       } else {
@@ -1087,6 +1152,10 @@ export class Resumable implements EventTarget {
 
   uploadNextChunk(): boolean {
     let found = false;
+
+    // In some cases (such as videos) it's really handy to upload the first
+    // and last chunk of a file quickly; this let's the server check the file's
+    // metadata and determine if there's even a point in continuing.
     if (this.getOpt("prioritizeFirstAndLastChunk")) {
       for (const file of this.files) {
         if (
@@ -1107,18 +1176,17 @@ export class Resumable implements EventTarget {
         }
       }
     }
+
+    // Now, simply look for the next, best thing to upload
     for (const file of this.files) {
       found = file.upload();
       if (found) return true;
     }
-    let outstanding = false;
-    for (const file of this.files) {
-      if (!file.isComplete()) {
-        outstanding = true;
-        break;
-      }
-    }
+
+    // The are no more outstanding chunks to upload, check is everything is done
+    const outstanding = this.files.some((file) => !file.isComplete());
     if (!outstanding) this.dispatch("complete");
+
     return false;
   }
 
@@ -1133,7 +1201,10 @@ export class Resumable implements EventTarget {
    * Start or resume uploading.
    */
   upload(): void {
+    // Make sure we don't start too many uploads at once
     if (this.isUploading()) return;
+
+    // Kick off the queue
     this.dispatch("uploadStart");
     for (let num = 1; num <= (this.getOpt("simultaneousUploads") as number); num++) {
       this.uploadNextChunk();
@@ -1187,7 +1258,7 @@ export class Resumable implements EventTarget {
   }
 
   /**
-   * Cancel upload of a specific `ResumableFile` object on the list from the list.
+   * Remove a specific `ResumableFile` object from the list.
    */
   removeFile(file: ResumableFile): void {
     for (let i = this.files.length - 1; i >= 0; i--) {
@@ -1199,11 +1270,7 @@ export class Resumable implements EventTarget {
    * Look up a `ResumableFile` object by its unique identifier.
    */
   getFromUniqueIdentifier(uniqueIdentifier: string): ResumableFile | false {
-    let returnValue: ResumableFile | false = false;
-    for (const file of this.files) {
-      if (file.uniqueIdentifier === uniqueIdentifier) returnValue = file;
-    }
-    return returnValue;
+    return this.files.find((file) => file.uniqueIdentifier === uniqueIdentifier) || false;
   }
 
   /**

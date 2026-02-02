@@ -2,7 +2,8 @@ import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
-import type { AgglomerateMapping } from "./agglomerate_mapping_helper";
+import { serializeAdjacencyList, type AgglomerateMapping } from "./agglomerate_mapping_helper";
+import DiffableMap from "libs/diffable_map";
 
 type RenderFormat = "dot" | "svg" | "png";
 
@@ -19,29 +20,29 @@ export class MappingVisualizer {
   }
 
   renderVersion(version: number, options: RenderOptions = {}): void {
-    const { outputPath = `mapping_v${version}.svg`, format = "svg", rankdir = "LR" } = options;
-
-    const dot = this.buildDot(version, rankdir);
+    const { outputPath = `version_${version}.json`, format = "json", rankdir = "LR" } = options;
 
     const outDir = path.dirname(outputPath);
     if (outDir && outDir !== ".") {
       mkdirSync(outDir, { recursive: true });
     }
-
-    if (format === "dot") {
-      writeFileSync(outputPath, dot, "utf8");
+    if (format === "json") {
+      const json = this.buildJson(version);
+      writeFileSync("./visualizer/data/" + outputPath, json, "utf8");
       return;
+    } else {
+      const dot = this.buildDot(version, rankdir);
+
+      const dotPath = outputPath.replace(/\.(svg|png)$/, ".dot");
+      writeFileSync(dotPath, dot, "utf8");
+
+      execSync(`dot -T${format} "${dotPath}" -o "${outputPath}" && rm "${dotPath}"`);
     }
-
-    const dotPath = outputPath.replace(/\.(svg|png)$/, ".dot");
-    writeFileSync(dotPath, dot, "utf8");
-
-    execSync(`dot -T${format} "${dotPath}" -o "${outputPath}" && rm "${dotPath}"`);
   }
 
   /* ---------------- internal ---------------- */
 
-  private buildDot(version: number, rankdir: "TB" | "LR"): string {
+  private buildJson(version: number): string {
     const versionMap = this.mapping.getMap(version);
 
     const adjacencyList: Map<number, Set<number>> = this.mapping.getAdjacencyList(version);
@@ -49,6 +50,28 @@ export class MappingVisualizer {
     if (!adjacencyList) {
       throw new Error("MappingVisualizer requires access to adjacencyList (test-only).");
     }
+
+    const storeState = this.backendMock.getState(version);
+
+    return JSON.stringify(
+      {
+        version,
+        versionMap: Object.fromEntries(Array.from(versionMap.entries())),
+        adjacencyList: serializeAdjacencyList(adjacencyList),
+        storeState,
+      },
+      (key, value) => {
+        if (value instanceof DiffableMap) {
+          return Array.from(value.entries());
+        }
+        return value;
+      },
+    );
+  }
+
+  private buildDot(version: number, rankdir: "TB" | "LR"): string {
+    const versionMap = this.mapping.getMap(version);
+    const storeState = this.backendMock.getState(version);
 
     // group segmentIds by componentId
     const components = new Map<number, number[]>();
@@ -61,12 +84,6 @@ export class MappingVisualizer {
 
     lines.push("digraph G {");
 
-    // lines.push(`  label="${updateAction}";`);
-    // lines.push(`  labelloc="t";`);
-    // lines.push(`  labeljust="l";`);
-    // lines.push(`  fontsize=14;`);
-    // lines.push(`  margin=0.3;`);
-
     lines.push(`  rankdir=${rankdir};`);
     lines.push("  compound=true;");
     lines.push("  node [shape=circle, fontsize=10, style=filled];");
@@ -75,9 +92,7 @@ export class MappingVisualizer {
 
     // clusters per component
     for (const [componentId, segmentIds] of components.entries()) {
-      const segmentItem = this.backendMock
-        .getState(version)
-        .annotation.volumes[0].segments.getNullable(componentId);
+      const segmentItem = storeState.annotation.volumes[0].segments.getNullable(componentId);
       const color = segmentItem != null ? "#7ce468" : "#000000";
       lines.push(`  subgraph cluster_${componentId} {`);
       lines.push(`    label="Agglomerate ${componentId}";`);

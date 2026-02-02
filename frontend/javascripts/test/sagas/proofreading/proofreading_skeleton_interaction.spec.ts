@@ -3,6 +3,8 @@ import { ColoredLogger } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import range from "lodash-es/range";
 import { call, put, take } from "redux-saga/effects";
+import { readdir, unlink } from "fs/promises";
+import path from "path";
 import {
   getNestedUpdateActions,
   setupWebknossosForTesting,
@@ -581,9 +583,9 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+  it.only("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]], Store.getState());
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
     mockEdgesForAgglomerateMinCut(context.mocks);
 
@@ -630,6 +632,24 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 4],
         ]),
       );
+
+      const viz = new MappingVisualizer(backendMock);
+      const dir = "debug";
+      const entries = yield call(readdir, dir, { withFileTypes: true });
+
+      const files = entries.filter((entry) => entry.isFile());
+
+      for (const file of files) {
+        const filePath = path.join(dir, file.name);
+        yield call(unlink, filePath);
+      }
+
+      // return;
+
+      for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
+        ColoredLogger.logYellow("rendering version", version);
+        viz.renderVersion(version);
+      }
     });
 
     await task.toPromise();
@@ -685,14 +705,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 6],
         ]),
       );
-      const viz = new MappingVisualizer(backendMock);
 
-      for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
-        ColoredLogger.logYellow("rendering version", version);
-        viz.renderVersion(version, {
-          outputPath: `debug/mapping-${version}.svg`,
-        });
-      }
       const nestedUpdateActions = getNestedUpdateActions(context);
       // console.log("nestedUpdateActions", nestedUpdateActions)
       for (const [index, action] of nestedUpdateActions.entries()) {

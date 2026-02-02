@@ -177,14 +177,6 @@ describe("Proofreading (Single User)", () => {
           },
         },
       ]);
-
-      // const viz = new MappingVisualizer(backendMock);
-
-      // for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
-      //   viz.renderVersion(version, {
-      //     outputPath: `debug/mapping-${version}.svg`,
-      //   });
-      // }
     });
 
     await task.toPromise();

@@ -962,14 +962,6 @@ describe("Proofreading (Multi User)", () => {
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      // const viz = new MappingVisualizer(backendMock);
-
-      // for (const version of _.range(backendMock.agglomerateMapping.currentVersion + 1)) {
-      //   viz.renderVersion(version, {
-      //     outputPath: `debug/mapping-${version}.svg`,
-      //   });
-      // }
-
       const backendState = backendMock.getState()!;
       const frontendState = Store.getState();
 

@@ -1,11 +1,9 @@
 import { Button, Dropdown, type MenuProps, Space } from "antd";
-import * as Utils from "libs/utils";
-import { useCallback } from "react";
-
 import { useWkSelector } from "libs/react_hooks";
+import capitalize from "lodash-es/capitalize";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { type ViewMode, ViewModeValues } from "viewer/constants";
-import constants from "viewer/constants";
+import constants, { type ViewMode, ViewModeValues } from "viewer/constants";
 import {
   setFlightmodeRecordingAction,
   setViewModeAction,
@@ -59,7 +57,7 @@ function ViewModesView() {
       type: "group",
       label: "Select View Mode",
       children: ViewModeValues.map((mode) => ({
-        label: Utils.capitalize(mode),
+        label: capitalize(mode),
         key: mode,
         disabled: isDisabled(mode),
         icon: <span style={{ marginRight: 8 }}>{VIEW_MODE_TO_ICON[mode]}</span>,

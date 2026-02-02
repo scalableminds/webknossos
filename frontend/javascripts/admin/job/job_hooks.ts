@@ -1,15 +1,15 @@
 import { getJob, getJobs } from "admin/rest_api";
 import features from "features";
 import { useEffectOnlyOnce, usePolling } from "libs/react_hooks";
-import _ from "lodash";
+import noop from "lodash-es/noop";
 import { useState } from "react";
 import type { APIJob } from "types/api_types";
 
 type JobInfo = [jobKey: string, jobId: string];
 
 export function useStartAndPollJob({
-  onSuccess = _.noop,
-  onFailure = _.noop,
+  onSuccess = noop,
+  onFailure = noop,
   initialJobKeyExtractor,
   interval = 2000,
 }: {

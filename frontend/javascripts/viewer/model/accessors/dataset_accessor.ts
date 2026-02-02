@@ -2,22 +2,35 @@ import ErrorHandling from "libs/error_handling";
 import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
-import _ from "lodash";
+import flattenDeep from "lodash-es/flattenDeep";
+import intersection from "lodash-es/intersection";
+import max from "lodash-es/max";
+import maxBy from "lodash-es/maxBy";
+import memoize from "lodash-es/memoize";
+import uniqBy from "lodash-es/uniqBy";
+import uniqWith from "lodash-es/uniqWith";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type {
+  AdditionalAxis,
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
   APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
-  AdditionalAxis,
   ElementClass,
 } from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
-import { LongUnitToShortUnitMap, Unicode, type Vector3, type ViewMode } from "viewer/constants";
-import constants, { ViewModeValues, Vector3Indices, MappingStatusEnum } from "viewer/constants";
+import constants, {
+  LongUnitToShortUnitMap,
+  MappingStatusEnum,
+  Unicode,
+  type Vector3,
+  Vector3Indices,
+  type ViewMode,
+  ViewModeValues,
+} from "viewer/constants";
 import type {
   ActiveMappingInfo,
   BoundingBoxObject,
@@ -28,7 +41,7 @@ import type {
 } from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
-import { MagInfo, convertToDenseMags } from "../helpers/mag_info";
+import { convertToDenseMags, MagInfo } from "../helpers/mag_info";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 const { ThinSpace } = Unicode;
@@ -39,7 +52,7 @@ function _getMagInfo(magnifications: Array<{ mag: Vector3 }>): MagInfo {
 
 // Don't use memoizeOne here, since we want to cache the mags for all layers
 // (which are not that many).
-export const getMagInfo = _.memoize(_getMagInfo);
+export const getMagInfo = memoize(_getMagInfo);
 
 function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   const infos: Record<string, MagInfo> = {};
@@ -51,7 +64,7 @@ function _getMagInfoByLayer(dataset: APIDataset): Record<string, MagInfo> {
   return infos;
 }
 
-export const getMagInfoByLayer = _.memoize(_getMagInfoByLayer);
+export const getMagInfoByLayer = memoize(_getMagInfoByLayer);
 
 export function getDenseMagsForLayerName(dataset: APIDataset, layerName: string) {
   return getMagInfoByLayer(dataset)[layerName].getDenseMags();
@@ -84,7 +97,7 @@ export const getMagnificationUnion = memoizeOne((dataset: APIDataset): Array<Vec
 
   for (const keyStr of Object.keys(magUnionDict)) {
     const key = Number(keyStr);
-    magUnionDict[key] = _.uniqWith(magUnionDict[key], V3.isEqual);
+    magUnionDict[key] = uniqWith(magUnionDict[key], V3.isEqual);
   }
 
   const keys = Object.keys(magUnionDict)
@@ -99,7 +112,7 @@ export function getWidestMags(dataset: APIDataset): Vector3[] {
     convertToDenseMags(layer.mags.map((magObj) => magObj.mag)),
   );
 
-  return _.maxBy(allLayerMags, (mags) => mags.length) || [];
+  return maxBy(allLayerMags, (mags) => mags.length) || [];
 }
 
 export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInfo => {
@@ -122,7 +135,7 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
 
   const maxZoomstep = Math.max(
     minimumZoomStepCount,
-    _.max(_.flattenDeep(getMagnificationUnion(dataset))) || minimumZoomStepCount,
+    max(flattenDeep(getMagnificationUnion(dataset))) || minimumZoomStepCount,
   );
 
   return maxZoomstep;
@@ -152,7 +165,7 @@ export function getLayerByName(
   alsoMatchFallbackLayer: boolean = false,
 ): DataLayerType {
   const dataLayers = getDataLayers(dataset);
-  const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
+  const hasUniqueNames = uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
   const layer = dataLayers.find(
     (l) =>
@@ -307,11 +320,7 @@ export function getDatasetExtentAsString(
     formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
   );
 }
-function getDatasetExtentAsProduct(extent: {
-  width: number;
-  height: number;
-  depth: number;
-}) {
+function getDatasetExtentAsProduct(extent: { width: number; height: number; depth: number }) {
   return extent.width * extent.height * extent.depth;
 }
 export function getDatasetExtentInVoxelAsProduct(dataset: APIDataset) {
@@ -326,7 +335,7 @@ export function determineAllowedModes(settings?: Settings): {
 } {
   // The order of allowedModes should be independent from the server and instead be similar to ViewModeValues
   const allowedModes = settings
-    ? _.intersection(ViewModeValues, settings.allowedModes)
+    ? intersection(ViewModeValues, settings.allowedModes)
     : ViewModeValues;
   let preferredMode = null;
 
@@ -593,9 +602,7 @@ export const getEnabledColorLayers = memoizeOne(_getEnabledColorLayers);
 export function getThumbnailURL(dataset: APIDataset): string {
   const layers = dataset.dataSource.dataLayers;
 
-  const colorLayer = _.find(layers, {
-    category: "color",
-  });
+  const colorLayer = layers.find((l) => l.category === "color");
 
   if (colorLayer) {
     return `/api/datasets/${dataset.id}/layers/${colorLayer.name}/thumbnail`;
@@ -750,6 +757,12 @@ export function getReadableURLPart(
   dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
 ) {
   return `${getURLSanitizedName(dataset)}-${dataset.id}`;
+}
+
+export function getViewDatasetURL(
+  dataset: APIDataset | APIDatasetCompact | { name: string; id: string },
+) {
+  return `/datasets/${getReadableURLPart(dataset)}/view`;
 }
 
 export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) {

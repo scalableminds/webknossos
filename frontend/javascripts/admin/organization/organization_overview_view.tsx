@@ -7,10 +7,10 @@ import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/form
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { type Key, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import type { APIPricingPlanStatus } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { Store } from "viewer/singletons";
 import { SettingsCard, type SettingsCardProps } from "../account/helpers/settings_card";
 import {
   PlanAboutToExceedAlert,
@@ -18,12 +18,13 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
-import { PricingPlanEnum, getActiveUserCount } from "./pricing_plan_utils";
+import { getActiveUserCount, PricingPlanEnum } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
 
 export function OrganizationOverviewView() {
+  const dispatch = useDispatch();
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
@@ -57,7 +58,7 @@ export function OrganizationOverviewView() {
       newOrgaName,
       organization.newUserMailingList,
     );
-    Store.dispatch(setActiveOrganizationAction(updatedOrganization));
+    dispatch(setActiveOrganizationAction(updatedOrganization));
   }
 
   const maxUsersCountLabel =

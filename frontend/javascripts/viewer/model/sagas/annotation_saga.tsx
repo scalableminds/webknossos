@@ -2,8 +2,8 @@ import type { EditableAnnotation } from "admin/rest_api";
 import { editAnnotation } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { hasUrlParam } from "libs/utils";
+import mapValues from "lodash-es/mapValues";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";
@@ -58,7 +58,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   // viewConfiguration.
   const { layers } = yield* select((state) => state.datasetConfiguration);
   const viewConfiguration = {
-    layers: _.mapValues(layers, (layer) => ({
+    layers: mapValues(layers, (layer) => ({
       isDisabled: layer.isDisabled,
     })),
   };
@@ -102,7 +102,7 @@ function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Sag
 }
 
 export function* checkVersionRestoreParam(): Saga<void> {
-  const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
+  const showVersionRestore = yield* call(hasUrlParam, "showVersionRestore");
 
   if (showVersionRestore) {
     yield* put(setVersionRestoreVisibilityAction(true));

@@ -7,7 +7,7 @@ import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { MathUtils, Matrix4 } from "three";
@@ -80,7 +80,7 @@ import {
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import {
@@ -95,7 +95,7 @@ import {
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
-import { MutexFetchingStrategy, getCurrentMutexFetchingStrategy } from "./saving/save_mutex_saga";
+import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "./saving/save_mutex_saga";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
   // In orthogonal view mode, the active planes' default rotation is added to the flycam rotation upon node creation.
@@ -335,10 +335,10 @@ export function* getAgglomerateSkeletonTracing(
 
     return parsedTracing;
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
-      // @ts-ignore
+      // @ts-expect-error
       const agglomerateTooLargeMessages = e.messages
         .filter(
           (message: Message) =>
@@ -350,7 +350,7 @@ export function* getAgglomerateSkeletonTracing(
 
       if (agglomerateTooLargeMessages.length > 0) {
         throw {
-          // @ts-ignore
+          // @ts-expect-error
           ...e,
           messages: [
             {
@@ -461,7 +461,7 @@ export function* loadAgglomerateSkeletonWithId(
       yield* call([Model, Model.ensureSavedState]);
     }
 
-    // @ts-ignore TS infers usedTreeIds to be never, but it should be number[] if its not null
+    // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
     if (usedTreeIds == null || usedTreeIds.length !== 1) {
       throw new Error(
         "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
@@ -471,7 +471,7 @@ export function* loadAgglomerateSkeletonWithId(
     // TODOM: release mutex
     // Hide the progress notification and handle the error
     hideFn();
-    // @ts-ignore
+    // @ts-expect-error
     handleAgglomerateLoadingError(e);
     return null;
   }
@@ -501,7 +501,7 @@ function* loadConnectomeAgglomerateSkeletonWithId(
       addConnectomeTreesAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
     );
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     handleAgglomerateLoadingError(e);
   }
 }
@@ -579,7 +579,7 @@ function* diffNodes(
 }
 
 export function updateNodePredicate(prevNode: Node, node: Node): boolean {
-  return !_.isEqual(prevNode, node);
+  return !isEqual(prevNode, node);
 }
 
 function* diffEdges(
@@ -622,16 +622,16 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
   // if one of them is empty; thus, resulting in new instances).
   const doDifferShallowly =
     doPrimitivesDiffer ||
-    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
-    !_.isEqual(prevTree.comments, tree.comments);
+    !isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    !isEqual(prevTree.comments, tree.comments);
   if (!useDeepEqualityCheck) {
     return doDifferShallowly;
   }
   // If doing a deep diff, we also want to deep diff the missing property arrays color and metadata.
   return (
     doDifferShallowly ||
-    !_.isEqual(prevTree.color, tree.color) ||
-    !_.isEqual(prevTree.metadata, tree.metadata)
+    !isEqual(prevTree.color, tree.color) ||
+    !isEqual(prevTree.metadata, tree.metadata)
   );
 }
 

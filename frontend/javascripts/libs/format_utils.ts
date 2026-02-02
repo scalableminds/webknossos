@@ -2,6 +2,7 @@ import { presetPalettes } from "@ant-design/colors";
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import type { Duration } from "dayjs/plugin/duration";
 import duration from "dayjs/plugin/duration";
 import localeData from "dayjs/plugin/localeData";
 import localizedFormat from "dayjs/plugin/localizedFormat";
@@ -9,14 +10,17 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
-import * as Utils from "libs/utils";
-import _ from "lodash";
-import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
-import { Unicode } from "viewer/constants";
-
-import type { Duration } from "dayjs/plugin/duration";
+import memoize from "lodash-es/memoize";
 import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_types";
+import {
+  LongUnitToShortUnitMap,
+  Unicode,
+  UnitShort,
+  type Vector3,
+  type Vector6,
+} from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
+import { hexToRgb, map3, roundTo } from "./utils";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -105,20 +109,20 @@ function getFactorToNextSmallestCommonUnit(
 }
 
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
-const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
+const COLOR_MAP_ANTD = Object.keys(presetPalettes);
 export function stringToColor(string: string): string {
   const hash = hashString(string, COLOR_MAP.length);
   return COLOR_MAP[hash];
 }
-export function stringToAntdColorPreset(string: string): string {
+export function stringToAntdColorPreset(string: string): keyof typeof presetPalettes {
   const hash = hashString(string, COLOR_MAP_ANTD.length);
   return COLOR_MAP_ANTD[hash];
 }
 export function stringToAntdColorPresetRgb(string: string): Vector3 {
   const presetString = stringToAntdColorPreset(string);
   // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
-  return Utils.hexToRgb(presetPalettes[presetString].primary);
+  // @ts-expect-error
+  return hexToRgb(presetPalettes[presetString].primary);
 }
 
 function hashString(string: string, max: number): number {
@@ -133,13 +137,16 @@ function hashString(string: string, max: number): number {
 
 export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | undefined) {
   if (tuple != null && tuple.length > 0) {
-    const tupleRounded = tuple.map((value) => Utils.roundTo(value, 2));
+    const tupleRounded = tuple.map((value) => roundTo(value, 2));
     return `(${tupleRounded.join(", ")})`;
   } else {
     return "";
   }
 }
-export function formatScale(scale: VoxelSize | null | undefined, roundTo: number = 2): string {
+export function formatScale(
+  scale: VoxelSize | null | undefined,
+  roundToDigits: number = 2,
+): string {
   if (scale == null) {
     return "";
   }
@@ -151,10 +158,10 @@ export function formatScale(scale: VoxelSize | null | undefined, roundTo: number
     unitDimension,
     nmFactorToUnit,
     false,
-    roundTo,
+    roundToDigits,
   );
-  const scaleInNmRounded = Utils.map3(
-    (value) => Utils.roundTo(value / conversionFactor, roundTo),
+  const scaleInNmRounded = map3(
+    (value) => roundTo(value / conversionFactor, roundToDigits),
     scaleFactor,
   );
   return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/Vx`;
@@ -345,7 +352,7 @@ export function formatCountToDataAmountUnit(
   );
 }
 
-const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
+const getSortedFactorsAndUnits = memoize((unitMap: Map<number, string>) =>
   Array.from(unitMap.entries()).sort((a, b) => a[0] - b[0]),
 );
 
@@ -397,12 +404,12 @@ function findBestUnitForFormatting(
   }
   return [closestConversionFactor, closestUnit];
 }
-export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {
-  const roundedLength = Utils.roundTo(lengthInVx, roundTo);
+export function formatLengthAsVx(lengthInVx: number, roundToDigits: number = 2): string {
+  const roundedLength = roundTo(lengthInVx, roundToDigits);
   return `${roundedLength}${ThinSpace}Vx`;
 }
-export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
-  return `${formatLengthAsVx(areaInVx, roundTo)}²`;
+export function formatAreaAsVx(areaInVx: number, roundToDigits: number = 2): string {
+  return `${formatLengthAsVx(areaInVx, roundToDigits)}²`;
 }
 export function formatExtentInUnitWithLength(
   extent: BoundingBoxObject,
@@ -583,8 +590,4 @@ export function formatMilliCreditsString(credits: number): string {
   const paddedMillis = millis.padStart(3, "0");
   const paddedMillisWithoutTrailingZeros = paddedMillis.replace(/0+$/, "");
   return `${fullCredits}.${paddedMillisWithoutTrailingZeros}`;
-}
-
-export function formatCurrency(amount: number, currency: string): string {
-  return `${amount.toFixed(2)}${ThinSpace}${currency}`;
 }

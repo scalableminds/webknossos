@@ -1,4 +1,4 @@
-import _ from "lodash";
+import min from "lodash-es/min";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "viewer/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "viewer/constants";
@@ -59,7 +59,7 @@ export class AbstractPrefetchStrategy {
         bucket[this.v] += v;
 
         // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-        if (_.min(bucket) >= 0) {
+        if (min(bucket) >= 0) {
           buckets.push(bucket);
         }
       }

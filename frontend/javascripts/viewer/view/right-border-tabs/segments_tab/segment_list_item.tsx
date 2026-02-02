@@ -7,11 +7,8 @@ import {
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
 import { App, Checkbox, List, type MenuProps } from "antd";
-import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
-import React from "react";
-import { useDispatch } from "react-redux";
-
 import type { MenuItemType } from "antd/es/menu/interface";
+import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import classnames from "classnames";
 import {
   ChangeColorMenuItemContent,
@@ -21,9 +18,10 @@ import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import type { APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import { take3 } from "libs/utils";
+import React from "react";
+import { useDispatch } from "react-redux";
+import type { AdditionalCoordinate, APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
 import { getSegmentIdForPosition } from "viewer/controller/combinations/volume_handlers";
@@ -281,7 +279,7 @@ function _MeshInfoItem(props: {
           if (!props.visibleSegmentationLayer) {
             return;
           }
-          Store.dispatch(
+          dispatch(
             triggerMeshDownloadAction(
               segment.name ? segment.name : "mesh",
               segment.id,
@@ -292,6 +290,7 @@ function _MeshInfoItem(props: {
       />
     </FastTooltip>
   );
+
   const deleteButton = (
     <FastTooltip title="Remove Mesh">
       <DeleteOutlined
@@ -301,11 +300,12 @@ function _MeshInfoItem(props: {
             return;
           }
 
-          Store.dispatch(removeMeshAction(props.visibleSegmentationLayer.name, segment.id));
+          dispatch(removeMeshAction(props.visibleSegmentationLayer.name, segment.id));
         }}
       />
     </FastTooltip>
   );
+
   const toggleVisibilityCheckbox = (
     <FastTooltip title="Change visibility of mesh">
       <Checkbox
@@ -325,6 +325,7 @@ function _MeshInfoItem(props: {
     </FastTooltip>
   );
   const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
+
   return (
     <div
       style={{
@@ -363,7 +364,11 @@ function _MeshInfoItem(props: {
             marginLeft: 6,
           }}
         >
-          {getRefreshButton(segment, isLoading, props.visibleSegmentationLayer)}
+          <RefreshButton
+            segment={segment}
+            isLoading={isHovered}
+            visibleSegmentationLayer={props.visibleSegmentationLayer}
+          />
           {downloadButton}
           {deleteButton}
         </div>
@@ -496,7 +501,7 @@ function _SegmentListItem({
                   createsNewUndoState,
                 );
               }}
-              rgb={Utils.take3(segmentColorRGBA)}
+              rgb={take3(segmentColorRGBA)}
             />
           ),
         },
@@ -687,11 +692,16 @@ function _SegmentListItem({
 
 const SegmentListItem = React.memo<Props>(_SegmentListItem);
 
-function getRefreshButton(
-  segment: Segment,
-  isLoading: boolean,
-  visibleSegmentationLayer: APISegmentationLayer | null | undefined,
-) {
+const RefreshButton = ({
+  segment,
+  isLoading,
+  visibleSegmentationLayer,
+}: {
+  segment: Segment;
+  isLoading: boolean;
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+}) => {
+  const dispatch = useDispatch();
   if (isLoading) {
     return (
       <LoadingOutlined
@@ -701,27 +711,27 @@ function getRefreshButton(
             return;
           }
 
-          Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
+          dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
         }}
       />
     );
-  } else {
-    return (
-      <FastTooltip title="Refresh Mesh">
-        <ReloadOutlined
-          key="refresh-button"
-          onClick={() => {
-            if (!visibleSegmentationLayer) {
-              return;
-            }
-
-            Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
-          }}
-        />
-      </FastTooltip>
-    );
   }
-}
+
+  return (
+    <FastTooltip title="Refresh Mesh">
+      <ReloadOutlined
+        key="refresh-button"
+        onClick={() => {
+          if (!visibleSegmentationLayer) {
+            return;
+          }
+
+          dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
+        }}
+      />
+    </FastTooltip>
+  );
+};
 
 function getComputeMeshAdHocTooltipInfo(
   isForCenteredSegment: boolean,

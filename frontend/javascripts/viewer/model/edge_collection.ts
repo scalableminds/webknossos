@@ -1,6 +1,5 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { diffArrays, diffNumberArrays } from "libs/utils";
 import type { Edge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;
@@ -182,7 +181,7 @@ export function diffEdgeCollections(
   );
 
   const getEdgesForNodes = (nodeIds: number[], diffableMap: EdgeMap) =>
-    _.flatten(nodeIds.map((nodeId) => diffableMap.getOrThrow(nodeId)));
+    nodeIds.flatMap((nodeId) => diffableMap.getOrThrow(nodeId));
 
   const edgeDiff = {
     onlyA: getEdgesForNodes(mapDiff.onlyA, edgeCollectionA.outMap),
@@ -197,8 +196,8 @@ export function diffEdgeCollections(
     if (useDeepEqualityCheck) {
       // In case of a deep equality check, we diff by outgoing edges.
       // The edges are then recreated based on the returned diff.
-      // If in some later time instance equality is needed, this should be fairly easy to implement here.
-      const targetDiff = Utils.diffNumberArrays(
+      // If in some later time instance equality is needed, thi should be fairly easy to implement here.
+      const targetDiff = diffNumberArrays(
         edgeCollectionA.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
         edgeCollectionB.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
       );
@@ -207,7 +206,7 @@ export function diffEdgeCollections(
         onlyB: targetDiff.onlyB.map((target) => ({ source: changedNodeIndex, target })),
       };
     } else {
-      outgoingEdgesDiff = Utils.diffArrays(
+      outgoingEdgesDiff = diffArrays(
         edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
         edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
       );

@@ -1,8 +1,9 @@
 package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, TextUtils}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat.LayerAttachmentDataformat
@@ -24,12 +25,14 @@ import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIden
 import controllers.{
   ReserveAttachmentUploadToPathRequest,
   ReserveDatasetUploadToPathsForPreliminaryRequest,
-  ReserveDatasetUploadToPathsRequest
+  ReserveDatasetUploadToPathsRequest,
+  ReserveMagUploadToPathRequest
 }
 import models.organization.OrganizationDAO
 import models.user.User
 import play.api.i18n.MessagesProvider
 import utils.WkConf
+import security.RandomIDGenerator
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -40,6 +43,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                             dataStoreDAO: DataStoreDAO,
                                             layerToLinkService: LayerToLinkService,
                                             datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                            datasetMagsDAO: DatasetMagsDAO,
                                             conf: WkConf)
     extends FoxImplicits
     with DataSourceValidation {
@@ -73,8 +77,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         newDatasetId,
         parameters.datasetName,
         dataSourceWithLayersToLink.toUnusableWithStatus(DataSourceStatus.notYetUploadedToPaths),
-        None,
-        isVirtual = true
+        isVirtual = true,
+        creationType = DatasetCreationType.UploadToPaths
       )
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
@@ -212,6 +216,9 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
 
+  private def generateMagPath(mag: Vec3Int, layerPath: UPath): UPath =
+    layerPath / f"${mag.toMagLiteral(allowScalar = true)}__${RandomIDGenerator.generateBlocking(12)}"
+
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
       implicit ec: ExecutionContext,
       mp: MessagesProvider): Fox[UPath] =
@@ -226,7 +233,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
       uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.directoryName, dataset._id)
+      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       attachmentPath = generateAttachmentPath(parameters.attachmentName,
                                               parameters.attachmentDataformat,
@@ -239,4 +246,43 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                                     parameters.attachmentDataformat,
                                                     attachmentPath)
     } yield attachmentPath
+
+  def reserveMagUploadToPath(dataset: Dataset, parameters: ReserveMagUploadToPathRequest)(
+      implicit ec: ExecutionContext,
+      mp: MessagesProvider): Fox[UPath] =
+    for {
+      _ <- datasetService.usableDataSourceFor(dataset)
+      _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
+      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
+      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
+      magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)
+      _ <- datasetMagsDAO.insertPending(dataset._id,
+                                        parameters.layerName,
+                                        parameters.mag,
+                                        parameters.axisOrder,
+                                        parameters.channelIndex,
+                                        magPath)
+    } yield magPath
+
+  private def handleExistingPendingMagIfExists(dataset: Dataset,
+                                               layerName: String,
+                                               mag: Vec3Int,
+                                               overwritePending: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      existingMagLocatorPathBox <- datasetMagsDAO.findPendingMagLocatorPath(dataset._id, layerName, mag).shiftBox
+      _ <- existingMagLocatorPathBox match {
+        case Full(existingMagLocatorPath) =>
+          if (overwritePending) {
+            for {
+              client <- datasetService.clientFor(dataset)(GlobalAccessContext)
+              _ <- client.deletePaths(Seq(existingMagLocatorPath))
+              _ <- datasetMagsDAO.deletePendingMagLocator(dataset._id, layerName, mag)
+            } yield ()
+          } else Fox.failure("dataset.reserveMagUploadToPath.exists")
+        case Empty      => Fox.successful(())
+        case f: Failure => f.toFox
+      }
+    } yield ()
+
 }

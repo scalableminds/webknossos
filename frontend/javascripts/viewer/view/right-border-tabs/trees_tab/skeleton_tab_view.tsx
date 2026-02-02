@@ -3,8 +3,8 @@ import {
   ArrowRightOutlined,
   ArrowsAltOutlined,
   DeleteOutlined,
-  DownOutlined,
   DownloadOutlined,
+  DownOutlined,
   ExclamationCircleOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -13,16 +13,25 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
+import {
+  BlobReader,
+  BlobWriter,
+  type Entry,
+  TextReader,
+  ZipReader,
+  ZipWriter,
+} from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
-import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
+import { Dropdown, Empty, type MenuProps, Modal, notification, Space, Spin, Tooltip } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import Zip from "libs/zipjs_wrapper";
-import _ from "lodash";
+import { isFileExtensionEqualTo, promiseAllWithErrors, sleep } from "libs/utils";
+import cloneDeep from "lodash-es/cloneDeep";
+import last from "lodash-es/last";
+import orderBy from "lodash-es/orderBy";
+import size from "lodash-es/size";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import React from "react";
@@ -42,8 +51,8 @@ import { addUserBoundingBoxesAction } from "viewer/model/actions/annotation_acti
 import { setVersionNumberAction } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
-  type BatchableUpdateTreeAction,
   addTreesAndGroupsAction,
+  type BatchableUpdateTreeAction,
   batchUpdateGroupsAndTreesAction,
   createTreeAction,
   deleteTreesAction,
@@ -66,10 +75,14 @@ import {
   importVolumeTracingAction,
   setLargestSegmentIdAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { getTreeEdgesAsCSV, getTreeNodesAsCSV } from "viewer/model/helpers/csv_helpers";
 import {
-  NmlParseError,
+  getTreeEdgesAsCSV,
+  getTreeNodesAsCSV,
+  getTreesAsCSV,
+} from "viewer/model/helpers/csv_helpers";
+import {
   getNmlName,
+  NmlParseError,
   parseNml,
   serializeToNml,
   wrapInNewGroup,
@@ -77,19 +90,18 @@ import {
 import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { MutableTreeMap, Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
-import { Model } from "viewer/singletons";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import TreeHierarchyView from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
   additionallyExpandGroup,
   callDeep,
   createGroupToParentMap,
   createGroupToTreesMap,
+  GroupTypeEnum,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -161,7 +173,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw error;
         }
 
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
         return undefined;
       }
@@ -187,7 +199,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           ),
         };
       } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
         return undefined;
       }
@@ -198,7 +210,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();
         const nmlFileEntry = entries.find((entry: Entry) =>
-          Utils.isFileExtensionEqualTo(entry.filename, "nml"),
+          isFileExtensionEqualTo(entry.filename, "nml"),
         );
 
         if (nmlFileEntry == null) {
@@ -213,7 +225,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const nmlImportActions = await tryParsingFileAsNml(nmlFile, false);
 
         const dataFileEntry = entries.find((entry: Entry) =>
-          Utils.isFileExtensionEqualTo(entry.filename, "zip"),
+          isFileExtensionEqualTo(entry.filename, "zip"),
         );
 
         if (dataFileEntry) {
@@ -253,15 +265,15 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         await reader.close();
         return nmlImportActions;
       } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as ZIP but failed. ${error.message}`);
         return undefined;
       }
     };
 
-    const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
+    const { successes: importActionsWithDatasetNames, errors } = await promiseAllWithErrors(
       files.map(async (file) => {
-        const ext = (_.last(file.name.split(".")) || "").toLowerCase();
+        const ext = (last(file.name.split(".")) || "").toLowerCase();
 
         let tryImportFunctions;
         if (ext === "nml" || ext === "xml")
@@ -292,9 +304,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     // an error
     importActionsWithDatasetNames
       .flatMap((el) => el.importActions)
-      .forEach((action) => Store.dispatch(action));
+      .forEach((action) => {
+        Store.dispatch(action);
+      });
   } catch (e) {
-    (Array.isArray(e) ? e : [e]).forEach((err) => Toast.error(err.message));
+    (Array.isArray(e) ? e : [e]).forEach((err) => {
+      Toast.error(err.message);
+    });
   }
 }
 
@@ -364,14 +380,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
           if (group.children) {
             // Groups are always sorted by name and appear before the trees
-            const sortedGroups = _.orderBy(group.children, ["name"], ["asc"]);
+            const sortedGroups = orderBy(group.children, ["name"], ["asc"]);
 
             yield* mapGroupsAndTreesSorted(sortedGroups, _groupToTreesMap, sortBy);
           }
 
           if (_groupToTreesMap[group.groupId] != null) {
             // Trees are sorted by the sortBy property
-            const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
+            const sortedTrees = orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
             yield* sortedTrees.map(makeTree);
           }
@@ -389,7 +405,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { treeGroups, trees } = this.props.skeletonTracing;
 
-    let newTreeGroups = _.cloneDeep(treeGroups);
+    let newTreeGroups = cloneDeep(treeGroups);
 
     const groupToTreesMap = createGroupToTreesMap(trees);
     let treeIdsToDelete: number[] = [];
@@ -433,7 +449,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         // Delete all trees of the current group
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
-        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+        group.children.forEach((subgroup) => {
+          findChildrenRecursively(subgroup);
+        });
       };
 
       findChildrenRecursively(item);
@@ -544,7 +562,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       isDownloadingNML: true,
     });
     // Wait 1 second for the Modal to render
-    const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
+    const [buildInfo] = await Promise.all([getBuildInfo(), sleep(1000)]);
     const state = Store.getState();
     const nml = serializeToNml(
       state,
@@ -564,6 +582,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
   handleCSVDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing, annotationId } = this.props;
+    const datasetUnit = Store.getState().dataset.dataSource.scale.unit;
 
     if (!skeletonTracing) {
       return;
@@ -574,13 +593,20 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
-      const treesCsv = getTreeNodesAsCSV(Store.getState(), skeletonTracing, applyTransforms);
+      const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
+      const nodesCsv = getTreeNodesAsCSV(
+        Store.getState(),
+        skeletonTracing,
+        applyTransforms,
+        datasetUnit,
+      );
       const edgesCsv = getTreeEdgesAsCSV(annotationId, skeletonTracing);
 
-      const blobWriter = new Zip.BlobWriter("application/zip");
-      const writer = new Zip.ZipWriter(blobWriter);
-      await writer.add("nodes.csv", new Zip.TextReader(treesCsv));
-      await writer.add("edges.csv", new Zip.TextReader(edgesCsv));
+      const blobWriter = new BlobWriter("application/zip");
+      const writer = new ZipWriter(blobWriter);
+      await writer.add("trees.csv", new TextReader(treesCsv));
+      await writer.add("nodes.csv", new TextReader(nodesCsv));
+      await writer.add("edges.csv", new TextReader(edgesCsv));
       await writer.close();
       saveAs(await blobWriter.getData(), "tree_export.zip");
     } catch (e) {
@@ -877,7 +903,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     const { showSkeletons, trees, treeGroups } = skeletonTracing;
-    const noTreesAndGroups = trees.size() === 0 && _.size(treeGroups) === 0;
+    const noTreesAndGroups = trees.size() === 0 && size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";
@@ -916,7 +942,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <Space.Compact block className="compact-wrap">
+                <Space.Compact
+                  block
+                  className="compact-wrap"
+                  style={{ marginBottom: "var(--ant-margin-sm)" }}
+                >
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}

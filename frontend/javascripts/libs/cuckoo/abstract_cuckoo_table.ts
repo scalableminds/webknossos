@@ -136,7 +136,9 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   notifySeedListeners() {
-    this.seedSubscribers.forEach((fn) => fn(this.seeds));
+    this.seedSubscribers.forEach((fn) => {
+      fn(this.seeds);
+    });
   }
 
   getUniformValues() {

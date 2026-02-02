@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  APIAiModelCategory,
   type AiModelTrainingAnnotationSpecification,
+  APIAiModelCategory,
   refreshOrganizationCredits,
   runInstanceModelTraining,
   runNeuronTraining,
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import compact from "lodash/compact";
-import every from "lodash/every";
+import compact from "lodash-es/compact";
+import every from "lodash-es/every";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
@@ -42,8 +42,8 @@ interface AiTrainingJobContextType {
   setModelName: (name: string) => void;
   comments: string;
   setComments: (comments: string) => void;
-  maxDistanceNm: number;
-  setMaxDistanceNm: (dist: number) => void;
+  instanceDiameterNm: number;
+  setInstanceDiameterNm: (dist: number) => void;
 
   selectedAnnotations: AiTrainingAnnotationSelection[];
   setSelectedAnnotations: React.Dispatch<React.SetStateAction<AiTrainingAnnotationSelection[]>>;
@@ -70,7 +70,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     [],
   );
   const [comments, setComments] = useState("");
-  const [maxDistanceNm, setMaxDistanceNm] = useState(1000.0);
+  const [instanceDiameterNm, setInstanceDiameterNm] = useState(1000.0);
 
   const dispatch = useDispatch();
 
@@ -166,7 +166,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       if (selectedJobType === APIJobCommand.TRAIN_INSTANCE_MODEL) {
         await runInstanceModelTraining({
           aiModelCategory: APIAiModelCategory.EM_NUCLEI,
-          maxDistanceNm: maxDistanceNm,
+          instanceDiameterNm: instanceDiameterNm,
           ...commonJobArgmuments,
         });
       } else {
@@ -181,7 +181,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       console.error(error);
       Toast.error("Failed to start training.");
     }
-  }, [modelName, selectedJobType, selectedAnnotations, comments, maxDistanceNm, dispatch]);
+  }, [modelName, selectedJobType, selectedAnnotations, comments, instanceDiameterNm, dispatch]);
 
   const value = {
     selectedJobType,
@@ -193,8 +193,8 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     setModelName,
     comments,
     setComments,
-    maxDistanceNm,
-    setMaxDistanceNm,
+    instanceDiameterNm,
+    setInstanceDiameterNm,
     selectedAnnotations,
     setSelectedAnnotations,
     handleSelectionChange,

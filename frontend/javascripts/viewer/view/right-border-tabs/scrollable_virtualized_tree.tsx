@@ -1,6 +1,6 @@
 import { Tree as AntdTree, type GetRef, type TreeProps } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
-import { throttle } from "lodash";
+import throttle from "lodash-es/throttle";
 import { forwardRef, useCallback, useRef } from "react";
 
 const MIN_SCROLL_SPEED = 30;

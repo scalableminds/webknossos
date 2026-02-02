@@ -1,4 +1,5 @@
-import _ from "lodash";
+import clamp from "lodash-es/clamp";
+import range from "lodash-es/range";
 import type { ElementClass } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import type { ShaderModule } from "./shader_module_system";
@@ -107,11 +108,11 @@ export const colormapJet: ShaderModule = {
 // Input in [0,1]
 // Output in [0,1] for r, g and b
 export function jsColormapJet(x: number): Vector3 {
-  const r = _.clamp(x < 0.89 ? (x - 0.35) / 0.31 : 1.0 - ((x - 0.89) / 0.11) * 0.5, 0, 1);
+  const r = clamp(x < 0.89 ? (x - 0.35) / 0.31 : 1.0 - ((x - 0.89) / 0.11) * 0.5, 0, 1);
 
-  const g = _.clamp(x < 0.64 ? (x - 0.125) * 4.0 : 1.0 - (x - 0.64) / 0.27, 0, 1);
+  const g = clamp(x < 0.64 ? (x - 0.125) * 4.0 : 1.0 - (x - 0.64) / 0.27, 0, 1);
 
-  const b = _.clamp(x < 0.34 ? 0.5 + (x * 0.5) / 0.11 : 1.0 - (x - 0.34) / 0.31, 0, 1);
+  const b = clamp(x < 0.34 ? 0.5 + (x * 0.5) / 0.11 : 1.0 - (x - 0.34) / 0.31, 0, 1);
 
   return [r, g, b];
 }
@@ -193,7 +194,7 @@ export const getElementOfPermutation: ShaderModule = {
 };
 
 export function getPermutation(sequenceLength: number, primitiveRoot: number) {
-  return _.range(sequenceLength).map((idx) =>
+  return range(sequenceLength).map((idx) =>
     jsGetElementOfPermutation(idx, sequenceLength, primitiveRoot),
   );
 }

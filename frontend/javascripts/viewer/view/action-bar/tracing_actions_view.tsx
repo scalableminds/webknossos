@@ -12,7 +12,7 @@ import {
 import { Button, Flex, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import messages from "messages";
-import * as React from "react";
+import { Fragment } from "react";
 import type { LayoutKeys } from "viewer/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "viewer/view/layouting/default_layout_configs";
 import ActionsMenu from "./actions_menu";
@@ -58,7 +58,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   } = props;
 
   const layoutMissingHelpTitle = (
-    <React.Fragment>
+    <Fragment>
       <h5
         style={{
           color: "#fff",
@@ -67,7 +67,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
         Where is my layout?
       </h5>
       <p>{messages["layouting.missing_custom_layout_info"]}</p>
-    </React.Fragment>
+    </Fragment>
   );
 
   const customLayoutsItems = storedLayoutNamesForView.map((layout) => {
@@ -87,7 +87,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
           ) : (
             <Tooltip placement="top" title="Remove this layout">
               <DeleteOutlined
-                className="clickable-icon sub-menu-item-icon"
+                className="sub-menu-item-icon"
                 onClick={() => onDeleteLayout(layout)}
               />
             </Tooltip>

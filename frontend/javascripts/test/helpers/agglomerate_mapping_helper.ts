@@ -1,4 +1,5 @@
-import _ from "lodash";
+import cloneDeep from "lodash-es/cloneDeep";
+import uniq from "lodash-es/uniq";
 
 export class AgglomerateMapping {
   /*
@@ -26,7 +27,7 @@ export class AgglomerateMapping {
     public readonly edges: Array<[number, number]>,
     initialVersion: number = 0,
   ) {
-    this.segmentIds = _.uniq(edges.flat());
+    this.segmentIds = uniq(edges.flat());
 
     this.largestMappedId = Math.max(...this.segmentIds);
     const initialVersionMap = new Map<number, number>();
@@ -156,7 +157,7 @@ export class AgglomerateMapping {
   // Returns a copy of the current adjacency list. It is a deep clone to avoid direct manipulation from outside.
   // AdjacencyList is currently unversioned.
   getAdjacencyList(): Map<number, Set<number>> {
-    return _.cloneDeep(this.adjacencyList);
+    return cloneDeep(this.adjacencyList);
   }
 
   private resetVersionCounter(initialVersion: number) {

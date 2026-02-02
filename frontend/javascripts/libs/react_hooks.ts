@@ -1,4 +1,5 @@
-import _ from "lodash";
+import debounce from "lodash-es/debounce";
+import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
@@ -37,11 +38,11 @@ export function usePrevious<T>(
 }
 
 const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => ({
-  // @ts-ignore
+  // @ts-expect-error
   Shift: event.shiftKey,
-  // @ts-ignore
+  // @ts-expect-error
   Alt: event.altKey, // This is the option key ⌥ on MacOS
-  // @ts-ignore
+  // @ts-expect-error
   ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 
@@ -161,7 +162,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: _.noop,
+    onClick: noop,
     onTouchStart,
     onTouchEnd,
   };
@@ -311,7 +312,7 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 
   const debouncedSetter = useMemo(
     () =>
-      _.debounce((val: T) => {
+      debounce((val: T) => {
         setDebouncedValue(val);
       }, delay),
     [delay],

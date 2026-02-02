@@ -2,7 +2,7 @@ import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import _ from "lodash";
+import last from "lodash-es/last";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
@@ -212,9 +212,9 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
       supportsFolders: true as const,
@@ -290,9 +290,9 @@ export default function DatasetCollectionContextProvider({
       updateDatasetMutation,
       selectedDatasets,
       globalSearchQuery,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getActiveSubfolders,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getBreadcrumbs,
       selectedFolder,
       setGlobalSearchQuery,
@@ -329,11 +329,11 @@ function useManagedUrlParams(
     const recursive = params.get("recursive");
     if (recursive != null) setSearchRecursively(recursive === "true");
 
-    const folderSpecifier = _.last(location.pathname.split("/"));
+    const folderSpecifier = last(location.pathname.split("/"));
 
     if (folderSpecifier?.includes("-")) {
       const nameChunksAndFolderId = folderSpecifier.split("-");
-      const folderId = _.last(nameChunksAndFolderId);
+      const folderId = last(nameChunksAndFolderId);
       if (folderId) {
         setActiveFolderId(folderId);
       }

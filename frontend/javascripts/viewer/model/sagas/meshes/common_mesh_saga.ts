@@ -1,18 +1,18 @@
+import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
 import ErrorHandling from "libs/error_handling";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
-import Zip from "libs/zipjs_wrapper";
 import messages from "messages";
 import type { Group } from "three";
 import { all, call, put, take, takeEvery } from "typed-redux-saga";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
+  removeMeshAction,
   type TriggerMeshDownloadAction,
   type TriggerMeshesDownloadAction,
   type UpdateMeshOpacityAction,
   type UpdateMeshVisibilityAction,
-  removeMeshAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -60,7 +60,7 @@ function* downloadMeshCellsAsZIP(
   segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
-  const zipWriter = new Zip.ZipWriter(new Zip.BlobWriter("application/zip"));
+  const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
     const addFileToZipWriterPromises = segments.map((element) => {
@@ -75,9 +75,9 @@ function* downloadMeshCellsAsZIP(
         Toast.error(errorMessage, {
           sticky: false,
         });
-        return;
+        return Promise.resolve();
       }
-      const stlDataReader = new Zip.BlobReader(getSTLBlob(geometry, element.segmentId));
+      const stlDataReader = new BlobReader(getSTLBlob(geometry, element.segmentId));
       return zipWriter.add(`${element.segmentName}-${element.segmentId}.stl`, stlDataReader);
     });
     yield all(addFileToZipWriterPromises);
@@ -150,7 +150,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<never> {
       for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
         const segmentIds = Object.keys(recordsForOneLayer);
         for (const segmentIdAsString of segmentIds) {
-          const segmentId = Number.parseInt(segmentIdAsString);
+          const segmentId = Number.parseInt(segmentIdAsString, 10);
           yield* put(
             updateMeshVisibilityAction(
               layerName,

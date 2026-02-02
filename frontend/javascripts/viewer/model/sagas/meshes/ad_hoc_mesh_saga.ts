@@ -4,12 +4,13 @@ import {
   hasSegmentIndexInDataStoreCached,
   sendAnalyticsEvent,
 } from "admin/rest_api";
-import ThreeDMap from "libs/ThreeDMap";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
+import ThreeDMap from "libs/ThreeDMap";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
-import _ from "lodash";
+import get from "lodash-es/get";
+import set from "lodash-es/set";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, put, race, take, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -29,10 +30,10 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
-  type RefreshMeshAction,
-  type RemoveMeshAction,
   addAdHocMeshAction,
   finishedLoadingMeshAction,
+  type RefreshMeshAction,
+  type RemoveMeshAction,
   removeMeshAction,
   startedLoadingMeshAction,
 } from "viewer/model/actions/annotation_actions";
@@ -82,7 +83,7 @@ function getOrAddMapForSegment(
 
   const keys = [additionalCoordKey, layerName];
   // create new map if adhocMeshesMapByLayer[additionalCoordinatesString][layerName] doesn't exist yet.
-  _.set(adhocMeshesMapByLayer, keys, _.get(adhocMeshesMapByLayer, keys, new Map()));
+  set(adhocMeshesMapByLayer, keys, get(adhocMeshesMapByLayer, keys, new Map()));
   const meshesMap = adhocMeshesMapByLayer[additionalCoordKey][layerName];
   const maybeMap = meshesMap.get(segmentId);
 

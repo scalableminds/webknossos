@@ -5,12 +5,12 @@ import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy, localeCompareBy, millisecondsToHours } from "libs/utils";
 import messages from "messages";
-import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { APIProjectProgressReport, APITeam } from "types/api_types";
 import TeamSelectionForm from "./team_selection_form";
+
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
@@ -46,8 +46,8 @@ function ProjectProgressReportView() {
       setIsLoading(false);
     }
   }
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchData):
-  React.useEffect(() => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchData): fetchData does not change
+  useEffect(() => {
     fetchData(team);
   }, [team]);
 
@@ -113,9 +113,7 @@ function ProjectProgressReportView() {
             title="Project"
             dataIndex="projectName"
             defaultSortOrder="ascend"
-            sorter={Utils.localeCompareBy<APIProjectProgressReport>(
-              (project) => project.projectName,
-            )}
+            sorter={localeCompareBy<APIProjectProgressReport>((project) => project.projectName)}
             render={(text: string, item: APIProjectProgressReport) => (
               <span>
                 {item.paused ? <PauseCircleOutlined /> : null} {text}
@@ -125,23 +123,21 @@ function ProjectProgressReportView() {
           <Column
             title="Tasks"
             dataIndex="totalTasks"
-            sorter={Utils.compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
+            sorter={compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
             render={(number) => number.toLocaleString()}
           />
           <Column
             title="Priority"
             dataIndex="priority"
-            sorter={Utils.compareBy<APIProjectProgressReport>((project) => project.priority)}
+            sorter={compareBy<APIProjectProgressReport>((project) => project.priority)}
             render={(number) => number.toLocaleString()}
           />
           <Column
             title="Time [h]"
             dataIndex="billedMilliseconds"
-            sorter={Utils.compareBy<APIProjectProgressReport>(
-              (project) => project.billedMilliseconds,
-            )}
+            sorter={compareBy<APIProjectProgressReport>((project) => project.billedMilliseconds)}
             render={(number) =>
-              Utils.millisecondsToHours(number).toLocaleString(undefined, {
+              millisecondsToHours(number).toLocaleString(undefined, {
                 maximumFractionDigits: 1,
               })
             }
@@ -151,9 +147,7 @@ function ProjectProgressReportView() {
               title="Total"
               width={100}
               dataIndex="totalInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.totalInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.totalInstances)}
               render={(number) => number.toLocaleString()}
             />
             <Column
@@ -161,7 +155,7 @@ function ProjectProgressReportView() {
               key="progress"
               dataIndex="finishedInstances"
               width={100}
-              sorter={Utils.compareBy<APIProjectProgressReport>(
+              sorter={compareBy<APIProjectProgressReport>(
                 ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
               )}
               render={(finishedInstances, item) =>
@@ -187,9 +181,7 @@ function ProjectProgressReportView() {
                 />
               }
               dataIndex="finishedInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.finishedInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.finishedInstances)}
               render={(_text, item: APIProjectProgressReport) => ({
                 props: {
                   colSpan: 3,
@@ -213,9 +205,7 @@ function ProjectProgressReportView() {
                 />
               }
               dataIndex="activeInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.activeInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.activeInstances)}
               render={() => ({
                 props: {
                   colSpan: 0,
@@ -233,9 +223,7 @@ function ProjectProgressReportView() {
                 />
               }
               dataIndex="pendingInstances"
-              sorter={Utils.compareBy<APIProjectProgressReport>(
-                (project) => project.pendingInstances,
-              )}
+              sorter={compareBy<APIProjectProgressReport>((project) => project.pendingInstances)}
               render={() => ({
                 props: {
                   colSpan: 0,

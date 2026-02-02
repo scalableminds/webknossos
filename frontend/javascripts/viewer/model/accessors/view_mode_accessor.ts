@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import _ from "lodash";
+import min from "lodash-es/min";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type {
@@ -344,8 +344,7 @@ export function getDisplayedDataExtentInPlaneMode(state: WebknossosState) {
   const minExtent = 1;
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'val1' implicitly has an 'any' type.
-  const getMinExtent = (val1, val2) =>
-    _.min([val1, val2].filter((v) => v >= minExtent)) || minExtent;
+  const getMinExtent = (val1, val2) => min([val1, val2].filter((v) => v >= minExtent)) || minExtent;
 
   const xMinExtent = getMinExtent(xyExtent[0], xzExtent[0]) * planeRatio[0];
   const yMinExtent = getMinExtent(xyExtent[1], yzExtent[1]) * planeRatio[1];

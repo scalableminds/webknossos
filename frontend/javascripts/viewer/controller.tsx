@@ -3,17 +3,17 @@ import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/
 import { fetchGistContent } from "libs/gist";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { getUrlParamValue, hasUrlParam, isNoElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import extend from "lodash-es/extend";
 import messages from "messages";
-import * as React from "react";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { BlockerFunction } from "react-router-dom";
-import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import type { APIOrganization, APIUser } from "types/api_types";
+import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
 import ApiLoader from "viewer/api/api_loader";
 import type { ViewMode } from "viewer/constants";
 import constants, { ControlModeEnum } from "viewer/constants";
@@ -52,9 +52,8 @@ type State = {
   organizationToSwitchTo: APIOrganization | null | undefined;
 };
 
-class Controller extends React.PureComponent<PropsWithRouter, State> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
-  keyboardNoLoop: InputKeyboardNoLoop;
+class Controller extends PureComponent<PropsWithRouter, State> {
+  keyboardNoLoop?: InputKeyboardNoLoop;
   _isMounted: boolean = false;
   state: State = {
     gotUnhandledError: false,
@@ -87,6 +86,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     this._isMounted = false;
+    this.keyboardNoLoop?.destroy();
     Store.dispatch(setIsInAnnotationViewAction(false));
     this.props.setBlocking({
       shouldBlock: false,
@@ -96,9 +96,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   tryFetchingModel() {
     this.props.setControllerStatus("loading");
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
-    const version = Utils.hasUrlParam("showVersionRestore")
-      ? Utils.hasUrlParam("version")
-        ? Number.parseInt(Utils.getUrlParamValue("version"))
+    const version = hasUrlParam("showVersionRestore")
+      ? hasUrlParam("version")
+        ? Number.parseInt(getUrlParamValue("version"), 10)
         : 1
       : undefined;
     Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, version)
@@ -152,7 +152,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
           Store.dispatch(saveNowAction());
           // restore the event handler in case a user chose to stay on the page
-          // @ts-ignore
           window.onbeforeunload = beforeUnload;
         }, 500);
 
@@ -167,7 +166,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // @ts-ignore beforeUnload signature is overloaded
+      // @ts-expect-error beforeUnload signature is overloaded
       shouldBlock: beforeUnload,
     });
 
@@ -214,7 +213,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        Utils.isNoElementFocussed()
+        isNoElementFocused()
       ) {
         event.preventDefault();
       }
@@ -223,7 +222,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const keyboardControls = {};
 
     if (controlMode !== ControlModeEnum.VIEW) {
-      _.extend(keyboardControls, {
+      extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
         "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
@@ -270,7 +269,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
 
-    _.extend(keyboardControls, {
+    extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
         let segmentationLayer = Model.getVisibleSegmentationLayer();

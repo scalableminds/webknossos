@@ -3,7 +3,7 @@ import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { clamp, waitForElementWithId } from "libs/utils";
 import messages from "messages";
 import React from "react";
 import type { Point2, Vector3, ViewMode, Viewport } from "viewer/constants";
@@ -95,7 +95,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    Utils.waitForElementWithId(arbitraryViewportId).then(() => {
+    waitForElementWithId(arbitraryViewportId).then(() => {
       this.input.mouseController = new InputMouse(
         arbitraryViewportId,
         {
@@ -377,7 +377,9 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   unsubscribeStoreListeners() {
-    this.storePropertyUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.storePropertyUnsubscribers.forEach((unsubscribe) => {
+      unsubscribe();
+    });
     this.storePropertyUnsubscribers = [];
   }
 
@@ -395,7 +397,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   scroll = (delta: number, type: ModifierKeys | null | undefined) => {
     if (type === "shift") {
-      this.setParticleSize(Utils.clamp(-1, delta, 1));
+      this.setParticleSize(clamp(-1, delta, 1));
     }
   };
 

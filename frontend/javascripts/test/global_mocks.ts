@@ -2,8 +2,8 @@
 // All modules mocked here are globally mocked for all tests.
 // These mocks have to work with the unit, E2E and screenshot tests alike.
 
-import { vi } from "vitest";
 import protobuf from "protobufjs";
+import { vi } from "vitest";
 
 // Mock common utility functions
 vi.mock("libs/toast", () => ({

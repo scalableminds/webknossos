@@ -1,10 +1,9 @@
 import { isWorkflowAccessibleBySwitching } from "admin/api/organization";
 import { getVoxelyticsWorkflow } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
-import { usePolling, useSearchParams } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { usePolling, useSearchParams, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
+import sortBy from "lodash-es/sortBy";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
@@ -338,10 +337,7 @@ export default function WorkflowView() {
     // is relevant when "expanding" the DAG. Therefore, we make sure
     // that nested meta tasks come after the high-level meta tasks.
     const sortedKeys = Object.fromEntries(
-      _.sortBy(
-        Array.from(Object.entries(newExpandedMetaTaskKeys)),
-        ([key]) => key.split("@").length,
-      ),
+      sortBy(Array.from(Object.entries(newExpandedMetaTaskKeys)), ([key]) => key.split("@").length),
     );
     setExpandedMetaTaskKeys(sortedKeys);
   };

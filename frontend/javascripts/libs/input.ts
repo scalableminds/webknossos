@@ -2,12 +2,13 @@ import { Keyboard } from "keyboardjs";
 import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
-import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
-import _ from "lodash";
-import { type Emitter, createNanoEvents } from "nanoevents";
+import extend from "lodash-es/extend";
+import noop from "lodash-es/noop";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
+import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -75,8 +76,16 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 const EXTENDED_COMMAND_KEYS = isMac ? "command + k" : "ctrl + k";
 const EXTENDED_COMMAND_DURATION = 3000;
 
+const keyboard = new Keyboard(
+  window,
+  document,
+  window.navigator?.platform,
+  window.navigator?.userAgent,
+);
+keyboard.setLocale("us", us);
+keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
+
 export class InputKeyboardNoLoop {
-  keyboard: Keyboard;
   bindings: KeyboardBindingPress[] = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
@@ -91,15 +100,6 @@ export class InputKeyboardNoLoop {
     extendedCommands?: KeyBindingMap,
     keyUpBindings?: KeyBindingMap,
   ) {
-    this.keyboard = new Keyboard(
-      window,
-      document,
-      window.navigator?.platform,
-      window.navigator?.userAgent,
-    );
-    this.keyboard.setLocale("us", us);
-    this.keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
-
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
     }
@@ -115,31 +115,31 @@ export class InputKeyboardNoLoop {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
+      this.attach(EXTENDED_COMMAND_KEYS, noop, noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
-        this.attach(key, callback, _.noop, true);
+        this.attach(key, callback, noop, true);
       }
     }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
+      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : noop;
       this.attach(key, callback, keyUpCallback);
     }
   }
 
   toggleExtendedMode = (evt: KeyboardEvent) => {
     evt.preventDefault();
-    const isInExtendedMode = this.keyboard.getContext() === "extended";
+    const isInExtendedMode = keyboard.getContext() === "extended";
     if (isInExtendedMode) {
       this.cancelExtendedModeTimeout();
-      this.keyboard.setContext("default");
+      keyboard.setContext("default");
       return;
     }
-    this.keyboard.setContext("extended");
+    keyboard.setContext("extended");
     this.cancelExtendedModeTimeoutId = setTimeout(() => {
-      this.keyboard.setContext("default");
+      keyboard.setContext("default");
     }, EXTENDED_COMMAND_DURATION);
   };
 
@@ -160,7 +160,7 @@ export class InputKeyboardNoLoop {
   attach(
     key: KeyboardKey,
     keyDownCallback: KeyboardHandler,
-    keyUpCallback: KeyboardHandler = _.noop,
+    keyUpCallback: KeyboardHandler = noop,
     isExtendedCommand: boolean = false,
   ) {
     const binding: KeyboardBindingPress = [
@@ -170,18 +170,18 @@ export class InputKeyboardNoLoop {
           return;
         }
 
-        if (!this.supportInputElements && !Utils.isNoElementFocussed()) {
+        if (!this.supportInputElements && !isNoElementFocused()) {
           return;
         }
 
         if (shouldIgnore(event, key)) {
           return;
         }
-        const isInExtendedMode = this.keyboard.getContext() === "extended";
+        const isInExtendedMode = keyboard.getContext() === "extended";
 
         if (isInExtendedMode) {
           this.cancelExtendedModeTimeout();
-          this.keyboard.setContext("default");
+          keyboard.setContext("default");
         }
 
         if (!event.repeat) {
@@ -198,12 +198,12 @@ export class InputKeyboardNoLoop {
     ];
 
     if (isExtendedCommand) {
-      this.keyboard.withContext("extended", () => {
-        this.keyboard.bind(...binding);
+      keyboard.withContext("extended", () => {
+        keyboard.bind(...binding);
       });
     } else {
-      this.keyboard.withContext("default", () => {
-        this.keyboard.bind(...binding);
+      keyboard.withContext("default", () => {
+        keyboard.bind(...binding);
       });
     }
     return this.bindings.push(binding);
@@ -214,7 +214,7 @@ export class InputKeyboardNoLoop {
 
     for (const binding of this.bindings) {
       const [keyCombo, pressHandler, releaseHandler] = binding;
-      this.keyboard.unbind(keyCombo, pressHandler, releaseHandler);
+      keyboard.unbind(keyCombo, pressHandler, releaseHandler);
     }
     if (this.hasExtendedBindings) {
       document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
@@ -225,7 +225,6 @@ export class InputKeyboardNoLoop {
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
 export class InputKeyboard {
-  keyboard: Keyboard;
   keyCallbackMap: KeyBindingLoopMap = {};
   keyPressedCount: number = 0;
   bindings: KeyboardBindingDownUp[] = [];
@@ -240,15 +239,6 @@ export class InputKeyboard {
       supportInputElements?: boolean;
     },
   ) {
-    this.keyboard = new Keyboard(
-      window,
-      document,
-      window.navigator?.platform,
-      window.navigator?.userAgent,
-    );
-    this.keyboard.setLocale("us", us);
-    this.keyboard.setContext("default"); // do not use global context as that is shared between all keycombos
-
     if (options) {
       this.delay = options.delay != null ? options.delay : this.delay;
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -280,7 +270,7 @@ export class InputKeyboard {
           return;
         }
 
-        if (!Utils.isNoElementFocussed()) {
+        if (!this.supportInputElements && !isNoElementFocused()) {
           return;
         }
 
@@ -306,7 +296,7 @@ export class InputKeyboard {
         if (totalDelay >= 0) {
           delayTimeoutId = setTimeout(() => {
             callback.delayed = false;
-            callback.lastTime = new Date().getTime();
+            callback.lastTime = Date.now();
           }, totalDelay);
         }
       },
@@ -327,8 +317,8 @@ export class InputKeyboard {
       },
       false, // preventRepeatByDefault
     ];
-    this.keyboard.withContext("default", () => {
-      this.keyboard.bind(...binding);
+    keyboard.withContext("default", () => {
+      keyboard.bind(...binding);
     });
     this.bindings.push(binding);
   }
@@ -345,7 +335,7 @@ export class InputKeyboard {
         const callback = this.keyCallbackMap[key];
 
         if (!callback.delayed) {
-          const curTime = new Date().getTime();
+          const curTime = Date.now();
           // If no lastTime, assume that desired FPS is met
           const lastTime = callback.lastTime || curTime - 1000 / constants.FPS;
           const elapsed = curTime - lastTime;
@@ -363,7 +353,7 @@ export class InputKeyboard {
 
     for (const binding of this.bindings) {
       const [keyCombo, pressHandler, releaseHandler] = binding;
-      this.keyboard.unbind(keyCombo, pressHandler, releaseHandler);
+      keyboard.unbind(keyCombo, pressHandler, releaseHandler);
     }
   }
 }
@@ -491,27 +481,12 @@ export class InputMouse {
     document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "mousedown",
-        targetSelector,
-        this.mouseDown,
-      ),
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "mouseover",
-        targetSelector,
-        this.mouseOver,
-      ),
-      ...Utils.addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
-      ...Utils.addEventListenerWithDelegation(
-        document,
-        "touchstart",
-        targetSelector,
-        this.mouseOver,
-      ),
-      ...Utils.addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
-      ...Utils.addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
+      ...addEventListenerWithDelegation(document, "mousedown", targetSelector, this.mouseDown),
+      ...addEventListenerWithDelegation(document, "mouseover", targetSelector, this.mouseOver),
+      ...addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
+      ...addEventListenerWithDelegation(document, "touchstart", targetSelector, this.mouseOver),
+      ...addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
+      ...addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
         passive: false,
       }),
     };
@@ -559,7 +534,7 @@ export class InputMouse {
     // target (as an example, this avoids that mouse events
     // for input catchers are dispatched when a modal is above
     // the input catchers).
-    // @ts-ignore The `id` property exists on DOM elements
+    // @ts-expect-error The `id` property exists on DOM elements
     if (event?.target?.id !== this.targetId) {
       return false;
     }
@@ -735,7 +710,7 @@ export class InputMouse {
     };
     // Don't use {...boundingRect, }, because boundingRect is a DOMRect
     // which isn't compatible with the spreading, apparently.
-    return _.extend({}, boundingRect, {
+    return extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,
     });

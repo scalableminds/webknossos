@@ -1,6 +1,7 @@
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
-import * as Utils from "libs/utils";
+import { __range__ } from "libs/utils";
+
 // Constants
 const HEAP_SIZE = 1 << 25;
 const HEAP = new ArrayBuffer(HEAP_SIZE);
@@ -483,7 +484,7 @@ class PolyhedronRasterizer {
         radiusStartZ = radiusMinZ;
       }
 
-      for (const z of Utils.__range__(radiusStartZ, radiusEndZ, true)) {
+      for (const z of __range__(radiusStartZ, radiusEndZ, true)) {
         for (let y = radiusMinY; y <= radiusMaxY; y++) {
           let index = ((z - minZ) << shiftZ) + ((y - minY) << 1);
           let x0 = buffer[index++];
@@ -493,11 +494,7 @@ class PolyhedronRasterizer {
             x0 += minX;
             x1 += minX;
 
-            for (const x of Utils.__range__(
-              Math.max(xs - radius, x0),
-              Math.min(xs + radius, x1),
-              true,
-            )) {
+            for (const x of __range__(Math.max(xs - radius, x0), Math.min(xs + radius, x1), true)) {
               if (
                 x === xs - radius ||
                 x === xs + radius ||
@@ -533,7 +530,7 @@ PolyhedronRasterizer.Master = class Master {
   transformAffine(matrix: Matrix4x4): PolyhedronRasterizer {
     const { vertices, indices } = this;
     const transformedPolyhdron = new PolyhedronRasterizer(
-      // @ts-ignore
+      // @ts-expect-error
       M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
       indices,
     );

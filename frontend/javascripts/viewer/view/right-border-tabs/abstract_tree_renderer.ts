@@ -1,7 +1,8 @@
-import _ from "lodash";
+import min from "lodash-es/min";
 import messages from "messages";
 import type { Vector2 } from "viewer/constants";
 import type { Tree } from "viewer/model/types/tree_types";
+
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;
 const CLICK_TRESHOLD = 6;
@@ -92,7 +93,7 @@ class AbstractTreeRenderer {
 
   buildTree(): AbstractNode | null | undefined {
     // Assumption: Node with smallest id is root
-    const rootId = _.min(Array.from(this.tree.nodes.keys()));
+    const rootId = min(Array.from(this.tree.nodes.keys()));
 
     const rootNode = {
       id: rootId,
@@ -138,6 +139,8 @@ class AbstractTreeRenderer {
    * @param  {TreeType} tree
    * @param  {Number} @activeNodeId node id
    */
+
+  // biome-ignore lint/suspicious/useAdjacentOverloadSignatures: Careful, there is a static drawTree() method as well.
   drawTree(tree: Tree, activeNodeId: number) {
     let root;
     this.tree = tree;
@@ -153,7 +156,7 @@ class AbstractTreeRenderer {
     } catch (e) {
       console.log("Error:", e);
 
-      // @ts-ignore
+      // @ts-expect-error
       if (e.message === CYCLIC_TREE_ERROR) {
         this.drawErrorMessage(messages["tracing.tree_viewer_no_cyclic_trees"]);
         return;
@@ -530,11 +533,7 @@ class AbstractTreeRenderer {
    * @return {Boolean}    true if node is commented
    */
   nodeIdHasComment(id: number): boolean {
-    return (
-      _.find(this.tree.comments, {
-        node: id,
-      }) != null
-    );
+    return this.tree.comments.some((c: any) => c.node === id);
   }
 
   /**

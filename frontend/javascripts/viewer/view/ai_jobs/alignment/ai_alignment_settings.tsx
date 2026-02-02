@@ -1,10 +1,9 @@
 import { SettingOutlined } from "@ant-design/icons";
-import { Card, Col, Form, Input, Row, Space } from "antd";
 import type { FormProps } from "antd";
+import { Card, Col, Form, Input, Row, Space } from "antd";
 import type React from "react";
-import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
-
 import { ColorWKBlue } from "theme";
+import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 
 export const AiAlignmentSettings: React.FC = () => {

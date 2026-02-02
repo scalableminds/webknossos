@@ -1,18 +1,18 @@
-import { describe, it, expect } from "vitest";
+import update from "immutability-helper";
+import { location } from "libs/window";
+import clone from "lodash-es/clone";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
+import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
 import UrlManager, {
-  updateTypeAndId,
   encodeUrlHash,
-  type UrlManagerState,
   getDatasetNameFromLocation,
   getUpdatedPathnameWithNewDatasetName,
+  type UrlManagerState,
+  updateTypeAndId,
 } from "viewer/controller/url_manager";
-import { location } from "libs/window";
-import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
 import defaultState from "viewer/default_state";
-import update from "immutability-helper";
+import { describe, expect, it } from "vitest";
 import DATASET from "../fixtures/dataset_server_object";
-import _ from "lodash";
-import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {
@@ -284,8 +284,8 @@ describe("UrlManager", () => {
   });
 
   it("Inserting an updated dataset name in the URL should yield the correct URL", () => {
-    const testDatasetEasy = update(_.clone(DATASET), { name: { $set: "extract_me" } });
-    const testDatasetComplex = update(_.clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
+    const testDatasetEasy = update(clone(DATASET), { name: { $set: "extract_me" } });
+    const testDatasetComplex = update(clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
     // View
     location.pathname = `/datasets/replace_me-${testDatasetEasy.id}/view`;
     const newPathName1 = getUpdatedPathnameWithNewDatasetName(location, testDatasetEasy);

@@ -1,17 +1,19 @@
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { coalesce } from "libs/utils";
+import { coalesce, map3, numberArrayToVector3, roundTo } from "libs/utils";
 import window, { location } from "libs/window";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
+import partition from "lodash-es/partition";
+import size from "lodash-es/size";
+import throttle from "lodash-es/throttle";
 import messages from "messages";
+import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
-import type { APIDataset, AdditionalCoordinate } from "types/api_types";
 import type { Mutable } from "types/globals";
 import { validateUrlStateJSON } from "types/validation";
 import type { Vector3, ViewMode } from "viewer/constants";
-import constants, { ViewModeValues, MappingStatusEnum } from "viewer/constants";
+import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";
 import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
@@ -155,7 +157,7 @@ class UrlManager {
     this.updateUnthrottled();
   }
 
-  update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
+  update = throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
 
   updateUnthrottled() {
     const url = this.buildUrl();
@@ -222,7 +224,7 @@ class UrlManager {
     }
 
     const commaSeparatedValues = urlHash.split(",");
-    const [baseValues, keyValuePairStrings] = _.partition(
+    const [baseValues, keyValuePairStrings] = partition(
       commaSeparatedValues,
       (value) => !value.includes("="),
     );
@@ -231,7 +233,7 @@ class UrlManager {
 
     if (validStateArray.length >= MINIMUM_VALID_CSV_LENGTH) {
       const positionValues = validStateArray.slice(0, 3);
-      state.position = Utils.numberArrayToVector3(positionValues);
+      state.position = numberArrayToVector3(positionValues);
       const modeString = ViewModeValues[validStateArray[3]];
 
       if (modeString) {
@@ -245,7 +247,7 @@ class UrlManager {
       state.zoomStep = validStateArray[4] !== 0 ? validStateArray[4] : 1;
 
       if (validStateArray.length >= 8) {
-        state.rotation = Utils.numberArrayToVector3(validStateArray.slice(5, 8));
+        state.rotation = numberArrayToVector3(validStateArray.slice(5, 8));
 
         if (validStateArray[8] != null) {
           state.activeNode = validStateArray[8];
@@ -290,11 +292,11 @@ class UrlManager {
   getUrlState(state: WebknossosState): UrlManagerState & { mode: ViewMode } {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
-    const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
-    const flycamRotation = Utils.map3((e) => Utils.roundTo(e, 2), state.flycam.rotation);
+    const zoomStep = roundTo(state.flycam.zoomStep, 3);
+    const flycamRotation = map3((e) => roundTo(e, 2), state.flycam.rotation);
     const rotation = {
       // Keep rotation state empty if no rotation is active to have shorter url hashes.
-      rotation: _.isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
+      rotation: isEqual(flycamRotation, [0, 0, 0]) ? undefined : flycamRotation,
     };
     const activeNode = state.annotation.skeleton?.activeNodeId;
     const activeNodeOptional = activeNode != null ? { activeNode } : {};
@@ -324,7 +326,7 @@ class UrlManager {
       const localMeshes = getMeshesForCurrentAdditionalCoordinates(state, layerName);
       const meshes =
         localMeshes != null
-          ? Utils.values(localMeshes)
+          ? Object.values(localMeshes)
               .filter(({ isVisible }) => isVisible)
               .map(mapMeshInfoToUrlMeshDescriptor)
           : [];
@@ -372,7 +374,7 @@ class UrlManager {
     }
 
     const stateByLayerOptional =
-      _.size(stateByLayer) > 0
+      size(stateByLayer) > 0
         ? {
             stateByLayer,
           }

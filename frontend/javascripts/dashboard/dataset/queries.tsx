@@ -10,17 +10,18 @@ import {
 import { type DatasetUpdater, getDataset, getDatasets, updateDatasetPartial } from "admin/rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { conjugate, diffArrays, pluralize } from "libs/utils";
+import isEqualWith from "lodash-es/isEqualWith";
+import keyBy from "lodash-es/keyBy";
 import { useEffect, useRef } from "react";
 import {
   type APIDataset,
   type APIDatasetCompact,
+  convertDatasetToCompact,
   type FlatFolderTreeItem,
   type Folder,
   type FolderItem,
   type FolderUpdater,
-  convertDatasetToCompact,
 } from "types/api_types";
 
 export const SEARCH_RESULTS_LIMIT = 100;
@@ -472,19 +473,19 @@ function diffDatasets(
     onlyA: onlyInOld,
     onlyB: onlyInNew,
     both,
-  } = Utils.diffArrays(
+  } = diffArrays(
     oldDatasets.map((ds) => ds.id),
     newDatasets.map((ds) => ds.id),
   );
 
-  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.id);
-  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.id);
+  const oldDatasetsDict = keyBy(oldDatasets, (ds) => ds.id);
+  const newDatasetsDict = keyBy(newDatasets, (ds) => ds.id);
 
   const changedDatasets = both
     .map((id) => newDatasetsDict[id])
     .filter((newDataset) => {
       const oldDataset = oldDatasetsDict[newDataset.id];
-      return !_.isEqualWith(oldDataset, newDataset, (_oldValue, _newValue, key) => {
+      return !isEqualWith(oldDataset, newDataset, (_oldValue, _newValue, key) => {
         if (key === "lastUsedByUser") {
           // Ignore the lastUsedByUser timestamp when diffing datasets.
           return true;
@@ -519,17 +520,17 @@ export function generateDiffMessage(diff: {
   const maybeAlso = newOrChangedCount ? "Also, " : "";
   const removedStr =
     diff.onlyInOld > 0
-      ? `${maybeAlso}${diff.onlyInOld} ${Utils.pluralize(
+      ? `${maybeAlso}${diff.onlyInOld} ${pluralize(
           "dataset",
           diff.onlyInOld,
-        )} no longer ${Utils.conjugate("exist", diff.onlyInOld)} in this folder.`
+        )} no longer ${conjugate("exist", diff.onlyInOld)} in this folder.`
       : "";
   const maybeNewAndChangedSentence = newOrChangedCount
-    ? `There ${Utils.conjugate(
+    ? `There ${conjugate(
         "are",
         newOrChangedCount,
         "is",
-      )} ${newStr}${maybeAnd}${changedStr}${Utils.pluralize("dataset", newOrChangedCount)}.`
+      )} ${newStr}${maybeAnd}${changedStr}${pluralize("dataset", newOrChangedCount)}.`
     : "";
   return joinStrings(maybeNewAndChangedSentence, removedStr);
 }
@@ -546,7 +547,7 @@ function getUnobtrusivelyUpdatedDatasets(
 
   const idFn = (dataset: APIDatasetCompact) => dataset.id;
 
-  const newDatasetsById = _.keyBy(newDatasets, idFn);
+  const newDatasetsById = keyBy(newDatasets, idFn);
   return oldDatasets.map((oldDataset) => {
     const newPendant = newDatasetsById[idFn(oldDataset)];
     if (!newPendant) {

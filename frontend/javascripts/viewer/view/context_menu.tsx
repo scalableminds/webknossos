@@ -12,8 +12,8 @@ import {
   Input,
   type MenuProps,
   Modal,
-  Popover,
   notification,
+  Popover,
 } from "antd";
 import type {
   ItemType,
@@ -38,13 +38,13 @@ import messages from "messages";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
+  AdditionalCoordinate,
   APIConnectomeFile,
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
   VoxelSize,
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
 import {
   AltOrOptionKey,
   CtrlOrCmdKey,
@@ -70,6 +70,7 @@ import {
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -128,6 +129,7 @@ import {
   setActiveNodeAction,
   setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { hideContextMenuAction, setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import { getUpdateSegmentActionToToggleVisibility } from "viewer/model/actions/volumetracing_action_helpers";
 import {
@@ -142,6 +144,7 @@ import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_redu
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/volume/min_cut_saga";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
+import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
@@ -152,10 +155,6 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "viewer/store";
-
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
-import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
@@ -1575,7 +1574,7 @@ export function GenericContextMenuContainer(props: {
           }}
           className="node-context-menu"
           tabIndex={-1}
-          // @ts-ignore
+          // @ts-expect-error
           ref={inputRef}
         />
         {/* Disable animations for the context menu (for performance reasons). */}

@@ -37,11 +37,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     with FoxImplicits
     with LazyLogging {
 
-  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest)(
+  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
@@ -58,6 +58,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
         fullMeshRequest.copy(mappingName = baseMappingName,
                              editableMappingTracingId = Some(tracingId),
+                             editableMappingVersion = Some(tracing.version),
                              mappingType = Some("HDF5"))
       else fullMeshRequest
       array <- remoteDatastoreClient.loadFullMeshStl(remoteFallbackLayer, fullMeshRequestAdapted)
@@ -76,7 +77,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else
-        getAllAdHocChunksWithNeighborLogic( // TODOM: collab with fm3 to make this versioned.
+        getAllAdHocChunksWithNeighborLogic(
           annotationId,
           tracingId,
           tracing,
@@ -109,7 +110,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         mag,
         mappingName,
         volumeTracingService.editableMappingTracingId(tracing, tracingId),
-        tracing.version, // TODOM: adjust so that the correct version is used
+        tracing.version,
         fullMeshRequest.additionalCoordinates
       )
       bucketPositions = bucketPositionsRaw.toSeq

@@ -1,8 +1,8 @@
-import * as THREE from "three";
+import { BufferAttribute, BufferGeometry, Mesh, MeshBasicMaterial } from "three";
 
 // This function should only be used for mocking.
 export function createUnitCubeBufferGeometry() {
-  const geometry = new THREE.BufferGeometry();
+  const geometry = new BufferGeometry();
 
   // 8 vertices (but we will duplicate for per-face normals if needed)
   const vertices = new Float32Array([
@@ -30,16 +30,16 @@ export function createUnitCubeBufferGeometry() {
   ];
 
   geometry.setIndex(indices);
-  geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+  geometry.setAttribute("position", new BufferAttribute(vertices, 3));
   geometry.computeVertexNormals();
 
   return geometry;
 }
 
 // This function should only be used for mocking.
-export function makeSimpleMesh(geometry: THREE.BufferGeometry) {
-  return new THREE.Mesh(
+export function makeSimpleMesh(geometry: BufferGeometry) {
+  return new Mesh(
     geometry,
-    new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
+    new MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
   );
 }

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import size from "lodash-es/size";
 import type {
   APIAnnotationUserState,
   APIUserBase,
@@ -60,7 +60,7 @@ export function getStats(annotation: StoreAnnotation): TracingStats {
       treeCount: skeleton.trees.size(),
       nodeCount: sum(skeleton.trees.values().map((tree) => tree.nodes.size())),
       edgeCount: sum(skeleton.trees.values().map((tree) => tree.edges.size())),
-      branchPointCount: sum(skeleton.trees.values().map((tree) => _.size(tree.branchPoints))),
+      branchPointCount: sum(skeleton.trees.values().map((tree) => size(tree.branchPoints))),
     };
   }
   return stats;

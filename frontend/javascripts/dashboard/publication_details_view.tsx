@@ -6,6 +6,7 @@ import { handleGenericError } from "libs/error_handling";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { APIPublication } from "types/api_types";
+
 const { Content } = Layout;
 
 function PublicationDetailView() {

@@ -91,7 +91,7 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          data: Array[Byte] <- fullMeshService.loadFor(dataSource, dataLayer, request.body) ?~> "mesh.file.loadChunk.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(datasetId, dataSource, dataLayer, request.body) ?~> "mesh.file.loadChunk.failed"
 
         } yield Ok(data)
       }

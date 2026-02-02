@@ -9,25 +9,24 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
-import Markdown from "libs/markdown_adapter";
-import * as React from "react";
-import { connect } from "react-redux";
-import { Link } from "react-router-dom";
-
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
+import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import { handleGenericError } from "libs/error_handling";
+import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { compareBy } from "libs/utils";
 import messages from "messages";
+import { PureComponent, useContext } from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
 import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
@@ -38,7 +37,7 @@ import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const pageLength: number = 1000;
 
-export type TaskModeState = {
+type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>;
   loadedAllTasks: boolean;
   lastLoadedPage: number;
@@ -96,7 +95,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<Props, State> {
+class DashboardTaskListView extends PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
@@ -115,7 +114,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    // @ts-ignore
+    // @ts-expect-error
     this.setState(persistence.load());
     this.fetchNextPage(0);
   }
@@ -413,7 +412,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy<APITaskWithAnnotation>(
+      compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),
@@ -552,8 +551,8 @@ function TopBar({
   toggleShowFinished: () => void;
   getFinishVerb: () => string;
 }) {
-  const activeTab = React.useContext(ActiveTabContext);
-  const renderingTab = React.useContext(RenderingTabContext);
+  const activeTab = useContext(ActiveTabContext);
+  const renderingTab = useContext(RenderingTabContext);
 
   const content = (
     <Space>

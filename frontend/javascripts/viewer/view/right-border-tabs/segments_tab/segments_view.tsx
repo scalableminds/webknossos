@@ -2,8 +2,8 @@ import {
   ArrowRightOutlined,
   CloseOutlined,
   DeleteOutlined,
-  DownOutlined,
   DownloadOutlined,
+  DownOutlined,
   ExclamationCircleOutlined,
   ExpandAltOutlined,
   EyeInvisibleOutlined,
@@ -17,9 +17,9 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import {
-  PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { getJobs, startComputeMeshFileJob } from "admin/rest_api";
 import {
@@ -46,13 +46,17 @@ import { SimpleRow } from "dashboard/folders/metadata_table";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
-import _, { isNumber, memoize } from "lodash";
+import difference from "lodash-es/difference";
+import isNumber from "lodash-es/isNumber";
+import memoize from "lodash-es/memoize";
+import sortBy from "lodash-es/sortBy";
+import sum from "lodash-es/sum";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
-import { APIJobCommand, type AdditionalCoordinate } from "types/api_types";
+import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
@@ -115,8 +119,8 @@ import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu";
 import SegmentListItem from "viewer/view/right-border-tabs/segments_tab/segment_list_item";
 import {
-  type SegmentHierarchyNode,
   getBaseSegmentationName,
+  type SegmentHierarchyNode,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -125,7 +129,6 @@ import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  MISSING_GROUP_ID,
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
@@ -135,6 +138,7 @@ import {
   getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
+  MISSING_GROUP_ID,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
@@ -384,7 +388,7 @@ function constructTreeData(
   groupToSegmentsMap: Record<number, Segment[]>,
 ): SegmentHierarchyNode[] {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
-  return _.sortBy(groups, "groupId").map((group) => {
+  return sortBy(groups, "groupId").map((group) => {
     const { groupId } = group;
     const segments = groupToSegmentsMap[groupId] || [];
     const treeNode: SegmentHierarchyNode = {
@@ -394,7 +398,7 @@ function constructTreeData(
       id: groupId,
       type: "group",
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
-        _.sortBy(segments, "id").map(
+        sortBy(segments, "id").map(
           (segment): SegmentHierarchyNode => ({
             ...segment,
             title: segment.name || "",
@@ -554,7 +558,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   collapseGroups = (groupsToCollapse: string[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const newExpandedGroups = _.difference(this.getExpandedGroupKeys(), groupsToCollapse);
+    const newExpandedGroups = difference(this.getExpandedGroupKeys(), groupsToCollapse);
     const expandedGroupSet = new Set(newExpandedGroups);
     Store.dispatch(
       setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer.name),
@@ -910,29 +914,59 @@ class SegmentsView extends React.Component<Props, State> {
       updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", magIndex),
     );
 
-  getAdHocMeshSettings = () => {
+  getMeshSettings = () => {
     const { preferredQualityForMeshAdHocComputation, magInfoOfVisibleSegmentationLayer: magInfo } =
       this.props;
     return (
       <div>
-        <FastTooltip title="The higher the quality, the more computational resources are required">
-          <Typography.Paragraph>
-            Select the quality for Ad-Hoc Mesh Computation:
-          </Typography.Paragraph>
-        </FastTooltip>
-        <Select
-          value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
-          onChange={this.handleQualityChangeForAdHocGeneration}
-          popupMatchSelectWidth={false}
-        >
-          {magInfo
-            .getMagsWithIndices()
-            .map(([log2Index, mag]: [number, Vector3], index: number) => (
-              <Option value={log2Index} key={log2Index}>
-                {formatMagWithLabel(mag, index)}
-              </Option>
-            ))}
-        </Select>
+        <Typography.Paragraph>
+          Select a precomputed mesh file:
+          <ConfigProvider
+            renderEmpty={renderEmptyMeshFileSelect}
+            theme={{ cssVar: { key: "antd-app-theme" } }}
+          >
+            <Select
+              placeholder="Select a mesh file"
+              value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
+              onChange={this.handleMeshFileSelected}
+              loading={this.props.availableMeshFiles == null}
+              popupMatchSelectWidth={false}
+              style={{ width: "100%" }}
+            >
+              {this.props.availableMeshFiles ? (
+                this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
+                  <Option key={meshFile.name} value={meshFile.name}>
+                    {formatMeshFile(meshFile)}
+                  </Option>
+                ))
+              ) : (
+                <Option value="" disabled>
+                  No files available.
+                </Option>
+              )}
+            </Select>
+          </ConfigProvider>
+        </Typography.Paragraph>
+
+        <Typography.Paragraph>
+          <FastTooltip title="The higher the quality, the more computational resources are required">
+            Select the quality for ad-hoc mesh computation:
+          </FastTooltip>
+          <Select
+            value={magInfo.getClosestExistingIndex(preferredQualityForMeshAdHocComputation)}
+            onChange={this.handleQualityChangeForAdHocGeneration}
+            popupMatchSelectWidth={false}
+            style={{ width: "100%" }}
+          >
+            {magInfo
+              .getMagsWithIndices()
+              .map(([log2Index, mag]: [number, Vector3], index: number) => (
+                <Option value={log2Index} key={log2Index}>
+                  {formatMagWithLabel(mag, index)}
+                </Option>
+              ))}
+          </Select>
+        </Typography.Paragraph>
       </div>
     );
   };
@@ -1004,33 +1038,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMeshesHeader = () => (
-    <Space.Compact>
-      <FastTooltip title="Select a mesh file from which precomputed meshes will be loaded.">
-        <ConfigProvider
-          renderEmpty={renderEmptyMeshFileSelect}
-          theme={{ cssVar: { key: "antd-app-theme" } }}
-        >
-          <Select
-            placeholder="Select a mesh file"
-            value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
-            onChange={this.handleMeshFileSelected}
-            loading={this.props.availableMeshFiles == null}
-            popupMatchSelectWidth={false}
-          >
-            {this.props.availableMeshFiles ? (
-              this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
-                <Option key={meshFile.name} value={meshFile.name}>
-                  {formatMeshFile(meshFile)}
-                </Option>
-              ))
-            ) : (
-              <Option value="" disabled>
-                No files available.
-              </Option>
-            )}
-          </Select>
-        </ConfigProvider>
-      </FastTooltip>
+    <Space.Compact block>
       <ButtonComponent
         title="Refresh list of available Mesh files"
         icon={<ReloadOutlined />}
@@ -1053,8 +1061,8 @@ class SegmentsView extends React.Component<Props, State> {
           icon={<LoadingOutlined />}
         />
       ) : null}
-      <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
-        <ButtonComponent title="Configure ad-hoc mesh computation" icon={<SettingOutlined />} />
+      <Popover content={this.getMeshSettings} trigger="click" placement="bottom">
+        <ButtonComponent title="Configure mesh computation" icon={<SettingOutlined />} />
       </Popover>
     </Space.Compact>
   );
@@ -1443,14 +1451,14 @@ class SegmentsView extends React.Component<Props, State> {
       if (key.startsWith(groupPrefix)) {
         // Note that negative ids can be found here, which is why Group- is used as a splitter
         const idWithSign = key.split(groupPrefix)[1];
-        if (isNumber(Number.parseInt(idWithSign))) {
-          selectedIds.group = Number.parseInt(idWithSign);
+        if (isNumber(Number.parseInt(idWithSign, 10))) {
+          selectedIds.group = Number.parseInt(idWithSign, 10);
         }
       } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = key.split("-");
-        if (isNumber(Number.parseInt(regexSplit[1]))) {
-          selectedIds.segments.push(Number.parseInt(regexSplit[1]));
+        if (isNumber(Number.parseInt(regexSplit[1], 10))) {
+          selectedIds.segments.push(Number.parseInt(regexSplit[1], 10));
         }
       }
     });
@@ -1684,7 +1692,7 @@ class SegmentsView extends React.Component<Props, State> {
   getMultiSelectMenu = (): MenuProps => {
     const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
     return {
-      items: _.flatten([
+      items: [
         this.getLoadMeshesFromFileMenuItem(null),
         this.getComputeMeshesAdHocMenuItem(null),
         doSelectedSegmentsHaveAnyMeshes ? this.maybeGetShowOrHideMeshesMenuItems(null) : null,
@@ -1694,7 +1702,7 @@ class SegmentsView extends React.Component<Props, State> {
         this.getSetGroupColorMenuItem(null),
         this.getResetGroupColorMenuItem(null),
         this.getRemoveFromSegmentListMenuItem(null),
-      ]),
+      ].flat(),
     };
   };
 
@@ -1757,7 +1765,7 @@ class SegmentsView extends React.Component<Props, State> {
       const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         const getMenu = (): MenuProps => ({
-          items: _.flatten([
+          items: [
             {
               key: "create",
               onClick: () => {
@@ -1795,7 +1803,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.getRemoveMeshesMenuItem(id),
             this.maybeGetShowOrHideMeshesMenuItems(id),
             this.getDownLoadMeshesMenuItem(id),
-          ]),
+          ].flat(),
         });
 
         const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
@@ -1863,7 +1871,7 @@ class SegmentsView extends React.Component<Props, State> {
             ).map((node) => node.key);
             return (
               <React.Fragment>
-                <Space.Compact>
+                <Space.Compact block style={{ marginBottom: "var(--ant-margin-sm)" }}>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
@@ -2066,7 +2074,7 @@ class SegmentsView extends React.Component<Props, State> {
                 />
                 <SimpleRow
                   label="Segment Count (all children)"
-                  value={_.sum(
+                  value={sum(
                     groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
                   )}
                 />

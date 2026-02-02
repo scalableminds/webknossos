@@ -1,9 +1,14 @@
 import { type ActionPattern, call, put, take } from "redux-saga/effects";
-import {
-  type WebknossosTestContext,
+import { type WebknossosTestContext,
   getNestedUpdateActions,
-  setupWebknossosForTesting,
-} from "test/helpers/apiHelpers";
+  setupWebknossosForTesting, } from "test/helpers/apiHelpers";
+import { actionChannel } from "typed-redux-saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
+import { TreeTypeEnum, type Vector3 } from "viewer/constants";
+import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
+import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
+import type { Action } from "viewer/model/actions/actions";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateWithPositionAction,
@@ -11,6 +16,7 @@ import {
   proofreadMergeAction,
   toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
@@ -20,21 +26,13 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
 import {
   initializeMappingAndTool,
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
-import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
-import { WkDevFlags } from "viewer/api/wk_dev";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { actionChannel } from "typed-redux-saga";
-import type { Action } from "viewer/model/actions/actions";
-import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 
 describe("Proofreading agglomerate skeleton syncing", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

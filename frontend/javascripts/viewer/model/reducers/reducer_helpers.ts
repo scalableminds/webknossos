@@ -1,8 +1,16 @@
-import * as Utils from "libs/utils";
+import {
+  colorObjectToRGBArray,
+  computeBoundingBoxFromBoundingBoxObject,
+  computeBoundingBoxObjectFromBoundingBox,
+  getRandomColor,
+  mapEntriesToMap,
+  mapGroupsDeep,
+  point3ToVector3,
+} from "libs/utils";
 import type {
-  APIAnnotation,
   AdditionalAxis,
   AdditionalAxisProto,
+  APIAnnotation,
   BoundingBoxProto,
   SkeletonUserState,
   UserBoundingBoxProto,
@@ -30,7 +38,7 @@ import type { Tree, TreeGroup } from "../types/tree_types";
 function convertServerBoundingBoxToBoundingBoxMinMaxType(
   boundingBox: BoundingBoxProto,
 ): BoundingBoxMinMaxType {
-  const min = Utils.point3ToVector3(boundingBox.topLeft);
+  const min = point3ToVector3(boundingBox.topLeft);
   const max: Vector3 = [
     min[0] + boundingBox.width,
     min[1] + boundingBox.height,
@@ -57,7 +65,7 @@ export function convertUserBoundingBoxFromUpdateActionToFrontend(
   } = bboxValue;
   const maybeBoundingBoxValue =
     boundingBox != null
-      ? { boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox) }
+      ? { boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBox) }
       : {};
 
   return {
@@ -70,14 +78,14 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxProto>,
   userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
-  const idToVisible = userState ? Utils.mapEntriesToMap(userState.boundingBoxVisibilities) : {};
+  const idToVisible = userState ? mapEntriesToMap(userState.boundingBoxVisibilities) : {};
 
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
     const convertedBoundingBox = convertServerBoundingBoxToBoundingBoxMinMaxType(boundingBox);
     return {
       boundingBox: convertedBoundingBox,
-      color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
+      color: color ? colorObjectToRGBArray(color) : getRandomColor(),
       id,
       name: name || `Bounding box ${id}`,
       isVisible: idToVisible[id] ?? isVisible ?? true,
@@ -89,7 +97,7 @@ export function convertUserBoundingBoxFromFrontendToServer(
   boundingBox: UserBoundingBoxWithOptIsVisible,
 ): UserBoundingBoxForServer {
   const { boundingBox: bb, ...rest } = boundingBox;
-  return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
+  return { ...rest, boundingBox: computeBoundingBoxObjectFromBoundingBox(bb) };
 }
 
 export function convertFrontendBoundingBoxToServer(
@@ -108,7 +116,7 @@ export function convertBoundingBoxProtoToObject(boundingBox: BoundingBoxProto): 
     width: boundingBox.width,
     height: boundingBox.height,
     depth: boundingBox.depth,
-    topLeft: Utils.point3ToVector3(boundingBox.topLeft),
+    topLeft: point3ToVector3(boundingBox.topLeft),
   };
 }
 
@@ -259,8 +267,8 @@ export function applyUserStateToGroups<Group extends TreeGroup | SegmentGroup>(
       ? userState.segmentGroupExpandedStates
       : userState.treeGroupExpandedStates;
 
-  const groupIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(expandedStates);
-  return Utils.mapGroupsDeep(groups, (group: Group, children): Group => {
+  const groupIdToExpanded: Record<number, boolean> = mapEntriesToMap(expandedStates);
+  return mapGroupsDeep(groups, (group: Group, children): Group => {
     return {
       ...group,
       isExpanded: groupIdToExpanded[group.groupId] ?? group.isExpanded,
@@ -277,7 +285,7 @@ export function getApplyUserStateToTreeFn(
   }
 
   const visibilities = userState.treeVisibilities;
-  const treeIdToExpanded: Record<number, boolean> = Utils.mapEntriesToMap(visibilities);
+  const treeIdToExpanded: Record<number, boolean> = mapEntriesToMap(visibilities);
   return (tree) => {
     return {
       ...tree,

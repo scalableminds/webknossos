@@ -2,7 +2,18 @@ import { Chalk } from "chalk";
 import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
-import _ from "lodash";
+import capitalize from "lodash-es/capitalize";
+import differenceWith from "lodash-es/differenceWith";
+import flattenDeep from "lodash-es/flattenDeep";
+import fromPairs from "lodash-es/fromPairs";
+import isEqual from "lodash-es/isEqual";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import once from "lodash-es/once";
+import toPairs from "lodash-es/toPairs";
+import uniq from "lodash-es/uniq";
+import zipObject from "lodash-es/zipObject";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
@@ -88,14 +99,13 @@ function swap<T>(arr: Array<T>, a: number, b: number) {
 naturalSort.insensitive = true;
 
 function getRecursiveValues(obj: ArbitraryObject | Array<any> | string): Array<any> {
-  return _.flattenDeep(getRecursiveValuesUnflat(obj));
+  return flattenDeep(getRecursiveValuesUnflat(obj));
 }
 
 function getRecursiveValuesUnflat(obj: ArbitraryObject | Array<any> | string): Array<any> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
-    // @ts-ignore
     return Object.keys(obj).map((key) => getRecursiveValuesUnflat(obj[key]));
   } else {
     return [obj];
@@ -200,12 +210,8 @@ export function roundTo(value: number, digits: number): number {
   return Math.round(value * digitMultiplier) / digitMultiplier;
 }
 
-export function capitalize(str: string): string {
-  return str[0].toUpperCase() + str.slice(1);
-}
-
 function intToHex(int: number, digits: number = 6): string {
-  return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
+  return ("0".repeat(digits) + int.toString(16)).slice(-digits);
 }
 
 export function rgbToInt(color: Vector3): number {
@@ -463,7 +469,7 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
 }
 
 export function isUserTeamManager(user: APIUser): boolean {
-  return _.findIndex(user.teams, (team) => team.isTeamManager) >= 0;
+  return user.teams.findIndex((team) => team.isTeamManager) >= 0;
 }
 
 export function isUserAdmin(user: APIUser): boolean {
@@ -527,7 +533,7 @@ export function getUrlParamValue(paramName: string): string {
 
 export function hasUrlParam(paramName: string): boolean {
   const params = getUrlParamsObject();
-  return Object.prototype.hasOwnProperty.call(params, paramName);
+  return Object.hasOwn(params, paramName);
 }
 
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {
@@ -556,7 +562,7 @@ export function isFileExtensionEqualTo(
   if (fileName == null) {
     return false;
   }
-  const passedExtension = (_.last(fileName.split(".")) || "").toLowerCase();
+  const passedExtension = (last(fileName.split(".")) || "").toLowerCase();
 
   if (Array.isArray(extensionOrExtensions)) {
     return extensionOrExtensions.includes(passedExtension);
@@ -699,7 +705,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
 }
 
 export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
-  // @ts-ignore
   return arr.filter((el) => el != null);
 }
 
@@ -717,21 +722,21 @@ export function filterWithSearchQueryAND<
   if (searchQuery === "") {
     return collection;
   } else {
-    const words = _.map(searchQuery.split(" "), (element) =>
-      element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
-    );
+    const words = searchQuery
+      .split(" ")
+      .map((element) => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
 
-    const uniques = _.filter(_.uniq(words), (element) => element !== "");
+    const uniques = uniq(words).filter((element) => element !== "");
 
     const patterns = uniques.map((pattern) => new RegExp(pattern, "igm"));
     return collection.filter((model) =>
-      _.every(patterns, (pattern) =>
-        _.some(properties, (fieldName) => {
+      patterns.every((pattern) =>
+        properties.some((fieldName) => {
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
 
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
             const recursiveValues = getRecursiveValues(value);
-            return _.some(recursiveValues, (v) => v?.toString().match(pattern));
+            return recursiveValues.some((v) => v?.toString().match(pattern));
           } else {
             return false;
           }
@@ -754,7 +759,7 @@ export function millisecondsToHours(ms: number) {
   return ms / oneHourInMilliseconds;
 }
 
-export function isNoElementFocussed(): boolean {
+export function isNoElementFocused(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
   return document.activeElement === document.body;
@@ -773,7 +778,7 @@ export function isEditableEventTarget(target: EventTarget | null): boolean {
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Safely_detecting_option_support
-const areEventListenerOptionsSupported = _.once(() => {
+const areEventListenerOptionsSupported = once(() => {
   let passiveSupported = false;
 
   try {
@@ -1009,23 +1014,19 @@ export function chunkIntoTimeWindows<T>(
 ): Array<Array<T>> {
   let chunkIndex = 0;
   let chunkTime = 0;
-  return _.reduce(
-    elements,
-    (chunks: Array<Array<T>>, element: T, index: number) => {
-      const elementTime = mapToTimeFn(element);
-      if (index === 0) chunkTime = elementTime;
+  return elements.reduce((chunks: Array<Array<T>>, element: T, index: number) => {
+    const elementTime = mapToTimeFn(element);
+    if (index === 0) chunkTime = elementTime;
 
-      if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
-        chunkIndex++;
-        chunkTime = elementTime;
-      }
+    if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
+      chunkIndex++;
+      chunkTime = elementTime;
+    }
 
-      if (chunks[chunkIndex] == null) chunks.push([]);
-      chunks[chunkIndex].push(element);
-      return chunks;
-    },
-    [],
-  );
+    if (chunks[chunkIndex] == null) chunks.push([]);
+    chunks[chunkIndex].push(element);
+    return chunks;
+  }, []);
 }
 
 // chunkDynamically takes an array of input elements and splits these
@@ -1150,7 +1151,7 @@ export function diffObjects<K extends string | number | symbol, V, Dict extends 
    * const b = { x: 1, y: 3, q: 4 }; // y is different, z is missing, q was added
    * diffObjects(a, b); // returns { y: 3, q: 4 }
    */
-  return _.fromPairs(_.differenceWith(_.toPairs(b), _.toPairs(a), _.isEqual)) as Partial<Dict>;
+  return fromPairs(differenceWith(toPairs(b), toPairs(a), isEqual)) as Partial<Dict>;
 }
 
 export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
@@ -1218,7 +1219,7 @@ export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
 }
 
 export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
-  return _.every(a.map((v, i) => Math.abs(v - b[i]) < epsilon));
+  return a.every((v, i) => Math.abs(v - b[i]) < epsilon);
 }
 
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
@@ -1254,7 +1255,7 @@ export function truncateStringToLength(str: string, length: number): string {
 }
 
 export function maxValue(array: Array<number>): number {
-  const value = _.max(array);
+  const value = max(array);
   if (value == null) {
     throw Error(`Max of empty array: ${array}`);
   }
@@ -1262,7 +1263,7 @@ export function maxValue(array: Array<number>): number {
 }
 
 export function minValue(array: Array<number>): number {
-  const value = _.min(array);
+  const value = min(array);
   if (value == null) {
     throw Error(`Min of empty array: ${array}`);
   }
@@ -1284,7 +1285,7 @@ export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) =>
     if (typeof item === "object") {
       // We know that item is an object or array which matches deepIterate's signature.
       // However, TS doesn't infer this.
-      // @ts-ignore
+      // @ts-expect-error
       deepIterate(item, callback);
     }
   });
@@ -1407,7 +1408,7 @@ export function safeZipObject<K extends string | number | symbol, V>(
   if (keys.length !== values.length) {
     throw new Error("Cannot construct objects because keys and values don't match in length.");
   }
-  return _.zipObject(keys, values) as Record<K, V>;
+  return zipObject(keys, values) as Record<K, V>;
 }
 
 export function mapEntriesToMap<K extends string | number | symbol, V>(

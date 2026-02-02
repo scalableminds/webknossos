@@ -155,7 +155,6 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
   };
 
   const copyLayerUrlMenu: MenuProps = {
-    // @ts-ignore
     onClick: copyTokenToClipboard,
     items: [
       {
@@ -182,7 +181,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
 
   return (
-    <Space.Compact className="no-borders">
+    <Space.Compact className="no-borders" block>
       <Input
         value={baseUrl}
         size="small"
@@ -236,7 +235,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(expirationDateTime) });
   };
   const expirationMenu: MenuProps = {
-    // @ts-ignore
+    // @ts-expect-error
     onClick: handleExpirationMenuClick,
     items: [
       {
@@ -270,7 +269,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   }
 
   const maybeWarning =
-    Number(new Date()) > linkItem.expirationDateTime ? (
+    Date.now() > linkItem.expirationDateTime ? (
       <Tooltip title="This link has expired">
         <InfoCircleOutlined style={{ color: "var(--ant-color-error)" }} />
       </Tooltip>
@@ -284,12 +283,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
         content={
           <>
             <div>
-              <DatePicker
-                onChange={onChange}
-                // @ts-ignore
-                defaultValue={expirationDate}
-                allowClear={false}
-              />
+              <DatePicker onChange={onChange} defaultValue={expirationDate} allowClear={false} />
             </div>
             <Button
               type="link"

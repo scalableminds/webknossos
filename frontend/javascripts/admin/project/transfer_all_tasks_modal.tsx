@@ -5,7 +5,7 @@ import { Modal, Spin, Table } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
-import _ from "lodash";
+import sortBy from "lodash-es/sortBy";
 import messages from "messages";
 import { useState } from "react";
 import type { APIActiveUser, APIProject, APIUser } from "types/api_types";
@@ -28,7 +28,7 @@ function TransferAllTasksModal({ project, onCancel, onComplete }: Props) {
         const activeUsers = users.filter((u) => u.isActive);
         const usersWithActiveTasks = project ? await getUsersWithActiveTasks(project.id) : [];
 
-        const sortedUsers = _.sortBy(activeUsers, "lastName");
+        const sortedUsers = sortBy(activeUsers, "lastName");
 
         setUsersWithActiveTasks(usersWithActiveTasks);
         return sortedUsers;

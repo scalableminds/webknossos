@@ -12,16 +12,17 @@ import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
-import * as Utils from "libs/utils";
-import { coalesce, mod } from "libs/utils";
+import { coalesce, map3, mod, sleep } from "libs/utils";
 import window, { location } from "libs/window";
-import _ from "lodash";
+import cloneDeep from "lodash-es/cloneDeep";
+import groupBy from "lodash-es/groupBy";
+import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type { Vector16 } from "mjs";
 import { Euler, MathUtils, Quaternion } from "three";
 import TWEEN from "tween.js";
-import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { Writeable } from "types/globals";
 import type {
@@ -35,10 +36,10 @@ import type {
 } from "viewer/constants";
 import Constants, {
   ControlModeEnum,
+  EMPTY_OBJECT,
+  MappingStatusEnum,
   OrthoViews,
   TDViewDisplayModeEnum,
-  MappingStatusEnum,
-  EMPTY_OBJECT,
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
 import { loadAgglomerateSkeletonForSegmentId } from "viewer/controller/combinations/segmentation_handlers";
@@ -74,7 +75,6 @@ import {
   getTreeAndNode,
   getTreeAndNodeOrNull,
   getTreeGroupsMap,
-  mapGroups,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import {
@@ -169,7 +169,7 @@ import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_s
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -184,9 +184,10 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import {
-  MISSING_GROUP_ID,
   callDeep,
   createGroupToSegmentsMap,
+  MISSING_GROUP_ID,
+  mapGroups,
   moveGroupsHelper,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
@@ -378,7 +379,7 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
-    const globalPosition = { rounded: Utils.map3(Math.round, position), floating: position };
+    const globalPosition = { rounded: map3(Math.round, position), floating: position };
     assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(
@@ -414,7 +415,7 @@ class TracingApi {
     assertExists(commentText, "Comment text is missing.");
 
     // Convert nodeId to node
-    if (_.isNumber(nodeId)) {
+    if (isNumber(nodeId)) {
       const tree =
         treeId != null
           ? skeletonTracing.trees.getNullable(treeId)
@@ -609,7 +610,7 @@ class TracingApi {
     const { annotation } = Store.getState();
     const skeletonTracing = assertSkeleton(annotation);
 
-    const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
+    const newTreeGroups = cloneDeep(skeletonTracing.treeGroups);
 
     callDeep(newTreeGroups, groupId, (item) => {
       // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'name' because it is a read-only ... Remove this comment to see the full error message
@@ -868,7 +869,7 @@ class TracingApi {
     }
     const { segmentGroups } = volumeTracing;
 
-    const newSegmentGroups = _.cloneDeep(segmentGroups);
+    const newSegmentGroups = cloneDeep(segmentGroups);
     const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
     const newGroup = {
       name: name || `Group ${newGroupId}`,
@@ -947,7 +948,7 @@ class TracingApi {
       return;
     }
 
-    let newSegmentGroups = _.cloneDeep(segmentGroups);
+    let newSegmentGroups = cloneDeep(segmentGroups);
 
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
     let segmentIdsToDelete: number[] = [];
@@ -995,7 +996,9 @@ class TracingApi {
           currentSubsegments.map((segment) => segment.id),
         );
         // Also delete the segments of all subgroups
-        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
+        group.children.forEach((subgroup) => {
+          findChildrenRecursively(subgroup);
+        });
       };
 
       findChildrenRecursively(item);
@@ -1121,7 +1124,7 @@ class TracingApi {
       }
     } catch (err) {
       console.error(err);
-      await Utils.sleep(2000);
+      await sleep(2000);
       location.href = "/dashboard";
     } finally {
       this.isFinishing = false;
@@ -1157,7 +1160,7 @@ class TracingApi {
       newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
-        // @ts-ignore
+        // @ts-expect-error
         type: newControlMode,
       },
       false,
@@ -1250,7 +1253,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of the given tree and returns the length in nanometer and in voxels.
+   * Measures the length of the given tree and returns the length in dataset unit and in voxels.
    */
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
@@ -1278,7 +1281,7 @@ class TracingApi {
   }
 
   /**
-   * Measures the length of all trees and returns the length in nanometer and in voxels.
+   * Measures the length of all trees and returns the length in dataset unit and in voxels.
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
@@ -1430,7 +1433,7 @@ class TracingApi {
     if (rotation == null) {
       rotation = curRotation;
     } else {
-      rotation = Utils.map3(MathUtils.degToRad, rotation);
+      rotation = map3(MathUtils.degToRad, rotation);
     }
     const endQuaternion = new Quaternion().setFromEuler(new Euler(...rotation, "XYZ"));
 
@@ -1465,7 +1468,7 @@ class TracingApi {
           t,
         );
         const interpolatedEuler = new Euler().setFromQuaternion(interpolatedQuaternion, "XYZ");
-        const interpolatedEulerInDegree = Utils.map3(MathUtils.radToDeg, [
+        const interpolatedEulerInDegree = map3(MathUtils.radToDeg, [
           interpolatedEuler.x,
           interpolatedEuler.y,
           interpolatedEuler.z,
@@ -1584,7 +1587,7 @@ class DataApi {
    * Returns the names of all available layers of the current tracing.
    */
   getLayerNames(): Array<string> {
-    return _.map(this.model.dataLayers, "name");
+    return Object.values(this.model.dataLayers).map((layer) => layer.name);
   }
 
   /**
@@ -1660,7 +1663,7 @@ class DataApi {
   ): Promise<void> {
     const truePredicate = () => true;
     await Promise.all(
-      Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
+      Object.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
             await Model.ensureSavedState();
@@ -1681,7 +1684,7 @@ class DataApi {
       await Model.ensureSavedState();
     }
 
-    Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
+    Object.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
       dataLayer.cube.removeAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });
@@ -2162,7 +2165,7 @@ class DataApi {
           const length = channelCount * (xMax - x);
           // The `set` operation is not problematic, since the BucketDataArray types
           // won't be mixed (either, they are BigInt or they aren't)
-          // @ts-ignore
+          // @ts-expect-error
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
         }
@@ -2284,7 +2287,7 @@ class DataApi {
         Math.floor(pos[2] / labeledMag[2]),
       ],
     );
-    const groupedByW = _.groupBy(globalPositions, (pos) => pos[thirdDim]);
+    const groupedByW = groupBy(globalPositions, (pos) => pos[thirdDim]);
 
     for (const group of Object.values(groupedByW)) {
       const w = group[0][thirdDim];
@@ -2412,7 +2415,7 @@ class DataApi {
       console.warn(`The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
       Instead, they are part of the segmentation layer configuration and can be set as follows:
       "const layerSettings = api.data.getConfiguration('layers');
-      const copyOfLayerSettings = _.cloneDeep(layerSettings);
+      const copyOfLayerSettings = cloneDeep(layerSettings);
       copyOfLayerSettings[<segmentationLayerName>].alpha = 40;
       copyOfLayerSettings[<segmentationLayerName>].isDisabled = false;
       api.data.setConfiguration('layers', copyOfLayerSettings);"`);

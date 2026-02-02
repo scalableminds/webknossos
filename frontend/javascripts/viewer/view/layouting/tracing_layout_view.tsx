@@ -3,12 +3,11 @@ import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import { document, location } from "libs/window";
-import window from "libs/window";
+import window, { document, location } from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import _ from "lodash";
+import debounce from "lodash-es/debounce";
 import messages from "messages";
-import * as React from "react";
+import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
@@ -22,14 +21,12 @@ import { destroySceneController } from "viewer/controller/scene_controller_provi
 import UrlManager from "viewer/controller/url_manager";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
-import { cancelSagaAction } from "viewer/model/actions/actions";
-import { resetStoreAction } from "viewer/model/actions/actions";
+import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { applyState } from "viewer/model_initialization";
-import { Store } from "viewer/singletons";
-import { Model } from "viewer/singletons";
-import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "viewer/store";
+import { Model, Store } from "viewer/singletons";
+import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
 import WkContextMenu from "viewer/view/context_menu";
@@ -39,9 +36,9 @@ import {
   recalculateInputCatcherSizes,
 } from "viewer/view/input_catcher";
 import {
-  LayoutEvents,
   getLastActiveLayout,
   getLayoutConfig,
+  LayoutEvents,
   layoutEmitter,
   setActiveLayout,
   storeLayoutConfig,
@@ -80,7 +77,7 @@ type State = {
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
-class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
+class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
   lastTouchTimeStamp: number | null = null;
 
   static getDerivedStateFromError() {
@@ -151,7 +148,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     const refreshMessageContainer = document.createElement("div");
     refreshMessageContainer.style.display = "grid";
-    // @ts-ignore
+    // @ts-expect-error
     refreshMessageContainer.style["place-items"] = "center";
     refreshMessageContainer.style.height = "75vh";
 
@@ -233,7 +230,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }
   };
 
-  debouncedOnLayoutChange = _.debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
+  debouncedOnLayoutChange = debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
 
   saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(
@@ -336,7 +333,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     };
 
     return (
-      <React.Fragment>
+      <Fragment>
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
@@ -406,14 +403,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 )}
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
-                  <React.Fragment>
+                  <Fragment>
                     <FlexLayoutWrapper
                       onLayoutChange={this.onLayoutChange}
                       layoutKey={layoutType}
                       layoutName={activeLayoutName}
                     />
                     <WelcomeToast />
-                  </React.Fragment>
+                  </Fragment>
                 ) : null}
               </div>
               <AiJobsDrawer isOpen={this.props.aiJobDrawerState !== "invisible"} />
@@ -426,7 +423,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             </Layout>
           </Layout>
         </NmlUploadZoneContainer>
-      </React.Fragment>
+      </Fragment>
     );
   }
 }

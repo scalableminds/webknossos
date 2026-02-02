@@ -3,7 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
+import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
@@ -23,14 +23,17 @@ import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import controllers.LayerRenaming
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
+import models.dataset.DatasetCreationType.DatasetCreationType
 import models.job.JobDAO
 import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import security.RandomIDGenerator
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -110,7 +113,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                             dataSource: DataSource,
                             folderId: Option[ObjectId],
                             user: User,
-                            isVirtual: Boolean): Fox[Dataset] =
+                            isVirtual: Boolean,
+                            creationType: DatasetCreationType): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
@@ -118,11 +122,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
       newDatasetId = ObjectId.generate
       directoryName = generateDirectoryName(datasetName, newDatasetId)
-      dataset <- createDataset(dataStore,
-                               newDatasetId,
-                               datasetName,
-                               dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
-                               isVirtual = isVirtual)
+      dataset <- createDataset(
+        dataStore,
+        newDatasetId,
+        datasetName,
+        dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
+        isVirtual = isVirtual,
+        creationType = creationType
+      )
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
@@ -133,18 +140,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       datasetId: ObjectId,
       datasetName: String,
       dataSource: DataSource,
-      publication: Option[ObjectId] = None,
-      isVirtual: Boolean = false
+      isVirtual: Boolean = false,
+      metadata: JsArray = JsArray.empty,
+      description: Option[String] = None,
+      creationType: DatasetCreationType.Value
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    val metadata =
-      if (publication.isDefined)
-        Json.arr(
-          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name"),
-          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region"),
-          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method")
-        )
-      else Json.arr()
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
@@ -154,13 +155,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         datasetId,
         dataStore.name,
         organization._id,
-        publication,
+        None,
         None,
         organizationRootFolder._id,
         dataSourceHash,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
-        description = None,
+        description = description,
         directoryName = dataSource.id.directoryName,
         isPublic = false,
         isUsable = dataSource.isUsable,
@@ -170,7 +171,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
-        metadata = metadata
+        metadata = metadata,
+        creationType = Some(creationType),
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
@@ -222,7 +224,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
           updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
         case _ =>
-          createDataset(dataStore, ObjectId.generate, dataSource.id.directoryName, dataSource).map(ds => Some(ds._id))
+          createDataset(dataStore,
+                        ObjectId.generate,
+                        dataSource.id.directoryName,
+                        dataSource,
+                        creationType = DatasetCreationType.DiskScan).map(ds => Some(ds._id))
       }
     }
   }
@@ -268,43 +274,80 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       }
     }).flatten
 
-  def updateDataSourceFromUserChanges(dataset: Dataset, dataSourceUpdates: UsableDataSource)(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Unit] =
+  def updateDataSourceFromUserChanges(
+      dataset: Dataset,
+      dataSourceUpdates: UsableDataSource,
+      layerRenamings: Seq[LayerRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
     for {
       existingDataSource <- usableDataSourceFor(dataset)
       datasetId = dataset._id
       dataStoreClient <- clientFor(dataset)
-      updatedDataSource = applyDataSourceUpdates(existingDataSource, dataSourceUpdates)
+      updatedDataSource <- applyDataSourceUpdates(existingDataSource, dataSourceUpdates, layerRenamings).toFox
       isChanged = updatedDataSource.hashCode() != existingDataSource.hashCode()
       _ <- if (isChanged) {
         logger.info(s"Updating dataSource of $datasetId")
         for {
           _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
           _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+          datastoreClient <- clientFor(dataset)
+          removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
+          pathsUsedOnlyByThisDataset <- if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
+          else Fox.successful(List.empty)
+          pathsToDelete = removedPaths.intersect(pathsUsedOnlyByThisDataset)
           _ <- datasetDAO.updateDataSource(datasetId,
                                            dataset._dataStore,
                                            updatedDataSource.hashCode(),
                                            updatedDataSource,
                                            isUsable = true)(GlobalAccessContext)
+          _ <- datastoreClient.deletePaths(pathsToDelete)
         } yield ()
       } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
     } yield ()
 
   private def applyDataSourceUpdates(existingDataSource: UsableDataSource,
-                                     updates: UsableDataSource): UsableDataSource = {
-    val updatedLayers = existingDataSource.dataLayers.flatMap { existingLayer =>
-      val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
-      layerUpdatesOpt match {
-        case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
-        case None               => None
+                                     updates: UsableDataSource,
+                                     layerRenamings: Seq[LayerRenaming]): Box[UsableDataSource] = {
+    val existingDataSourceWithRenamedLayers = applyLayerRenamings(existingDataSource, layerRenamings)
+    for {
+      _ <- Box.fromBool(
+        existingDataSourceWithRenamedLayers.dataLayers.length == existingDataSourceWithRenamedLayers.dataLayers
+          .distinctBy(_.name)
+          .length) ?~ "Layer renamings create name collisions."
+      updatedLayers = existingDataSourceWithRenamedLayers.dataLayers.flatMap { existingLayer =>
+        val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
+        layerUpdatesOpt match {
+          case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
+          case None               => None
+        }
       }
-    }
-    existingDataSource.copy(
-      dataLayers = updatedLayers,
-      scale = updates.scale
-    )
+      addedLayers <- findNewLayers(existingDataSourceWithRenamedLayers, updates)
+    } yield
+      existingDataSource.copy(
+        dataLayers = updatedLayers ++ addedLayers,
+        scale = updates.scale
+      )
   }
+
+  private def findNewLayers(existingDataSoruce: UsableDataSource, updates: UsableDataSource): Box[Seq[StaticLayer]] = {
+    val newLayers = updates.dataLayers.filter(layer => !existingDataSoruce.dataLayers.exists(_.name == layer.name))
+    val noneHaveMags = newLayers.forall(_.mags.isEmpty)
+    for {
+      _ <- Box.fromBool(noneHaveMags) ?~ "New layers may not have mags. Add empty layers instead and then add mags."
+    } yield newLayers
+  }
+
+  private def applyLayerRenamings(existingDataSource: UsableDataSource,
+                                  layerRenamings: Seq[LayerRenaming]): UsableDataSource =
+    if (layerRenamings.isEmpty) existingDataSource
+    else {
+      val renamingMap: Map[String, String] = layerRenamings.map(renaming => (renaming.oldName, renaming.newName)).toMap
+      val layersRenamed = existingDataSource.dataLayers.map { layer =>
+        if (renamingMap.contains(layer.name))
+          layer.mapped(name = renamingMap(layer.name))
+        else layer
+      }
+      existingDataSource.copy(dataLayers = layersRenamed)
+    }
 
   private def applyLayerUpdates(existingLayer: StaticLayer, layerUpdates: StaticLayer): StaticLayer =
     /*
@@ -319,13 +362,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
     existingLayer match {
       case e: StaticColorLayer =>
+        val mags = applyMagUpdates(e.mags, layerUpdates.mags)
         layerUpdates match {
           case u: StaticColorLayer =>
             e.copy(
               boundingBox = u.boundingBox,
               coordinateTransformations = u.coordinateTransformations,
               defaultViewConfiguration = u.defaultViewConfiguration,
-              adminViewConfiguration = u.adminViewConfiguration
+              adminViewConfiguration = u.adminViewConfiguration,
+              mags = mags
             )
           case u: StaticSegmentationLayer =>
             StaticSegmentationLayer(
@@ -333,7 +378,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               e.dataFormat,
               u.boundingBox,
               e.elementClass,
-              e.mags,
+              mags,
               u.defaultViewConfiguration,
               u.adminViewConfiguration,
               u.coordinateTransformations,
@@ -344,6 +389,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             )
         }
       case e: StaticSegmentationLayer =>
+        val mags = applyMagUpdates(e.mags, layerUpdates.mags)
         layerUpdates match {
           case u: StaticSegmentationLayer =>
             e.copy(
@@ -351,7 +397,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               coordinateTransformations = u.coordinateTransformations,
               defaultViewConfiguration = u.defaultViewConfiguration,
               adminViewConfiguration = u.adminViewConfiguration,
-              largestSegmentId = u.largestSegmentId
+              largestSegmentId = u.largestSegmentId,
+              mags = mags
             )
           case u: StaticColorLayer =>
             StaticColorLayer(
@@ -359,7 +406,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               e.dataFormat,
               u.boundingBox,
               e.elementClass,
-              e.mags,
+              mags,
               u.defaultViewConfiguration,
               u.adminViewConfiguration,
               u.coordinateTransformations,
@@ -368,6 +415,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             )
         }
     }
+
+  private def applyMagUpdates(existingMags: List[MagLocator], magUpdates: List[MagLocator]): List[MagLocator] =
+    // In this context removing mags is the only allowed update
+    existingMags.filter(existingMag => magUpdates.exists(_.mag == existingMag.mag))
 
   def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
                                       dataStore: DataStore,
@@ -511,15 +562,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       })
     } yield ()
 
+  private def findPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
+    for {
+      magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findMagPathsUsedOnlyByThisDataset(datasetId)
+      attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findAttachmentPathsUsedOnlyByThisDataset(
+        datasetId)
+    } yield magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
+
   def deleteDataset(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       datastoreClient <- clientFor(dataset)
       _ <- if (dataset.isVirtual) {
         for {
-          magPathsUsedOnlyByThisDataset <- datasetMagsDAO.findMagPathsUsedOnlyByThisDataset(dataset._id)
-          attachmentPathsUsedOnlyByThisDataset <- datasetLayerAttachmentsDAO.findAttachmentPathsUsedOnlyByThisDataset(
-            dataset._id)
-          pathsUsedOnlyByThisDataset = magPathsUsedOnlyByThisDataset ++ attachmentPathsUsedOnlyByThisDataset
+          pathsUsedOnlyByThisDataset <- findPathsUsedOnlyByThisDataset(dataset._id)
           // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
           _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
         } yield ()

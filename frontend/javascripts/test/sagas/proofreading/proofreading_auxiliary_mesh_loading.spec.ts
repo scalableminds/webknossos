@@ -1,18 +1,36 @@
+import type { ActionPattern, Task } from "@redux-saga/types";
+import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import { cancel, delay, takeEvery } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
+import type { Action } from "viewer/model/actions/actions";
+import {
+  type FinishedLoadingMeshAction,
+  type RemoveMeshAction,
+  setOthersMayEditForAnnotationAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { type WebknossosState, startSaga } from "viewer/store";
+import { Store } from "viewer/singletons";
+import { startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  mockEdgesForAgglomerateMinCut,
+  performMergeTreesProofreading,
+  performMinCutWithNodesProofreading,
+  performSplitTreesProofreading,
+} from "./proofreading_skeleton_test_utils";
 import {
   getAllCurrentlyLoadedMeshIds,
   initializeMappingAndTool,
@@ -24,24 +42,6 @@ import {
   prepareGetNeighborsForAgglomerateNode,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
-import { cancel, delay, takeEvery } from "typed-redux-saga";
-import {
-  setOthersMayEditForAnnotationAction,
-  type FinishedLoadingMeshAction,
-  type RemoveMeshAction,
-} from "viewer/model/actions/annotation_actions";
-import type { ActionPattern, Task } from "@redux-saga/types";
-import { Store } from "viewer/singletons";
-import _ from "lodash";
-import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import type { Action } from "viewer/model/actions/actions";
-import {
-  mockEdgesForAgglomerateMinCut,
-  performMergeTreesProofreading,
-  performMinCutWithNodesProofreading,
-  performSplitTreesProofreading,
-} from "./proofreading_skeleton_test_utils";
 
 describe("Proofreading (with auxiliary mesh loading enabled)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -117,11 +117,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
         const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-        expect(_.sortBy([...loadedMeshIds])).toEqual([1, 6]);
+        expect(sortBy([...loadedMeshIds])).toEqual([1, 6]);
         yield loadAgglomerateMeshes([4]);
 
         const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context);
-        expect(_.sortBy([...loadedMeshIds2])).toEqual([1, 4, 6]);
+        expect(sortBy([...loadedMeshIds2])).toEqual([1, 4, 6]);
 
         // Execute the actual merge and wait for the finished mapping.
         const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
@@ -141,8 +141,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         yield delay(1);
 
         const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-        expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
-        expect(_.sortBy([...removedMeshes])).toEqual([1, 4]);
+        expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
+        expect(sortBy([...removedMeshes])).toEqual([1, 4]);
         expect([...addedMeshes]).toEqual([1]);
         yield cancel(forkedEffect1);
         yield cancel(forkedEffect2);
@@ -168,7 +168,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
         const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-        expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4]);
+        expect(sortBy([...loadedMeshIds])).toEqual([1, 4]);
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -201,9 +201,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         yield delay(1);
 
         const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-        expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
-        expect(_.sortBy([...removedMeshes])).toEqual([1, 1339]); // Although 1339 is not loaded it is tried to be removed by the proofreading saga to refresh it.
-        expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
+        expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
+        expect(sortBy([...removedMeshes])).toEqual([1, 1339]); // Although 1339 is not loaded it is tried to be removed by the proofreading saga to refresh it.
+        expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
         yield cancel(forkedEffect1);
         yield cancel(forkedEffect2);
       });
@@ -254,9 +254,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4]);
-      expect(_.sortBy([...removedMeshes])).toEqual([4, 6]);
-      expect(_.sortBy([...addedMeshes])).toEqual([4]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4]);
+      expect(sortBy([...removedMeshes])).toEqual([4, 6]);
+      expect(sortBy([...addedMeshes])).toEqual([4]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
@@ -323,9 +323,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 1339]);
-      expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339]);
+      expect(sortBy([...removedMeshes])).toEqual([1, 1339]);
+      expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
@@ -359,7 +359,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield loadAgglomerateMeshes([4, 6, 1]);
 
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+      expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -385,9 +385,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 4, 6]);
-      expect(_.sortBy([...addedMeshes])).toEqual([1]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
+      expect(sortBy([...removedMeshes])).toEqual([1, 4, 6]);
+      expect(sortBy([...addedMeshes])).toEqual([1]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
@@ -436,7 +436,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield loadAgglomerateMeshes([4, 6, 1]);
 
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+      expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -461,9 +461,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
-      expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
+      expect(sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
+      expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
@@ -498,7 +498,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield loadAgglomerateMeshes([4, 6, 1]);
 
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+      expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -530,9 +530,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
-      expect(_.sortBy([...addedMeshes])).toEqual([1, 1339]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
+      expect(sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
+      expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
@@ -581,7 +581,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield loadAgglomerateMeshes([4, 6, 1]);
 
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+      expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -615,9 +615,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield delay(1);
 
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
-      expect(_.sortBy([...removedMeshes])).toEqual([1, 1339, 1340]);
-      expect(_.sortBy([...addedMeshes])).toEqual([1, 1339, 1340]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      expect(sortBy([...removedMeshes])).toEqual([1, 1339, 1340]);
+      expect(sortBy([...addedMeshes])).toEqual([1, 1339, 1340]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
     });
@@ -659,7 +659,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
     });
 
     await task.toPromise();
@@ -711,7 +711,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
     });
 
     await task.toPromise();
@@ -762,7 +762,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
     });
 
     await task.toPromise();
@@ -809,7 +809,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
     });
 
     await task.toPromise();
@@ -862,7 +862,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
     });
 
     await task.toPromise();
@@ -956,7 +956,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
-      expect(_.sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
+      expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
     });
 
     await task.toPromise();

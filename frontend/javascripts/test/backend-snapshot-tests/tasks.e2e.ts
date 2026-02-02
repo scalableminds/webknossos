@@ -1,18 +1,20 @@
-import _ from "lodash";
-import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
+import { replaceVolatileValues, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import {
+  createTasks,
+  deleteTask,
+  getAnnotationsForTask,
   getTask,
   getTasks,
   peekNextTasks,
-  getAnnotationsForTask,
-  transferTask,
-  deleteTask,
   requestTask,
-  createTasks,
+  transferTask,
   updateTask,
 } from "admin/api/tasks";
-import { describe, test, beforeAll, expect } from "vitest";
+import isNull from "lodash-es/isNull";
+import omitBy from "lodash-es/omitBy";
 import type { Vector3 } from "viewer/constants";
+import { beforeAll, describe, expect, test } from "vitest";
 
 describe("Task API  (E2E)", () => {
   beforeAll(async () => {
@@ -60,7 +62,7 @@ describe("Task API  (E2E)", () => {
   test("updateTask()", async () => {
     const taskBase = await getTask("58135c192faeb34c0081c058");
 
-    const task = _.omitBy(
+    const task = omitBy(
       {
         ...taskBase,
         taskTypeId: taskBase.type.id,
@@ -68,7 +70,7 @@ describe("Task API  (E2E)", () => {
         scriptId: taskBase.script ? taskBase.script.id : null,
         pendingInstances: taskBase.status.pending,
       },
-      _.isNull,
+      isNull,
     );
 
     // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.

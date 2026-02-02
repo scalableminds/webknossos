@@ -1,25 +1,42 @@
+import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import type { RequestOptionsWithData } from "libs/request";
 import { sleep } from "libs/utils";
+import isEqual from "lodash-es/isEqual";
+import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
 import { AgglomerateMapping } from "test/helpers/agglomerate_mapping_helper";
 import {
   type BucketOverride,
-  type WebknossosTestContext,
   createBucketResponseFunction,
+  type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
+import { delay } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import Constants, { type Vector3, type Vector2 } from "viewer/constants";
+import Constants, { type Vector2, type Vector3 } from "viewer/constants";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import {
+  cutAgglomerateFromNeighborsAction,
+  minCutPartitionsAction,
+  proofreadAtPosition,
+  toggleSegmentInPartitionAction,
+} from "viewer/model/actions/proofread_actions";
 import { setMappingAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
+import {
+  setActiveCellAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import type {
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
@@ -31,22 +48,6 @@ import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
-import { delay } from "typed-redux-saga";
-import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import {
-  cutAgglomerateFromNeighborsAction,
-  minCutPartitionsAction,
-  proofreadAtPosition,
-  toggleSegmentInPartitionAction,
-} from "viewer/model/actions/proofread_actions";
-import {
-  updateSegmentAction,
-  setActiveCellAction,
-} from "viewer/model/actions/volumetracing_actions";
-import _ from "lodash";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -440,7 +441,7 @@ export function prepareGetNeighborsForAgglomerateNode(
         };
       }
       return {
-        segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
+        segmentId: Number.parseInt(segmentInfo.segmentId.toString(), 10),
         neighbors: [],
       };
     },
@@ -482,7 +483,7 @@ export function* performCutFromAllNeighbours(
     yield loadAgglomerateMeshes([4, 6, 1]);
 
     const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-    expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+    expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
   }
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
@@ -532,7 +533,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
     yield loadAgglomerateMeshes([4, 6, 1]);
 
     const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
-    expect(_.sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+    expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen
@@ -588,8 +589,8 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
       if (
         agglomerateId === 1 &&
-        _.isEqual(partition1, [1, 2]) &&
-        _.isEqual(partition2, [1337, 1338])
+        isEqual(partition1, [1, 2]) &&
+        isEqual(partition2, [1337, 1338])
       ) {
         return [
           {

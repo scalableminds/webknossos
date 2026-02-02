@@ -5,8 +5,8 @@ import {
   getUnversionedAnnotationInformation,
 } from "admin/rest_api";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { type APIAnnotation, AnnotationLayerEnum, type ServerVolumeTracing } from "types/api_types";
+import { computeBoundingBoxFromBoundingBoxObject, point3ToVector3 } from "libs/utils";
+import { AnnotationLayerEnum, type APIAnnotation, type ServerVolumeTracing } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { convertUserBoundingBoxesFromServerToFrontend } from "viewer/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
@@ -82,7 +82,7 @@ function getVolumeTracingMags(
 
     if (layer) {
       volumeTracingMags[layer.name] = tracing.mags
-        ? tracing.mags.map((mag) => ({ mag: Utils.point3ToVector3(mag) }))
+        ? tracing.mags.map((mag) => ({ mag: point3ToVector3(mag) }))
         : [{ mag: [1, 1, 1] as Vector3 }];
     }
   });
@@ -121,7 +121,7 @@ async function getBoundingBoxes(
     const largestId = existingIds.length > 0 ? Math.max(...existingIds) : -1;
     userBoundingBoxes.push({
       name: "Task Bounding Box",
-      boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(annotation.task.boundingBox),
+      boundingBox: computeBoundingBoxFromBoundingBoxObject(annotation.task.boundingBox),
       color: [0, 0, 0],
       isVisible: true,
       id: largestId + 1,

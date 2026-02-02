@@ -1,5 +1,8 @@
 import { withoutValues } from "libs/utils";
-import _ from "lodash";
+
+import groupBy from "lodash-es/groupBy";
+import keyBy from "lodash-es/keyBy";
+
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import { updateNodePredicate } from "viewer/model/sagas/skeletontracing_saga";
 import type {
@@ -45,13 +48,13 @@ function compactMovedNodesAndEdges(
   > = [];
 
   // Performance improvement: create a map of the deletedNode update actions, key is the nodeId
-  const deleteNodeActionsMap = _.keyBy(updateActions, (ua) =>
+  const deleteNodeActionsMap = keyBy(updateActions, (ua) =>
     ua.name === "deleteNode" ? ua.value.nodeId : -1,
   );
 
   // Performance improvement: create a map of the deletedEdge update actions, key is the cantor pairing
   // of sourceId and targetId
-  const deleteEdgeActionsMap = _.keyBy(updateActions, (ua) =>
+  const deleteEdgeActionsMap = keyBy(updateActions, (ua) =>
     ua.name === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1,
   );
 
@@ -81,7 +84,7 @@ function compactMovedNodesAndEdges(
 
   // Group moved nodes and edges by their old and new treeId using the cantor pairing function
   // to create a single unique id
-  const groupedMovedNodesAndEdges = _.groupBy(movedNodesAndEdges, ([createUA, deleteUA]) =>
+  const groupedMovedNodesAndEdges = groupBy(movedNodesAndEdges, ([createUA, deleteUA]) =>
     cantor(createUA.value.treeId, deleteUA.value.treeId),
   ) as Record<
     number,
@@ -92,7 +95,7 @@ function compactMovedNodesAndEdges(
   >;
 
   // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
-  for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
+  for (const movedPairings of Object.values(groupedMovedNodesAndEdges)) {
     const actionTracingId = movedPairings[0][1].value.actionTracingId;
     const oldTreeId = movedPairings[0][1].value.treeId;
     const newTreeId = movedPairings[0][0].value.treeId;
@@ -156,7 +159,7 @@ function compactMovedNodesAndEdges(
     compactedActions = withoutValues(
       compactedActions,
       // Cast movedPairs type to satisfy _.flatten
-      _.flatten(movedPairings as Array<[CreateOrDeleteNodeOrEdge, CreateOrDeleteNodeOrEdge]>),
+      (movedPairings as Array<[CreateOrDeleteNodeOrEdge, CreateOrDeleteNodeOrEdge]>).flat(),
     );
   }
 
@@ -172,8 +175,7 @@ function compactDeletedTrees(updateActions: Array<UpdateActionWithoutIsolationRe
   const deletedTreeIds = updateActions
     .filter((ua) => ua.name === "deleteTree")
     .map((ua) => (ua as DeleteTreeUpdateAction).value.id);
-  return _.filter(
-    updateActions,
+  return updateActions.filter(
     (ua) =>
       !(
         (ua.name === "deleteNode" || ua.name === "deleteEdge") &&

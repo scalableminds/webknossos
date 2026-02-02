@@ -1,16 +1,23 @@
-import _ from "lodash";
-import dayjs from "dayjs";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
-  tokenUserA,
-  setUserAuthToken,
-  resetDatabase,
-  writeTypeCheckingFile,
   replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  writeTypeCheckingFile,
 } from "test/e2e-setup";
-import * as api from "admin/rest_api";
-import { describe, test, beforeAll, expect } from "vitest";
+import {
+  getActiveUser,
+  getAvailableTasksReport,
+  getProjectProgressReport,
+  getTeams,
+  getTimeTrackingForUserSpans,
+} from "admin/rest_api";
+import dayjs from "dayjs";
+import sortBy from "lodash-es/sortBy";
 import type { APITeam, APIUser } from "types/api_types";
 import { AnnotationStateFilterEnum } from "viewer/constants";
+import { beforeAll, describe, expect, test } from "vitest";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;
@@ -22,15 +29,15 @@ describe("Time Tracking API (E2E)", () => {
     // Reset database and initialize values
     resetDatabase();
     setUserAuthToken(tokenUserA);
-    activeUser = await api.getActiveUser();
+    activeUser = await getActiveUser();
 
-    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+    const teams = sortBy(await getTeams(), (team) => team.name);
 
     firstTeam = teams[0];
   });
 
   test("getTimeTrackingForUserSpans", async () => {
-    const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
+    const timeTrackingForUser = await getTimeTrackingForUserSpans(
       activeUser.id,
       dayjs("20180101", "YYYYMMDD").valueOf(),
       dayjs("20181001", "YYYYMMDD").valueOf(),
@@ -43,7 +50,7 @@ describe("Time Tracking API (E2E)", () => {
 
   test("getTimeTrackingForUser for a user other than the active user", async () => {
     const idUserC = "770b9f4d2a7c0e4d008da6ef";
-    const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
+    const timeTrackingForUser = await getTimeTrackingForUserSpans(
       idUserC,
       dayjs("20160401", "YYYYMMDD").valueOf(),
       dayjs("20160420", "YYYYMMDD").valueOf(),
@@ -55,7 +62,7 @@ describe("Time Tracking API (E2E)", () => {
   });
 
   test("getProjectProgressReport", async () => {
-    const projectProgressReport = await api.getProjectProgressReport(firstTeam.id);
+    const projectProgressReport = await getProjectProgressReport(firstTeam.id);
     writeTypeCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
       isArray: true,
     });
@@ -63,7 +70,7 @@ describe("Time Tracking API (E2E)", () => {
   });
 
   test("getAvailableTasksReport", async () => {
-    const availableTasksReport = await api.getAvailableTasksReport(firstTeam.id);
+    const availableTasksReport = await getAvailableTasksReport(firstTeam.id);
     writeTypeCheckingFile(availableTasksReport, "available-tasks", "APIAvailableTasksReport", {
       isArray: true,
     });

@@ -3,8 +3,9 @@ import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction, sleep } from "libs/utils";
-import _ from "lodash";
-import { type Channel, buffers } from "redux-saga";
+import compact from "lodash-es/compact";
+import sum from "lodash-es/sum";
+import { buffers, type Channel } from "redux-saga";
 import {
   actionChannel,
   call,
@@ -36,11 +37,11 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import {
-  type EnsureHasNewestVersionAction,
-  type NotifyAboutUpdatedBucketsAction,
   dispatchEnsureTracingsWereDiffedToSaveQueueAction,
+  type EnsureHasNewestVersionAction,
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
+  type NotifyAboutUpdatedBucketsAction,
   prepareRebaseAction,
   setPendingProofreadingOperationInfoAction,
   setVersionNumberAction,
@@ -104,7 +105,7 @@ function* watchForNumberOfBucketsInSaveQueue(): Saga<void> {
   });
   while (true) {
     yield* delay(CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS);
-    const sumOfBuckets = _.sum(currentBucketCounts);
+    const sumOfBuckets = sum(currentBucketCounts);
     if (sumOfBuckets > bucketSaveWarningThreshold) {
       Store.dispatch(showManyBucketUpdatesWarningAction());
     }
@@ -167,7 +168,7 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
   const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
   const volumeTracings = yield* select((state) => state.annotation.volumes);
 
-  const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
+  const tracings: Array<SkeletonTracing | VolumeTracing> = compact([
     ...volumeTracings,
     maybeSkeletonTracing,
   ]);
@@ -442,7 +443,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     // saga.
     console.error("in save saga, got exception, terminating ...");
     console.warn(exception);
-    // @ts-ignore
+    // @ts-expect-error
     ErrorHandling.notify(exception);
     Toast.error(
       "An unrecoverable error occurred while synchronizing this annotation. Please refresh the page.",
@@ -716,7 +717,7 @@ export function* tryToIncorporateActions(
         case "updateMappingName": {
           // TODO migrate to applyVolumeUpdateActionsFromServerAction.
           const { actionTracingId, mappingName, isEditable, isLocked } = action.value;
-          let mappingType = undefined;
+          let mappingType ;
           if (mappingName) {
             let volumeDataLayer = yield* select((state) =>
               getSegmentationLayerByName(state.dataset, actionTracingId),

@@ -1,11 +1,10 @@
 // See
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
 // for all functions in M4x4, V2 and V3.
-import _ from "lodash";
+
+import mjs, { type Matrix4x4, type Vector16 } from "mjs";
 import type { Vector2, Vector3, Vector4 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
-
-import mjs, { type Vector16, type Matrix4x4 } from "mjs";
 
 const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Array);
 
@@ -54,8 +53,7 @@ const M4x4 = {
     if (!Array.isArray(_points[0])) {
       throw new Error("transformVectorsAffine doesn't support typed arrays at the moment.");
     }
-    // @ts-ignore
-    return chunk3(M4x4.transformPointsAffine(m, _.flatten(points)));
+    return chunk3(M4x4.transformPointsAffine(m, points.flat()));
   },
   // Applies a transformation matrix on an array of points.
   transformPoints(

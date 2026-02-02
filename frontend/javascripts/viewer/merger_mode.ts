@@ -1,4 +1,4 @@
-import _ from "lodash";
+import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { UnregisterHandler } from "viewer/api/api_latest";
@@ -141,7 +141,7 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   const nodes: Array<NodeWithTreeId> = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {
-    const currentTreeId = Number.parseInt(treeId);
+    const currentTreeId = Number.parseInt(treeId, 10);
     const currentTree = trees[currentTreeId];
 
     for (const node of currentTree.nodes.values()) {
@@ -396,7 +396,7 @@ function changeOpacity(mergerModeState: MergerModeState) {
 
   const layerSettings = api.data.getConfiguration("layers");
   // Invert the visibility of the segmentation layer.
-  const copyOfLayerSettings: WriteableDatasetLayerConfiguration = _.cloneDeep(layerSettings) as any;
+  const copyOfLayerSettings: WriteableDatasetLayerConfiguration = cloneDeep(layerSettings) as any;
   const isSegmentationDisabled = copyOfLayerSettings[segmentationLayerName].isDisabled;
   copyOfLayerSettings[segmentationLayerName].isDisabled = !isSegmentationDisabled;
   api.data.setConfiguration("layers", copyOfLayerSettings);
@@ -547,8 +547,12 @@ export function disableMergerMode(segmentationLayerName: string | null | undefin
   }
 
   isCodeActive = false;
-  unsubscribeFunctions.forEach((unsubscribeFunction) => unsubscribeFunction());
-  unregisterKeyHandlers.forEach((unregisterObject) => unregisterObject.unregister());
+  unsubscribeFunctions.forEach((unsubscribeFunction) => {
+    unsubscribeFunction();
+  });
+  unregisterKeyHandlers.forEach((unregisterObject) => {
+    unregisterObject.unregister();
+  });
 
   // Disable the custom merger mode mapping
   if (segmentationLayerName != null) {

@@ -1,7 +1,8 @@
 import Request from "libs/request";
 import Toast from "libs/toast";
-import _ from "lodash";
+import last from "lodash-es/last";
 import messages from "messages";
+
 // https://developer.github.com/v3/gists/#get-a-single-gist
 type GithubGist = {
   files: Record<
@@ -22,7 +23,7 @@ function handleError(name: string) {
 }
 
 export async function fetchGistContent(url: string, name: string): Promise<string> {
-  const gistId = _.last(url.split("/"));
+  const gistId = last(url.split("/"));
 
   let gist;
 

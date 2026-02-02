@@ -2,7 +2,7 @@ import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash-es/throttle";
 import {
   Matrix4,
   Object3D,
@@ -241,7 +241,7 @@ class ArbitraryView {
     // passed to the GPU but were not used.
     // It can be used within the orthogonal bucket picker for example.
     //
-    // import * as Utils from "libs/utils";
+    // import { diffArrays } from "libs/utils";
     // import type { Vector4 } from "viewer/constants";
     // const makeBucketId = ([x, y, z], logZoomStep) => [x, y, z, logZoomStep].join(",");
     // const unpackBucketId = (str): Vector4 =>
@@ -250,7 +250,7 @@ class ArbitraryView {
     //     .map(el => parseInt(el))
     //     .map((el, idx) => (idx < 3 ? el : 0));
     // function diff(traversedBuckets, lastRenderedBuckets) {
-    //     const bucketDiff = Utils.diffArrays(traversedBuckets.map(makeBucketId), lastRenderedBuckets.map(makeBucketId));
+    //     const bucketDiff = diffArrays(traversedBuckets.map(makeBucketId), lastRenderedBuckets.map(makeBucketId));
     //
     //     bucketDiff.onlyA.forEach(bucketAddress => {
     //       const bucket = cube.getOrCreateBucket(unpackBucketId(bucketAddress));
@@ -308,7 +308,7 @@ class ArbitraryView {
   };
 
   // throttle resize to avoid annoying flickering
-  resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
+  resizeThrottled = throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
     this.camera.near = ARBITRARY_CAM_DISTANCE - value;

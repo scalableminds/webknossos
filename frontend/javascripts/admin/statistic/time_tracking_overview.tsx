@@ -18,8 +18,7 @@ import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { isUserAdminOrTeamManager } from "libs/utils";
-import * as Utils from "libs/utils";
+import { compareBy, isUserAdminOrTeamManager, localeCompareBy } from "libs/utils";
 import messages from "messages";
 import { useState } from "react";
 import type { APITimeTrackingPerUser } from "types/api_types";
@@ -27,6 +26,7 @@ import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/cons
 import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
+
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
@@ -150,7 +150,7 @@ function TimeTrackingOverview() {
       key: "user",
       render: (user: APITimeTrackingPerUser["user"]) =>
         `${user.lastName}, ${user.firstName} (${user.email})`,
-      sorter: Utils.localeCompareBy<APITimeTrackingPerUser>(
+      sorter: localeCompareBy<APITimeTrackingPerUser>(
         (timeEntry) =>
           `${timeEntry.user.lastName}, ${timeEntry.user.firstName} (${timeEntry.user.email})`,
       ),
@@ -159,14 +159,14 @@ function TimeTrackingOverview() {
       title: "No. tasks / annotations",
       dataIndex: "annotationCount",
       key: "numberAnn",
-      sorter: Utils.compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.annotationCount),
+      sorter: compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.annotationCount),
     },
     {
       title: "Avg. time per task / annotation",
       key: "avgTime",
       render: (item: APITimeTrackingPerUser) =>
         formatMilliseconds(item.timeMillis / item.annotationCount),
-      sorter: Utils.compareBy<APITimeTrackingPerUser>(
+      sorter: compareBy<APITimeTrackingPerUser>(
         (timeEntry) => timeEntry.timeMillis / timeEntry.annotationCount,
       ),
     },
@@ -176,7 +176,7 @@ function TimeTrackingOverview() {
       key: "tracingTimes",
       render: (tracingTimeInMs: APITimeTrackingPerUser["timeMillis"]) =>
         formatMilliseconds(tracingTimeInMs),
-      sorter: Utils.compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis),
+      sorter: compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis),
     },
     {
       key: "details",

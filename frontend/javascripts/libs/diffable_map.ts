@@ -1,4 +1,4 @@
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
 
 const defaultItemsPerBatch = 1000;
 let idCounter = 0;
@@ -479,7 +479,7 @@ export function diffDiffableMaps<K extends number, V>(
   onlyB: Array<K>;
 } {
   const areDifferent = useDeepEqualityCheck
-    ? (valueA: V | undefined, valueB: V | undefined) => !_.isEqual(valueA, valueB)
+    ? (valueA: V | undefined, valueB: V | undefined) => !isEqual(valueA, valueB)
     : (valueA: V | undefined, valueB: V | undefined) => valueA !== valueB;
 
   // For the edge case that one of the maps is empty, we will consider them dependent, anyway

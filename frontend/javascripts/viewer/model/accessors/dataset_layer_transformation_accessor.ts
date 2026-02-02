@@ -1,14 +1,15 @@
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import MultiKeyMap from "libs/multi_key_map";
 import { mod } from "libs/utils";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
+import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Quaternion, Vector3 as ThreeVector3 } from "three";
 import type {
+  AffineTransformation,
   APIDataLayer,
   APIDataset,
   APISkeletonLayer,
-  AffineTransformation,
   CoordinateTransformation,
 } from "types/api_types";
 import {
@@ -21,12 +22,12 @@ import {
 import type { WebknossosState } from "viewer/store";
 import type BoundingBox from "../bucket_data_handling/bounding_box";
 import {
-  type Transform,
   chainTransforms,
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
   nestedToFlatMatrix,
+  type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 import { getLayerByName } from "./dataset_accessor";
@@ -270,7 +271,7 @@ export function getTransformsForLayer(
 }
 
 function equalsIdentityTransform(transform: Transform) {
-  return transform.type === "affine" && _.isEqual(transform.affineMatrix, Identity4x4);
+  return transform.type === "affine" && isEqual(transform.affineMatrix, Identity4x4);
 }
 
 function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
@@ -369,7 +370,7 @@ export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
 // data position (i.e., how it's stored without the transformation).
 // Without the inversion, the matrix maps from stored position to the position
 // where it should be rendered.
-export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
+export const invertAndTranspose = memoize((mat: Matrix4x4) => {
   return M4x4.transpose(M4x4.inverse(mat));
 });
 
@@ -401,7 +402,7 @@ function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
   threeMatrix.decompose(translation, quaternion, scale);
   return (
     translation.length() === 0 &&
-    _.isEqual([Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)], [1, 1, 1])
+    isEqual([Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)], [1, 1, 1])
   );
 }
 
@@ -459,11 +460,11 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
     const transformations = dataLayers[i].coordinateTransformations;
     if (
       transformations == null ||
-      !_.isEqual(transformations[0], firstDataLayerTransformations[0]) ||
-      !_.isEqual(transformations[1], firstDataLayerTransformations[1]) ||
-      !_.isEqual(transformations[2], firstDataLayerTransformations[2]) ||
-      !_.isEqual(transformations[3], firstDataLayerTransformations[3]) ||
-      !_.isEqual(transformations[4], firstDataLayerTransformations[4])
+      !isEqual(transformations[0], firstDataLayerTransformations[0]) ||
+      !isEqual(transformations[1], firstDataLayerTransformations[1]) ||
+      !isEqual(transformations[2], firstDataLayerTransformations[2]) ||
+      !isEqual(transformations[3], firstDataLayerTransformations[3]) ||
+      !isEqual(transformations[4], firstDataLayerTransformations[4])
     ) {
       return false;
     }
@@ -471,7 +472,7 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
   return true;
 }
 
-export const doAllLayersHaveTheSameRotation = _.memoize(_doAllLayersHaveTheSameRotation);
+export const doAllLayersHaveTheSameRotation = memoize(_doAllLayersHaveTheSameRotation);
 
 export function transformationEqualsAffineIdentityTransform(
   transformations: CoordinateTransformation[],
@@ -491,7 +492,7 @@ export function transformationEqualsAffineIdentityTransform(
       ),
     IdentityTransform as Transform,
   );
-  return _.isEqual(resultingTransformation, IdentityTransform);
+  return isEqual(resultingTransformation, IdentityTransform);
 }
 
 export function globalToLayerTransformedPosition(

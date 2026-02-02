@@ -1,6 +1,6 @@
 import { V3 } from "libs/mjs";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
 import { calculateGlobalPos, getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
@@ -22,20 +22,26 @@ export function setMousePosition(position: Point2 | null | undefined): void {
     Store.dispatch(setMousePositionAction(null));
   }
 }
+
 export function handleOverViewport(planeId: OrthoView): void {
   Store.dispatch(setViewportAction(planeId));
 }
+
 export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
   Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
 };
+
 export const handleMovePlane = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
+
 export const moveU = (deltaU: number): void => {
   movePlane([deltaU, 0, 0]);
 };
+
 export const moveV = (deltaV: number): void => {
   movePlane([0, deltaV, 0]);
 };
+
 export const moveW = (
   deltaW: number,
   oneSlide: boolean,
@@ -71,6 +77,7 @@ export const moveW = (
     );
   }
 };
+
 export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, event: MouseEvent) {
   // Always set the correct mouse position. Otherwise, using alt + mouse move and
   // alt + scroll won't result in the correct zoomToMouse behavior.
@@ -80,6 +87,7 @@ export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, 
     handleMovePlane(delta);
   }
 }
+
 export const zoom = (value: number, zoomToMouse: boolean) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
 
@@ -113,6 +121,7 @@ export function zoomPlanes(value: number, zoomToMouse: boolean): void {
     finishZoom(oldMousePosition);
   }
 }
+
 export function zoomTDView(value: number): void {
   const zoomToPosition = null;
   const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);

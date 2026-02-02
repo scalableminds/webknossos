@@ -1,9 +1,9 @@
 import Deferred from "libs/async/deferred";
-import * as Utils from "libs/utils";
-/* eslint no-await-in-loop: 0 */
+import { animationFrame } from "libs/utils";
 import type { Store as StoreType } from "redux";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+
 const MAXIMUM_STORE_UPDATE_DELAY = 10000;
 const listeners: Array<() => void> = [];
 let waitForUpdate = new Deferred();
@@ -22,7 +22,7 @@ async function go(): Promise<never> {
   while (true) {
     await waitForUpdate.promise();
     waitForUpdate = new Deferred();
-    await Utils.animationFrame(MAXIMUM_STORE_UPDATE_DELAY);
+    await animationFrame(MAXIMUM_STORE_UPDATE_DELAY);
 
     for (const listener of listeners) {
       listener();

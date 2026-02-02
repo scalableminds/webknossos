@@ -6,7 +6,7 @@ import { Button, Flex, Input, Progress, Space, Spin, Table, Tooltip } from "antd
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { filterWithSearchQueryAND } from "libs/utils";
 import type React from "react";
 import { type Key, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -15,7 +15,7 @@ import {
   type VoxelyticsWorkflowListing,
   type VoxelyticsWorkflowListingRun,
 } from "types/api_types";
-import { VX_POLLING_INTERVAL, runStateToStatus } from "./utils";
+import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
 
 const { Search } = Input;
 
@@ -101,7 +101,7 @@ export default function WorkflowListView() {
       : run.hostUserName;
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(getUserDisplayName):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(getUserDisplayName): omitted to maintain stability as the function does not capture reactive state
   const renderRuns: Array<RenderRunInfo> = useMemo(
     () =>
       workflows.map((workflow) => ({
@@ -275,7 +275,7 @@ export default function WorkflowListView() {
               render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
             },
           ]}
-          dataSource={Utils.filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
+          dataSource={filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
           locale={{ emptyText: null }}
         />
       </Spin>

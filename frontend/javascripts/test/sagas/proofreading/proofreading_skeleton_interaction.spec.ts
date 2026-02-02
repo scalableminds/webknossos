@@ -14,13 +14,8 @@ import {
 import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
-import { type SkeletonTracing, type WebknossosState, startSaga } from "viewer/store";
+import { type SkeletonTracing, startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  initializeMappingAndTool,
-  makeMappingEditableHelper,
-  mockInitialBucketAndAgglomerateData,
-} from "./proofreading_test_utils";
 import {
   loadAgglomerateSkeletons,
   mockEdgesForAgglomerateMinCut,
@@ -28,6 +23,11 @@ import {
   performMinCutWithNodesProofreading,
   performSplitTreesProofreading,
 } from "./proofreading_skeleton_test_utils";
+import {
+  initializeMappingAndTool,
+  makeMappingEditableHelper,
+  mockInitialBucketAndAgglomerateData,
+} from "./proofreading_test_utils";
 
 describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

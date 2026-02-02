@@ -1,16 +1,18 @@
 import {
-  type MinCutTargetEdge,
-  type NeighborInfo,
   getAgglomeratesForSegmentsFromTracingstore,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
+  type MinCutTargetEdge,
+  type NeighborInfo,
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { SoftError, getAdaptToTypeFunction, isEditableEventTarget, isNumberMap } from "libs/utils";
+import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
+import union from "lodash-es/union";
+import uniq from "lodash-es/uniq";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
@@ -54,8 +56,8 @@ import {
   type MinCutPartitionsAction,
   type ProofreadAtPositionAction,
   type ProofreadMergeAction,
-  type ToggleSegmentInPartitionAction,
   resetMultiCutToolPartitionsAction,
+  type ToggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import {
   pushSaveQueueTransaction,
@@ -66,22 +68,22 @@ import {
   loadPrecomputedMeshAction,
 } from "viewer/model/actions/segmentation_actions";
 import {
-  type UpdateUserSettingAction,
   setMappingAction,
   setMappingNameAction,
+  type UpdateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import {
   type CreateNodeAction,
   type DeleteNodeAction,
-  type SetNodePositionAction,
   deleteEdgeAction,
+  type SetNodePositionAction,
   setTreeNameAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
-  type EnterAction,
-  type EscapeAction,
   allowSagaWhileBusyAction,
   disallowSagaWhileBusyAction,
+  type EnterAction,
+  type EscapeAction,
 } from "viewer/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
@@ -93,22 +95,13 @@ import {
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import {
-  type UpdateActionWithoutIsolationRequirement,
   mergeAgglomerate,
   splitAgglomerate,
+  type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model, Store, api } from "viewer/singletons";
-import type {
-  ActiveMappingInfo,
-  Mapping,
-  NumberLikeMap,
-  ProofreadingActionInfo,
-  VolumeTracing,
-} from "viewer/store";
-import {
-  getAdditionalCoordinatesAsString,
-  getCurrentMag,
-} from "../../../accessors/flycam_accessor";
+import { api, Model, Store } from "viewer/singletons";
+import type { ActiveMappingInfo, Mapping, NumberLikeMap,ProofreadingActionInfo, VolumeTracing } from "viewer/store";
+import { getAdditionalCoordinatesAsString, getCurrentMag } from "../../../accessors/flycam_accessor";
 import type { Action } from "../../../actions/actions";
 import type { Tree } from "../../../types/tree_types";
 import { ensureWkInitialized } from "../../ready_sagas";
@@ -216,14 +209,14 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
 }
 
 function proofreadCoarseMagIndex(): number {
-  // @ts-ignore
+  // @ts-expect-error
   return window.__proofreadCoarseResolutionIndex != null
-    ? // @ts-ignore
+    ? // @ts-expect-error
       window.__proofreadCoarseResolutionIndex
     : 3;
 }
 function proofreadUsingMeshes(): boolean {
-  // @ts-ignore
+  // @ts-expect-error
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }
 
@@ -875,7 +868,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
   // The unmapped segments of this edge might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
   // There is no guarantee that for all mesh parts the mapping is locally stored.
-  const additionalUnmappedSegmentsToReRequest = _.union(unmappedSegmentsOfPartitions, [
+  const additionalUnmappedSegmentsToReRequest = union(unmappedSegmentsOfPartitions, [
     edgesToRemove[0].segmentId1,
     edgesToRemove[0].segmentId2,
   ]);
@@ -1070,6 +1063,7 @@ function* clearProofreadingByproducts() {
       (state) => state.localSegmentationData[layerName]?.meshes?.[additionalCoordinateKey],
     )) || {};
   const meshRemoveActions = Object.values(meshInfos)
+  // TODO @MichaelBuessemeyer Double check this. This map does not return anything
     .map((meshInfo) => {
       meshInfo.isProofreadingAuxiliaryMesh ? removeMeshAction(layerName, meshInfo.segmentId) : null;
     })
@@ -1288,7 +1282,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     targetAgglomerate &&
     (sourceAgglomerate.name || targetAgglomerate.name)
   ) {
-    const mergedName = _.uniq([sourceAgglomerate.name, targetAgglomerate.name])
+    const mergedName = uniq([sourceAgglomerate.name, targetAgglomerate.name])
       .filter((name) => name != null)
       .join(",");
     if (mergedName !== sourceAgglomerate.name) {
@@ -1708,9 +1702,9 @@ function getDeleteEdgeActionForEdgePositions(
   let firstNodeId;
   let secondNodeId;
   for (const node of sourceTree.nodes.values()) {
-    if (_.isEqual(node.untransformedPosition, edge.position1)) {
+    if (isEqual(node.untransformedPosition, edge.position1)) {
       firstNodeId = node.id;
-    } else if (_.isEqual(node.untransformedPosition, edge.position2)) {
+    } else if (isEqual(node.untransformedPosition, edge.position2)) {
       secondNodeId = node.id;
     }
     if (firstNodeId && secondNodeId) {
@@ -1781,7 +1775,7 @@ export function* splitAgglomerateInMapping(
     activeMapping,
     sourceAgglomerateId,
   );
-  const splitSegmentIds = _.union(segmentIdsFromLocalMapping, additionalSegmentsToRequest);
+  const splitSegmentIds = union(segmentIdsFromLocalMapping, additionalSegmentsToRequest);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
@@ -1804,14 +1798,13 @@ export function* splitAgglomerateInMapping(
   if (unsplitMapping && additionalSegmentsToRequest.length > 0) {
     // Add the additionally reloaded segments' agglomerate ids to the once maybe refreshed.
     const adaptToType = getAdaptToTypeFunction(unsplitMapping);
-    additionalSegmentsToRequest.forEach((segmentId) =>
+    additionalSegmentsToRequest.forEach((segmentId) => {
       oldAgglomerateIds.add(
         Number(
           (unsplitMapping as NumberLikeMap | undefined)?.get(adaptToType(segmentId)) ??
             sourceAgglomerateId,
         ),
-      ),
-    );
+      )});
   }
   const newAgglomerateIds = new Set<number>();
 
@@ -1819,7 +1812,7 @@ export function* splitAgglomerateInMapping(
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
   const splitMapping = new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
-      // @ts-ignore get() is expected to accept the type that segmentId has.
+      // @ts-expect-error get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
         newAgglomerateIds.add(Number(mappedId));
@@ -1830,7 +1823,7 @@ export function* splitAgglomerateInMapping(
   );
   // Add potentially missing entries of segment in additionalSegmentsToRequest to the new map.
   for (const unmappedId of additionalSegmentsToRequest) {
-    // @ts-ignore get() is expected to accept the type that unmappedId has.
+    // @ts-expect-error get() is expected to accept the type that unmappedId has.
     const mappedId = mappingAfterSplit.get(unmappedId);
     if (mappedId) {
       newAgglomerateIds.add(Number(mappedId));

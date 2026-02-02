@@ -221,9 +221,9 @@ class DataVaultTestSuite extends PlaySpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
+        override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
             implicit ec: ExecutionContext,
-            tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = ???
+            tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = ???
 
         override def listDirectory(path: VaultPath,
                                    maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = ???

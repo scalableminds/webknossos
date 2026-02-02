@@ -20,27 +20,29 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
   def readBytes(byteRange: ByteRange = ByteRange.complete)(implicit ec: ExecutionContext,
                                                            tc: TokenContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, byteRange) ?=> "Failed to read from vault path"
-      decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
+      (bytes, encoding, _) <- dataVault.readBytesEncodingAndRangeHeader(this, byteRange) ?=> "Failed to read from vault path"
+      decoded <- decode(bytes, encoding) ?~> s"Failed to decode $encoding-encoded response."
     } yield decoded
+
+  def readBytesEncodingAndRangeHeader(byteRange: ByteRange = ByteRange.complete)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
+    dataVault.readBytesEncodingAndRangeHeader(this, byteRange) ?=> "Failed to read from vault path"
 
   def getUsedStorageBytes(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     dataVault.getUsedStorageBytes(this)
 
   def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLengthByteRange(byteCount)) ?=> "Failed to read from vault path"
-      decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
+      (bytes, encoding, _) <- dataVault.readBytesEncodingAndRangeHeader(this, SuffixLengthByteRange(byteCount)) ?=> "Failed to read from vault path"
+      decoded <- decode(bytes, encoding) ?~> s"Failed to decode $encoding-encoded response."
     } yield decoded
 
-  private def decode(bytesAndEncoding: (Array[Byte], Encoding.Value))(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    bytesAndEncoding match {
-      case (bytes, encoding) =>
-        encoding match {
-          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes)).toFox
-          case Encoding.brotli     => tryo(decodeBrotli(bytes)).toFox
-          case Encoding.`identity` => Fox.successful(bytes)
-        }
+  private def decode(bytes: Array[Byte], encoding: Encoding.Value)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    encoding match {
+      case Encoding.gzip       => tryo(ZipIO.gunzip(bytes)).toFox
+      case Encoding.brotli     => tryo(decodeBrotli(bytes)).toFox
+      case Encoding.`identity` => Fox.successful(bytes)
     }
 
   def listDirectory(maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =

@@ -36,9 +36,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   // dashes, excluding chars that may be part of the bucket name (e.g. underscore).
   private lazy val bucket: String = uri.getAuthority
 
-  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = {
 
     val objName = path.toRemoteUriUnsafe.getPath.tail
     val blobId = BlobId.of(bucket, objName)
@@ -75,7 +75,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       }
       blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build).toFox
       encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse("")).toFox
-    } yield (bytes, encoding)
+    } yield (bytes, encoding, Option(blobInfo.getSize).flatMap(size => range.toContentRangeHeaderWithLength(size)))
   }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =

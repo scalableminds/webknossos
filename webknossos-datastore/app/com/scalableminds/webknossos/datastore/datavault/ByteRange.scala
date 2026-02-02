@@ -8,15 +8,20 @@ import scala.concurrent.ExecutionContext
 
 trait ByteRange extends Status {
   def successResponseCode: Int = OK
+  def toContentRangeHeaderWithLength(totalLength: Long): Option[String] = None
 }
 
 case class StartEndExclusiveByteRange(start: Long, end: Long) extends ByteRange {
   def length: Int = (end - start).toInt
-  def toHttpHeader: String = s"bytes=$start-${end - 1}" // HTTP header is inclusive
+  def toRangeHeader: String = s"bytes=$start-${end - 1}" // HTTP header is inclusive
+  override def toContentRangeHeaderWithLength(totalLength: Long): Option[String] =
+    Some(s"bytes $start-${end - 1}/$totalLength")
   override def successResponseCode: Int = PARTIAL_CONTENT
 }
 case class SuffixLengthByteRange(length: Int) extends ByteRange {
-  def toHttpHeader: String = s"bytes=-$length" // HTTP header is inclusive
+  def toRangeHeader: String = s"bytes=-$length" // HTTP header is inclusive
+  override def toContentRangeHeaderWithLength(totalLength: Long): Option[String] =
+    Some(s"bytes ${totalLength - length - 1}-${totalLength - 1}/$totalLength")
   override def successResponseCode: Int = PARTIAL_CONTENT
 }
 case class CompleteByteRange() extends ByteRange

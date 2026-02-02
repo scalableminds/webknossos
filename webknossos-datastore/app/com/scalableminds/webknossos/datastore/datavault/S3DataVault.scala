@@ -58,16 +58,16 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     S3DataVault.getAmazonS3Client(s3AccessKeyCredential, uri, ws)
 
   private def getRangeRequest(bucketName: String, key: String, range: StartEndExclusiveByteRange): GetObjectRequest =
-    GetObjectRequest.builder().bucket(bucketName).key(key).range(range.toHttpHeader).build()
+    GetObjectRequest.builder().bucket(bucketName).key(key).range(range.toRangeHeader).build()
 
   private def getSuffixRangeRequest(bucketName: String, key: String, range: SuffixLengthByteRange): GetObjectRequest =
-    GetObjectRequest.builder.bucket(bucketName).key(key).range(range.toHttpHeader).build()
+    GetObjectRequest.builder.bucket(bucketName).key(key).range(range.toRangeHeader).build()
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest =
     GetObjectRequest.builder.bucket(bucketName).key(key).build()
 
   private def performGetObjectRequest(request: GetObjectRequest)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
+      implicit ec: ExecutionContext): Fox[(Array[Byte], String, String)] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
     for {
@@ -75,9 +75,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
         client.getObject(request, responseTransformer).asScala)
       encoding = responseBytesObject.response().contentEncoding()
+      contentRangeHeader = responseBytesObject.response().contentRange()
       // "aws-chunked" encoding is an artifact of the upload, does not make sense for retrieval, can be ignored.
       encodingNormalized = if (encoding == null || encoding == "aws-chunked") "" else encoding
-    } yield (responseBytesObject.asByteArray(), encodingNormalized)
+    } yield (responseBytesObject.asByteArray(), encodingNormalized, contentRangeHeader)
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
@@ -105,9 +106,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
     })
 
-  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       objectKey <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       request = range match {
@@ -115,9 +116,9 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         case r: SuffixLengthByteRange      => getSuffixRangeRequest(bucketName, objectKey, r)
         case CompleteByteRange()           => getRequest(bucketName, objectKey)
       }
-      (bytes, encodingString) <- performGetObjectRequest(request)
+      (bytes, encodingString, rangeHeader) <- performGetObjectRequest(request)
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
-    } yield (bytes, encoding)
+    } yield (bytes, encoding, if (rangeHeader == "") None else Some(rangeHeader))
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {

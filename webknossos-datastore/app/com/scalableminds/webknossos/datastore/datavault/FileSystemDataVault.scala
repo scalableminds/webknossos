@@ -16,26 +16,32 @@ import scala.jdk.CollectionConverters._
 
 class FileSystemDataVault extends DataVault with FoxImplicits {
 
-  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       localPath <- vaultPathToLocalPath(path)
-      bytes <- readBytesLocal(localPath, range)
-    } yield (bytes, Encoding.identity)
+      (bytes, rangeHeader) <- readBytesLocal(localPath, range)
+    } yield (bytes, Encoding.identity, rangeHeader)
 
-  private def readBytesLocal(localPath: Path, range: ByteRange)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytesLocal(localPath: Path, range: ByteRange)(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Option[String])] =
     if (Files.exists(localPath)) {
       range match {
         case CompleteByteRange() =>
-          readAsync(localPath, 0, Math.toIntExact(Files.size(localPath)))
-
+          for {
+            bytes <- readAsync(localPath, 0, Math.toIntExact(Files.size(localPath)))
+          } yield (bytes, None)
         case r: StartEndExclusiveByteRange =>
-          readAsync(localPath, r.start, r.length)
-
-        case SuffixLengthByteRange(length) =>
+          for {
+            bytes <- readAsync(localPath, r.start, r.length)
+            fileSize = Files.size(localPath)
+          } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
+        case r: SuffixLengthByteRange =>
           val fileSize = Files.size(localPath)
-          readAsync(localPath, fileSize - length, length)
+          for {
+            bytes <- readAsync(localPath, fileSize - r.length, r.length)
+          } yield (bytes, r.toContentRangeHeaderWithLength(fileSize))
       }
     } else {
       Fox.empty

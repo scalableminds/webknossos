@@ -5,7 +5,8 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.datavault.ByteRange
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, Encoding}
+import com.scalableminds.webknossos.datastore.datavault.Encoding.Encoding
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerAttachments, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataStoreAccessTokenService, DatasetCache, UserAccessRequest}
@@ -39,10 +40,21 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
           magPath <- dataVaultService.vaultPathFor(magLocator, dataSource.id, dataLayerName)
           requestedPath = magPath / path
           byteRange <- ByteRange.fromRequest(request)
-          data <- requestedPath.readBytes(byteRange)
-        } yield resultWithStatus(byteRange.successResponseCode, data).withHeaders(ACCEPT_RANGES -> "bytes")
+          (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)
+          headers = buildResponseHeaders(encoding, rangeHeader)
+        } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers: _*)
       }
     }
+
+  private def buildResponseHeaders(encoding: Encoding, rangeHeader: Option[String]): Seq[(String, String)] = {
+    val contentEncoding = encoding match {
+      case Encoding.`identity` => None
+      case _                   => Some((CONTENT_ENCODING, encoding.toString))
+    }
+    val contentRange = rangeHeader.map(value => (CONTENT_RANGE, value))
+    val acceptRanges = Some(ACCEPT_RANGES, "bytes")
+    Seq(contentEncoding, contentRange, acceptRanges).flatten
+  }
 
   def proxyAttachment(datasetId: ObjectId,
                       dataLayerName: String,
@@ -60,8 +72,9 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
         attachmentPath <- dataVaultService.vaultPathFor(attachment)
         requestedPath = attachmentPath / path
         byteRange <- ByteRange.fromRequest(request)
-        data <- requestedPath.readBytes(byteRange)
-      } yield resultWithStatus(byteRange.successResponseCode, data).withHeaders(ACCEPT_RANGES -> "bytes")
+        (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)
+        headers = buildResponseHeaders(encoding, rangeHeader)
+      } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers: _*)
     }
   }
 

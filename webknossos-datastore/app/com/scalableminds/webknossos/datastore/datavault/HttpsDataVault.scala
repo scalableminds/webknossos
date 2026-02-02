@@ -30,9 +30,9 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
-  override def readBytesAndEncoding(path: VaultPath, range: ByteRange)(
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = {
     val uri = path.toRemoteUriUnsafe
     for {
       response <- range match {
@@ -41,8 +41,9 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
         case CompleteByteRange()           => getComplete(uri)
       }
       encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
+      rangeHeader = response.header("Content-Range")
       result <- if (Status.isSuccessful(response.status)) {
-        Fox.successful((response.bodyAsBytes.toArray, encoding))
+        Fox.successful((response.bodyAsBytes.toArray, encoding, rangeHeader))
       } else if (response.status == 404) Fox.empty
       else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
@@ -74,7 +75,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
                                                                         tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toHttpHeader).get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
@@ -82,7 +83,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
                                                                          tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toHttpHeader).get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 

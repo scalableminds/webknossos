@@ -1,8 +1,8 @@
 import { call, put } from "redux-saga/effects";
 import {
-  type WebknossosTestContext,
   getNestedUpdateActions,
   setupWebknossosForTesting,
+  type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
@@ -639,8 +639,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.version).toEqual(8);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
         getNestedUpdateActions(context).slice(-2);
-
-      const splitTreeAndAgglomerateAndDeleteSegmentActions2 = getNestedUpdateActions(context);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
       );

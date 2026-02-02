@@ -1,7 +1,9 @@
 import { type ActionPattern, call, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext,
+import {
   getNestedUpdateActions,
-  setupWebknossosForTesting, } from "test/helpers/apiHelpers";
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import { actionChannel } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";

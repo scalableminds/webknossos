@@ -607,12 +607,11 @@ function* diffEdges(
 
 function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: boolean): boolean {
   const doPrimitivesDiffer =
-    prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
     prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId ||
-    prevTree.type !== tree.type ||
-    prevTree.metadata !== tree.metadata;
+    prevTree.type !== tree.type;
+
   if (doPrimitivesDiffer) {
     return true;
   }
@@ -620,19 +619,14 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
   // equality. This avoids unnecessary updates in certain cases (e.g.,
   // when two trees are merged, the comments are concatenated, even
   // if one of them is empty; thus, resulting in new instances).
-  const doDifferShallowly =
-    doPrimitivesDiffer ||
+  const doArraysDiffer =
     !isEqual(prevTree.branchPoints, tree.branchPoints) ||
     !isEqual(prevTree.comments, tree.comments);
-  if (!useDeepEqualityCheck) {
-    return doDifferShallowly;
-  }
-  // If doing a deep diff, we also want to deep diff the missing property arrays color and metadata.
-  return (
-    doDifferShallowly ||
-    !isEqual(prevTree.color, tree.color) ||
-    !isEqual(prevTree.metadata, tree.metadata)
-  );
+  // In case of a deep diff, also diff the color and metadata deeply, which is not needed for shallow diffing.
+  const doesMetadataOrColorDiffer = useDeepEqualityCheck
+    ? !isEqual(prevTree.color, tree.color) || !isEqual(prevTree.metadata, tree.metadata)
+    : prevTree.color !== tree.color || prevTree.metadata !== tree.metadata;
+  return doArraysDiffer || doesMetadataOrColorDiffer;
 }
 
 export function* diffTrees(

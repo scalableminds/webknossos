@@ -15,7 +15,7 @@ import {
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { Node } from "viewer/model/types/tree_types";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
-import type {  SkeletonTracing } from "viewer/store";
+import type { SkeletonTracing } from "viewer/store";
 import { call, type Saga, select } from "../../effect-generators";
 import { diffSkeletonTracing, getAgglomerateSkeletonTracing } from "../../skeletontracing_saga";
 import {

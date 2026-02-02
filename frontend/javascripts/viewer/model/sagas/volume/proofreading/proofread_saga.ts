@@ -6,6 +6,7 @@ import {
   type MinCutTargetEdge,
   type NeighborInfo,
 } from "admin/rest_api";
+import processTaskWithPool from "libs/async/task_pool";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
@@ -100,8 +101,17 @@ import {
   type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import { api, Model, Store } from "viewer/singletons";
-import type { ActiveMappingInfo, Mapping, NumberLikeMap,ProofreadingActionInfo, VolumeTracing } from "viewer/store";
-import { getAdditionalCoordinatesAsString, getCurrentMag } from "../../../accessors/flycam_accessor";
+import type {
+  ActiveMappingInfo,
+  Mapping,
+  NumberLikeMap,
+  ProofreadingActionInfo,
+  VolumeTracing,
+} from "viewer/store";
+import {
+  getAdditionalCoordinatesAsString,
+  getCurrentMag,
+} from "../../../accessors/flycam_accessor";
 import type { Action } from "../../../actions/actions";
 import type { Tree } from "../../../types/tree_types";
 import { ensureWkInitialized } from "../../ready_sagas";
@@ -110,7 +120,6 @@ import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
-import processTaskWithPool from "libs/async/task_pool";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -1063,7 +1072,7 @@ function* clearProofreadingByproducts() {
       (state) => state.localSegmentationData[layerName]?.meshes?.[additionalCoordinateKey],
     )) || {};
   const meshRemoveActions = Object.values(meshInfos)
-  // TODO @MichaelBuessemeyer Double check this. This map does not return anything
+    // TODO @MichaelBuessemeyer Double check this. This map does not return anything
     .map((meshInfo) => {
       meshInfo.isProofreadingAuxiliaryMesh ? removeMeshAction(layerName, meshInfo.segmentId) : null;
     })
@@ -1804,7 +1813,8 @@ export function* splitAgglomerateInMapping(
           (unsplitMapping as NumberLikeMap | undefined)?.get(adaptToType(segmentId)) ??
             sourceAgglomerateId,
         ),
-      )});
+      );
+    });
   }
   const newAgglomerateIds = new Set<number>();
 

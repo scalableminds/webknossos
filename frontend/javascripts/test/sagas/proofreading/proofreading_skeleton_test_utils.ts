@@ -1,6 +1,6 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import isEqual  from "lodash-es/isEqual";
-import sortBy  from "lodash-es/sortBy";
+import isEqual from "lodash-es/isEqual";
+import sortBy from "lodash-es/sortBy";
 import { Root } from "protobufjs";
 import type { WebknossosTestContext } from "test/helpers/apiHelpers";
 import { put } from "typed-redux-saga";

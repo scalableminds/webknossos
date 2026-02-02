@@ -19,6 +19,7 @@ import type {
   APISegmentationLayer,
 } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
+import Constants from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
@@ -54,7 +55,6 @@ import Store from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
-import Constants from "viewer/constants";
 
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 

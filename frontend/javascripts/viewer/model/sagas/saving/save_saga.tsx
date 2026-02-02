@@ -717,7 +717,7 @@ export function* tryToIncorporateActions(
         case "updateMappingName": {
           // TODO migrate to applyVolumeUpdateActionsFromServerAction.
           const { actionTracingId, mappingName, isEditable, isLocked } = action.value;
-          let mappingType ;
+          let mappingType;
           if (mappingName) {
             let volumeDataLayer = yield* select((state) =>
               getSegmentationLayerByName(state.dataset, actionTracingId),

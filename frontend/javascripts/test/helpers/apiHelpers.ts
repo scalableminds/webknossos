@@ -594,7 +594,9 @@ export async function setupWebknossosForTesting(
     testContext.segmentLodGroups = {};
   }
   const { segmentLodGroups } = testContext;
-  Object.keys(segmentLodGroups).forEach((key) => {delete segmentLodGroups[key]});
+  Object.keys(segmentLodGroups).forEach((key) => {
+    delete segmentLodGroups[key];
+  });
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-expect-error

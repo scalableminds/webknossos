@@ -38,8 +38,5 @@ export function createUnitCubeBufferGeometry() {
 
 // This function should only be used for mocking.
 export function makeSimpleMesh(geometry: BufferGeometry) {
-  return new Mesh(
-    geometry,
-    new MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
-  );
+  return new Mesh(geometry, new MeshBasicMaterial({ color: 0xffffff, wireframe: true }));
 }

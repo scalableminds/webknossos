@@ -23,6 +23,7 @@ import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
@@ -63,10 +64,16 @@ function DatasetTransformationsModeCard() {
     <SettingsCard
       title="Transformation Configuration"
       content={
-        <FormItemWithInfo
-          info="<Some information about the format>"
+        <Form.Item
           name={["coordinateTransformations"]}
-          label="Coordinate Transformations JSON"
+          label={
+            <Space size="small">
+              Coordinate Transformations JSON
+              <Link to="https://docs.webknossos.org/webknossos/datasets/settings.html">
+                Read more about the format
+              </Link>
+            </Space>
+          }
           rules={[
             {
               validator: (rule, value) => validateTransformationsJSON(rule, value),
@@ -74,7 +81,7 @@ function DatasetTransformationsModeCard() {
           ]}
         >
           <Input.TextArea autoSize={{ minRows: 10, maxRows: 20 }} />
-        </FormItemWithInfo>
+        </Form.Item>
       }
       style={MARGIN_BOTTOM}
     />
@@ -234,7 +241,13 @@ function SimpleDatasetForm({
               <FormItemWithInfo
                 name={["transformationsMode"]}
                 label="Transformation Mode"
-                info="The transformations for the dataset."
+                info={
+                  <>
+                    You can remove all transformations by selecting "None", add rotational and
+                    mirroring transformations in "Simple" mode, or define custom transformations per
+                    layer in "Advanced" mode.
+                  </>
+                }
               >
                 <Select options={transformationItems} style={{ width: LEFT_COLUMN_ITEMS_WIDTH }} />
               </FormItemWithInfo>

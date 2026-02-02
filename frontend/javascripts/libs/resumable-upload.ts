@@ -56,10 +56,6 @@ export interface ConfigurationHash {
    * The name of the total number of chunks POST parameter to use for the file chunk (Default: `resumableTotalChunks`)
    */
   totalChunksParameterName?: string;
-  /**
-   * The class name to add on drag over an assigned drop zone. (Default: `dragover`)
-   */
-  dragOverClass?: string;
   throttleProgressCallbacks?: number;
   /**
    * Extra parameters to include in the multipart request with data. This can be an object or a function. If a function, it will be passed a ResumableFile and a ResumableChunk object (Default: `{}`)
@@ -814,7 +810,6 @@ export class Resumable implements EventTarget {
       fileNameParameterName: "resumableFilename",
       relativePathParameterName: "resumableRelativePath",
       totalChunksParameterName: "resumableTotalChunks",
-      dragOverClass: "dragover",
       throttleProgressCallbacks: 0.5,
       query: {},
       headers: {},

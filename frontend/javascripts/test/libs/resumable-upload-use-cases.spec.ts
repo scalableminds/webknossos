@@ -83,7 +83,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
     it("should skip POST if GET returns 200 (chunk exists)", async () => {
       // Conditionally return 200 for GET, fail for POST (to ensure we don't post)
-      mockFetch.mockImplementation((url: string, init: any) => {
+      mockFetch.mockImplementation((_url: string, init: any) => {
         if (init?.method === "GET") {
           return Promise.resolve({
             ok: true,
@@ -123,7 +123,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should treat 204 as success (chunk exists)", async () => {
-      mockFetch.mockImplementation((url: string, init: any) => {
+      mockFetch.mockImplementation((_url: string, init: any) => {
         if (init?.method === "GET") {
           return Promise.resolve({
             ok: true,
@@ -157,7 +157,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should proceed to POST if GET returns 404 (chunk missing)", async () => {
-      mockFetch.mockImplementation((url: string, init: any) => {
+      mockFetch.mockImplementation((_url: string, init: any) => {
         if (init?.method === "GET") {
           return Promise.resolve({
             ok: false,

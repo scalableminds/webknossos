@@ -308,17 +308,17 @@ export class ResumableChunk {
 
     Object.assign(params, customQueryParameters || {});
 
-    const extraParams: Array<[keyof ConfigurationHash, any]> = [
-      ["chunkNumberParameterName", this.offset + 1],
-      ["chunkSizeParameterName", this.getOpt("chunkSize")],
-      ["currentChunkSizeParameterName", this.endByte - this.startByte],
-      ["totalSizeParameterName", this.fileObjSize],
-      ["typeParameterName", this.fileObjType],
-      ["identifierParameterName", this.fileObj.uniqueIdentifier],
-      ["fileNameParameterName", this.fileObj.fileName],
-      ["relativePathParameterName", this.fileObj.relativePath],
-      ["totalChunksParameterName", this.fileObj.chunks.length],
-    ];
+    const extraParams: Partial<Record<keyof ConfigurationHash, any>> = {
+      chunkNumberParameterName: this.offset + 1,
+      chunkSizeParameterName: this.getOpt("chunkSize"),
+      currentChunkSizeParameterName: this.endByte - this.startByte,
+      totalSizeParameterName: this.fileObjSize,
+      typeParameterName: this.fileObjType,
+      identifierParameterName: this.fileObj.uniqueIdentifier,
+      fileNameParameterName: this.fileObj.fileName,
+      relativePathParameterName: this.fileObj.relativePath,
+      totalChunksParameterName: this.fileObj.chunks.length,
+    };
 
     const targetUrl = helpers.getTargetURI(this.resumableObj, "test", extraParams);
 
@@ -871,12 +871,16 @@ export class Resumable implements EventTarget {
   /**
    * Listen for event from Resumable
    */
-  addEventListener(
+  addEventListener<K extends Event = Event>(
     type: string,
-    callback: EventListener | null,
-    options?: boolean | AddEventListenerOptions | undefined,
+    callback: ((event: K) => void) | EventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
   ): void {
-    this._eventTarget.addEventListener(type, callback, options);
+    this._eventTarget.addEventListener(
+      type,
+      callback as EventListenerOrEventListenerObject | null,
+      options,
+    );
   }
 
   dispatchEvent(event: Event): boolean {

@@ -738,13 +738,22 @@ class DatasetController @Inject()(userService: UserService,
         dataSourceWithPaths <- datasetUploadToPathsService.reserveDatasetUploadToPaths(request.body,
                                                                                        request.identity,
                                                                                        newDatasetId)
-      } yield Ok(Json.obj("newDatasetId" -> newDatasetId, "dataSource" -> Json.toJson(dataSourceWithPaths)))
+        dataSourceReplyOpt = if (conf.WebKnossos.Datasets.createPreferVirtual) Some(dataSourceWithPaths) else None
+      } yield
+        Ok(
+          Json.obj(
+            "newDatasetId" -> newDatasetId,
+            "dataSource" -> Json.toJson(dataSourceReplyOpt),
+            "organizationId" -> dataSourceWithPaths.id.organizationId,
+            "directoryName" -> dataSourceWithPaths.id.directoryName
+          ))
     }
 
   def reserveUploadToPathsForPreliminary(
       datasetId: ObjectId): Action[ReserveDatasetUploadToPathsForPreliminaryRequest] =
     sil.SecuredAction.async(validateJson[ReserveDatasetUploadToPathsForPreliminaryRequest]) { implicit request =>
       for {
+        _ <- Fox.fromBool(conf.WebKnossos.Datasets.createPreferVirtual) ?~> "reserveUploadToPathsForPreliminary is not available on this WEBKNOSSOS instance because it is configured to create non-virtual datasets during uploadToPaths."
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         dataSourceWithPaths <- datasetUploadToPathsService.reserveDatasetUploadToPathsForPreliminary(request.body,
                                                                                                      request.identity,
@@ -760,6 +769,15 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
+        _ <- Fox.runIf(!conf.WebKnossos.Datasets.createPreferVirtual) {
+          logger.info(
+            s"Finishing uploadToPaths for $datasetId with createPreferVirtual=false, setting to non-virtual and triggering reload...")
+          for {
+            _ <- datasetDAO.setIsVirtual(datasetId, isVirtual = false)
+            remoteDatastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
+            _ <- remoteDatastoreClient.triggerReload(dataset._organization, datasetId)
+          } yield ()
+        }
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         _ = logger.info(

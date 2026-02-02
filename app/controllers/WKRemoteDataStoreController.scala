@@ -72,7 +72,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
-          _ <- assertLayersToLinkOnlyForVirtual(request.body.layersToLink.getOrElse(Seq.empty))
+          _ <- layerToLinkService.assertLayersToLinkOnlyForVirtual(request.body.layersToLink.getOrElse(Seq.empty))
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             layerToLinkService.validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
@@ -136,7 +136,7 @@ class WKRemoteDataStoreController @Inject()(
                                              request.body.needsConversion,
                                              request.body.datasetSizeBytes,
                                              addVariantLabel = "upload without conversion")
-          _ <- assertLayersToLinkOnlyForVirtual(request.body.layersToLink)
+          _ <- layerToLinkService.assertLayersToLinkOnlyForVirtual(request.body.layersToLink)
           dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
             implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
             layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)
@@ -155,13 +155,6 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok
       }
     }
-
-  private def assertLayersToLinkOnlyForVirtual(layersToLink: Seq[LinkedLayerIdentifier]): Fox[Unit] =
-    for {
-      _ <- Fox.runIf(!conf.WebKnossos.Datasets.createPreferVirtual) {
-        Fox.fromBool(layersToLink.isEmpty) ?~> "Linking layers during upload is not available for this WEBKNOSSOS instance, as it is configured not to create virtual datasets."
-      }
-    } yield ()
 
   def statusUpdate(name: String, key: String): Action[DataStoreStatus] = Action.async(validateJson[DataStoreStatus]) {
     implicit request =>

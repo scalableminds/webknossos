@@ -138,4 +138,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .deleteJson(paths)
     } yield ()
 
+  def triggerReload(organizationId: String, datasetId: ObjectId): Fox[Unit] =
+    rpc(s"${dataStore.url}/data/triggers/reload/$organizationId/$datasetId").postEmpty()
+
 }

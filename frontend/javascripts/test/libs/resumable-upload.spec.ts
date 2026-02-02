@@ -543,7 +543,7 @@ describe("Helper Functions", () => {
 
 describe("Edge Cases", () => {
   it("should handle empty file", () => {
-    const r = new Resumable({ minFileSize: undefined });
+    const r = new Resumable({ minFileSize: 0 });
     const emptyFile = new File([], "empty.txt");
 
     r.addFile(emptyFile);
@@ -555,7 +555,7 @@ describe("Edge Cases", () => {
         resolve(undefined);
       }, 10);
     });
-  }, 10000);
+  });
 
   it("should handle very large chunk size", () => {
     const r = new Resumable({
@@ -571,7 +571,7 @@ describe("Edge Cases", () => {
         resolve(undefined);
       }, 10);
     });
-  }, 10000);
+  });
 
   it("should handle forceChunkSize option", () => {
     const r = new Resumable({

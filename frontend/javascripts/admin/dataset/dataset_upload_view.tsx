@@ -50,6 +50,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
+import type { ResumableUploadErrorEvent } from "libs/resumable-upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
@@ -436,15 +437,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     });
     // terminalFileError is triggered by the RestApi when a normal fileError could not be
     // recovered by refreshing the user token.
-    resumableUpload.addEventListener(
-      "terminalFileError",
-      (_file: FileWithPath, message: string) => {
-        Toast.error(message);
-        this.setState({
-          isUploading: false,
-        });
-      },
-    );
+    resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadErrorEvent) => {
+      Toast.error(event.detail.message);
+      this.setState({
+        isUploading: false,
+      });
+    });
     resumableUpload.addEventListener("progress", () => {
       this.setState({
         isRetrying: false,

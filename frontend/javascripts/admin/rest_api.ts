@@ -1214,7 +1214,8 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     });
 
     let lastFileErrorTimestamp: number | null = null;
-    resumable.addEventListener("fileError", function (file, message) {
+    resumable.addEventListener("fileError", (event: Event) => {
+      const { file, message } = (event as CustomEvent).detail;
       // When a file could not be uploaded, assume that the token is invalid. Then,
       // refresh the token (unless we already did this in the last hour) and
       // retry the file upload.

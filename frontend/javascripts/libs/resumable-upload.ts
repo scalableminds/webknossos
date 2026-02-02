@@ -125,7 +125,7 @@ export interface ConfigurationHash {
   /**
    * The number of milliseconds to wait before retrying a chunk on a non-permanent error. Valid values are any positive integer and `undefined` for immediate retry. (Default: `undefined`)
    */
-  chunkRetryInterval?: number;
+  chunkRetryInterval?: number | undefined;
   /**
    * List of HTTP status codes that define if the chunk upload was a permanent error and should not retry the upload. (Default: `[400, 404, 409, 415, 500, 501]`)
    */
@@ -133,7 +133,7 @@ export interface ConfigurationHash {
   /**
    * Indicates how many files can be uploaded in a single session. Valid values are any positive integer and `undefined` for no limit. (Default: `undefined`)
    */
-  maxFiles?: number;
+  maxFiles?: number | undefined;
   /**
    * Standard CORS requests do not send or set any cookies by default. In order to include cookies as part of the request, you need to set the `withCredentials` property to true. (Default: `false`)
    */
@@ -153,9 +153,9 @@ export interface ConfigurationHash {
    */
   maxFilesErrorCallback?: (files: File[], errorCount: number) => void;
   /**
-   * The minimum allowed file size. (Default: `undefined`)
+   * The minimum allowed file size. (Default: 1)
    */
-  minFileSize?: number;
+  minFileSize?: number | undefined;
   /**
    * A function which displays an error a selected file is smaller than allowed. (Default: displays an alert for every bad file.)
    */
@@ -163,7 +163,7 @@ export interface ConfigurationHash {
   /**
    * The maximum allowed file size. (Default: `undefined`)
    */
-  maxFileSize?: number;
+  maxFileSize?: number | undefined;
   /**
    * A function which displays an error a selected file is larger than allowed. (Default: displays an alert for every bad file.)
    */
@@ -183,7 +183,7 @@ interface ExtendedFile extends File {
   uniqueIdentifier?: string;
 }
 
-interface ResumableEventDetail {
+export interface ResumableEventDetail {
   file?: ResumableFile;
   message?: string;
   error?: any;
@@ -191,6 +191,8 @@ interface ResumableEventDetail {
   files?: ResumableFile[];
   skippedFiles?: File[];
 }
+
+export class ResumableUploadErrorEvent extends CustomEvent<ResumableEventDetail> {}
 
 // Helper functions
 const helpers = {
@@ -206,7 +208,10 @@ const helpers = {
     return size + "-" + relativePath.replace(/[^0-9a-zA-Z_-]/gim, "");
   },
 
-  formatSize(size: number): string {
+  formatSize(size: number | undefined): string {
+    if (size === undefined) {
+      return "undefined";
+    }
     if (size < 1024) {
       return size + " bytes";
     } else if (size < 1024 * 1024) {
@@ -346,13 +351,15 @@ export class ResumableChunk {
         method: this.getOpt("testMethod") as string,
         headers: customHeaders as Record<string, string>,
         signal: this.abortController.signal,
+        credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
       });
 
       this.tested = true;
 
-      if (response.ok || response.status === 200) {
+      if (response.ok) {
         this._message = await response.text();
         this.callback("success", this._message);
+        this.markComplete = true;
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();
@@ -479,9 +486,10 @@ export class ResumableChunk {
         headers,
         body,
         signal: this.abortController.signal,
+        credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
       });
 
-      if (response.ok || response.status === 201) {
+      if (response.ok) {
         this._status = "success";
         this._message = await response.text();
         this.callback("success", this._message);
@@ -872,13 +880,13 @@ export class Resumable implements EventTarget {
       minFileSize: 1,
       minFileSizeErrorCallback: (file: File) => {
         console.error(
-          `${file.name} is too small, please upload files larger than ${helpers.formatSize(this.getOpt("minFileSize") as number)}.`,
+          `${file.name} is too small, please upload files larger than ${helpers.formatSize(this.getOpt("minFileSize"))}.`,
         );
       },
       maxFileSize: undefined,
       maxFileSizeErrorCallback: (file: File) => {
         console.error(
-          `${file.name} is too large, please upload files less than ${helpers.formatSize(this.getOpt("maxFileSize") as number)}.`,
+          `${file.name} is too large, please upload files less than ${helpers.formatSize(this.getOpt("maxFileSize"))}.`,
         );
       },
       fileType: [],
@@ -927,7 +935,10 @@ export class Resumable implements EventTarget {
   }
 
   dispatch(event: string, detail: ResumableEventDetail = {}): void {
-    const e = new CustomEvent(event, { detail });
+    const e =
+      event === "error"
+        ? new ResumableUploadErrorEvent(event, { detail })
+        : new CustomEvent(event, { detail });
     this.dispatchEvent(e);
     if (event === "fileError") {
       this.dispatch("error", { error: detail.message, file: detail.file });

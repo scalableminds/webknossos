@@ -74,6 +74,19 @@ function renderVersion(index) {
     .append("svg")
     .attr("viewBox", [0, 0, width, height]);
 
+  svg.append("defs")
+    .append("marker")
+    .attr("id", "arrow")
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 35)      // distance from node center
+    .attr("refY", 0)
+    .attr("markerWidth", 10)
+    .attr("markerHeight", 10)
+    .attr("orient", "auto")
+    .append("svg:path")
+    .attr("d", "M0,-5L10,0L0,5")
+    .attr("fill", "#999");
+
   const simulation = d3.forceSimulation(nodes)
     .force("link", d3.forceLink(links).id(d => d.id).distance(60))
     .force("charge", d3.forceManyBody().strength(-200))
@@ -131,13 +144,14 @@ function renderVersion(index) {
 
 
   }
-  // render links AFTER simulation
+
   const link = svg.append("g")
     .attr("stroke", "#999")
     .attr("stroke-opacity", 0.6)
     .selectAll("line")
     .data(links)
     .join("line")
+    .attr("marker-end", "url(#arrow)")
     .attr("x1", d => d.source.x)
     .attr("y1", d => d.source.y)
     .attr("x2", d => d.target.x)
@@ -190,8 +204,4 @@ function drag(simulation) {
       d.fx = null;
       d.fy = null;
     });
-}
-
-function randomColor() {
-  return `hsl(${Math.random() * 360}, 60%, 60%)`;
 }

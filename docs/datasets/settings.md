@@ -17,9 +17,75 @@ The `Data Source` tab contains the core settings for your dataset.
 - **Voxel Size:** The physical size of a voxel in the configured unit (e.g., `11, 11, 24`).
 - **Unit:** The unit of the voxel size (e.g., `nm`).
 
-### Axis Rotation
+### Transformations
 
-You can rotate the dataset around the X, Y, and Z axes. You can also mirror the axes.
+Transformations are a way of rotating, mirroring or projecting dataset layers, among others. There are three modes for dataset transformation: `None`, `Simple`, and `Advanced`.
+
+- `None`: There are no transformations. If there were transformations before, they will be removed upon saving.  
+- `Simple`: You can rotate the dataset around the X, Y, and Z axes. You can also mirror the axes.  
+- `Advanced`: You can define complex transformations per layer with a JSON. See below for the exact format.
+
+
+#### JSON Schema for Advanced Transformations
+The DataLayerWithTransformations schema defines an array structure for specifying coordinate transformations on data layers:
+
+- **Type**: Array of objects
+- **Properties per object**:
+    - **name** (required, string): The name of the data layer to apply transformations to
+    - **coordinateTransformations** (optional, array): A sequence of coordinate transformations to apply
+
+Each transformation can be one of two types:
+
+1. Affine Transformation
+A 4x4 transformation matrix for linear transformations (rotation, scaling, translation, shearing).
+```
+{
+  "type": "affine",
+  "matrix": [
+    [a, b, c, d],
+    [e, f, g, h],
+    [i, j, k, l],
+    [m, n, o, p]
+  ]
+}
+```
+
+2. Thin Plate Spline Transformation
+Non-linear warping transformation defined by corresponding point pairs in source and target coordinate spaces.
+```
+{
+  "type": "thin_plate_spline",
+  "correspondences": {
+    "source": [[x1, y1, z1], [x2, y2, z2], ...],
+    "target": [[x1, y1, z1], [x2, y2, z2], ...]
+  }
+}
+```
+
+All in all, the provided JSON for a dataset with the layers `color` and `segmentation` could look like this: 
+```
+[
+  {
+    "name": "color",
+    "coordinateTransformations": [
+      {
+        "type": "affine",
+        "matrix": [[1, 0, 0, 10], [0, 1, 0, 20], [0, 0, 1, 30], [0, 0, 0, 1]]
+      }
+    ]
+  },
+    {
+    "name": "segmentation",
+    "coordinateTransformations": [
+      {
+        "type": "affine",
+        "matrix": [[1, 0, 0, 10], [0, 1, 0, 20], [0, 0, 1, 30], [0, 0, 0, 1]]
+      }
+    ]
+  }
+]
+```
+
 
 ### Layer Settings
 

@@ -15,6 +15,11 @@ describe("Resumable", () => {
   let resumable: Resumable;
 
   beforeEach(() => {
+    // Mock window and location for URL construction
+    const mockLocation = new URL("http://localhost");
+    vi.stubGlobal("location", mockLocation);
+    vi.stubGlobal("window", { location: mockLocation });
+
     // Reset mocks
     vi.restoreAllMocks();
     mockFetch();

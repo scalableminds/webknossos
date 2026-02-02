@@ -6,6 +6,11 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
   let mockFetch: any;
 
   beforeEach(() => {
+    const mockLocation = new URL("http://localhost");
+    vi.stubGlobal("location", mockLocation);
+    vi.stubGlobal("window", { location: mockLocation });
+
+    // Reset mocks
     vi.restoreAllMocks();
     mockFetch = vi.fn().mockImplementation(() => {
       // console.log("Fetch called:", url, init?.method);

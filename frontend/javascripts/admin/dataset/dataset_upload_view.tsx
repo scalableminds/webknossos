@@ -455,7 +455,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isRetrying: true,
       });
     });
-    resumableUpload.addFiles(formValues.zipFile);
+    resumableUpload.addFiles(formValues.zipFile as File[]);
   };
 
   cancelUpload = async () => {

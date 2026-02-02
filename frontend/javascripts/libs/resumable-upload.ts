@@ -106,10 +106,6 @@ export interface ConfigurationHash {
    */
   testTarget?: string | null;
   /**
-   * Extra prefix added before the name of each parameter included in the multipart POST or in the test GET. (Default: `''`)
-   */
-  parameterNamespace?: string;
-  /**
    * Make a GET request to the server for each chunks to see if it already exists. If implemented on the server-side, this will allow for upload resumes even after a browser crash or even a computer restart. (Default: `true`)
    */
   testChunks?: boolean;
@@ -125,7 +121,7 @@ export interface ConfigurationHash {
   /**
    * The number of milliseconds to wait before retrying a chunk on a non-permanent error. Valid values are any positive integer and `undefined` for immediate retry. (Default: `undefined`)
    */
-  chunkRetryInterval?: number | undefined;
+  chunkRetryInterval?: number | null;
   /**
    * List of HTTP status codes that define if the chunk upload was a permanent error and should not retry the upload. (Default: `[400, 404, 409, 415, 500, 501]`)
    */
@@ -133,7 +129,7 @@ export interface ConfigurationHash {
   /**
    * Indicates how many files can be uploaded in a single session. Valid values are any positive integer and `undefined` for no limit. (Default: `undefined`)
    */
-  maxFiles?: number | undefined;
+  maxFiles?: number;
   /**
    * Standard CORS requests do not send or set any cookies by default. In order to include cookies as part of the request, you need to set the `withCredentials` property to true. (Default: `false`)
    */
@@ -155,7 +151,7 @@ export interface ConfigurationHash {
   /**
    * The minimum allowed file size. (Default: 1)
    */
-  minFileSize?: number | undefined;
+  minFileSize?: number | null;
   /**
    * A function which displays an error a selected file is smaller than allowed. (Default: displays an alert for every bad file.)
    */
@@ -163,7 +159,7 @@ export interface ConfigurationHash {
   /**
    * The maximum allowed file size. (Default: `undefined`)
    */
-  maxFileSize?: number | undefined;
+  maxFileSize?: number;
   /**
    * A function which displays an error a selected file is larger than allowed. (Default: displays an alert for every bad file.)
    */
@@ -210,7 +206,7 @@ const helpers = {
 
   formatSize(size: number | undefined): string {
     if (size === undefined) {
-      return "undefined";
+      return "n/a";
     }
     if (size < 1024) {
       return size + " bytes";
@@ -223,7 +219,7 @@ const helpers = {
     }
   },
 
-  getTarget(resumable: Resumable, request: string, params: string[]): string {
+  getTargetURI(resumable: Resumable, request: string, params: Record<string, any>): string {
     let target = resumable.getOpt("target");
 
     if (request === "test" && resumable.getOpt("testTarget")) {
@@ -237,14 +233,12 @@ const helpers = {
       return target(params);
     }
 
-    const separator = (target as string).indexOf("?") < 0 ? "?" : "&";
-    const joinedParams = params.join("&");
+    const url = new URL(target as string, window.location.origin);
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.append(key, value);
+    });
 
-    if (joinedParams) {
-      target = target + separator + joinedParams;
-    }
-
-    return target as string;
+    return url.pathname + url.search;
   },
 };
 
@@ -305,17 +299,14 @@ export class ResumableChunk {
   async test(): Promise<void> {
     this.abortController = new AbortController();
 
-    const params: string[] = [];
-    const parameterNamespace = this.getOpt("parameterNamespace") as string;
-    let customQuery = this.getOpt("query");
+    const params: Record<string, any> = {};
+    let customQueryParameters = this.getOpt("query");
 
-    if (typeof customQuery === "function") {
-      customQuery = customQuery(this.fileObj, this);
+    if (typeof customQueryParameters === "function") {
+      customQueryParameters = customQueryParameters(this.fileObj, this);
     }
 
-    Object.entries((customQuery as Record<string, any>) || {}).forEach(([k, v]) => {
-      params.push([encodeURIComponent(parameterNamespace + k), encodeURIComponent(v)].join("="));
-    });
+    Object.assign(params, customQueryParameters || {});
 
     const extraParams: Array<[keyof ConfigurationHash, any]> = [
       ["chunkNumberParameterName", this.offset + 1],
@@ -329,17 +320,7 @@ export class ResumableChunk {
       ["totalChunksParameterName", this.fileObj.chunks.length],
     ];
 
-    params.push(
-      ...extraParams
-        .filter((pair) => this.getOpt(pair[0]))
-        .map((pair) =>
-          [parameterNamespace + (this.getOpt(pair[0]) as string), encodeURIComponent(pair[1])].join(
-            "=",
-          ),
-        ),
-    );
-
-    const targetUrl = helpers.getTarget(this.resumableObj, "test", params);
+    const targetUrl = helpers.getTargetURI(this.resumableObj, "test", extraParams);
 
     let customHeaders = this.getOpt("headers");
     if (typeof customHeaders === "function") {
@@ -400,7 +381,7 @@ export class ResumableChunk {
     this.pendingRetry = false;
     this.callback("progress");
 
-    const queryBase: Record<string, any> = [
+    const queryParameters: Record<string, any> = [
       ["chunkNumberParameterName", this.offset + 1],
       ["chunkSizeParameterName", this.getOpt("chunkSize")],
       ["currentChunkSizeParameterName", this.endByte - this.startByte],
@@ -420,11 +401,11 @@ export class ResumableChunk {
         {} as Record<string, any>,
       );
 
-    let customQuery = this.getOpt("query");
-    if (typeof customQuery === "function") {
-      customQuery = customQuery(this.fileObj, this);
+    let customQueryParameters = this.getOpt("query");
+    if (typeof customQueryParameters === "function") {
+      customQueryParameters = customQueryParameters(this.fileObj, this);
     }
-    Object.assign(queryBase, customQuery || {});
+    Object.assign(queryParameters, customQueryParameters || {});
 
     const bytes = this.fileObj.file.slice(
       this.startByte,
@@ -433,8 +414,6 @@ export class ResumableChunk {
     );
 
     let body: FormData | Blob | string;
-    const params: string[] = [];
-    const parameterNamespace = this.getOpt("parameterNamespace") as string;
 
     const headers: Record<string, string> = {};
     let customHeaders = this.getOpt("headers");
@@ -446,22 +425,14 @@ export class ResumableChunk {
     if (this.getOpt("method") === "octet") {
       body = bytes;
       headers["Content-Type"] = "application/octet-stream";
-      Object.entries(queryBase).forEach(([k, v]) => {
-        params.push([encodeURIComponent(parameterNamespace + k), encodeURIComponent(v)].join("="));
-      });
     } else {
       const formData = new FormData();
-      Object.entries(queryBase).forEach(([k, v]) => {
-        formData.append(parameterNamespace + k, v);
-        params.push([encodeURIComponent(parameterNamespace + k), encodeURIComponent(v)].join("="));
+      Object.entries(queryParameters).forEach(([k, v]) => {
+        formData.append(k, v);
       });
 
       if (this.getOpt("chunkFormat") === "blob") {
-        formData.append(
-          parameterNamespace + (this.getOpt("fileParameterName") as string),
-          bytes,
-          this.fileObj.fileName,
-        );
+        formData.append(this.getOpt("fileParameterName") as string, bytes, this.fileObj.fileName);
         body = formData;
       } else {
         const readPromise = new Promise<string>((resolve) => {
@@ -470,15 +441,12 @@ export class ResumableChunk {
           fr.readAsDataURL(bytes);
         });
         const base64Data = await readPromise;
-        formData.append(
-          parameterNamespace + (this.getOpt("fileParameterName") as string),
-          base64Data,
-        );
+        formData.append(this.getOpt("fileParameterName") as string, base64Data);
         body = formData;
       }
     }
 
-    const targetUrl = helpers.getTarget(this.resumableObj, "upload", params);
+    const targetUrl = helpers.getTargetURI(this.resumableObj, "upload", queryParameters);
 
     try {
       const response = await fetch(targetUrl, {
@@ -858,14 +826,14 @@ export class Resumable implements EventTarget {
       prioritizeFirstAndLastChunk: false,
       target: "/",
       testTarget: null,
-      parameterNamespace: "",
+
       testChunks: true,
       generateUniqueIdentifier: null,
       getTarget: null,
       maxChunkRetries: 100,
-      chunkRetryInterval: undefined,
+      chunkRetryInterval: null,
       permanentErrors: [400, 401, 403, 404, 409, 415, 500, 501],
-      maxFiles: undefined,
+      maxFiles: Number.POSITIVE_INFINITY,
       withCredentials: false,
       fetchTimeout: 0,
       clearInput: true,
@@ -883,7 +851,7 @@ export class Resumable implements EventTarget {
           `${file.name} is too small, please upload files larger than ${helpers.formatSize(this.getOpt("minFileSize"))}.`,
         );
       },
-      maxFileSize: undefined,
+      maxFileSize: Number.POSITIVE_INFINITY,
       maxFileSizeErrorCallback: (file: File) => {
         console.error(
           `${file.name} is too large, please upload files less than ${helpers.formatSize(this.getOpt("maxFileSize"))}.`,
@@ -1028,7 +996,7 @@ export class Resumable implements EventTarget {
       "fileTypeErrorCallback",
     ]) as any;
 
-    if (typeof o.maxFiles !== "undefined" && o.maxFiles < fileList.length + this.files.length) {
+    if (o.maxFiles < fileList.length + this.files.length) {
       if (o.maxFiles === 1 && this.files.length === 1 && fileList.length === 1) {
         this.removeFile(this.files[0]);
       } else {
@@ -1077,11 +1045,11 @@ export class Resumable implements EventTarget {
         }
       }
 
-      if (typeof o.minFileSize !== "undefined" && file.size < o.minFileSize) {
+      if (file.size < o.minFileSize) {
         o.minFileSizeErrorCallback(file, errorCount++);
         continue;
       }
-      if (typeof o.maxFileSize !== "undefined" && file.size > o.maxFileSize) {
+      if (file.size > o.maxFileSize) {
         o.maxFileSizeErrorCallback(file, errorCount++);
         continue;
       }

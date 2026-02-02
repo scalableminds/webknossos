@@ -668,6 +668,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()
 
+  def setIsVirtual(id: ObjectId, isVirtual: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.datasets SET isvirtual = $isVirtual WHERE _id = $id".asUpdate)
+    } yield ()
+
   def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {

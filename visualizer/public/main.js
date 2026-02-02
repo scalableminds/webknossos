@@ -7,12 +7,14 @@ let activeIndex = 0;
 
 const sidebar = document.getElementById("sidebar");
 const main = document.getElementById("main");
+const main2 = document.getElementById("main2");
 
 /* keep positions between renders for smooth morphing */
-const previousPositions = new Map();
+const previousPositionsForAgglomerates = new Map();
+const previousPositionsForSkeletons = new Map();
 
 /* ================================
-   Persistent SVG + layers (IMPORTANT)
+   Persistent SVG + layers
 ================================ */
 
 const svg = d3
@@ -217,29 +219,64 @@ function renderVersion(index) {
   const trees = storeState.annotation.skeleton.trees;
   console.log("trees", trees)
 
-
-
   const versionMap = new Map(
     Object.entries(versionMapJSON).map(([k, v]) => [Number(k), v])
   );
 
   const adjacencyList = parseAdjacencyList(adjacencyListJSON);
 
-  const width = main.clientWidth;
-  const height = main.clientHeight;
 
   /* ---------- build nodes/links ---------- */
 
-  const nodes = [...versionMap.keys()].map(id => ({ id }));
+  function renderAgglomerateGraph() {
+    const nodes = [...versionMap.keys()].map(id => ({ id }));
+
+    const links = [];
+    for (const [from, tos] of adjacencyList.entries()) {
+      tos.forEach(to => {
+        links.push({ source: from, target: to });
+      });
+    }
+    const segments = new Map(storeState.annotation.volumes[0].segments);
+    const componentIdToColor = id => segments.has(id) ? "green" : "gray";
+
+    renderGraph(previousPositionsForAgglomerates, nodes, links, versionMap, componentIdToColor)
+  }
+
+  function renderSkeletonGraph() {
+    const treeIdByNodeId = new Map();
+
+    for (const tree of trees.values()) {
+      for (const node of tree.nodes.values()) {
+        treeIdByNodeId.set(node.id, tree.treeId)
+      }
+    }
+
+
+    const nodes = [...trees.values().flatMap(tree => tree.nodes.values())].map(node => ({ id: node.id }));
+    console.log("nodes", nodes)
+
+    const links = [];
+    for (const tree of trees.values()) {
+      for (const edge of tree.edges.outMap.values()) {
+        links.push({ source: edge[0].source, target: edge[0].target })
+      }
+    }
+    const componentIdToColor = _id => "gray";
+
+    renderGraph(previousPositionsForSkeletons, nodes, links, treeIdByNodeId, componentIdToColor)
+
+  }
+
+  // renderAgglomerateGraph();
+  renderSkeletonGraph();
+}
+
+function renderGraph(previousPositions, nodes, links, versionMap, componentIdToColor) {
+  const width = main.clientWidth;
+  const height = main.clientHeight;
   const nodeById = new Map(nodes.map(n => [n.id, n]));
 
-
-  const links = [];
-  for (const [from, tos] of adjacencyList.entries()) {
-    tos.forEach(to => {
-      links.push({ source: from, target: to });
-    });
-  }
   links.forEach(l => {
     l.source = nodeById.get(l.source);
     l.target = nodeById.get(l.target);
@@ -285,8 +322,6 @@ function renderVersion(index) {
     };
   });
 
-  const segments = new Map(storeState.annotation.volumes[0].segments);
-
   const t = svg.transition().duration(600);
 
   /* ================================
@@ -327,7 +362,7 @@ function renderVersion(index) {
     .attr("y", d => d.y - 6)
     .attr("font-size", 14)
     .attr("font-family", "sans-serif")
-    .attr("fill", d => segments.has(d.id) ? "green" : "gray")
+    .attr("fill", d => componentIdToColor(d.id))
     .text(d => `Agglomerate ${d.id}`);
 
   /* ================================

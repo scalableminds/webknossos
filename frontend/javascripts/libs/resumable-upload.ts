@@ -295,28 +295,30 @@ export class ResumableChunk {
   async test(): Promise<void> {
     this.abortController = new AbortController();
 
-    const params: Record<string, any> = {};
     let customQueryParameters = this.getOpt("query");
 
     if (typeof customQueryParameters === "function") {
       customQueryParameters = customQueryParameters(this.fileObj, this);
     }
 
-    Object.assign(params, customQueryParameters || {});
+    const queryParams = Object.assign({}, customQueryParameters || {});
 
-    const extraParams: Partial<Record<keyof ConfigurationHash, any>> = {
-      chunkNumberParameterName: this.offset + 1,
-      chunkSizeParameterName: this.getOpt("chunkSize"),
-      currentChunkSizeParameterName: this.endByte - this.startByte,
-      totalSizeParameterName: this.fileObjSize,
-      typeParameterName: this.fileObjType,
-      identifierParameterName: this.fileObj.uniqueIdentifier,
-      fileNameParameterName: this.fileObj.fileName,
-      relativePathParameterName: this.fileObj.relativePath,
-      totalChunksParameterName: this.fileObj.chunks.length,
+    const extraParams: Partial<Record<string, any>> = {
+      [this.getOpt("chunkNumberParameterName")]: this.offset + 1,
+      [this.getOpt("chunkSizeParameterName")]: this.getOpt("chunkSize"),
+      [this.getOpt("currentChunkSizeParameterName")]: this.endByte - this.startByte,
+      [this.getOpt("totalSizeParameterName")]: this.fileObjSize,
+      [this.getOpt("typeParameterName")]: this.fileObjType,
+      [this.getOpt("identifierParameterName")]: this.fileObj.uniqueIdentifier,
+      [this.getOpt("fileNameParameterName")]: this.fileObj.fileName,
+      [this.getOpt("relativePathParameterName")]: this.fileObj.relativePath,
+      [this.getOpt("totalChunksParameterName")]: this.fileObj.chunks.length,
     };
 
-    const targetUrl = helpers.getTargetURI(this.resumableObj, "test", extraParams);
+    const targetUrl = helpers.getTargetURI(this.resumableObj, "test", {
+      ...queryParams,
+      ...extraParams,
+    });
 
     let customHeaders = this.getOpt("headers");
     if (typeof customHeaders === "function") {
@@ -337,7 +339,7 @@ export class ResumableChunk {
       if (response.ok) {
         this._message = await response.text();
         this.callback("success", this._message);
-        this.markComplete = true; // Tom added this.
+        // this.markComplete = true; // Tom added this.
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();
@@ -379,23 +381,23 @@ export class ResumableChunk {
     this.pendingRetry = false;
     this.callback("progress");
 
-    const queryParameters: Partial<Record<keyof ConfigurationHash, any>> = {
-      chunkNumberParameterName: this.offset + 1,
-      chunkSizeParameterName: this.getOpt("chunkSize"),
-      currentChunkSizeParameterName: this.endByte - this.startByte,
-      totalSizeParameterName: this.fileObjSize,
-      typeParameterName: this.fileObjType,
-      identifierParameterName: this.fileObj.uniqueIdentifier,
-      fileNameParameterName: this.fileObj.fileName,
-      relativePathParameterName: this.fileObj.relativePath,
-      totalChunksParameterName: this.fileObj.chunks.length,
+    const standardQueryParameters: Partial<Record<string, any>> = {
+      [this.getOpt("chunkNumberParameterName")]: this.offset + 1,
+      [this.getOpt("chunkSizeParameterName")]: this.getOpt("chunkSize"),
+      [this.getOpt("currentChunkSizeParameterName")]: this.endByte - this.startByte,
+      [this.getOpt("totalSizeParameterName")]: this.fileObjSize,
+      [this.getOpt("typeParameterName")]: this.fileObjType,
+      [this.getOpt("identifierParameterName")]: this.fileObj.uniqueIdentifier,
+      [this.getOpt("fileNameParameterName")]: this.fileObj.fileName,
+      [this.getOpt("relativePathParameterName")]: this.fileObj.relativePath,
+      [this.getOpt("totalChunksParameterName")]: this.fileObj.chunks.length,
     };
 
     let customQueryParameters = this.getOpt("query");
     if (typeof customQueryParameters === "function") {
       customQueryParameters = customQueryParameters(this.fileObj, this);
     }
-    Object.assign(queryParameters, customQueryParameters || {});
+    const queryParameters = Object.assign(standardQueryParameters, customQueryParameters || {});
 
     const bytes = this.fileObj.file.slice(
       this.startByte,
@@ -405,12 +407,11 @@ export class ResumableChunk {
 
     let data: FormData | Blob | string;
 
-    const headers: Record<string, string> = {};
     let customHeaders = this.getOpt("headers");
     if (typeof customHeaders === "function") {
       customHeaders = customHeaders(this.fileObj, this);
     }
-    Object.assign(headers, customHeaders);
+    const headers: Record<string, string> = Object.assign({}, customHeaders);
 
     if (this.getOpt("method") === "octet") {
       data = bytes;
@@ -1151,7 +1152,7 @@ export class Resumable implements EventTarget {
   }
 
   uploadNextChunk(): boolean {
-    let found = false;
+    let chunkFound = false;
 
     // In some cases (such as videos) it's really handy to upload the first
     // and last chunk of a file quickly; this let's the server check the file's
@@ -1179,8 +1180,8 @@ export class Resumable implements EventTarget {
 
     // Now, simply look for the next, best thing to upload
     for (const file of this.files) {
-      found = file.upload();
-      if (found) return true;
+      chunkFound = file.upload();
+      if (chunkFound) return true;
     }
 
     // The are no more outstanding chunks to upload, check is everything is done

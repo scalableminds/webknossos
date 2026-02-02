@@ -9,7 +9,7 @@ import {
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import {
-  ColoredLogger,
+  // ColoredLogger,
   getAdaptToTypeFunction,
   isEditableEventTarget,
   isNumberMap,
@@ -206,7 +206,7 @@ function proofreadCoarseMagIndex(): number {
   // @ts-expect-error
   return window.__proofreadCoarseResolutionIndex != null
     ? // @ts-expect-error
-    window.__proofreadCoarseResolutionIndex
+      window.__proofreadCoarseResolutionIndex
     : 3;
 }
 
@@ -224,7 +224,6 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
-  ColoredLogger.logGreen("clickSegmentAction for id=", segmentId);
   yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
 
   const autoRenderMeshInProofreading = yield* select(
@@ -431,7 +430,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   } else if (!isProofreadingToolActive && isModifyingAnyAgglomerateSkeletons) {
     Toast.warning(
       "In order to edit the active mapping by deleting or adding edges of agglomerate skeletons, the proofreading tool needs to be active." +
-      " If you want to edit the active mapping, activate the proofreading tool and then redo the action.",
+        " If you want to edit the active mapping, activate the proofreading tool and then redo the action.",
       { timeout: 12000 },
     );
     return;
@@ -541,11 +540,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   sourceAgglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
-    sourceAgglomerateId,
+      sourceAgglomerateId,
   );
   targetAgglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
-    targetAgglomerateId,
+      targetAgglomerateId,
   );
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
@@ -598,11 +597,15 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     sourceTree = findTreeByNodeId(trees, sourceNodeId);
     targetTree = findTreeByNodeId(trees, targetNodeId);
     if (sourceTree == null || targetTree == null) {
-      console.error("Couldn't find trees for nodes. Details:", { sourceNodeId, sourceTree, targetNodeId, targetTree })
-      throw new Error("Couldn't find trees for source and/or tree nodes. See console for details")
+      console.error("Couldn't find trees for nodes. Details:", {
+        sourceNodeId,
+        sourceTree,
+        targetNodeId,
+        targetTree,
+      });
+      throw new Error("Couldn't find trees for source and/or tree nodes. See console for details");
     }
   }
-
 
   /* Rename agglomerate skeleton(s) according to their new id and mapping name */
   yield* put(
@@ -621,7 +624,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     );
   } else {
     // A merge happened. Remove the segment that doesn't exist anymore.
-    ColoredLogger.logRed("removeSegmentAction", targetAgglomerateId);
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
@@ -777,7 +779,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   agglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(partitions[1][0])) ??
-    agglomerateId,
+      agglomerateId,
   );
 
   const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
@@ -907,17 +909,17 @@ function* performCutFromNeighbors(
 
   const edgesToRemove: Array<
     | {
-      position1: Vector3;
-      position2: Vector3;
-      segmentId1: number;
-      segmentId2: number;
-    }
+        position1: Vector3;
+        position2: Vector3;
+        segmentId1: number;
+        segmentId2: number;
+      }
     | {
-      position1: null;
-      position2: Vector3;
-      segmentId1: number;
-      segmentId2: number;
-    }
+        position1: null;
+        position2: Vector3;
+        segmentId1: number;
+        segmentId2: number;
+      }
   > = neighborInfo.neighbors.map(
     (neighbor) =>
       ({
@@ -1074,7 +1076,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
     yield* put(mergeSegmentsAction(sourceAgglomerateId, targetAgglomerateId, volumeTracingId));
-    ColoredLogger.logGreen("dispatch mergeSegmentsAction");
   }
 
   yield* put(pushSaveQueueTransaction(updateActions));
@@ -1277,7 +1278,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   targetAgglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetSegmentId)) ??
-    targetAgglomerateId,
+      targetAgglomerateId,
   );
 
   const newAnnotationVersion = yield* select((state) => state.annotation.version);
@@ -1387,9 +1388,9 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
 
   const agglomerateFileMag = isSkeletonProofreading
     ? // In case of skeleton proofreading, the finest mag should be used.
-    magInfo.getFinestMag()
+      magInfo.getFinestMag()
     : // For non-skeleton proofreading, the active mag suffices
-    currentMag;
+      currentMag;
   if (agglomerateFileMag == null) {
     return null;
   }
@@ -1430,7 +1431,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     const mappedId = isNumberMap(mappingToAccess)
       ? mappingToAccess.get(Number(segmentId))
       : // TODO: Proper 64 bit support (#6921)
-      Number(mappingToAccess.get(BigInt(segmentId)));
+        Number(mappingToAccess.get(BigInt(segmentId)));
     if (mappedId == null) {
       // It could happen that the user tries to perform a proofreading operation
       // that involves an id for which the mapped id wasn't fetched yet.
@@ -1449,7 +1450,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     const agglomerateId = isNumberMap(mapping)
       ? mapping.get(unmappedId)
       : // TODO: Proper 64 bit support (#6921)
-      Number(mapping.get(BigInt(unmappedId)));
+        Number(mapping.get(BigInt(unmappedId)));
 
     if (agglomerateId == null) {
       // It could happen that the user tries to perform a proofreading operation
@@ -1518,7 +1519,6 @@ function* refreshAffectedSegmentItemsAndMeshes(
     nodePosition: Vector3;
   }>,
 ) {
-  ColoredLogger.logBlue("refreshAffectedSegmentItemsAndMeshes", items);
   // ATTENTION: This saga should usually be called with `spawn` to avoid that the user
   // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
 
@@ -1538,7 +1538,6 @@ function* refreshAffectedSegmentItemsAndMeshes(
       removedIds.add(item.agglomerateId);
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
-      ColoredLogger.logGreen("ensureSegmentItemAndLoadCoarseMesh for", item.newAgglomerateId);
       yield* call(
         ensureSegmentItemAndLoadCoarseMesh,
         layerName,

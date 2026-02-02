@@ -102,10 +102,7 @@ export class BackendMock {
     if (state == null) {
       throw new Error("Unexpected getState on BackendMock.");
     }
-    for (const actionBatch of this.updateActionLog) {
-      if (requestedVersion != null && actionBatch.version > requestedVersion) {
-        break;
-      }
+    for (const actionBatch of this.getLocalUpdateActionLog(requestedVersion)) {
       state = combinedReducer(
         state,
         applySkeletonUpdateActionsFromServerAction(
@@ -123,6 +120,25 @@ export class BackendMock {
     }
 
     return state;
+  }
+
+  getLocalUpdateActionLog(requestedVersion: number | null = null, until: boolean = true) {
+    let state = this.initialState;
+    if (state == null) {
+      throw new Error("Unexpected getState on BackendMock.");
+    }
+
+    if (requestedVersion === null) {
+      return this.updateActionLog;
+    }
+
+    const untilPredicate = until
+      ? (version: number) => version <= requestedVersion
+      : (version: number) => version === requestedVersion;
+
+    return this.updateActionLog.filter((actionBatch) => {
+      return requestedVersion == null || untilPredicate(actionBatch.version);
+    });
   }
 
   private addOnSavedListener = (fn: () => void) => {

@@ -1,9 +1,9 @@
 import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
-import { serializeAdjacencyList, type AgglomerateMapping } from "./agglomerate_mapping_helper";
 import DiffableMap from "libs/diffable_map";
+import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
+import { type AgglomerateMapping, serializeAdjacencyList } from "./agglomerate_mapping_helper";
 
 type RenderFormat = "dot" | "json";
 
@@ -51,6 +51,7 @@ export class MappingVisualizer {
     }
 
     const storeState = this.backendMock.getState(version);
+    const saveRequests = this.backendMock.getLocalUpdateActionLog(version, false);
 
     return JSON.stringify(
       {
@@ -58,6 +59,7 @@ export class MappingVisualizer {
         versionMap: Object.fromEntries(Array.from(versionMap.entries())),
         adjacencyList: serializeAdjacencyList(adjacencyList),
         storeState,
+        saveRequests,
       },
       (key, value) => {
         if (value instanceof DiffableMap) {

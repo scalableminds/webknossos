@@ -42,6 +42,7 @@ function buildSidebar() {
 
   updateActive();
 
+
   window.addEventListener("keydown", (e) => {
     if (e.key === "ArrowDown") {
       activeIndex = (activeIndex + 1) % versions.length;
@@ -173,7 +174,7 @@ function parseDiffableMap(obj) {
 }
 
 function renderVersion(index) {
-  const { versionMap: versionMapJSON, adjacencyList: adjacencyListJSON, storeState: storeStateOriginal } =
+  const { versionMap: versionMapJSON, adjacencyList: adjacencyListJSON, storeState: storeStateOriginal, saveRequests } =
     versions[index];
 
   const storeState = JSON.parse(JSON.stringify(storeStateOriginal), (key, value) => {
@@ -181,7 +182,14 @@ function renderVersion(index) {
   })
 
   const trees = storeState.annotation.skeleton.trees;
-  console.log("trees", trees)
+
+  console.log("saveRequests", saveRequests);
+  document.getElementById("json-log").value = JSON
+    .stringify(saveRequests, null, "\t")
+    .replaceAll(
+      "],\n\t\"",
+      "],\n\n\t\""
+    );
 
   const versionMap = new Map(
     Object.entries(versionMapJSON).map(([k, v]) => [Number(k), v])

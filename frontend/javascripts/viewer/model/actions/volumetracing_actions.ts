@@ -331,7 +331,6 @@ export const removeSegmentAction = (
   layerName: string,
   timestamp: number = Date.now(),
 ) => {
-  ColoredLogger.logRed("removeSegment action", segmentId);
   return {
     type: "REMOVE_SEGMENT",
     // TODO: Proper 64 bit support (#6921)

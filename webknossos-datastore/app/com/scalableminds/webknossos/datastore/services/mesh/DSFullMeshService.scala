@@ -28,7 +28,7 @@ case class FullMeshRequest(
     mappingName: Option[String],
     mappingType: Option[String], // json, agglomerate, editableMapping
     editableMappingTracingId: Option[String],
-    editableMappingVersion: Option[Long],
+    annotationVersion: Option[Long],
     mag: Option[Vec3Int], // required for ad-hoc meshing
     seedPosition: Option[Vec3Int], // required for ad-hoc meshing
     additionalCoordinates: Option[Seq[AdditionalCoordinate]]
@@ -120,7 +120,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         segmentationLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
-        fullMeshRequest.editableMappingVersion,
+        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile = None,
         omitMissing = false
@@ -214,7 +214,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         dataLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
-        fullMeshRequest.editableMappingVersion,
+        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile,
         omitMissing = false

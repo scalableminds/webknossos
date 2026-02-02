@@ -149,7 +149,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                               mag: Vec3Int,
                               mappingName: Option[String],
                               editableMappingTracingId: Option[String],
-                              editableMappingVersion: Long,
+                              annotationVersion: Long,
                               additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Set[Vec3IntProto]] =
@@ -160,7 +160,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         elementClass = tracing.elementClass,
         mappingName = mappingName,
         volumeSegmentIndexClient = volumeSegmentIndexClient,
-        version = editableMappingVersion,
+        version = annotationVersion,
         remoteDatastoreClient = remoteDatastoreClient,
         fallbackLayer = fallbackLayer,
         additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),

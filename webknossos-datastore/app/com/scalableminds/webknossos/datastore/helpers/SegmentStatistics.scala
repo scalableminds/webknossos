@@ -15,7 +15,7 @@ case class SegmentStatisticsParameters(mag: Vec3Int,
                                        segmentIds: List[Long],
                                        mappingName: Option[String],
                                        additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                       editableMappingVersion: Option[Long])
+                                       annotationVersion: Option[Long])
 object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }

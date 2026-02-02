@@ -324,7 +324,7 @@ class VolumeTracingController @Inject()(
                                                             request.body.mag,
                                                             mappingName,
                                                             request.body.additionalCoordinates,
-                                                            request.body.editableMappingVersion)
+                                                            request.body.annotationVersion)
           }
         } yield Ok(Json.toJson(segmentVolumes))
       }
@@ -344,7 +344,7 @@ class VolumeTracingController @Inject()(
                                                                  request.body.mag,
                                                                  mappingName,
                                                                  request.body.additionalCoordinates,
-                                                                 request.body.editableMappingVersion)
+                                                                 request.body.annotationVersion)
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
       }
@@ -365,7 +365,7 @@ class VolumeTracingController @Inject()(
               mappingName = baseMappingName,
               mappingType = baseMappingName.map(_ => "HDF5"),
               editableMappingTracingId = None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
-              editableMappingVersion = None,
+              annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
@@ -400,7 +400,7 @@ class VolumeTracingController @Inject()(
             additionalCoordinates = request.body.additionalCoordinates,
             mappingName = mappingName,
             editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
-            editableMappingVersion = request.body.editableMappingVersion.getOrElse(tracing.version)
+            annotationVersion = request.body.annotationVersion.getOrElse(tracing.version)
           )
           bucketPositionsForCubeSize = bucketPositions.toSeq
             .map(vec3IntFromProto)

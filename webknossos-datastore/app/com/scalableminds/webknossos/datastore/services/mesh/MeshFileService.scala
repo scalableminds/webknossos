@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext
 case class ListMeshChunksRequest(
     meshFileName: String,
     segmentId: Long,
-    editableMappingVersion: Option[Long],
+    annotationVersion: Option[Long],
 )
 
 object ListMeshChunksRequest {

@@ -93,7 +93,7 @@ class VolumeSegmentIndexBuffer(
   def getMultiple(segmentIds: List[Long],
                   mag: Vec3Int,
                   editableMappingTracingId: Option[String],
-                  editableMappingVersion: Option[Long],
+                  annotationVersion: Option[Long],
                   additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[List[(Long, Set[Vec3IntProto])]] =
     if (segmentIds.isEmpty) Fox.successful(List.empty)
@@ -108,7 +108,7 @@ class VolumeSegmentIndexBuffer(
                                                       additionalCoordinates,
                                                       mappingName,
                                                       editableMappingTracingId,
-                                                      editableMappingVersion)
+                                                      annotationVersion)
         _ = putMultiple(fromFossilOrTempHits.toSeq, mag, additionalCoordinates, markAsChanged = false)
         _ = putMultiple(fromDatastoreHits, mag, additionalCoordinates, markAsChanged = false)
         allHits = fromBufferHits ++ fromFossilOrTempHits ++ fromDatastoreHits
@@ -200,7 +200,7 @@ class VolumeSegmentIndexBuffer(
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       mappingName: Option[String],
       editableMappingTracingId: Option[String],
-      editableMappingVersion: Option[Long])(implicit ec: ExecutionContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
+      annotationVersion: Option[Long])(implicit ec: ExecutionContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
     fallbackLayer match {
       case Some(remoteFallbackLayer) if segmentIds.nonEmpty =>
         remoteDatastoreClient.querySegmentIndexForMultipleSegments(remoteFallbackLayer,
@@ -208,7 +208,7 @@ class VolumeSegmentIndexBuffer(
                                                                    mag,
                                                                    mappingName,
                                                                    editableMappingTracingId,
-                                                                   editableMappingVersion)(tc)
+                                                                   annotationVersion)(tc)
       case _ => Fox.successful(List.empty)
     }
 

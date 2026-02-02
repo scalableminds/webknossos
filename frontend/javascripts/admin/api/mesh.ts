@@ -24,7 +24,7 @@ export type MeshSegmentInfo = {
 type ListMeshChunksRequest = {
   meshFileName: string;
   segmentId: number;
-  editableMappingVersion: number | undefined | null;
+  annotationVersion: number | undefined | null;
 };
 
 export function getMeshfileChunksForSegment(
@@ -42,7 +42,7 @@ export function getMeshfileChunksForSegment(
   // editableMappingTracingId should be the tracing id, not the editable mapping id.
   // If this is set, it is assumed that the request is about an editable mapping.
   editableMappingTracingId: string | null | undefined,
-  editableMappingVersion: number | undefined | null,
+  annotationVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
@@ -56,7 +56,7 @@ export function getMeshfileChunksForSegment(
     const payload: ListMeshChunksRequest = {
       meshFileName: meshFile.name,
       segmentId,
-      editableMappingVersion,
+      annotationVersion,
     };
     return Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,

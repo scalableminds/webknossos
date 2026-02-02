@@ -56,10 +56,12 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(tracing, annotationId)
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
-        fullMeshRequest.copy(mappingName = baseMappingName,
-                             editableMappingTracingId = Some(tracingId),
-                             editableMappingVersion = Some(tracing.version),
-                             mappingType = Some("HDF5"))
+        fullMeshRequest.copy(
+          mappingName = baseMappingName,
+          editableMappingTracingId = Some(tracingId),
+          annotationVersion = fullMeshRequest.annotationVersion.orElse(Some(tracing.version)),
+          mappingType = Some("HDF5")
+        )
       else fullMeshRequest
       array <- remoteDatastoreClient.loadFullMeshStl(remoteFallbackLayer, fullMeshRequestAdapted)
     } yield array

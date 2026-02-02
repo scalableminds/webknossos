@@ -33,14 +33,14 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                        mag: Vec3Int,
                        mappingName: Option[String],
                        additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                       editableMappingVersion: Option[Long],
+                       annotationVersion: Option[Long],
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     calculateSegmentVolume(
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, editableMappingVersion),
-      getDataForBucketPositions(annotationId, tracingId)
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, annotationVersion),
+      getDataForBucketPositions(annotationId, annotationVersion, tracingId)
     )
 
   def getSegmentBoundingBox(
@@ -50,16 +50,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       mag: Vec3Int,
       mappingName: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      editableMappingVersion: Option[Long])(implicit ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
+      annotationVersion: Option[Long])(implicit ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, editableMappingVersion),
-      getDataForBucketPositions(annotationId, tracingId)
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, annotationVersion),
+      getDataForBucketPositions(annotationId, annotationVersion, tracingId)
     )
 
-  private def getDataForBucketPositions(annotationId: ObjectId, tracingId: String)(
+  private def getDataForBucketPositions(annotationId: ObjectId, annotationVersion: Option[Long], tracingId: String)(
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
@@ -74,7 +74,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
           cubeSize = DataLayer.bucketLength,
           fourBit = Some(false),
           applyAgglomerate = None,
-          version = None,
+          version = annotationVersion,
           additionalCoordinates = additionalCoordinates
         )
       }.toList
@@ -89,13 +89,12 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                              includeFallbackDataIfAvailable = true)
     } yield (bucketDataBoxes, elementClassFromProto(tracing.elementClass))
 
-  private def getBucketPositions(annotationId: ObjectId,
-                                 tracingId: String,
-                                 mappingName: Option[String],
-                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                 editableMappingVersion: Option[Long])(segmentId: Long, mag: Vec3Int)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext) =
+  private def getBucketPositions(
+      annotationId: ObjectId,
+      tracingId: String,
+      mappingName: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      annotationVersion: Option[Long])(segmentId: Long, mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
@@ -107,7 +106,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         mag,
         mappingName,
         editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
-        editableMappingVersion.getOrElse(tracing.version),
+        annotationVersion.getOrElse(tracing.version),
         additionalCoordinates
       )
     } yield allBucketPositions

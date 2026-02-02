@@ -1742,6 +1742,7 @@ function ContextMenuInner() {
       const magInfo = getMagInfo(visibleSegmentationLayer.mags);
       const layersFinestMag = magInfo.getFinestMag();
       const voxelSize = dataset.dataSource.scale;
+      const annotationVersion = Store.getState().annotation.version;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
@@ -1750,6 +1751,7 @@ function ContextMenuInner() {
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotationVersion,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           layerSourceInfo,
@@ -1757,6 +1759,7 @@ function ContextMenuInner() {
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotationVersion,
         );
         const [surfaceArea] = await getSegmentSurfaceArea(
           layerSourceInfo,
@@ -1765,6 +1768,7 @@ function ContextMenuInner() {
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotationVersion,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxInRequestedMag, layersFinestMag);
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;

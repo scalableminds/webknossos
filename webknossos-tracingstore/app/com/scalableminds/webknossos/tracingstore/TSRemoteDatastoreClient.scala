@@ -118,7 +118,7 @@ class TSRemoteDatastoreClient @Inject()(
       mag: Vec3Int,
       mappingName: Option[String], // should be the baseMappingName in case of editable mappings
       editableMappingTracingId: Option[String],
-      editableMappingVersion: Option[Long])(implicit tc: TokenContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
+      annotationVersion: Option[Long])(implicit tc: TokenContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/segmentIndex").withTokenFromContext.silent
@@ -129,7 +129,7 @@ class TSRemoteDatastoreClient @Inject()(
             additionalCoordinates = None,
             mappingName = mappingName,
             editableMappingTracingId = editableMappingTracingId,
-            editableMappingVersion = editableMappingVersion
+            annotationVersion = annotationVersion
           ))
 
     } yield result.map(data => (data.segmentId, data.positions.toSet.map(vec3IntToProto)))

@@ -4,7 +4,6 @@ import path from "node:path";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
 import { serializeAdjacencyList, type AgglomerateMapping } from "./agglomerate_mapping_helper";
 import DiffableMap from "libs/diffable_map";
-import { ColoredLogger } from "libs/utils";
 
 type RenderFormat = "dot" | "json";
 
@@ -22,7 +21,6 @@ export class MappingVisualizer {
 
   renderVersion(version: number, options: RenderOptions = {}): void {
     const { outputPath = `version_${version}.json`, format = "json", rankdir = "LR" } = options;
-    ColoredLogger.logGreen("format", format);
 
     const outDir = path.dirname(outputPath);
     if (outDir && outDir !== ".") {
@@ -37,8 +35,6 @@ export class MappingVisualizer {
 
       const dotPath = outputPath.replace(/\.(svg|png)$/, ".dot");
       writeFileSync(dotPath, dot, "utf8");
-      console.log("dotPath", dotPath);
-      console.log("outputPath", outputPath);
       execSync(`dot -Tsvg "${dotPath}" -o "${outputPath}" && rm "${dotPath}"`);
     }
   }

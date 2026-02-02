@@ -647,7 +647,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // return;
 
       for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
-        ColoredLogger.logYellow("rendering version", version);
+        // ColoredLogger.logYellow("rendering version", version);
         viz.renderVersion(version, { outputPath: `version_${version}.json`, format: "json" });
         viz.renderVersion(version, { outputPath: dir + `/version_${version}.svg`, format: "dot" });
         //

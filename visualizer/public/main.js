@@ -8,6 +8,7 @@ let activeIndex = 0;
 const sidebar = document.getElementById("sidebar");
 const main = document.getElementById("main");
 const main2 = document.getElementById("main2");
+const main3 = document.getElementById("main3");
 
 /* ================================
    Load once
@@ -210,10 +211,12 @@ function renderVersion(index) {
 
   function renderSkeletonGraph() {
     const treeByNodeId = new Map();
+    const treeByTreeId = new Map();
 
     for (const tree of trees.values()) {
       for (const node of tree.nodes.values()) {
         treeByNodeId.set(node.id, tree)
+        treeByTreeId.set(tree.treeId, tree)
       }
     }
 
@@ -229,10 +232,9 @@ function renderVersion(index) {
     }
     const nodeIdToComponentId = nodeId => treeByNodeId.get(nodeId).treeId;
     const componentIdToColor = _id => "gray";
-    const componentIdToLabel = id => `${treeByNodeId.get(id).name} (${id})`;
+    const componentIdToLabel = id => `${treeByTreeId.get(id).name} (${id})`;
 
     skeletonRenderer.renderGraph(nodes, links, nodeIdToComponentId, componentIdToColor, componentIdToLabel)
-
   }
 
   renderAgglomerateGraph();

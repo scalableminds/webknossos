@@ -1,3 +1,5 @@
+// Inspired by Resumable.js (https://github.com/23/resumable.js)
+
 /**
  * Configuration options for the Resumable instance.
  */
@@ -350,7 +352,7 @@ export class ResumableChunk {
 
       if (response.ok || response.status === 200) {
         this._message = await response.text();
-        // this.callback("success", this._message);
+        this.callback("success", this._message);
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();
@@ -579,7 +581,7 @@ export class ResumableFile {
    */
   uniqueIdentifier: string;
   /**
-   * An array of `ResumableChunk` items. You shouldn't need to dig into these.
+   * An array of `ResumableChunk` items.
    */
   chunks: ResumableChunk[] = [];
   container: EventTarget | null = null;
@@ -895,7 +897,7 @@ export class Resumable implements EventTarget {
    */
   addEventListener(
     type: string,
-    callback: EventListenerOrEventListenerObject | null,
+    callback: EventListener | null,
     options?: boolean | AddEventListenerOptions | undefined,
   ): void {
     this._eventTarget.addEventListener(type, callback, options);
@@ -907,7 +909,7 @@ export class Resumable implements EventTarget {
 
   removeEventListener(
     type: string,
-    callback: EventListenerOrEventListenerObject | null,
+    callback: EventListener | null,
     options?: boolean | EventListenerOptions | undefined,
   ): void {
     this._eventTarget.removeEventListener(type, callback, options);

@@ -3,12 +3,15 @@ import { Resumable, ResumableChunk, type ResumableFile } from "../../libs/resuma
 
 // Helper to mock Fetch API
 function mockFetch(status = 200, ok = true, text = "success") {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok,
-    status,
-    text: () => Promise.resolve(text),
-    headers: new Headers(),
-  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok,
+      status,
+      text: () => Promise.resolve(text),
+      headers: new Headers(),
+    }),
+  );
 }
 
 describe("Resumable", () => {

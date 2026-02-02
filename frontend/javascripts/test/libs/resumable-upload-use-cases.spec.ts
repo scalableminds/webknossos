@@ -21,7 +21,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
         headers: new Headers(),
       });
     });
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   describe("Dynamic Query Parameters (Token Injection)", () => {

@@ -1,12 +1,21 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Col, Form, type FormInstance, InputNumber, Row, Slider, Tooltip, Typography } from "antd";
+import {
+  Col,
+  Form,
+  type FormInstance,
+  InputNumber,
+  Row,
+  Slider,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import FormItem from "antd/es/form/FormItem";
 import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import { useCallback, useEffect, useMemo } from "react";
 import type { AffineTransformation, APIDataLayer } from "types/api_types";
 import {
   AXIS_TO_TRANSFORM_INDEX,
-  doAllLayersHaveTheSameRotation,
   EXPECTED_TRANSFORMATION_LENGTH,
   fromCenterToOrigin,
   fromOriginToCenter,
@@ -180,12 +189,7 @@ export type DatasetRotationAndMirroringSettings = {
 export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatasetProps> = ({
   form,
 }: AxisRotationSettingForDatasetProps) => {
-  // form -> dataSource -> dataLayers can be undefined in case of the add remote dataset form which is initially empty.
-  const dataLayers: APIDataLayer[] | undefined = form?.getFieldValue(["dataSource", "dataLayers"]);
-  const isRotationOnly = useMemo(
-    () => (dataLayers ? doAllLayersHaveTheSameRotation(dataLayers) : false),
-    [dataLayers],
-  );
+  const isRotationOnly: boolean = form?.getFieldValue(["isRotationOnly"]) || false;
   if (!isRotationOnly) {
     return (
       <Tooltip
@@ -200,14 +204,23 @@ export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatas
               <li>Rotation around the z-axis</li>
               <li>Translation back to the original position</li>
             </ul>
-            To easily enable this setting, delete all coordinateTransformations of all layers in the
-            advanced tab, save and reload the dataset settings.
+            To easily enable this setting, delete all coordinateTransformations of all layers by
+            choosing "Transformation Mode: None" in the dropdown above, save and reload the dataset
+            settings.
           </div>
         }
       >
         <Text type="secondary">
-          Setting a dataset's rotation is only supported when all layers have the same rotation
-          transformation. <InfoCircleOutlined />
+          <>
+            Setting a dataset's rotation is only supported when all layers have the same rotation
+            transformation. <InfoCircleOutlined />
+          </>
+          <Space orientation="vertical" size="small">
+            <>
+              To enable this setting, choose "Transformation Mode: None" in the dropdown above, save
+              and reload the dataset settings.
+            </>
+          </Space>
         </Text>
       </Tooltip>
     );

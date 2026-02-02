@@ -13,6 +13,7 @@ export type DatasetSettingsFormData = {
   datasetRotation?: DatasetRotationAndMirroringSettings;
   coordinateTransformations?: string;
   transformationsMode: TransformationsMode;
+  isRotationOnly: boolean;
 };
 
 export type DatasetSettingsContextValue = {

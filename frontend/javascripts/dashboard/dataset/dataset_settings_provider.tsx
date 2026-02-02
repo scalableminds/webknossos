@@ -137,6 +137,9 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         datasetRotation: initialRotationSettings,
       });
 
+      const isRotationOnly = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
+      form.setFieldValue("isRotationOnly", isRotationOnly);
+
       const dataLayersWithTransformations: DataLayerWithTransformations[] =
         dataSource.dataLayers.map((layer: APIDataLayer) => ({
           name: layer.name,
@@ -180,7 +183,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       setIsLoading(false);
       form.validateFields();
     }
-  }, [datasetId, form.setFieldsValue, form.validateFields]);
+  }, [datasetId, form.setFieldsValue, form.validateFields, form.setFieldValue]);
 
   const getFormValidationSummary = useCallback((): Record<
     "data" | "general" | "defaultConfig",

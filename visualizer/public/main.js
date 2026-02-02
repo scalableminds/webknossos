@@ -202,9 +202,22 @@ function layoutComponentsWithDagre(nodes, links, versionMap, width, height) {
    Main render with transitions
 ================================ */
 
+function parseDiffableMap(obj) {
+  return new Map(obj.entries);
+}
+
 function renderVersion(index) {
-  const { versionMap: versionMapJSON, adjacencyList: adjacencyListJSON, storeState } =
+  const { versionMap: versionMapJSON, adjacencyList: adjacencyListJSON, storeState: storeStateOriginal } =
     versions[index];
+
+  const storeState = JSON.parse(JSON.stringify(storeStateOriginal), (key, value) => {
+    return value != null && typeof value === "object" && value._isDiffableMap ? parseDiffableMap(value) : value;
+  })
+
+  const trees = storeState.annotation.skeleton.trees;
+  console.log("trees", trees)
+
+
 
   const versionMap = new Map(
     Object.entries(versionMapJSON).map(([k, v]) => [Number(k), v])

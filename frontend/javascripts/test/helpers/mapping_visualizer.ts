@@ -22,6 +22,7 @@ export class MappingVisualizer {
 
   renderVersion(version: number, options: RenderOptions = {}): void {
     const { outputPath = `version_${version}.json`, format = "json", rankdir = "LR" } = options;
+    ColoredLogger.logGreen("format", format);
 
     const outDir = path.dirname(outputPath);
     if (outDir && outDir !== ".") {
@@ -64,7 +65,7 @@ export class MappingVisualizer {
       },
       (key, value) => {
         if (value instanceof DiffableMap) {
-          return Array.from(value.entries());
+          return { entries: Array.from(value.entries()), _isDiffableMap: true };
         }
         return value;
       },

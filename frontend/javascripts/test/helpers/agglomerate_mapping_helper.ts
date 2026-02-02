@@ -5,17 +5,9 @@ type VersionSnapshot = {
   adjacencyList: Map<number, Set<number>>;
 };
 
-export function serializeAdjacencyList(
-  map: Map<number, Set<number>>
-): string {
-  return JSON.stringify(
-    [...map.entries()].map(([key, set]) => [
-      key,
-      [...set],
-    ])
-  );
+export function serializeAdjacencyList(map: Map<number, Set<number>>): string {
+  return JSON.stringify([...map.entries()].map(([key, set]) => [key, [...set]]));
 }
-
 
 export class AgglomerateMapping {
   /*

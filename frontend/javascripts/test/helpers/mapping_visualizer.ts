@@ -4,8 +4,9 @@ import path from "node:path";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
 import { serializeAdjacencyList, type AgglomerateMapping } from "./agglomerate_mapping_helper";
 import DiffableMap from "libs/diffable_map";
+import { ColoredLogger } from "libs/utils";
 
-type RenderFormat = "dot" | "svg" | "png";
+type RenderFormat = "dot" | "json";
 
 interface RenderOptions {
   outputPath?: string;
@@ -35,8 +36,9 @@ export class MappingVisualizer {
 
       const dotPath = outputPath.replace(/\.(svg|png)$/, ".dot");
       writeFileSync(dotPath, dot, "utf8");
-
-      execSync(`dot -T${format} "${dotPath}" -o "${outputPath}" && rm "${dotPath}"`);
+      console.log("dotPath", dotPath);
+      console.log("outputPath", outputPath);
+      execSync(`dot -Tsvg "${dotPath}" -o "${outputPath}" && rm "${dotPath}"`);
     }
   }
 
@@ -72,6 +74,7 @@ export class MappingVisualizer {
   private buildDot(version: number, rankdir: "TB" | "LR"): string {
     const versionMap = this.mapping.getMap(version);
     const storeState = this.backendMock.getState(version);
+    const adjacencyList: Map<number, Set<number>> = this.mapping.getAdjacencyList(version);
 
     // group segmentIds by componentId
     const components = new Map<number, number[]>();

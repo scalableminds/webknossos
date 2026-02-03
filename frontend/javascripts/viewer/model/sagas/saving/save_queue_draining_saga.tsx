@@ -20,7 +20,7 @@ import {
   setSaveBusyAction,
   setVersionNumberAction,
   shiftSaveQueueAction,
-  snapshotAnnotationStateFrNextRebaseAction,
+  snapshotAnnotationStateForNextRebaseAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
@@ -168,7 +168,7 @@ export function* synchronizeAnnotationWithBackend(
     yield call(unsubscribeFromAnnotationMutexSaga);
   }
   // Update RebaseRelevantAnnotationState information as new updates have been stored on the server.
-  yield* put(snapshotAnnotationStateFrNextRebaseAction());
+  yield* put(snapshotAnnotationStateForNextRebaseAction());
   yield* put(setSaveBusyAction(false));
   return { hadConflict: false };
 }

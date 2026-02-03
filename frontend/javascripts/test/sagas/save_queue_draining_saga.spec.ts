@@ -5,12 +5,12 @@ import { call, put, take } from "redux-saga/effects";
 import { TIMESTAMP } from "test/global_mocks";
 import { UnitLong } from "viewer/constants";
 import {
-  doneSavingAction,
   saveNowAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
   setVersionNumberAction,
   shiftSaveQueueAction,
+  snapshotAnnotationStateForNextRebaseAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
@@ -148,7 +148,7 @@ describe("Save Saga", () => {
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendSaga.next([]), // select save queue
-      put(doneSavingAction()),
+      put(snapshotAnnotationStateForNextRebaseAction()),
     );
     expectValueDeepEqual(
       expect,
@@ -204,7 +204,7 @@ describe("Save Saga", () => {
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendSaga.next([]),
-      put(doneSavingAction()),
+      put(snapshotAnnotationStateForNextRebaseAction()),
     );
     expectValueDeepEqual(
       expect,
@@ -368,7 +368,7 @@ describe("Save Saga", () => {
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendSaga.next([]), // select save queue
-      put(doneSavingAction()),
+      put(snapshotAnnotationStateForNextRebaseAction()),
     );
     expectValueDeepEqual(
       expect,

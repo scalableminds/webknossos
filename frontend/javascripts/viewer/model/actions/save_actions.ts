@@ -33,8 +33,8 @@ export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
-export type SnapshotAnnotationStateFrNextRebaseAction = ReturnType<
-  typeof snapshotAnnotationStateFrNextRebaseAction
+export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
+  typeof snapshotAnnotationStateForNextRebaseAction
 >;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
@@ -65,7 +65,7 @@ export type SaveAction =
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
   | EnsureHasNewestVersionAction
-  | SnapshotAnnotationStateFrNextRebaseAction
+  | SnapshotAnnotationStateForNextRebaseAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
   | PrepareRebaseAction
@@ -212,7 +212,7 @@ export const dispatchEnsureHasNewestVersionAsync = async (
   await readyDeferred.promise();
 };
 
-export const snapshotAnnotationStateFrNextRebaseAction = () =>
+export const snapshotAnnotationStateForNextRebaseAction = () =>
   ({
     type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
   }) as const;

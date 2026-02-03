@@ -1216,7 +1216,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       // 403 is explicitly listed because we want to get a fileError
       // event. Then, we can invalidate the token and trigger
       // a retry ourselves (see below).
-      permanentErrors: [400, 403, 404, 409, 415, 500, 501],
+      permanentErrors: [400, 403, 404, 409, 415, 501],
     });
 
     let lastFileErrorTimestamp: number | null = null;

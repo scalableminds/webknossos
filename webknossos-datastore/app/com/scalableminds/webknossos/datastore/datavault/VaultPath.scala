@@ -22,7 +22,6 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
     for {
       (bytes, encoding, rangeHeader) <- dataVault.readBytesEncodingAndRangeHeader(this, byteRange) ?=> "Failed to read from vault path"
       decoded <- decode(bytes, encoding) ?~> s"Failed to decode $encoding-encoded response."
-      _ = println(s"read ${bytes.length} bytes with encoding $encoding and range header $rangeHeader")
     } yield decoded
 
   def readBytesEncodingAndRangeHeader(byteRange: ByteRange = ByteRange.complete)(

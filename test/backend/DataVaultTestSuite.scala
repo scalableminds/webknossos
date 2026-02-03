@@ -60,20 +60,24 @@ class DataVaultTestSuite extends PlaySpec {
         val vaultPath = new VaultPath(upath, GoogleCloudDataVault.create(CredentializedUPath(upath, None)))
         "return correct response (start-end range)" in {
 
-          val bytes = (vaultPath / dataKey)
-            .readBytes(range)(globalExecutionContext, emptyTokenContext)
+          val (bytes, encoding, rangeHeader) = (vaultPath / dataKey)
+            .readBytesEncodingAndRangeHeader(range)(globalExecutionContext, emptyTokenContext)
             .get(handleFoxJustification)
 
           assert(bytes.length == range.length)
+          assert(encoding == Encoding.identity)
+          assert(rangeHeader.contains("bytes 0-99/127808"))
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
         }
 
         "return correct response (suffix-length range)" in {
-          val bytes = (vaultPath / dataKey)
-            .readBytes(suffixRange)(globalExecutionContext, emptyTokenContext)
+          val (bytes, encoding, rangeHeader) = (vaultPath / dataKey)
+            .readBytesEncodingAndRangeHeader(suffixRange)(globalExecutionContext, emptyTokenContext)
             .get(handleFoxJustification)
 
           assert(bytes.length == suffixRange.length)
+          assert(encoding == Encoding.identity)
+          assert(rangeHeader.contains("bytes 127708-127807/127808"))
           assert(bytes.takeRight(10).sameElements(Array(-61, 45, -114, -64, -109, -64, 25, -81, -1, -39)))
         }
 

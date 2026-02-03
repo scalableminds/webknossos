@@ -21,7 +21,7 @@ case class StartEndExclusiveByteRange(start: Long, end: Long) extends ByteRange 
 case class SuffixLengthByteRange(length: Int) extends ByteRange {
   def toRangeHeader: String = s"bytes=-$length" // HTTP header is inclusive
   override def toContentRangeHeaderWithLength(totalLength: Long): Option[String] =
-    Some(s"bytes ${totalLength - length - 1}-${totalLength - 1}/$totalLength")
+    Some(s"bytes ${totalLength - length}-${totalLength - 1}/$totalLength")
   override def successResponseCode: Int = PARTIAL_CONTENT
 }
 case class CompleteByteRange() extends ByteRange

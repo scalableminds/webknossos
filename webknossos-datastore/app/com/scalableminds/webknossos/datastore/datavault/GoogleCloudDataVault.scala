@@ -76,9 +76,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       blobInfo: BlobInfo <- tryo(
         storage.get(
           blobId,
-          Storage.BlobGetOption.fields(Storage.BlobField.SIZE),
-          Storage.BlobGetOption.fields(Storage.BlobField.CONTENT_TYPE),
-          Storage.BlobGetOption.fields(Storage.BlobField.CONTENT_ENCODING)
+          Storage.BlobGetOption
+            .fields(Storage.BlobField.SIZE, Storage.BlobField.CONTENT_TYPE, Storage.BlobField.CONTENT_ENCODING),
         )).toFox ?~> "could not get blobInfo"
       encoding <- Encoding
         .fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))

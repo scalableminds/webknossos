@@ -14,7 +14,11 @@ function ChangeUsernameView({
   onClose,
   setEditedUser,
   user,
-}: { onClose: () => void; setEditedUser: (updatedUser: APIUser) => void; user: APIUser }) {
+}: {
+  onClose: () => void;
+  setEditedUser: (updatedUser: APIUser) => void;
+  user: APIUser;
+}) {
   const [form] = Form.useForm();
   const activeUser = useWkSelector((state) => state.activeUser);
 

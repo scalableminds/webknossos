@@ -1,8 +1,9 @@
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailableInPlanMessage,
-  isFeatureAllowedByPricingPlan,isUserAllowedToRequestUpgrades, 
-  type PricingPlanEnum
+  isFeatureAllowedByPricingPlan,
+  isUserAllowedToRequestUpgrades,
+  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import { Alert, Button, type ButtonProps, Col, Popover, Result, Row } from "antd";

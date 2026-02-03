@@ -342,7 +342,7 @@ const emptyBoundingBox = {
  * vector input. This component defaults to `changeOnlyOnBlur` to ensure
  * complex data structures are only updated once the full vector is valid.
  */
-export const BoundingBoxInput: React.FC<BoundingBoxInputProps> = ({
+export const BoundingBoxInput: React.FC<BoundingBoxInputProps & { ref?: React.Ref<InputRef> }> = ({
   ref,
   value = emptyBoundingBox,
   onChange = noop,

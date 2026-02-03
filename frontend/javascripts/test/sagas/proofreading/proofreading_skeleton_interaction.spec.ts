@@ -418,8 +418,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should split agglomerate skeleton optimistically, perform the split proofreading action and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
-    // todop: this test does not update the skeleton properly?
+  it("should split agglomerate skeleton optimistically, perform the split proofreading action and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const injectedSplit = {
       name: "splitAgglomerate" as const,
@@ -441,7 +440,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedSplit]);
       expect(injectedMergeRequest.version).toEqual(8);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
+      const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.slice(-2);
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_simple.json",
       );

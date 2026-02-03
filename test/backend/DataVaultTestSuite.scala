@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
   HttpsDataVault,
   S3DataVault,
   StartEndExclusiveByteRange,
+  SuffixLengthByteRange,
   VaultPath
 }
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
@@ -34,6 +35,7 @@ class DataVaultTestSuite extends PlaySpec {
   "Data vault" when {
     "using Range requests" when {
       val range: StartEndExclusiveByteRange = ByteRange.startEndExclusive(0, 100)
+      val suffixRange: SuffixLengthByteRange = ByteRange.suffix(100)
       val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584" // when accessed via range request, the response body is 1024 bytes long, otherwise 124.8 KB
 
       "using HTTP Vault" should {
@@ -56,7 +58,7 @@ class DataVaultTestSuite extends PlaySpec {
       "using Google Cloud Storage Vault" should {
         val upath = UPath.fromStringUnsafe("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
         val vaultPath = new VaultPath(upath, GoogleCloudDataVault.create(CredentializedUPath(upath, None)))
-        "return correct response" in {
+        "return correct response (start-end range)" in {
 
           val bytes = (vaultPath / dataKey)
             .readBytes(range)(globalExecutionContext, emptyTokenContext)
@@ -64,6 +66,15 @@ class DataVaultTestSuite extends PlaySpec {
 
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+        }
+
+        "return correct response (suffix-length range)" in {
+          val bytes = (vaultPath / dataKey)
+            .readBytes(suffixRange)(globalExecutionContext, emptyTokenContext)
+            .get(handleFoxJustification)
+
+          assert(bytes.length == suffixRange.length)
+          assert(bytes.takeRight(10).sameElements(Array(-61, 45, -114, -64, -109, -64, 25, -81, -1, -39)))
         }
 
         "return empty box" when {

@@ -73,8 +73,16 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           else Fox.failure(s.getMessage)
         case t: Throwable => Fox.failure(t.getMessage)
       }
-      blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build).toFox
-      encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse("")).toFox
+      blobInfo: BlobInfo <- tryo(
+        storage.get(
+          blobId,
+          Storage.BlobGetOption.fields(Storage.BlobField.SIZE),
+          Storage.BlobGetOption.fields(Storage.BlobField.CONTENT_TYPE),
+          Storage.BlobGetOption.fields(Storage.BlobField.CONTENT_ENCODING)
+        )).toFox ?~> "could not get blobInfo"
+      encoding <- Encoding
+        .fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
+        .toFox ?~> "could not get encoding"
     } yield (bytes, encoding, Option(blobInfo.getSize).flatMap(size => range.toContentRangeHeaderWithLength(size)))
   }
 

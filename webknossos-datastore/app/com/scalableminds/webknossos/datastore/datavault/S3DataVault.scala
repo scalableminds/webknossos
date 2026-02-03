@@ -67,7 +67,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     GetObjectRequest.builder.bucket(bucketName).key(key).build()
 
   private def performGetObjectRequest(request: GetObjectRequest)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], String, String)] = {
+      implicit ec: ExecutionContext): Fox[(Array[Byte], String, Option[String])] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
     for {
@@ -75,7 +75,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
         client.getObject(request, responseTransformer).asScala)
       encoding = responseBytesObject.response().contentEncoding()
-      contentRangeHeader = responseBytesObject.response().contentRange()
+      contentRangeHeader = Option(responseBytesObject.response().contentRange())
       // "aws-chunked" encoding is an artifact of the upload, does not make sense for retrieval, can be ignored.
       encodingNormalized = if (encoding == null || encoding == "aws-chunked") "" else encoding
     } yield (responseBytesObject.asByteArray(), encodingNormalized, contentRangeHeader)
@@ -118,7 +118,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       }
       (bytes, encodingString, rangeHeader) <- performGetObjectRequest(request)
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
-    } yield (bytes, encoding, if (rangeHeader == "") None else Some(rangeHeader))
+    } yield (bytes, encoding, rangeHeader)
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {

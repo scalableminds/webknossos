@@ -1,10 +1,4 @@
-import {
-  BankOutlined,
-  DeleteOutlined,
-  HistoryOutlined,
-  MailOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, HistoryOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -50,11 +44,6 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         key: "planupdates",
         icon: <HistoryOutlined />,
         label: "Plan Updates",
-      },
-      {
-        key: "credits",
-        icon: <BankOutlined />,
-        label: "Credit Usage",
       },
     ],
   },

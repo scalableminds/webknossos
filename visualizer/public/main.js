@@ -134,10 +134,15 @@ function layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, hei
 
     const w = maxX - minX;
 
+    function random(seed) {
+      var x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
     // shift into row layout
-    compNodes.forEach(n => {
+    compNodes.forEach((n, nodeIdx) => {
       const pos = g.node(n.id);
-      n.x = pos.x - minX + cursorX;
+      n.x = pos.x - minX + cursorX + 5 * nodeIdx + ((random(nodeIdx) - 0.5) * 50);
       n.y = pos.y + 20 * componentIndex;
 
       allPositions.push(n);
@@ -306,6 +311,10 @@ class GraphRenderer {
     this.componentLabelLayer = this.svg.append("g");
     this.linkLayer = this.svg.append("g");
     this.nodeLayer = this.svg.append("g");
+
+    this.componentLayer.style("pointer-events", "none");
+    this.componentLabelLayer.style("pointer-events", "none");
+    this.linkLayer.style("pointer-events", "none");
   }
 
   renderGraph(nodes, links, nodeIdToComponentId, componentIdToColor, componentIdToLabel) {
@@ -418,7 +427,7 @@ class GraphRenderer {
 
     const linkEnter = linkSel.enter()
       .append("line")
-      .attr("stroke", "#999")
+      .attr("stroke", randomColor())
       .attr("stroke-opacity", 0.6)
       .attr("marker-end", "url(#arrow)")
       .attr("x1", d => d.source.x)
@@ -431,8 +440,9 @@ class GraphRenderer {
       .y(d => d.y)
       .curve(d3.curveBundle.beta(0.5)); // makes edges curved
 
-    linkSel.merge(linkEnter)
-      .transition()
+    const linkMerged = linkSel.merge(linkEnter);
+
+    linkMerged.transition()
       .duration(600)
       .attr("x1", d => d.source.x)
       .attr("y1", d => d.source.y)
@@ -451,10 +461,36 @@ class GraphRenderer {
       .style("opacity", 0)
       .remove();
 
+    const linksByNode = new Map();
+
+
     const nodeEnter = nodeSel.enter()
       .append("g")
       .attr("class", "node")
-      .style("opacity", 0);
+      .style("opacity", 0)
+      .call(d3.drag()
+        .on("drag", function (event, d) {
+          d.x = event.x;
+          d.y = event.y;
+
+          d3.select(this)
+            .attr("transform", `translate(${d.x}, ${d.y})`);
+
+          // precompute which edges belong to which node
+          links.forEach(l => {
+            if (!linksByNode.has(l.source.id)) linksByNode.set(l.source.id, []);
+            if (!linksByNode.has(l.target.id)) linksByNode.set(l.target.id, []);
+            linksByNode.get(l.source.id).push(l);
+            linksByNode.get(l.target.id).push(l);
+          });
+
+          linkMerged
+            .attr("x1", l => l.source.x)
+            .attr("y1", l => l.source.y)
+            .attr("x2", l => l.target.x)
+            .attr("y2", l => l.target.y);
+        })
+      );
 
     nodeEnter.append("circle")
       .attr("r", 25)
@@ -480,6 +516,10 @@ class GraphRenderer {
       .style("opacity", 1)
       .attr("transform", d => `translate(${d.x}, ${d.y})`);
   }
+}
+
+function randomColor() {
+  return `hsl(${Math.random() * 360}, 70%, 50%)`;
 }
 
 const aggloRenderer = new GraphRenderer(main)

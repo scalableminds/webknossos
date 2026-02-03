@@ -1569,7 +1569,8 @@ function getDeleteEdgeActionForEdgePositions(
 
   if (!firstNodeId || !secondNodeId) {
     Toast.warning(
-      `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${!secondNodeId ? [", ", edge.position2] : null
+      `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
+        !secondNodeId ? [", ", edge.position2] : null
       } in ${sourceTree.name}.`,
     );
     return null;

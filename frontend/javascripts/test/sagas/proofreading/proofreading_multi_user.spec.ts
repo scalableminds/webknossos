@@ -426,10 +426,12 @@ describe("Proofreading (Multi User)", () => {
       });
 
       expect(receivedUpdateActions.at(-1)).toMatchObject({
-        name: "createSegment",
+        name: "updateSegmentPartial",
         value: {
+          // todop: why? isn't this superfluous?
           actionTracingId: VOLUME_TRACING_ID,
           id: 1339,
+          anchorPosition: [1, 1, 1],
         },
       });
 
@@ -445,6 +447,8 @@ describe("Proofreading (Multi User)", () => {
           [7, 6],
         ]),
       );
+      ColoredLogger.logRed("publishDebuggingState");
+      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();
@@ -531,7 +535,7 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping will reflect both the frontend cut and the backend split.
      */
     const { mocks } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     prepareGetNeighborsForAgglomerateNode(mocks);
 
     backendMock.planVersionInjection(7, [
@@ -598,7 +602,7 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping shows segment 3 cut from 2, but 2 remains merged with 4 due to the backend action.
      */
     const { mocks } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     prepareGetNeighborsForAgglomerateNode(mocks);
 
     backendMock.planVersionInjection(7, [
@@ -669,7 +673,7 @@ describe("Proofreading (Multi User)", () => {
 
       The resulting mapping incorporates both the frontend merge and the backend split.
      */
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     backendMock.planVersionInjection(5, [
       {
@@ -744,7 +748,7 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping correctly incorporates the backend merge, even with the initially not-loaded segment.
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     /* Should lead to the following full mapping:
      * [[ 1, 1 ],
@@ -1071,7 +1075,7 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping reflects only the frontend merge, and no rebasing is triggered.
      */
     const { api } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

@@ -65,7 +65,7 @@
       },
     ],
     "authorId": "dummy-user-id",
-    "info": "["SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME","REMOVE_SEGMENT","REMOVE_MESH","SET_BUSY_BLOCKING_INFO_ACTION","CLICK_SEGMENT","MAYBE_FETCH_MESH_FILES","UPDATE_SEGMENT"]",
+    "info": "["SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME","REMOVE_SEGMENT","REMOVE_MESH * 2","SET_BUSY_BLOCKING_INFO_ACTION","CLICK_SEGMENT","MAYBE_FETCH_MESH_FILES","UPDATE_SEGMENT"]",
     "stats": {
       "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
         "branchPointCount": 2,
@@ -82,5 +82,45 @@
     "transactionGroupIndex": 0,
     "transactionId": "dummyRequestId",
     "version": 11,
+  },
+  {
+    "actions": [
+      {
+        "name": "createSegment",
+        "value": {
+          "actionTracingId": "volumeTracingId",
+          "additionalCoordinates": undefined,
+          "anchorPosition": [
+            3,
+            3,
+            3,
+          ],
+          "color": null,
+          "creationTime": 1494695001688,
+          "groupId": null,
+          "id": 1340,
+          "metadata": [],
+          "name": null,
+        },
+      },
+    ],
+    "authorId": "dummy-user-id",
+    "info": "["UPDATE_MESH_FILE_LIST","UPDATE_CURRENT_MESH_FILE","LOAD_PRECOMPUTED_MESH_ACTION","REMOVE_MESH","CLICK_SEGMENT","MAYBE_FETCH_MESH_FILES","ADD_PRECOMPUTED_MESH","UPDATE_SEGMENT * 2","STARTED_LOADING_MESH","MAYBE_FETCH_MESH_FILES"]",
+    "stats": {
+      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+        "branchPointCount": 2,
+        "edgeCount": 3,
+        "nodeCount": 6,
+        "treeCount": 3,
+      },
+      "volumeTracingId": {
+        "segmentCount": 3,
+      },
+    },
+    "timestamp": 1494695001688,
+    "transactionGroupCount": 1,
+    "transactionGroupIndex": 0,
+    "transactionId": "dummyRequestId",
+    "version": 12,
   },
 ]

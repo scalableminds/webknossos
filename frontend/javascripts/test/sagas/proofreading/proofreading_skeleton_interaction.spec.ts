@@ -34,6 +34,7 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { publishDebuggingState } from "test/helpers/mapping_visualizer";
 
 function* performMergeTreesProofreading(
   context: WebknossosTestContext,
@@ -460,6 +461,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 6],
         ]),
       );
+
+      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();

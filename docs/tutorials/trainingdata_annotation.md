@@ -8,10 +8,10 @@ For detailed instructions on using WEBKNOSSOS for annotation, please watch our [
 
 ## 1. Annotation Area
 
-- **Bounding Box:** Annotations should be performed within the predefined bounding box. Annotate all segments that appear within the bounding box, including those that are only partially visible. Segmentation may extend beyond the bounding box boundaries; content outside the box does not matter, as long as the segmentation inside the box is complete.
+- **Bounding Box:** Set up a number of bounding boxes, equally spaced throughout the dataset (see [guide on choosing bounding boxes](../automation/choosing_mags_and_bboxes.md)) for marking your training data regions. Annotations should be performed within these bounding boxes. Annotate all segments that appear within the bounding box, including those that are only partially visible. Segmentation may extend beyond the bounding box boundaries; content outside the box does not matter, as long as the segmentation inside the box is complete.
 - **Segment Distinction:** Since the ML model processes only the data within the bounding box, any cell parts that are not connected or directly adjacent inside the box must be assigned separate segment IDs, even if they appear to be part of the same cellular process.
     
-    ![segment touching outside of box.png](./images/tutorial_trainingdata_01_segment_touching_outside_of_box.png)
+    ![Assign separate segment IDs to cell parts that are not connected within the bounding box.](./images/tutorial_trainingdata_01_segment_touching_outside_of_box.jpeg)
     
     *Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
     
@@ -20,7 +20,7 @@ For detailed instructions on using WEBKNOSSOS for annotation, please watch our [
 
 ## 2. Annotating Cell Segments
 
-- **Unique Segment IDs:** Each cell within the bounding box should be annotated with its own distinct segment ID.
+- **Unique Segment IDs:** Each cell within the bounding box should be annotated with its own distinct segment ID. [Create new segments](../volume_annotation/tools.md#tool-modes-and-extras) as needed.
 - **Sequential Approach:**
     - Start at the corner at the top, left and front of the bounding box.
     - Annotate the cell in that area, following its structure across all sections.
@@ -44,58 +44,59 @@ Consistency is key to creating reliable ground truth data. Here are a few exampl
 
 A careful review of your annotations can prevent mistakes that might impact model performance. Consider these tips for your final quality check:
 
-- **3D Verification:** Review the annotation in all three viewports (XY, XZ, and YZ) simultaneously. If you observe any unnatural lines or separations - especially in the XZ or YZ views - it may indicate an error that needs correction.
+**3D Verification:** Review the annotation in all three viewports (XY, XZ, and YZ) simultaneously. If you observe any unnatural lines or separations - especially in the XZ or YZ views - it may indicate an error that needs correction.
     
-    ![final check 1.png](./images/tutorial_trainingdata_02_final_check.png)
+![Inspect the annotation in XY, XZ, and YZ views simultaneously for errors.](./images/tutorial_trainingdata_02_final_check.jpeg)
+
+*Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
     
-    *Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
+**Complete Coverage:** Make sure no part of a cell is left unannotated. Even a small fragment in a corner of the bounding box should be included.
     
-- **Complete Coverage:** Make sure no part of a cell is left unannotated. Even a small fragment in a corner of the bounding box should be included.
+![Ensure all cell fragments within the bounding box are completely annotated.](./images/tutorial_trainingdata_03_complete_coverage.jpeg)
+
+*Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
     
-    ![complete coverage.png](./images/tutorial_trainingdata_03_complete_coverage.png)
+**Gaps and Holes:** Look for any gaps or holes within a segment. Every cell should be annotated as a continuous, complete structure. If you see a darker line that suggests a membrane inside the same cell, it should be annotated; otherwise, an gap will be created.
     
-    *Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
+![Avoid internal holes or unannotated membranes within a single segment.](./images/tutorial_trainingdata_04_gaps_membrane_within_one_segment.jpeg)
+
+*Image attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
     
-- **Gaps and Holes:** Look for any gaps or holes within a segment. Every cell should be annotated as a continuous, complete structure. If you see a darker line that suggests a membrane inside the same cell, it should be annotated; otherwise, an gap will be created.
+**Disconnected Regions:** Ensure that segments which are not connected or directly adjacent within the bounding box have distinct segment IDs — even if they appear to be part of the same process.
     
-    ![gaps membrane within one segment.png](./images/tutorial_trainingdata_04_gaps_membrane_within_one_segment.png)
+![Use distinct segment IDs for disconnected regions in 3D.](./images/tutorial_trainingdata_05_membranes_unannotated.jpeg)
+
+*Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
     
-    *Image attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
+**Membrane Annotation Consistency between Cells:** Membranes separating two cells should remain unannotated consistently throughout your work.
+
+![Consistently leave membranes unannotated between adjacent cells.](./images/tutorial_trainingdata_05_membranes_unannotated.jpeg)
+
+*Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
     
-- **Disconnected Regions:** Ensure that segments which are not connected or directly adjacent within the bounding box have distinct segment IDs — even if they appear to be part of the same process.
+**Natural Cell Geometry:** Unnatural or irregular segment shapes in 3D often indicate a misunderstanding of the data or a mistake such as switching segment IDs during annotation.
     
-    ![segment touching outside of box.png](./images/tutorial_trainingdata_05_membranes_unannotated.png)
+![Identify unnatural geometries in 3D that may signal annotation mistakes.](./images/tutorial_trainingdata_06_cell_geometry.jpeg)
+
+*Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
     
-    *Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
+**Isolated Voxels:** Check for stray voxels or remnants that don’t belong to any cell. These artifacts can occur when using automated tools or through a complex annotation process.
     
-- **Membrane Annotation Consistency between Cells:** Membranes separating two cells should remain unannotated consistently throughout your work.
+![Remove isolated voxels or artifacts that do not belong to any segment.](./images/tutorial_trainingdata_07_isolated_voxels.jpeg)
+
+*Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
     
-    ![membranes unannotated.png](./images/tutorial_trainingdata_05_membranes_unannotated.png)
+**Segment Registration and check:** Use the “Register segments in bounding box” function to compile a list of all annotated segments. Then, enable “Selective Visibility” under the annotation layer name to inspect each segment individually. Look for any inconsistencies such as:
+
+- Holes or gaps within segments
+- Isolated voxels that do not belong
+- “Unnatural” segment geometries
     
-    *Data attributions: Motta et al., 2019, Dense connectomic reconstruction in layer 4 of the somatosensory cortex*
+*This method is especially relevant when using automated segmentation as the base for ground truth annotation, since it may generate new segments within the bounding box that you do not directly control.*
     
-- **Natural Cell Geometry:** Unnatural or irregular segment shapes in 3D often indicate a misunderstanding of the data or a mistake such as switching segment IDs during annotation.
-    
-    ![Cell geometry.png](./images/tutorial_trainingdata_06_cell_geometry.png)
-    
-    *Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
-    
-- **Isolated Voxels:** Check for stray voxels or remnants that don’t belong to any cell. These artifacts can occur when using automated tools or through a complex annotation process.
-    
-    ![isolated voxels.png](./images/tutorial_trainingdata_07_isolated_voxels.png)
-    
-    *Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
-    
-- **Segment Registration and check:** Use the “Register segments in bounding box” function to compile a list of all annotated segments. Then, enable “Selective Visibility” under the annotation layer name to inspect each segment individually. Look for any inconsistencies such as:
-    - Holes or gaps within segments
-    - Isolated voxels that do not belong
-    - “Unnatural” segment geometries
-    
-    *This method is especially relevant when using automated segmentation as the base for ground truth annotation, since it may generate new segments within the bounding box that you do not directly control.*
-    
-    ![youtube-video](https://www.youtube.com/embed/J4wkm55gnDQ)
-    
-    *Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
+![youtube-video](https://www.youtube.com/embed/J4wkm55gnDQ)
+
+*Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
     
 
 ---

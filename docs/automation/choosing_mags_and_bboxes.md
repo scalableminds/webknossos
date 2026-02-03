@@ -1,8 +1,18 @@
-# Choosing Magnification and Bounding Boxes for AI Analysis in WEBKNOSSOS
+# Choosing Magnification and Bounding Boxes for Custom AI Training in WEBKNOSSOS
 
-This document explains how to choose an appropriate magnification for custom AI training on volume EM datasets and how to define bounding boxes for ground truth generation. 
+This guide explains how to choose the right magnification for training and how to define bounding boxes for ground truth annotation. 
+The checklist below summarizes the key requirements. 
+Part 1 covers magnification selection, Part 2 explains how to define bounding box dimensions, and Part 3 presents two example use cases.
 
----
+## Checklist: key requirements
+
+- Use the coarsest magnification that still allows accurate annotation
+- Ensure box sizes are defined relative to magnification
+- Use ≥ 230,000 voxels per box
+- Respect the hard minimum dimensions: 85x85x32 for neuron training and 32x32x32 for instance segmentation (recommendation: 64x64x64). Use multiple of these values if larger boxes.
+- Ensure box position and size are divisible by magnification
+- Prefer many well-distributed boxes over a few large ones
+- Total volume recommended for training: 5–10 million voxels
 
 ## Part 1: Choosing the Right Magnification
 
@@ -18,41 +28,39 @@ Training at a coarser magnification has two important effects:
 - **Neuron segmentation:** Experience has shown that computing a neuron segmentation for a dataset in a voxel size finer than **8 nm/vx** usually doesn’t offer any benefits. Consider switching to the next-coarse magnification instead to benefit from increased data context.
 - **Instance segmentation / object detection:** The optimal magnification depends on the objects of interest. Choose the coarsest magnification at which object boundaries and distinguishing features are still clearly visible.
 
----
-
 ## Part 2: Defining Bounding Boxes for Ground Truth Generation
 
-Bounding boxes should provide enough spatial context while remaining efficient to annotate. Because vEM data is often anisotropic, box dimensions should be adapted so that boxes are as close to cubic as possible in physical space.
+There are several constraints on bounding box dimensions to ensure that enough data is annotated and used as efficiently as possible. In this section, we list these constraints and then describe two example use cases.
 
-### Box size and magnification
+### Constraints for Bounding Box Dimensions
 
-Box dimensions are always interpreted **relative to the chosen magnification**. Internally, the model effectively sees the box size divided by the magnification. 
+Bounding box dimensions are always interpreted **relative to the chosen magnification**. Internally, the model effectively sees the box size divided by the magnification.
 
-Each bounding box should contain **at least 250,000 voxels in the chosen magnification**. 
+We recommend that each bounding box contains at least **230,000 voxels** at the chosen magnification. There are hard minimum dimensions for bounding boxes. To use the annotated data efficiently, bounding box dimensions should ideally be integer multiples of these minimum values. This means that:
 
-- Minimum effective box size:
-    - For neuron finetuning: **85 × 85 × 32 voxels**
-    - For instance segmentation: minimum effective box size is **32 x 32 x 32 voxels** in the chosen magnification.
-- Box dimensions should be integer multiples of these values in each dimension
-- Recommended total annotated volume per finetuning: **5–10 million voxels** (in the chosen magnification)
+- For neuron segmentation, the hard minimum bounding box dimensions are **`85 × 85 × 30`**, corresponding to approximately **230,000 voxels** at the chosen magnification.
+- For instance segmentation, the hard minimum dimensions are **`32 × 32 × 32`** (approximately **33,000 voxels**). This is not sufficient, so we recommend using at least **`64 × 64 × 64`** or **`96 x 96 x 32`** to reach approximately **260,000 voxels** at the chosen magnification.
 
-When distributing this volume, **many smaller, well-distributed boxes are preferable to a few large contiguous ones**. For example, ten spatially distributed boxes of size 85 × 85 × 32 voxels usually provide better results than a single larger volume of size 170 × 425 × 32 voxels.
+Bounding box dimensions may vary and should ideally be integer multiples of the minimum values, but the training will also work as long as the boxes exceed the minimum size. The scaling factor does not need to be the same for all three dimensions.
 
-- The box dimensions must also be divisible by the magnification.
-- The top-left corner of each bounding box must be divisible by the chosen magnification.
+In addition, the position of the top-left corner of each bounding box must be divisible by the chosen magnification.
 
-### Examples
+The recommended total annotated ground truth volume for training (both neuron and instance segmentation) is **5–10 million voxels** at the chosen magnification. A smaller volume may be sufficient for small or very homogeneous datasets.
 
-- Dataset scale: **11.24 × 11.24 × 30 nm/vx** → processing resolution **1–1–1:** define training boxes of **89 × 89 × 34 voxels** in WEBKNOSSOS
-- Dataset scale: **4 × 4 × 35 nm/vx** → processing resolution **2–2–1** → boxes size 125 × 125 × 32 voxels in Mag 2: **define** **training boxes 250x250x32 in Mag 1** in WEBKNOSSOS
+When distributing this total annotated volume of 5–10 million voxels, **many smaller, well-distributed boxes are preferable to a few large contiguous ones**. For example, ten spatially distributed boxes of size **85 × 85 × 32** voxels usually yield better results than a single larger volume of **170 × 425 × 32** voxels, as they capture more variability in the data.
 
----
+### Part 3: Example Use Cases
 
-## Short Checklist
+**Neuron training: dense neuron segmentation**
 
-- Use the coarsest magnification that still allows accurate annotation
-- Ensure box sizes are defined relative to magnification
-- Use ≥250,000 voxels per box (general case)
-- For neuron finetuning, respect the 85 × 85 × 32 effective minimum
-- Prefer many well-distributed boxes over a few large ones
-- Ensure box position and size are divisible by magnification
+In this example, we create ground truth data to train an EM neuron segmentation model. For this dataset, we work at **magnification 1** to resolve neuronal structures clearly. We use bounding boxes of size **85 × 85 × 32** voxels, which corresponds to approximately **230,000 voxels per box**. Annotating **25 boxes** results in a total annotated volume of approximately **5.8 million voxels**.
+
+![example_box_sampling_neuron_training.png](./images/example_box_sampling_neuron_training.jpeg)
+
+**Instance segmentation training: detecting nuclei**
+
+In this example, we create ground truth data to train an instance segmentation model for nuclei detection. Nuclei are clearly visible and can be reliably annotated at **magnification 16–16–8**. We use bounding boxes of size **64 × 64 × 64** voxels (the recommended size for instance segmentation) at this magnification. This corresponds to **1024 × 1024 × 512** voxels at magnification 1: size that needs to be defined in WEBKNOSSOS. Each box therefore contains approximately **260,000 voxels** at magnification 16. 
+
+To reach the recommended total annotated volume of 5–10 million voxels, we annotate **20 boxes** distributed across the dataset, resulting in approximately **5.2 million annotated voxels** in total. The top-left position of each bounding box is divisible by 16. 
+
+![example_box_sampling_instance_segm.png](./images/example_box_sampling_instance_segm.jpeg)

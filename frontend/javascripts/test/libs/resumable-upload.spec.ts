@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Resumable, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
 
 // Helper to mock Fetch API
@@ -13,6 +13,10 @@ function mockFetch(status = 200, ok = true, text = "success") {
     }),
   );
 }
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("Resumable", () => {
   let resumable: Resumable;

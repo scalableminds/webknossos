@@ -15,8 +15,10 @@ export type WithBlockerProps = {
  */
 export function withBlocker<TProps extends WithBlockerProps>(
   WrappedComponent: React.ComponentType<TProps>,
-): React.ComponentType<Omit<TProps, keyof WithBlockerProps> & { ref?: any }> {
-  const WithBlockerComponent = (props: Omit<TProps, keyof WithBlockerProps> & { ref?: any }) => {
+): React.ComponentType<Omit<TProps, keyof WithBlockerProps> & { ref?: unknown }> {
+  const WithBlockerComponent = (
+    props: Omit<TProps, keyof WithBlockerProps> & { ref?: unknown },
+  ) => {
     const { ref, ...restProps } = props;
 
     // State to control blocking behavior

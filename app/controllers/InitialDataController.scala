@@ -459,13 +459,14 @@ Samplecountry
     } else Fox.successful(())
   }
 
-  private def insertRemoteNDDataset(): Fox[Unit] = datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
-    if (maybeDataset.isEmpty) {
-      for {
-        _ <- datasetDAO.insertOne(remoteNDZarrDataset)
-        _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
-      } yield ()
-    } else Fox.successful(())
+  private def insertRemoteNDDataset(): Fox[Unit] = datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap {
+    maybeDataset =>
+      if (maybeDataset.isEmpty) {
+        for {
+          _ <- datasetDAO.insertOne(remoteNDZarrDataset)
+          _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
+        } yield ()
+      } else Fox.successful(())
   }
 
   private def insertAiModel(): Fox[Unit] = aiModelDAO.findAll.flatMap { aiModels =>

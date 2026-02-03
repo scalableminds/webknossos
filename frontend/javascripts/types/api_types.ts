@@ -688,6 +688,16 @@ export type APIPricingPlanStatus = {
   readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
 };
 
+export type APIOrganizationPricingPlanUpdate = {
+  readonly organizationId: string;
+  readonly description: string;
+  readonly pricingPlan: PricingPlanEnum;
+  readonly paidUntil: number;
+  readonly includedUsers: number;
+  readonly includedStorageBytes: number;
+  readonly created: number;
+};
+
 export type APIBuildInfoWk = {
   webknossos: {
     name: string;

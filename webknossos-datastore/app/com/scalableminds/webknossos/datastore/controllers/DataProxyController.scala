@@ -110,6 +110,8 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
     for {
       _ <- Fox.fromBool(!path.contains("..")) ?~> "path must not contain “..”"
       _ <- Fox.fromBool(!path.startsWith("/")) ?~> "path must not start with “/”"
+      _ <- Fox.fromBool(!path.contains("%2e%2e")) ?~> "path must not contain “%2e%2e”"
+      _ <- Fox.fromBool(!path.startsWith("%2f")) ?~> "path must not start with “%2f”"
     } yield ()
 
   private def resultWithStatus[C](statusCode: Int, content: C)(implicit writeable: Writeable[C]): Result =

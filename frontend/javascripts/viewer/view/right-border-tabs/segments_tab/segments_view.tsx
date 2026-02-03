@@ -1028,7 +1028,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMeshesHeader = () => (
-    <Space block>
+    <Space>
       <ButtonComponent
         title="Refresh list of available Mesh files"
         icon={<ReloadOutlined />}

@@ -83,10 +83,7 @@ import {
 import { api, Model } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import {
-  dispatchEnsureHasAnnotationMutexAsync,
-  dispatchEnsureHasNewestVersionAsync,
-} from "../actions/save_actions";
+import { dispatchEnsureHasNewestVersionAsync } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import {
   eulerAngleToReducerInternalMatrix,
@@ -95,7 +92,11 @@ import {
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
-import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "./saving/save_mutex_saga";
+import {
+  getCurrentMutexFetchingStrategy,
+  MutexFetchingStrategy,
+  subscribeToAnnotationMutex,
+} from "./saving/save_mutex_saga";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
   // In orthogonal view mode, the active planes' default rotation is added to the flycam rotation upon node creation.
@@ -423,9 +424,10 @@ export function* loadAgglomerateSkeletonWithId(
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const shouldGuardWithAnnotationMutex =
     othersMayEdit && (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
+  let unsubscribeFromAnnotationMutex = null;
   try {
     if (shouldGuardWithAnnotationMutex) {
-      yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
+      yield* call(subscribeToAnnotationMutex, "Agglomerate Skeleton Loading");
 
       // Fetch agglomerate skeleton in parallel to updating to latest version to make syncing with the server faster.
       // We already sync here to make the save after adding the agglomerate skeleton a fast forward like update,
@@ -459,6 +461,13 @@ export function* loadAgglomerateSkeletonWithId(
       // Enforces to directly store the loaded agglomerate skeleton to the annotation on the server to enable easier syncing of update actions.
       // The saving includes releasing the mutex acquired earlier.
       yield* call([Model, Model.ensureSavedState]);
+      if (unsubscribeFromAnnotationMutex) {
+        yield* call(unsubscribeFromAnnotationMutex);
+      } else {
+        console.warn(
+          "Loaded agglomerate skeleton in live collab mode, but there was no mutex subscription to be release, although this is to be expected.",
+        );
+      }
     }
 
     // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
@@ -468,7 +477,9 @@ export function* loadAgglomerateSkeletonWithId(
       );
     }
   } catch (e) {
-    // TODOM: release mutex
+    if (unsubscribeFromAnnotationMutex) {
+      yield* call(unsubscribeFromAnnotationMutex);
+    }
     // Hide the progress notification and handle the error
     hideFn();
     // @ts-expect-error

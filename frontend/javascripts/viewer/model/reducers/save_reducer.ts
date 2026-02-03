@@ -265,7 +265,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "DONE_SAVING":
+    case "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE":
     case "FINISHED_APPLYING_MISSING_UPDATES": {
       return update(state, {
         save: {

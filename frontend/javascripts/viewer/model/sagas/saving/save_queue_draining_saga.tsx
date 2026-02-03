@@ -15,13 +15,12 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
-  dispatchEnsureHasAnnotationMutexAsync,
   dispatchEnsureHasNewestVersionAsync,
-  doneSavingAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
   setVersionNumberAction,
   shiftSaveQueueAction,
+  snapshotAnnotationStateFrNextRebaseAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
@@ -36,7 +35,11 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
-import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "./save_mutex_saga";
+import {
+  getCurrentMutexFetchingStrategy,
+  MutexFetchingStrategy,
+  subscribeToAnnotationMutex,
+} from "./save_mutex_saga";
 
 const MAX_ON_CONFLICT_RETRIES = 10;
 
@@ -98,9 +101,13 @@ export function* synchronizeAnnotationWithBackend(
   enforceEmptySaveQueue: boolean,
 ): Saga<{ hadConflict: boolean }> {
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  let unsubscribeFromAnnotationMutexSaga = null;
   if (othersMayEdit && WkDevFlags.liveCollab) {
     // Wait until we may save (due to mutex acquisition).
-    yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
+    unsubscribeFromAnnotationMutexSaga = yield* call(
+      subscribeToAnnotationMutex,
+      "Save Queue Draining",
+    );
     // Wait until we have the newest version. This *must* happen after
     // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
     // race condition where the frontend thinks that it knows about the newest
@@ -157,10 +164,11 @@ export function* synchronizeAnnotationWithBackend(
       break;
     }
   }
-  if (saveQueue.length === 0) {
-    // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
-    yield* put(doneSavingAction());
+  if (saveQueue.length === 0 && unsubscribeFromAnnotationMutexSaga) {
+    yield call(unsubscribeFromAnnotationMutexSaga);
   }
+  // Update RebaseRelevantAnnotationState information as new updates have been stored on the server.
+  yield* put(snapshotAnnotationStateFrNextRebaseAction());
   yield* put(setSaveBusyAction(false));
   return { hadConflict: false };
 }

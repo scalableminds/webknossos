@@ -10,6 +10,7 @@ import {
   fork,
   put,
   retry,
+  spawn,
   take,
   takeEvery,
 } from "typed-redux-saga";
@@ -21,7 +22,6 @@ import {
   setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
 import {
-  type EnsureHasAnnotationMutexAction,
   type SetIsMutexAcquiredAction,
   setIsMutexAcquiredAction,
   setUserHoldingMutexAction,
@@ -55,27 +55,13 @@ export enum MutexFetchingStrategy {
 type MutexLogicState = {
   isInitialRequest: boolean;
   fetchingStrategy: MutexFetchingStrategy;
-  runningMutexAcquiringSaga: FixedTask<void> | null;
+  runningContinuousMutexAcquiringSaga: FixedTask<void> | null;
+  runningAdHocMutexAcquiringSaga: FixedTask<void> | null;
+  subscribersToMutex: Record<number, string>; // Mapping from self maintained id to caller id.
 };
 
 function* getDoesHaveMutex(): Saga<boolean> {
   return yield* select((state) => state.save.mutexState.hasAnnotationMutex);
-}
-
-function* resolveEnsureHasAnnotationMutexActions(action: EnsureHasAnnotationMutexAction) {
-  /*
-   * For each EnsureHasAnnotationMutexAction wait until we have the mutex. Then call
-   * the callback.
-   */
-  while (true) {
-    const doesHaveMutex = yield* call(getDoesHaveMutex);
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    if (doesHaveMutex || !othersMayEdit) {
-      action.callback();
-      return;
-    }
-    yield* take("SET_IS_MUTEX_ACQUIRED");
-  }
 }
 
 const TOOLS_WITH_AD_HOC_MUTEX_SUPPORT = [
@@ -107,9 +93,26 @@ function* determineInitialMutexLogicState(): Saga<MutexLogicState> {
   const mutexLogicState: MutexLogicState = {
     isInitialRequest: true,
     fetchingStrategy,
-    runningMutexAcquiringSaga: null,
+    runningContinuousMutexAcquiringSaga: null,
+    runningAdHocMutexAcquiringSaga: null,
+    subscribersToMutex: {},
   };
   return mutexLogicState;
+}
+
+// Should only be accessed via getMutexLogicState().
+let mutexLogicState: MutexLogicState | null = null;
+
+// Exported to be used in tests.
+export function getMutexLogicState(): MutexLogicState {
+  if (!mutexLogicState) {
+    throw new Error("Mutex state not yet loaded!");
+  }
+  return mutexLogicState;
+}
+
+function setMutexLogicSate(state: MutexLogicState): void {
+  mutexLogicState = state;
 }
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
@@ -126,13 +129,13 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
 
   const mutexLogicState = yield* call(determineInitialMutexLogicState);
+  setMutexLogicSate(mutexLogicState);
 
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
   yield* fork(watchForOthersMayEditChange, mutexLogicState);
   yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
   yield* fork(watchForActiveToolChange, mutexLogicState);
   yield* fork(watchForHasEditableMappingChange, mutexLogicState);
-  yield* takeEvery("ENSURE_HAS_ANNOTATION_MUTEX", resolveEnsureHasAnnotationMutexActions);
 
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   if (othersMayEdit) {
@@ -141,24 +144,72 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
 }
 
+function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
+  function* unsubscribe(): Saga<void> {
+    const state = getMutexLogicState();
+    const callerId = state.subscribersToMutex[id];
+    delete state.subscribersToMutex[id];
+    if (!state.runningAdHocMutexAcquiringSaga) {
+      console.warn(
+        "Unsubscribing from annotation mutex, while no saga is running that takes care of acquiring the annotation mutex. Unsubscriber id:",
+        callerId,
+      );
+    }
+    const hasNoSubscribersLeft = Object.keys(state.subscribersToMutex).length === 0;
+    if (hasNoSubscribersLeft && state.runningAdHocMutexAcquiringSaga) {
+      yield* cancel(state.runningAdHocMutexAcquiringSaga);
+      state.runningAdHocMutexAcquiringSaga = null;
+      yield* call(releaseMutex);
+    }
+  }
+  return unsubscribe;
+}
+
+export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<void>> {
+  const state = getMutexLogicState();
+  let newId = Math.round(Math.random() * 10000);
+  while (newId in state.subscribersToMutex) {
+    newId = Math.round(Math.random() * 10000);
+  }
+  state.subscribersToMutex[newId] = callerId;
+
+  if (yield* call(getDoesHaveMutex)) {
+    return getUnsubscribeFromAnnotationMutexSaga(newId);
+  }
+
+  const taskPermanentlyAcquiringMutex = yield* spawn(tryAcquireMutexForSaving, state);
+  state.runningAdHocMutexAcquiringSaga = taskPermanentlyAcquiringMutex;
+  while (true) {
+    const doesHaveMutex = yield* call(getDoesHaveMutex);
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (doesHaveMutex || !othersMayEdit) {
+      return getUnsubscribeFromAnnotationMutexSaga(newId);
+    }
+    yield* take("SET_IS_MUTEX_ACQUIRED");
+  }
+}
+
 function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
   const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
   const oldFetchingStrategy = mutexLogicState.fetchingStrategy;
   const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
-  if (didStrategyChange && mutexLogicState.runningMutexAcquiringSaga != null) {
-    yield* cancel(mutexLogicState.runningMutexAcquiringSaga);
-    mutexLogicState.runningMutexAcquiringSaga = null;
+  if (didStrategyChange && mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
+    yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
+    mutexLogicState.runningContinuousMutexAcquiringSaga = null;
+  } else if (didStrategyChange && mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
+    yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
+    mutexLogicState.runningAdHocMutexAcquiringSaga = null;
   }
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   if (!othersMayEdit) {
     return;
   }
-  if (didStrategyChange || mutexLogicState.runningMutexAcquiringSaga == null) {
+  const hasNoRunningMutexAcquiringSaga =
+    mutexLogicState.runningContinuousMutexAcquiringSaga == null &&
+    mutexLogicState.runningAdHocMutexAcquiringSaga == null;
+  if (didStrategyChange || hasNoRunningMutexAcquiringSaga) {
     mutexLogicState.fetchingStrategy = newFetchingStrategy;
-    mutexLogicState.runningMutexAcquiringSaga = yield* fork(
-      startSagaWithAppropriateMutexFetchingStrategy,
-      mutexLogicState,
-    );
+    yield* call(startSagaWithAppropriateMutexFetchingStrategy, mutexLogicState);
   }
 }
 
@@ -166,9 +217,24 @@ function* startSagaWithAppropriateMutexFetchingStrategy(
   mutexLogicState: MutexLogicState,
 ): Saga<void> {
   if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
-    yield* call(tryAcquireMutexAdHoc, mutexLogicState);
+    const hasActiveMutexSubscribers = Object.keys(mutexLogicState.subscribersToMutex).length > 0;
+    // While the fetching strategy is ad hoc, updating should be allowed.
+    yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
+    if (hasActiveMutexSubscribers) {
+      const taskPermanentlyAcquiringMutex = yield* fork(tryAcquireMutexForSaving, mutexLogicState);
+      mutexLogicState.runningAdHocMutexAcquiringSaga = taskPermanentlyAcquiringMutex;
+    } else {
+      // If we still have the mutex, release it first as strategy is now ad-hoc.
+      const currentlyHavingMutex = yield* select(
+        (state) => state.save.mutexState.hasAnnotationMutex,
+      );
+      if (currentlyHavingMutex) {
+        yield* call(releaseMutex);
+      }
+    }
   } else {
-    yield* call(tryAcquireMutexContinuously, mutexLogicState);
+    const continuousSaga = yield* fork(tryAcquireMutexContinuously, mutexLogicState);
+    mutexLogicState.runningContinuousMutexAcquiringSaga = continuousSaga;
   }
 }
 
@@ -228,7 +294,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
   }
 }
 
-function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
+function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void> {
   let backoffTime = INITIAL_BACKOFF_TIME;
   const startingTime = new Date().getMilliseconds();
   let canEdit = false;
@@ -283,11 +349,11 @@ function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
   }
 }
 
-function* keepAnnotationMutex(annotationId: string): Saga<void> {
+function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> {
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   let canEdit = true;
   let blockedByUser = null;
-  // Wait a little since we already just acquired the mutex in acquireMutexForSavingInitially.
+  // Wait a little since we already just acquired the mutex in acquireMutexInitiallyForAdHocStrategy.
   yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   while (true) {
     try {
@@ -297,7 +363,7 @@ function* keepAnnotationMutex(annotationId: string): Saga<void> {
       yield* put(setUserHoldingMutexAction(blockedByUser));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
-        // Only wait for next refretching of the mutex in case the user can edit.
+        // Only wait for next refetching of the mutex in case the user can edit.
         // Else directly go to the error case outside the try-catch block below.
         yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
       }
@@ -333,8 +399,8 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   mutexLogicState.isInitialRequest = true; // Never show popup about the mutex now being acquired.
 
-  yield* call(acquireMutexForSavingInitially, annotationId);
-  yield* call(keepAnnotationMutex, annotationId);
+  yield* call(acquireMutexInitiallyForAdHocStrategy, annotationId);
+  yield* call(keepAnnotationMutexForAdHocStrategy, annotationId);
 }
 
 function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<void> {
@@ -389,26 +455,6 @@ function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Sa
     yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
   yield* takeEvery("SET_HAS_EDITABLE_MAPPING", reactToHasEditableMappingChange);
-}
-
-function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {
-  // While the fetching strategy is ad hoc, updating should be allowed.
-  yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
-  // If we still have the mutex, release it first as strategy is now ad-hoc.
-  const currentlyHavingMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
-  if (currentlyHavingMutex) {
-    yield* call(releaseMutex);
-  }
-  while (true) {
-    // Wait for action telling to acquire annotation mutex.
-    yield* take("ENSURE_HAS_ANNOTATION_MUTEX");
-    const taskPermanentlyAcquiringMutex = yield* fork(tryAcquireMutexForSaving, mutexLogicState);
-    // Then wait for signal to stop keeping the mutex as saving is done.
-    yield* take("DONE_SAVING");
-    // Stop acquiring the mutex and release it.
-    yield* cancel(taskPermanentlyAcquiringMutex);
-    yield* call(releaseMutex);
-  }
 }
 
 function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState): Saga<void> {

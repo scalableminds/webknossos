@@ -32,9 +32,10 @@ type DisableSavingAction = ReturnType<typeof disableSavingAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
-export type EnsureHasAnnotationMutexAction = ReturnType<typeof ensureHasAnnotationMutexAction>;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
-export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
+export type SnapshotAnnotationStateFrNextRebaseAction = ReturnType<
+  typeof snapshotAnnotationStateFrNextRebaseAction
+>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
 export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
@@ -63,9 +64,8 @@ export type SaveAction =
   | RedoAction
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
-  | EnsureHasAnnotationMutexAction
   | EnsureHasNewestVersionAction
-  | DoneSavingAction
+  | SnapshotAnnotationStateFrNextRebaseAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
   | PrepareRebaseAction
@@ -197,21 +197,6 @@ export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
   }
 };
 
-export const ensureHasAnnotationMutexAction = (callback: () => void) =>
-  ({
-    type: "ENSURE_HAS_ANNOTATION_MUTEX",
-    callback,
-  }) as const;
-
-export const dispatchEnsureHasAnnotationMutexAsync = async (
-  dispatch: Dispatch<any>,
-): Promise<void> => {
-  const readyDeferred = new Deferred();
-  const action = ensureHasAnnotationMutexAction(() => readyDeferred.resolve(null));
-  dispatch(action);
-  await readyDeferred.promise();
-};
-
 export const ensureHasNewestVersionAction = (callback: () => void) =>
   ({
     type: "ENSURE_HAS_NEWEST_VERSION",
@@ -227,9 +212,9 @@ export const dispatchEnsureHasNewestVersionAsync = async (
   await readyDeferred.promise();
 };
 
-export const doneSavingAction = () =>
+export const snapshotAnnotationStateFrNextRebaseAction = () =>
   ({
-    type: "DONE_SAVING",
+    type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
   }) as const;
 
 export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>

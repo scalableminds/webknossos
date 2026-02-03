@@ -386,7 +386,7 @@ describe("Proofreading (Multi User)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      yield take("DONE_SAVING");
+      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
       expect(mergeSaveActionBatch).toEqual([
@@ -500,7 +500,7 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield take("DONE_SAVING");
+      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
       yield take("SET_BUSY_BLOCKING_INFO_ACTION");
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(3)![0]?.actions;
@@ -663,7 +663,7 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield take("DONE_SAVING");
+      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
       yield take("SET_BUSY_BLOCKING_INFO_ACTION");
 
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(4)![0]?.actions;

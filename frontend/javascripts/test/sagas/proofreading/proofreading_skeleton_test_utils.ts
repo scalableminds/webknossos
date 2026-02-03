@@ -183,7 +183,7 @@ export function* loadAgglomerateSkeletons(
     yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]);
     // Wait until skeleton saga has loaded the skeleton.
     if (isInLiveCollabMode) {
-      yield take("DONE_SAVING");
+      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
     } else {
       yield take("ADD_TREES_AND_GROUPS");
     }

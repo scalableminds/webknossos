@@ -504,7 +504,7 @@ export function* performCutFromAllNeighbours(
       [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
     ),
   );
-  yield take("DONE_SAVING");
+  yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
   yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
 }
 

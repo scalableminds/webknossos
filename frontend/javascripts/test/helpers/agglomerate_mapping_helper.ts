@@ -1,3 +1,4 @@
+import cloneDeep from "lodash-es/cloneDeep";
 import uniq from "lodash-es/uniq";
 
 type VersionSnapshot = {
@@ -223,8 +224,9 @@ export class AgglomerateMapping {
   getAdjacencyList(version: number): Map<number, Set<number>> {
     /*
      * Get the adjacency list for a specific version.
+     * It is a deep clone to avoid direct manipulation from outside.
      */
-    return this.getSnapshot(version).adjacencyList;
+    return cloneDeep(this.getSnapshot(version).adjacencyList);
   }
 
   private getSnapshot(version: number): VersionSnapshot {

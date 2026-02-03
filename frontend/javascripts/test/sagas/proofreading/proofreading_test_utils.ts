@@ -342,12 +342,22 @@ export class BackendMock {
     _tracingId: string,
     agglomerateId: number,
   ): Promise<ArrayBuffer> => {
+    // Does not currently support versioning as this would require a versioned adjacency list.
     const version = this.agglomerateMapping.currentVersion;
+    const adjacencyList = this.agglomerateMapping.getAdjacencyList(version);
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
-    // TODOM: createSkeletonTracingFromAdjacency expects an unmapped id and not an agglomerateId
+    const someSegmentOfAgglomerate = mapping.find(
+      ([_segment, agglomerate]) => agglomerate === agglomerateId,
+    );
+    if (!someSegmentOfAgglomerate) {
+      throw new Error(
+        `Could not find any segment pointing to agglomerate with id ${agglomerateId}!`,
+      );
+    }
+    const segmentId = someSegmentOfAgglomerate[0];
     const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
-      mapping,
-      agglomerateId,
+      adjacencyList,
+      segmentId,
       "agglomerateSkeleton",
       version,
     );

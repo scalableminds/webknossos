@@ -12688,13 +12688,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resumablejs@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "resumablejs@npm:1.1.0"
-  checksum: 10c0/1d16c6a0889d9eda5ffe2012b8d61f4e945094f727af8ed4027e37940b394ee1231b2aba0f133c136c5827830c750cc6564ae0113f89c67797f207449c04b6ec
-  languageName: node
-  linkType: hard
-
 "retry@npm:^0.12.0":
   version: 0.12.0
   resolution: "retry@npm:0.12.0"
@@ -15081,7 +15074,6 @@ __metadata:
     redux-batched-actions: "npm:^0.5.0"
     redux-mock-store: "npm:^1.2.2"
     redux-saga: "npm:^1.3.0"
-    resumablejs: "npm:^1.1.0"
     sax-ts: "npm:^1.2.13"
     shelljs: "npm:^0.8.5"
     three: "npm:^0.169.0"

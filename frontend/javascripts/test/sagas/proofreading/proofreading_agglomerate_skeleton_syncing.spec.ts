@@ -25,6 +25,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { getMutexLogicState } from "viewer/model/sagas/saving/save_mutex_saga";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,7 +70,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       const versionBeforeSkeletonLoading = yield select((state) => state.annotation.version);
 
       const loadAgglomerateChannel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
-      const ensureHasAnnotationMutexChannel = yield* actionChannel("ENSURE_HAS_ANNOTATION_MUTEX");
       const ensureHasNewestVersionChannel = yield* actionChannel("ENSURE_HAS_NEWEST_VERSION");
       const saveNowChannel = yield* actionChannel("SAVE_NOW");
 
@@ -82,7 +82,11 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // 3. The latest changes including the loading of thee agglomerate skeleton are stored in the backend.
       // Check whether the actions are dispatched via action channels to avoid race condition.
       yield take(loadAgglomerateChannel);
-      yield take(ensureHasAnnotationMutexChannel);
+      const annotationMutexLogicState = getMutexLogicState();
+      const amountOfMutexSubscribers = Object.keys(
+        annotationMutexLogicState.subscribersToMutex,
+      ).length;
+      expect(amountOfMutexSubscribers).toBe(1);
       yield take(ensureHasNewestVersionChannel);
       yield take(saveNowChannel);
       yield take(
@@ -96,7 +100,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(agglomerateSkeletonUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/should_auto_push_skeleton_updates_in_live_collab.json",
       );
-      //
     });
 
     await task.toPromise();

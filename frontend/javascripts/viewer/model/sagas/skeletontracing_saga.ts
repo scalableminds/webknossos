@@ -427,7 +427,10 @@ export function* loadAgglomerateSkeletonWithId(
   let unsubscribeFromAnnotationMutex = null;
   try {
     if (shouldGuardWithAnnotationMutex) {
-      yield* call(subscribeToAnnotationMutex, "Agglomerate Skeleton Loading");
+      unsubscribeFromAnnotationMutex = yield* call(
+        subscribeToAnnotationMutex,
+        "Agglomerate Skeleton Loading",
+      );
 
       // Fetch agglomerate skeleton in parallel to updating to latest version to make syncing with the server faster.
       // We already sync here to make the save after adding the agglomerate skeleton a fast forward like update,

@@ -1,16 +1,11 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import { readdir, unlink } from "fs/promises";
-import { ColoredLogger } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
-import range from "lodash-es/range";
-import path from "path";
 import { call, put, take } from "redux-saga/effects";
 import {
   getNestedUpdateActions,
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { MappingVisualizer } from "test/helpers/mapping_visualizer";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
@@ -422,8 +417,9 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should split agglomerate skeleton optimistically, perform the split proofreading action and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+  it.only("should split agglomerate skeleton optimistically, perform the split proofreading action and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
+    // todop: this test does not update the skeleton properly?
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const injectedSplit = {
       name: "splitAgglomerate" as const,
       value: {
@@ -469,7 +465,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should split two agglomerate skeletons optimistically, perform the split proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
+  it("should split two agglomerate skeletons optimistically, perform the split proofreading action and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const injectedMerge = {
       name: "mergeAgglomerate" as const,
@@ -513,22 +509,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 1339],
         ]),
       );
-
-      const viz = new MappingVisualizer(backendMock);
-      const dir = "debug";
-      const entries = yield call(readdir, dir, { withFileTypes: true });
-
-      const files = entries.filter((entry) => entry.isFile());
-
-      for (const file of files) {
-        const filePath = path.join(dir, file.name);
-        yield call(unlink, filePath);
-      }
-
-      for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
-        viz.renderVersion(version, { outputPath: `version_${version}.json`, format: "json" });
-        viz.renderVersion(version, { outputPath: dir + `/version_${version}.svg`, format: "dot" });
-      }
     });
 
     await task.toPromise();

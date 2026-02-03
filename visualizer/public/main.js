@@ -8,7 +8,7 @@ let activeIndex = 0;
 const sidebar = document.getElementById("sidebar");
 const main = document.getElementById("main");
 const main2 = document.getElementById("main2");
-const main3 = document.getElementById("main3");
+const segmentViewDiv = document.getElementById("segment-view")
 
 /* ================================
    Load once
@@ -184,12 +184,38 @@ function renderVersion(index) {
   const trees = storeState.annotation.skeleton.trees;
 
   console.log("saveRequests", saveRequests);
-  document.getElementById("json-log").value = JSON
+  document.getElementById("action-log-area").value = JSON
     .stringify(saveRequests, null, "\t")
     .replaceAll(
       "],\n\t\"",
       "],\n\n\t\""
     );
+
+  const segments = storeState.annotation.volumes[0].segments;
+  console.log("segments", segments);
+
+  const tableHTML = `
+  <table>
+    <thead>
+      <tr>
+        <th style='width: 100px'>ID</th>
+        <th style='width: 100px'>Name</th>
+        <th style='width: 100px'>Anchor</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${Array.from(segments.values()).map(s => `
+        <tr>
+          <td>${s.id}</td>
+          <td>${s.name}</td>
+          <td>${JSON.stringify(s.anchorPosition)}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  `;
+
+  segmentViewDiv.innerHTML = tableHTML;
 
   const versionMap = new Map(
     Object.entries(versionMapJSON).map(([k, v]) => [Number(k), v])

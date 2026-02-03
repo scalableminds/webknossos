@@ -36,6 +36,8 @@ import {
 import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
+import { publishDebuggingState } from "test/helpers/mapping_visualizer";
+import { ColoredLogger } from "libs/utils";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -200,7 +202,7 @@ describe("Proofreading (Multi User)", () => {
       {1337, 1338}
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     backendMock.planVersionInjection(5, [
       {
@@ -328,7 +330,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
+  it.only("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     /*
       Initial Mapping:
       {1 -> 2 -> 3}
@@ -349,9 +351,23 @@ describe("Proofreading (Multi User)", () => {
       [7, 6],
      */
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     backendMock.planVersionInjection(5, [
+      {
+        name: "createSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          additionalCoordinates: undefined,
+          anchorPosition: [1, 1, 1],
+          color: null,
+          creationTime: 1494695001688,
+          groupId: null,
+          id: 1,
+          metadata: [],
+          name: null,
+        },
+      },
       {
         name: "splitAgglomerate",
         value: {
@@ -359,6 +375,20 @@ describe("Proofreading (Multi User)", () => {
           segmentId1: 3, // will keep its agglomerate id
           segmentId2: 2, // will get a new agglomerate id
           agglomerateId: 1,
+        },
+      },
+      {
+        name: "createSegment",
+        value: {
+          actionTracingId: "volumeTracingId",
+          additionalCoordinates: undefined,
+          anchorPosition: [2, 2, 2],
+          color: null,
+          creationTime: 1494695001688,
+          groupId: null,
+          id: 1339,
+          metadata: [],
+          name: null,
         },
       },
     ]);

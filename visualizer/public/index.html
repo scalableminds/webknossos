@@ -35,10 +35,21 @@
       color: white;
     }
 
+    #content-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
     #main {
       flex: 1;
       position: relative;
-      border-right: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #segment-view {
+      border-bottom: 1px solid #ccc;
+
     }
 
     #main2 {
@@ -46,7 +57,7 @@
       position: relative;
     }
 
-    #main3 {
+    #action-log {
       flex: 1;
       position: relative;
     }
@@ -58,16 +69,18 @@
 
     textarea {
       border: 1px solid #ccc;
-
     }
   </style>
 </head>
 <body>
   <div id="sidebar"></div>
-  <div id="main"></div>
-  <div id="main2"></div>
-  <div id="main3">
-    <textarea id="json-log" style="height: 100%; width: 100%"></textarea>
+  <div id="content-wrapper">
+    <div id="segment-view"></div>
+    <div id="main"></div>
+    <div id="main2"></div>
+  </div>
+  <div id="action-log">
+    <textarea id="action-log-area" style="height: 100%; width: 100%"></textarea>
   </div>
 
   <script src="main.js"></script>

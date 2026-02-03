@@ -4,6 +4,8 @@ import path from "node:path";
 import DiffableMap from "libs/diffable_map";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
 import { type AgglomerateMapping, serializeAdjacencyList } from "./agglomerate_mapping_helper";
+import { readdir, unlink } from "fs/promises";
+import range from "lodash-es/range";
 
 type RenderFormat = "dot" | "json";
 
@@ -11,6 +13,30 @@ interface RenderOptions {
   outputPath?: string;
   format?: RenderFormat;
   rankdir?: "TB" | "LR";
+}
+
+export async function publishDebuggingState(backendMock: BackendMock): Promise<void> {
+  const viz = new MappingVisualizer(backendMock);
+  const dir = "debug";
+  const entries = await readdir(dir, { withFileTypes: true });
+
+  const files = entries.filter((entry) => entry.isFile());
+
+  for (const file of files) {
+    const filePath = path.join(dir, file.name);
+    await unlink(filePath);
+  }
+  console.log(
+    "backendMock.agglomerateMapping.currentVersion",
+    backendMock.agglomerateMapping.currentVersion,
+  );
+  for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
+    viz.renderVersion(version, { outputPath: `version_${version}.json`, format: "json" });
+    viz.renderVersion(version, {
+      outputPath: dir + `/version_${version}.svg`,
+      format: "dot",
+    });
+  }
 }
 
 export class MappingVisualizer {

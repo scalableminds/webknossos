@@ -1028,10 +1028,12 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMeshesHeader = () => (
-    <Space.Compact block>
+    <Space block>
       <ButtonComponent
         title="Refresh list of available Mesh files"
         icon={<ReloadOutlined />}
+        variant="text"
+        color="default"
         onClick={() =>
           Store.dispatch(
             maybeFetchMeshFilesAction(
@@ -1043,18 +1045,30 @@ class SegmentsView extends React.Component<Props, State> {
         }
       />
       <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
-        <ButtonComponent title="Add a precomputed mesh file" icon={<PlusOutlined />} />
+        <ButtonComponent
+          title="Add a precomputed mesh file"
+          icon={<PlusOutlined />}
+          variant="text"
+          color="default"
+        />
       </Popover>
       {this.state.activeMeshJobId != null ? (
         <ButtonComponent
           title='A mesh file is currently being computed. See "Processing Jobs" for more information.'
           icon={<LoadingOutlined />}
+          variant="text"
+          color="default"
         />
       ) : null}
       <Popover content={this.getMeshSettings} trigger="click" placement="bottom">
-        <ButtonComponent title="Configure mesh computation" icon={<SettingOutlined />} />
+        <ButtonComponent
+          title="Configure mesh computation"
+          icon={<SettingOutlined />}
+          variant="text"
+          color="default"
+        />
       </Popover>
-    </Space.Compact>
+    </Space>
   );
 
   getToastForMissingPositions = (groupId: number | null) => {
@@ -1861,7 +1875,7 @@ class SegmentsView extends React.Component<Props, State> {
             ).map((node) => node.key);
             return (
               <React.Fragment>
-                <Space.Compact block style={{ marginBottom: "var(--ant-margin-sm)" }}>
+                <Space>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.state.searchableTreeItemList}
@@ -1873,10 +1887,13 @@ class SegmentsView extends React.Component<Props, State> {
                     <ButtonComponent
                       title="Open the search via CTRL + Shift + F"
                       icon={<SearchOutlined />}
+                      variant="text"
+                      color="default"
                     />
                   </AdvancedSearchPopover>
                   {this.getMeshesHeader()}
-                </Space.Compact>
+                </Space>
+                <Divider size="small" />
                 <div style={{ flex: 1 }}>
                   {isSegmentHierarchyEmpty ? (
                     <Empty

@@ -529,8 +529,8 @@ export async function setupWebknossosForTesting(
   vi.mocked(parseProtoAnnotation).mockReturnValue(cloneDeep(annotationProto));
 
   setSceneController({
-    name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-expect-error
+    name: "This is a dummy scene controller so that getSceneController works in the tests.",
     segmentMeshController: new SegmentMeshController(),
     // segmentMeshController: {
     //   meshesGroupsPerSegmentId: {},

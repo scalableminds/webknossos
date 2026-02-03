@@ -103,7 +103,7 @@ describe("Proofreading (Single User)", () => {
 
   it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

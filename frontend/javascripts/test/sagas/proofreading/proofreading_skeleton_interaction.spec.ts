@@ -1,11 +1,6 @@
-import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
-import {
-  getNestedUpdateActions,
-  setupWebknossosForTesting,
-  type WebknossosTestContext,
-} from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
@@ -34,7 +29,7 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { publishDebuggingState } from "test/helpers/mapping_visualizer";
+import type { MinCutTargetEdge } from "admin/rest_api";
 
 function* performMergeTreesProofreading(
   context: WebknossosTestContext,

@@ -1,11 +1,11 @@
 import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { readdir, unlink } from "fs/promises";
 import DiffableMap from "libs/diffable_map";
+import range from "lodash-es/range";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
 import { type AgglomerateMapping, serializeAdjacencyList } from "./agglomerate_mapping_helper";
-import { readdir, unlink } from "fs/promises";
-import range from "lodash-es/range";
 
 type RenderFormat = "dot" | "json";
 

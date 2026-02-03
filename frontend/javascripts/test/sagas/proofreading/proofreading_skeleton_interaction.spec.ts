@@ -516,7 +516,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   });
 
-  it("should split two agglomerate skeletons if interfering merge makes it an no-op.", async (context: WebknossosTestContext) => {
+  // TODO: the same split update action is sent twice to the server
+  it("should split two agglomerate skeletons if interfering split makes it an no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const injectedSplit = {
       name: "splitAgglomerate" as const,

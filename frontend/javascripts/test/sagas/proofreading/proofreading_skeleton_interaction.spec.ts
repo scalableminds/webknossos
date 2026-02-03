@@ -566,8 +566,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
   it("performMinCutWithNodesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
-    // Mock backend answer telling saga to split edges 3-2 and 3-1.
-    mockEdgesForAgglomerateMinCut(context.mocks);
+    // Mock backend answer telling saga to split edges 3-2.
+    mockEdgesForAgglomerateMinCut(context.mocks, true);
 
     const task = startSaga(function* task() {
       yield performMinCutWithNodesProofreading(context);
@@ -631,7 +631,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 4],
         ]),
       );
-      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();

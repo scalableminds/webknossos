@@ -581,6 +581,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
+  // TODO: the loaded agglomerate skeleton doesnt have the same amount of edges as the actual agglomerate 1
   it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]], Store.getState());
@@ -630,6 +631,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 4],
         ]),
       );
+      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();
@@ -685,12 +687,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 6],
         ]),
       );
-
-      const nestedUpdateActions = getNestedUpdateActions(context);
-      // console.log("nestedUpdateActions", nestedUpdateActions)
-      for (const [index, action] of nestedUpdateActions.entries()) {
-        console.log(index + 2, action);
-      }
     });
 
     await task.toPromise();
@@ -748,7 +744,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           [7, 6],
         ]),
       );
-      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();

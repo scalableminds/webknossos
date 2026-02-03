@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Resumable } from "../../libs/resumable-upload";
 
 describe("Resumable Use Cases (WebKnossos Patterns)", () => {
@@ -22,6 +22,10 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       });
     });
     vi.stubGlobal("fetch", mockFetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   describe("Dynamic Query Parameters (Token Injection)", () => {
@@ -81,7 +85,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       expect(firstCallArgs[1].method).toBe("GET");
     });
 
-    it("should skip POST if GET returns 200 (chunk exists)", async () => {
+    it("should not upload chunk if it already exists on server)", async () => {
       // Conditionally return 200 for GET, fail for POST (to ensure we don't post)
       mockFetch.mockImplementation((_url: string, init: any) => {
         if (init?.method === "GET") {
@@ -98,11 +102,14 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
         });
       });
 
+      const errorHandler = vi.fn();
+
       resumable = new Resumable({
         target: "/upload",
         chunkSize: 10,
         testChunks: true,
       });
+      resumable.addEventListener("error", errorHandler);
 
       const file = new File(["1234567890"], "test.txt");
       resumable.addFile(file);
@@ -115,14 +122,17 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       const calls = mockFetch.mock.calls;
       expect(calls[0][1].method).toBe("GET");
 
+      // should never have called POST to upload the actual data as it was already present
       const hasPost = calls.some((c: any) => c[1]?.method === "POST");
       expect(hasPost).toBe(false);
+
+      expect(errorHandler).not.toHaveBeenCalled();
 
       // Chunk should be marked success
       expect(resumable.files[0].chunks[0].status()).toBe("success");
     });
 
-    it("should treat 204 as success (chunk exists)", async () => {
+    it("should upload chunk if it does not exist on server", async () => {
       mockFetch.mockImplementation((_url: string, init: any) => {
         if (init?.method === "GET") {
           return Promise.resolve({
@@ -132,9 +142,9 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
           });
         }
         return Promise.resolve({
-          ok: false,
-          status: 500, // Fail if POST
-          text: () => Promise.resolve("Should not POST"),
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(""),
         });
       });
 
@@ -153,7 +163,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       expect(mockFetch).toHaveBeenCalled();
       const calls = mockFetch.mock.calls;
       const hasPost = calls.some((c: any) => c[1]?.method === "POST");
-      expect(hasPost).toBe(false);
+      expect(hasPost).toBe(true);
     });
 
     it("should proceed to POST if GET returns 404 (chunk missing)", async () => {

@@ -8,10 +8,11 @@ import models.organization.{
   CreditState,
   CreditTransaction,
   CreditTransactionDAO,
+  CreditTransactionPublicWritesService,
   CreditTransactionService,
   CreditTransactionState,
   FreeCreditTransactionService,
-  OrganizationDAO,
+  OrganizationDAO
 }
 import models.user.UserService
 import com.scalableminds.util.tools.Box.tryo
@@ -28,6 +29,7 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
                                             creditTransactionService: CreditTransactionService,
                                             freeCreditTransactionService: FreeCreditTransactionService,
                                             creditTransactionDAO: CreditTransactionDAO,
+                                            creditTransactionPublicWritesService: CreditTransactionPublicWritesService,
                                             userService: UserService,
                                             sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
@@ -85,8 +87,10 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
 
   def list(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      isSuperUser <- userService.isSuperUser(request.identity._multiUser)
+      _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listCreditTransactions.onlyAdmin"
       transactions <- creditTransactionDAO.findAll
-      transactionsJs <- Fox.serialCombined(transactions)(creditTransactionService.publicWrites)
+      transactionsJs <- Fox.serialCombined(transactions)(creditTransactionPublicWritesService.publicWrites)
     } yield Ok(Json.toJson(transactionsJs))
   }
 

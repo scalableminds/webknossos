@@ -10,9 +10,7 @@ import play.api.libs.json.{JsObject, Json}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO,
-                                         jobService: JobService,
-                                         jobDAO: JobDAO)(implicit val ec: ExecutionContext)
+class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO)(implicit val ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -74,7 +72,11 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
     creditTransactionDAO.findTransactionForJob(jobId)
 
-  def publicWrites(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[JsObject] =
+}
+
+class CreditTransactionPublicWritesService @Inject()(jobDAO: JobDAO, jobService: JobService) {
+
+  def publicWrites(transaction: CreditTransaction)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[JsObject] =
     for {
       jobOpt <- Fox.runOptional(transaction._paidJob)(jobDAO.findOne)
       jobJsOpt <- Fox.runOptional(jobOpt)(jobService.publicWrites)

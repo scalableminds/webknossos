@@ -690,11 +690,11 @@ export type APIPricingPlanStatus = {
 
 export type APIOrganizationPricingPlanUpdate = {
   readonly organizationId: string;
-  readonly description: string;
-  readonly pricingPlan: PricingPlanEnum;
-  readonly paidUntil: number;
-  readonly includedUsers: number;
-  readonly includedStorageBytes: number;
+  readonly description?: string | null;
+  readonly pricingPlan?: PricingPlanEnum | null;
+  readonly paidUntil?: number | null;
+  readonly includedUsers?: number | null;
+  readonly includedStorageBytes?: number | null;
   readonly created: number;
 };
 

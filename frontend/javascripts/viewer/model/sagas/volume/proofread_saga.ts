@@ -1174,23 +1174,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     newMapping,
   );
 
-  // Preserving custom names across merges & splits.
-  if (
-    action.type === "PROOFREAD_MERGE" &&
-    sourceAgglomerate &&
-    targetAgglomerate &&
-    (sourceAgglomerate.name || targetAgglomerate.name)
-  ) {
-    const mergedName = uniq([sourceAgglomerate.name, targetAgglomerate.name])
-      .filter((name) => name != null)
-      .join(",");
-    if (mergedName !== sourceAgglomerate.name) {
-      yield* put(
-        updateSegmentAction(newSourceAgglomerateId, { name: mergedName }, volumeTracingId),
-      );
-      Toast.info(`Renamed segment "${getSegmentName(sourceAgglomerate)}" to "${mergedName}."`);
-    }
-  } else if (action.type === "MIN_CUT_AGGLOMERATE") {
+  // Preserving custom names across splits.
+  if (action.type === "MIN_CUT_AGGLOMERATE") {
     yield* call(updateNameOfNewSegmentItemsAfterSplit, volumeTracingId, sourceAgglomerate, [
       newTargetAgglomerateId,
     ]);

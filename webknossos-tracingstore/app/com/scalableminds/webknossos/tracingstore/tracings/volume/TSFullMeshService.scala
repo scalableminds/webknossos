@@ -131,6 +131,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
             fullMeshRequest.mappingName,
             fullMeshRequest.mappingType,
             fullMeshRequest.additionalCoordinates,
+            fullMeshRequest.annotationVersion,
             findNeighbors = false
           )
           loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
@@ -160,7 +161,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         voxelSize.factor,
         fullMeshRequest.mappingName,
         fullMeshRequest.mappingType,
-        fullMeshRequest.additionalCoordinates
+        fullMeshRequest.additionalCoordinates,
+        fullMeshRequest.annotationVersion,
       )
       _ = visited += topLeft
       (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)

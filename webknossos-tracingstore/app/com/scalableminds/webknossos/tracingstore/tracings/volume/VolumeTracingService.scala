@@ -703,8 +703,8 @@ class VolumeTracingService @Inject()(
         None,
         None,
         request.additionalCoordinates,
-        request.findNeighbors,
         request.annotationVersion,
+        request.findNeighbors,
       )
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result

@@ -152,6 +152,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
             fullMeshRequest.mappingName,
             fullMeshRequest.mappingType,
             fullMeshRequest.additionalCoordinates,
+            fullMeshRequest.annotationVersion,
             findNeighbors = false,
           )
           adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
@@ -179,7 +180,8 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       tc,
       fullMeshRequest.mappingName,
       fullMeshRequest.mappingType,
-      fullMeshRequest.additionalCoordinates
+      fullMeshRequest.additionalCoordinates,
+      fullMeshRequest.annotationVersion
     )
     visited += topLeft
     for {

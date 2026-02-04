@@ -133,8 +133,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
-        yield call(() => api.tracing.save());
-
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
         );
@@ -188,8 +186,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
-        yield call(() => api.tracing.save());
-
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
         );
@@ -220,7 +216,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     });
 
     it("should split an agglomerate and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-      const { api } = context;
       mockInitialBucketAndAgglomerateData(context);
 
       const { annotation } = Store.getState();
@@ -258,8 +253,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
-        yield call(() => api.tracing.save());
-
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
         );
@@ -267,7 +260,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1);
         expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
 
-        const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-3);
+        const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-2);
         yield expect(splittingAndAgglomerateReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/split_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
@@ -314,8 +307,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         // Wait till while proofreading action is finished including agglomerate skeleton refresh
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
-
-        yield call(() => api.tracing.save());
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -428,8 +419,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
             !action.value.isBusy) as ActionPattern,
         );
 
-        yield call(() => context.api.tracing.save());
-
         const agglomerateSkeletons = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
         );
@@ -524,7 +513,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
   // --------- Multi user tests with injected updates ---------
 
   it("should merge two agglomerates, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-    const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
     backendMock.planVersionInjection(10, [
@@ -585,8 +573,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // Wait till while proofreading action is finished including agglomerate skeleton refresh
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
-
-      yield call(() => api.tracing.save());
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -702,8 +688,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
-      yield call(() => api.tracing.save());
-
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
       );
@@ -805,8 +789,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         ((action: Action) =>
           action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
       );
-
-      yield call(() => context.api.tracing.save());
 
       const agglomerateSkeletons = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -926,8 +908,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         ((action: Action) =>
           action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
       );
-
-      yield call(() => context.api.tracing.save());
 
       const agglomerateSkeletons = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),

@@ -54,4 +54,48 @@
       },
     },
   ],
+  [
+    {
+      "name": "updateTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "branchPoints": [],
+        "color": [
+          0,
+          1,
+          0.7568627450980392,
+        ],
+        "comments": [],
+        "edgesAreVisible": true,
+        "groupId": undefined,
+        "id": 4,
+        "isVisible": true,
+        "metadata": [],
+        "name": "agglomerate 1 (volumeTracingId)",
+        "timestamp": 1494695001688,
+        "type": "AGGLOMERATE",
+        "updatedId": 4,
+      },
+    },
+  ],
+  [
+    {
+      "name": "updateSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          1,
+          1,
+          1,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1,
+        "metadata": [],
+        "name": "Agglomerate 1",
+      },
+    },
+  ],
 ]

@@ -82,7 +82,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       const shouldSaveAfterLoadingTrees = false;
       yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const loadTreesAndMergeUpdateActions = getNestedUpdateActions(context).slice(-4)!;
+      const loadTreesAndMergeUpdateActions = getNestedUpdateActions(context).slice(-5)!;
       yield expect(loadTreesAndMergeUpdateActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/perform_merge_trees_proofreading_update_actions.json",
       );
@@ -116,7 +116,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(9);
       // Includes loading of agglomerate trees and tree merging operation & agglomerate merge update
-      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-2)!;
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-3)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_simple.json",
       );
@@ -168,7 +168,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(9);
       // Should include agglomerate tree updates & mergeAgglomerate action.
-      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-2)!;
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-3)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_interfered.json",
       );
@@ -220,9 +220,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(9);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload1 = getNestedUpdateActions(context).at(-1)!;
-      const latestUpdateActionRequestPayload2 = context.receivedDataPerSaveRequest;
-      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-2)!;
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-3)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_interfered_no-op.json",
       );
@@ -420,7 +418,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     const task = startSaga(function* task() {
       yield performMinCutWithNodesProofreading(context, false);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const loadAgglomerateTreesAndSplitUpdateActions = getNestedUpdateActions(context).slice(-3);
+      const loadAgglomerateTreesAndSplitUpdateActions = getNestedUpdateActions(context).slice(-6);
       yield expect(loadAgglomerateTreesAndSplitUpdateActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/perform_min_cut_with_nodes_proofreading.json",
       );
@@ -457,7 +455,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(8);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
-        getNestedUpdateActions(context).slice(-3);
+        getNestedUpdateActions(context).slice(-6);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_simple.json",
       );
@@ -581,7 +579,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.version).toEqual(8);
 
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
-        getNestedUpdateActions(context).slice(-3);
+        getNestedUpdateActions(context).slice(-6);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_more_complex.json",
       );
@@ -638,7 +636,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
       expect(injectedMergeRequest.version).toEqual(8);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
-        getNestedUpdateActions(context).slice(-2);
+        getNestedUpdateActions(context).slice(-4);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
       );

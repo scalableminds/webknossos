@@ -248,4 +248,13 @@
       },
     },
   ],
+  [
+    {
+      "name": "deleteSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "id": 1,
+      },
+    },
+  ],
 ]

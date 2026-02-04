@@ -200,7 +200,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const tryParsingFileAsZip = async (file: File) => {
       try {
-        // @zip.js is a fairly large module (150kb)
+        // @zip.js is a fairly large module
         // Dynamically import it to avoid loading it on Dashboard/admin pages.
         const { BlobReader, ZipReader, BlobWriter } = await import("@zip.js/zip.js");
 
@@ -590,7 +590,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
-      // @zip.js is a fairly large module (150kb)
+      // @zip.js is a fairly large module
       // Dynamically import it to avoid loading it on Dashboard/admin pages.
       const { BlobWriter, ZipWriter, TextReader } = await import("@zip.js/zip.js");
 

@@ -99,7 +99,13 @@ import {
   type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import { api, Model, Store } from "viewer/singletons";
-import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
+import type {
+  ActiveMappingInfo,
+  Mapping,
+  NumberLikeMap,
+  Segment,
+  VolumeTracing,
+} from "viewer/store";
 import { getCurrentMag } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { Tree } from "../../types/tree_types";
@@ -287,6 +293,28 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   }
 
   coarselyLoadedSegmentIds.push(segmentId);
+}
+
+function* updateNameOfNewSegmentItemsAfterSplit(
+  volumeTracingId: string,
+  sourceAgglomerate: Segment | undefined,
+  splitOffSegmentIds: number[],
+) {
+  if (sourceAgglomerate?.name == null || splitOffSegmentIds.length === 0) {
+    return;
+  }
+
+  // Assign custom name to split-off target.
+  const updateNameActions = splitOffSegmentIds.map((splitOffSegmentId) =>
+    put(
+      updateSegmentAction(
+        Number(splitOffSegmentId),
+        { name: `Segment ${splitOffSegmentId} - Split off from: ${sourceAgglomerate.name}` },
+        volumeTracingId,
+      ),
+    ),
+  );
+  yield* all(updateNameActions);
 }
 
 function* checkForAgglomerateSkeletonModification(
@@ -829,19 +857,10 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     partitions[2][0],
     newMapping,
   );
-  // Preserving custom names across merges & splits.
-  if (agglomerate && agglomerate.name != null) {
-    // Assign custom name to split-off target.
-    yield* put(
-      updateSegmentAction(
-        Number(newAgglomerateIdFromPartition2),
-        { name: agglomerate.name },
-        volumeTracingId,
-      ),
-    );
 
-    Toast.info(`Assigned name "${agglomerate.name}" to new split-off segment.`);
-  }
+  yield* call(updateNameOfNewSegmentItemsAfterSplit, volumeTracingId, agglomerate, [
+    newAgglomerateIdFromPartition2,
+  ]);
 
   // Get positions of new meshes from first split edge information.
   const firstEdgeFirstSegmentNewAgglomerate = yield* call(
@@ -1154,6 +1173,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     targetInfo.unmappedId,
     newMapping,
   );
+
   // Preserving custom names across merges & splits.
   if (
     action.type === "PROOFREAD_MERGE" &&
@@ -1170,21 +1190,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       );
       Toast.info(`Renamed segment "${getSegmentName(sourceAgglomerate)}" to "${mergedName}."`);
     }
-  } else if (
-    action.type === "MIN_CUT_AGGLOMERATE" &&
-    sourceAgglomerate &&
-    sourceAgglomerate.name != null
-  ) {
-    // Assign custom name to split-off target.
-    yield* put(
-      updateSegmentAction(
-        Number(newTargetAgglomerateId),
-        { name: sourceAgglomerate.name },
-        volumeTracingId,
-      ),
-    );
-
-    Toast.info(`Assigned name "${sourceAgglomerate.name}" to new split-off segment.`);
+  } else if (action.type === "MIN_CUT_AGGLOMERATE") {
+    yield* call(updateNameOfNewSegmentItemsAfterSplit, volumeTracingId, sourceAgglomerate, [
+      newTargetAgglomerateId,
+    ]);
   }
 
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
@@ -1312,21 +1321,12 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     ),
   ]);
 
-  if (targetAgglomerate != null && targetAgglomerate.name != null) {
-    // Assign custom name to split-off target.
-    const updateNeighborNamesActions = newNeighborAgglomerateIds.map((newNeighborAgglomerateId) =>
-      put(
-        updateSegmentAction(
-          Number(newNeighborAgglomerateId),
-          { name: targetAgglomerate.name },
-          volumeTracingId,
-        ),
-      ),
-    );
-    yield* all(updateNeighborNamesActions);
-
-    Toast.info(`Assigned name "${targetAgglomerate.name}" to all new split-off segments.`);
-  }
+  yield* call(
+    updateNameOfNewSegmentItemsAfterSplit,
+    volumeTracingId,
+    targetAgglomerate,
+    newNeighborAgglomerateIds,
+  );
 
   /* Reload meshes */
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [

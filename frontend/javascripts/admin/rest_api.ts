@@ -2175,6 +2175,9 @@ export async function getEdgesForAgglomerateMinCut(
           data: {
             ...segmentsInfo,
             // TODO: Proper 64 bit support (#6921)
+            // For a normal min-cut, the id at which the proofreading marker is at
+            // will be put into partition1. The right-clicked segment/mesh will be
+            // in partition2.
             partition1: segmentsInfo.partition1.map(Number),
             partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),

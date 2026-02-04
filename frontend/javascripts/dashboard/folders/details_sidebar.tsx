@@ -16,8 +16,8 @@ import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import keyBy from "lodash/keyBy";
-import uniq from "lodash/uniq";
+import keyBy from "lodash-es/keyBy";
+import uniq from "lodash-es/uniq";
 import { useEffect, useState } from "react";
 import type { APIDatasetCompact, Folder } from "types/api_types";
 import {
@@ -327,7 +327,7 @@ function DatasetsDetails({
 
   return (
     <div style={{ textAlign: "center" }}>
-      <Space direction="vertical" size="large" style={{ display: "flex" }}>
+      <Space orientation="vertical" size="large">
         <div>
           Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
           with drag and drop.
@@ -437,7 +437,7 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
   const allowedTeamsById = keyBy(folder.allowedTeams, "id");
 
   return (
-    <>
+    <Space>
       {folder.allowedTeamsCumulative.map((team) => {
         const isCumulative = !allowedTeamsById[team.id];
         return (
@@ -465,6 +465,6 @@ function FolderTeamTags({ folder }: { folder: Folder }) {
           </Tooltip>
         );
       })}
-    </>
+    </Space>
   );
 }

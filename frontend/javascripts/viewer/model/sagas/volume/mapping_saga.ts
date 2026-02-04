@@ -9,7 +9,7 @@ import { message } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
-import min from "lodash/min";
+import min from "lodash-es/min";
 import { buffers, eventChannel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import {
@@ -66,8 +66,7 @@ import {
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
-import { api } from "viewer/singletons";
-import { Model } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   Mapping,
@@ -568,7 +567,7 @@ export function* updateLocalHdf5Mapping(
   // new mapping. See the definition of mutableRemainingEntries.
   const mapping = mutableRemainingEntries as Mapping;
   for (const [key, val] of newEntries.entries()) {
-    // @ts-ignore
+    // @ts-expect-error
     mapping.set(key, val);
   }
 

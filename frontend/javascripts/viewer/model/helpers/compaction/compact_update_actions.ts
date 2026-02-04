@@ -1,7 +1,7 @@
 import { withoutValues } from "libs/utils";
 
-import groupBy from "lodash/groupBy";
-import keyBy from "lodash/keyBy";
+import groupBy from "lodash-es/groupBy";
+import keyBy from "lodash-es/keyBy";
 
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import type {

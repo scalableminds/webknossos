@@ -2,12 +2,11 @@ import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
 import { pluralize } from "libs/utils";
-import sum from "lodash/sum";
+import sum from "lodash-es/sum";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { MetadataEntryProto } from "types/api_types";
-import { mapGroups } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
   setTreeMetadataAction,
@@ -20,18 +19,19 @@ import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
-  type TreeNode,
   additionallyExpandGroup,
   createGroupToTreesMap,
   deepFlatFilter,
   findGroup,
   findParentGroupNode,
+  GroupTypeEnum,
   getGroupByIdWithSubgroups,
   getNodeKey,
   insertTreesAndTransform,
+  MISSING_GROUP_ID,
+  mapGroups,
   moveGroupsHelper,
+  type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
 import { getContextMenuPositionFromEvent } from "../../context_menu";
@@ -40,8 +40,8 @@ import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  type Props,
   onBatchActions,
+  type Props,
   renderGroupNode,
   renderTreeNode,
   selectGroupById,
@@ -143,7 +143,9 @@ function TreeHierarchyView(props: Props) {
         [clickedNode],
         (node) => node.type === GroupTypeEnum.GROUP,
       ).map((node) => node.key as string);
-      subGroupKeys.forEach((key) => expandedKeySet.delete(key));
+      subGroupKeys.forEach((key) => {
+        expandedKeySet.delete(key);
+      });
     }
     setExpandedGroups(expandedKeySet);
   };

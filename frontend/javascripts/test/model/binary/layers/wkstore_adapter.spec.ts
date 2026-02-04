@@ -1,19 +1,19 @@
-import range from "lodash/range";
-import { getBitDepth, getByteCountFromLayer } from "viewer/model/accessors/dataset_accessor";
-import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import { vi, describe, it, expect, beforeEach } from "vitest";
-import { MagInfo } from "viewer/model/helpers/mag_info";
-import type { APIDataLayer } from "types/api_types";
-import type { PushSaveQueueTransaction } from "viewer/model/actions/save_actions";
-import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
-import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
-import PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import Request from "libs/request";
-import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import range from "lodash-es/range";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import type { APIDataLayer } from "types/api_types";
 import type { BucketAddress } from "viewer/constants";
-import Store from "viewer/store";
 import Constants from "viewer/constants";
+import { getBitDepth, getByteCountFromLayer } from "viewer/model/accessors/dataset_accessor";
+import type { PushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import PushQueue from "viewer/model/bucket_data_handling/pushqueue";
+import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import { MagInfo } from "viewer/model/helpers/mag_info";
+import Store from "viewer/store";
+import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { dataSource } = datasetServerObject;
 let _fourBit = false;
@@ -310,7 +310,7 @@ describe("wkstore_adapter", () => {
 
     const pushQueue = new PushQueue(mockedCube, tracingId);
 
-    // @ts-ignore pushTransaction is a private method
+    // @ts-expect-error pushTransaction is a private method
     return pushQueue.pushTransaction(batch).then(() => {
       expect(Store.dispatch).toHaveBeenCalledTimes(2);
       expect(Store.dispatch).toHaveBeenCalledWith(expectedSaveQueueItems);

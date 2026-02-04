@@ -1,6 +1,8 @@
+import type { NeighborInfo } from "admin/rest_api";
 import { actionChannel, call, flush, put, take } from "redux-saga/effects";
-import { type WebknossosTestContext, setupWebknossosForTesting } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -26,8 +28,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import type { NeighborInfo } from "admin/rest_api";
-import type { Vector3 } from "viewer/constants";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -252,7 +252,7 @@ describe("Proofreading (Multi User)", () => {
           };
         }
         return {
-          segmentId: Number.parseInt(segmentInfo.segmentId.toString()),
+          segmentId: Number.parseInt(segmentInfo.segmentId.toString(), 10),
           neighbors: [],
         };
       },

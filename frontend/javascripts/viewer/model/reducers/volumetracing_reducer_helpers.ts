@@ -1,8 +1,8 @@
 import update from "immutability-helper";
 import {
   type ContourMode,
-  type OrthoViewWithoutTD,
   OrthoViews,
+  type OrthoViewWithoutTD,
   type Vector3,
 } from "viewer/constants";
 import {

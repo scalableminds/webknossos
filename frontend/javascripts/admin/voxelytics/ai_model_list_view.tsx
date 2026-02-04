@@ -5,7 +5,8 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
+import { getUsersOrganizations } from "admin/api/organization";
+import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
 import { App, Button, Col, Flex, Modal, Row, Select, Table, Tooltip, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
@@ -13,15 +14,12 @@ import LinkButton from "components/link_button";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import uniq from "lodash/uniq";
-import { useState } from "react";
+import uniq from "lodash-es/uniq";
 import type { Key } from "react";
-import { formatUserName } from "viewer/model/accessors/user_accessor";
-
-import { getUsersOrganizations } from "admin/api/organization";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { AiModel } from "types/api_types";
-import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";
 
 export default function AiModelListView() {
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
@@ -173,7 +171,11 @@ function EditModelSharedOrganizationsModal({
   model,
   onClose,
   owningOrganization,
-}: { model: AiModel; onClose: () => void; owningOrganization: string }) {
+}: {
+  model: AiModel;
+  onClose: () => void;
+  owningOrganization: string;
+}) {
   const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<string[]>(
     model.sharedOrganizationIds || [owningOrganization],
   );

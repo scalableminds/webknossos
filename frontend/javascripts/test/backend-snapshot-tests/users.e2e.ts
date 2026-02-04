@@ -1,23 +1,24 @@
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
+  replaceVolatileValues,
+  resetDatabase,
+  setUserAuthToken,
   tokenUserA,
   tokenUserE,
   tokenUserF,
-  setUserAuthToken,
-  resetDatabase,
-  replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import {
-  getUsers,
-  getAdminUsers,
-  getEditableUsers,
   getActiveUser,
-  getUser,
-  updateUser,
+  getAdminUsers,
   getAuthToken,
+  getEditableUsers,
   getLoggedTimes,
+  getUser,
+  getUsers,
+  updateUser,
 } from "admin/rest_api";
-import { describe, it, beforeAll, expect, beforeEach } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 describe("Users API (E2E)", () => {
   beforeAll(async () => {

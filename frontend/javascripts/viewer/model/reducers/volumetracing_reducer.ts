@@ -1,7 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import { colorObjectToRGBArray, floor3, mapEntriesToMap, point3ToVector3 } from "libs/utils";
-import type { APIUserBase, AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
+import type { AdditionalCoordinate, APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,
@@ -28,7 +28,6 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "viewer/model/reducers/reducer_helpers";
 import {
-  type VolumeTracingReducerAction,
   addToContourListReducer,
   createCellReducer,
   getSegmentUpdateInfo,
@@ -43,14 +42,15 @@ import {
   updateDirectionReducer,
   updateSegments,
   updateVolumeTracing,
+  type VolumeTracingReducerAction,
 } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "viewer/store";
 import {
   findParentIdForGroupId,
   getGroupNodeKey,
+  mapGroups,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
-import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
 

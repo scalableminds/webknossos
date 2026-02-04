@@ -12,7 +12,7 @@ import dayjs from "dayjs";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import { switchTo } from "navbar";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -53,7 +53,7 @@ export function CheckTermsOfServices() {
     }
 
     const lastWarningString = UserLocalStorage.getItem(LAST_TERMS_OF_SERVICE_WARNING_KEY);
-    const lastWarning = dayjs(lastWarningString ? Number.parseInt(lastWarningString) : 0);
+    const lastWarning = dayjs(lastWarningString ? Number.parseInt(lastWarningString, 10) : 0);
     const isLastWarningOld = dayjs().diff(lastWarning, "days") > SNOOZE_DURATION_IN_DAYS;
     setIsModalOpen(isLastWarningOld);
   }, [acceptanceInfo]);

@@ -1,11 +1,11 @@
-import cloneDeep from "lodash/cloneDeep";
-// @ts-ignore
-import deepForEach from "deep-for-each";
 import fs from "node:fs";
+// @ts-expect-error
+import deepForEach from "deep-for-each";
+import { JSDOM } from "jsdom";
+import cloneDeep from "lodash-es/cloneDeep";
 import shell from "shelljs";
 import type { ArbitraryObject } from "types/globals";
 import { vi } from "vitest";
-import { JSDOM } from "jsdom";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for the unit tests. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation
@@ -76,7 +76,7 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
       arrOrObj: O,
     ) => {
       if (volatileKeys.includes(key)) {
-        // @ts-ignore Typescript complains that we might change the type of arrOrObj[key] (which we do deliberately)
+        // @ts-expect-error Typescript complains that we might change the type of arrOrObj[key] (which we do deliberately)
         arrOrObj[key] = key;
       }
     },

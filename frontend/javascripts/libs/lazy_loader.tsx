@@ -1,5 +1,5 @@
 import type React from "react";
-import { Suspense, lazy } from "react";
+import { lazy, Suspense } from "react";
 
 export default function loadable<Props>(
   loader: () => Promise<{ default: React.ComponentType<Props> }>,

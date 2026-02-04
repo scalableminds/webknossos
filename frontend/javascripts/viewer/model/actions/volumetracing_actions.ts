@@ -1,8 +1,12 @@
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
-import type { BucketDataArray, ServerEditableMapping, ServerVolumeTracing } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  BucketDataArray,
+  ServerEditableMapping,
+  ServerVolumeTracing,
+} from "types/api_types";
 import type { ContourMode, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";

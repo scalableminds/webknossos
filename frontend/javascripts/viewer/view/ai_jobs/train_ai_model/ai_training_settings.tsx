@@ -1,10 +1,9 @@
 import { SettingOutlined } from "@ant-design/icons";
-import { Card, Col, Form, Input, InputNumber, Row, Space } from "antd";
 import type { FormProps } from "antd";
+import { Card, Col, Form, Input, InputNumber, Row, Space } from "antd";
 import type React from "react";
-import { APIJobCommand } from "types/api_types";
-
 import { ColorWKBlue } from "theme";
+import { APIJobCommand } from "types/api_types";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 export const AiTrainingSettings: React.FC = () => {

@@ -3,10 +3,9 @@ import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import { document, location } from "libs/window";
-import window from "libs/window";
+import window, { document, location } from "libs/window";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import debounce from "lodash/debounce";
+import debounce from "lodash-es/debounce";
 import messages from "messages";
 import { Fragment, PureComponent } from "react";
 import { connect } from "react-redux";
@@ -22,14 +21,12 @@ import { destroySceneController } from "viewer/controller/scene_controller_provi
 import UrlManager from "viewer/controller/url_manager";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
-import { cancelSagaAction } from "viewer/model/actions/actions";
-import { resetStoreAction } from "viewer/model/actions/actions";
+import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import rootSaga from "viewer/model/sagas/root_saga";
 import { applyState } from "viewer/model_initialization";
-import { Store } from "viewer/singletons";
-import { Model } from "viewer/singletons";
-import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "viewer/store";
+import { Model, Store } from "viewer/singletons";
+import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
 import WkContextMenu from "viewer/view/context_menu";
@@ -39,16 +36,15 @@ import {
   recalculateInputCatcherSizes,
 } from "viewer/view/input_catcher";
 import {
-  LayoutEvents,
   getLastActiveLayout,
   getLayoutConfig,
+  LayoutEvents,
   layoutEmitter,
   setActiveLayout,
   storeLayoutConfig,
 } from "viewer/view/layouting/layout_persistence";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
-import PresentModernControls from "viewer/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
 import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "viewer/view/tracing_view";
@@ -151,7 +147,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
 
     const refreshMessageContainer = document.createElement("div");
     refreshMessageContainer.style.display = "grid";
-    // @ts-ignore
+    // @ts-expect-error
     refreshMessageContainer.style["place-items"] = "center";
     refreshMessageContainer.style.height = "75vh";
 
@@ -337,7 +333,6 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
 
     return (
       <Fragment>
-        <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
         {status === "loaded" && <WkContextMenu />}

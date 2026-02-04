@@ -1,5 +1,5 @@
-import debounce from "lodash/debounce";
-import noop from "lodash/noop";
+import debounce from "lodash-es/debounce";
+import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
@@ -38,11 +38,11 @@ export function usePrevious<T>(
 }
 
 const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => ({
-  // @ts-ignore
+  // @ts-expect-error
   Shift: event.shiftKey,
-  // @ts-ignore
+  // @ts-expect-error
   Alt: event.altKey, // This is the option key ⌥ on MacOS
-  // @ts-ignore
+  // @ts-expect-error
   ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 

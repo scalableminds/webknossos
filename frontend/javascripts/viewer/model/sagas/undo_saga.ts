@@ -19,22 +19,22 @@ import {
 import type { RedoAction, UndoAction } from "viewer/model/actions/save_actions";
 import type { SkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
 import {
-  SkeletonTracingSaveRelevantActions,
   centerActiveNodeAction,
+  SkeletonTracingSaveRelevantActions,
   setSkeletonTracingAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import {
   type AddBucketToUndoAction,
   type BatchUpdateGroupsAndSegmentsAction,
+  cancelQuickSelectAction,
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
   type RemoveSegmentAction,
   type SetSegmentGroupsAction,
-  type UpdateSegmentAction,
-  cancelQuickSelectAction,
   setSegmentGroupsAction,
   setSegmentsAction,
+  type UpdateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
@@ -134,7 +134,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
   throw new Error("Could not unpack redux action from channel");
 }
 
-export function* manageUndoStates(): Saga<never> {
+function* manageUndoStates(): Saga<never> {
   // At its core, this saga maintains an undo and redo stack to implement
   // undo/redo functionality.
   const undoStack: Array<UndoState> = [];

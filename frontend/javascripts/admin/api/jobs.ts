@@ -1,12 +1,12 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import camelCase from "lodash/camelCase";
-import mapKeys from "lodash/mapKeys";
+import camelCase from "lodash-es/camelCase";
+import mapKeys from "lodash-es/mapKeys";
 import type {
-  APIAnnotationType,
-  APIJob,
   AdditionalCoordinate,
   AiModel,
+  APIAnnotationType,
+  APIJob,
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";

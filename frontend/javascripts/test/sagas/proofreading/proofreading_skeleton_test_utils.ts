@@ -1,11 +1,10 @@
+import { Root } from "protobufjs";
 import type {
   ServerNode,
   ServerSkeletonTracing,
   ServerSkeletonTracingTree,
   ServerTracing,
 } from "types/api_types";
-
-import { Root } from "protobufjs";
 import type { TreeType } from "viewer/constants";
 import { PROTO_FILES, PROTO_TYPES } from "viewer/model/helpers/proto_helpers";
 import type { Edge } from "viewer/model/types/tree_types";

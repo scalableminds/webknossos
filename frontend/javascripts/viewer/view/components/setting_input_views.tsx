@@ -23,7 +23,7 @@ import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import Toast from "libs/toast";
 import { hexToRgb, numberArrayToVector6, rgbToHex, roundTo, stringToNumberArray } from "libs/utils";
-import isNumber from "lodash/isNumber";
+import isNumber from "lodash-es/isNumber";
 import messages from "messages";
 import type * as React from "react";
 import { useEffect, useState } from "react";
@@ -272,7 +272,7 @@ export function SwitchSetting(props: SwitchSettingProps) {
   const leftSpanValue = labelSpan || SETTING_LEFT_SPAN;
   const rightSpanValue = labelSpan != null ? ANTD_TOTAL_SPAN - leftSpanValue : SETTING_RIGHT_SPAN;
   return (
-    <Row className="margin-bottom" align="middle" gutter={ROW_GUTTER}>
+    <Row align="middle" gutter={ROW_GUTTER} style={{ marginBottom: "var(--ant-margin-sm)" }}>
       <Col span={leftSpanValue}>
         <label className="setting-label">{label}</label>
       </Col>
@@ -729,7 +729,7 @@ type DropdownSettingProps = {
 export function DropdownSetting(props: DropdownSettingProps) {
   const { onChange, label, value, options, disabled, disabledReason } = props;
   return (
-    <Row className="margin-bottom" align="top" gutter={ROW_GUTTER}>
+    <Row align="top" gutter={ROW_GUTTER} style={{ marginBottom: "var(--ant-margin-sm)" }}>
       <Col span={SETTING_LEFT_SPAN}>
         <label className="setting-label">{label}</label>
       </Col>

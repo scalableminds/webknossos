@@ -23,13 +23,12 @@ import {
 } from "dashboard/dataset/dataset_collection_context";
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
-import debounce from "lodash/debounce";
-import isEqual from "lodash/isEqual";
-import noop from "lodash/noop";
-import uniq from "lodash/uniq";
+import debounce from "lodash-es/debounce";
+import isEqual from "lodash-es/isEqual";
+import noop from "lodash-es/noop";
+import uniq from "lodash-es/uniq";
 import type React from "react";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type APIDataset,
   type APIMetadataEntry,
@@ -269,7 +268,9 @@ const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is API
 // to ensure the metadata is displayed and saved correctly.
 export default function MetadataTable({
   datasetOrFolder,
-}: { datasetOrFolder: APIDataset | Folder }) {
+}: {
+  datasetOrFolder: APIDataset | Folder;
+}) {
   const context = useDatasetCollectionContext();
   const [metadata, metadataRef, setMetadata] = useStateWithRef<APIMetadataWithError[]>(
     datasetOrFolder?.metadata?.map((entry) => ({ ...entry, error: null })) || [],
@@ -550,7 +551,11 @@ export function SimpleRow({
   label, // must not be called "key" as this is reserved in react
   value,
   isTableHead,
-}: { label: React.ReactNode; value: React.ReactNode; isTableHead?: boolean }) {
+}: {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  isTableHead?: boolean;
+}) {
   if (isTableHead) {
     return (
       <tr>

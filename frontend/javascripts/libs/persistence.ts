@@ -1,8 +1,8 @@
 import { PropTypes } from "@scalableminds/prop-types";
 import ErrorHandling from "libs/error_handling";
-import extend from "lodash/extend";
-import isEqual from "lodash/isEqual";
-import pick from "lodash/pick";
+import extend from "lodash-es/extend";
+import isEqual from "lodash-es/isEqual";
+import pick from "lodash-es/pick";
 import type { EmptyObject } from "types/globals";
 
 class Persistence<T extends Record<string, any>> {
@@ -39,7 +39,7 @@ class Persistence<T extends Record<string, any>> {
       } catch (e) {
         // Reset the persisted state and log the error to airbrake so we learn whether and how often this happens
         this.persist({}, {});
-        // @ts-ignore
+        // @ts-expect-error
         ErrorHandling.notify(e);
         return {};
       }

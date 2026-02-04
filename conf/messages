@@ -160,6 +160,7 @@ dataLayer.notFound=DataLayer “{0}” not found
 dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
 dataLayer.wrongMag=DataLayer “{0}” does not have mag “{1}”
+dataLayer.wrongAttachment=DataLayer “{0}” does not have attachment “{1}”
 dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use “x-y-z”
 
 zarr.invalidChunkCoordinates=Invalid chunk coordinates. Expected dot separated coordinates like c.<additional_axes.>x.y.z

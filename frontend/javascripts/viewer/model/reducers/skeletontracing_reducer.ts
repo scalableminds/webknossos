@@ -3,9 +3,9 @@ import ColorGenerator from "libs/color_generator";
 import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
 import { zeroPad } from "libs/utils";
-import clamp from "lodash/clamp";
-import identity from "lodash/identity";
-import orderBy from "lodash/orderBy";
+import clamp from "lodash-es/clamp";
+import identity from "lodash-es/identity";
+import orderBy from "lodash-es/orderBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
@@ -51,8 +51,8 @@ import {
 import { type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import {
-  GroupTypeEnum,
   additionallyExpandGroup,
+  GroupTypeEnum,
   getNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
@@ -484,7 +484,7 @@ function SkeletonTracingReducer(
 
       const newTrees = skeletonTracing.trees.clone();
       for (const tree of skeletonTracing.trees.values()) {
-        // @ts-ignore newColors.shift() can be undefined
+        // @ts-expect-error newColors.shift() can be undefined
         newTrees.mutableSet(tree.treeId, { ...tree, color: newColors.shift() });
       }
 

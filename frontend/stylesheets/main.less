@@ -9,16 +9,15 @@
 @import "_publications.less";
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_status_bar.less";
-@import "trace_view/_user_settings_view.less";
 @import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
 @import "antd_overwrites.less";
 @import "olvy_overwrites.less";
-@import "_admin.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
 @import "dark.less";
 @import "command_palette.less";
+@import "_voxelytics.less";
 
 @font-face {
   font-family: "Nunito";
@@ -32,6 +31,7 @@
 }
 
 // ----------------------- MAIN STYLES
+/** Global body styles: sets typography, smoothing and enforces full-height layout with navbar padding. */
 body {
   margin: 0;
   font-family: @font-family;
@@ -42,10 +42,12 @@ body {
   padding-top: var(--navbar-height);
 }
 
+/** Ensures the main layout header stays at the top within the main container section. */
 #main-container>section>.ant-layout-header {
   top: 0;
 }
 
+/** Highlights the header and menu with an error color when a save operation fails. */
 .save-error {
 
   .ant-layout-header,
@@ -54,10 +56,9 @@ body {
   }
 }
 
-.construction {
-  background: repeating-linear-gradient(45deg, #ffdc00, #ffdc00 20px, #111111 20px, #111111 40px);
-}
 
+
+/** Navbar related styles for logo, avatar and organization switching elements. */
 .ant-layout-header {
   .logo {
     width: 30px;
@@ -100,30 +101,13 @@ body {
   }
 }
 
-.fa-random {
-  width: 14px;
-  background-position: -217px -120px;
-}
 
-.fa-bull::before {
-  display: inline-block;
-  width: 16px;
-  content: "•";
-  text-align: center;
-}
-
+/** Utility class for inline-block display. */
 .inline-block {
   display: inline-block;
 }
 
-#credits {
-  img {
-    margin-right: 10px;
-    width: 25%;
-    max-width: 100px;
-  }
-}
-
+/** Layout for the onboarding page, ensuring it takes up available viewport height. */
 .onboarding {
   min-height: calc(100vh - var(--navbar-height));
   display: flex;
@@ -131,6 +115,7 @@ body {
   padding-bottom: 50px;
 }
 
+/** Utility class for centering core content areas with a max-width constraint. */
 .centered-content {
   padding: 50px;
   width: 100%;
@@ -138,20 +123,10 @@ body {
   margin: auto;
 }
 
-#impressum {
-  h5 {
-    margin-top: 2em;
-  }
-}
 
-// Fixing font awesome
-.btn [class^="fa-"],
-.nav [class^="fa-"],
-.btn [class*=" fa-"],
-.nav [class*=" fa-"] {
-  line-height: normal;
-}
 
+
+/** Styling for compact buttons, typically used in toolbars (e.g. undo/redo). */
 button.narrow {
   // undo/redo + toolbar buttons
   padding: 0 10px;
@@ -161,26 +136,31 @@ button.narrow {
   }
 }
 
+/** Utility alias for Ant Design small margin at the start of an element. */
 .icon-margin-left {
   margin-inline-start: var(--ant-margin-xs);
 }
 
+/** Utility alias for Ant Design small margin at the end of an element. */
 .icon-margin-right {
   margin-inline-end: var(--ant-margin-xs);
 }
 
+/** Enforces no right margin for specific Ant Design and FontAwesome interactive elements. */
 .ant-spin-dot,
 .ant-spin-dot i,
 .ant-avatar i {
   margin-right: 0;
 }
 
+/** Hides elements on screens smaller than 1200px width. */
 .hide-on-small-screen {
   @media (max-width: 1200px) {
     display: none !important;
   }
 }
 
+/** Main responsive container with side margins and padding. */
 .container {
   padding-top: 20px;
   margin-left: 10px;
@@ -195,11 +175,13 @@ button.narrow {
   }
 }
 
+/** Extra-large icon styling, often used for placeholder or hero illustrations. */
 .icon-big {
   font-size: 180px;
   color: rgb(58, 144, 255);
 }
 
+/** Animation for highlighting the background (e.g. for newly added items). */
 @keyframes highlight-background {
   0% {
     background: #f6ff2e9c;
@@ -209,6 +191,7 @@ button.narrow {
 }
 
 // Brain loading spinner
+/** Full-page loading overlay used in the Brain view. */
 .brain-loading {
   position: absolute;
   top: 0;
@@ -219,6 +202,7 @@ button.narrow {
   z-index: 300;
 }
 
+/** Container for the brain loading content, providing vertical alignment. */
 .brain-loading-container {
   display: flex;
   align-items: center;
@@ -227,6 +211,7 @@ button.narrow {
   height: 80%;
 }
 
+/** Inner content of the brain loading screen. */
 .brain-loading-content {
   max-width: 50%;
   width: 375px;
@@ -239,6 +224,7 @@ button.narrow {
   margin: 1em 0;
 }
 
+/** Progress bar for the brain loading screen. */
 .brain-loading-bar {
   height: 2px;
   width: 100%;
@@ -247,6 +233,7 @@ button.narrow {
   background-color: var(--ant-color-border);
 }
 
+/** Inner moving element for the brain loading bar animation. */
 .brain-loading-bar:before {
   display: block;
   position: absolute;
@@ -285,6 +272,7 @@ button.narrow {
   }
 }
 
+/** Smoothly transitions opacity to 1 on hover. */
 .hover-effect-via-opacity {
   opacity: 0.9;
 
@@ -293,10 +281,12 @@ button.narrow {
   }
 }
 
+/** Displays a wait cursor for links representing an in-progress operation. */
 .link-in-progress {
   cursor: wait;
 }
 
+/** Full-screen overlay used when dragging NML files into the browser. */
 .nml-upload-zone-overlay {
   position: fixed;
   top: 0;
@@ -309,6 +299,7 @@ button.narrow {
   z-index: 1000;
 }
 
+/** Modal window for the NML file upload zone. */
 .nml-upload-zone-modal {
   position: relative;
   top: 100px;
@@ -319,6 +310,7 @@ button.narrow {
   margin: 0 auto;
 }
 
+/** Styles for the dataset upload dropzone, including active, accept, and reject states. */
 .dataset-upload-dropzone {
   flex: 1;
   display: flex;
@@ -349,10 +341,9 @@ button.narrow {
   }
 }
 
-.transparent-background-on-hover:hover {
-  background: transparent;
-}
 
+
+/** Stylized box for displaying cross-links (e.g. between datasets). */
 .crosslink-box {
   padding: 20px;
   margin: 20px;
@@ -362,6 +353,7 @@ button.narrow {
 }
 
 
+/** Removes borders from nested input and button elements. */
 .no-borders {
 
   input,
@@ -370,170 +362,15 @@ button.narrow {
   }
 }
 
-.voxelytics-view {
-  min-width: 1300px;
 
-  .task-panel {
-    height: calc(100vh - 100px);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-  }
 
-  .task-panel-name {
-    color: #777;
-    font-size: 0.9em;
-    padding-left: 1em;
-  }
-
-  .task-panel-state {
-    color: #777;
-    font-size: 0.9em;
-    padding-left: 1em;
-
-    .ant-tag {
-      margin-bottom: 0;
-    }
-
-    .ant-tag-default {
-      color: #888;
-      border-color: #ddd;
-    }
-  }
-
-  .stats-table {
-    text-align: right;
-
-    tbody tr:nth-child(odd) {
-      background-color: rgba(128, 128, 128, 0.1);
-    }
-
-    td,
-    th {
-      padding: 8px;
-    }
-
-    .stats-label {
-      color: #aaa;
-    }
-  }
-
-  .log-tab {
-    display: flex;
-    flex-direction: column;
-
-    .log-tab-header {
-      display: flex;
-      justify-content: end;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .log-tab-warning {
-      font-size: 0.9em;
-      color: #777;
-      text-align: center;
-    }
-
-    .log-content {
-      position: relative;
-      background-color: var(--ant-color-bg-container);
-      width: 100%;
-      height: 500px;
-      overflow-y: auto;
-    }
-
-    .log-line {
-      position: relative;
-      padding-left: 60px;
-
-      @log-font-family: "RobotoMono", Monaco, "Courier New", monospace;
-      @log-font-size: 12px;
-      @log-line-height: 19px;
-      @log-line-number-width: 60px;
-
-      .log-line-number {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: @log-line-number-width;
-        padding-right: 1em;
-        font-family: @log-font-family;
-        font-size: @log-font-size;
-        line-height: @log-line-height;
-        color: #666;
-        text-align: right;
-        user-select: none;
-      }
-
-      code {
-        display: block;
-        width: calc(100% - @log-line-number-width);
-        font-family: @log-font-family;
-        font-size: @log-font-size;
-        line-height: @log-line-height;
-        overflow-wrap: break-word;
-        color: var(--ant-color-text);
-      }
-
-      &:hover {
-        background-color: var(--ant-control-item-bg-hover);
-      }
-    }
-
-    &.log-tab-fullscreen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1001;
-      background: var(--ant-color-bg-base);
-      padding-top: 8px;
-
-      .log-tab-header {
-        padding-right: 8px;
-      }
-
-      .log-tab-content {
-        height: unset;
-        flex: 1;
-      }
-    }
-  }
-
-  .react-flow {
-    .react-flow__minimap {
-      background-color: var(--ant-color-bg-container);
-    }
-
-    .controls {
-      flex-direction: column;
-      display: flex;
-      z-index: 1000;
-      position: absolute;
-      bottom: 25px;
-      left: 0;
-
-      .ant-btn:not(:first-child) {
-        margin-top: -1px;
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-      }
-
-      .ant-btn:not(:last-child) {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-    }
-  }
-}
-
+/** Ensures the React modal portal has a high enough z-index. */
 .ReactModalPortal {
   position: absolute;
   z-index: 1001;
 }
 
+/** Styling for items in a folder-like listing (e.g. sidebar). */
 .folder-item {
   padding: 0 4px;
   border-radius: 2px;
@@ -541,14 +378,17 @@ button.narrow {
   flex-grow: 1;
 }
 
+/** Highlight background color for valid drag-and-drop targets. */
 .valid-drop-target {
   background-color: var(--ant-blue-4);
 }
 
+/** Selection highlight for folder items in the sidebar. */
 .highlight-folder-sidebar {
   background-color: var(--ant-table-row-selected-hover-bg);
 }
 
+/** Styling for secondary labels in the sidebar. */
 .sidebar-label {
   color: var(--ant-color-text-secondary);
   font-size: 12px;
@@ -556,6 +396,7 @@ button.narrow {
   margin-bottom: 4px;
 }
 
+/** Full-screen login view layout and background styling. */
 .login-view {
   & {
     height: 100%;
@@ -589,23 +430,18 @@ button.narrow {
   }
 }
 
-.ai-job-title {
-  text-align: center;
-  display: inherit;
-}
 
+/** Fixed width for the project and annotation type dropdown. */
 .project-and-annotation-type-dropdown {
   width: 200px;
 }
 
-.task-annotation-view {
-  width: 31%;
-}
-
+/** Limits the height of the organization switch dropdown menu. */
 .organization-switch-menu>ul {
   max-height: calc(100vh - var(--navbar-height) - 200px) !important;
 }
 
+/** Grid-based layout for time tracking detail columns. */
 .time-tracking-details {
   .ant-col {
     display: grid;
@@ -617,6 +453,7 @@ button.narrow {
   }
 }
 
+/** Global top-level progress bar for long-running operations. */
 .global-progress-bar {
   position: absolute;
   top: 0;
@@ -627,15 +464,18 @@ button.narrow {
   transition: width 0.3s ease-in-out;
 }
 
+/** Transitions the global progress bar to zero width without animation. */
 .hidden-global-progress-bar {
   width: 0 !important;
   transition: none !important;
 }
 
+/** Utility class for maximum possible z-index. 32-bit signed integer */
 .max-z-index {
-  z-index: 10000000000;
+  z-index: 2147483646;
 }
 
+/** Margin adjustments for checkboxes in the registration form. */
 .registration-form-checkboxes {
   >div:first-of-type {
     margin-bottom: 0px;
@@ -646,6 +486,7 @@ button.narrow {
   }
 }
 
+/** Interactive list items used for selection (e.g. in the AI job selector). */
 .hoverable-list-item {
   // used in AI Job Drawer for selecting models, tasks etc.
   transition: background-color 0.2s ease-in-out;
@@ -666,6 +507,7 @@ button.narrow {
   }
 }
 
+/** Styling adjustment for notification buttons in the 'many bucket updates' warning. */
 .many-bucket-updates-warning {
   .ant-notification-notice-btn {
     margin-top: 0 !important;

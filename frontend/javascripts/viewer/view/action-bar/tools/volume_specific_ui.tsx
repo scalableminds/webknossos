@@ -5,6 +5,7 @@ import {
   ScissorOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import {
   Badge,
   Button,
@@ -16,12 +17,11 @@ import {
   type RadioChangeEvent,
   Space,
 } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import { usePrevious, useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-
-import { usePrevious } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
 import {
   FillModeEnum,
   type InterpolationMode,
@@ -35,23 +35,20 @@ import {
   getMappingInfoForVolumeTracing,
   getSegmentColorAsRGBA,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { clearProofreadingByProducts } from "viewer/model/actions/proofread_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { showQuickSelectSettingsAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
+import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
-
-import { updateNovelUserExperienceInfos } from "admin/rest_api";
-import FastTooltip from "components/fast_tooltip";
-import { clearProofreadingByProducts } from "viewer/model/actions/proofread_actions";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
-import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import { QuickSelectControls } from "../quick_select_settings";
 import {
   ACTIONBAR_MARGIN_LEFT,

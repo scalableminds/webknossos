@@ -3,8 +3,8 @@
 // replacing the actions with updateTree*Group*Visibility actions where
 // appropriate.
 // See compactToggleActions for the high-level logic of the compaction.
-import last from "lodash/last";
-import partition from "lodash/partition";
+import last from "lodash-es/last";
+import partition from "lodash-es/partition";
 import type {
   UpdateActionWithoutIsolationRequirement,
   UpdateSegmentVisibilityVolumeAction,
@@ -19,11 +19,12 @@ import {
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {
-  MISSING_GROUP_ID,
   createGroupToSegmentsMap,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+
 type GroupNode = {
   children: GroupNode[];
   groupId: number | null | undefined;

@@ -1,22 +1,20 @@
-import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
-import React, { useState } from "react";
-
-import { startRenderAnimationJob } from "admin/rest_api";
-import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import Store, { type MeshInformation, type UserBoundingBox } from "viewer/store";
-
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
-  PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+
+import { startRenderAnimationJob } from "admin/rest_api";
+import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
 import { LayerSelection } from "components/layer_selection";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import {
   computeBoundingBoxFromBoundingBoxObject,
   computeBoundingBoxObjectFromBoundingBox,
 } from "libs/utils";
+import React, { useState } from "react";
 import type { Mesh } from "three";
 import {
   type APIDataLayer,
@@ -39,6 +37,7 @@ import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import Store, { type MeshInformation, type UserBoundingBox } from "viewer/store";
 import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
 
 type Props = {

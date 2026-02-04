@@ -1,5 +1,5 @@
 import { diffArrays } from "libs/utils";
-import range from "lodash/range";
+import range from "lodash-es/range";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -9,15 +9,15 @@ import {
   LineSegments,
   Object3D,
   Points,
-  RGBAFormat,
   type RawShaderMaterial,
+  RGBAFormat,
 } from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import EdgeShader from "viewer/geometries/materials/edge_shader";
 import NodeShader, {
-  NodeTypes,
   COLOR_TEXTURE_WIDTH,
+  NodeTypes,
 } from "viewer/geometries/materials/node_shader";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { sum } from "viewer/model/helpers/iterator_utils";
@@ -154,7 +154,7 @@ class Skeleton {
     this.stopStoreListening = () => {};
 
     this.treeColorTexture.dispose();
-    // @ts-ignore
+    // @ts-expect-error
     this.treeColorTexture = undefined;
 
     this.nodes.material.dispose();
@@ -429,8 +429,12 @@ class Skeleton {
             const oldIds = oldElements.map((el) => el.nodeId);
             const newIds = newElements.map((el) => el.nodeId);
             const { onlyA: deletedIds, onlyB: createdIds } = diffArrays(oldIds, newIds);
-            createdIds.forEach((id) => callback(id, true));
-            deletedIds.forEach((id) => callback(id, false));
+            createdIds.forEach((id) => {
+              callback(id, true);
+            });
+            deletedIds.forEach((id) => {
+              callback(id, false);
+            });
           };
 
           const treeId = update.value.id;

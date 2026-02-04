@@ -1,82 +1,80 @@
-import { type Mock, vi, type TestContext as BaseTestContext } from "vitest";
-import cloneDeep from "lodash/cloneDeep";
-import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
-import { sleep } from "libs/utils";
-import dummyUser from "test/fixtures/dummy_user";
-import dummyOrga from "test/fixtures/dummy_organization";
-import { setSceneController } from "viewer/controller/scene_controller_provider";
-import {
-  tracing as SKELETON_TRACING,
-  annotation as SKELETON_ANNOTATION,
-  annotationProto as SKELETON_ANNOTATION_PROTO,
-} from "../fixtures/skeletontracing_server_objects";
-import {
-  tracing as TASK_TRACING,
-  annotation as TASK_ANNOTATION,
-  annotationProto as TASK_ANNOTATION_PROTO,
-} from "../fixtures/tasktracing_server_objects";
-import {
-  tracing as VOLUME_TRACING,
-  annotation as VOLUME_ANNOTATION,
-  annotationProto as VOLUME_ANNOTATION_PROTO,
-} from "../fixtures/volumetracing_server_objects";
-import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
-import type { ApiInterface } from "viewer/api/api_latest";
-import type { ModelType } from "viewer/model";
-
-import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
-import Model from "viewer/model";
-import UrlManager from "viewer/controller/url_manager";
-
-import WebknossosApi from "viewer/api/api_loader";
-import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
-import rootSaga from "viewer/model/sagas/root_saga";
-import { setStore, setModel } from "viewer/singletons";
-import { setupApi } from "viewer/api/internal_api";
-import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import Request, { type RequestOptions } from "libs/request";
-import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
-import app from "app";
 import {
   acquireAnnotationMutex,
-  releaseAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
   getEditableAgglomerateSkeleton,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
-  sendSaveRequestWithToken,
   type MinCutTargetEdge,
+  releaseAnnotationMutex,
+  sendSaveRequestWithToken,
 } from "admin/rest_api";
+import app from "app";
+import { __setFeatures } from "features";
+import Request, { type RequestOptions } from "libs/request";
+import { sleep } from "libs/utils";
+import cloneDeep from "lodash-es/cloneDeep";
+import dummyOrga from "test/fixtures/dummy_organization";
+import dummyUser from "test/fixtures/dummy_user";
 import {
-  resetStoreAction,
-  restartSagaAction,
-  wkInitializedAction,
-} from "viewer/model/actions/actions";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import {
-  tracings as HYBRID_TRACINGS,
   annotation as HYBRID_ANNOTATION,
   annotationProto as HYBRID_ANNOTATION_PROTO,
+  tracings as HYBRID_TRACINGS,
 } from "test/fixtures/hybridtracing_server_objects";
 import {
-  tracings as MULTI_VOLUME_TRACINGS,
   annotation as MULTI_VOLUME_ANNOTATION,
   annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
+  tracings as MULTI_VOLUME_TRACINGS,
 } from "test/fixtures/multivolume_server_objects";
 import type {
   APIAnnotation,
   APIDataset,
   APITracingStoreAnnotation,
+  ElementClass,
   ServerSkeletonTracing,
   ServerTracing,
   ServerVolumeTracing,
-  ElementClass,
 } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
+import type { ApiInterface } from "viewer/api/api_latest";
+import WebknossosApi from "viewer/api/api_loader";
+import { setupApi } from "viewer/api/internal_api";
+import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
+import { setSceneController } from "viewer/controller/scene_controller_provider";
+import UrlManager from "viewer/controller/url_manager";
+import type { ModelType } from "viewer/model";
+import Model from "viewer/model";
+import {
+  resetStoreAction,
+  restartSagaAction,
+  wkInitializedAction,
+} from "viewer/model/actions/actions";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
-import { __setFeatures } from "features";
+import rootSaga from "viewer/model/sagas/root_saga";
+import { setModel, setStore } from "viewer/singletons";
+import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
+import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
+import { type TestContext as BaseTestContext, type Mock, vi } from "vitest";
+import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
+import {
+  annotation as SKELETON_ANNOTATION,
+  annotationProto as SKELETON_ANNOTATION_PROTO,
+  tracing as SKELETON_TRACING,
+} from "../fixtures/skeletontracing_server_objects";
+import {
+  annotation as TASK_ANNOTATION,
+  annotationProto as TASK_ANNOTATION_PROTO,
+  tracing as TASK_TRACING,
+} from "../fixtures/tasktracing_server_objects";
+import {
+  annotation as VOLUME_ANNOTATION,
+  annotationProto as VOLUME_ANNOTATION_PROTO,
+  tracing as VOLUME_TRACING,
+} from "../fixtures/volumetracing_server_objects";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -438,7 +436,7 @@ export async function setupWebknossosForTesting(
   };
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>
-    Model.getAllLayers().map((layer) => {
+    Model.getAllLayers().forEach((layer) => {
       layer.pullQueue.destroy();
     });
   testContext.receivedDataPerSaveRequest = (
@@ -487,7 +485,7 @@ export async function setupWebknossosForTesting(
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
-    // @ts-ignore
+    // @ts-expect-error
     segmentMeshController: {
       meshesGroupsPerSegmentId: {},
       updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
@@ -523,7 +521,7 @@ export async function setupWebknossosForTesting(
     if (error instanceof Error) {
       throw error;
     } else {
-      // @ts-ignore
+      // @ts-expect-error
       throw new Error(error.message);
     }
   }

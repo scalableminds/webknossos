@@ -1,22 +1,22 @@
 import update from "immutability-helper";
-import { describe, it, expect } from "vitest";
-import type { WebknossosState } from "viewer/store";
+import { M4x4, V3 } from "libs/mjs";
+import { map3 } from "libs/utils";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
+import testRotations from "test/fixtures/test_rotations";
+import { almostEqual } from "test/libs/transform_spec_helpers";
+import { Euler, MathUtils, Vector3 as ThreeVector3 } from "three";
+import { OrthoViews, OrthoViewValuesWithoutTDView, UnitLong, type Vector3 } from "viewer/constants";
+import defaultState from "viewer/default_state";
 import {
   calculateGlobalPos,
   calculateInViewportPos,
 } from "viewer/model/accessors/view_mode_accessor";
-import { OrthoViews, OrthoViewValuesWithoutTDView, UnitLong, type Vector3 } from "viewer/constants";
-import defaultState from "viewer/default_state";
-import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
-import { M4x4, V3 } from "libs/mjs";
-import Dimensions from "viewer/model/dimensions";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
+import Dimensions from "viewer/model/dimensions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
-import { MathUtils, Vector3 as ThreeVector3, Euler } from "three";
-import { map3 } from "libs/utils";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { almostEqual } from "test/libs/transform_spec_helpers";
-import testRotations from "test/fixtures/test_rotations";
+import type { WebknossosState } from "viewer/store";
+import { describe, expect, it } from "vitest";
 
 const viewportOffsets = {
   left: 200,

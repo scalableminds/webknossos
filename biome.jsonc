@@ -1,32 +1,49 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "organizeImports": {
-    "enabled": true,
-    "ignore": [
-      "frontend/javascripts/test/*",
-      "frontend/javascripts/viewer/model/helpers/shader_editor.ts",
-      "**/__snapshots__/**"
+  "files": {
+    "includes": [
+      "**",
+      "!**/libs/stl_exporter.ts",
+      "!**/libs/DRACOLoader.ts",
+      "!**/libs/DRACOWorker.worker.js",
+      "!**/libs/BufferGeometryUtils.ts",
+      "!**/libs/parse_stl_buffer.ts",
+      "!**/libs/trackball_controls.ts",
+      "!**/libs/fps_meter.ts",
+      "!**/*.d.ts",
+      "!**/*.json",
+      "!**/*.jsonc",
+      "!**/*.ts.snap",
+      "!**/__snapshots__",
+      "!**/frontend/javascripts/test/snapshots"
     ]
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   },
   "linter": {
     "enabled": true,
-    "ignore": [
-      "libs/keyboard.ts",
-      "libs/stl_exporter.ts",
-      "libs/DRACOLoader.ts",
-      "libs/DRACOWorker.worker.js",
-      "libs/BufferGeometryUtils.ts",
-      "libs/fps_meter.ts",
-      "libs/parse_stl_buffer.ts",
-      "libs/trackball_controls.ts",
-      "*.d.ts",
-      "frontend/javascripts/test/snapshots/*",
-      "**/__snapshots__/**"
+    "includes": [
+      "!**/libs/keyboard.ts",
+      "!**/libs/stl_exporter.ts",
+      "!**/libs/DRACOLoader.ts",
+      "!**/libs/DRACOWorker.worker.js",
+      "!**/libs/BufferGeometryUtils.ts",
+      "!**/libs/fps_meter.ts",
+      "!**/libs/parse_stl_buffer.ts",
+      "!**/libs/trackball_controls.ts",
+      "!**/*.d.ts",
+      "!**/*.json",
+      "!**/frontend/javascripts/test/snapshots/**/*",
+      "**"
     ],
     "rules": {
       "recommended": true,
       "style": {
-        "useShorthandArrayType": "off",
         "useBlockStatements": "off",
         "noNegationElse": "off",
         "noImplicitBoolean": "off",
@@ -41,13 +58,26 @@
         "useDefaultParameterLast": "off",
         "useAsConstAssertion": "off",
         "noNonNullAssertion": "off",
-        "noNamespaceImport": "error"
+        "useConsistentArrayType": {
+          "level": "off",
+          "options": {
+            "syntax": "shorthand"
+          }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "lodash": "Import <method> from 'lodash/<method>' instead."
+            }
+          }
+        }
       },
       "complexity": {
-        "useSimplifiedLogicExpression": "off",
+        "useSimplifiedLogicExpression": "off", // TODO: consider removing
         "noForEach": "off",
         "noBannedTypes": "error",
-        "noUselessFragments": "off",
+        "noUselessFragments": "off", // TODO: consider removing
         "useLiteralKeys": "off",
         "useArrowFunction": "off",
         "noStaticOnlyClass": "off",
@@ -60,16 +90,20 @@
         "useKeyWithClickEvents": "off",
         "useIframeTitle": "off",
         "noAriaHiddenOnFocusable": "off",
-        "noLabelWithoutControl": "off"
+        "noLabelWithoutControl": "off",
+        "noStaticElementInteractions": "off"
       },
       "performance": {
-        "noDelete": "off"
+        "noDelete": "off",
+        "noNamespaceImport": "error"
       },
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error",
         "noRenderReturnValue": "off",
-        "useHookAtTopLevel": "error"
+        "useHookAtTopLevel": "error",
+        "useExhaustiveDependencies": "warn", // TODO: consider turning this into an error
+        "noReactPropAssignments": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",
@@ -77,44 +111,25 @@
         "noShadowRestrictedNames": "off",
         "noImplicitAnyLet": "off",
         "noConfusingVoidType": "off",
-        "noGlobalIsNan": "off",
+        "noGlobalIsNan": "off", // TODO: consider turning this into an error
         "noArrayIndexKey": "off",
         "noConstEnum": "off",
         "noRedeclare": "off",
         "noFallthroughSwitchClause": "off",
         "noAssignInExpressions": "off"
       },
-      "nursery": {
-        "noRestrictedImports": {
-          "level": "error",
-          "options": {
-            "paths": {
-              "lodash": "Import <method> from 'lodash/<method>' instead."
-            }
-          }
-        }
-      }
+      "nursery": {}
     }
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "lineWidth": 100,
-    "ignore": [
-      "libs/keyboard.ts",
-      "libs/stl_exporter.ts",
-      "libs/DRACOLoader.ts",
-      "libs/DRACOWorker.worker.js",
-      "libs/BufferGeometryUtils.ts",
-      "libs/parse_stl_buffer.ts",
-      "libs/trackball_controls.ts",
-      "*.d.ts",
-      "**/__snapshots__/**"
-    ]
+    "lineWidth": 100
   },
+
   "overrides": [
     {
-      "include": [
+      "includes": [
         "**/package.json"
       ],
       "formatter": {

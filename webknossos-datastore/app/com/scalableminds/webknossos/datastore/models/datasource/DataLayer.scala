@@ -41,12 +41,14 @@ trait DataLayer {
 
   def attachments: Option[DataLayerAttachments]
 
+  def allAttachments: Seq[LayerAttachment] = attachments.map(_.allAttachments).getOrElse(Seq.empty)
+
   def allExplicitPaths: Seq[UPath] = {
     val magPaths = this match {
       case s: StaticLayer => s.mags.flatMap(_.path)
       case _              => Seq.empty
     }
-    val attachmentPaths = attachments.map(_.allAttachments.map(_.path)).getOrElse(Seq.empty)
+    val attachmentPaths = allAttachments.map(_.path)
     magPaths ++ attachmentPaths
   }
 

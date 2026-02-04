@@ -1,7 +1,7 @@
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import { location } from "libs/window";
-import memoize from "lodash/memoize";
+import memoize from "lodash-es/memoize";
 import type {
   APIOrganization,
   APIOrganizationCompact,

@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import min from "lodash/min";
+import min from "lodash-es/min";
 import memoizeOne from "memoize-one";
 import { Euler, Matrix4, Vector3 as ThreeVector3 } from "three";
 import type {

@@ -102,6 +102,7 @@ export function OrganizationOverviewView() {
     upgradeUsersAction = (
       <Button
         shape="circle"
+        type="primary"
         size="small"
         key="upgradeUsersAction"
         icon={<PlusOutlined />}
@@ -116,6 +117,7 @@ export function OrganizationOverviewView() {
     upgradeStorageAction = (
       <Button
         shape="circle"
+        type="primary"
         size="small"
         key="upgradeStorageAction"
         icon={<PlusOutlined />}
@@ -129,7 +131,7 @@ export function OrganizationOverviewView() {
   }
   const buyMoreCreditsAction = (
     <Button
-      type="default"
+      type="primary"
       shape="circle"
       icon={<PlusOutlined />}
       size="small"

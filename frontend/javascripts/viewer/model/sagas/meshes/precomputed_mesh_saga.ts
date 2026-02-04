@@ -500,7 +500,6 @@ export default function* precomputedMeshSaga(): Saga<void> {
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
 
-  // todop: reactivate
   yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);

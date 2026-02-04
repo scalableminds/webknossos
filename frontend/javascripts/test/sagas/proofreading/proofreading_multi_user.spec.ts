@@ -428,7 +428,6 @@ describe("Proofreading (Multi User)", () => {
       expect(receivedUpdateActions.at(-1)).toMatchObject({
         name: "updateSegmentPartial",
         value: {
-          // todop: why? isn't this superfluous?
           actionTracingId: VOLUME_TRACING_ID,
           id: 1339,
           anchorPosition: [1, 1, 1],

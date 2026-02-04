@@ -22,7 +22,7 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import { type NumberLike, startSaga } from "viewer/store";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   expectedMappingAfterMerge,
   expectedMappingAfterMerge2,
@@ -447,8 +447,6 @@ describe("Proofreading (Multi User)", () => {
           [7, 6],
         ]),
       );
-      ColoredLogger.logRed("publishDebuggingState");
-      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();
@@ -1135,6 +1133,129 @@ describe("Proofreading (Multi User)", () => {
       // Asserting no rebasing relevant actions were triggered.
       const rebasingActions = yield flush(rebaseActionChannel);
       expect(rebasingActions.length).toBe(0);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
+    const { api, mocks } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
+
+    backendMock.planVersionInjection(5, [
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: 1337,
+          targetId: 4,
+        },
+      },
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      const initialExpectedMapping = new Map([
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
+      ]);
+      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4], initialExpectedMapping);
+
+      // Prepare the server's reply for the upcoming split.
+      vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+        Promise.resolve([
+          {
+            position1: [4, 4, 4],
+            position2: [5, 5, 5],
+            segmentId1: 4,
+            segmentId2: 5,
+          },
+        ]),
+      );
+
+      // Execute the actual min cut and wait for the finished mapping.
+      yield put(
+        minCutAgglomerateWithPositionAction(
+          [5, 5, 5], // At this position is: unmappedId=5 / mappedId=4
+        ),
+      );
+      yield call(waitUntilNotBusy);
+
+      yield take("FINISH_MAPPING_INITIALIZATION");
+      yield take("FINISH_MAPPING_INITIALIZATION");
+
+      ColoredLogger.logGreen("expectMapping");
+      yield* expectMapping(
+        tracingId,
+        new Map([
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1337],
+          [5, 1339],
+          [6, 1339],
+          [7, 1339],
+          // [1337, 1339], not loaded
+          // [1338, 1339], not loaded
+        ]),
+      );
+
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
+
+      const backendState = backendMock.getState()!;
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const currentSegments = state.annotation.volumes[0].segments;
+        expect(currentSegments.size()).toEqual(2);
+        const segment4AfterSaving = currentSegments.getNullable(4);
+        expect(segment4AfterSaving).toBeUndefined();
+
+        const segment1337AfterSaving = currentSegments.getNullable(1337);
+
+        expect(segment1337AfterSaving).toMatchObject({
+          name: "Segment 1337 and Segment 4",
+          anchorPosition: [4, 4, 4],
+        });
+        const segment1339AfterSaving = currentSegments.getNullable(1339);
+        expect(segment1339AfterSaving).toMatchObject({
+          name: "Segment 1339 - Split off from: Segment 4",
+          anchorPosition: [5, 5, 5],
+        });
+      }
+
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+
+      expect(receivedUpdateActions).toContainEqual({
+        name: "splitAgglomerate",
+        value: {
+          actionTracingId: "volumeTracingId",
+          segmentId1: 4,
+          segmentId2: 5,
+          agglomerateId: 1337,
+        },
+      });
+
+      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();

@@ -417,10 +417,10 @@ export function mockInitialBucketAndAgglomerateData(
 
 export function* expectMapping(
   tracingId: string,
-  initialExpectedMapping: Map<number, number>,
+  expectedMapping: Map<number, number>,
 ): Saga<void> {
   const mapping0 = yield select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
-  expect(mapping0).toEqual(initialExpectedMapping);
+  expect(mapping0).toEqual(expectedMapping);
 }

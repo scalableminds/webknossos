@@ -166,7 +166,7 @@ export function OrganizationOverviewView() {
     );
   }
 
-  const orgaStats: (SettingsCardProps & { key: Key })[] = [
+  const rowOneStats: (SettingsCardProps & { key: Key })[] = [
     {
       key: "name",
       title: "Name",
@@ -185,6 +185,8 @@ export function OrganizationOverviewView() {
       title: "Owner",
       content: organization.ownerName,
     },
+  ];
+  const rowTwoStats: (SettingsCardProps & { key: Key })[] = [
     {
       key: "plan",
       title: "Current Plan",
@@ -195,7 +197,6 @@ export function OrganizationOverviewView() {
         </a>
       ),
     },
-    
     {
       key: "users",
       title: "Users",
@@ -208,7 +209,7 @@ export function OrganizationOverviewView() {
       content: `${usedStorageLabel} / ${includedStorageLabel}`,
       action: upgradeStorageAction,
     },
-{
+    {
       key: "ai-plan",
       title: "AI Add-on",
       content: aiPlanLabel,
@@ -216,7 +217,7 @@ export function OrganizationOverviewView() {
     },
     {
       key: "credits",
-      title: "WEBKNOSSOS Credits",
+      title: "AI Credits",
       content:
         organization.milliCreditBalance != null
           ? formatMilliCreditsString(organization.milliCreditBalance)
@@ -234,7 +235,19 @@ export function OrganizationOverviewView() {
       ) : null}
       <Spin spinning={isFetchingData}>
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-          {orgaStats.map((stat) => (
+          {rowOneStats.map((stat) => (
+            <Col span={12} key={stat.key}>
+              <SettingsCard
+                title={stat.title}
+                content={stat.content}
+                action={stat.action}
+                tooltip={stat.tooltip}
+              />
+            </Col>
+          ))}
+        </Row>
+        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+          {rowTwoStats.map((stat) => (
             <Col span={8} key={stat.key}>
               <SettingsCard
                 title={stat.title}
@@ -245,6 +258,7 @@ export function OrganizationOverviewView() {
             </Col>
           ))}
         </Row>
+        
       </Spin>
       <PlanExpirationCard organization={organization} />
       {organization.pricingPlan === PricingPlanEnum.Personal ||

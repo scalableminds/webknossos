@@ -227,7 +227,6 @@ function UpgradeAiPlanModal({
         <Typography.Paragraph>
           Unlock AI model training for your organization with the AI Add-on. 
         </Typography.Paragraph>
-        <Divider />
         <Typography.Text>Upgrade Highlights include:</Typography.Text>
         <ul>
           {aiAddonFeatures.map((feature) => (

@@ -1,5 +1,5 @@
-import { FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Row } from "antd";
+import { CrownOutlined, FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Col, Row, Space } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
@@ -18,7 +18,11 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () => void }) {
   return (
     <Card
-      title={`${PricingPlanEnum.Team} Plan`}
+      title={
+        <Space size="small">
+          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />{PricingPlanEnum.Team} Plan
+        </Space>
+      }
       styles={{ body: { minHeight: 220 } }}
       actions={[
         <Button type="primary" onClick={teamUpgradeCallback} key="buy-teamupgrade-button">
@@ -44,7 +48,11 @@ export function PowerPlanUpgradeCard({
 }) {
   return (
     <Card
-      title={`${PricingPlanEnum.Power} Plan`}
+      title={
+        <Space size="small">
+          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />{PricingPlanEnum.Power} Plan
+        </Space>
+      }
       styles={{ body: { minHeight: 220 } }}
       actions={[
         <Button type="primary" onClick={powerUpgradeCallback} key="buy-power-upgrade-button">
@@ -64,7 +72,7 @@ export function PowerPlanUpgradeCard({
 
 export function AiAddonUpgradeCard({
   onRequestUpgrade,
-  actionLabel = "Request AI Add-on",
+  actionLabel = "Buy AI Add-on",
   description,
 }: {
   onRequestUpgrade?: () => void;
@@ -74,10 +82,10 @@ export function AiAddonUpgradeCard({
   return (
     <Card
       title={
-        <>
-          <RobotOutlined style={{ marginRight: 8, color: "var(--ant-color-primary)" }} />
+        <Space size="small">
+          <RobotOutlined style={{ color: "var(--ant-color-primary)" }} />
           AI Add-on
-        </>
+        </Space>
       }
       styles={{ body: { minHeight: 220 } }}
       actions={

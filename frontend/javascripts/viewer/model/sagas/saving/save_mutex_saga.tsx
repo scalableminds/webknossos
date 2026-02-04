@@ -189,6 +189,15 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
   }
 }
 
+// Needed for tests
+export function* clearAllSubscriptions() {
+  const state = getMutexLogicState();
+  for (const numId of Object.keys(state.subscribersToMutex)) {
+    const unsubscribe = getUnsubscribeFromAnnotationMutexSaga(numId as any as number);
+    yield* call(unsubscribe);
+  }
+}
+
 function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
   const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
   const oldFetchingStrategy = mutexLogicState.fetchingStrategy;

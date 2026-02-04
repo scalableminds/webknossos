@@ -22,13 +22,15 @@ import {
 import { type Saga, select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import {
+  clearAllSubscriptions,
   getMutexLogicState,
   subscribeToAnnotationMutex,
 } from "viewer/model/sagas/saving/save_mutex_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading_test_utils";
+import { delay } from "typed-redux-saga";
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -129,12 +131,39 @@ async function setupWebknossosForTestingWithRestrictions(
 describe("Save Mutex Saga", () => {
   afterEach<WebknossosTestContext>(async (context) => {
     context.tearDownPullQueues();
+    // Not all tests clean up their detached ad hoc mutex fetching sagas.
+    // Thus, we need to manually clear them here.
+    const task = startSaga(function* task() {
+      yield call(clearAllSubscriptions);
+    });
+    await task.toPromise();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
     Store.dispatch(restartSagaAction());
     vi.clearAllMocks(); // clears call counts of *all* spies
     WkDevFlags.liveCollab = initialLiveCollab;
   });
+
+  it<WebknossosTestContext>("clearAllSubscriptions should clear all ad hoc mutex subscriptions.", async (context: WebknossosTestContext) => {
+    WkDevFlags.liveCollab = true;
+    await setupWebknossosForTestingWithRestrictions(context, true, true, true);
+    expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    const task = startSaga(function* task() {
+      const _unsubscribe = yield call(subscribeToAnnotationMutex, "Test");
+      yield delay(1000);
+      expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+      yield call(clearAllSubscriptions);
+      yield delay(10);
+      expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
+      context.mocks.acquireAnnotationMutex.mockClear();
+      context.mocks.releaseAnnotationMutex.mockClear();
+      yield delay(1000);
+      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+      expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+    });
+    await task.toPromise();
+  });
+
   // Properties that can influence whether mutex acquisition is called are:
   // - othersMayEdit
   // - isUpdatingCurrentlyAllowed

@@ -120,6 +120,8 @@ import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
+import { subscribeToAnnotationMutex } from "../../saving/save_mutex_saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -233,6 +235,14 @@ function* syncWithBackend() {
   yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
   yield* call([Model, Model.ensureSavedState]);
   yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
+}
+
+function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  if (othersMayEdit && WkDevFlags.liveCollab) {
+    return yield* call(subscribeToAnnotationMutex, proofreadingSagaId);
+  }
+  return null;
 }
 
 function* loadCoarseMesh(
@@ -586,6 +596,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
 
   yield* put(pushSaveQueueTransaction(items));
+  const unsubscribeFromAnnotationMutex = yield* call(
+    subscribeToAnnotationMutexInLiveCollab,
+    "Proofreading via Skeleton",
+  );
   yield* call(syncWithBackend);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
   if (proofreadingPostProcessingInfo) {
@@ -707,6 +721,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   } else {
     // A merge happened. Remove the segment that doesn't exist anymore.
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
+  }
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
   }
 
   const pack = (oldAgglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
@@ -853,6 +871,10 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, dummySourceInfo);
 
   yield* put(pushSaveQueueTransaction(items));
+  const unsubscribeFromAnnotationMutex = yield* call(
+    subscribeToAnnotationMutexInLiveCollab,
+    "Proofreading Partitioned Min-Cut",
+  );
   yield* call(syncWithBackend);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
   const agglomerateIdBeforeSplit = proofreadingPostProcessingInfo
@@ -940,6 +962,10 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     );
 
     Toast.info(`Assigned name "${agglomerate.name}" to new split-off segment.`);
+  }
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
   }
 
   // Get positions of new meshes from first split edge information.
@@ -1074,7 +1100,9 @@ function* clearProofreadingByproducts() {
   const meshRemoveActions = Object.values(meshInfos)
     // TODO @MichaelBuessemeyer Double check this. This map does not return anything
     .map((meshInfo) => {
-      meshInfo.isProofreadingAuxiliaryMesh ? removeMeshAction(layerName, meshInfo.segmentId) : null;
+      return meshInfo.isProofreadingAuxiliaryMesh
+        ? removeMeshAction(layerName, meshInfo.segmentId)
+        : null;
     })
     .filter((action) => action != null);
   for (const action of meshRemoveActions) {
@@ -1186,6 +1214,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
 
   yield* put(pushSaveQueueTransaction(updateActions));
+  const unsubscribeFromAnnotationMutex = yield* call(
+    subscribeToAnnotationMutexInLiveCollab,
+    "Proofreading Merge or Min-Cut",
+  );
   yield* call(syncWithBackend);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
   if (proofreadingPostProcessingInfo) {
@@ -1314,6 +1346,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
     Toast.info(`Assigned name "${sourceAgglomerate.name}" to new split-off segment.`);
   }
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
+  }
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
@@ -1399,6 +1435,10 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, idInfos[0], idInfos[0]);
 
   yield* put(pushSaveQueueTransaction(updateActions));
+  const unsubscribeFromAnnotationMutex = yield* call(
+    subscribeToAnnotationMutexInLiveCollab,
+    "Proofreading Split From All Neighbors",
+  );
   yield* call(syncWithBackend);
 
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
@@ -1469,6 +1509,10 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     yield* all(updateNeighborNamesActions);
 
     Toast.info(`Assigned name "${targetAgglomerate.name}" to all new split-off segments.`);
+  }
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
   }
 
   /* Reload meshes */

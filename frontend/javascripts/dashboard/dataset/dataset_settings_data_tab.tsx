@@ -68,7 +68,7 @@ function DatasetTransformationsModeCard() {
           name={["coordinateTransformations"]}
           label={
             <Space size="small">
-              Coordinate Transformations JSON
+              Coordinate Transformations JSON.
               <Link to="https://docs.webknossos.org/webknossos/datasets/settings.html">
                 Read more about the format
               </Link>
@@ -76,7 +76,8 @@ function DatasetTransformationsModeCard() {
           }
           rules={[
             {
-              validator: (rule, value) => validateTransformationsJSON(rule, value),
+              validator: (rule, value) =>
+                value !== "" ? validateTransformationsJSON(rule, value) : Promise.resolve(),
             },
           ]}
         >

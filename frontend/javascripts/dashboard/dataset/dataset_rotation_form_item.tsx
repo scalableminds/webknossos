@@ -134,7 +134,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         <FormItemWithInfo
           name={["datasetRotation", axis, "rotationInDegrees"]}
           label={`${axis.toUpperCase()} Axis Rotation`}
-          info={`Change the datasets rotation around the ${axis}-axis.`}
+          info={`Change the datasets rotation in 90 degree steps around the ${axis}-axis.`}
           colon={false}
         >
           <Slider min={0} max={270} step={90} onChange={setMatrixRotationsForAllLayer} />
@@ -146,16 +146,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           colon={false}
           label=" " /* Whitespace label is needed for correct formatting*/
         >
-          <InputNumber
-            min={0}
-            max={270}
-            step={90}
-            precision={0}
-            onChange={(value: number | null) =>
-              // InputNumber might be called with null, so we need to check for that.
-              value != null && setMatrixRotationsForAllLayer(value)
-            }
-          />
+          <InputNumber readOnly variant="borderless" />
         </FormItem>
       </Col>
       <Col span={4} style={{ marginRight: -12 }}>

@@ -86,6 +86,8 @@ All in all, the provided JSON for a dataset with the layers `color` and `segment
 ]
 ```
 
+Please note that transformations in `Advanced` mode can only be defined for a specific layer. For transformations that should be applied to the whole dataset, either use the `Simple` mode or define the wanted transformation for each layer individually. 
+
 
 ### Layer Settings
 

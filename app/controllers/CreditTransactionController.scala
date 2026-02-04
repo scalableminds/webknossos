@@ -12,11 +12,11 @@ import models.organization.{
   CreditTransactionState,
   FreeCreditTransactionService,
   OrganizationDAO,
-  OrganizationService
 }
 import models.user.UserService
 import com.scalableminds.util.tools.Box.tryo
 import play.api.i18n.Messages
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import play.silhouette.api.Silhouette
 import security.WkEnv
@@ -24,8 +24,7 @@ import security.WkEnv
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CreditTransactionController @Inject()(organizationService: OrganizationService,
-                                            organizationDAO: OrganizationDAO,
+class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
                                             creditTransactionService: CreditTransactionService,
                                             freeCreditTransactionService: FreeCreditTransactionService,
                                             creditTransactionDAO: CreditTransactionDAO,
@@ -82,6 +81,13 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually revoke expired credits"
       _ <- freeCreditTransactionService.revokeExpiredCredits()
     } yield Ok
+  }
+
+  def list(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      transactions <- creditTransactionDAO.findAll
+      transactionsJs <- Fox.serialCombined(transactions)(creditTransactionService.publicWrites)
+    } yield Ok(Json.toJson(transactionsJs))
   }
 
 }

@@ -8,17 +8,10 @@ import {
 } from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import {
-  // ColoredLogger,
-  getAdaptToTypeFunction,
-  isEditableEventTarget,
-  isNumberMap,
-  SoftError,
-} from "libs/utils";
+import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
-import uniq from "lodash-es/uniq";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
@@ -44,7 +37,6 @@ import {
   getActiveSegmentationTracingLayer,
   getEditableMappingForVolumeTracingId,
   getMeshInfoForSegment,
-  getSegmentName,
   getSegmentsForLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -1022,7 +1014,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   let sourceAgglomerateId = sourceInfo.agglomerateId;
   let targetAgglomerateId = targetInfo.agglomerateId;
   const sourceAgglomerate = volumeTracing.segments.getNullable(Number(sourceAgglomerateId));
-  const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */

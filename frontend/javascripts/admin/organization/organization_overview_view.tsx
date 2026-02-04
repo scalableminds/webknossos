@@ -1,4 +1,5 @@
 import { PlusOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
@@ -6,9 +7,8 @@ import { Button, Col, Row, Spin, Typography } from "antd";
 import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type Key, useEffect, useState } from "react";
+import { type Key, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import type { APIPricingPlanStatus } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { SettingsCard, type SettingsCardProps } from "../account/helpers/settings_card";
@@ -18,7 +18,7 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
-import { getActiveUserCount, PricingPlanEnum } from "./pricing_plan_utils";
+import { formatAiPlanLabel, getActiveUserCount, PricingPlanEnum } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
@@ -28,22 +28,41 @@ export function OrganizationOverviewView() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
-  const [isFetchingData, setIsFetchingData] = useState(true);
-  const [activeUsersCount, setActiveUsersCount] = useState(1);
-  const [pricingPlanStatus, setPricingPlanStatus] = useState<APIPricingPlanStatus | null>(null);
+
+  const {
+    data: users = [],
+    isFetching: isFetchingUsers,
+    error: usersError,
+  } = useQuery({
+    queryKey: ["users"],
+    queryFn: getUsers,
+  });
+
+  const {
+    data: pricingPlanStatus,
+    isFetching: isFetchingPlanStatus,
+    error: pricingPlanError,
+  } = useQuery({
+    queryKey: ["pricingPlanStatus"],
+    queryFn: getPricingPlanStatus,
+  });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (usersError) {
+      Toast.error("Could not load users.");
+      console.error(usersError);
+    }
+  }, [usersError]);
 
-  async function fetchData() {
-    setIsFetchingData(true);
-    const [users, pricingPlanStatus] = await Promise.all([getUsers(), getPricingPlanStatus()]);
+  useEffect(() => {
+    if (pricingPlanError) {
+      Toast.error("Could not load pricing plan status.");
+      console.error(pricingPlanError);
+    }
+  }, [pricingPlanError]);
 
-    setPricingPlanStatus(pricingPlanStatus);
-    setActiveUsersCount(getActiveUserCount(users));
-    setIsFetchingData(false);
-  }
+  const isFetchingData = isFetchingUsers || isFetchingPlanStatus;
+  const activeUsersCount = getActiveUserCount(users);
 
   async function setOrganizationName(newOrgaName: string) {
     if (!ORGA_NAME_REGEX_PATTERN.test(newOrgaName)) {
@@ -70,6 +89,7 @@ export function OrganizationOverviewView() {
       : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
+  const aiPlanLabel = formatAiPlanLabel(organization.aiPlan);
 
   let upgradeUsersAction: React.ReactNode = null;
   let upgradeStorageAction: React.ReactNode = null;
@@ -146,6 +166,11 @@ export function OrganizationOverviewView() {
           Compare all plans
         </a>
       ),
+    },
+    {
+      key: "ai-plan",
+      title: "AI Add-on",
+      content: aiPlanLabel,
     },
     {
       key: "users",

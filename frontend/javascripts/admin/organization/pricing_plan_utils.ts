@@ -10,6 +10,16 @@ export enum PricingPlanEnum {
   Custom = "Custom",
 }
 
+export enum AiPlanEnum {
+  TeamAI = "Team_AI",
+  PowerAI = "Power_AI",
+}
+
+const AI_PLAN_LABELS: Record<AiPlanEnum, string> = {
+  [AiPlanEnum.TeamAI]: "Team AI",
+  [AiPlanEnum.PowerAI]: "Power AI",
+};
+
 export const teamPlanFeatures = [
   "Everything from Personal plan",
   "Collaborative Annotation",
@@ -92,6 +102,15 @@ export function isFeatureAllowedByPricingPlan(
 
 export function hasSomePaidPlan(organization: APIOrganization | null) {
   return isFeatureAllowedByPricingPlan(organization, PricingPlanEnum.Team);
+}
+
+export function hasAiPlan(organization: APIOrganization | null) {
+  return organization?.aiPlan != null;
+}
+
+export function formatAiPlanLabel(aiPlan: AiPlanEnum | null | undefined): string {
+  if (!aiPlan) return "Not booked";
+  return AI_PLAN_LABELS[aiPlan] ?? aiPlan;
 }
 
 export function getFeatureNotAvailableInPlanMessage(

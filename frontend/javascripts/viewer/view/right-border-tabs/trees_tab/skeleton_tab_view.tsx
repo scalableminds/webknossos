@@ -13,14 +13,7 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import {
-  BlobReader,
-  BlobWriter,
-  type Entry,
-  TextReader,
-  ZipReader,
-  ZipWriter,
-} from "@zip.js/zip.js";
+import type { Entry } from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import { Dropdown, Empty, type MenuProps, Modal, notification, Space, Spin, Tooltip } from "antd";
 import { saveAs } from "file-saver";
@@ -207,6 +200,10 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const tryParsingFileAsZip = async (file: File) => {
       try {
+        // @zip.js is a fairly large module (150kb)
+        // Dynamically import it to avoid loading it on Dashboard/admin pages.
+        const { BlobReader, ZipReader, BlobWriter } = await import("@zip.js/zip.js");
+
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();
         const nmlFileEntry = entries.find((entry: Entry) =>
@@ -593,6 +590,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
+      // @zip.js is a fairly large module (150kb)
+      // Dynamically import it to avoid loading it on Dashboard/admin pages.
+      const { BlobWriter, ZipWriter, TextReader } = await import("@zip.js/zip.js");
+
       const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
       const nodesCsv = getTreeNodesAsCSV(
         Store.getState(),

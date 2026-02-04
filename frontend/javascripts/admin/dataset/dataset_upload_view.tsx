@@ -6,7 +6,6 @@ import {
   InfoCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
-import { BlobReader, ZipReader } from "@zip.js/zip.js";
 import {
   AllowedTeamsFormItem,
   CardContainer,
@@ -22,7 +21,6 @@ import {
   createResumableUpload,
   finishDatasetUpload,
   getUnfinishedUploads,
-  refreshToken,
   reserveDatasetUpload,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
@@ -353,7 +351,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       needsConversion: this.state.needsConversion,
     };
     const datastoreUrl = formValues.datastoreUrl;
-    await refreshToken();
     await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
     const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
     this.setState({
@@ -564,6 +561,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       if (fileExtension === "zip") {
         try {
+          // @zip.js is a fairly large module (150kb)
+          // Dynamically import it to avoid loading it on Dashboard/admin pages.
+          const { BlobReader, ZipReader } = await import("@zip.js/zip.js");
+
           const reader = new ZipReader(new BlobReader(file));
           const entries = await reader.getEntries();
           await reader.close();

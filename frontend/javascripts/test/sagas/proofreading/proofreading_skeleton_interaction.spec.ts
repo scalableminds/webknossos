@@ -1,3 +1,4 @@
+import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
@@ -29,7 +30,6 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import type { MinCutTargetEdge } from "admin/rest_api";
 
 function* performMergeTreesProofreading(
   context: WebknossosTestContext,

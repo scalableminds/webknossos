@@ -330,7 +330,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     /*
       Initial Mapping:
       {1 -> 2 -> 3}

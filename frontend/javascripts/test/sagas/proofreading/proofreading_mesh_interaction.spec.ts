@@ -236,6 +236,7 @@ describe("Proofreading (with mesh actions)", () => {
   function* simulateSplitAgglomeratesViaMeshes(
     context: WebknossosTestContext,
   ): Generator<any, void, any> {
+    // Splits segments 1337 and 1338 which are assumed to both be mapped to agglomerate 6.
     const { api } = context;
     const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
     const expectedInitialMapping = new Map([
@@ -357,10 +358,14 @@ describe("Proofreading (with mesh actions)", () => {
     //  [7, 6],
     //  [1337, 6],
     //  [1338, 6]]
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [
-      [7, 1337],
-      [1338, 1],
-    ]);
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [7, 1337],
+        [1338, 1],
+      ],
+      Store.getState(),
+    );
 
     backendMock.planVersionInjection(7, [
       {
@@ -385,7 +390,7 @@ describe("Proofreading (with mesh actions)", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      expect(receivedUpdateActions.slice(-2)).toEqual([
+      expect(receivedUpdateActions.slice(-3)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -407,6 +412,20 @@ describe("Proofreading (with mesh actions)", () => {
             creationTime: 1494695001688,
             groupId: null,
             id: 4,
+            metadata: [],
+            name: null,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [1338, 1338, 1338],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
             metadata: [],
             name: null,
           },
@@ -531,6 +550,8 @@ describe("Proofreading (with mesh actions)", () => {
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   }
 
+  // TODO: this test creates a segment item 6 (for agglomerate 6) with an incorrect anchor position (1337^3).
+  // This is likely an incorrect mock.
   it("should perform partitioned min-cut correctly", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     // Initial mapping should be
@@ -544,10 +565,14 @@ describe("Proofreading (with mesh actions)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Thus, there should be the following circle of edges: 1-2-3-1337-1338-1.
-    const _backendMock = mockInitialBucketAndAgglomerateData(context, [
-      [1, 1338],
-      [3, 1337],
-    ]);
+    const _backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [1, 1338],
+        [3, 1337],
+      ],
+      Store.getState(),
+    );
 
     mockEdgesForPartitionedAgglomerateMinCut(mocks);
 
@@ -558,7 +583,7 @@ describe("Proofreading (with mesh actions)", () => {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.slice(-3)).toEqual([
+      expect(receivedUpdateActions.slice(-4)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -588,6 +613,20 @@ describe("Proofreading (with mesh actions)", () => {
             creationTime: 1494695001688,
             groupId: null,
             id: 1,
+            metadata: [],
+            name: null,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [1338, 1338, 1338],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
             metadata: [],
             name: null,
           },

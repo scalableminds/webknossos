@@ -165,16 +165,17 @@ class AiModelController @Inject()(
         _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
+        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
+                                                                       request.identity._organization)
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         jobCommand = JobCommand.train_neuron_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
           "organization_id" -> organization._id,
           "model_id" -> modelId,
+          "model_name" -> request.body.name,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
-        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
-                                                                       request.identity._organization)
-        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         creditTransactionComment = s"AI training for neuron model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
                                                    commandArgs,
@@ -221,17 +222,18 @@ class AiModelController @Inject()(
         _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
+        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
+                                                                       request.identity._organization)
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         jobCommand = JobCommand.train_instance_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
           "organization_id" -> organization._id,
           "model_id" -> modelId,
+          "model_name" -> request.body.name,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "instance_diameter_nm" -> request.body.instanceDiameterNm
         )
-        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
-                                                                       request.identity._organization)
-        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         creditTransactionComment = s"AI training for instance model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
                                                    commandArgs,

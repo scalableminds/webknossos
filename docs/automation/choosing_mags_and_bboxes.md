@@ -25,7 +25,7 @@ Training at a coarser magnification has two important effects:
 
 ### Practical guidance
 
-- **Neuron segmentation:** Experience has shown that computing a neuron segmentation for a dataset in a voxel size finer than **8 nm/vx** usually doesn’t offer any benefits. Consider switching to the next-coarse magnification instead to benefit from increased data context.
+- **Neuron segmentation:** Our experience has shown that computing a neuron segmentation for a dataset in a voxel size finer than **8 nm/vx** usually doesn’t offer any benefits. Consider switching to the next-coarse magnification instead to benefit from increased data context.
 - **Instance segmentation / object detection:** The optimal magnification depends on the objects of interest. Choose the coarsest magnification at which object boundaries and distinguishing features are still clearly visible.
 
 ## Part 2: Defining Bounding Boxes for Ground Truth Generation

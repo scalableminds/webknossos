@@ -1,32 +1,30 @@
-import { hasAiPlan } from "admin/organization/pricing_plan_utils";
-import { Alert, Drawer, Tabs, Typography } from "antd";
+import {
+  hasAiPlan,
+  isAiAddonEligiblePlan,
+  isUserAllowedToRequestUpgrades,
+} from "admin/organization/pricing_plan_utils";
+import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
+import { Drawer, Tabs } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { AiImageAlignmentJob } from "./alignment/ai_image_alignment_job";
+import { AiTrainingUnavailableNotice } from "./components/ai_training_unavailable_notice";
 import type { StartAiJobDrawerState } from "./constants";
 import { AiImageSegmentationJob } from "./run_ai_model/ai_image_segmentation_job";
 import { AiModelTrainingJob } from "./train_ai_model/ai_training_job";
 
-const AiTrainingUnavailableNotice = () => (
-  <Alert
-    showIcon
-    type="info"
-    message="AI training requires the AI add-on"
-    description={
-      <Typography.Text>
-        To train models, your organization needs the AI add-on. Ask your organization admin to
-        book it.
-      </Typography.Text>
-    }
-  />
-);
-
 export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   const dispatch = useDispatch();
   const orgaHasAiPlan = useWkSelector((state) => hasAiPlan(state.activeOrganization));
-  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser) ?? false;
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  const isSuperUser = activeUser?.isSuperUser ?? false;
+  const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+  const isEligibleForAiAddon = activeOrganization
+    ? isAiAddonEligiblePlan(activeOrganization.pricingPlan)
+    : false;
   const ai_job_drawer_state = useWkSelector((state) => state.uiInformation.aIJobDrawerState);
   const canTrainModels = isSuperUser || orgaHasAiPlan;
 
@@ -50,7 +48,20 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
     {
       label: "Train Segmentation Model",
       key: "open_ai_training",
-      children: canTrainModels ? <AiModelTrainingJob /> : <AiTrainingUnavailableNotice />,
+      children: canTrainModels ? (
+        <AiModelTrainingJob />
+      ) : (
+        <AiTrainingUnavailableNotice
+          onRequestUpgrade={
+            canRequestAiPlan && activeOrganization
+              ? () =>
+                  UpgradePricingPlanModal.requestAiPlanUpgrade(activeOrganization)
+              : undefined
+          }
+          canRequestAiAddon={canRequestAiPlan}
+          isEligibleForAiAddon={isEligibleForAiAddon}
+        />
+      ),
     },
     {
       label: "Image Alignment",

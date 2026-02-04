@@ -1,4 +1,4 @@
-import { FieldTimeOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
@@ -6,6 +6,7 @@ import { useWkSelector } from "libs/react_hooks";
 import type { APIOrganization } from "types/api_types";
 import Constants from "viewer/constants";
 import {
+  aiAddonFeatures,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   PricingPlanEnum,
@@ -54,6 +55,44 @@ export function PowerPlanUpgradeCard({
       {description ? <p>{description}</p> : null}
       <ul>
         {powerPlanFeatures.map((feature) => (
+          <li key={feature.slice(0, 10)}>{feature}</li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+export function AiAddonUpgradeCard({
+  onRequestUpgrade,
+  actionLabel = "Request AI Add-on",
+  description,
+}: {
+  onRequestUpgrade?: () => void;
+  actionLabel?: string;
+  description?: string;
+}) {
+  return (
+    <Card
+      title={
+        <>
+          <RobotOutlined style={{ marginRight: 8, color: "var(--ant-color-primary)" }} />
+          AI Add-on
+        </>
+      }
+      styles={{ body: { minHeight: 220 } }}
+      actions={
+        onRequestUpgrade
+          ? [
+              <Button type="primary" onClick={onRequestUpgrade} key="buy-ai-addon-button">
+                <PlusCircleOutlined /> {actionLabel}
+              </Button>,
+            ]
+          : undefined
+      }
+    >
+      {description ? <p>{description}</p> : null}
+      <ul>
+        {aiAddonFeatures.map((feature) => (
           <li key={feature.slice(0, 10)}>{feature}</li>
         ))}
       </ul>

@@ -215,6 +215,12 @@ export async function sendOrderCreditsEmail(requestedCredits: number): Promise<v
   });
 }
 
+export async function sendUpgradeAiAddonEmail(): Promise<void> {
+  return Request.receiveJSON("/api/pricing/requestAiAddon", {
+    method: "POST",
+  });
+}
+
 export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
   return Request.receiveJSON("/api/pricing/status");
 }

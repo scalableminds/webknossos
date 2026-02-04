@@ -13,12 +13,20 @@ import { enforceActiveOrganization } from "viewer/model/accessors/organization_a
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { SettingsCard, type SettingsCardProps } from "../account/helpers/settings_card";
 import {
+  AiAddonUpgradeCard,
   PlanAboutToExceedAlert,
   PlanExceededAlert,
   PlanExpirationCard,
   PlanUpgradeCard,
+  PowerPlanUpgradeCard,
 } from "./organization_cards";
-import { formatAiPlanLabel, getActiveUserCount, PricingPlanEnum } from "./pricing_plan_utils";
+import {
+  formatAiPlanLabel,
+  getActiveUserCount,
+  isAiAddonEligiblePlan,
+  isUserAllowedToRequestUpgrades,
+  PricingPlanEnum,
+} from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
@@ -28,6 +36,7 @@ export function OrganizationOverviewView() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const {
     data: users = [],
@@ -90,9 +99,13 @@ export function OrganizationOverviewView() {
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
   const aiPlanLabel = formatAiPlanLabel(organization.aiPlan);
+  const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+  const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
+  const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;
 
   let upgradeUsersAction: React.ReactNode = null;
   let upgradeStorageAction: React.ReactNode = null;
+  let upgradeAiPlanAction: React.ReactNode = null;
 
   if (
     organization.pricingPlan === PricingPlanEnum.Personal ||
@@ -140,6 +153,19 @@ export function OrganizationOverviewView() {
     />
   );
 
+  if (canRequestAiPlan && showAiAddonCard) {
+    upgradeAiPlanAction = (
+      <Button
+        shape="circle"
+        type="primary"
+        size="small"
+        key="upgradeAiPlanAction"
+        icon={<PlusOutlined />}
+        onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade(organization)}
+      />
+    );
+  }
+
   const orgaStats: (SettingsCardProps & { key: Key })[] = [
     {
       key: "name",
@@ -169,11 +195,7 @@ export function OrganizationOverviewView() {
         </a>
       ),
     },
-    {
-      key: "ai-plan",
-      title: "AI Add-on",
-      content: aiPlanLabel,
-    },
+    
     {
       key: "users",
       title: "Users",
@@ -186,7 +208,12 @@ export function OrganizationOverviewView() {
       content: `${usedStorageLabel} / ${includedStorageLabel}`,
       action: upgradeStorageAction,
     },
-
+{
+      key: "ai-plan",
+      title: "AI Add-on",
+      content: aiPlanLabel,
+      action: upgradeAiPlanAction,
+    },
     {
       key: "credits",
       title: "WEBKNOSSOS Credits",
@@ -222,13 +249,58 @@ export function OrganizationOverviewView() {
       <PlanExpirationCard organization={organization} />
       {organization.pricingPlan === PricingPlanEnum.Personal ||
       organization.pricingPlan === PricingPlanEnum.Team ||
-      organization.pricingPlan === PricingPlanEnum.TeamTrial ? (
+      organization.pricingPlan === PricingPlanEnum.TeamTrial ||
+      showAiAddonCard ? (
         <>
           <SettingsTitle
             title="Unlock more features"
             description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
           />
-          <PlanUpgradeCard organization={organization} />
+          {organization.pricingPlan === PricingPlanEnum.Personal ? (
+            <PlanUpgradeCard organization={organization} />
+          ) : null}
+          {organization.pricingPlan === PricingPlanEnum.Team ||
+          organization.pricingPlan === PricingPlanEnum.TeamTrial ? (
+            <Row gutter={24} style={{ marginTop: 24 }}>
+              <Col span={showAiAddonCard ? 12 : 24}>
+                <PowerPlanUpgradeCard
+                  description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
+                  powerUpgradeCallback={() =>
+                    UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
+                  }
+                />
+              </Col>
+              {showAiAddonCard ? (
+                <Col span={12}>
+                  <AiAddonUpgradeCard
+                    description="Add AI model training capabilities to your organization."
+                    onRequestUpgrade={
+                      canRequestAiPlan
+                        ? () => UpgradePricingPlanModal.requestAiPlanUpgrade(organization)
+                        : undefined
+                    }
+                  />
+                </Col>
+              ) : null}
+            </Row>
+          ) : null}
+          {organization.pricingPlan !== PricingPlanEnum.Personal &&
+          organization.pricingPlan !== PricingPlanEnum.Team &&
+          organization.pricingPlan !== PricingPlanEnum.TeamTrial &&
+          showAiAddonCard ? (
+            <Row gutter={24} style={{ marginTop: 24 }}>
+              <Col span={24}>
+                <AiAddonUpgradeCard
+                  description="Add AI model training capabilities to your organization."
+                  onRequestUpgrade={
+                    canRequestAiPlan
+                      ? () => UpgradePricingPlanModal.requestAiPlanUpgrade(organization)
+                      : undefined
+                  }
+                />
+              </Col>
+            </Row>
+          ) : null}
         </>
       ) : null}
     </>

@@ -1,17 +1,19 @@
 import {
   DatabaseOutlined,
   FieldTimeOutlined,
+  RobotOutlined,
   RocketOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
 import {
   sendExtendPricingPlanEmail,
   sendOrderCreditsEmail,
+  sendUpgradeAiAddonEmail,
   sendUpgradePricingPlanEmail,
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
 } from "admin/api/organization";
-import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
+import { Button, Col, Divider, InputNumber, Modal, Row, Typography } from "antd";
 import type { GetRef } from "antd/lib";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
@@ -22,7 +24,12 @@ import type React from "react";
 import { useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
-import { PricingPlanEnum, powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
+import {
+  aiAddonFeatures,
+  PricingPlanEnum,
+  powerPlanFeatures,
+  teamPlanFeatures,
+} from "./pricing_plan_utils";
 
 const ModalInformationFooter = (
   <>
@@ -30,7 +37,11 @@ const ModalInformationFooter = (
     <p style={{ color: "#aaa", fontSize: 12 }}>
       Requesting an upgrade to your organization&apos;s WEBKNOSSOS plan will send an email to the
       WEBKNOSSOS sales team. We typically respond within one business day. See our{" "}
-      <a href="https://webknossos.org/faq">FAQ</a> for more information.
+      <a href="https://webknossos.org/faq">FAQ</a> for more information. Compare all plans at{" "}
+      <a href="https://webknossos.org/pricing" target="_blank" rel="noreferrer">
+        webknossos.org/pricing
+      </a>
+      .
     </p>
   </>
 );
@@ -152,6 +163,77 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
         <div>
           <InputNumber min={1} defaultValue={1} ref={storageInputRef} />
         </div>
+        {ModalInformationFooter}
+      </div>
+    </Modal>
+  );
+}
+
+export function requestAiPlanUpgrade(
+  organization: APIOrganization,
+  options?: {
+    onRequestSent?: () => void;
+  },
+) {
+  renderIndependently((destroyCallback) => (
+    <UpgradeAiPlanModal
+      destroy={destroyCallback}
+      organization={organization}
+      onRequestSent={options?.onRequestSent}
+    />
+  ));
+}
+
+function UpgradeAiPlanModal({
+  organization,
+  destroy,
+  onRequestSent,
+}: {
+  organization: APIOrganization;
+  destroy: () => void;
+  onRequestSent?: () => void;
+}) {
+
+  const handleSubmit = async () => {
+    try {
+      await sendUpgradeAiAddonEmail();
+      Toast.success(messages["organization.plan.upgrage_request_sent"]);
+      if (onRequestSent) {
+        onRequestSent();
+      }
+    } catch (error) {
+      Toast.error("Could not request the AI add-on.");
+      console.error(error);
+      return;
+    }
+
+    destroy();
+  };
+
+  return (
+    <Modal
+      title={
+        <>
+          <RobotOutlined style={{ color: "var(--ant-color-primary)" }} /> AI Add-on
+        </>
+      }
+      okText="Buy AI Add-on"
+      onOk={handleSubmit}
+      onCancel={destroy}
+      width={800}
+      open
+    >
+      <div>
+        <Typography.Paragraph>
+          Unlock AI model training for your organization with the AI Add-on. 
+        </Typography.Paragraph>
+        <Divider />
+        <Typography.Text>Upgrade Highlights include:</Typography.Text>
+        <ul>
+          {aiAddonFeatures.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
         {ModalInformationFooter}
       </div>
     </Modal>
@@ -364,7 +446,11 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
               FAQ
             </a>{" "}
-            for more information.
+            for more information. Compare all plans at{" "}
+            <a href="https://webknossos.org/pricing" target="_blank" rel="noreferrer">
+              webknossos.org/pricing
+            </a>
+            .
           </p>
         </>
       </div>
@@ -377,5 +463,6 @@ export default {
   extendPricingPlan,
   upgradeUserQuota,
   upgradeStorageQuota,
+  requestAiPlanUpgrade,
   orderWebknossosCredits,
 };

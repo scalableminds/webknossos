@@ -37,6 +37,13 @@ export const powerPlanFeatures = [
   "Integration with your HPC and storage servers",
 ];
 
+export const aiAddonFeatures = [
+  "Train custom AI models on your data",
+  "Seamless access to WEBKNOSSOS GPU compute infrastructure",
+  "Includes WEBKNOSSOS credits (400 Team / 1,000 Power)",
+  "Enable AI model training for your team",
+];
+
 export const maxIncludedUsersInPersonalPlan = 1;
 
 export function getActiveUserCount(users: APIUser[]): number {
@@ -106,6 +113,16 @@ export function hasSomePaidPlan(organization: APIOrganization | null) {
 
 export function hasAiPlan(organization: APIOrganization | null) {
   return organization?.aiPlan != null;
+}
+
+export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {
+  return (
+    pricingPlan === PricingPlanEnum.Team ||
+    pricingPlan === PricingPlanEnum.TeamTrial ||
+    pricingPlan === PricingPlanEnum.Power ||
+    pricingPlan === PricingPlanEnum.PowerTrial ||
+    pricingPlan === PricingPlanEnum.Custom
+  );
 }
 
 export function formatAiPlanLabel(aiPlan: AiPlanEnum | null | undefined): string {

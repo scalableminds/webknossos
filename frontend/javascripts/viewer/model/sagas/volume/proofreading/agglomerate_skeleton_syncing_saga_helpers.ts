@@ -3,8 +3,7 @@ import { all, put } from "typed-redux-saga";
 import { TreeTypeEnum } from "viewer/constants";
 import {
   enforceSkeletonTracing,
-  findTreeByName,
-  getTreeNameForAgglomerateSkeleton,
+  findTreeByAgglomerateId,
   getTreesWithType,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
@@ -23,15 +22,6 @@ import {
   ApplicableSkeletonUpdateActionNamesHelperNamesList,
   type UpdateActionWithoutIsolationRequirement,
 } from "../update_actions";
-
-function getAgglomerateTreeIfExists(
-  agglomerateId: number,
-  mappingName: string,
-  trees: TreeMap,
-): Tree | undefined {
-  const agglomerateTreeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  return findTreeByName(trees, agglomerateTreeName);
-}
 
 // Puts the given trees into a skeleton tracing object, where the value equal those of the active skeleton tracing.
 // Before calling, ensure a skeleton tracing exists.
@@ -57,7 +47,7 @@ function* getAgglomerateTreesAsSkeleton(agglomerateIds: number[], mappingName: s
     getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   const existingAgglomerateTrees = agglomerateIds
-    .map((aggloId) => getAgglomerateTreeIfExists(aggloId, mappingName, trees))
+    .map((aggloId) => findTreeByAgglomerateId(trees, aggloId))
     .filter((tree) => tree != null);
   if (existingAgglomerateTrees.length === 0) {
     return;
@@ -213,10 +203,9 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
   }
   const positionToIdMap = createPositionToIdMap(tracingWithOldAggloTrees.trees.values());
 
-  const maybeOutdatedSourceAgglomerateTree = getAgglomerateTreeIfExists(
-    sourceAgglomerateIdBeforeMerge,
-    mappingName,
+  const maybeOutdatedSourceAgglomerateTree = findTreeByAgglomerateId(
     tracingWithOldAggloTrees.trees,
+    sourceAgglomerateIdBeforeMerge,
   );
   const assignedTreeIds = maybeOutdatedSourceAgglomerateTree
     ? [maybeOutdatedSourceAgglomerateTree.treeId]
@@ -261,7 +250,7 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
   let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
 
   const assignedTreeIds = newAgglomerateIds
-    .map((id) => getAgglomerateTreeIfExists(id, mappingName, tracingWithOldAggloTrees.trees))
+    .map((id) => findTreeByAgglomerateId(tracingWithOldAggloTrees.trees, id))
     .map((tree) => (tree ? tree.treeId : newTreeId++));
 
   const tracingWithUpdatedAggloTrees = yield* call(

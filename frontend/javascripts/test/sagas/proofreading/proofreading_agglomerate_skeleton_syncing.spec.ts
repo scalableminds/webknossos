@@ -603,7 +603,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
   });
 
   it("should merge two agglomerates, apply injected split update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-    const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
     backendMock.planVersionInjection(10, [
@@ -632,6 +631,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           type: "AGGLOMERATE",
           edgesAreVisible: true,
           metadata: [],
+          agglomerateInfo: { agglomerateId: 1339, tracingId: "volumeTracingId" },
         },
       },
       {
@@ -840,6 +840,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           type: "AGGLOMERATE",
           edgesAreVisible: true,
           metadata: [],
+          agglomerateId: 1339,
         },
       },
       {
@@ -1109,6 +1110,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           type: "AGGLOMERATE",
           edgesAreVisible: true,
           metadata: [],
+          agglomerateId: 1339,
         },
       },
       {

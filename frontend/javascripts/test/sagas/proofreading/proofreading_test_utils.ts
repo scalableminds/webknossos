@@ -303,7 +303,7 @@ class BackendMock {
 
   getEditableAgglomerateSkeleton = async (
     _tracingStoreUrl: string,
-    _tracingId: string,
+    tracingId: string,
     agglomerateId: number,
   ): Promise<ArrayBuffer> => {
     // Does not currently support versioning as this would require a versioned adjacency list.
@@ -322,6 +322,8 @@ class BackendMock {
     const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
       adjacencyList,
       segmentId,
+      agglomerateId,
+      tracingId,
       "agglomerateSkeleton",
       version,
     );

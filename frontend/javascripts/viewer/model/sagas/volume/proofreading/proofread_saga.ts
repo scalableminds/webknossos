@@ -79,6 +79,7 @@ import {
   deleteEdgeAction,
   type SetNodePositionAction,
   setTreeNameAction,
+  setTreeAgglomerateIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
   allowSagaWhileBusyAction,
@@ -452,6 +453,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Note that the skeletontracing reducer already mutated the skeletons according to the
   // received action.
   if (
+    // TODOM!!!!: Change agglomerateInfo: tracingId
+    // to currently active editbaleMappingTracingId in case it is still the mapping name!
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
     action.type !== "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"
@@ -695,6 +698,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       updatedSourceTree.treeId,
     ),
   );
+  yield* put(setTreeAgglomerateIdAction(newSourceAgglomerateId, updatedSourceTree.treeId));
 
   if (updatedSourceTree.treeId !== updatedTargetTree.treeId) {
     // A split between the trees was done. Create a segment for the new tree and update its name.
@@ -704,6 +708,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         updatedTargetTree.treeId,
       ),
     );
+    yield* put(setTreeAgglomerateIdAction(newTargetAgglomerateId, updatedTargetTree.treeId));
     const newSegmentName =
       (yield* select(
         (state) =>

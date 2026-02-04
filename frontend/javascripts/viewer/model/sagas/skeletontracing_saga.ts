@@ -624,7 +624,9 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
     prevTree.name !== tree.name ||
     prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId ||
-    prevTree.type !== tree.type;
+    prevTree.type !== tree.type ||
+    prevTree.agglomerateInfo?.agglomerateId !== tree.agglomerateInfo?.agglomerateId ||
+    prevTree.agglomerateInfo?.tracingId !== tree.agglomerateInfo?.tracingId;
 
   if (doPrimitivesDiffer) {
     return true;

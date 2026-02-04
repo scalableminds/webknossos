@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto, AgglomerateInfo}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.{
@@ -339,7 +339,8 @@ class EditableMappingService @Inject()(
         nodes = nodes,
         edges = skeletonEdges,
         name = s"agglomerate $agglomerateId ($tracingId)",
-        `type` = Some(TreeTypeProto.AGGLOMERATE)
+        `type` = Some(TreeTypeProto.AGGLOMERATE),
+        agglomerateInfo = Some(AgglomerateInfo(agglomerateId, tracingId)),
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(

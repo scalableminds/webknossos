@@ -4,6 +4,7 @@
       "name": "createTree",
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateId": 1,
         "branchPoints": [],
         "color": [
           0.6784313725490196,
@@ -121,6 +122,7 @@
       "name": "createTree",
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateId": 4,
         "branchPoints": [],
         "color": [
           0.6784313725490196,

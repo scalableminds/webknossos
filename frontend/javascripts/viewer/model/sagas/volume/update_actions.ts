@@ -1,9 +1,20 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
-import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import type {
+  AdditionalCoordinate,
+  APIMagRestrictions,
+  MetadataEntryProto,
+  TreeAgglomerateInfo,
+} from "types/api_types";
+import type { TreeType, Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
-import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type {
+  MutableBranchPoint,
+  MutableCommentType,
+  Node,
+  Tree,
+  TreeGroup,
+} from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
   NumberLike,
@@ -286,7 +297,28 @@ export type ServerUpdateAction = AsServerAction<
   | CreateTracingUpdateAction
 >;
 
-export function createTree(tree: Tree, actionTracingId: string) {
+export function createTree(
+  tree: Tree,
+  actionTracingId: string,
+): {
+  name: "createTree";
+  value: {
+    actionTracingId: string;
+    id: number;
+    updatedId: number;
+    color: Vector3;
+    name: string;
+    timestamp: number;
+    comments: Readonly<MutableCommentType>[];
+    branchPoints: Readonly<MutableBranchPoint>[];
+    groupId: number | undefined | null;
+    isVisible: boolean;
+    type: TreeType;
+    edgesAreVisible: boolean;
+    metadata: MetadataEntryProto[];
+    agglomerateInfo?: TreeAgglomerateInfo;
+  };
+} {
   return {
     name: "createTree",
     value: {
@@ -303,6 +335,7 @@ export function createTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateInfo: tree.agglomerateInfo,
     },
   } as const;
 }
@@ -332,6 +365,7 @@ export function updateTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateId: tree.agglomerateInfo,
     },
   } as const;
 }

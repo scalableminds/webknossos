@@ -63,6 +63,8 @@ export function encodeServerTracing(
 export function createSkeletonTracingFromAdjacency(
   adjacencyList: Map<number, Set<number>>,
   startNode: number,
+  agglomerateId: number,
+  editableMappingId: string,
   tracingId: string,
   version: number,
 ): ServerSkeletonTracing {
@@ -133,6 +135,7 @@ export function createSkeletonTracingFromAdjacency(
     type: 1 as any as TreeType, // Needed as encoding only accepts enum ids and not the representative string.
     edgesAreVisible: true,
     metadata: [],
+    agglomerateInfo: { agglomerateId, tracingId: editableMappingId },
   };
 
   type ServerSkeletonTracingProtoCompatible = ServerSkeletonTracing & {

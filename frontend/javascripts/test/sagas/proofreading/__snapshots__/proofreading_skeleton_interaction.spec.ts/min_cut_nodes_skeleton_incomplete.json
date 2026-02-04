@@ -1,50 +1,6 @@
 [
   [
     {
-      "name": "createTree",
-      "value": {
-        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-        "branchPoints": [],
-        "color": [
-          0,
-          1,
-          0.7568627450980392,
-        ],
-        "comments": [],
-        "edgesAreVisible": true,
-        "groupId": undefined,
-        "id": 4,
-        "isVisible": true,
-        "metadata": [],
-        "name": "explorative_2017-05-13_First_Name_Last_Name_004",
-        "timestamp": 1494695001688,
-        "type": "AGGLOMERATE",
-        "updatedId": 4,
-      },
-    },
-    {
-      "name": "moveTreeComponent",
-      "value": {
-        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-        "nodeIds": [
-          6,
-        ],
-        "sourceId": 3,
-        "targetId": 4,
-      },
-    },
-    {
-      "name": "deleteEdge",
-      "value": {
-        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-        "source": 5,
-        "target": 6,
-        "treeId": 3,
-      },
-    },
-  ],
-  [
-    {
       "name": "splitAgglomerate",
       "value": {
         "actionTracingId": "volumeTracingId",
@@ -59,6 +15,7 @@
       "name": "updateTree",
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateId": 1,
         "branchPoints": [],
         "color": [
           0,
@@ -75,6 +32,31 @@
         "timestamp": 1494695001688,
         "type": "AGGLOMERATE",
         "updatedId": 4,
+      },
+    },
+  ],
+  [
+    {
+      "name": "updateTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateId": 1,
+        "branchPoints": [],
+        "color": [
+          0.6784313725490196,
+          0.1411764705882353,
+          0.050980392156862744,
+        ],
+        "comments": [],
+        "edgesAreVisible": true,
+        "groupId": undefined,
+        "id": 3,
+        "isVisible": true,
+        "metadata": [],
+        "name": "agglomerate 1 (volumeTracingId)",
+        "timestamp": 1494695001688,
+        "type": "AGGLOMERATE",
+        "updatedId": 3,
       },
     },
   ],

@@ -17,9 +17,11 @@ import models.team._
 import models.user._
 import com.scalableminds.util.tools.Full
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
   DataFormat,
   DataSourceId,
   ElementClass,
@@ -265,6 +267,69 @@ Samplecountry
     )
   )
 
+  private val remoteNDZarrDataSource = UsableDataSource(
+    id = DataSourceId("tubhiswt-4D", defaultOrganization._id),
+    dataLayers = List(
+      StaticColorLayer(
+        name = "channel0",
+        dataFormat = DataFormat.zarr,
+        boundingBox = BoundingBox(Vec3Int(0, 0, 0), 512, 512, 10),
+        elementClass = ElementClass.uint8,
+        additionalAxes = Some(Seq(AdditionalAxis("t", Seq(0, 43), 0))),
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            axisOrder = Some(AxisOrder(4, 3, Some(2), Some(1))),
+            channelIndex = Some(0),
+            path = Some(UPath.fromStringUnsafe("s3://gs-public-zarr-archive/tubhiswt-4D.ome.zarr/0/0"))
+          )
+        )
+      ),
+      StaticColorLayer(
+        name = "channel1",
+        dataFormat = DataFormat.zarr,
+        boundingBox = BoundingBox(Vec3Int(0, 0, 0), 512, 512, 10),
+        elementClass = ElementClass.uint8,
+        additionalAxes = Some(Seq(AdditionalAxis("t", Seq(0, 43), 0))),
+        mags = List(
+          MagLocator(
+            mag = Vec3Int(1, 1, 1),
+            axisOrder = Some(AxisOrder(4, 3, Some(2), Some(1))),
+            channelIndex = Some(1),
+            path = Some(UPath.fromStringUnsafe("s3://gs-public-zarr-archive/tubhiswt-4D.ome.zarr/0/1"))
+          )
+        )
+      )
+    ),
+    scale = VoxelSize(Vec3Double(1, 1, 1), LengthUnit.nanometer)
+  )
+
+  private val remoteNDZarrDataset = Dataset(
+    _id = ObjectId("05c85a876c4c979ef53752b4"),
+    _dataStore = defaultDataStore.name,
+    _organization = defaultOrganization._id,
+    _publication = None,
+    _uploader = Some(defaultUser._id),
+    _folder = defaultOrganization._rootFolder,
+    inboxSourceHash = Some(remoteNDZarrDataSource.hashCode()),
+    defaultViewConfiguration = None,
+    adminViewConfiguration = None,
+    description = Some("Remote OME-Zarr dataset from S3"),
+    directoryName = remoteNDZarrDataSource.id.directoryName,
+    isPublic = true,
+    isUsable = true,
+    isVirtual = true,
+    name = "tubhiswt-4D OME-Zarr",
+    voxelSize = Some(remoteNDZarrDataSource.scale),
+    sharingToken = None,
+    status = "",
+    logoUrl = None,
+    metadata = Json.arr(
+      Json.obj("key" -> "source", "type" -> "string", "value" -> "s3://gs-public-zarr-archive/tubhiswt-4D.ome.zarr/0"),
+      Json.obj("key" -> "format", "type" -> "string", "value" -> "ome-zarr")
+    )
+  )
+
   def insert: Fox[Unit] =
     for {
       _ <- updateLocalDataStorePublicUri()
@@ -284,6 +349,7 @@ Samplecountry
       _ <- insertProject()
       _ <- insertPublication()
       _ <- insertDataset()
+      _ <- insertRemoteNDDataset()
       _ <- insertAiModel()
     } yield ()
 
@@ -392,6 +458,16 @@ Samplecountry
         _ <- datasetLayerDAO.updateLayers(defaultDataset._id, defaultDataSource)
       } yield ()
     } else Fox.successful(())
+  }
+
+  private def insertRemoteNDDataset(): Fox[Unit] = datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap {
+    maybeDataset =>
+      if (maybeDataset.isEmpty) {
+        for {
+          _ <- datasetDAO.insertOne(remoteNDZarrDataset)
+          _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
+        } yield ()
+      } else Fox.successful(())
   }
 
   private def insertAiModel(): Fox[Unit] = aiModelDAO.findAll.flatMap { aiModels =>

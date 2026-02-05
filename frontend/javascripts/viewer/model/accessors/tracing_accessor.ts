@@ -3,13 +3,15 @@ import type { TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { SaveQueueType } from "viewer/model/actions/save_actions";
-import type { 
+import type {
   EditableMapping,
   ReadOnlyTracing,
   SkeletonTracing,
-  StoreAnnotation,UserBoundingBox, 
+  StoreAnnotation,
+  UserBoundingBox,
   VolumeTracing,
-  WebknossosState,} from "viewer/store";
+  WebknossosState,
+} from "viewer/store";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 

@@ -14,7 +14,12 @@ import { connect, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import type { APIDataset, APIOrganization, APISegmentationLayer, APIUser } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
-import constants, { type ControlMode, ControlModeEnum, MappingStatusEnum, type ViewMode } from "viewer/constants";
+import constants, {
+  type ControlMode,
+  ControlModeEnum,
+  MappingStatusEnum,
+  type ViewMode,
+} from "viewer/constants";
 import {
   doesSupportVolumeWithFallback,
   getColorLayers,
@@ -130,13 +135,16 @@ function AdditionalCoordinatesInputView() {
       }
       placement="bottom"
     >
-      <ArbitraryVectorInput
-        vectorLength={additionalCoordinates.length}
-        value={additionalCoordinates.map((el) => el.value)}
-        onChange={changeAdditionalCoordinatesFromVector}
-        style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
-        vectorLabel={additionalCoordinates.map((coord) => coord.name).join("")}
-      />
+      {/* this div is needed to prevent the popover from being offset to the top-left screen */}
+      <div>
+        <ArbitraryVectorInput
+          vectorLength={additionalCoordinates.length}
+          value={additionalCoordinates.map((el) => el.value)}
+          onChange={changeAdditionalCoordinatesFromVector}
+          style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
+          vectorLabel={additionalCoordinates.map((coord) => coord.name).join("")}
+        />
+      </div>
     </Popover>
   );
 }

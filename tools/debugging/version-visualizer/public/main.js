@@ -9,6 +9,7 @@ const sidebar = document.getElementById("sidebar");
 const main = document.getElementById("main");
 const main2 = document.getElementById("main2");
 const segmentViewDiv = document.getElementById("segment-view");
+const publishedAtEl = document.getElementById("publish-date");
 
 /* ================================
    Load once
@@ -21,6 +22,19 @@ fetch("/versions")
     buildSidebar();
     renderVersion(0);
   });
+
+// fetch creation time and render at top of the sidebar
+fetch("/creationTime")
+  .then((res) => res.json())
+  .then((data) => {
+    const iso = data && data.creationTime;
+    if (!iso) return;
+    const d = new Date(iso);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    publishedAtEl.textContent = `Published at ${hh}:${mm}`;
+  })
+  .catch(() => {});
 
 /* ================================
    Sidebar

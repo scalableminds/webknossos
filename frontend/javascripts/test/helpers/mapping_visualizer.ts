@@ -1,5 +1,23 @@
-import { execSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+/*
+ * This module can be used to serialize the individual versions
+ * that a BackendMock received via update actions.
+ * Each version will be written to DEBUG_OUTPUT_DIR as a json file.
+ *
+ * These serialized versions can then be visualized and inspected in
+ * the browser by running
+ *   node tools/debugging/version-visualizer/server.js
+ *
+ * To actually write out the json files, put this at the end of
+ * the test you want to analyze:
+ *
+ *   publishDebuggingState(backendMock)
+ *
+ * Note that you need to pass Store.getState() in your test when constructing
+ * the backendMock:
+ *   const backendMock = mockInitialBucketAndAgglomerateData(..., Store.getState())
+ */
+
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { readdir, unlink } from "fs/promises";
 import DiffableMap from "libs/diffable_map";
@@ -7,36 +25,12 @@ import range from "lodash-es/range";
 import type { BackendMock } from "test/sagas/proofreading/proofreading_test_utils";
 import { type AgglomerateMapping, serializeAdjacencyList } from "./agglomerate_mapping_helper";
 
-type RenderFormat = "dot" | "json";
-
-interface RenderOptions {
-  outputPath?: string;
-  format?: RenderFormat;
-  rankdir?: "TB" | "LR";
-}
+const DEBUG_OUTPUT_DIR = "./tools/debugging/version-visualizer/data";
 
 export async function publishDebuggingState(backendMock: BackendMock): Promise<void> {
+  await deleteOldFiles();
   const viz = new MappingVisualizer(backendMock);
-  const dir = "debug";
-  const entries = await readdir(dir, { withFileTypes: true });
-
-  const files = entries.filter((entry) => entry.isFile());
-
-  for (const file of files) {
-    const filePath = path.join(dir, file.name);
-    await unlink(filePath);
-  }
-  console.log(
-    "backendMock.agglomerateMapping.currentVersion",
-    backendMock.agglomerateMapping.currentVersion,
-  );
-  for (const version of range(backendMock.agglomerateMapping.currentVersion + 1)) {
-    viz.renderVersion(version, { outputPath: `version_${version}.json`, format: "json" });
-    viz.renderVersion(version, {
-      outputPath: dir + `/version_${version}.svg`,
-      format: "dot",
-    });
-  }
+  viz.serializeAllVersions();
 }
 
 export class MappingVisualizer {
@@ -45,27 +39,17 @@ export class MappingVisualizer {
     this.mapping = backendMock.agglomerateMapping;
   }
 
-  renderVersion(version: number, options: RenderOptions = {}): void {
-    const { outputPath = `version_${version}.json`, format = "json", rankdir = "LR" } = options;
-
-    const outDir = path.dirname(outputPath);
-    if (outDir && outDir !== ".") {
-      mkdirSync(outDir, { recursive: true });
-    }
-    if (format === "json") {
-      const json = this.buildJson(version);
-      writeFileSync("./visualizer/data/" + outputPath, json, "utf8");
-      return;
-    } else {
-      const dot = this.buildDot(version, rankdir);
-
-      const dotPath = outputPath.replace(/\.(svg|png)$/, ".dot");
-      writeFileSync(dotPath, dot, "utf8");
-      execSync(`dot -Tsvg "${dotPath}" -o "${outputPath}" && rm "${dotPath}"`);
+  serializeAllVersions() {
+    for (const version of range(this.backendMock.agglomerateMapping.currentVersion + 1)) {
+      this.serializeVersion(version);
     }
   }
 
-  /* ---------------- internal ---------------- */
+  serializeVersion(version: number): void {
+    const json = this.buildJson(version);
+    const outputPath = DEBUG_OUTPUT_DIR + `/version_${version}.json`;
+    writeFileSync(outputPath, json, "utf8");
+  }
 
   private buildJson(version: number): string {
     const versionMap = this.mapping.getMap(version);
@@ -87,7 +71,7 @@ export class MappingVisualizer {
         storeState,
         saveRequests,
       },
-      (key, value) => {
+      (_key, value) => {
         if (value instanceof DiffableMap) {
           return { entries: Array.from(value.entries()), _isDiffableMap: true };
         }
@@ -95,60 +79,15 @@ export class MappingVisualizer {
       },
     );
   }
+}
 
-  private buildDot(version: number, rankdir: "TB" | "LR"): string {
-    const versionMap = this.mapping.getMap(version);
-    const storeState = this.backendMock.getState(version);
-    const adjacencyList: Map<number, Set<number>> = this.mapping.getAdjacencyList(version);
+async function deleteOldFiles() {
+  const entries = await readdir(DEBUG_OUTPUT_DIR, { withFileTypes: true });
 
-    // group segmentIds by componentId
-    const components = new Map<number, number[]>();
-    for (const [segmentId, componentId] of versionMap.entries()) {
-      if (!components.has(componentId)) components.set(componentId, []);
-      components.get(componentId)!.push(segmentId);
-    }
+  const files = entries.filter((entry) => entry.isFile());
 
-    const lines: string[] = [];
-
-    lines.push("digraph G {");
-
-    lines.push(`  rankdir=${rankdir};`);
-    lines.push("  compound=true;");
-    lines.push("  node [shape=circle, fontsize=10, style=filled];");
-    lines.push("  edge [fontsize=9];");
-    lines.push("");
-
-    // clusters per component
-    for (const [componentId, segmentIds] of components.entries()) {
-      const segmentItem = storeState.annotation.volumes[0].segments.getNullable(componentId);
-      const color = segmentItem != null ? "#7ce468" : "#000000";
-      lines.push(`  subgraph cluster_${componentId} {`);
-      lines.push(`    label="Agglomerate ${componentId}";`);
-      lines.push(`    fontcolor="${color}";`);
-      lines.push("    fontsize=12;");
-      lines.push("    style=rounded;");
-
-      for (const segmentId of segmentIds) {
-        // lines.push(`    ${segmentId};`);
-        lines.push(`    ${segmentId};`);
-      }
-
-      lines.push("  }");
-      lines.push("");
-    }
-
-    // directed edges (deduplicated)
-    const seenEdges = new Set<string>();
-    for (const [from, neighbors] of adjacencyList.entries()) {
-      for (const to of neighbors) {
-        const key = `${from}->${to}`;
-        if (seenEdges.has(key)) continue;
-        seenEdges.add(key);
-        lines.push(`  ${from} -> ${to};`);
-      }
-    }
-
-    lines.push("}");
-    return lines.join("\n");
+  for (const file of files) {
+    const filePath = path.join(DEBUG_OUTPUT_DIR, file.name);
+    await unlink(filePath);
   }
 }

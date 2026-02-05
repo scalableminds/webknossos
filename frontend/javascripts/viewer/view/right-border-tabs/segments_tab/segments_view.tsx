@@ -426,7 +426,7 @@ class SegmentsView extends React.Component<Props, State> {
     contextMenuPosition: null,
     menu: null,
   };
-  tree: React.RefObject<GetRef<typeof Tree>>;
+  tree: React.RefObject<GetRef<typeof Tree> | null>;
 
   constructor(props: Props) {
     super(props);

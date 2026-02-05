@@ -37,7 +37,6 @@ import messages from "messages";
 import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { batchActions } from "redux-batched-actions";
 import { LongUnitToShortUnitMap } from "viewer/constants";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -46,7 +45,6 @@ import {
   getTree,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
-import type { Action } from "viewer/model/actions/actions";
 import { addUserBoundingBoxesAction } from "viewer/model/actions/annotation_actions";
 import { setVersionNumberAction } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -1090,10 +1088,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onDeleteTrees(treeIds: number[]) {
     dispatch(deleteTreesAction(treeIds));
-  },
-
-  onBatchActions(actions: Array<Action>, actionName: string) {
-    dispatch(batchActions(actions, actionName));
   },
 
   onBatchUpdateGroupsAndTreesAction(actions: BatchableUpdateTreeAction[]) {

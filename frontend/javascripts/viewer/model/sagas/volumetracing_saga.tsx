@@ -4,6 +4,7 @@ import Toast from "libs/toast";
 import isEqual from "lodash-es/isEqual";
 import memoizeOne from "memoize-one";
 import messages from "messages";
+import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { AnnotationLayerEnum } from "types/api_types";
@@ -261,7 +262,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
-    const channel = yield* actionChannel(["ADD_TO_CONTOUR_LIST", "FINISH_EDITING"]);
+    const channel: Channel<Action> = yield* actionChannel([
+      "ADD_TO_CONTOUR_LIST",
+      "FINISH_EDITING",
+    ]);
 
     while (true) {
       const currentAction = yield* take(channel);

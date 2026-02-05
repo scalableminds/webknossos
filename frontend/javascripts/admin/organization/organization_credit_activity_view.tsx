@@ -19,6 +19,7 @@ const SYSTEM_USER_LABEL = "System";
 const NO_JOB_FILTER_VALUE = "__NO_JOB__";
 const NO_JOB_LABEL = "No job";
 const dateFilterFormat = "YYYY-MM-DD";
+const dateRangeSeparator = "|";
 
 const creditStateColors: Partial<Record<APICreditState, string>> = {
   AddCredits: "green",
@@ -31,36 +32,43 @@ const creditStateColors: Partial<Record<APICreditState, string>> = {
 };
 
 function formatCreditDelta(credits: number): string {
-  const absoluteCredits = Math.abs(credits);
-  const formatted = formatMilliCreditsString(absoluteCredits);
-  if (credits > 0) {
-    return `+${formatted}`;
-  }
-  if (credits < 0) {
-    return `-${formatted}`;
-  }
-  return formatted;
+  const sign = credits > 0 ? "+" : credits < 0 ? "-" : "";
+  return `${sign}${formatMilliCreditsString(Math.abs(credits))}`;
 }
 
-function getUserLabel(job: APIJob | null | undefined): string {
+function getUserInfo(job: APIJob | null | undefined) {
   if (job == null) {
-    return SYSTEM_USER_LABEL;
+    return {
+      label: SYSTEM_USER_LABEL,
+      value: SYSTEM_USER_LABEL,
+      text: SYSTEM_USER_LABEL,
+    };
   }
-  return `${job.ownerLastName}, ${job.ownerFirstName}`;
+  const label = `${job.ownerLastName}, ${job.ownerFirstName}`;
+  return {
+    label,
+    value: job.ownerEmail,
+    text: `${label} (${job.ownerEmail})`,
+  };
 }
 
-function getUserFilterValue(job: APIJob | null | undefined): string {
-  if (job == null) {
-    return SYSTEM_USER_LABEL;
-  }
-  return job.ownerEmail;
+function getJobLabel(job: APIJob | null | undefined): string {
+  return job ? getJobTypeName(job.command) : "";
 }
 
-function getUserFilterText(job: APIJob | null | undefined): string {
-  if (job == null) {
-    return SYSTEM_USER_LABEL;
+function parseRangeValue(value: string | undefined) {
+  const [start, end] = (value ?? "").split(dateRangeSeparator);
+  return [
+    start ? dayjs(start, dateFilterFormat) : null,
+    end ? dayjs(end, dateFilterFormat) : null,
+  ] as const;
+}
+
+function toRangeValue(dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) {
+  if (dates?.[0] && dates?.[1]) {
+    return [`${dates[0].format(dateFilterFormat)}${dateRangeSeparator}${dates[1].format(dateFilterFormat)}`];
   }
-  return `${job.ownerLastName}, ${job.ownerFirstName} (${job.ownerEmail})`;
+  return [];
 }
 
 function renderJob(job: APIJob | null | undefined) {
@@ -94,32 +102,26 @@ export function OrganizationCreditActivityView() {
 
   const jobFilters = useMemo(() => {
     const options = new Map<string, string>();
-    for (const transaction of organizationTransactions) {
-      const job = transaction.paidJob;
-      if (job == null) {
-        options.set(NO_JOB_FILTER_VALUE, NO_JOB_LABEL);
-      } else {
-        options.set(job.command, getJobTypeName(job.command));
-      }
-    }
+    organizationTransactions.forEach(({ paidJob }) => {
+      options.set(
+        paidJob ? paidJob.command : NO_JOB_FILTER_VALUE,
+        paidJob ? getJobTypeName(paidJob.command) : NO_JOB_LABEL,
+      );
+    });
     return Array.from(options.entries()).map(([value, text]) => ({ value, text }));
   }, [organizationTransactions]);
 
   const userFilters = useMemo(() => {
     const options = new Map<string, string>();
-    for (const transaction of organizationTransactions) {
-      const job = transaction.paidJob;
-      options.set(getUserFilterValue(job), getUserFilterText(job));
-    }
+    organizationTransactions.forEach(({ paidJob }) => {
+      const { value, text } = getUserInfo(paidJob);
+      options.set(value, text);
+    });
     return Array.from(options.entries()).map(([value, text]) => ({ value, text }));
   }, [organizationTransactions]);
 
   const stateFilters = useMemo(() => {
-    const states = new Set<string>();
-    for (const transaction of organizationTransactions) {
-      states.add(transaction.creditState);
-    }
-    return Array.from(states)
+    return Array.from(new Set(organizationTransactions.map(({ creditState }) => creditState)))
       .sort()
       .map((state) => ({ text: state, value: state }));
   }, [organizationTransactions]);
@@ -180,28 +182,12 @@ export function OrganizationCreditActivityView() {
             }
             defaultSortOrder="descend"
             filterDropdown={({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
-              const selectedRange = selectedKeys[0] ? (selectedKeys[0] as string).split("|") : [];
-              const startDate =
-                selectedRange[0] != null && selectedRange[0] !== ""
-                  ? dayjs(selectedRange[0], dateFilterFormat)
-                  : null;
-              const endDate =
-                selectedRange[1] != null && selectedRange[1] !== ""
-                  ? dayjs(selectedRange[1], dateFilterFormat)
-                  : null;
+              const [startDate, endDate] = parseRangeValue(selectedKeys[0] as string | undefined);
               return (
                 <Space style={{ padding: 8 }}>
                   <DatePicker.RangePicker
                     value={startDate && endDate ? [startDate, endDate] : null}
-                    onChange={(dates) => {
-                      if (dates == null || dates[0] == null || dates[1] == null) {
-                        setSelectedKeys([]);
-                        return;
-                      }
-                      setSelectedKeys([
-                        `${dates[0].format(dateFilterFormat)}|${dates[1].format(dateFilterFormat)}`,
-                      ]);
-                    }}
+                    onChange={(dates) => setSelectedKeys(toRangeValue(dates))}
                     allowClear
                   />
                   <Button type="primary" size="small" onClick={() => confirm()}>
@@ -223,18 +209,15 @@ export function OrganizationCreditActivityView() {
               <CalendarOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
             )}
             onFilter={(value, record) => {
-              const [startValue, endValue] = (value as string).split("|");
-              const startDate = startValue ? dayjs(startValue, dateFilterFormat) : null;
-              const endDate = endValue ? dayjs(endValue, dateFilterFormat) : null;
+              const [startDate, endDate] = parseRangeValue(value as string);
               if (startDate == null || endDate == null) {
                 return true;
               }
               const recordDate = dayjs(record.createdAt);
-              const isAfterStart =
-                recordDate.isSame(startDate, "day") || recordDate.isAfter(startDate, "day");
-              const isBeforeEnd =
-                recordDate.isSame(endDate, "day") || recordDate.isBefore(endDate, "day");
-              return isAfterStart && isBeforeEnd;
+              return (
+                !recordDate.isBefore(startDate, "day") &&
+                !recordDate.isAfter(endDate, "day")
+              );
             }}
           />
           <Column
@@ -269,18 +252,15 @@ export function OrganizationCreditActivityView() {
             key="paidJob"
             width={200}
             render={(transaction: APICreditTransaction) => renderJob(transaction.paidJob)}
-            sorter={(left: APICreditTransaction, right: APICreditTransaction) => {
-              const leftLabel = left.paidJob ? getJobTypeName(left.paidJob.command) : "";
-              const rightLabel = right.paidJob ? getJobTypeName(right.paidJob.command) : "";
-              return leftLabel.localeCompare(rightLabel);
-            }}
+            sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
+              getJobLabel(left.paidJob).localeCompare(getJobLabel(right.paidJob))
+            }
             filters={jobFilters}
-            onFilter={(value, record: APICreditTransaction) => {
-              if (value === NO_JOB_FILTER_VALUE) {
-                return record.paidJob == null;
-              }
-              return record.paidJob?.command === value;
-            }}
+            onFilter={(value, record: APICreditTransaction) =>
+              value === NO_JOB_FILTER_VALUE
+                ? record.paidJob == null
+                : record.paidJob?.command === value
+            }
           />
           <Column
             title="User"
@@ -288,22 +268,23 @@ export function OrganizationCreditActivityView() {
             width={200}
             render={(transaction: APICreditTransaction) => {
               const job = transaction.paidJob;
+              const userInfo = getUserInfo(job);
               if (job == null) {
-                return SYSTEM_USER_LABEL;
+                return userInfo.label;
               }
               return (
                 <div>
-                  <div>{getUserLabel(job)}</div>
+                  <div>{userInfo.label}</div>
                   <Typography.Text type="secondary">({job.ownerEmail})</Typography.Text>
                 </div>
               );
             }}
             sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
-              getUserLabel(left.paidJob).localeCompare(getUserLabel(right.paidJob))
+              getUserInfo(left.paidJob).label.localeCompare(getUserInfo(right.paidJob).label)
             }
             filters={userFilters}
             onFilter={(value, record: APICreditTransaction) =>
-              getUserFilterValue(record.paidJob) === value
+              getUserInfo(record.paidJob).value === value
             }
           />
           <Column
@@ -311,11 +292,9 @@ export function OrganizationCreditActivityView() {
             key="state"
             width={160}
             render={(transaction: APICreditTransaction) => (
-              <>
-                <Tag color={creditStateColors[transaction.creditState]}>
-                  {transaction.creditState}
-                </Tag>
-              </>
+              <Tag color={creditStateColors[transaction.creditState]}>
+                {transaction.creditState}
+              </Tag>
             )}
             sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
               left.creditState.localeCompare(right.creditState)

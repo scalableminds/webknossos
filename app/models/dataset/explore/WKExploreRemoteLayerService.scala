@@ -36,6 +36,7 @@ object WKExploreRemoteLayerParameters {
 
 case class ExploreAndAddRemoteDatasetParameters(remoteUri: String,
                                                 datasetName: String,
+                                                folderId: Option[ObjectId],
                                                 folderPath: Option[String],
                                                 dataStoreName: Option[String])
 

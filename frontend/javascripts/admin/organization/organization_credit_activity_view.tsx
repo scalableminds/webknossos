@@ -20,6 +20,26 @@ const NO_JOB_FILTER_VALUE = "__NO_JOB__";
 const NO_JOB_LABEL = "No job";
 const dateFilterFormat = "YYYY-MM-DD";
 const dateRangeSeparator = "|";
+const datePresets = [
+  { label: "Last 7 days", value: [dayjs().subtract(6, "day"), dayjs()] },
+  { label: "Last 30 days", value: [dayjs().subtract(29, "day"), dayjs()] },
+  { label: "Last 90 days", value: [dayjs().subtract(89, "day"), dayjs()] },
+  {
+    label: "Last month",
+    value: [
+      dayjs().subtract(1, "month").startOf("month"),
+      dayjs().subtract(1, "month").endOf("month"),
+    ],
+  },
+  {
+    label: "This month",
+    value: [dayjs().startOf("month"), dayjs().endOf("month")],
+  },
+  {
+    label: "Year to date",
+    value: [dayjs().startOf("year"), dayjs()],
+  },
+] as const;
 
 const creditStateColors: Partial<Record<APICreditState, string>> = {
   AddCredits: "green",
@@ -189,6 +209,7 @@ export function OrganizationCreditActivityView() {
                     value={startDate && endDate ? [startDate, endDate] : null}
                     onChange={(dates) => setSelectedKeys(toRangeValue(dates))}
                     allowClear
+                    presets={datePresets}
                   />
                   <Button type="primary" size="small" onClick={() => confirm()}>
                     Apply

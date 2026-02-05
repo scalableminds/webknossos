@@ -28,7 +28,6 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         icon: <MailOutlined />,
         label: "Notifications",
       },
-
       {
         key: "delete",
         icon: <DeleteOutlined />,

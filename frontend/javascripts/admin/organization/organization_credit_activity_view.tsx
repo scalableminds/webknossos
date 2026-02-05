@@ -4,8 +4,8 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getCreditTransactions } from "admin/api/organization";
 import { getJobTypeName } from "admin/job/job_list_view";
 import { Button, DatePicker, Space, Spin, Table, Tag, Typography } from "antd";
-import FormattedId from "components/formatted_id";
 import FastTooltip from "components/fast_tooltip";
+import FormattedId from "components/formatted_id";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -86,7 +86,9 @@ function parseRangeValue(value: string | undefined) {
 
 function toRangeValue(dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) {
   if (dates?.[0] && dates?.[1]) {
-    return [`${dates[0].format(dateFilterFormat)}${dateRangeSeparator}${dates[1].format(dateFilterFormat)}`];
+    return [
+      `${dates[0].format(dateFilterFormat)}${dateRangeSeparator}${dates[1].format(dateFilterFormat)}`,
+    ];
   }
   return [];
 }
@@ -235,10 +237,7 @@ export function OrganizationCreditActivityView() {
                 return true;
               }
               const recordDate = dayjs(record.createdAt);
-              return (
-                !recordDate.isBefore(startDate, "day") &&
-                !recordDate.isAfter(endDate, "day")
-              );
+              return !recordDate.isBefore(startDate, "day") && !recordDate.isAfter(endDate, "day");
             }}
           />
           <Column

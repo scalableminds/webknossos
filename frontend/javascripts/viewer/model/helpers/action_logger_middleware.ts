@@ -52,11 +52,11 @@ export default function actionLoggerMiddleware<A extends Action>(): (
         actionLog = drop(actionLog, overflowCount);
 
         if (WkDevFlags.logActions) {
-          // console.group(action.type);
-          console.info("dispatching", action.type);
+          console.group(action.type);
+          console.info("dispatching", action);
           let result = next(action);
-          // console.log('next state', store.getState())
-          // console.groupEnd();
+          console.log("next state", store.getState());
+          console.groupEnd();
           return result;
         }
       }

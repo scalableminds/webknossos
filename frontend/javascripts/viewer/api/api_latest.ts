@@ -856,6 +856,11 @@ class TracingApi {
     parentGroupId: number = MISSING_GROUP_ID,
     volumeLayerName?: string,
   ): number {
+    // todop: keep?
+    // if (parentGroupId == null) {
+    //   // Guard against explicitly passed null or undefined.
+    //   parentGroupId = MISSING_GROUP_ID;
+    // }
     const volumeTracing = volumeLayerName
       ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());

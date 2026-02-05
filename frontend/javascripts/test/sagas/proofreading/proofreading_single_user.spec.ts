@@ -150,7 +150,6 @@ describe("Proofreading (Single User)", () => {
       yield call(() => api.tracing.save());
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      // console.log("receivedUpdateActions", receivedUpdateActions);
 
       expect(receivedUpdateActions.slice(-2)).toEqual([
         {

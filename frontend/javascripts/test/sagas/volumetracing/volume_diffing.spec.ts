@@ -1,4 +1,3 @@
-import { ColoredLogger } from "libs/utils";
 import {
   createSegment1,
   createSegment2,
@@ -184,7 +183,7 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
       if (segmentItemsToCreateInSetup.includes(id1)) {
         newState = VolumeTracingReducer(newState, createSegment1);
       }
-      if (segmentItemsToCreateInSetup.includes(id1)) {
+      if (segmentItemsToCreateInSetup.includes(id2)) {
         newState = VolumeTracingReducer(newState, createSegment2);
       }
       const stateBeforeMerge = newState;
@@ -229,22 +228,13 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
       ],
     };
 
-    let segment1 = newState.annotation.volumes[0].segments.getNullable(1);
-    ColoredLogger.logYellow("segment1 initial", segment1);
-
     const stateBeforeMerge = newState;
     newState = VolumeTracingReducer(
       newState,
       updateSegmentAction(id1, newSegmentPartial, VOLUME_TRACING_ID),
     );
 
-    segment1 = newState.annotation.volumes[0].segments.getNullable(1);
-    ColoredLogger.logYellow("segment1 after update", segment1);
-
     newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
-
-    segment1 = newState.annotation.volumes[0].segments.getNullable(1);
-    ColoredLogger.logYellow("segment1 after merge", segment1);
 
     const stateAfterMerge = newState;
 

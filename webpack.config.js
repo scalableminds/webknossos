@@ -7,6 +7,7 @@ module.exports = function (env = {}) {
   const browserslistToEsbuild = require("browserslist-to-esbuild");
   const CopyPlugin = require("copy-webpack-plugin");
 
+  const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
   const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
@@ -21,6 +22,7 @@ module.exports = function (env = {}) {
   ]);
 
   const plugins = [
+    new BundleAnalyzerPlugin(),
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": env.production ? '"production"' : '"development"',
       "process.env.BABEL_ENV": process.env.BABEL_ENV,
@@ -173,6 +175,11 @@ module.exports = function (env = {}) {
             test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
             chunks: "all",
             name: "vendors~html2canvas",
+          },
+          zipjs: {
+            test: /[\\/]node_modules[\\/](@zip\.js\/zip\.js)[\\/]/,
+            chunks: "all",
+            name: "vendors~zipjs",
           },
         },
       },

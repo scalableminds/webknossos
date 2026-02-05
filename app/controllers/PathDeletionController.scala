@@ -25,9 +25,7 @@ class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeleti
   def markAsDeleted(key: String): Action[Seq[String]] = Action.async(validateJson[Seq[String]]) { implicit request =>
     for {
       _ <- authenticateExternalPathDeletionService(key)
-      _ <- Fox.runIf(request.body.nonEmpty) {
-        Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
-      }
+      _ <- Fox.serialCombined(request.body.grouped(100))(pathDeletionDAO.markAsDeleted)
     } yield Ok
   }
 
@@ -52,16 +50,20 @@ class PathDeletionDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     run(q"""SELECT path from webknossos.remote_paths_to_delete ORDER BY created""".as[String])
 
   def insertMultiple(paths: Seq[UPath]): Fox[Unit] =
-    for {
-      _ <- run(q"""INSERT INTO webknossos.remote_paths_to_delete(path)
+    if (paths.isEmpty) Fox.successful(())
+    else
+      for {
+        _ <- run(q"""INSERT INTO webknossos.remote_paths_to_delete(path)
               VALUES ${SqlToken.joinByComma(paths.map(path => SqlToken.tupleFromList(Seq(path))))}
               ON CONFLICT DO NOTHING""".asUpdate)
-    } yield ()
+      } yield ()
 
   def markAsDeleted(paths: Seq[String]): Fox[Unit] =
-    for {
-      _ <- run(
-        q"""DELETE FROM webknossos.remote_paths_to_delete WHERE path in ${SqlToken.tupleFromList(paths)}""".asUpdate)
-    } yield ()
+    if (paths.isEmpty) Fox.successful(())
+    else
+      for {
+        _ <- run(
+          q"""DELETE FROM webknossos.remote_paths_to_delete WHERE path in ${SqlToken.tupleFromList(paths)}""".asUpdate)
+      } yield ()
 
 }

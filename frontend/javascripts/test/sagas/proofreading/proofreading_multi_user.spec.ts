@@ -1201,7 +1201,6 @@ describe("Proofreading (Multi User)", () => {
         });
         const segment1339AfterSaving = currentSegments.getNullable(1339);
         expect(segment1339AfterSaving).toMatchObject({
-          name: "Segment 1339 - Split off from: Segment 4",
           anchorPosition: [5, 5, 5],
         });
       }

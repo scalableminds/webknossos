@@ -81,7 +81,6 @@ import {
   removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
-  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
@@ -91,13 +90,7 @@ import {
   type UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
 import { api, Model, Store } from "viewer/singletons";
-import type {
-  ActiveMappingInfo,
-  Mapping,
-  NumberLikeMap,
-  Segment,
-  VolumeTracing,
-} from "viewer/store";
+import type { ActiveMappingInfo, Mapping, NumberLikeMap, VolumeTracing } from "viewer/store";
 import { getCurrentMag } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { Tree } from "../../types/tree_types";
@@ -285,28 +278,6 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   }
 
   coarselyLoadedSegmentIds.push(segmentId);
-}
-
-function* updateNameOfNewSegmentItemsAfterSplit(
-  volumeTracingId: string,
-  sourceAgglomerate: Segment | undefined,
-  splitOffSegmentIds: number[],
-) {
-  if (sourceAgglomerate?.name == null || splitOffSegmentIds.length === 0) {
-    return;
-  }
-
-  // Assign custom name to split-off target.
-  const updateNameActions = splitOffSegmentIds.map((splitOffSegmentId) =>
-    put(
-      updateSegmentAction(
-        Number(splitOffSegmentId),
-        { name: `Segment ${splitOffSegmentId} - Split off from: ${sourceAgglomerate.name}` },
-        volumeTracingId,
-      ),
-    ),
-  );
-  yield* all(updateNameActions);
 }
 
 function* checkForAgglomerateSkeletonModification(
@@ -763,7 +734,6 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   }
   const volumeTracingId = preparation.volumeTracing.tracingId;
   const { agglomerateFileMag, annotationVersion } = preparation;
-  const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));
 
   const items: UpdateActionWithoutIsolationRequirement[] = [];
 
@@ -849,10 +819,6 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     partitions[2][0],
     newMapping,
   );
-
-  yield* call(updateNameOfNewSegmentItemsAfterSplit, volumeTracingId, agglomerate, [
-    newAgglomerateIdFromPartition2,
-  ]);
 
   // Get positions of new meshes from first split edge information.
   const firstEdgeFirstSegmentNewAgglomerate = yield* call(
@@ -1013,11 +979,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const [sourceInfo, targetInfo] = idInfos;
   let sourceAgglomerateId = sourceInfo.agglomerateId;
   let targetAgglomerateId = targetInfo.agglomerateId;
-  const sourceAgglomerate = volumeTracing.segments.getNullable(Number(sourceAgglomerateId));
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
-
   const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   if (action.type === "PROOFREAD_MERGE") {
@@ -1165,13 +1129,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     newMapping,
   );
 
-  // Preserving custom names across splits.
-  if (action.type === "MIN_CUT_AGGLOMERATE") {
-    yield* call(updateNameOfNewSegmentItemsAfterSplit, volumeTracingId, sourceAgglomerate, [
-      newTargetAgglomerateId,
-    ]);
-  }
-
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: sourceAgglomerateId,
@@ -1230,11 +1187,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   let targetAgglomerateId = idInfos[0].agglomerateId;
   const targetSegmentId = idInfos[0].unmappedId;
 
-  const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
-
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
-
   const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   const { didCancel, neighborInfo } = yield* call(
@@ -1296,13 +1250,6 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       call(getDataValue, neighbor.position, mappingAfterSplit),
     ),
   ]);
-
-  yield* call(
-    updateNameOfNewSegmentItemsAfterSplit,
-    volumeTracingId,
-    targetAgglomerate,
-    newNeighborAgglomerateIds,
-  );
 
   /* Reload meshes */
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [

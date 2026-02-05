@@ -1,5 +1,4 @@
 import update from "immutability-helper";
-import { ColoredLogger } from "libs/utils";
 import range from "lodash-es/range";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
@@ -46,20 +45,6 @@ const enforceVolumeTracing = (state: WebknossosState) => {
   }
   return tracing;
 };
-
-function withClearedSegmentJournal(state: WebknossosState): WebknossosState {
-  return update(state, {
-    annotation: {
-      volumes: {
-        [0]: {
-          segmentJournal: {
-            $set: [],
-          },
-        },
-      },
-    },
-  });
-}
 
 const initialState: WebknossosState = update(defaultVolumeState, {
   annotation: {
@@ -211,8 +196,20 @@ describe("Update Action Application for VolumeTracing", () => {
           : range(beforeVersionIndex, userActions.length + 1);
 
       test.each(afterVersionIndices)("To v=%i", (afterVersionIndex: number) => {
-        // initialState --> [actions until beforeVersionIndex] --> state2 --> [actions between before and afterVersionIndex] --> state3
-        // state2 and state3 are diffed and that diff is applied again on state2. The result is compared against state3 again.
+        // The update actions are applied on the initialState which produces new states.
+        // The "timeline" is as follows:
+        //         initialState
+        //              ↓
+        // [actions until beforeVersionIndex]
+        //              ↓
+        //            state2
+        //              ↓
+        // [actions between before and afterVersionIndex]
+        //              ↓
+        //            state3
+        //
+        // state2 and state3 are diffed and that diff is applied again on state2.
+        // The result is compared against state3 again.
         const state2WithActiveCell = applyActions(
           initialState,
           userActions.slice(0, beforeVersionIndex),
@@ -231,10 +228,6 @@ describe("Update Action Application for VolumeTracing", () => {
 
         const volumeTracing2 = enforceVolumeTracing(state2WithoutActiveBoundingBox);
         const volumeTracing3 = enforceVolumeTracing(state3);
-
-        ColoredLogger.logYellow("Segments before", Array.from(volumeTracing2.segments.keys()));
-        console.log("actionsToApply", actionsToApply);
-        ColoredLogger.logYellow("Segments after", Array.from(volumeTracing3.segments.keys()));
 
         const updateActionsBeforeCompaction = Array.from(
           diffVolumeTracing(volumeTracing2, volumeTracing3),
@@ -278,17 +271,6 @@ describe("Update Action Application for VolumeTracing", () => {
             },
           });
         }
-        // Currently, the segment journal cannot be reconstructed by diffing two arbitrary states (see example).
-        // Therefore, we ignore the journal in the following assertion.
-        // Example:
-        // The segmentJournal currently only contains MERGE_SEGMENTS entries. Consider, the following states:
-        // state A: no segments
-        // state B: segment 1 and 2
-        // state C: segment 1 (because 2 was merged into 1)
-        // When diffing C with A, no deletion is detected (because only segment 1 was added in the diff). Therefore,
-        // no merge will be detected (even though the merge journal also contains a MERGE_SEGMENTS operation).
-        reappliedNewState = withClearedSegmentJournal(reappliedNewState);
-        state3 = withClearedSegmentJournal(state3);
 
         expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
       });

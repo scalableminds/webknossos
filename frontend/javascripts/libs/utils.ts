@@ -1452,13 +1452,24 @@ export function isWindows(): boolean {
 }
 
 export function replaceOrAdd<T>(
-  volumes: T[],
-  newVolumeTracing: T,
-  predicate: (tracing: T) => boolean,
+  elements: T[],
+  newElement: T,
+  predicate: (element: T) => boolean,
 ): T[] {
-  const index = volumes.findIndex(predicate);
+  /*
+   * Insert `newElement` into `elements`. `predicate` will
+   * be called for all existing elements. If it returns true
+   * for one, that element will be replaced with newElement.
+   * If the predicate always returns false, the newElement
+   * will be appended.
+   *
+   * Returns a new array (and doesn't modify the input).
+   */
+  const index = elements.findIndex(predicate);
   if (index === -1) {
-    return volumes.concat([newVolumeTracing]);
+    return elements.concat([newElement]);
   }
-  return volumes.slice().splice(index, 1, newVolumeTracing);
+  const copy = elements.slice();
+  copy.splice(index, 1, newElement);
+  return;
 }

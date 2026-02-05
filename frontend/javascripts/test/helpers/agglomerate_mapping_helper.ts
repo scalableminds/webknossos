@@ -10,6 +10,14 @@ export function serializeAdjacencyList(map: Map<number, Set<number>>): string {
   return JSON.stringify([...map.entries()].map(([key, set]) => [key, [...set]]));
 }
 
+function getShallowCopyOfAdjacencyList(adjacencyList: VersionSnapshot["adjacencyList"]) {
+  const nextAdjacencyList = new Map<number, Set<number>>();
+  for (const [k, v] of adjacencyList) {
+    nextAdjacencyList.set(k, new Set(v));
+  }
+  return nextAdjacencyList;
+}
+
 export class AgglomerateMapping {
   /*
    * This class is used to mock the backend in the proofreading
@@ -70,16 +78,11 @@ export class AgglomerateMapping {
     this.ensureNode(segmentIdA, previous.adjacencyList);
     this.ensureNode(segmentIdB, previous.adjacencyList);
 
-    // copy adjacency list (shallow)
-    const nextAdjacencyList = new Map<number, Set<number>>();
-    for (const [k, v] of previous.adjacencyList) {
-      nextAdjacencyList.set(k, new Set(v));
-    }
-
+    const nextAdjacencyList = getShallowCopyOfAdjacencyList(previous.adjacencyList);
     nextAdjacencyList.get(segmentIdA)!.add(segmentIdB);
 
     const previousVersionMap = previous.map;
-    const nextVersionMap = new Map(previousVersionMap); // copy-on-write
+    const nextVersionMap = new Map(previousVersionMap);
 
     const componentIdA = previousVersionMap.get(segmentIdA)!;
     const componentIdB = previousVersionMap.get(segmentIdB)!;
@@ -109,11 +112,7 @@ export class AgglomerateMapping {
      * The target component is reassigned to a new id.
      */
     const previous = this.versions[this.currentVersion];
-    // copy adjacency list (shallow)
-    const nextAdjacencyList = new Map<number, Set<number>>();
-    for (const [k, v] of previous.adjacencyList) {
-      nextAdjacencyList.set(k, new Set(v));
-    }
+    const nextAdjacencyList = getShallowCopyOfAdjacencyList(previous.adjacencyList);
 
     let didRemove = false;
     if (previous.adjacencyList.has(segmentIdA)) {
@@ -279,16 +278,8 @@ export class AgglomerateMapping {
     if (bumpVersion) {
       this.currentVersion++;
       this.versions.push(snapshot);
-      // console.log(
-      //   `Committed v=${this.currentVersion} with mapping: `,
-      //   // snapshot.entries().toArray(),
-      // );
     } else {
       this.versions[this.currentVersion] = snapshot;
-      // console.log(
-      //   `Appended new update to v=${this.currentVersion}; resulting mapping: `,
-      //   // snapshot.entries().toArray(),
-      // );
     }
   }
 }

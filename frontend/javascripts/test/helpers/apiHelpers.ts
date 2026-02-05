@@ -108,6 +108,9 @@ export interface WebknossosTestContext extends BaseTestContext {
 }
 
 export function getFlattenedUpdateActions(context: WebknossosTestContext) {
+  /*
+   * Returns a list of all update actions
+   */
   return flattenDeep(
     context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
       saveQueueEntries.map((entry) => entry.actions),
@@ -116,6 +119,11 @@ export function getFlattenedUpdateActions(context: WebknossosTestContext) {
 }
 
 export function getNestedUpdateActions(context: WebknossosTestContext) {
+  /*
+   * Returns a nested list of all update actions. Each sublist groups
+   * update actions that were sent in the same request (not necessarily
+   * in the same transaction).
+   */
   const versions = [];
   for (const saveQueueEntries of context.receivedDataPerSaveRequest) {
     for (const entry of saveQueueEntries) {
@@ -532,11 +540,6 @@ export async function setupWebknossosForTesting(
     // @ts-expect-error
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
     segmentMeshController: new SegmentMeshController(),
-    // segmentMeshController: {
-    //   meshesGroupsPerSegmentId: {},
-    //   updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
-    //   getLODGroupOfLayer: vi.fn(),
-    // },
   });
 
   __setFeatures({});

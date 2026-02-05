@@ -73,7 +73,7 @@ const OrganizationView = () => {
         backgroundColor: "var(--ant-layout-body-bg)",
       }}
     >
-      <Sider width={200}>
+      <Sider width={250}>
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
@@ -82,7 +82,7 @@ const OrganizationView = () => {
           onClick={({ key }) => navigate(`/organization/${key}`)}
         />
       </Sider>
-      <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
+      <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1200 }}>
         <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
         <Outlet />
       </Content>

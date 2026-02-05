@@ -4,8 +4,8 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getCreditTransactions } from "admin/api/organization";
 import { getJobTypeName } from "admin/job/job_list_view";
 import { Button, DatePicker, Space, Spin, Table, Tag, Typography } from "antd";
-import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
+import FastTooltip from "components/fast_tooltip";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -127,7 +127,7 @@ export function OrganizationCreditActivityView() {
   return (
     <>
       <SettingsTitle
-        title="Activity Log"
+        title="Credit Activity"
         description="Review credit purchases, spending, and refunds for your organization."
       />
       <Spin spinning={isLoading}>
@@ -157,9 +157,24 @@ export function OrganizationCreditActivityView() {
             title="Date"
             key="createdAt"
             width={170}
-            render={(transaction: APICreditTransaction) => (
-              <FormattedDate timestamp={transaction.createdAt} />
-            )}
+            render={(transaction: APICreditTransaction) => {
+              const utcTimestamp = dayjs.utc(transaction.createdAt);
+              const localTimestamp = utcTimestamp.local();
+              return (
+                <FastTooltip
+                  title={`The displayed time refers to your local timezone. In UTC, the time is: ${utcTimestamp.format(
+                    "YYYY-MM-DD HH:mm",
+                  )}`}
+                >
+                  <div>
+                    <div>{localTimestamp.format("YYYY-MM-DD")}</div>
+                    <Typography.Text type="secondary">
+                      {localTimestamp.format("HH:mm")}
+                    </Typography.Text>
+                  </div>
+                </FastTooltip>
+              );
+            }}
             sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
               left.createdAt - right.createdAt
             }
@@ -245,9 +260,8 @@ export function OrganizationCreditActivityView() {
             dataIndex="comment"
             key="comment"
             width={320}
-            ellipsis
             render={(comment: string) => (
-              <Typography.Text ellipsis={{ tooltip: comment }}>{comment}</Typography.Text>
+              <Typography.Text style={{ whiteSpace: "normal" }}>{comment}</Typography.Text>
             )}
           />
           <Column

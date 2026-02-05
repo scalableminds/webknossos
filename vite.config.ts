@@ -25,7 +25,7 @@ export const viteConfig = {
     },
   },
   plugins: [
-    analyzer(),
+    // analyzer(),
     react({ skipFastRefresh: true, fastRefresh: false }),
     tsconfigPaths(),
     wasm(),

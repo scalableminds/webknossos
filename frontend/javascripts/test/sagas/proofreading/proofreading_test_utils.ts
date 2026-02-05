@@ -12,19 +12,25 @@ import {
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import type { APIUpdateActionBatch } from "types/api_types";
 import Constants, { type Vector2, type Vector3 } from "viewer/constants";
+import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
+import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
+import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type {
+  ApplicableSkeletonServerUpdateAction,
+  ApplicableVolumeUpdateAction,
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry } from "viewer/store";
+import type { SaveQueueEntry, WebknossosState } from "viewer/store";
+import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping } from "./proofreading_fixtures";
 import {
@@ -66,7 +72,7 @@ export function* initializeMappingAndTool(
   yield take("FINISH_MAPPING_INITIALIZATION");
 }
 
-class BackendMock {
+export class BackendMock {
   typedArrayClass = Uint16Array;
   fillValue = 1;
   requestDelay = 5;
@@ -83,11 +89,56 @@ class BackendMock {
   constructor(
     public overrides: BucketOverride[],
     additionalEdges: Vector2[] = [],
+    private initialState: WebknossosState | undefined = undefined,
   ) {
     this.agglomerateMapping = new AgglomerateMapping(
       edgesForInitialMapping.concat(additionalEdges),
       1, // the annotation's current version (as defined in hybridtracing_server_objects.ts)
     );
+  }
+
+  getState(requestedVersion: number | null = null): WebknossosState {
+    let state = this.initialState;
+    if (state == null) {
+      throw new Error("Unexpected getState on BackendMock.");
+    }
+    for (const actionBatch of this.getLocalUpdateActionLog(requestedVersion)) {
+      state = combinedReducer(
+        state,
+        applySkeletonUpdateActionsFromServerAction(
+          actionBatch.value as ApplicableSkeletonServerUpdateAction[],
+          true,
+        ),
+      );
+      state = combinedReducer(
+        state,
+        applyVolumeUpdateActionsFromServerAction(
+          actionBatch.value as ApplicableVolumeUpdateAction[],
+          true,
+        ),
+      );
+    }
+
+    return state;
+  }
+
+  getLocalUpdateActionLog(requestedVersion: number | null = null, until: boolean = true) {
+    let state = this.initialState;
+    if (state == null) {
+      throw new Error("Unexpected getState on BackendMock.");
+    }
+
+    if (requestedVersion === null) {
+      return this.updateActionLog;
+    }
+
+    const untilPredicate = until
+      ? (version: number) => version <= requestedVersion
+      : (version: number) => version === requestedVersion;
+
+    return this.updateActionLog.filter((actionBatch) => {
+      return requestedVersion == null || untilPredicate(actionBatch.version);
+    });
   }
 
   private addOnSavedListener = (fn: () => void) => {
@@ -130,14 +181,12 @@ class BackendMock {
   getCurrentMappingEntriesFromServer = (version?: number | null | undefined): Vector2[] => {
     if (version == null) {
       version = this.agglomerateMapping.currentVersion;
-      console.log("defaulting to version", version);
     }
     // This function should always return the full current mapping.
     // The values will be filtered according to the requested keys
     // in `getAgglomeratesForSegmentsImpl`.
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
 
-    console.log(`Replying with mapping for v=${version}: `, mapping);
     return mapping;
   };
 
@@ -182,7 +231,7 @@ class BackendMock {
 
     // Process received update actions and update agglomerateMapping.
     for (const item of newItems) {
-      console.log("pushing to server: v=", item.version, "with", item.value);
+      console.log(`Updating mocked server to: v=${item.version} with`, item.value);
       let isFirstUpdateAction = true;
       for (const updateAction of item.value) {
         const bumpVersion = isFirstUpdateAction;
@@ -289,12 +338,22 @@ class BackendMock {
     _tracingId: string,
     agglomerateId: number,
   ): Promise<ArrayBuffer> => {
+    // Does not currently support versioning as this would require a versioned adjacency list.
     const version = this.agglomerateMapping.currentVersion;
+    const adjacencyList = this.agglomerateMapping.getAdjacencyList(version);
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
-    // TODOM: createSkeletonTracingFromAdjacency expects an unmapped id and not an agglomerateId
+    const someSegmentOfAgglomerate = mapping.find(
+      ([_segment, agglomerate]) => agglomerate === agglomerateId,
+    );
+    if (!someSegmentOfAgglomerate) {
+      throw new Error(
+        `Could not find any segment pointing to agglomerate with id ${agglomerateId}!`,
+      );
+    }
+    const segmentId = someSegmentOfAgglomerate[0];
     const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
-      mapping,
-      agglomerateId,
+      adjacencyList,
+      segmentId,
       "agglomerateSkeleton",
       version,
     );
@@ -306,6 +365,7 @@ class BackendMock {
 export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
+  initialState: WebknossosState | undefined = undefined,
 ) {
   const { mocks } = context;
 
@@ -322,6 +382,7 @@ export function mockInitialBucketAndAgglomerateData(
       { position: [7, 7, 7], value: 7 },
     ],
     additionalEdges,
+    initialState,
   );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
@@ -348,4 +409,14 @@ export function mockInitialBucketAndAgglomerateData(
   );
 
   return backendMock;
+}
+
+export function* expectMapping(
+  tracingId: string,
+  expectedMapping: Map<number, number>,
+): Saga<void> {
+  const mapping0 = yield select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(expectedMapping);
 }

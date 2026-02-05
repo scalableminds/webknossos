@@ -103,6 +103,10 @@ metals.sbt
 **/screenshots/*.diff.png
 **/screenshots/*.new.png
 
+# Tools
+tools/debugging/version-visualizer/data/*
+!tools/debugging/version-visualizer/data/.gitignore
+
 # Yarn 
 .yarn/*
 !.yarn/cache

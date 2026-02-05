@@ -24,7 +24,7 @@ import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,
@@ -185,6 +185,7 @@ import type {
 import Store from "viewer/store";
 import {
   callDeep,
+  createGroupHelper,
   createGroupToSegmentsMap,
   MISSING_GROUP_ID,
   mapGroups,
@@ -650,13 +651,11 @@ class TracingApi {
    */
   registerSegment(
     segmentId: number,
-    somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+    anchorPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
   /**
@@ -801,8 +800,8 @@ class TracingApi {
    *   3,
    *   {
    *     name: "A name",
-   *     somePosition: [1, 2, 3],
-   *     someAdditionalCoordinates: [],
+   *     anchorPosition: [1, 2, 3],
+   *     additionalCoordinates: [],
    *     color: [1, 2, 3],
    *     groupId: 1,
    *   },
@@ -854,13 +853,9 @@ class TracingApi {
    */
   createSegmentGroup(
     name: string | null = null,
-    parentGroupId: number = MISSING_GROUP_ID,
+    parentGroupId: number | null = MISSING_GROUP_ID,
     volumeLayerName?: string,
   ): number {
-    if (parentGroupId == null) {
-      // Guard against explicitly passed null or undefined.
-      parentGroupId = MISSING_GROUP_ID;
-    }
     const volumeTracing = volumeLayerName
       ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
@@ -868,23 +863,12 @@ class TracingApi {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
     const { segmentGroups } = volumeTracing;
-
-    const newSegmentGroups = cloneDeep(segmentGroups);
-    const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
-    const newGroup = {
-      name: name || `Group ${newGroupId}`,
-      groupId: newGroupId,
-      children: [],
-      isExpanded: false,
-    };
-
-    if (parentGroupId === MISSING_GROUP_ID) {
-      newSegmentGroups.push(newGroup);
-    } else {
-      callDeep(newSegmentGroups, parentGroupId, (item) => {
-        item.children.push(newGroup);
-      });
-    }
+    const { newSegmentGroups, newGroupId } = createGroupHelper(
+      segmentGroups,
+      name,
+      getMaximumGroupId(segmentGroups) + 1,
+      parentGroupId,
+    );
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
 
@@ -2348,8 +2332,8 @@ class DataApi {
       updateSegmentAction(
         segmentId,
         {
-          somePosition: globalPositionsMag1[0],
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: globalPositionsMag1[0],
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -3043,6 +3027,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
+
 export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),

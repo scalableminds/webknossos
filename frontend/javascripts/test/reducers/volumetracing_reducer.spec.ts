@@ -1,4 +1,11 @@
 import update from "immutability-helper";
+import {
+  createSegment1,
+  createSegment2,
+  getSegment,
+  id1,
+  id2,
+} from "test/fixtures/segment_merging_fixtures";
 import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { Vector3 } from "viewer/constants";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
@@ -8,6 +15,7 @@ import {
   addToContourListAction,
   createCellAction,
   finishAnnotationStrokeAction,
+  mergeSegmentsAction,
   registerLabelPointAction,
   resetContourAction,
   setActiveCellAction,
@@ -287,6 +295,68 @@ describe("VolumeTracing", () => {
     expect(newState).not.toBe(initialState);
     const tracing = getFirstVolumeTracingOrFail(newState.annotation);
     expect(tracing.contourList).toEqual([]);
+  });
+
+  describe("should merge segments", () => {
+    it("should merge two segments (simple)", () => {
+      let newState = VolumeTracingReducer(initialState, createSegment1);
+      newState = VolumeTracingReducer(newState, createSegment2);
+      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+
+      const segment1 = getSegment(newState, id1);
+      const segment2 = getSegment(newState, id2);
+
+      expect(segment1).toMatchObject({
+        id: id1,
+        groupId: id1,
+        name: "Name 1 and Name 2",
+        metadata: [
+          { key: "someKey1-1", stringValue: "someStringValue - segment 1" },
+          { key: "someKey2", stringListValue: ["list", "value", "segment 1"] },
+          { key: "identicalKey", stringValue: "identicalValue" },
+          { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
+          { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
+        ],
+        anchorPosition: [1, 1, 1],
+      });
+      expect(segment2).toBeUndefined();
+    });
+
+    it("should merge two segments (segment 1 doesn't exist, though)", () => {
+      let newState = VolumeTracingReducer(initialState, createSegment2);
+      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+
+      const segment1 = getSegment(newState, id1);
+      const segment2 = getSegment(newState, id2);
+
+      expect(segment1).toMatchObject({
+        id: id1,
+        groupId: id2,
+        name: "Segment 1 and Name 2", // Note that "Segment 1" got used here as a fallback name.
+        metadata: [
+          { key: "someKey1", stringValue: "someStringValue - segment 2" },
+          { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
+          {
+            key: "identicalKey",
+            stringValue: "identicalValue",
+          },
+        ],
+        anchorPosition: [2, 2, 2],
+      });
+      expect(segment2).toBeUndefined();
+    });
+
+    it("should merge two segments (segment 2 doesn't exist, though)", () => {
+      let newState = VolumeTracingReducer(initialState, createSegment1);
+      const segment1BeforeMerge = getSegment(newState, id1);
+      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+
+      const segment1 = getSegment(newState, id1);
+      const segment2 = getSegment(newState, id2);
+
+      expect(segment1).toEqual(segment1BeforeMerge);
+      expect(segment2).toBeUndefined();
+    });
   });
 });
 

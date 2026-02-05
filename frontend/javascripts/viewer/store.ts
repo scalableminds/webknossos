@@ -28,6 +28,7 @@ import type {
   TracingType,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
+import { ensureExactKeys } from "types/type_utils";
 import type {
   AdditionalCoordinate,
   BLEND_MODES,
@@ -162,19 +163,39 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly somePosition: Vector3 | undefined; // in layer space
-  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
+  readonly anchorPosition?: Vector3 | null | undefined; // in layer space
+  readonly additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
   readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
+type SegmentWithoutUserState = Omit<Segment, "isVisible">;
+
+export const SegmentPropertiesWithoutUserState = ensureExactKeys<SegmentWithoutUserState>()([
+  "id",
+  "name",
+  "anchorPosition",
+  "additionalCoordinates",
+  "creationTime",
+  "color",
+  "groupId",
+  "metadata",
+] as const) as unknown as Array<keyof SegmentWithoutUserState>;
+
 export type SegmentMap = DiffableMap<number, Segment>;
 
 export type LabelAction = {
   centroid: Vector3; // centroid of the label action
   plane: OrthoViewWithoutTD; // plane that was labeled
+};
+
+export type SegmentJournalEntry = {
+  entryIndex: number;
+  type: "MERGE_SEGMENTS";
+  sourceId: number;
+  targetId: number; // will be swallowed by source
 };
 
 export type VolumeTracing = TracingBase & {
@@ -203,6 +224,7 @@ export type VolumeTracing = TracingBase & {
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
   readonly hideUnregisteredSegments: boolean;
+  readonly segmentJournal: Array<SegmentJournalEntry>; // should always be stored with ascending entryIndex
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -437,6 +459,7 @@ export type RebaseRelevantAnnotationState = {
   readonly annotationDescription: string;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
+  readonly volumes: Array<VolumeTracing>;
   readonly isRebasing: boolean;
 };
 export type SaveState = {

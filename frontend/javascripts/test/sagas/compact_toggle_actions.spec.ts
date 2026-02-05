@@ -11,7 +11,7 @@ import {
   updateTreeGroupVisibility,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
+import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, WebknossosState } from "viewer/store";
 import { describe, expect, it } from "vitest";
@@ -37,9 +37,9 @@ const createSegment = (id: number, groupId: number | null, isVisible: boolean): 
   name: "TestSegment",
   color: [23, 23, 23],
   creationTime: 12345678,
-  somePosition: [0, 0, 0],
+  anchorPosition: [0, 0, 0],
   isVisible,
-  someAdditionalCoordinates: [],
+  additionalCoordinates: [],
   groupId,
   metadata: [],
 });
@@ -124,6 +124,7 @@ const createStateWithSegments = (
         segments: new DiffableMap(segments.map((s) => [s.id, s])),
         hideUnregisteredSegments: false,
         proofreadingMarkerPosition: undefined,
+        segmentJournal: [],
       },
     ],
   },

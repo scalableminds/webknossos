@@ -1,14 +1,25 @@
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import keyBy from "lodash-es/keyBy";
+import type { MetadataEntryProto } from "types/api_types";
+import {
+  getSegmentsForLayer,
+  getVolumeTracingById,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { changeUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import {
+  mergeSegmentsAction,
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Segment, WebknossosState } from "viewer/store";
-import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import type { SegmentGroup, WebknossosState } from "viewer/store";
+import {
+  createGroupHelper,
+  findGroup,
+  mapGroups,
+  moveGroupsHelper,
+} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   setLargestSegmentIdReducer,
@@ -29,10 +40,11 @@ export function applyVolumeUpdateActionsFromServer(
     state: WebknossosState,
     action: VolumeTracingReducerAction,
   ) => WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   let newState = state;
   for (const ua of actions) {
-    newState = applySingleAction(ua, newState, VolumeTracingReducer);
+    newState = applySingleAction(ua, newState, VolumeTracingReducer, ignoreUnsupportedActionTypes);
   }
 
   return newState;
@@ -45,23 +57,55 @@ function applySingleAction(
     state: WebknossosState,
     action: VolumeTracingReducerAction,
   ) => WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   switch (ua.name) {
     case "updateLargestSegmentId": {
       const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
       return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
     }
-    case "createSegment":
-    case "updateSegment": {
-      const { actionTracingId, ...originalSegment } = ua.value;
-      const { anchorPosition, ...segmentWithoutAnchor } = originalSegment;
-      const segment: Partial<Segment> = {
-        somePosition: anchorPosition ?? undefined,
-        ...segmentWithoutAnchor,
-      };
+    case "createSegment": {
+      const { actionTracingId, ...segment } = ua.value;
+      return VolumeTracingReducer(state, updateSegmentAction(segment.id, segment, actionTracingId));
+    }
+    case "updateSegmentPartial": {
+      const { actionTracingId, ...segment } = ua.value;
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(originalSegment.id, segment, actionTracingId),
+        updateSegmentAction(segment.id, segment, actionTracingId, Date.now(), false),
+      );
+    }
+    case "updateMetadataOfSegment": {
+      const { actionTracingId, id, upsertEntriesByKey, removeEntriesByKey } = ua.value;
+      const segments = getSegmentsForLayer(state, actionTracingId);
+      const segment = segments.getNullable(id);
+      if (segment == null) {
+        throw new Error(`Cannot find segment with id ${id} during application of update action.`);
+      }
+      const { metadata } = segment;
+
+      const removeKeySet = new Set(removeEntriesByKey);
+      const upsertDict = keyBy(upsertEntriesByKey, "key");
+
+      const metadataEntries = metadata.map(
+        (item) => [item.key, item] as [string, MetadataEntryProto],
+      );
+
+      const newMetadata = metadataEntries
+        // Only keep the items that should not be removed or changed
+        .filter(([key]) => !removeKeySet.has(key) && upsertDict[key] == null)
+        .map(([_key, item]) => item)
+        .concat(upsertEntriesByKey);
+
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(id, { metadata: newMetadata }, actionTracingId, Date.now(), false),
+      );
+    }
+    case "mergeSegments": {
+      return VolumeTracingReducer(
+        state,
+        mergeSegmentsAction(ua.value.sourceId, ua.value.targetId, ua.value.actionTracingId),
       );
     }
     case "deleteSegment": {
@@ -70,10 +114,69 @@ function applySingleAction(
         removeSegmentAction(ua.value.id, ua.value.actionTracingId),
       );
     }
-    case "updateSegmentGroups": {
+    case "upsertSegmentGroup": {
+      const { groupId, actionTracingId, newParentId, ...props } = ua.value;
+      const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
+      const oldSegmentGroups = volumeTracing.segmentGroups;
+
+      const existingGroup = findGroup(oldSegmentGroups, groupId);
+      let newSegmentGroups;
+      if (existingGroup) {
+        newSegmentGroups = mapGroups(oldSegmentGroups, (group) =>
+          group.groupId === ua.value.groupId
+            ? {
+                ...group,
+                ...props,
+              }
+            : group,
+        );
+
+        if ("newParentId" in ua.value) {
+          newSegmentGroups = moveGroupsHelper(newSegmentGroups, groupId, ua.value.newParentId);
+        }
+      } else {
+        newSegmentGroups = createGroupHelper(
+          oldSegmentGroups,
+          ua.value.name ?? null,
+          groupId,
+          newParentId ?? null,
+        ).newSegmentGroups;
+      }
+
       return VolumeTracingReducer(
         state,
-        setSegmentGroupsAction(ua.value.segmentGroups, ua.value.actionTracingId),
+        setSegmentGroupsAction(newSegmentGroups, ua.value.actionTracingId),
+      );
+    }
+    case "deleteSegmentGroup": {
+      const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
+      const oldSegmentGroups = volumeTracing.segmentGroups;
+
+      // todop: use sth similar to how moveGroupsHelper does it?
+      function deepFilter<T extends SegmentGroup>(
+        nodes: T[],
+        predicate: (node: T) => boolean,
+      ): T[] {
+        // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
+        return nodes.reduce((acc: T[], node: T) => {
+          if (predicate(node)) {
+            acc.push({
+              ...node,
+              children: deepFilter(node.children as T[], predicate),
+            });
+          }
+          return acc;
+        }, []);
+      }
+
+      const newSegmentGroups = deepFilter(
+        oldSegmentGroups,
+        (group) => group.groupId !== ua.value.groupId,
+      );
+
+      return VolumeTracingReducer(
+        state,
+        setSegmentGroupsAction(newSegmentGroups, ua.value.actionTracingId),
       );
     }
     case "updateUserBoundingBoxInVolumeTracing": {
@@ -160,6 +263,9 @@ function applySingleAction(
 
   ua satisfies never;
 
+  if (ignoreUnsupportedActionTypes) {
+    return state;
+  }
   // Satisfy TS.
   throw new Error("Reached unexpected part of function.");
 }

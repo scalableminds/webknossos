@@ -97,7 +97,7 @@
         "noShadowRestrictedNames": "off",
         "noImplicitAnyLet": "off",
         "noConfusingVoidType": "off",
-        "noGlobalIsNan": "off", // TODO: consider turning this into an error
+        "noGlobalIsNan": "error",
         "noArrayIndexKey": "off",
         "noConstEnum": "off",
         "noRedeclare": "off",

@@ -7,9 +7,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
-import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationPlanUpdate, OrganizationService}
+import models.organization.{
+  FreeCreditTransactionService,
+  OrganizationDAO,
+  OrganizationPlanUpdate,
+  OrganizationService,
+  PricingPlan
+}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
-import models.team.PricingPlan
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsNull, JsValue, Json, OFormat, __}
@@ -242,6 +247,26 @@ class OrganizationController @Inject()(
         userEmail <- userService.emailFor(request.identity)
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage, organization.name))
+      } yield Ok
+    }
+
+  private def aiAddonLabelForPricingPlan(pricingPlan: PricingPlan.PricingPlan): String =
+    pricingPlan match {
+      case PricingPlan.Team | PricingPlan.Team_Trial  => "Team AI"
+      case PricingPlan.Power | PricingPlan.Power_Trial => "Power AI"
+      case _                                          => "AI Add-on"
+    }
+
+  def sendUpgradeAiAddonEmail(): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+        organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
+        userEmail <- userService.emailFor(request.identity)
+        aiPlanLabel = aiAddonLabelForPricingPlan(organization.pricingPlan)
+        pricingPlanLabel = organization.pricingPlan.toString
+        _ = Mailer ! Send(
+          defaultMails.upgradeAiAddonMail(request.identity, userEmail, organization.name, aiPlanLabel, pricingPlanLabel))
       } yield Ok
     }
 

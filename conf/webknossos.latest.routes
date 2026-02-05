@@ -258,6 +258,7 @@ POST          /pricing/requestUpgrade                                           
 POST          /pricing/requestUsers                                                             controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
 POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
 POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
+POST          /pricing/requestAiAddon                                                           controllers.OrganizationController.sendUpgradeAiAddonEmail()
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
 POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan
 GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates

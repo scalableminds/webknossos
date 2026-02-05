@@ -99,6 +99,7 @@
       },
       "correctness": {
         "noUnusedVariables": "error",
+        "noUnusedFunctionParameters": "error",
         "noUnusedImports": "error",
         "noRenderReturnValue": "off",
         "useHookAtTopLevel": "error",

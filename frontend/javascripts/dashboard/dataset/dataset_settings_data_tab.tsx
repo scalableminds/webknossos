@@ -125,14 +125,19 @@ function SimpleDatasetForm({
   const coordinateTransformationsJSON: string = Form.useWatch(["coordinateTransformations"], form);
 
   useEffect(() => {
-    if (dataSource == null || dataSource.dataLayers?.length === 0) return;
+    // Prevent unnecessary re-renders by not having the dataSource, which
+    // might be changed below, as a dependency
+    const currentDataSource: Record<string, any> = form.getFieldValue("dataSource");
+    if (currentDataSource == null || currentDataSource.dataLayers?.length === 0) return;
     if (transformationsMode === TransformationsMode.NONE) {
-      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer: DataLayer) => {
-        return {
-          ...layer,
-          coordinateTransformations: [],
-        };
-      });
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          return {
+            ...layer,
+            coordinateTransformations: [],
+          };
+        },
+      );
       form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
     }
     if (form.getFieldError(["coordinateTransformations"]).length > 0) {
@@ -142,18 +147,20 @@ function SimpleDatasetForm({
       if (coordinateTransformationsJSON == null) return;
       const layersWithCoordTransformations: DataLayerWithTransformations[] =
         coordinateTransformationsJSON === "" ? [] : JSON.parse(coordinateTransformationsJSON);
-      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer: DataLayer) => {
-        const coordinateTransformation = layersWithCoordTransformations?.find(
-          (ct) => ct.name === layer.name,
-        );
-        return {
-          ...layer,
-          coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
-        };
-      });
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          const coordinateTransformation = layersWithCoordTransformations?.find(
+            (ct) => ct.name === layer.name,
+          );
+          return {
+            ...layer,
+            coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
+          };
+        },
+      );
       form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
     }
-  }, [coordinateTransformationsJSON, form, dataSource, transformationsMode]);
+  }, [coordinateTransformationsJSON, form, transformationsMode]);
 
   const getTransformationSettings = () => {
     switch (transformationsMode) {

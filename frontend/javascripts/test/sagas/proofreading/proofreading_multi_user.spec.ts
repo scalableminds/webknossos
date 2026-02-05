@@ -176,10 +176,16 @@ describe("Proofreading (Multi User)", () => {
       ]);
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
-      const segment4AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(4);
+      const currentSegments = Store.getState().annotation.volumes[0].segments;
+      expect(currentSegments.size()).toEqual(2);
+
+      const segment1AfterSaving = currentSegments.getNullable(1);
+      expect(segment1AfterSaving).toBeUndefined();
+
+      const segment4AfterSaving = currentSegments.getNullable(4);
       expect(segment4AfterSaving).toBeUndefined();
 
-      const segment6AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(6);
+      const segment6AfterSaving = currentSegments.getNullable(6);
       expect(segment6AfterSaving).toBeUndefined();
     });
 
@@ -963,11 +969,6 @@ describe("Proofreading (Multi User)", () => {
       for (const state of [frontendState, backendState]) {
         const currentSegments = state.annotation.volumes[0].segments;
         expect(currentSegments.size()).toEqual(1);
-        const segment1AfterSaving = currentSegments.getNullable(1);
-        expect(segment1AfterSaving).toBeUndefined();
-
-        const segment4AfterSaving = currentSegments.getNullable(4);
-        expect(segment4AfterSaving).toBeUndefined();
 
         const segment1339AfterSaving = currentSegments.getNullable(1339);
         expect(segment1339AfterSaving).toMatchObject({
@@ -1182,6 +1183,9 @@ describe("Proofreading (Multi User)", () => {
       );
 
       yield call(waitUntilNotBusy);
+      // Unfortunately, save has to be called twice to ensure that
+      // everything is saved.
+      yield call(() => api.tracing.save());
       yield call(() => api.tracing.save());
 
       const backendState = backendMock.getState()!;
@@ -1190,17 +1194,16 @@ describe("Proofreading (Multi User)", () => {
       for (const state of [frontendState, backendState]) {
         const currentSegments = state.annotation.volumes[0].segments;
         expect(currentSegments.size()).toEqual(2);
-        const segment4AfterSaving = currentSegments.getNullable(4);
-        expect(segment4AfterSaving).toBeUndefined();
 
         const segment1337AfterSaving = currentSegments.getNullable(1337);
-
         expect(segment1337AfterSaving).toMatchObject({
           name: "Segment 1337 and Segment 4",
           anchorPosition: [4, 4, 4],
         });
+
         const segment1339AfterSaving = currentSegments.getNullable(1339);
         expect(segment1339AfterSaving).toMatchObject({
+          name: null,
           anchorPosition: [5, 5, 5],
         });
       }

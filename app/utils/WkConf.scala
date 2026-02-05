@@ -278,6 +278,10 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val password: String = get[String]("segmentAnything.password")
   }
 
+  object ExternalPathDeletionService {
+    val key: String = get[String]("externalPathDeletionService.key")
+  }
+
   val children =
     List(
       Http,
@@ -293,7 +297,8 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       BackendAnalytics,
       Slick,
       Voxelytics,
-      SegmentAnything
+      SegmentAnything,
+      ExternalPathDeletionService
     )
 
 }

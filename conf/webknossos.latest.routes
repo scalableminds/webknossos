@@ -115,6 +115,8 @@ GET           /datasets/:datasetId/dataSourceForSuperUser                       
 POST          /datasets/:datasetId/duplicateToOrga                                              controllers.DatasetController.duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
+GET           /datasets/pathsToDelete                                                           controllers.PathDeletionController.listPathsToDelete(key: String)
+POST          /datasets/pathsToDelete/markAsDeleted                                             controllers.PathDeletionController.markAsDeleted(key: String)
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

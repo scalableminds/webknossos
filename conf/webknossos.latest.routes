@@ -92,6 +92,8 @@ POST          /datasets/exploreAndAddRemote                                     
 POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
 GET           /datasets/disambiguate/:datasetName/toNew                                         controllers.DatasetController.getOrganizationForDataset(datasetName: String, sharingToken: Option[String])
 GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
+GET           /datasets/pathsToDelete                                                           controllers.PathDeletionController.listPathsToDelete(key: String)
+POST          /datasets/pathsToDelete/markAsDeleted                                             controllers.PathDeletionController.markAsDeleted(key: String)
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
 PATCH         /datasets/:datasetId                                                              controllers.DatasetController.update(datasetId: ObjectId)
 PATCH         /datasets/:datasetId/updatePartial                                                controllers.DatasetController.updatePartial(datasetId: ObjectId)

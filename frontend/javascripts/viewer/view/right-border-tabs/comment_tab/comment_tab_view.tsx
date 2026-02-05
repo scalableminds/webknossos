@@ -122,8 +122,8 @@ function CommentTabView(props: Props) {
   const [isVisibleInDom, setIsVisibleInDom] = useState(true);
 
   const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
-  const nextCommentRef = useRef<(arg0?: boolean) => void>();
-  const previousCommentRef = useRef<() => void>();
+  const nextCommentRef = useRef<(arg0?: boolean) => void>(null);
+  const previousCommentRef = useRef<() => void>(null);
 
   const dispatch = useDispatch();
 

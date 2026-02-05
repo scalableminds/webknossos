@@ -1,6 +1,7 @@
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import messages from "messages";
+import type { Channel } from "redux-saga";
 import { actionChannel, call, delay, put, take } from "typed-redux-saga";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -199,7 +200,7 @@ function* manageUndoStates(): Saga<never> {
     return true;
   }
 
-  const channel = yield* actionChannel([
+  const channel: Channel<Action> = yield* actionChannel([
     ...SkeletonTracingSaveRelevantActions,
     ...UndoRedoRelevantBoundingBoxActions,
     "ADD_BUCKET_TO_UNDO",

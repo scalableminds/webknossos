@@ -8,15 +8,15 @@ let activeIndex = 0;
 const sidebar = document.getElementById("sidebar");
 const main = document.getElementById("main");
 const main2 = document.getElementById("main2");
-const segmentViewDiv = document.getElementById("segment-view")
+const segmentViewDiv = document.getElementById("segment-view");
 
 /* ================================
    Load once
 ================================ */
 
 fetch("/versions")
-  .then(res => res.json())
-  .then(data => {
+  .then((res) => res.json())
+  .then((data) => {
     versions = data;
     buildSidebar();
     renderVersion(0);
@@ -42,7 +42,6 @@ function buildSidebar() {
 
   updateActive();
 
-
   window.addEventListener("keydown", (e) => {
     if (e.key === "ArrowDown") {
       activeIndex = (activeIndex + 1) % versions.length;
@@ -58,13 +57,10 @@ function buildSidebar() {
       e.preventDefault();
     }
   });
-
 }
 
 function updateActive() {
-  [...sidebar.children].forEach((el, i) =>
-    el.classList.toggle("active", i === activeIndex)
-  );
+  [...sidebar.children].forEach((el, i) => el.classList.toggle("active", i === activeIndex));
 }
 
 /* ================================
@@ -74,13 +70,11 @@ function updateActive() {
 function parseAdjacencyList(json) {
   const data = JSON.parse(json);
 
-  return new Map(
-    data.map(([key, values]) => [key, new Set(values)])
-  );
+  return new Map(data.map(([key, values]) => [key, new Set(values)]));
 }
 
 function layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, height) {
-  const components = d3.group(nodes, d => nodeIdToComponentId(d.id));
+  const components = d3.group(nodes, (d) => nodeIdToComponentId(d.id));
 
   const GAP_X = 200;
   let cursorX = 0;
@@ -88,17 +82,14 @@ function layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, hei
   const allPositions = [];
 
   // stable order (VERY IMPORTANT)
-  const sorted = [...components.entries()]
-    .sort((a, b) => a[0] - b[0]); // by agglomerate id
+  const sorted = [...components.entries()].sort((a, b) => a[0] - b[0]); // by agglomerate id
 
-  let componentIndex = -1
+  let componentIndex = -1;
   for (const [_aggId, compNodes] of sorted) {
     componentIndex++;
-    const compSet = new Set(compNodes.map(n => n.id));
+    const compSet = new Set(compNodes.map((n) => n.id));
 
-    const compLinks = links.filter(
-      l => compSet.has(l.source) && compSet.has(l.target)
-    );
+    const compLinks = links.filter((l) => compSet.has(l.source) && compSet.has(l.target));
 
     const g = new dagre.graphlib.Graph();
     g.setGraph({
@@ -110,21 +101,19 @@ function layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, hei
 
     g.setDefaultEdgeLabel(() => ({}));
 
-    compNodes.forEach(n =>
-      g.setNode(n.id, { width: 50, height: 50 })
-    );
+    compNodes.forEach((n) => g.setNode(n.id, { width: 50, height: 50 }));
 
-    compLinks.forEach(l =>
-      g.setEdge(l.source, l.target)
-    );
+    compLinks.forEach((l) => g.setEdge(l.source, l.target));
 
     dagre.layout(g);
 
     // compute component bbox
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      maxX = -Infinity;
+    let minY = Infinity,
+      maxY = -Infinity;
 
-    compNodes.forEach(n => {
+    compNodes.forEach((n) => {
       const pos = g.node(n.id);
       minX = Math.min(minX, pos.x);
       maxX = Math.max(maxX, pos.x);
@@ -142,7 +131,7 @@ function layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, hei
     // shift into row layout
     compNodes.forEach((n, nodeIdx) => {
       const pos = g.node(n.id);
-      n.x = pos.x - minX + cursorX + 5 * nodeIdx + ((random(nodeIdx) - 0.5) * 50);
+      n.x = pos.x - minX + cursorX + 5 * nodeIdx + (random(nodeIdx) - 0.5) * 50;
       n.y = pos.y + 20 * componentIndex;
 
       allPositions.push(n);
@@ -153,8 +142,8 @@ function layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, hei
 
   // -------- center entire layout (fix top-left problem)
 
-  const xs = nodes.map(n => n.x);
-  const ys = nodes.map(n => n.y);
+  const xs = nodes.map((n) => n.x);
+  const ys = nodes.map((n) => n.y);
 
   const graphW = Math.max(...xs) - Math.min(...xs);
   const graphH = Math.max(...ys) - Math.min(...ys);
@@ -162,13 +151,11 @@ function layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, hei
   const offsetX = (width - graphW) / 2 - Math.min(...xs);
   const offsetY = (height - graphH) / 2 - Math.min(...ys);
 
-  nodes.forEach(n => {
+  nodes.forEach((n) => {
     n.x += offsetX;
     n.y += offsetY;
   });
 }
-
-
 
 /* ================================
    Main render with transitions
@@ -179,22 +166,27 @@ function parseDiffableMap(obj) {
 }
 
 function renderVersion(index) {
-  const { versionMap: versionMapJSON, adjacencyList: adjacencyListJSON, storeState: storeStateOriginal, saveRequests } =
-    versions[index];
+  const {
+    versionMap: versionMapJSON,
+    adjacencyList: adjacencyListJSON,
+    storeState: storeStateOriginal,
+    saveRequests,
+  } = versions[index];
 
   const storeState = JSON.parse(JSON.stringify(storeStateOriginal), (key, value) => {
-    return value != null && typeof value === "object" && value._isDiffableMap ? parseDiffableMap(value) : value;
-  })
+    return value != null && typeof value === "object" && value._isDiffableMap
+      ? parseDiffableMap(value)
+      : value;
+  });
 
   const trees = storeState.annotation.skeleton.trees;
 
   console.log("saveRequests", saveRequests);
-  document.getElementById("action-log-area").value = JSON
-    .stringify(saveRequests, null, "\t")
-    .replaceAll(
-      "],\n\t\"",
-      "],\n\n\t\""
-    );
+  document.getElementById("action-log-area").value = JSON.stringify(
+    saveRequests,
+    null,
+    "\t",
+  ).replaceAll('],\n\t"', '],\n\n\t"');
 
   const segments = storeState.annotation.volumes[0].segments;
   console.log("segments", segments);
@@ -203,49 +195,56 @@ function renderVersion(index) {
   <table>
     <thead>
       <tr>
-        <th style='width: 100px'>ID</th>
-        <th style='width: 100px'>Name</th>
+        <th style='width: 50px'>ID</th>
+        <th style='width: 450px'>Name</th>
         <th style='width: 100px'>Anchor</th>
       </tr>
     </thead>
     <tbody>
-      ${Array.from(segments.values()).map(s => `
+      ${Array.from(segments.values())
+        .map(
+          (s) => `
         <tr>
           <td>${s.id}</td>
           <td>${s.name}</td>
           <td>${JSON.stringify(s.anchorPosition)}</td>
         </tr>
-      `).join("")}
+      `,
+        )
+        .join("")}
     </tbody>
   </table>
   `;
 
   segmentViewDiv.innerHTML = tableHTML;
 
-  const versionMap = new Map(
-    Object.entries(versionMapJSON).map(([k, v]) => [Number(k), v])
-  );
+  const versionMap = new Map(Object.entries(versionMapJSON).map(([k, v]) => [Number(k), v]));
 
   const adjacencyList = parseAdjacencyList(adjacencyListJSON);
-
 
   /* ---------- build nodes/links ---------- */
 
   function renderAgglomerateGraph() {
-    const nodes = [...versionMap.keys()].map(id => ({ id }));
+    const nodes = [...versionMap.keys()].map((id) => ({ id }));
 
     const links = [];
     for (const [from, tos] of adjacencyList.entries()) {
-      tos.forEach(to => {
+      tos.forEach((to) => {
         links.push({ source: from, target: to });
       });
     }
     const segments = new Map(storeState.annotation.volumes[0].segments);
-    const nodeIdToComponentId = nodeId => versionMap.get(nodeId);
-    const componentIdToColor = id => segments.has(id) ? "green" : "gray";
-    const componentIdToLabel = id => `Agglomerate ${id}`;
+    const nodeIdToComponentId = (nodeId) => versionMap.get(nodeId);
+    const componentIdToColor = (id) => (segments.has(id) ? "green" : "gray");
+    const componentIdToLabel = (id) => `Agglomerate ${id}`;
 
-    aggloRenderer.renderGraph(nodes, links, nodeIdToComponentId, componentIdToColor, componentIdToLabel)
+    aggloRenderer.renderGraph(
+      nodes,
+      links,
+      nodeIdToComponentId,
+      componentIdToColor,
+      componentIdToLabel,
+    );
   }
 
   function renderSkeletonGraph() {
@@ -254,26 +253,33 @@ function renderVersion(index) {
 
     for (const tree of trees.values()) {
       for (const node of tree.nodes.values()) {
-        treeByNodeId.set(node.id, tree)
-        treeByTreeId.set(tree.treeId, tree)
+        treeByNodeId.set(node.id, tree);
+        treeByTreeId.set(tree.treeId, tree);
       }
     }
 
-
-    const nodes = [...trees.values().flatMap(tree => tree.nodes.values())].map(node => ({ id: node.id }));
-    console.log("nodes", nodes)
+    const nodes = [...trees.values().flatMap((tree) => tree.nodes.values())].map((node) => ({
+      id: node.id,
+    }));
+    console.log("nodes", nodes);
 
     const links = [];
     for (const tree of trees.values()) {
       for (const edge of tree.edges.outMap.values()) {
-        links.push({ source: edge[0].source, target: edge[0].target })
+        links.push({ source: edge[0].source, target: edge[0].target });
       }
     }
-    const nodeIdToComponentId = nodeId => treeByNodeId.get(nodeId).treeId;
-    const componentIdToColor = _id => "gray";
-    const componentIdToLabel = id => `${treeByTreeId.get(id).name} (${id})`;
+    const nodeIdToComponentId = (nodeId) => treeByNodeId.get(nodeId).treeId;
+    const componentIdToColor = (_id) => "gray";
+    const componentIdToLabel = (id) => `${treeByTreeId.get(id).name} (${id})`;
 
-    skeletonRenderer.renderGraph(nodes, links, nodeIdToComponentId, componentIdToColor, componentIdToLabel)
+    skeletonRenderer.renderGraph(
+      nodes,
+      links,
+      nodeIdToComponentId,
+      componentIdToColor,
+      componentIdToLabel,
+    );
   }
 
   renderAgglomerateGraph();
@@ -285,14 +291,10 @@ class GraphRenderer {
     /* keep positions between renders for smooth morphing */
     this.previousPositions = new Map();
 
+    this.svg = d3.select(parentDiv).append("svg").attr("width", "100%").attr("height", "100%");
 
-    this.svg = d3
-      .select(parentDiv)
-      .append("svg")
-      .attr("width", "100%")
-      .attr("height", "100%");
-
-    this.svg.append("defs")
+    this.svg
+      .append("defs")
       .append("marker")
       .attr("id", "arrow")
       .attr("viewBox", "0 -5 10 10")
@@ -320,17 +322,16 @@ class GraphRenderer {
   renderGraph(nodes, links, nodeIdToComponentId, componentIdToColor, componentIdToLabel) {
     const width = main.clientWidth;
     const height = main.clientHeight;
-    const nodeById = new Map(nodes.map(n => [n.id, n]));
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
-    links.forEach(l => {
+    links.forEach((l) => {
       l.source = nodeById.get(l.source);
       l.target = nodeById.get(l.target);
     });
 
-
     /* ---------- seed previous positions ---------- */
 
-    nodes.forEach(n => {
+    nodes.forEach((n) => {
       const prev = this.previousPositions.get(n.id);
       if (prev) {
         n.x = prev.x;
@@ -342,28 +343,24 @@ class GraphRenderer {
 
     layoutComponentsWithDagre(nodes, links, nodeIdToComponentId, width, height);
 
-
-
     /* save positions for next render */
-    nodes.forEach(n =>
-      this.previousPositions.set(n.id, { x: n.x, y: n.y })
-    );
+    nodes.forEach((n) => this.previousPositions.set(n.id, { x: n.x, y: n.y }));
 
     /* ---------- group components ---------- */
 
-    const components = d3.group(nodes, d => nodeIdToComponentId(d.id));
+    const components = d3.group(nodes, (d) => nodeIdToComponentId(d.id));
 
     const compData = [...components.entries()].map(([aggId, compNodes]) => {
       const pad = 50;
-      const xs = compNodes.map(d => d.x);
-      const ys = compNodes.map(d => d.y);
+      const xs = compNodes.map((d) => d.x);
+      const ys = compNodes.map((d) => d.y);
 
       return {
         id: aggId,
         x: Math.min(...xs) - pad,
         y: Math.min(...ys) - pad,
         w: Math.max(...xs) - Math.min(...xs) + 2 * pad,
-        h: Math.max(...ys) - Math.min(...ys) + 2 * pad
+        h: Math.max(...ys) - Math.min(...ys) + 2 * pad,
       };
     });
 
@@ -375,18 +372,18 @@ class GraphRenderer {
 
     this.componentLayer
       .selectAll("rect")
-      .data(compData, d => d.id)
+      .data(compData, (d) => d.id)
       .join(
-        enter => enter.append("rect").attr("opacity", 0),
-        update => update,
-        exit => exit.transition(t).attr("opacity", 0).remove()
+        (enter) => enter.append("rect").attr("opacity", 0),
+        (update) => update,
+        (exit) => exit.transition(t).attr("opacity", 0).remove(),
       )
       .transition(t)
       .attr("opacity", 1)
-      .attr("x", d => d.x)
-      .attr("y", d => d.y)
-      .attr("width", d => d.w)
-      .attr("height", d => d.h)
+      .attr("x", (d) => d.x)
+      .attr("y", (d) => d.y)
+      .attr("width", (d) => d.w)
+      .attr("height", (d) => d.h)
       .attr("rx", 12)
       .attr("ry", 12)
       .attr("fill", "none")
@@ -395,20 +392,20 @@ class GraphRenderer {
 
     this.componentLabelLayer
       .selectAll("text")
-      .data(compData, d => d.id)
+      .data(compData, (d) => d.id)
       .join(
-        enter => enter.append("text").attr("opacity", 0),
-        update => update,
-        exit => exit.transition(t).attr("opacity", 0).remove()
+        (enter) => enter.append("text").attr("opacity", 0),
+        (update) => update,
+        (exit) => exit.transition(t).attr("opacity", 0).remove(),
       )
       .transition(t)
       .attr("opacity", 1)
-      .attr("x", d => d.x + 6)
-      .attr("y", d => d.y - 6)
+      .attr("x", (d) => d.x + 6)
+      .attr("y", (d) => d.y - 6)
       .attr("font-size", 14)
       .attr("font-family", "sans-serif")
-      .attr("fill", d => componentIdToColor(d.id))
-      .text(d => componentIdToLabel(d.id));
+      .attr("fill", (d) => componentIdToColor(d.id))
+      .text((d) => componentIdToLabel(d.id));
 
     /* ================================
        LINKS
@@ -416,68 +413,60 @@ class GraphRenderer {
 
     const linkSel = this.linkLayer
       .selectAll("line")
-      .data(links, d => `${d.source.id}->${d.target.id}`);
+      .data(links, (d) => `${d.source.id}->${d.target.id}`);
 
+    linkSel.exit().transition().style("opacity", 0).remove();
 
-    linkSel.exit()
-      .transition()
-      .style("opacity", 0)
-      .remove();
-
-
-    const linkEnter = linkSel.enter()
+    const linkEnter = linkSel
+      .enter()
       .append("line")
       .attr("stroke", randomColor())
       .attr("stroke-opacity", 0.6)
       .attr("marker-end", "url(#arrow)")
-      .attr("x1", d => d.source.x)
-      .attr("y1", d => d.source.y)
-      .attr("x2", d => d.target.x)
-      .attr("y2", d => d.target.y);
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y);
 
-    const line = d3.line()
-      .x(d => d.x)
-      .y(d => d.y)
+    const line = d3
+      .line()
+      .x((d) => d.x)
+      .y((d) => d.y)
       .curve(d3.curveBundle.beta(0.5)); // makes edges curved
 
     const linkMerged = linkSel.merge(linkEnter);
 
-    linkMerged.transition()
+    linkMerged
+      .transition()
       .duration(600)
-      .attr("x1", d => d.source.x)
-      .attr("y1", d => d.source.y)
-      .attr("x2", d => d.target.x)
-      .attr("y2", d => d.target.y);
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y);
     /* ================================
        NODES
     ================================ */
 
-    const nodeSel = this.nodeLayer
-      .selectAll("g.node")
-      .data(nodes, d => d.id);
+    const nodeSel = this.nodeLayer.selectAll("g.node").data(nodes, (d) => d.id);
 
-    nodeSel.exit()
-      .transition(t)
-      .style("opacity", 0)
-      .remove();
+    nodeSel.exit().transition(t).style("opacity", 0).remove();
 
     const linksByNode = new Map();
 
-
-    const nodeEnter = nodeSel.enter()
+    const nodeEnter = nodeSel
+      .enter()
       .append("g")
       .attr("class", "node")
       .style("opacity", 0)
-      .call(d3.drag()
-        .on("drag", function (event, d) {
+      .call(
+        d3.drag().on("drag", function (event, d) {
           d.x = event.x;
           d.y = event.y;
 
-          d3.select(this)
-            .attr("transform", `translate(${d.x}, ${d.y})`);
+          d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
 
           // precompute which edges belong to which node
-          links.forEach(l => {
+          links.forEach((l) => {
             if (!linksByNode.has(l.source.id)) linksByNode.set(l.source.id, []);
             if (!linksByNode.has(l.target.id)) linksByNode.set(l.target.id, []);
             linksByNode.get(l.source.id).push(l);
@@ -485,19 +474,17 @@ class GraphRenderer {
           });
 
           linkMerged
-            .attr("x1", l => l.source.x)
-            .attr("y1", l => l.source.y)
-            .attr("x2", l => l.target.x)
-            .attr("y2", l => l.target.y);
-        })
+            .attr("x1", (l) => l.source.x)
+            .attr("y1", (l) => l.source.y)
+            .attr("x2", (l) => l.target.x)
+            .attr("y2", (l) => l.target.y);
+        }),
       );
 
-    nodeEnter.append("circle")
-      .attr("r", 25)
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1.5);
+    nodeEnter.append("circle").attr("r", 25).attr("stroke", "#fff").attr("stroke-width", 1.5);
 
-    nodeEnter.append("text")
+    nodeEnter
+      .append("text")
       .attr("text-anchor", "middle")
       .attr("dy", "0.35em")
       .attr("font-size", 20)
@@ -505,16 +492,14 @@ class GraphRenderer {
 
     const nodeMerged = nodeEnter.merge(nodeSel);
 
-    nodeMerged.select("circle")
-      .attr("fill", "gray");
+    nodeMerged.select("circle").attr("fill", "gray");
 
-    nodeMerged.select("text")
-      .text(d => d.id);
+    nodeMerged.select("text").text((d) => d.id);
 
     nodeMerged
       .transition(t)
       .style("opacity", 1)
-      .attr("transform", d => `translate(${d.x}, ${d.y})`);
+      .attr("transform", (d) => `translate(${d.x}, ${d.y})`);
   }
 }
 
@@ -522,5 +507,5 @@ function randomColor() {
   return `hsl(${Math.random() * 360}, 70%, 50%)`;
 }
 
-const aggloRenderer = new GraphRenderer(main)
-const skeletonRenderer = new GraphRenderer(main2)
+const aggloRenderer = new GraphRenderer(main);
+const skeletonRenderer = new GraphRenderer(main2);

@@ -89,6 +89,7 @@
   font-size: 14px;
   font-weight: 400;
   font-family: @font-family;
+  box-sizing: border-box;
 
   border-left: 1px solid transparent;
   border-right: 1px solid transparent;
@@ -106,6 +107,12 @@
   .flexlayout__tab_button_content {
     background-color: var(--ant-color-bg-base);
     color: var(--ant-color-text-secondary);
+    // Keep borders defined at all times to avoid layout shifts on hover.
+    border-left: 1px solid transparent;
+    border-right: 1px solid transparent;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    box-sizing: border-box;
 
   }
 
@@ -139,15 +146,11 @@
   }
 
   &:hover {
-    background-color: var(--ant-color-bg-base);
+    background-color: var(--ant-color-primary-bg-hover);
 
     .flexlayout__tab_button_content {
-      background-color: var(--ant-color-bg-base);
+      background-color: var(--ant-color-primary-bg-hover);
       color: var(--ant-color-text-secondary);
-      border-left: 1px solid transparent;
-      border-right: 1px solid transparent;
-      border-top: 1px solid transparent;
-      border-bottom: 1px solid transparent;
     }
   }
 }

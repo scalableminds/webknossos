@@ -1,15 +1,12 @@
 import { AiAddonUpgradeCard } from "admin/organization/organization_cards";
+import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import { Alert, Space, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 
-export function AiTrainingUnavailableNotice({
-  onRequestUpgrade,
-  canRequestAiAddon,
-  isEligibleForAiAddon,
-}: {
-  onRequestUpgrade?: () => void;
-  canRequestAiAddon: boolean;
-  isEligibleForAiAddon: boolean;
-}) {
+export function AiTrainingUnavailableNotice() {
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const canRequestAiAddon = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+
   return (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       <Alert
@@ -23,12 +20,7 @@ export function AiTrainingUnavailableNotice({
           </Typography.Text>
         }
       />
-      {isEligibleForAiAddon ? (
-        <AiAddonUpgradeCard
-          description="Unlock AI model training for your organization."
-          onRequestUpgrade={canRequestAiAddon ? onRequestUpgrade : undefined}
-        />
-      ) : null}
+      {canRequestAiAddon ? <AiAddonUpgradeCard /> : null}
     </Space>
   );
 }

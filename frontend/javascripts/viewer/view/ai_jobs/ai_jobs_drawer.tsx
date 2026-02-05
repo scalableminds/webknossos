@@ -1,9 +1,4 @@
-import {
-  hasAiPlan,
-  isAiAddonEligiblePlan,
-  isUserAllowedToRequestUpgrades,
-} from "admin/organization/pricing_plan_utils";
-import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
+import { hasAiPlan } from "admin/organization/pricing_plan_utils";
 import { Drawer, Tabs } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
@@ -19,12 +14,8 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   const dispatch = useDispatch();
   const orgaHasAiPlan = useWkSelector((state) => hasAiPlan(state.activeOrganization));
   const activeUser = useWkSelector((state) => state.activeUser);
-  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   const isSuperUser = activeUser?.isSuperUser ?? false;
-  const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
-  const isEligibleForAiAddon = activeOrganization
-    ? isAiAddonEligiblePlan(activeOrganization.pricingPlan)
-    : false;
+
   const ai_job_drawer_state = useWkSelector((state) => state.uiInformation.aIJobDrawerState);
   const canTrainModels = isSuperUser || orgaHasAiPlan;
 
@@ -48,19 +39,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
     {
       label: "Train Segmentation Model",
       key: "open_ai_training",
-      children: canTrainModels ? (
-        <AiModelTrainingJob />
-      ) : (
-        <AiTrainingUnavailableNotice
-          onRequestUpgrade={
-            canRequestAiPlan && activeOrganization
-              ? () => UpgradePricingPlanModal.requestAiPlanUpgrade(activeOrganization)
-              : undefined
-          }
-          canRequestAiAddon={canRequestAiPlan}
-          isEligibleForAiAddon={isEligibleForAiAddon}
-        />
-      ),
+      children: canTrainModels ? <AiModelTrainingJob /> : <AiTrainingUnavailableNotice />,
     },
     {
       label: "Image Alignment",

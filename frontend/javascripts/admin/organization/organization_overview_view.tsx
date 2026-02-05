@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
-import { Button, Col, Row, Spin, Typography } from "antd";
+import { Button, Col, Row, Space, Spin, Typography } from "antd";
 import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -161,7 +161,7 @@ export function OrganizationOverviewView() {
         size="small"
         key="upgradeAiPlanAction"
         icon={<PlusOutlined />}
-        onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade(organization)}
+        onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
       />
     );
   }
@@ -226,6 +226,59 @@ export function OrganizationOverviewView() {
     },
   ];
 
+  function renderUpgradeCards() {
+    const isPersonal = organization.pricingPlan === PricingPlanEnum.Personal;
+    const isTeamOrTeamTrial =
+      organization.pricingPlan === PricingPlanEnum.Team ||
+      organization.pricingPlan === PricingPlanEnum.TeamTrial;
+
+    if (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard) {
+      return null;
+    }
+
+    let upgradeContent: React.ReactNode = null;
+
+    if (isPersonal) {
+      upgradeContent = <PlanUpgradeCard organization={organization} />;
+    } else if (isTeamOrTeamTrial) {
+      upgradeContent = (
+        <Row gutter={24} style={{ marginTop: 24 }}>
+          <Col span={showAiAddonCard ? 12 : 24}>
+            <PowerPlanUpgradeCard
+              description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
+              powerUpgradeCallback={() =>
+                UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
+              }
+            />
+          </Col>
+          {showAiAddonCard && (
+            <Col span={12}>
+              <AiAddonUpgradeCard />
+            </Col>
+          )}
+        </Row>
+      );
+    } else if (showAiAddonCard) {
+      upgradeContent = (
+        <Row gutter={24} style={{ marginTop: 24 }}>
+          <Col span={24}>
+            <AiAddonUpgradeCard />
+          </Col>
+        </Row>
+      );
+    }
+
+    return (
+      <div>
+        <SettingsTitle
+          title="Unlock more features"
+          description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
+        />
+        {upgradeContent}
+      </div>
+    );
+  }
+
   return (
     <>
       <SettingsTitle title={organization.name} description="Manage your organization." />
@@ -233,89 +286,38 @@ export function OrganizationOverviewView() {
       {pricingPlanStatus?.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
         <PlanAboutToExceedAlert organization={organization} />
       ) : null}
-      <Spin spinning={isFetchingData}>
-        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-          {rowOneStats.map((stat) => (
-            <Col span={12} key={stat.key}>
-              <SettingsCard
-                title={stat.title}
-                content={stat.content}
-                action={stat.action}
-                tooltip={stat.tooltip}
-              />
-            </Col>
-          ))}
-        </Row>
-        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-          {rowTwoStats.map((stat) => (
-            <Col span={8} key={stat.key}>
-              <SettingsCard
-                title={stat.title}
-                content={stat.content}
-                action={stat.action}
-                tooltip={stat.tooltip}
-              />
-            </Col>
-          ))}
-        </Row>
-      </Spin>
-      <PlanExpirationCard organization={organization} />
-      {organization.pricingPlan === PricingPlanEnum.Personal ||
-      organization.pricingPlan === PricingPlanEnum.Team ||
-      organization.pricingPlan === PricingPlanEnum.TeamTrial ||
-      showAiAddonCard ? (
-        <>
-          <SettingsTitle
-            title="Unlock more features"
-            description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-          />
-          {organization.pricingPlan === PricingPlanEnum.Personal ? (
-            <PlanUpgradeCard organization={organization} />
-          ) : null}
-          {organization.pricingPlan === PricingPlanEnum.Team ||
-          organization.pricingPlan === PricingPlanEnum.TeamTrial ? (
-            <Row gutter={24} style={{ marginTop: 24 }}>
-              <Col span={showAiAddonCard ? 12 : 24}>
-                <PowerPlanUpgradeCard
-                  description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-                  powerUpgradeCallback={() =>
-                    UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
-                  }
-                />
-              </Col>
-              {showAiAddonCard ? (
-                <Col span={12}>
-                  <AiAddonUpgradeCard
-                    description="Add AI model training capabilities to your organization."
-                    onRequestUpgrade={
-                      canRequestAiPlan
-                        ? () => UpgradePricingPlanModal.requestAiPlanUpgrade(organization)
-                        : undefined
-                    }
+      <Space orientation="vertical" size="large">
+        <Spin spinning={isFetchingData}>
+          <Space orientation="vertical" size={24}>
+            <Row gutter={[24, 24]}>
+              {rowOneStats.map((stat) => (
+                <Col span={12} key={stat.key}>
+                  <SettingsCard
+                    title={stat.title}
+                    content={stat.content}
+                    action={stat.action}
+                    tooltip={stat.tooltip}
                   />
                 </Col>
-              ) : null}
+              ))}
             </Row>
-          ) : null}
-          {organization.pricingPlan !== PricingPlanEnum.Personal &&
-          organization.pricingPlan !== PricingPlanEnum.Team &&
-          organization.pricingPlan !== PricingPlanEnum.TeamTrial &&
-          showAiAddonCard ? (
-            <Row gutter={24} style={{ marginTop: 24 }}>
-              <Col span={24}>
-                <AiAddonUpgradeCard
-                  description="Add AI model training capabilities to your organization."
-                  onRequestUpgrade={
-                    canRequestAiPlan
-                      ? () => UpgradePricingPlanModal.requestAiPlanUpgrade(organization)
-                      : undefined
-                  }
-                />
-              </Col>
+            <Row gutter={[24, 24]}>
+              {rowTwoStats.map((stat) => (
+                <Col span={8} key={stat.key}>
+                  <SettingsCard
+                    title={stat.title}
+                    content={stat.content}
+                    action={stat.action}
+                    tooltip={stat.tooltip}
+                  />
+                </Col>
+              ))}
             </Row>
-          ) : null}
-        </>
-      ) : null}
+            <PlanExpirationCard organization={organization} />
+          </Space>
+        </Spin>
+        {renderUpgradeCards()}
+      </Space>
     </>
   );
 }

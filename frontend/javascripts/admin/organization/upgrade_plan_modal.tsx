@@ -171,37 +171,15 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
   );
 }
 
-export function requestAiPlanUpgrade(
-  organization: APIOrganization,
-  options?: {
-    onRequestSent?: () => void;
-  },
-) {
-  renderIndependently((destroyCallback) => (
-    <UpgradeAiPlanModal
-      destroy={destroyCallback}
-      organization={organization}
-      onRequestSent={options?.onRequestSent}
-    />
-  ));
+export function requestAiPlanUpgrade() {
+  renderIndependently((destroyCallback) => <UpgradeAiPlanModal destroy={destroyCallback} />);
 }
 
-function UpgradeAiPlanModal({
-  organization,
-  destroy,
-  onRequestSent,
-}: {
-  organization: APIOrganization;
-  destroy: () => void;
-  onRequestSent?: () => void;
-}) {
+function UpgradeAiPlanModal({ destroy }: { destroy: () => void }) {
   const handleSubmit = async () => {
     try {
       await sendUpgradeAiAddonEmail();
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
-      if (onRequestSent) {
-        onRequestSent();
-      }
     } catch (error) {
       Toast.error("Could not request the AI add-on.");
       console.error(error);

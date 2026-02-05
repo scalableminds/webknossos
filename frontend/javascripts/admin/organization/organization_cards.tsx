@@ -31,8 +31,13 @@ export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallba
       }
       styles={{ body: { minHeight: 220 } }}
       actions={[
-        <Button type="primary" onClick={teamUpgradeCallback} key="buy-teamupgrade-button">
-          <PlusCircleOutlined /> Buy Upgrade
+        <Button
+          type="primary"
+          onClick={teamUpgradeCallback}
+          key="buy-teamupgrade-button"
+          icon={<PlusCircleOutlined />}
+        >
+          Buy Upgrade
         </Button>,
       ]}
     >
@@ -62,30 +67,29 @@ export function PowerPlanUpgradeCard({
       }
       styles={{ body: { minHeight: 220 } }}
       actions={[
-        <Button type="primary" onClick={powerUpgradeCallback} key="buy-power-upgrade-button">
-          <PlusCircleOutlined /> Buy Upgrade
+        <Button
+          type="primary"
+          onClick={powerUpgradeCallback}
+          key="buy-power-upgrade-button"
+          icon={<PlusCircleOutlined />}
+        >
+          Buy Upgrade
         </Button>,
       ]}
     >
-      {description ? <p>{description}</p> : null}
-      <ul>
-        {powerPlanFeatures.map((feature) => (
-          <li key={feature.slice(0, 10)}>{feature}</li>
-        ))}
-      </ul>
+      <div className="drawing-ai-addon">
+        {description ? <p>{description}</p> : null}
+        <ul>
+          {powerPlanFeatures.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
+      </div>
     </Card>
   );
 }
 
-export function AiAddonUpgradeCard({
-  onRequestUpgrade,
-  actionLabel = "Buy AI Add-on",
-  description,
-}: {
-  onRequestUpgrade?: () => void;
-  actionLabel?: string;
-  description?: string;
-}) {
+export function AiAddonUpgradeCard() {
   return (
     <Card
       title={
@@ -95,22 +99,25 @@ export function AiAddonUpgradeCard({
         </Space>
       }
       styles={{ body: { minHeight: 220 } }}
-      actions={
-        onRequestUpgrade
-          ? [
-              <Button type="primary" onClick={onRequestUpgrade} key="buy-ai-addon-button">
-                <PlusCircleOutlined /> {actionLabel}
-              </Button>,
-            ]
-          : undefined
-      }
+      actions={[
+        <Button
+          type="primary"
+          onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
+          key="buy-ai-addon-button"
+          icon={<PlusCircleOutlined />}
+        >
+          Buy AI Add-on
+        </Button>,
+      ]}
     >
-      {description ? <p>{description}</p> : null}
-      <ul>
-        {aiAddonFeatures.map((feature) => (
-          <li key={feature.slice(0, 10)}>{feature}</li>
-        ))}
-      </ul>
+      <div>
+        Unlock AI add-on for advanced capabilities like model training for your organization.
+        <ul>
+          {aiAddonFeatures.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
+      </div>
     </Card>
   );
 }

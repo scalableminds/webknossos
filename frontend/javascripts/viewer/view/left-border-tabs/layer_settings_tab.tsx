@@ -537,7 +537,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getComputeSegmentIndexFileButton = (layerName: string, isSegmentation: boolean) => {
-    if (!(this.props.isSuperUser && isSegmentation)) return <></>;
+    if (!(this.props.isSuperUser && isSegmentation)) return null;
 
     const triggerComputeSegmentIndexFileJob = async () => {
       await startComputeSegmentIndexFileJob(this.props.dataset.id, layerName);

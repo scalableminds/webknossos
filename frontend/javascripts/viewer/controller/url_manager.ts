@@ -228,7 +228,7 @@ class UrlManager {
       (value) => !value.includes("="),
     );
     const stateArray = baseValues.map(Number);
-    const validStateArray = stateArray.map((value) => (!isNaN(value) ? value : 0));
+    const validStateArray = stateArray.map((value) => (!Number.isNaN(value) ? value : 0));
 
     if (validStateArray.length >= MINIMUM_VALID_CSV_LENGTH) {
       const positionValues = validStateArray.slice(0, 3);

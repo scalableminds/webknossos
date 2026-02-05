@@ -1873,11 +1873,9 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "distanceInfo",
         <FastTooltip title="Distance to the active Node of the active Tree">
-          <>
-            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
-            this {maybeClickedNodeId != null ? "Node" : "Position"}
-            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-          </>
+          <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
+          {maybeClickedNodeId != null ? "Node" : "Position"}
+          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
         </FastTooltip>,
       ),
     );
@@ -1943,7 +1941,7 @@ function ContextMenuInner() {
         "boundingBoxPositionInfo",
         <>
           <i className="fas fa-dice-d6 segment-context-icon" />
-          <>Bounding Box: </>
+          Bounding Box:
           <div style={{ marginLeft: 22, marginTop: -5 }}>
             {boundingBoxInfoLabel}
             {copyIconWithTooltip(

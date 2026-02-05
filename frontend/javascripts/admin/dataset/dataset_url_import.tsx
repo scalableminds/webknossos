@@ -15,12 +15,10 @@ export function DatasetURLImport() {
   };
 
   return datastores != null ? (
-    <>
-      <DatasetAddRemoteView
-        datastores={datastores}
-        onAdded={handleDatasetAdded}
-        defaultDatasetUrl={datasetUri}
-      />
-    </>
+    <DatasetAddRemoteView
+      datastores={datastores}
+      onAdded={handleDatasetAdded}
+      defaultDatasetUrl={datasetUri}
+    />
   ) : null;
 }

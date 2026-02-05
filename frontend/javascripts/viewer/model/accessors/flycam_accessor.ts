@@ -169,7 +169,7 @@ export function _getMaximumZoomForAllMags(
   let currentMagIndex = 0;
   const maxZoomValueThresholds = [];
 
-  if (typeof maximumCapacity !== "number" || isNaN(maximumCapacity)) {
+  if (typeof maximumCapacity !== "number" || Number.isNaN(maximumCapacity)) {
     // If maximumCapacity is NaN for some reason, the following loop will
     // never terminate (causing webKnossos to hang).
     throw new Error("Internal error: Invalid maximum capacity provided.");

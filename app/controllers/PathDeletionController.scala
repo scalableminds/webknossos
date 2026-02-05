@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import jakarta.inject.Inject
-import models.dataset.{WKRemoteDataStoreClient}
+import models.dataset.WKRemoteDataStoreClient
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf

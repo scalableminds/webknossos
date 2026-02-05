@@ -128,7 +128,7 @@ export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {
 }
 
 export function formatAiPlanLabel(aiPlan: AiPlanEnum | null | undefined): string {
-  if (!aiPlan) return "Not booked";
+  if (!aiPlan) return "Upgrade to Team or Power plan for advanced AI features";
   return AI_PLAN_LABELS[aiPlan] ?? aiPlan;
 }
 

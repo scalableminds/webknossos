@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
@@ -111,7 +111,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       chunks <- Fox.serialCombined(meshChunkDataRequests.toList)(request =>
-        shardUrl.readBytes(Some(request.byteOffset until request.byteOffset + request.byteSize)))
+        shardUrl.readBytes(ByteRange.startEndExclusive(request.byteOffset, request.byteOffset + request.byteSize)))
       output = chunks.flatten.toArray
     } yield (output, NeuroglancerMesh.meshEncoding)
 

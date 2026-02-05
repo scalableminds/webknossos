@@ -459,10 +459,6 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   const sourceSegment = segments.getNullable(action.sourceId);
   const targetSegment = segments.getNullable(action.targetId);
 
-  ColoredLogger.logGreen("merging segments");
-  ColoredLogger.logGreen("sourceSegment", sourceSegment);
-  ColoredLogger.logGreen("targetSegment", targetSegment);
-
   let newState = handleRemoveSegment(state, removeSegmentAction(action.targetId, action.layerName));
   const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
@@ -509,7 +505,7 @@ export function getUpdatedSourcePropsAfterMerge(
   }
   const props: Writeable<Partial<Segment>> = {};
   // Handle `name` by concatening names
-  if (targetSegment.name != null) {
+  if (targetSegment.name != null && targetSegment.name !== "") {
     // The new segments name should always start with the original
     // source segment's name. Therefore, we use getSegmentName
     // so that we have a fallback even when no source segment existed.

@@ -108,11 +108,18 @@ describe("Proofreading (Multi User)", () => {
           id: 6,
           anchorPosition: [1, 2, 3],
           additionalCoordinates: undefined,
-          name: "",
           color: [1, 2, 3],
           groupId: null,
           metadata: [],
           creationTime: 0,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 4,
+          targetId: 6,
         },
       },
       {
@@ -123,13 +130,6 @@ describe("Proofreading (Multi User)", () => {
           segmentId2: 6,
           agglomerateId1: 4,
           agglomerateId2: 6,
-        },
-      },
-      {
-        name: "deleteSegment",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 6,
         },
       },
     ]);
@@ -177,16 +177,13 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
       const currentSegments = Store.getState().annotation.volumes[0].segments;
-      expect(currentSegments.size()).toEqual(2);
+      expect(currentSegments.size()).toEqual(1);
 
       const segment1AfterSaving = currentSegments.getNullable(1);
-      expect(segment1AfterSaving).toBeUndefined();
-
-      const segment4AfterSaving = currentSegments.getNullable(4);
-      expect(segment4AfterSaving).toBeUndefined();
-
-      const segment6AfterSaving = currentSegments.getNullable(6);
-      expect(segment6AfterSaving).toBeUndefined();
+      expect(segment1AfterSaving).toMatchObject({
+        name: "Segment 1",
+        anchorPosition: [1, 1, 1],
+      });
     });
 
     await task.toPromise();

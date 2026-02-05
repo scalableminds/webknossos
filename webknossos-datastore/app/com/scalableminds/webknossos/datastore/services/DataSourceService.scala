@@ -307,7 +307,7 @@ class DataSourceService @Inject()(
           SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),
           ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath),
           CumsumFileInfo.scanForCumsumFile(dataLayerPath)
-        )
+        ).relativizedIn(UPath.fromLocalPath(dataSourcePath))
       )
     })
 

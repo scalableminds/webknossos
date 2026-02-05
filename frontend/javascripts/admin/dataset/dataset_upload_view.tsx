@@ -22,6 +22,7 @@ import {
   createResumableUpload,
   finishDatasetUpload,
   getUnfinishedUploads,
+  refreshToken,
   reserveDatasetUpload,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
@@ -222,7 +223,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   blockTimeoutId: number | null = null;
-  formRef: React.RefObject<FormInstance<UploadFormFieldTypes>> = React.createRef<FormInstance>();
+  formRef = React.createRef<FormInstance<UploadFormFieldTypes>>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -352,6 +353,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       needsConversion: this.state.needsConversion,
     };
     const datastoreUrl = formValues.datastoreUrl;
+    await refreshToken();
     await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
     const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
     this.setState({

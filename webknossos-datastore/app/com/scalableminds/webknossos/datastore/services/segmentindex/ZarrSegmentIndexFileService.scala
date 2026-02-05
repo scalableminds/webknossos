@@ -96,22 +96,23 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
       topLeftsArray <- openZarrArray(segmentIndexFileKey, keyTopLefts)
       bucket <- hashBucketsArray.readAsMultiArray(offset = Array(bucketStart, 0),
                                                   shape = Array((bucketEnd - bucketStart + 1).toInt, 3))
-      bucketLocalOffset <- findLocalOffsetInBucket(bucket, segmentId).toFox ?~> s"SegmentId $segmentId not in bucket list"
-      topLeftOpts <- Fox.runIf(bucketLocalOffset >= 0)(for {
-        topLeftStart <- tryo(bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))).toFox
-        topLeftEnd <- tryo(bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))).toFox
-        topLeftCount = (topLeftEnd - topLeftStart).toInt
-        _ <- Fox
-          .fromBool(attributes.dtypeBucketEntries == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
-        topLeftsMA <- topLeftsArray.readAsMultiArray(offset = Array(topLeftStart, 0), shape = Array(topLeftCount, 3))
-        topLefts <- tryo((0 until topLeftCount).map { idx =>
-          Vec3Int(
-            topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 0))),
-            topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 1))),
-            topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 2)))
-          )
-        }.toArray).toFox
-      } yield topLefts)
+      bucketLocalOffsetOpt = findLocalOffsetInBucket(bucket, segmentId)
+      topLeftOpts <- Fox.runOptional(bucketLocalOffsetOpt) { bucketLocalOffset =>
+        for {
+          topLeftStart <- tryo(bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 1)))).toFox
+          topLeftEnd <- tryo(bucket.getLong(bucket.getIndex.set(Array(bucketLocalOffset, 2)))).toFox
+          topLeftCount = (topLeftEnd - topLeftStart).toInt
+          _ <- Fox.fromBool(attributes.dtypeBucketEntries == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
+          topLeftsMA <- topLeftsArray.readAsMultiArray(offset = Array(topLeftStart, 0), shape = Array(topLeftCount, 3))
+          topLefts <- tryo((0 until topLeftCount).map { idx =>
+            Vec3Int(
+              topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 0))),
+              topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 1))),
+              topLeftsMA.getShort(topLeftsMA.getIndex.set(Array(idx, 2)))
+            )
+          }.toArray).toFox
+        } yield topLefts
+      }
     } yield topLeftOpts.getOrElse(Array.empty)
 
   private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =

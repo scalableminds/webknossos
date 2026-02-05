@@ -63,7 +63,7 @@
         "useSimplifiedLogicExpression": "off", // TODO: consider removing
         "noForEach": "off",
         "noBannedTypes": "error",
-        "noUselessFragments": "off", // TODO: consider removing
+        "noUselessFragments": "error",
         "useLiteralKeys": "off",
         "useArrowFunction": "off",
         "noStaticOnlyClass": "off",

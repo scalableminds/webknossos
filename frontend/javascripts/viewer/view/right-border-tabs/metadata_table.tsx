@@ -155,14 +155,14 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
 
   return (
     <InnerMetadataTable
-        onlyReturnRows
-        metadata={itemMetadata}
-        getKeyInput={getKeyInput}
-        getValueInput={getValueInput}
-        getDeleteEntryButton={getDeleteEntryButton}
-        addNewEntryMenuItems={addNewEntryMenuItems}
-        readOnly={readOnly}
-      />
+      onlyReturnRows
+      metadata={itemMetadata}
+      getKeyInput={getKeyInput}
+      getValueInput={getValueInput}
+      getDeleteEntryButton={getDeleteEntryButton}
+      addNewEntryMenuItems={addNewEntryMenuItems}
+      readOnly={readOnly}
+    />
   );
 }
 

@@ -1471,5 +1471,5 @@ export function replaceOrAdd<T>(
   }
   const copy = elements.slice();
   copy.splice(index, 1, newElement);
-  return;
+  return copy;
 }

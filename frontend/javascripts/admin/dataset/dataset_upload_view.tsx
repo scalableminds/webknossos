@@ -51,6 +51,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
+import type { ResumableUploadErrorEvent } from "libs/resumable-upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
@@ -361,7 +362,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload,
       datastoreUrl,
     });
-    resumableUpload.on("complete", () => {
+    resumableUpload.addEventListener("complete", () => {
       const newestForm = this.formRef.current;
 
       if (!newestForm) {
@@ -433,30 +434,30 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         },
       );
     });
-    resumableUpload.on("filesAdded", () => {
+    resumableUpload.addEventListener("filesAdded", () => {
       resumableUpload.upload();
     });
     // terminalFileError is triggered by the RestApi when a normal fileError could not be
     // recovered by refreshing the user token.
-    resumableUpload.on("terminalFileError", (_file: FileWithPath, message: string) => {
-      Toast.error(message);
+    resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadErrorEvent) => {
+      Toast.error(event.detail.message);
       this.setState({
         isUploading: false,
       });
     });
-    resumableUpload.on("progress", () => {
+    resumableUpload.addEventListener("progress", () => {
       this.setState({
         isRetrying: false,
         uploadProgress: resumableUpload.progress(),
       });
     });
-    resumableUpload.on("fileRetry", () => {
+    resumableUpload.addEventListener("fileRetry", () => {
       logRetryToAnalytics(newDatasetName);
       this.setState({
         isRetrying: true,
       });
     });
-    resumableUpload.addFiles(formValues.zipFile);
+    resumableUpload.addFiles(formValues.zipFile as File[]);
   };
 
   cancelUpload = async () => {

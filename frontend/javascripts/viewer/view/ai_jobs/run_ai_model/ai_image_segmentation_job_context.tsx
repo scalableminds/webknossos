@@ -39,7 +39,7 @@ interface RunAiModelJobContextType {
   selectedBoundingBox: UserBoundingBox | null;
   newDatasetName: string;
   selectedLayer: APIDataLayer | null;
-  seedGeneratorDistanceThreshold: number;
+  seedGeneratorDistanceThreshold: number | null;
   isEvaluationActive: boolean;
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
   setSelectedJobType: (
@@ -53,7 +53,7 @@ interface RunAiModelJobContextType {
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
   setSelectedLayer: (layer: APIDataLayer) => void;
-  setSeedGeneratorDistanceThreshold: (threshold: number) => void;
+  setSeedGeneratorDistanceThreshold: (threshold: number | null) => void;
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
   handleStartAnalysis: () => void;
@@ -83,7 +83,9 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
   const [newDatasetName, setNewDatasetName] = useState("");
   const [selectedLayer, setSelectedLayer] = useState<APIDataLayer | null>(null);
-  const [seedGeneratorDistanceThreshold, setSeedGeneratorDistanceThreshold] = useState(1000.0);
+  const [seedGeneratorDistanceThreshold, setSeedGeneratorDistanceThreshold] = useState<
+    number | null
+  >(null);
   const [isEvaluationActive, setIsEvaluationActive] = useState(false);
   const [splitMergerEvaluationSettings, setSplitMergerEvaluationSettings] =
     useState<SplitMergerEvaluationSettings>({

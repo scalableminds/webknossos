@@ -4,6 +4,7 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getCreditTransactions } from "admin/api/organization";
 import { getJobTypeName } from "admin/job/job_list_view";
 import { Button, DatePicker, Space, Spin, Table, Tag, Typography } from "antd";
+import type { RangePickerProps } from "antd/es/date-picker";
 import FastTooltip from "components/fast_tooltip";
 import FormattedId from "components/formatted_id";
 import dayjs from "dayjs";
@@ -20,7 +21,7 @@ const NO_JOB_FILTER_VALUE = "__NO_JOB__";
 const NO_JOB_LABEL = "No job";
 const dateFilterFormat = "YYYY-MM-DD";
 const dateRangeSeparator = "|";
-const datePresets = [
+const datePresets: RangePickerProps["presets"] = [
   { label: "Last 7 days", value: [dayjs().subtract(6, "day"), dayjs()] },
   { label: "Last 30 days", value: [dayjs().subtract(29, "day"), dayjs()] },
   { label: "Last 90 days", value: [dayjs().subtract(89, "day"), dayjs()] },

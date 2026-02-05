@@ -1,5 +1,4 @@
-import { ColoredLogger } from "libs/utils";
-import keyBy from "lodash/keyBy";
+import keyBy from "lodash-es/keyBy";
 import type { MetadataEntryProto } from "types/api_types";
 import {
   getSegmentsForLayer,
@@ -81,7 +80,6 @@ function applySingleAction(
       const segments = getSegmentsForLayer(state, actionTracingId);
       const segment = segments.getNullable(id);
       if (segment == null) {
-        ColoredLogger.logRed("crashing ua", ua);
         throw new Error(`Cannot find segment with id ${id} during application of update action.`);
       }
       const { metadata } = segment;

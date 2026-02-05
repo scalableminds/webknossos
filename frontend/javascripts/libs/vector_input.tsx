@@ -1,5 +1,5 @@
 import { type InputProps, type InputRef, Space } from "antd";
-import noop from "lodash/noop";
+import noop from "lodash-es/noop";
 import type React from "react";
 import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import type { ServerBoundingBoxMinMaxTypeTuple } from "types/api_types";

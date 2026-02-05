@@ -1,9 +1,9 @@
 import update from "immutability-helper";
-import { ColoredLogger, floor3 } from "libs/utils";
-import groupBy from "lodash/groupBy";
-import isEqual from "lodash/isEqual";
-import uniqBy from "lodash/uniqBy";
-import uniqWith from "lodash/uniqWith";
+import { floor3 } from "libs/utils";
+import groupBy from "lodash-es/groupBy";
+import isEqual from "lodash-es/isEqual";
+import uniqBy from "lodash-es/uniqBy";
+import uniqWith from "lodash-es/uniqWith";
 import type { Writeable } from "types/type_utils";
 import {
   type ContourMode,

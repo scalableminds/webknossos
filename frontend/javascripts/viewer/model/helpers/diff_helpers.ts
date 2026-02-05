@@ -123,6 +123,10 @@ function isDescendant(
   possibleDescendantId: number,
   childrenMap: Map<number, number[]>,
 ): boolean {
+  /*
+   * Checks whether ancestorId is an ancestor
+   * of possibleDescendantId.
+   */
   const stack = childrenMap.get(ancestorId) ?? [];
   const visited = new Set<number>();
 
@@ -140,7 +144,13 @@ function isDescendant(
 export function buildOrderDependencies(
   updates: ParentUpdate[],
   prevGroupsById: Map<number, FlatGroup>,
-) {
+): Map<number, Set<number>> {
+  /*
+   * Returns a map that contains "problematic" groups that are about
+   * to be moved into one of its descendant groups.
+   * The map maps from each key of a problematic group to its
+   * target group.
+   */
   const prevChildrenMap = buildChildrenMap(prevGroupsById);
 
   const deps = new Map<number, Set<number>>(); // A -> Set of B (A depends on B)

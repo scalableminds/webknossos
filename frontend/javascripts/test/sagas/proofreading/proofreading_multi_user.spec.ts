@@ -37,7 +37,6 @@ import {
 import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
-import { ColoredLogger } from "libs/utils";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -1163,7 +1162,6 @@ describe("Proofreading (Multi User)", () => {
       yield take("FINISH_MAPPING_INITIALIZATION");
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      ColoredLogger.logGreen("expectMapping");
       yield* expectMapping(
         tracingId,
         new Map([

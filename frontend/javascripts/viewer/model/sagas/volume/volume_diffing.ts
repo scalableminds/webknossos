@@ -1,8 +1,8 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { diffArrays } from "libs/utils";
-import isEqual from "lodash/isEqual";
-import keyBy from "lodash/keyBy";
-import sortedIndexBy from "lodash/sortedIndexBy";
+import isEqual from "lodash-es/isEqual";
+import keyBy from "lodash-es/keyBy";
+import sortedIndexBy from "lodash-es/sortedIndexBy";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
 import {

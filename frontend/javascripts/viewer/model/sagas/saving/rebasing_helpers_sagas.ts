@@ -1,7 +1,6 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
-import flattenDeep from "lodash/flattenDeep";
-import omitBy from "lodash/omitBy";
+import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
@@ -172,11 +171,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
   );
   const annotationBeforeUpdate = yield* select((state) => state.annotation);
 
-  ColoredLogger.logRed(
-    "adapt actions during rebase",
-    flattenDeep(saveQueue.map((entry) => entry.actions)),
-  );
-
   let success = true;
   const updatedSaveQueue = saveQueue
     .map((saveQueueEntry): SaveQueueEntry | null => {
@@ -239,8 +233,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               }
             }
             case "createSegment": {
-              console.log("adapting createSegment action?", action);
-
               const { actionTracingId } = action.value;
 
               const tracing = annotationBeforeUpdate.volumes.find(
@@ -360,7 +352,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
     })
     .filter((a) => a != null);
   if (success) {
-    // ColoredLogger.logRed("new updatedSaveQueue", updatedSaveQueue);
     yield put(replaceSaveQueueAction(updatedSaveQueue));
     return { success: true, updatedSaveQueue };
   }

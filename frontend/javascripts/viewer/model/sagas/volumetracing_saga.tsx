@@ -1,6 +1,7 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import messages from "messages";
+import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import type { ContourMode, OverwriteMode } from "viewer/constants";
@@ -242,7 +243,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
-    const channel = yield* actionChannel(["ADD_TO_CONTOUR_LIST", "FINISH_EDITING"]);
+    const channel: Channel<Action> = yield* actionChannel([
+      "ADD_TO_CONTOUR_LIST",
+      "FINISH_EDITING",
+    ]);
 
     while (true) {
       const currentAction = yield* take(channel);

@@ -1,5 +1,5 @@
 import drop from "lodash-es/drop";
-import type { Dispatch } from "redux";
+import type { Dispatch, Middleware, MiddlewareAPI } from "redux";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Action } from "viewer/model/actions/actions";
 
@@ -30,12 +30,9 @@ const actionBlacklist = [
 export function getActionLog(): Array<string> {
   return actionLog;
 }
-export default function actionLoggerMiddleware<A extends Action>(): (
-  next: Dispatch<A>,
-) => Dispatch<A> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '(next: Dispatch<A>) => (action: A) => A' is ... Remove this comment to see the full error message
-  return (next: Dispatch<A>) =>
-    (action: A): A => {
+export default (function actionLoggerMiddleware(_store: MiddlewareAPI) {
+  return (next: Dispatch<Action>) =>
+    (action: Action): Action => {
       const isBlackListed = actionBlacklist.includes(action.type);
 
       if (!isBlackListed) {
@@ -62,4 +59,4 @@ export default function actionLoggerMiddleware<A extends Action>(): (
 
       return next(action);
     };
-}
+} as Middleware);

@@ -2,12 +2,11 @@ package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class ChunkReader(header: DatasetHeader) extends FoxImplicits {
@@ -15,10 +14,9 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
   private lazy val chunkTyper = ChunkTyper.createFromHeader(header)
   private lazy val shortcutChunkTyper = new ShortcutChunkTyper(header)
 
-  def read(path: VaultPath,
-           chunkShapeFromMetadata: Array[Int],
-           range: Option[NumericRange[Long]],
-           useSkipTypingShortcut: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[MultiArray] =
+  def read(path: VaultPath, chunkShapeFromMetadata: Array[Int], range: ByteRange, useSkipTypingShortcut: Boolean)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[MultiArray] =
     for {
       chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).shiftBox
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
@@ -43,7 +41,7 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
-  protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
+  protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {

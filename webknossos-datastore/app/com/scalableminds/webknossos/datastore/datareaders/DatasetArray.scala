@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -13,7 +13,6 @@ import ucar.ma2.{Array => MultiArray}
 
 import java.nio.ByteOrder
 import java.util
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class DatasetArray(vaultPath: VaultPath,
@@ -232,8 +231,9 @@ class DatasetArray(vaultPath: VaultPath,
     s"Copying data from dataset chunk failed. Chunk shape ${sourceChunk.getShape.mkString(",")}, target shape ${target.getShape
       .mkString(",")}, offsetInChunk: ${offsetInChunk.mkString(",")}"
 
-  protected def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] =
+  protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     ??? // Defined in subclass
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
@@ -255,7 +255,7 @@ class DatasetArray(vaultPath: VaultPath,
         shardPathAndChunkRangeBox <- getShardedChunkPathAndRange(chunkIndex).shiftBox
         multiArray <- shardPathAndChunkRangeBox match {
           case Full((shardPath, chunkRange)) =>
-            chunkReader.read(shardPath, chunkShape, Some(chunkRange), useSkipTypingShortcut)
+            chunkReader.read(shardPath, chunkShape, chunkRange, useSkipTypingShortcut)
           case Empty      => chunkReader.createFromFillValue(chunkShape, useSkipTypingShortcut)
           case f: Failure => f.toFox
         }
@@ -263,7 +263,7 @@ class DatasetArray(vaultPath: VaultPath,
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)
       val chunkShape = chunkShapeAtIndex(chunkIndex)
-      chunkReader.read(chunkPath, chunkShape, None, useSkipTypingShortcut)
+      chunkReader.read(chunkPath, chunkShape, ByteRange.complete, useSkipTypingShortcut)
     }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =

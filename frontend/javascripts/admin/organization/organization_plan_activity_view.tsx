@@ -15,7 +15,7 @@ const UNCHANGED_LABEL = <Text type="secondary">Unchanged</Text>;
 const CLEARED_LABEL = <Text type="secondary">Cleared</Text>;
 const EMPTY_LABEL = <Text type="secondary">—</Text>;
 
-export function OrganizationPlanUpdatesLogView() {
+export function OrganizationPlanActivityView() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );

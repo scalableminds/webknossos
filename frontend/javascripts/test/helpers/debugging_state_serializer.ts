@@ -29,11 +29,11 @@ const DEBUG_OUTPUT_DIR = "./tools/debugging/version-visualizer/data";
 
 export async function publishDebuggingState(backendMock: BackendMock): Promise<void> {
   await deleteOldFiles();
-  const viz = new MappingVisualizer(backendMock);
+  const viz = new DebuggingStateSerializer(backendMock);
   viz.serializeAllVersions();
 }
 
-export class MappingVisualizer {
+class DebuggingStateSerializer {
   private readonly mapping: AgglomerateMapping;
   constructor(private readonly backendMock: BackendMock) {
     this.mapping = backendMock.agglomerateMapping;
@@ -57,7 +57,7 @@ export class MappingVisualizer {
     const adjacencyList: Map<number, Set<number>> = this.mapping.getAdjacencyList(version);
 
     if (!adjacencyList) {
-      throw new Error("MappingVisualizer requires access to adjacencyList (test-only).");
+      throw new Error("DebuggingStateSerializer requires access to adjacencyList (test-only).");
     }
 
     const storeState = this.backendMock.getState(version);
@@ -84,7 +84,7 @@ export class MappingVisualizer {
 async function deleteOldFiles() {
   const entries = await readdir(DEBUG_OUTPUT_DIR, { withFileTypes: true });
 
-  const files = entries.filter((entry) => entry.isFile());
+  const files = entries.filter((entry) => entry.isFile() && entry.name !== ".gitignore");
 
   for (const file of files) {
     const filePath = path.join(DEBUG_OUTPUT_DIR, file.name);

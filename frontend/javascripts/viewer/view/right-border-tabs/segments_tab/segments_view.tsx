@@ -9,7 +9,6 @@ import {
   EyeInvisibleOutlined,
   EyeOutlined,
   FolderOutlined,
-  LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -17,13 +16,6 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import {
-  getFeatureNotAvailableInPlanMessage,
-  isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
-} from "admin/organization/pricing_plan_utils";
-import { getJobs, startComputeMeshFileJob } from "admin/rest_api";
-import {
-  Button,
   ConfigProvider,
   Divider,
   Empty,
@@ -43,7 +35,6 @@ import app from "app";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { SimpleRow } from "dashboard/folders/metadata_table";
-import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import difference from "lodash-es/difference";
@@ -58,7 +49,7 @@ import type { Dispatch } from "redux";
 import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
+import { EMPTY_OBJECT } from "viewer/constants";
 import {
   getMagInfoOfVisibleSegmentationLayer,
   getMappingInfo,
@@ -75,7 +66,6 @@ import {
   getSegmentName,
   getSelectedIds,
   getVisibleSegments,
-  hasEditableMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   maybeFetchMeshFilesAction,
@@ -119,7 +109,7 @@ import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu";
 import SegmentListItem from "viewer/view/right-border-tabs/segments_tab/segment_list_item";
 import {
-  getBaseSegmentationName,
+  formatMagWithLabel,
   type SegmentHierarchyNode,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import AdvancedSearchPopover from "../advanced_search_popover";
@@ -140,14 +130,13 @@ import {
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../trees_tab/tree_hierarchy_view_helpers";
+import { PrecomputeMeshesPopover } from "./precompute_meshes_popover";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
 const SCROLL_DELAY_MS = 50;
 
 const { confirm } = Modal;
 const { Option } = Select;
-// Interval in ms to check for running mesh file computation jobs for this dataset
-const refreshInterval = 5000;
 
 export const stlMeshConstants = {
   meshMarker: [105, 115, 111],
@@ -327,7 +316,6 @@ type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
   renamingCounter: number;
-  activeMeshJobId: string | null | undefined;
   groupTree: SegmentHierarchyNode[];
   searchableTreeItemList: SegmentHierarchyNode[];
   prevProps: Props | null | undefined;
@@ -337,14 +325,7 @@ type State = {
   menu: MenuProps | null | undefined;
 };
 
-const formatMagWithLabel = (mag: Vector3, index: number) => {
-  // index refers to the array of available mags. Thus, we can directly
-  // use that index to pick an adequate label.
-  const labels = ["Highest", "High", "Medium", "Low", "Very Low"];
-  // Use "Very Low" for all low Mags which don't have extra labels
-  const clampedIndex = Math.min(labels.length - 1, index);
-  return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
-};
+// Redundant, moved to segments_view_helper.tsx
 
 const formatMeshFile = (
   meshFile: APIMeshFileInfo | null | undefined,
@@ -417,7 +398,6 @@ class SegmentsView extends React.Component<Props, State> {
   unmountBenchmarkListener: (() => void) | undefined;
   state: State = {
     renamingCounter: 0,
-    activeMeshJobId: null,
     groupTree: [],
     searchableTreeItemList: [],
     prevProps: null,
@@ -439,12 +419,10 @@ class SegmentsView extends React.Component<Props, State> {
     );
 
     if (
-      this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
         APIJobCommand.COMPUTE_MESH_FILE,
       )
     ) {
-      this.pollJobData();
     }
 
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
@@ -682,117 +660,6 @@ class SegmentsView extends React.Component<Props, State> {
     };
   }
 
-  async pollJobData(): Promise<void> {
-    const jobs = this.props.activeUser != null ? await getJobs() : [];
-    const oldActiveJobId = this.state.activeMeshJobId;
-    const meshJobsForDataset = jobs.filter(
-      (job) =>
-        job.command === "compute_mesh_file" && job.args.datasetName === this.props.datasetName,
-    );
-    const activeJob =
-      oldActiveJobId != null ? meshJobsForDataset.find((job) => job.id === oldActiveJobId) : null;
-
-    if (activeJob != null) {
-      // We are aware of a running mesh job. Check whether the job is finished now.
-      switch (activeJob.state) {
-        case "SUCCESS": {
-          Toast.success(
-            'The computation of a mesh file for this dataset has finished. You can now use the "Load Mesh (precomputed)" functionality in the context menu.',
-          );
-          this.setState({
-            activeMeshJobId: null,
-          });
-          // maybeFetchMeshFiles will fetch the new mesh file and also activate it if no other mesh file
-          // currently exists.
-          Store.dispatch(
-            maybeFetchMeshFilesAction(
-              this.props.visibleSegmentationLayer,
-              this.props.dataset,
-              true,
-            ),
-          );
-          break;
-        }
-
-        case "STARTED":
-        case "PENDING": {
-          break;
-        }
-
-        case "FAILURE": {
-          Toast.info("The computation of a mesh file for this dataset didn't finish properly.");
-          this.setState({
-            activeMeshJobId: null,
-          });
-          break;
-        }
-
-        default: {
-          break;
-        }
-      }
-    } else {
-      // Check whether there is an active mesh job (e.g., the user
-      // started the job earlier and reopened WEBKNOSSOS in the meantime).
-      const pendingJobs = meshJobsForDataset.filter(
-        (job) => job.state === "STARTED" || job.state === "PENDING",
-      );
-      const activeMeshJobId = pendingJobs.length > 0 ? pendingJobs[0].id : null;
-      this.setState({
-        activeMeshJobId,
-      });
-    }
-
-    // refresh according to the refresh interval
-    this.intervalID = setTimeout(() => this.pollJobData(), refreshInterval);
-  }
-
-  getPrecomputeMeshesTooltipInfo = () => {
-    let title = "";
-    let disabled = true;
-
-    const activeOrganization = useWkSelector((state) => state.activeOrganization);
-    const activeUser = useWkSelector((state) => state.activeUser);
-    if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
-      return {
-        disabled: true,
-        title: getFeatureNotAvailableInPlanMessage(
-          PricingPlanEnum.Team,
-          activeOrganization,
-          activeUser,
-        ),
-      };
-    }
-
-    if (
-      !this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobCommand.COMPUTE_MESH_FILE,
-      )
-    ) {
-      title = "Mesh computation jobs are not enabled for this WEBKNOSSOS instance.";
-    } else if (this.props.activeUser == null) {
-      title = "Please log in to precompute the meshes of this dataset.";
-    } else if (!this.props.dataset.dataStore.jobsEnabled) {
-      title =
-        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to webknossos.org to use this feature.";
-    } else if (this.props.hasVolumeTracing) {
-      title = this.props.visibleSegmentationLayer?.fallbackLayer
-        ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
-        : "Meshes cannot be precomputed for volume annotations.";
-    } else if (this.props.visibleSegmentationLayer == null) {
-      title = "There is no segmentation layer for which meshes could be precomputed.";
-    } else {
-      title =
-        "Precompute meshes for all segments of this dataset so that meshes for segments can be loaded quickly afterwards from a mesh file.";
-      disabled = false;
-    }
-
-    return {
-      disabled,
-      title,
-    };
-  };
-
   onSelectSegment = (segment: Segment) => {
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     if (visibleSegmentationLayer == null) {
@@ -828,80 +695,20 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  startComputingMeshfile = async () => {
-    const {
-      mappingInfo,
-      preferredQualityForMeshPrecomputation,
-      magInfoOfVisibleSegmentationLayer,
-    } = this.props;
-    const defaultOrHigherIndex = magInfoOfVisibleSegmentationLayer.getIndexOrClosestHigherIndex(
-      preferredQualityForMeshPrecomputation,
-    );
-    const meshfileMagIndex =
-      defaultOrHigherIndex != null
-        ? defaultOrHigherIndex
-        : magInfoOfVisibleSegmentationLayer.getClosestExistingIndex(
-            preferredQualityForMeshPrecomputation,
-          );
-    const meshfileMag = magInfoOfVisibleSegmentationLayer.getMagByIndexWithFallback(
-      meshfileMagIndex,
-      null,
-    );
-
-    if (this.props.visibleSegmentationLayer != null) {
-      const isEditableMapping = hasEditableMapping(
-        Store.getState(),
-        this.props.visibleSegmentationLayer.name,
-      );
-
-      const maybeMappingName =
-        !isEditableMapping &&
-        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType !== "JSON" &&
-        mappingInfo.mappingName != null
-          ? mappingInfo.mappingName
-          : undefined;
-
-      const job = await startComputeMeshFileJob(
-        this.props.dataset.id,
-        getBaseSegmentationName(this.props.visibleSegmentationLayer),
-        meshfileMag,
-        maybeMappingName,
-      );
-      this.setState({
-        activeMeshJobId: job.id,
-      });
-      Toast.info(
-        <React.Fragment>
-          The computation of a mesh file was started. For large datasets, this may take a while.
-          Closing this tab will not stop the computation.
-          <br />
-          See{" "}
-          <a target="_blank" href="/jobs" rel="noopener noreferrer">
-            Processing Jobs
-          </a>{" "}
-          for an overview of running jobs.
-        </React.Fragment>,
-      );
-    } else {
-      Toast.error(
-        "The computation of a mesh file could not be started because no segmentation layer was found.",
-      );
-    }
-  };
-
   handleMeshFileSelected = async (meshFileName: string) => {
     if (this.props.visibleSegmentationLayer != null && meshFileName != null) {
       this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, meshFileName);
     }
   };
 
-  handleQualityChangeForPrecomputation = (magIndex: number) =>
-    Store.dispatch(updateTemporarySettingAction("preferredQualityForMeshPrecomputation", magIndex));
-
   handleQualityChangeForAdHocGeneration = (magIndex: number) =>
     Store.dispatch(
       updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", magIndex),
+    );
+
+  handleRefreshMeshFiles = () =>
+    Store.dispatch(
+      maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, true),
     );
 
   getMeshSettings = () => {
@@ -915,26 +722,29 @@ class SegmentsView extends React.Component<Props, State> {
             renderEmpty={renderEmptyMeshFileSelect}
             theme={{ cssVar: { key: "antd-app-theme" } }}
           >
-            <Select
-              placeholder="Select a mesh file"
-              value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
-              onChange={this.handleMeshFileSelected}
-              loading={this.props.availableMeshFiles == null}
-              popupMatchSelectWidth={false}
-              style={{ width: "100%" }}
-            >
-              {this.props.availableMeshFiles ? (
-                this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
-                  <Option key={meshFile.name} value={meshFile.name}>
-                    {formatMeshFile(meshFile)}
+            <Space.Compact style={{ width: "100%" }}>
+              <Select
+                placeholder="Select a mesh file"
+                value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
+                onChange={this.handleMeshFileSelected}
+                loading={this.props.availableMeshFiles == null}
+                popupMatchSelectWidth={false}
+                style={{ width: "100%" }}
+              >
+                {this.props.availableMeshFiles ? (
+                  this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
+                    <Option key={meshFile.name} value={meshFile.name}>
+                      {formatMeshFile(meshFile)}
+                    </Option>
+                  ))
+                ) : (
+                  <Option value="" disabled>
+                    No files available.
                   </Option>
-                ))
-              ) : (
-                <Option value="" disabled>
-                  No files available.
-                </Option>
-              )}
-            </Select>
+                )}
+              </Select>
+              <ButtonComponent icon={<ReloadOutlined />} onClick={this.handleRefreshMeshFiles} />
+            </Space.Compact>
           </ConfigProvider>
         </Typography.Paragraph>
 
@@ -961,90 +771,9 @@ class SegmentsView extends React.Component<Props, State> {
     );
   };
 
-  getPreComputeMeshesPopover = () => {
-    const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
-    const { preferredQualityForMeshPrecomputation, magInfoOfVisibleSegmentationLayer: magInfo } =
-      this.props;
-    return (
-      <div
-        style={{
-          maxWidth: 500,
-        }}
-      >
-        <h3>Precompute Meshes</h3>
-        <p>
-          Mesh visualizations can be very helpful when exploring segmentations. WEBKNOSSOS can
-          precompute all meshes for a segmentation layer. Once the precomputation has finished,
-          individual meshes can be loaded very quickly. As an alternative, you can use the ad-hoc
-          mesh functionality which is a bit slower but does not require pre-computation.
-        </p>
-
-        <div>
-          <div>
-            <FastTooltip title="The higher the quality, the more computational resources are required">
-              Quality for Mesh Precomputation:
-            </FastTooltip>
-          </div>
-
-          <Select
-            size="small"
-            style={{
-              width: 220,
-            }}
-            value={magInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation)}
-            onChange={this.handleQualityChangeForPrecomputation}
-          >
-            {magInfo
-              .getMagsWithIndices()
-              .map(([log2Index, mag]: [number, Vector3], index: number) => (
-                <Option value={log2Index} key={log2Index}>
-                  {formatMagWithLabel(mag, index)}
-                </Option>
-              ))}
-          </Select>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginTop: 16,
-          }}
-        >
-          <FastTooltip title={title}>
-            <Button
-              size="large"
-              loading={this.state.activeMeshJobId != null}
-              type="primary"
-              disabled={disabled}
-              onClick={this.startComputingMeshfile}
-            >
-              Precompute Meshes
-            </Button>
-          </FastTooltip>
-        </div>
-      </div>
-    );
-  };
-
   getMeshesHeader = () => (
     <Space>
-      <ButtonComponent
-        title="Refresh list of available Mesh files"
-        icon={<ReloadOutlined />}
-        variant="text"
-        color="default"
-        onClick={() =>
-          Store.dispatch(
-            maybeFetchMeshFilesAction(
-              this.props.visibleSegmentationLayer,
-              this.props.dataset,
-              true,
-            ),
-          )
-        }
-      />
-      <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
+      <Popover content={<PrecomputeMeshesPopover />} trigger="click" placement="bottom">
         <ButtonComponent
           title="Add a precomputed mesh file"
           icon={<PlusOutlined />}
@@ -1052,14 +781,6 @@ class SegmentsView extends React.Component<Props, State> {
           color="default"
         />
       </Popover>
-      {this.state.activeMeshJobId != null ? (
-        <ButtonComponent
-          title='A mesh file is currently being computed. See "Processing Jobs" for more information.'
-          icon={<LoadingOutlined />}
-          variant="text"
-          color="default"
-        />
-      ) : null}
       <Popover content={this.getMeshSettings} trigger="click" placement="bottom">
         <ButtonComponent
           title="Configure mesh computation"
@@ -1435,7 +1156,9 @@ class SegmentsView extends React.Component<Props, State> {
   getSelectedSegments = (): Segment[] => {
     const allSegments = this.props.segments;
     if (allSegments == null) return [];
-    return this.props.selectedIds.segments.map((segmentId) => allSegments.getOrThrow(segmentId));
+    return this.props.selectedIds.segments.map((segmentId: number) =>
+      allSegments.getOrThrow(segmentId),
+    );
   };
 
   getSelectedItemKeys = () => {

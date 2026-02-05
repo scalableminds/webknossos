@@ -7,6 +7,8 @@
 import logging
 import httpx
 import argparse
+import time
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -19,19 +21,40 @@ def main():
 
     args = parse_pargs()
 
-    logger.info("Fetching paths to delete from WEBKNOSSOS at xxx...")
+    logger.info(
+        f"Polling WEBKNOSSOS at {args.wk_uri} for paths to delete, "
+        f"with {args.polling_interval_seconds} seconds interval...\n"
+    )
+
+    last_poll_successful = True
+    while True:
+        try:
+            poll_for_work(args)
+            if not last_poll_successful:
+                logger.info("Last polling was successful again after previous errors")
+                last_poll_successful = True
+        except Exception as e:
+            logger.error(f"Error while polling for paths to delete: {e}")
+            logger.error(traceback.format_exc())
+            logger.info("Continue polling...")
+            last_poll_successful = False
+        time.sleep(args.polling_interval_seconds)
+
+
+def poll_for_work(args):
     paths_to_delete = fetch_paths_to_delete(args)
-    logger.info(f"WEBKNOSSOS listed {len(paths_to_delete)} paths.")
+    if not paths_to_delete:
+        return
 
+    logger.debug(f"WEBKNOSSOS listed {len(paths_to_delete)} paths to delete.")
 
-
-    deleted_paths = [paths_to_delete[0], paths_to_delete[1]]
-    logger.info(f"Marking {len(deleted_paths)} paths as deleted in WEBKNOSSOS...")
+    deleted_paths = [paths_to_delete[0]]
+    logger.debug(f"Marking {len(deleted_paths)} paths as deleted in WEBKNOSSOS...")
     mark_paths_as_deleted(args, deleted_paths)
 
 def parse_pargs():
     parser = argparse.ArgumentParser(
-        description="Script to delete remote paths listed by WEBKNOSSOS."
+        description="Service to delete remote paths listed by WEBKNOSSOS."
     )
     parser.add_argument(
         "--wk_uri", help="URI of the WEBKNOSSOS instance", type=str, default="http://localhost:9000"
@@ -44,6 +67,9 @@ def parse_pargs():
     )
     parser.add_argument(
         "--secret_access_key", help="Secret access key to access remote paths.", type=str, required=True
+    )
+    parser.add_argument(
+        "--polling_interval_seconds", help="Interval to sleep after each polling of WEBKNOSSOS (in seconds)", type=int, default=3
     )
     return parser.parse_args()
 

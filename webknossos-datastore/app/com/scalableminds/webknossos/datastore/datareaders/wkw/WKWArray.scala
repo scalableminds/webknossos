@@ -6,14 +6,13 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper, WKWHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import java.io.ByteArrayInputStream
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 object WKWArray extends WKWDataFormatHelper with FoxImplicits {
@@ -58,8 +57,9 @@ class WKWArray(vaultPath: VaultPath,
 
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[Long]] = AlfuCache()
 
-  override protected def getShardedChunkPathAndRange(
-      chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] =
+  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox
       shardFilename = getChunkFilename(shardCoordinates)
@@ -68,7 +68,7 @@ class WKWArray(vaultPath: VaultPath,
       chunkIndexInShardIndex <- getChunkIndexInShardIndex(chunkIndex).toFox
       chunkByteOffset = shardIndexEntryAt(parsedShardIndex, chunkIndexInShardIndex)
       nextChunkByteOffset = shardIndexEntryAt(parsedShardIndex, chunkIndexInShardIndex + 1)
-      range = Range.Long(chunkByteOffset, nextChunkByteOffset, 1)
+      range = ByteRange.startEndExclusive(chunkByteOffset, nextChunkByteOffset)
     } yield (shardPath, range)
 
   private def shardIndexEntryAt(shardIndex: Array[Long], chunkIndexInShardIndex: Int): Long =
@@ -82,9 +82,9 @@ class WKWArray(vaultPath: VaultPath,
     val bytesPerShardIndexEntry = 8
     val numEntriesToRead = if (header.isCompressed) 1 + header.numChunksPerShard else 1
     val rangeInShardFile =
-      Range.Long(skipBytes, skipBytes + numEntriesToRead * bytesPerShardIndexEntry, 1)
+      ByteRange.startEndExclusive(skipBytes, skipBytes + numEntriesToRead * bytesPerShardIndexEntry)
     for {
-      shardIndexBytes <- shardPath.readBytes(Some(rangeInShardFile))
+      shardIndexBytes <- shardPath.readBytes(rangeInShardFile)
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(shardIndexBytes))
       shardIndex = (0 until numEntriesToRead).map(_ => dataInputStream.readLong()).toArray
     } yield shardIndex

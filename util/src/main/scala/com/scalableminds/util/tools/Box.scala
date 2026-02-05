@@ -747,9 +747,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
   type A = Nothing
 
   override def getOrThrow(justification: => String) =
-    throw new NullPointerException(
-      "An Failure Box was opened.  Failure Message: " + msg +
-        ".  The justification for allowing the getOrThrow was " + justification) {
+    throw new NullPointerException(s"Opened Failure Box (justification: $justification). Details: $this") {
       override def getCause: Throwable = exception getOrElse null
     }
 

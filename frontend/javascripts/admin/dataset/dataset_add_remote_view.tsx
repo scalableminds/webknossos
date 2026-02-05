@@ -6,10 +6,7 @@ import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings
 import DatasetSettingsDataTab, {
   TransformationsMode,
 } from "dashboard/dataset/dataset_settings_data_tab";
-import {
-  DatasetSettingsProvider,
-  getRotationFromCoordinateTransformations, // Sync simple with advanced and get newest datasourceJson
-} from "dashboard/dataset/dataset_settings_provider";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";
@@ -18,16 +15,13 @@ import { computeHash } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { APIDataLayer, APIDataStore } from "types/api_types";
+import type { APIDataStore } from "types/api_types";
 import type {
   DataLayer,
   DataLayerWithTransformations,
   DatasourceConfiguration,
 } from "types/schemas/datasource.types";
-import {
-  doAllLayersHaveTheSameRotation,
-  type RotationAndMirroringSettings,
-} from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
 
@@ -114,14 +108,7 @@ function DatasetAddRemoteView(props: Props) {
     );
   };
 
-  const hasFormAnyErrors = (form: FormInstance) =>
-    form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
-
-  const onSuccessfulExplore = async (url: string, newDataSourceConfig: DatasourceConfiguration) => {
-    const datasourceConfig = form.getFieldValue("dataSource");
-    const mergedConfig = mergeNewLayers(datasourceConfig, newDataSourceConfig);
-    form.setFieldValue("dataSource", mergedConfig);
-
+  const setEmptyTransformations = (mergedConfig: DatasourceConfiguration) => {
     const initialRotationSettingsPerAxis: RotationAndMirroringSettings = {
       rotationInDegrees: 0,
       isMirrored: false,
@@ -152,6 +139,17 @@ function DatasetAddRemoteView(props: Props) {
     });
 
     form.setFieldValue("transformationsMode", TransformationsMode.SIMPLE);
+  };
+
+  const hasFormAnyErrors = (form: FormInstance) =>
+    form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
+
+  const onSuccessfulExplore = async (url: string, newDataSourceConfig: DatasourceConfiguration) => {
+    const datasourceConfig = form.getFieldValue("dataSource");
+    const mergedConfig = mergeNewLayers(datasourceConfig, newDataSourceConfig);
+    form.setFieldValue("dataSource", mergedConfig);
+
+    setEmptyTransformations(mergedConfig);
 
     if (defaultDatasetUrl == null) {
       setShowLoadingOverlay(false);

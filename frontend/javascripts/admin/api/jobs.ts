@@ -403,7 +403,7 @@ export type BaseCustomModelInferenceParameters = {
 type RunCustomNeuronModelInferenceParameters = BaseCustomModelInferenceParameters;
 
 type RunCustomInstanceModelInferenceParameters = BaseCustomModelInferenceParameters & {
-  seedGeneratorDistanceThreshold: number;
+  seedGeneratorDistanceThreshold: number | null;
 };
 
 export function runCustomNeuronModelInferenceJob(params: RunCustomNeuronModelInferenceParameters) {

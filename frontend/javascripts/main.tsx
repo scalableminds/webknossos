@@ -88,13 +88,26 @@ async function loadOrganization() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  // With vite dev server, javascript loaded as <script type="module"> might already be ready
+  initApp();
+}
+
+async function initApp() {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
   message.config({ top: 30 });
   checkBrowserFeatures();
   const containerElement = document.getElementById("main-container");
+
+  if (!containerElement) {
+    return;
+  }
+
+  const react_root = createRoot(containerElement);
 
   try {
     await Promise.all([
@@ -107,21 +120,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadHasOrganizations(),
     ]);
     await loadOrganization();
-  } catch (e) {
-    console.error("Failed to load WEBKNOSSOS due to the following error", e);
-    if (containerElement) {
-      const react_root = createRoot(containerElement);
-      react_root.render(
-        <p style={{ margin: 20, marginTop: -20 }}>
-          Failed to load WEBKNOSSOS. Please try again or check the console for details.
-        </p>,
-      );
-    }
-    return;
-  }
+    sessionStorage.removeItem("wk_load_retries"); // auto reload while backend is still compiling/starting
 
-  if (containerElement) {
-    const react_root = createRoot(containerElement);
     react_root.render(
       <ErrorBoundary>
         <Provider store={Store}>
@@ -130,9 +130,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             persistOptions={{ persister: localStoragePersister }}
           >
             {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
-        certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
-        The fix is inspired by:
-        https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
+          certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
+          The fix is inspired by:
+          https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
               <GlobalThemeProvider>
                 <RootForFastTooltips />
@@ -147,5 +147,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         </Provider>
       </ErrorBoundary>,
     );
+  } catch (e) {
+    console.error("Failed to load WEBKNOSSOS due to the following error", e);
   }
-});
+}

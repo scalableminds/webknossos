@@ -154,8 +154,7 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
   const addNewEntryMenuItems = getTypeSelectDropdownMenu(addNewEntryWithType);
 
   return (
-    <>
-      <InnerMetadataTable
+    <InnerMetadataTable
         onlyReturnRows
         metadata={itemMetadata}
         getKeyInput={getKeyInput}
@@ -164,7 +163,6 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
         addNewEntryMenuItems={addNewEntryMenuItems}
         readOnly={readOnly}
       />
-    </>
   );
 }
 

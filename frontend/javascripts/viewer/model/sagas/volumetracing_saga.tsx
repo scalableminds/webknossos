@@ -4,6 +4,7 @@ import Toast from "libs/toast";
 import isEqual from "lodash-es/isEqual";
 import memoizeOne from "memoize-one";
 import messages from "messages";
+import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { AnnotationLayerEnum } from "types/api_types";
@@ -16,10 +17,12 @@ import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { AnnotationTool, 
+import {
+  AnnotationTool,
   isBrushTool,
   isTraceTool,
-  isVolumeDrawingTool,} from "viewer/model/accessors/tool_accessor";
+  isVolumeDrawingTool,
+} from "viewer/model/accessors/tool_accessor";
 import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -259,7 +262,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
-    const channel = yield* actionChannel(["ADD_TO_CONTOUR_LIST", "FINISH_EDITING"]);
+    const channel: Channel<Action> = yield* actionChannel([
+      "ADD_TO_CONTOUR_LIST",
+      "FINISH_EDITING",
+    ]);
 
     while (true) {
       const currentAction = yield* take(channel);

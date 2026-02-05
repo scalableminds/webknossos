@@ -226,8 +226,12 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         dataStore <- dataStoreDAO.findOneWithUploadsAllowed
         _ <- datasetService.validatePaths(dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
-        folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
-          folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
+        folderIdOpt <- request.body.folderId match {
+          case Some(passedFolderId) => Fox.successful(Some(passedFolderId))
+          case None =>
+            Fox.runOptional(request.body.folderPath)(folderPath =>
+              folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
+        }
         _ <- datasetService.assertValidDatasetName(request.body.datasetName)
         _ <- Fox.serialCombined(dataSource.dataLayers)(layer => datasetService.assertValidLayerNameLax(layer.name))
         newDataset <- datasetService.createAndSetUpDataset(

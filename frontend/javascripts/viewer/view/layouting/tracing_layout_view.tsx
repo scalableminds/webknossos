@@ -45,7 +45,6 @@ import {
 } from "viewer/view/layouting/layout_persistence";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
-import PresentModernControls from "viewer/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
 import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "viewer/view/tracing_view";
@@ -333,7 +332,6 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
 
     return (
       <Fragment>
-        <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
         {status === "loaded" && <WkContextMenu />}

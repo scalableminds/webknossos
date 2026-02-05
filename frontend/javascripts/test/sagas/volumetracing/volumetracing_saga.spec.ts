@@ -23,9 +23,11 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { askUserForLockingActiveMapping, 
+import {
+  askUserForLockingActiveMapping,
   ensureMaybeActiveMappingIsLocked,
-  requestBucketModificationInVolumeTracing,} from "viewer/model/sagas/saga_helpers";
+  requestBucketModificationInVolumeTracing,
+} from "viewer/model/sagas/saga_helpers";
 import { editVolumeLayerAsync, finishSectionLabeler } from "viewer/model/sagas/volumetracing_saga";
 import SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import { Model, Store } from "viewer/singletons";

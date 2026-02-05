@@ -13,7 +13,7 @@ export function useInterval(
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef<ArbitraryFunction>();
+  const savedCallback = useRef<ArbitraryFunction>(null);
   // Remember the latest callback.
   useEffect(() => {
     savedCallback.current = callback;

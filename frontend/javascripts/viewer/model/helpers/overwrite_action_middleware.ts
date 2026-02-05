@@ -1,4 +1,4 @@
-import type { Dispatch, MiddlewareAPI } from "redux";
+import type { Dispatch, MiddlewareAPI, UnknownAction } from "redux";
 import type { Action } from "viewer/model/actions/actions";
 
 type OverwriteFunction<S, A> = (store: S, next: (action: A) => void, action: A) => A | Promise<A>;
@@ -24,14 +24,13 @@ export function overwriteAction<S, A>(
 export function removeOverwrite(actionName: string) {
   delete overwrites[actionName];
 }
-export default function overwriteMiddleware<S, A extends Action>(
-  // @ts-expect-error ts-migrate(2314) FIXME: Generic type 'MiddlewareAPI<S>' requires 1 type ar... Remove this comment to see the full error message
-  store: MiddlewareAPI<S, A>,
-): (next: Dispatch<A>) => Dispatch<A> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '(next: Dispatch<A>) => (action: A) => A' is ... Remove this comment to see the full error message
-  return (next: Dispatch<A>) =>
-    (action: A): A => {
-      if (overwrites[action.type]) {
+export default function overwriteMiddleware<S, A extends UnknownAction>(
+  store: MiddlewareAPI<Dispatch<A>, S>,
+) {
+  return (next: (action: unknown) => unknown) =>
+    (action: unknown): unknown => {
+      const typedAction = action as Action;
+      if (overwrites[typedAction.type]) {
         let isSyncExecutionDone = false;
 
         // @ts-expect-error ts-migrate(7019) FIXME: Rest parameter 'args' implicitly has an 'any[]' ty... Remove this comment to see the full error message
@@ -39,7 +38,7 @@ export default function overwriteMiddleware<S, A extends Action>(
           if (isSyncExecutionDone) {
             console.warn(
               "Apparently, you used registerOverwrite for",
-              action.type,
+              typedAction.type,
               ` and
               dispatched the action asynchronously (e.g., within a setTimeout call
               or after 'async'). This can lead to weird behaviour, since actions
@@ -52,7 +51,7 @@ export default function overwriteMiddleware<S, A extends Action>(
           return next(...args);
         };
 
-        const returnValue = overwrites[action.type](store, wrappedNext, action);
+        const returnValue = overwrites[typedAction.type](store, wrappedNext, action);
         isSyncExecutionDone = true;
         return returnValue;
       } else {

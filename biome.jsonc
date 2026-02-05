@@ -27,20 +27,6 @@
   },
   "linter": {
     "enabled": true,
-    "includes": [
-      "!**/libs/keyboard.ts",
-      "!**/libs/stl_exporter.ts",
-      "!**/libs/DRACOLoader.ts",
-      "!**/libs/DRACOWorker.worker.js",
-      "!**/libs/BufferGeometryUtils.ts",
-      "!**/libs/fps_meter.ts",
-      "!**/libs/parse_stl_buffer.ts",
-      "!**/libs/trackball_controls.ts",
-      "!**/*.d.ts",
-      "!**/*.json",
-      "!**/frontend/javascripts/test/snapshots/**/*",
-      "**"
-    ],
     "rules": {
       "recommended": true,
       "style": {
@@ -102,7 +88,8 @@
         "noUnusedImports": "error",
         "noRenderReturnValue": "off",
         "useHookAtTopLevel": "error",
-        "useExhaustiveDependencies": "warn" // TODO: consider turning this into an error
+        "useExhaustiveDependencies": "warn", // TODO: consider turning this into an error
+        "noReactPropAssignments": "error"
       },
       "suspicious": {
         "noExplicitAny": "off",
@@ -117,16 +104,15 @@
         "noFallthroughSwitchClause": "off",
         "noAssignInExpressions": "off"
       },
-      "nursery": {}
+      "nursery": {
+        "noReactForwardRef": "error"
+      }
     }
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "lineWidth": 100,
-    "includes": [
-     
-    ]
+    "lineWidth": 100
   },
 
   "overrides": [

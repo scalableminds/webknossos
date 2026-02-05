@@ -13,7 +13,10 @@
 }
 
 .flexlayout__tabset_tabbar_outer_top {
-  border-color: var(--ant-color-border);
+  // Use an inset shadow instead of a real border so the active tab can visually "cut" the line.
+  // Borders live outside the box and can't be masked by children; shadows are inside and can be covered.
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--ant-color-border);
 }
 
 .flexlayout__tabset_tabbar_inner_tab_container_top {
@@ -70,6 +73,8 @@
 // Fix min/max window button in dark mode
 .flexlayout__tab_toolbar_button:hover {
   background-color: var(--ant-color-bg-base);
+  position: relative;
+
   cursor: pointer;
 
   svg {
@@ -80,11 +85,17 @@
 .flexlayout__tab_button {
   margin: 0;
   padding: 0px 5px;
-  line-height: 1;
   // These properties are copied from antd's styling:
   font-size: 14px;
   font-weight: 400;
   font-family: @font-family;
+
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid var(--ant-color-border);
+  // Draw the 1px underline on all tabs so the tabbar line looks continuous.
+  // The active tab will mask this line to create the "interrupt" effect.
 
   &:hover {
     cursor: move;
@@ -95,15 +106,35 @@
   .flexlayout__tab_button_content {
     background-color: var(--ant-color-bg-base);
     color: var(--ant-color-text-secondary);
-    border-bottom: 1px solid transparent;
+
   }
 
   &.flexlayout__tab_button--selected {
     background-color: var(--ant-color-bg-base);
+    // Minimalist active tab: only left/right/top borders, no bottom.
+    border-left: 1px solid var(--ant-color-border);
+    border-right: 1px solid var(--ant-color-border);
+    border-top: 1px solid var(--ant-color-border);
+    border-bottom: 1px solid var(--ant-color-bg-base);
+    position: relative;
+    z-index: 200;
+    margin-bottom: -1px;
 
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-bg-base);
-      color: var(--ant-color-link);
+      color: var(--ant-color-text);
+
+    }
+
+    // Mask the tabbar underline (an inset shadow) so the active tab "cuts" the line.
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background-color: var(--ant-color-bg-base);
     }
   }
 
@@ -112,8 +143,11 @@
 
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-bg-base);
-      color: var(--ant-color-link);
-      border-bottom: 1px solid var(--ant-color-link);
+      color: var(--ant-color-text-secondary);
+      border-left: 1px solid transparent;
+      border-right: 1px solid transparent;
+      border-top: 1px solid transparent;
+      border-bottom: 1px solid transparent;
     }
   }
 }

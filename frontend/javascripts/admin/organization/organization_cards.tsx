@@ -77,7 +77,7 @@ export function PowerPlanUpgradeCard({
         </Button>,
       ]}
     >
-      <div className="drawing-ai-addon">
+      <div>
         {description ? <p>{description}</p> : null}
         <ul>
           {powerPlanFeatures.map((feature) => (

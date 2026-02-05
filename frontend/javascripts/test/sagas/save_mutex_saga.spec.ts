@@ -4,6 +4,7 @@ import { call, put, take } from "redux-saga/effects";
 import { powerOrga } from "test/fixtures/dummy_organization";
 import { tracing as volumeTracing } from "test/fixtures/volumetracing_server_objects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import { delay } from "typed-redux-saga";
 import type { ServerSkeletonTracing, ServerVolumeTracing } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
@@ -28,9 +29,8 @@ import {
 } from "viewer/model/sagas/saving/save_mutex_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading_test_utils";
-import { delay } from "typed-redux-saga";
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 

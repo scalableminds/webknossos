@@ -125,7 +125,8 @@ export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefin
 export function findTreeByAgglomerateId(
   trees: TreeMap,
   agglomerateId: number,
-  editableMappingIdOrMappingName: string,
+  editableMappingId: string,
+  mappingName: string,
 ): Tree | undefined {
   return trees
     .values()
@@ -133,7 +134,8 @@ export function findTreeByAgglomerateId(
       (tree: Tree) =>
         tree.agglomerateInfo &&
         tree.agglomerateInfo.agglomerateId === agglomerateId &&
-        tree.agglomerateInfo.tracingId === editableMappingIdOrMappingName,
+        tree.agglomerateInfo.tracingId === editableMappingId &&
+        tree.agglomerateInfo.tracingId === mappingName,
     );
 }
 

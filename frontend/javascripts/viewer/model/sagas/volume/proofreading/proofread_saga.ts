@@ -17,6 +17,7 @@ import uniq from "lodash-es/uniq";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import Constants, {
   MappingStatusEnum,
   SagaIdentifier,
@@ -78,8 +79,8 @@ import {
   type DeleteNodeAction,
   deleteEdgeAction,
   type SetNodePositionAction,
-  setTreeNameAction,
   setTreeAgglomerateIdAction,
+  setTreeNameAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
   allowSagaWhileBusyAction,
@@ -117,12 +118,11 @@ import type { Action } from "../../../actions/actions";
 import type { Tree } from "../../../types/tree_types";
 import { ensureWkInitialized } from "../../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../../saga_helpers";
+import { subscribeToAnnotationMutex } from "../../saving/save_mutex_saga";
 import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
-import { subscribeToAnnotationMutex } from "../../saving/save_mutex_saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {

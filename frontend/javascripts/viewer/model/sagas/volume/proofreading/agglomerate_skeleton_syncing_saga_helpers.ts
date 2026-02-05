@@ -38,7 +38,11 @@ function* agglomerateTreesToSkeleton(trees: Tree[]): Saga<SkeletonTracing> {
   return tracingWithTreesReplaced;
 }
 
-function* getAgglomerateTreesAsSkeleton(agglomerateIds: number[], mappingName: string) {
+function* getAgglomerateTreesAsSkeleton(
+  agglomerateIds: number[],
+  editableMappingTracingId: string,
+  mappingName: string,
+) {
   const skeletonTracing = yield* select((state) => state.annotation.skeleton);
   if (!skeletonTracing || mappingName == null) {
     return;
@@ -47,7 +51,9 @@ function* getAgglomerateTreesAsSkeleton(agglomerateIds: number[], mappingName: s
     getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   const existingAgglomerateTrees = agglomerateIds
-    .map((aggloId) => findTreeByAgglomerateId(trees, aggloId))
+    .map((aggloId) =>
+      findTreeByAgglomerateId(trees, aggloId, editableMappingTracingId, mappingName),
+    )
     .filter((tree) => tree != null);
   if (existingAgglomerateTrees.length === 0) {
     return;
@@ -196,6 +202,7 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
   const tracingWithOldAggloTrees = yield* call(
     getAgglomerateTreesAsSkeleton,
     [sourceAgglomerateIdBeforeMerge, targetAgglomerateIdBeforeMerge],
+    tracingId,
     mappingName,
   );
   if (!tracingWithOldAggloTrees) {
@@ -206,6 +213,8 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
   const maybeOutdatedSourceAgglomerateTree = findTreeByAgglomerateId(
     tracingWithOldAggloTrees.trees,
     sourceAgglomerateIdBeforeMerge,
+    tracingId,
+    mappingName,
   );
   const assignedTreeIds = maybeOutdatedSourceAgglomerateTree
     ? [maybeOutdatedSourceAgglomerateTree.treeId]
@@ -240,6 +249,7 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
   const tracingWithOldAggloTrees = yield* call(
     getAgglomerateTreesAsSkeleton,
     oldAgglomerateIds,
+    tracingId,
     mappingName,
   );
   if (!tracingWithOldAggloTrees) {
@@ -250,7 +260,9 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
   let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
 
   const assignedTreeIds = newAgglomerateIds
-    .map((id) => findTreeByAgglomerateId(tracingWithOldAggloTrees.trees, id))
+    .map((id) =>
+      findTreeByAgglomerateId(tracingWithOldAggloTrees.trees, id, tracingId, mappingName),
+    )
     .map((tree) => (tree ? tree.treeId : newTreeId++));
 
   const tracingWithUpdatedAggloTrees = yield* call(

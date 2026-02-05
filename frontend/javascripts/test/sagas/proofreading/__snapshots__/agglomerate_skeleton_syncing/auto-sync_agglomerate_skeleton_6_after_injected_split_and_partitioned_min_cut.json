@@ -1,5 +1,8 @@
 {
-  "agglomerateId": 6,
+  "agglomerateInfo": {
+    "agglomerateId": 6,
+    "tracingId": "volumeTracingId",
+  },
   "branchPoints": [],
   "color": [
     0.6784313725490196,

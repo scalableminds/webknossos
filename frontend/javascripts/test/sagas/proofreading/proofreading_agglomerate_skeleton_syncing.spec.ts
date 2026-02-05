@@ -840,7 +840,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           type: "AGGLOMERATE",
           edgesAreVisible: true,
           metadata: [],
-          agglomerateId: 1339,
+          agglomerateInfo: { agglomerateId: 1339, tracingId: "volumeTracingId" },
         },
       },
       {
@@ -1110,7 +1110,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           type: "AGGLOMERATE",
           edgesAreVisible: true,
           metadata: [],
-          agglomerateId: 1339,
+          agglomerateInfo: { agglomerateId: 1339, tracingId: "volumeTracingId" },
         },
       },
       {

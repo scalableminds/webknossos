@@ -30,6 +30,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
+import utils.WkConf
 
 import scala.concurrent.duration.DurationInt
 import javax.inject.Inject
@@ -47,6 +48,7 @@ class WKRemoteDataStoreController @Inject()(
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
     credentialDAO: CredentialDAO,
+    conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
@@ -69,6 +71,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
+          _ <- layerToLinkService.assertLayersToLinkOnlyForVirtual(request.body.layersToLink.getOrElse(Seq.empty))
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             layerToLinkService.validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
@@ -132,6 +135,7 @@ class WKRemoteDataStoreController @Inject()(
                                              request.body.needsConversion,
                                              request.body.datasetSizeBytes,
                                              addVariantLabel = "upload without conversion")
+          _ <- layerToLinkService.assertLayersToLinkOnlyForVirtual(request.body.layersToLink)
           dataSourceWithLinkedLayersOpt <- Fox.runOptional(request.body.dataSourceOpt) {
             implicit val ctx: DBAccessContext = AuthorizedAccessContext(user)
             layerToLinkService.addLayersToLinkToDataSource(_, request.body.layersToLink)
@@ -142,8 +146,10 @@ class WKRemoteDataStoreController @Inject()(
                                         dataset._dataStore,
                                         dataSource.hashCode(),
                                         dataSource,
-                                        isUsable = true)(GlobalAccessContext)
+                                        isUsable = true)(AuthorizedAccessContext(user))
           }
+          _ <- Fox.runIf(!conf.WebKnossos.Datasets.createPreferVirtual)(
+            datasetDAO.setIsVirtual(datasetId, isVirtual = false)(AuthorizedAccessContext(user)))
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
         } yield Ok
       }
@@ -272,6 +278,12 @@ class WKRemoteDataStoreController @Inject()(
           credential <- credentialDAO.findOne(credentialId)
         } yield Ok(Json.toJson(credential))
       }
+  }
+
+  def datasetCreatePreferVirtual(name: String, key: String): Action[AnyContent] = Action.async { implicit request =>
+    dataStoreService.validateAccess(name, key) { _ =>
+      Fox.successful(Ok(Json.toJson(conf.WebKnossos.Datasets.createPreferVirtual)))
+    }
   }
 
 }

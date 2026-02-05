@@ -531,7 +531,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val allReferencedPaths = explicitPaths ++ additionalMagPaths
     for {
       allFiles <- PathUtils.listFilesRecursive(unpackedDir, silent = true, maxDepth = 10).toFox
-      filesToDelete = allFiles.filterNot(file => allReferencedPaths.exists(neededPath => file.startsWith(neededPath)))
+      preferVirtual <- remoteWebknossosClient.getDatasetCreatePreferVirtual
+      whitelist: Set[String] = if (preferVirtual) Set.empty
+      else Set(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
+      filesToDelete = allFiles.filterNot(file =>
+        allReferencedPaths.exists(neededPath =>
+          file.startsWith(neededPath) || whitelist.contains(file.getFileName.toString)))
     } yield filesToDelete
   }
 

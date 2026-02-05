@@ -211,4 +211,8 @@ class DSRemoteWebknossosClient @Inject()(
           .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
     )
 
+  lazy val getDatasetCreatePreferVirtual: Fox[Boolean] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasetCreatePreferVirtual")
+      .addQueryParam("key", dataStoreKey)
+      .getWithJsonResponse[Boolean] ?~> "Failed to get datasetCreatePreferVirtual config from remote webknossos."
 }

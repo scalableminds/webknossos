@@ -12,12 +12,24 @@ import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIden
 import models.user.{User, UserService}
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class LayerToLinkService @Inject()(datasetDAO: DatasetDAO, userService: UserService, datasetService: DatasetService)
+class LayerToLinkService @Inject()(datasetDAO: DatasetDAO,
+                                   userService: UserService,
+                                   datasetService: DatasetService,
+                                   conf: WkConf)
     extends FoxImplicits {
+
+  def assertLayersToLinkOnlyForVirtual(layersToLink: Seq[LinkedLayerIdentifier])(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.runIf(!conf.WebKnossos.Datasets.createPreferVirtual) {
+        Fox.fromBool(layersToLink.isEmpty) ?~> "Linking layers during upload/uploadToPaths is not available for this WEBKNOSSOS instance, as it is configured not to create virtual datasets."
+      }
+    } yield ()
 
   def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
                           requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =

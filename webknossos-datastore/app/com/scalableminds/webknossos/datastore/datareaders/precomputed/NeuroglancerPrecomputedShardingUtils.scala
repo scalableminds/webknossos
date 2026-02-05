@@ -4,12 +4,11 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.util.tools.Box
 import com.scalableminds.util.tools.Box.tryo
 
 import java.nio.{ByteBuffer, ByteOrder}
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
@@ -28,16 +27,16 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
 
   private lazy val minishardCount = 1 << shardingSpecification.minishard_bits
 
-  protected lazy val shardIndexRange: NumericRange.Exclusive[Long] = {
+  protected lazy val shardIndexRange: StartEndExclusiveByteRange = {
     val end = minishardCount * 16
-    Range.Long(0, end, 1)
+    ByteRange.startEndExclusive(0, end)
   }
 
   private def getShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     shardIndexCache.getOrLoad(shardPath, readShardIndex)
 
   private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
-    shardPath.readBytes(Some(shardIndexRange))
+    shardPath.readBytes(shardIndexRange)
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
     // See https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#shard-index-format
@@ -48,11 +47,10 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
       })
       .toSeq
 
-  private def getMinishardIndexRange(minishardNumber: Int,
-                                     parsedShardIndex: Seq[(Long, Long)]): NumericRange.Exclusive[Long] = {
+  private def getMinishardIndexRange(minishardNumber: Int, parsedShardIndex: Seq[(Long, Long)]): ByteRange = {
     val miniShardIndexStart: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._1
     val miniShardIndexEnd: Long = (shardIndexRange.end) + parsedShardIndex(minishardNumber)._2
-    Range.Long(miniShardIndexStart, miniShardIndexEnd, 1)
+    ByteRange.startEndExclusive(miniShardIndexStart, miniShardIndexEnd)
   }
 
   private def decodeMinishardIndex(bytes: Array[Byte]) =
@@ -120,25 +118,25 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
       index <- getShardIndex(vaultPath)
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
-      indexRaw <- vaultPath.readBytes(Some(minishardIndexRange))
+      indexRaw <- vaultPath.readBytes(minishardIndexRange)
       minishardIndex <- parseMinishardIndex(indexRaw).toFox
     } yield minishardIndex
   }
 
   def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
-      implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
+      implicit ec: ExecutionContext): Fox[StartEndExclusiveByteRange] =
     for {
       chunkSpecification <- minishardIndex
         .find(_._1 == chunkId)
         .toFox ?~> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
-    } yield Range.Long(chunkStart, chunkEnd, 1)
+    } yield ByteRange.startEndExclusive(chunkStart, chunkEnd)
 
-  def getChunk(chunkRange: NumericRange[Long], shardPath: VaultPath)(implicit ec: ExecutionContext,
-                                                                     tc: TokenContext): Fox[Array[Byte]] =
+  def getChunk(chunkRange: ByteRange, shardPath: VaultPath)(implicit ec: ExecutionContext,
+                                                            tc: TokenContext): Fox[Array[Byte]] =
     for {
-      rawBytes <- shardPath.readBytes(Some(chunkRange))
+      rawBytes <- shardPath.readBytes(chunkRange)
       bytes = shardingSpecification.data_encoding match {
         // Check for GZIP Magic bytes to check if it was already decompressed
         case "gzip" if rawBytes(0) == 31 && rawBytes(1) == -117 => ZipIO.gunzip(rawBytes)

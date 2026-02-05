@@ -1,15 +1,24 @@
+import { CalendarOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getCreditTransactions } from "admin/api/organization";
-import { Spin, Table, Tag, Typography } from "antd";
+import { getJobTypeName } from "admin/job/job_list_view";
+import { Button, DatePicker, Space, Spin, Table, Tag, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
+import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { APICreditState, APICreditTransaction, APIJob } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 
 const { Column } = Table;
+
+const SYSTEM_USER_LABEL = "System";
+const NO_JOB_FILTER_VALUE = "__NO_JOB__";
+const NO_JOB_LABEL = "No job";
+const dateFilterFormat = "YYYY-MM-DD";
 
 const creditStateColors: Partial<Record<APICreditState, string>> = {
   AddCredits: "green",
@@ -19,11 +28,6 @@ const creditStateColors: Partial<Record<APICreditState, string>> = {
   PartiallyRevoked: "orange",
   Refunding: "blue",
   Revoking: "purple",
-};
-
-const transactionStateColors: Partial<Record<APICreditTransaction["transactionState"], string>> = {
-  Pending: "gold",
-  Complete: "green",
 };
 
 function formatCreditDelta(credits: number): string {
@@ -38,14 +42,35 @@ function formatCreditDelta(credits: number): string {
   return formatted;
 }
 
+function getUserLabel(job: APIJob | null | undefined): string {
+  if (job == null) {
+    return SYSTEM_USER_LABEL;
+  }
+  return `${job.ownerLastName}, ${job.ownerFirstName}`;
+}
+
+function getUserFilterValue(job: APIJob | null | undefined): string {
+  if (job == null) {
+    return SYSTEM_USER_LABEL;
+  }
+  return job.ownerEmail;
+}
+
+function getUserFilterText(job: APIJob | null | undefined): string {
+  if (job == null) {
+    return SYSTEM_USER_LABEL;
+  }
+  return `${job.ownerLastName}, ${job.ownerFirstName} (${job.ownerEmail})`;
+}
+
 function renderJob(job: APIJob | null | undefined) {
   if (job == null) {
-    return "-";
+    return null;
   }
   const datasetLabel = job.args.datasetName || job.args.datasetDirectoryName;
   return (
     <div>
-      <div>{job.command}</div>
+      <div>{getJobTypeName(job.command)}</div>
       {datasetLabel ? <div>{datasetLabel}</div> : null}
       <FormattedId id={job.id} />
     </div>
@@ -56,39 +81,48 @@ export function OrganizationCreditActivityView() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
-  const [isLoading, setIsLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Array<APICreditTransaction>>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchData() {
-      setIsLoading(true);
-      try {
-        const creditTransactions = await getCreditTransactions();
-        if (!isMounted) {
-          return;
-        }
-        setTransactions(creditTransactions);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    fetchData();
-    return () => {
-      isMounted = false;
-    };
-  }, [organization.id]);
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ["credit-transactions"],
+    queryFn: getCreditTransactions,
+  });
 
   const organizationTransactions = useMemo(() => {
     return transactions
       .filter((transaction) => transaction.organization_id === organization.id)
-      .slice()
       .sort((left, right) => right.createdAt - left.createdAt);
   }, [transactions, organization.id]);
+
+  const jobFilters = useMemo(() => {
+    const options = new Map<string, string>();
+    for (const transaction of organizationTransactions) {
+      const job = transaction.paidJob;
+      if (job == null) {
+        options.set(NO_JOB_FILTER_VALUE, NO_JOB_LABEL);
+      } else {
+        options.set(job.command, getJobTypeName(job.command));
+      }
+    }
+    return Array.from(options.entries()).map(([value, text]) => ({ value, text }));
+  }, [organizationTransactions]);
+
+  const userFilters = useMemo(() => {
+    const options = new Map<string, string>();
+    for (const transaction of organizationTransactions) {
+      const job = transaction.paidJob;
+      options.set(getUserFilterValue(job), getUserFilterText(job));
+    }
+    return Array.from(options.entries()).map(([value, text]) => ({ value, text }));
+  }, [organizationTransactions]);
+
+  const stateFilters = useMemo(() => {
+    const states = new Set<string>();
+    for (const transaction of organizationTransactions) {
+      states.add(transaction.creditState);
+    }
+    return Array.from(states)
+      .sort()
+      .map((state) => ({ text: state, value: state }));
+  }, [organizationTransactions]);
 
   return (
     <>
@@ -103,6 +137,21 @@ export function OrganizationCreditActivityView() {
           pagination={{ defaultPageSize: 50 }}
           locale={{ emptyText: "No credit activity recorded yet." }}
           style={{ marginTop: 16 }}
+          summary={(pageData) => {
+            const totalCredits = pageData.reduce(
+              (sum, transaction) => sum + transaction.creditChange,
+              0,
+            );
+            return (
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={0}>Total</Table.Summary.Cell>
+                <Table.Summary.Cell index={1}>
+                  <Typography.Text>{formatCreditDelta(totalCredits)} credits</Typography.Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} colSpan={4} />
+              </Table.Summary.Row>
+            );
+          }}
         >
           <Column
             title="Date"
@@ -115,6 +164,63 @@ export function OrganizationCreditActivityView() {
               left.createdAt - right.createdAt
             }
             defaultSortOrder="descend"
+            filterDropdown={({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+              const selectedRange = selectedKeys[0] ? (selectedKeys[0] as string).split("|") : [];
+              const startDate =
+                selectedRange[0] != null && selectedRange[0] !== ""
+                  ? dayjs(selectedRange[0], dateFilterFormat)
+                  : null;
+              const endDate =
+                selectedRange[1] != null && selectedRange[1] !== ""
+                  ? dayjs(selectedRange[1], dateFilterFormat)
+                  : null;
+              return (
+                <Space style={{ padding: 8 }}>
+                  <DatePicker.RangePicker
+                    value={startDate && endDate ? [startDate, endDate] : null}
+                    onChange={(dates) => {
+                      if (dates == null || dates[0] == null || dates[1] == null) {
+                        setSelectedKeys([]);
+                        return;
+                      }
+                      setSelectedKeys([
+                        `${dates[0].format(dateFilterFormat)}|${dates[1].format(dateFilterFormat)}`,
+                      ]);
+                    }}
+                    allowClear
+                  />
+                  <Button type="primary" size="small" onClick={() => confirm()}>
+                    Apply
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      clearFilters?.();
+                      confirm();
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </Space>
+              );
+            }}
+            filterIcon={(filtered) => (
+              <CalendarOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+            )}
+            onFilter={(value, record) => {
+              const [startValue, endValue] = (value as string).split("|");
+              const startDate = startValue ? dayjs(startValue, dateFilterFormat) : null;
+              const endDate = endValue ? dayjs(endValue, dateFilterFormat) : null;
+              if (startDate == null || endDate == null) {
+                return true;
+              }
+              const recordDate = dayjs(record.createdAt);
+              const isAfterStart =
+                recordDate.isSame(startDate, "day") || recordDate.isAfter(startDate, "day");
+              const isBeforeEnd =
+                recordDate.isSame(endDate, "day") || recordDate.isBefore(endDate, "day");
+              return isAfterStart && isBeforeEnd;
+            }}
           />
           <Column
             title="Credit Change"
@@ -128,11 +234,7 @@ export function OrganizationCreditActivityView() {
                   : transaction.creditChange > 0
                     ? "success"
                     : undefined;
-              return (
-                <Typography.Text type={textType}>
-                  {formattedChange} credits
-                </Typography.Text>
-              );
+              return <Typography.Text type={textType}>{formattedChange} credits</Typography.Text>;
             }}
             sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
               left.creditChange - right.creditChange
@@ -153,6 +255,42 @@ export function OrganizationCreditActivityView() {
             key="paidJob"
             width={200}
             render={(transaction: APICreditTransaction) => renderJob(transaction.paidJob)}
+            sorter={(left: APICreditTransaction, right: APICreditTransaction) => {
+              const leftLabel = left.paidJob ? getJobTypeName(left.paidJob.command) : "";
+              const rightLabel = right.paidJob ? getJobTypeName(right.paidJob.command) : "";
+              return leftLabel.localeCompare(rightLabel);
+            }}
+            filters={jobFilters}
+            onFilter={(value, record: APICreditTransaction) => {
+              if (value === NO_JOB_FILTER_VALUE) {
+                return record.paidJob == null;
+              }
+              return record.paidJob?.command === value;
+            }}
+          />
+          <Column
+            title="User"
+            key="user"
+            width={200}
+            render={(transaction: APICreditTransaction) => {
+              const job = transaction.paidJob;
+              if (job == null) {
+                return SYSTEM_USER_LABEL;
+              }
+              return (
+                <div>
+                  <div>{getUserLabel(job)}</div>
+                  <Typography.Text type="secondary">({job.ownerEmail})</Typography.Text>
+                </div>
+              );
+            }}
+            sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
+              getUserLabel(left.paidJob).localeCompare(getUserLabel(right.paidJob))
+            }
+            filters={userFilters}
+            onFilter={(value, record: APICreditTransaction) =>
+              getUserFilterValue(record.paidJob) === value
+            }
           />
           <Column
             title="State"
@@ -163,11 +301,13 @@ export function OrganizationCreditActivityView() {
                 <Tag color={creditStateColors[transaction.creditState]}>
                   {transaction.creditState}
                 </Tag>
-                <Tag color={transactionStateColors[transaction.transactionState]}>
-                  {transaction.transactionState}
-                </Tag>
               </>
             )}
+            sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
+              left.creditState.localeCompare(right.creditState)
+            }
+            filters={stateFilters}
+            onFilter={(value, record: APICreditTransaction) => record.creditState === value}
           />
         </Table>
       </Spin>

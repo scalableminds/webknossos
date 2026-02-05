@@ -1,4 +1,4 @@
-import { DeleteOutlined, HistoryOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { BankOutlined, DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -29,14 +29,20 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         label: "Notifications",
       },
       {
-        key: "credit-activity",
-        icon: <HistoryOutlined />,
-        label: "Credit Activity",
-      },
-      {
         key: "delete",
         icon: <DeleteOutlined />,
         label: "Delete",
+      },
+      {
+        label: "Activity Logs",
+        type: "group",
+        children: [
+          {
+            key: "credit-activity",
+            icon: <BankOutlined />,
+            label: "Credit Activity",
+          },
+        ],
       },
     ],
   },

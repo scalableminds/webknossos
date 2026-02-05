@@ -28,23 +28,20 @@ case class DataLayerAttachments(
       cumsum = this.cumsum.orElse(other.cumsum)
     )
 
-  def resolvedIn(dataSourcePath: UPath): DataLayerAttachments =
+  def mapped(attachmentMapping: LayerAttachment => LayerAttachment): DataLayerAttachments =
     DataLayerAttachments(
-      meshes = meshes.map(_.resolvedIn(dataSourcePath)),
-      agglomerates = agglomerates.map(_.resolvedIn(dataSourcePath)),
-      segmentIndex = segmentIndex.map(_.resolvedIn(dataSourcePath)),
-      connectomes = connectomes.map(_.resolvedIn(dataSourcePath)),
-      cumsum = cumsum.map(_.resolvedIn(dataSourcePath))
+      meshes = meshes.map(attachmentMapping(_)),
+      agglomerates = agglomerates.map(attachmentMapping(_)),
+      segmentIndex = segmentIndex.map(attachmentMapping(_)),
+      connectomes = connectomes.map(attachmentMapping(_)),
+      cumsum = cumsum.map(attachmentMapping(_))
     )
 
+  def resolvedIn(dataSourcePath: UPath): DataLayerAttachments =
+    mapped(_.resolvedIn(dataSourcePath))
+
   def relativizedIn(dataSourcePath: UPath): DataLayerAttachments =
-    DataLayerAttachments(
-      meshes = meshes.map(_.relativizedIn(dataSourcePath)),
-      agglomerates = agglomerates.map(_.relativizedIn(dataSourcePath)),
-      segmentIndex = segmentIndex.map(_.relativizedIn(dataSourcePath)),
-      connectomes = connectomes.map(_.relativizedIn(dataSourcePath)),
-      cumsum = cumsum.map(_.relativizedIn(dataSourcePath))
-    )
+    mapped(_.relativizedIn(dataSourcePath))
 
   lazy val containsDuplicateNames: Boolean =
     meshes.distinctBy(_.name).length != meshes.length ||

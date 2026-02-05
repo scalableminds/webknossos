@@ -258,7 +258,6 @@ export function OrganizationOverviewView() {
             </Col>
           ))}
         </Row>
-        
       </Spin>
       <PlanExpirationCard organization={organization} />
       {organization.pricingPlan === PricingPlanEnum.Personal ||

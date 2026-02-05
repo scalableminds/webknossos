@@ -1,4 +1,9 @@
-import { CrownOutlined, FieldTimeOutlined, PlusCircleOutlined, RobotOutlined } from "@ant-design/icons";
+import {
+  CrownOutlined,
+  FieldTimeOutlined,
+  PlusCircleOutlined,
+  RobotOutlined,
+} from "@ant-design/icons";
 import { Alert, Button, Card, Col, Row, Space } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
@@ -20,7 +25,8 @@ export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallba
     <Card
       title={
         <Space size="small">
-          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />{PricingPlanEnum.Team} Plan
+          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
+          {PricingPlanEnum.Team} Plan
         </Space>
       }
       styles={{ body: { minHeight: 220 } }}
@@ -50,7 +56,8 @@ export function PowerPlanUpgradeCard({
     <Card
       title={
         <Space size="small">
-          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />{PricingPlanEnum.Power} Plan
+          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
+          {PricingPlanEnum.Power} Plan
         </Space>
       }
       styles={{ body: { minHeight: 220 } }}

@@ -54,8 +54,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
         <AiTrainingUnavailableNotice
           onRequestUpgrade={
             canRequestAiPlan && activeOrganization
-              ? () =>
-                  UpgradePricingPlanModal.requestAiPlanUpgrade(activeOrganization)
+              ? () => UpgradePricingPlanModal.requestAiPlanUpgrade(activeOrganization)
               : undefined
           }
           canRequestAiAddon={canRequestAiPlan}
@@ -70,8 +69,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
     },
   ];
 
-  const activeKey =
-    ai_job_drawer_state === "invisible" ? "open_ai_inference" : ai_job_drawer_state;
+  const activeKey = ai_job_drawer_state === "invisible" ? "open_ai_inference" : ai_job_drawer_state;
 
   return (
     <Drawer

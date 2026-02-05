@@ -44,6 +44,7 @@ export const aiAddonFeatures = [
   "Seamless access to WEBKNOSSOS GPU compute infrastructure",
   "Includes WEBKNOSSOS credits (400 Team / 1,000 Power)",
   "Enable AI model training for your team",
+  "Priority access to AI job queue",
 ];
 
 export const maxIncludedUsersInPersonalPlan = 1;

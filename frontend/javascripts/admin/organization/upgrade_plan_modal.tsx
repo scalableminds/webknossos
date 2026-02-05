@@ -224,7 +224,7 @@ function UpgradeAiPlanModal({
       width={800}
       open
     >
-      <div>
+      <div className="drawing-upgrade-ai-addon">
         <Typography.Paragraph>
           Unlock AI model training for your organization with the AI Add-on.
         </Typography.Paragraph>

@@ -520,13 +520,6 @@ describe("Proofreading (Multi User)", () => {
 
   it("should cut agglomerate from all neighbors after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
     /*
-      todop: double check this docstring
-      Initial Mapping:
-      {1 -> 2 -> 3}
-      {4 -> 5}
-      {6 -> 7}
-      {1337, 1338}
-
       - Backend splits agglomerate 1 (segments 1 and 2)
       - Frontend cuts agglomerate 2 from its neighbors (segment 3)
 
@@ -587,13 +580,6 @@ describe("Proofreading (Multi User)", () => {
 
   it("should not cut agglomerate from all neighbors due to interfering merge action", async (context: WebknossosTestContext) => {
     /*
-      todop: double check this docstring
-      Initial Mapping:
-      {1 -> 2 -> 3}
-      {4 -> 5}
-      {6 -> 7}
-      {1337, 1338}
-
       - Backend merges agglomerates 1 and 4 (segments 4 and 2)
       - Frontend attempts to cut agglomerate 2 from all neighbors (segment 3)
 
@@ -659,13 +645,6 @@ describe("Proofreading (Multi User)", () => {
 
   it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
-      todop: double check this docstring
-      Initial Mapping:
-      {1 -> 2 -> 3}
-      {4 -> 5}
-      {6 -> 7}
-      {1337, 1338}
-
       - Backend splits agglomerate 1 (segments 1 and 2)
       - Frontend merges agglomerates 4 and 1 (target segment 3)
 
@@ -733,13 +712,6 @@ describe("Proofreading (Multi User)", () => {
 
   it("should merge two agglomerates optimistically and incorporate a new merge action from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
     /*
-      todop: double check this docstring
-      Initial Mapping:
-      {1 -> 2 -> 3}
-      {4 -> 5}
-      {6 -> 7}
-      {1337, 1338}
-
       - Backend merges agglomerates 1337 and 4 (segments 1337 and 5), where 1337 is initially not loaded
       - Frontend merges agglomerates 4 and 1 (target segment 4)
 
@@ -851,14 +823,6 @@ describe("Proofreading (Multi User)", () => {
 
   it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
     /*
-      todop: double check this docstring
-      Initial Mapping:
-      {1 -> 2 -> 3}
-      {4 -> 5}
-      {6 -> 1337}
-      {7 -> 1337}
-      {1338 -> 1337} (1337 and 1338 not loaded)
-
       - Backend splits agglomerate 1337 (segments 7 and 1337)
       - Backend merges agglomerates 1339 and 4 (segments 1337 and 5)
       - Frontend merges agglomerates 4 and 1 (target segment 1)

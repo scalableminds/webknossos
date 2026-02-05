@@ -128,7 +128,7 @@ function DatasetAddRemoteView(props: Props) {
       mergedConfig.dataLayers.map((layer: DataLayer) => ({
         name: layer.name,
         coordinateTransformations: [],
-      })) || [];
+      }));
     const layersWithCoordTransformationsJSON = JSON.stringify(
       dataLayersWithTransformations,
       null,

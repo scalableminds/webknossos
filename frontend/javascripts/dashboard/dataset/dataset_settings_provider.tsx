@@ -144,7 +144,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         dataSource.dataLayers.map((layer: APIDataLayer) => ({
           name: layer.name,
           coordinateTransformations: layer.coordinateTransformations || [],
-        })) || [];
+        }));
       const layersWithCoordTransformationsJSON = JSON.stringify(
         dataLayersWithTransformations,
         null,

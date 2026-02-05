@@ -487,6 +487,7 @@ export default {
                   },
                 },
                 type: "object",
+                required: ["source", "target"],
               },
               type: {
                 const: "thin_plate_spline",

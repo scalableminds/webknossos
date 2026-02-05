@@ -35,12 +35,11 @@ import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
-  const dataSource = Form.useWatch("dataSource", { form, preserve: true });
 
   return (
     <div>
       <SettingsTitle title="Data Source" description="Configure the data source" />
-      <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
+      <SimpleDatasetForm dataset={dataset} form={form} />
     </div>
   );
 }
@@ -96,11 +95,9 @@ export enum TransformationsMode {
 }
 
 function SimpleDatasetForm({
-  dataSource,
   form,
   dataset,
 }: {
-  dataSource: Record<string, any>; //datasource stored in form. todo_c maybe rename or refactor so this is clear
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
@@ -123,15 +120,14 @@ function SimpleDatasetForm({
     { value: TransformationsMode.ADVANCED, label: "Advanced" },
   ];
 
-  const transformationsMode = Form.useWatch(["transformationsMode"], form);
-  const coordinateTransformationsJSON = Form.useWatch(["coordinateTransformations"], form);
+  const dataSource: Record<string, any> = Form.useWatch("dataSource", { form, preserve: true });
+  const transformationsMode: TransformationsMode = Form.useWatch(["transformationsMode"], form);
+  const coordinateTransformationsJSON: string = Form.useWatch(["coordinateTransformations"], form);
 
   useEffect(() => {
-    if (!form) {
-      return;
-    }
+    if (dataSource == null || dataSource.dataLayers?.length === 0) return;
     if (transformationsMode === TransformationsMode.NONE) {
-      const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
+      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer: DataLayer) => {
         return {
           ...layer,
           coordinateTransformations: [],
@@ -143,9 +139,10 @@ function SimpleDatasetForm({
       return;
     }
     if (transformationsMode === TransformationsMode.ADVANCED) {
-      const layersWithCoordTransformations: DataLayerWithTransformations[] | undefined =
-        coordinateTransformationsJSON ? JSON.parse(coordinateTransformationsJSON) : undefined;
-      const dataLayersWithUpdatedTransforms = dataSource?.dataLayers?.map((layer: DataLayer) => {
+      if (coordinateTransformationsJSON == null) return;
+      const layersWithCoordTransformations: DataLayerWithTransformations[] =
+        coordinateTransformationsJSON === "" ? [] : JSON.parse(coordinateTransformationsJSON);
+      const dataLayersWithUpdatedTransforms = dataSource.dataLayers.map((layer: DataLayer) => {
         const coordinateTransformation = layersWithCoordTransformations?.find(
           (ct) => ct.name === layer.name,
         );

@@ -134,7 +134,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         <FormItemWithInfo
           name={["datasetRotation", axis, "rotationInDegrees"]}
           label={`${axis.toUpperCase()} Axis Rotation`}
-          info={`Change the datasets rotation in 90 degree steps around the ${axis}-axis.`}
+          info={`Change the dataset's rotation in 90 degree steps around the ${axis}-axis.`}
           colon={false}
         >
           <Slider min={0} max={270} step={90} onChange={setMatrixRotationsForAllLayer} />
@@ -201,18 +201,16 @@ export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatas
           </div>
         }
       >
-        <Text type="secondary">
-          <>
+        <Space orientation="vertical" size="small">
+          <Text type="secondary">
             Setting a dataset's rotation is only supported when all layers have the same rotation
             transformation. <InfoCircleOutlined />
-          </>
-          <Space orientation="vertical" size="small">
-            <>
-              To enable this setting, choose "Transformation Mode: None" in the dropdown above, save
-              and reload the dataset settings.
-            </>
-          </Space>
-        </Text>
+          </Text>
+          <Text type="secondary">
+            To enable this setting, choose "Transformation Mode: None" in the dropdown above, save
+            and reload the dataset settings.
+          </Text>
+        </Space>
       </Tooltip>
     );
   }

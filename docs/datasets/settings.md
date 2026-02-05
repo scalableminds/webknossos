@@ -38,7 +38,7 @@ Each transformation can be one of two types:
 
 1. Affine Transformation
 A 4x4 transformation matrix for linear transformations (rotation, scaling, translation, shearing).
-```
+```json
 {
   "type": "affine",
   "matrix": [
@@ -52,7 +52,7 @@ A 4x4 transformation matrix for linear transformations (rotation, scaling, trans
 
 2. Thin Plate Spline Transformation
 Non-linear warping transformation defined by corresponding point pairs in source and target coordinate spaces.
-```
+```json
 {
   "type": "thin_plate_spline",
   "correspondences": {
@@ -63,7 +63,7 @@ Non-linear warping transformation defined by corresponding point pairs in source
 ```
 
 All in all, the provided JSON for a dataset with the layers `color` and `segmentation` could look like this: 
-```
+```json
 [
   {
     "name": "color",

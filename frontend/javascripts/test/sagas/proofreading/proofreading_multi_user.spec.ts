@@ -38,7 +38,6 @@ import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
 import { ColoredLogger } from "libs/utils";
-import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -1102,7 +1101,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
+  it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
@@ -1218,8 +1217,6 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId: 1337,
         },
       });
-
-      yield call(publishDebuggingState, backendMock);
     });
 
     await task.toPromise();

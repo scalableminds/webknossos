@@ -265,7 +265,7 @@ export function untransformNodePosition(position: Vector3, state: WebknossosStat
   return transformPointUnscaled(invertTransform(currentTransforms))(position);
 }
 
-export function getMaxNodeIdInTree(tree: Tree): number | null {
+function getMaxNodeIdInTree(tree: Tree): number | null {
   return max(tree.nodes.values().map((node) => node.id));
 }
 

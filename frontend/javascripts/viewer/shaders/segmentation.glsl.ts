@@ -311,7 +311,7 @@ export const jsConvertCellIdToRGBA = (
   return [...rgb, alpha];
 };
 // Output is in [0,1] for H, S, L, and A
-export const jsConvertCellIdToHSLA = (
+const jsConvertCellIdToHSLA = (
   id: number,
   customColors?: Array<Vector3> | null | undefined,
   alpha: number = 1,

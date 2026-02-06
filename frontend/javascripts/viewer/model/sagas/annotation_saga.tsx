@@ -39,7 +39,7 @@ import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/
  */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
-export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
+function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
   if (!mayEdit) {
     return;
@@ -47,7 +47,7 @@ export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDesc
   yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.description)]));
 }
 
-export function* pushAnnotationUpdateAsync(action: Action) {
+function* pushAnnotationUpdateAsync(action: Action) {
   const annotation = yield* select((state) => state.annotation);
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
   if (!mayEdit) {
@@ -101,7 +101,7 @@ function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Sag
   );
 }
 
-export function* checkVersionRestoreParam(): Saga<void> {
+function* checkVersionRestoreParam(): Saga<void> {
   const showVersionRestore = yield* call(hasUrlParam, "showVersionRestore");
 
   if (showVersionRestore) {
@@ -134,7 +134,7 @@ function shouldDisplaySegmentationData(): boolean {
   return !onlyViewing3dViewport;
 }
 
-export function* warnAboutSegmentationZoom(): Saga<never> {
+function* warnAboutSegmentationZoom(): Saga<never> {
   function* warnMaybe(): Saga<void> {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -201,7 +201,7 @@ export function* warnAboutSegmentationZoom(): Saga<never> {
     yield* warnMaybe();
   }
 }
-export function* watchAnnotationAsync(): Saga<void> {
+function* watchAnnotationAsync(): Saga<void> {
   // Consuming the latest action here handles an offline scenario better.
   // If the user is offline and performs multiple changes to the annotation
   // name, only the latest action is relevant. If `_takeEvery` was used,

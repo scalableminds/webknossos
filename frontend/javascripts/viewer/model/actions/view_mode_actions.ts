@@ -60,7 +60,7 @@ export const zoomTDViewAction = (
     curHeight,
   }) as const;
 
-export const moveTDViewByVectorAction = (x: number, y: number) =>
+const moveTDViewByVectorAction = (x: number, y: number) =>
   ({
     type: "MOVE_TD_VIEW_BY_VECTOR",
     x,
@@ -83,7 +83,7 @@ export const moveTDViewYAction = (y: number): MoveTDViewByVectorAction => {
   const state = Store.getState();
   return moveTDViewByVectorAction(0, (-y * getTDViewportSize(state)[1]) / constants.VIEWPORT_WIDTH);
 };
-export const setInputCatcherRect = (viewport: Viewport, rect: Rect) =>
+const setInputCatcherRect = (viewport: Viewport, rect: Rect) =>
   ({
     type: "SET_INPUT_CATCHER_RECT",
     viewport,

@@ -196,7 +196,7 @@ export function getMappings(dataset: APIDataset, layerName: string): string[] {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'mappings' does not exist on type 'APIDat... Remove this comment to see the full error message
   return getLayerByName(dataset, layerName).mappings || [];
 }
-export function isRgb(dataset: APIDataset, layerName: string): boolean {
+function isRgb(dataset: APIDataset, layerName: string): boolean {
   return (
     getLayerByName(dataset, layerName).category === "color" &&
     getByteCount(dataset, layerName) === 3
@@ -205,7 +205,7 @@ export function isRgb(dataset: APIDataset, layerName: string): boolean {
 export function getByteCountFromLayer(layerInfo: DataLayerType): number {
   return getBitDepth(layerInfo) / 8;
 }
-export function getByteCount(dataset: APIDataset, layerName: string): number {
+function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));
 }
 export function getElementClass(dataset: APIDataset, layerName: string): ElementClass {
@@ -501,7 +501,7 @@ export function getSegmentationLayerWithMappingSupport(
   return null;
 }
 
-export function getFirstSegmentationLayer(
+function getFirstSegmentationLayer(
   dataset: APIMaybeUnimportedDataset,
 ): APISegmentationLayer | null | undefined {
   if (!dataset.isActive) {
@@ -516,9 +516,7 @@ export function getFirstSegmentationLayer(
 
   return null;
 }
-export function _getSegmentationLayers(
-  dataset: APIMaybeUnimportedDataset,
-): Array<APISegmentationLayer> {
+function _getSegmentationLayers(dataset: APIMaybeUnimportedDataset): Array<APISegmentationLayer> {
   if (!dataset.isActive) {
     return [];
   }
@@ -637,7 +635,7 @@ export function isLayerVisible(
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
 
-export function hasFallbackLayer(layer: APIDataLayer) {
+function hasFallbackLayer(layer: APIDataLayer) {
   return "fallbackLayer" in layer && layer.fallbackLayer != null;
 }
 

@@ -43,4 +43,3 @@ export async function fetchGistContent(url: string, name: string): Promise<strin
     return "";
   }
 }
-export default {};

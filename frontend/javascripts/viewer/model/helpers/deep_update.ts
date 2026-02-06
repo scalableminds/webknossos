@@ -47,7 +47,7 @@ export function updateKey3<
     },
   };
 }
-export function updateKey4<
+function updateKey4<
   TKey1 extends keyof WebknossosState & string,
   TKey2 extends keyof WebknossosState[TKey1] & string,
   TKey3 extends keyof WebknossosState[TKey1][TKey2] & string,

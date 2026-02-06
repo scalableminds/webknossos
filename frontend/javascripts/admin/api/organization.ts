@@ -11,7 +11,7 @@ import type {
 import Constants, { ControlModeEnum } from "viewer/constants";
 import type { TraceOrViewCommand } from "viewer/store";
 
-export function getOrganizationPayingForActiveUser(
+function getOrganizationPayingForActiveUser(
   activeUserId: string,
   options?: RequestOptions,
 ): Promise<string> {

@@ -32,7 +32,7 @@ export function getBaseVoxelFactorsInUnit(voxelSize: VoxelSize): Vector3 {
   return [baseVoxel / scaleFactor[0], baseVoxel / scaleFactor[1], baseVoxel / scaleFactor[2]];
 }
 
-export function getVoxelPerUnit(voxelSize: VoxelSize): Vector3 {
+function getVoxelPerUnit(voxelSize: VoxelSize): Vector3 {
   const voxelPerUnit = [0, 0, 0] as Vector3;
 
   for (let i = 0; i < 3; i++) {

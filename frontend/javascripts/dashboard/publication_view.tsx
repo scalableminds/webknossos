@@ -88,5 +88,3 @@ function PublicationView(props: Props) {
     />
   );
 }
-
-export default memo<Props>(PublicationView);

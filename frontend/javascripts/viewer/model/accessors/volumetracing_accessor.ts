@@ -235,7 +235,7 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
   [AnnotationTool.ERASE_BRUSH.id]: 3,
   [AnnotationTool.FILL_CELL.id]: 1,
 };
-export function isVolumeTool(tool: AnnotationTool): boolean {
+function isVolumeTool(tool: AnnotationTool): boolean {
   return VolumeTools.indexOf(tool) > -1;
 }
 

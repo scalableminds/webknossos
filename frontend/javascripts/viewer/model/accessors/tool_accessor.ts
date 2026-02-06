@@ -157,7 +157,7 @@ export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.AREA_MEASUREMENT,
 ];
 
-export function getAvailableTools(_state: WebknossosState) {}
+function getAvailableTools(_state: WebknossosState) {}
 
 export function isVolumeDrawingTool(activeTool: AnnotationTool): boolean {
   return (

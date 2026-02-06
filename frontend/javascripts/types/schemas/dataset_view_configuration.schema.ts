@@ -19,7 +19,7 @@ export function getDefaultLayerViewConfiguration(
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
 
-export const defaultIntensityRange = [0, 255];
+const defaultIntensityRange = [0, 255];
 
 // Note that these values will only be used as a default,
 // if the property is marked as required in the corresponding JSON schema.
@@ -116,7 +116,7 @@ export const baseDatasetViewConfiguration = {
     enum: Object.values(BLEND_MODES),
   },
 };
-export const datasetViewConfiguration = {
+const datasetViewConfiguration = {
   ...baseDatasetViewConfiguration,
   position: {
     type: "array",

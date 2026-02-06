@@ -38,7 +38,7 @@ type IdsToReloadPerMappingId = Record<string, number[]>;
 // but not in the activeMappingByLayer.mapping. Due to incorporating backend updates the agglomerate ids of the
 // meshes might be outdated, thus we reload this info and store it in the local mapping to perform the correct merge.
 // Returns a list of segment ids to reload for each needed volume / editable tracing id.
-export function* getAllUnknownSegmentIdsInPendingUpdates(
+function* getAllUnknownSegmentIdsInPendingUpdates(
   saveQueue: SaveQueueEntry[],
 ): Saga<IdsToReloadPerMappingId> {
   const activeMappingByLayer = yield* select(
@@ -85,9 +85,7 @@ export function* getAllUnknownSegmentIdsInPendingUpdates(
 // For each passed mapping, reload the segment ids' mapping information and store it in the local mapping.
 // Needed after getAllUnknownSegmentIdsInPendingUpdates to load updated mapping info for segment ids of
 // mesh interaction proofreading actions to ensure reapplying these actions is done with up-to-date mapping info.
-export function* addMissingSegmentsToLoadedMappings(
-  idsToReload: IdsToReloadPerMappingId,
-): Saga<void> {
+function* addMissingSegmentsToLoadedMappings(idsToReload: IdsToReloadPerMappingId): Saga<void> {
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const version = yield* select((state) => state.annotation.version);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);

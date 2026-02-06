@@ -49,9 +49,9 @@ export type Rect = {
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
 export const Vector2Indices = [0, 1] as const;
 export const Vector3Indices = [0, 1, 2] as const;
-export const Vector4Indices = [0, 1, 2, 3] as const;
-export const Vector5Indices = [0, 1, 2, 3, 4] as const;
-export const Vector6Indices = [0, 1, 2, 3, 4, 5] as const;
+const Vector4Indices = [0, 1, 2, 3] as const;
+const Vector5Indices = [0, 1, 2, 3, 4] as const;
+const Vector6Indices = [0, 1, 2, 3, 4, 5] as const;
 export enum OrthoViews {
   PLANE_XY = "PLANE_XY",
   PLANE_YZ = "PLANE_YZ",
@@ -81,7 +81,7 @@ export const ArbitraryViewsToName = {
   TDView: "3D",
 };
 export type Viewport = OrthoView | typeof ArbitraryViewport;
-export const allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
+const allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
 export type ViewportMap<T> = Record<Viewport, T>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
@@ -275,7 +275,7 @@ const VIEWPORT_WIDTH = 376;
 // viewport.
 export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
-export const ensureSmallerEdge = false;
+const ensureSmallerEdge = false;
 export const Unicode = {
   ThinSpace: "\u202f",
   NonBreakingSpace: "\u00a0",

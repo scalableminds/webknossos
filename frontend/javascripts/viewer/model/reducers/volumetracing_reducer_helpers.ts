@@ -57,7 +57,7 @@ export function updateVolumeTracing(
     volumes: newVolumes,
   });
 }
-export function updateEditableMapping(
+function updateEditableMapping(
   state: WebknossosState,
   volumeTracingId: string,
   shape: Partial<EditableMapping>,
@@ -207,7 +207,7 @@ export function setMappingNameReducer(
   });
 }
 
-export function removeMissingGroupsFromSegments(
+function removeMissingGroupsFromSegments(
   volumeTracing: VolumeTracing,
   segmentGroups: Array<SegmentGroup>,
 ): SegmentMap {

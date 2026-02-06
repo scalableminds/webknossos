@@ -15,7 +15,7 @@ import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
 import { MEAN_VX_SIZE, MIN_BBOX_EXTENT } from "./constants";
 
-export const getMinimumDSSize = (jobType: APIJobCommand) => {
+const getMinimumDSSize = (jobType: APIJobCommand) => {
   switch (jobType) {
     case APIJobCommand.INFER_NEURONS:
     case APIJobCommand.INFER_NUCLEI:
@@ -87,7 +87,7 @@ export const getBestFittingMagComparedToTrainingDS = (
   return closestMagOfCurrentDS;
 };
 
-export const isBBoxTooSmall = (
+const isBBoxTooSmall = (
   bbox: Vector3,
   segmentationType:
     | APIJobCommand.INFER_INSTANCES
@@ -147,7 +147,7 @@ export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   volumeTracingMags: Record<string, { mag: Vector3 }[]>;
 };
 
-export function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(
+function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(
   annotationsWithDatasets: Array<AnnotationInfoForAITrainingJob<T>>,
 ): {
   hasAnnotationErrors: boolean;
@@ -179,7 +179,7 @@ export function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation |
 }
 
 const MIN_BBOX_EXTENT_IN_EACH_DIM = 32;
-export function checkBoundingBoxesForErrorsAndWarnings(
+function checkBoundingBoxesForErrorsAndWarnings(
   userBoundingBoxes: (UserBoundingBox & {
     annotationId: string;
     trainingMag: Vector3 | undefined;

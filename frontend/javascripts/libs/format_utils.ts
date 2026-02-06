@@ -199,7 +199,7 @@ function formatNumberInUnit(
   return `${toOptionalFixed(valueInUnit, decimalPrecision)}${ThinSpace}${maybeAdjustedUnit}`;
 }
 
-export const nmFactorToUnit = new Map([
+const nmFactorToUnit = new Map([
   [1e-15, "ym"],
   [1e-12, "zm"],
   [1e-9, "am"],
@@ -239,7 +239,7 @@ export function formatNumberToLength(
   );
 }
 
-export const nmFactorToUnit2D = new Map([
+const nmFactorToUnit2D = new Map([
   [1e-30, "ym²"],
   [1e-24, "zm²"],
   [1e-18, "am²"],
@@ -279,7 +279,7 @@ export function formatNumberToArea(
   );
 }
 
-export const nmFactorToUnit3D = new Map([
+const nmFactorToUnit3D = new Map([
   [1e-45, "ym³"],
   [1e-36, "zm³"],
   [1e-27, "am³"],
@@ -441,12 +441,12 @@ export function formatSeconds(durationSeconds: number): string {
 
   return timeString;
 }
-export function formatDurationToMinutesAndSeconds(durationInMillisecons: number) {
+function formatDurationToMinutesAndSeconds(durationInMillisecons: number) {
   const duration = dayjs.duration(durationInMillisecons);
   return duration.format("mm:ss");
 }
 
-export function formatDurationToSeconds(durationInMillisecons: number) {
+function formatDurationToSeconds(durationInMillisecons: number) {
   const duration = dayjs.duration(durationInMillisecons);
   return duration.format("s");
 }
@@ -488,7 +488,7 @@ export function formatCPU(cpuShare: number) {
   return `${(cpuShare * 100).toFixed(0)}%`;
 }
 
-export function formatBytes(nbytes: number) {
+function formatBytes(nbytes: number) {
   if (nbytes == null || !Number.isFinite(nbytes)) {
     return "";
   }

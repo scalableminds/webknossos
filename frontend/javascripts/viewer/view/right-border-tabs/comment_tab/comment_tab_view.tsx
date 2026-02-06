@@ -11,6 +11,7 @@ import {
 } from "@ant-design/icons";
 import {
   Tree as AntdTree,
+  Divider,
   Dropdown,
   type GetRef,
   type MenuProps,
@@ -454,7 +455,7 @@ function CommentTabView(props: Props) {
           return (
             <React.Fragment>
               {renderMarkdownModal()}
-              <Space.Compact block style={{ marginBottom: "var(--ant-margin-sm)" }}>
+              <Space>
                 <AdvancedSearchPopover
                   onSelect={(comment) => {
                     setActiveNode(comment.nodeId);
@@ -468,14 +469,22 @@ function CommentTabView(props: Props) {
                     tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
                   )}
                   searchKey="content"
+                  provideShortcut
                   targetId={commentListId}
                 >
-                  <ButtonComponent icon={<SearchOutlined />} title="Search through comments" />
+                  <ButtonComponent
+                    icon={<SearchOutlined />}
+                    title="Open search via CTRL + Shift + F"
+                    variant="text"
+                    color="default"
+                  />
                 </AdvancedSearchPopover>
                 <ButtonComponent
                   title="Jump to previous comment"
                   onClick={previousComment}
                   icon={<ArrowLeftOutlined />}
+                  variant="text"
+                  color="default"
                 />
                 <InputComponent
                   value={activeCommentContent}
@@ -499,11 +508,15 @@ function CommentTabView(props: Props) {
                   }
                   type={isMultilineComment ? "primary" : "default"}
                   icon={<EditOutlined />}
+                  variant="text"
+                  color="default"
                 />
                 <ButtonComponent
                   title="Jump to next comment"
                   onClick={() => nextComment()}
                   icon={<ArrowRightOutlined />}
+                  variant="text"
+                  color="default"
                 />
                 <Dropdown menu={getSortDropdown()} trigger={["click"]}>
                   <ButtonComponent
@@ -512,14 +525,19 @@ function CommentTabView(props: Props) {
                     icon={
                       isSortedAscending ? <SortAscendingOutlined /> : <SortDescendingOutlined />
                     }
+                    variant="text"
+                    color="default"
                   />
                 </Dropdown>
                 <ButtonComponent
                   onClick={toggleExpandAllTrees}
                   icon={<ShrinkOutlined />}
                   title="Collapse or expand groups"
+                  variant="text"
+                  color="default"
                 />
-              </Space.Compact>
+              </Space>
+              <Divider size="small" />
               <div
                 style={{
                   flex: "1 1 auto",

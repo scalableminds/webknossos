@@ -1,9 +1,11 @@
 import {
+  DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
   InfoCircleOutlined,
   LockOutlined,
   MenuOutlined,
+  MergeCellsOutlined,
   PlusOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -22,7 +24,8 @@ import {
   startComputeSegmentIndexFileJob,
   updateDatasetDefaultConfiguration,
 } from "admin/rest_api";
-import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
+import { Button, Col, Divider, Dropdown, Flex, type MenuProps, Modal, Row, Switch } from "antd";
+import type { ItemType } from "antd/es/menu/interface";
 import type { SwitchChangeEventHandler } from "antd/es/switch";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";
@@ -134,6 +137,7 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
+import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
   ColorSetting,
@@ -194,10 +198,7 @@ function DragHandle({ id }: { id: string }) {
 
 function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
   return (
-    <FastTooltip
-      title={tooltipTitle}
-      style={{ justifyContent: "center", alignItems: "center", display: "flex" }}
-    >
+    <FastTooltip title={tooltipTitle}>
       <DragHandleIcon isDisabled />
     </FastTooltip>
   );
@@ -266,35 +267,28 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
   };
 
-  const style = {
-    width: 14,
-    height: 14,
-    marginBottom: 4,
-    marginRight: 5,
-    ...(isDisabled
-      ? { cursor: "not-allowed", opacity: "0.5" }
-      : { cursor: "pointer", opacity: "1.0" }),
-  };
-
   return (
-    <div className="flex-item">
-      <FastTooltip
-        title={
-          isRenderedNatively
-            ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
-            : `This layer is rendered with ${
-                typeToLabel[transform.type]
-              } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
-        }
-      >
+    <ButtonComponent
+      variant="text"
+      color="default"
+      size="small"
+      onClick={toggleLayerTransforms}
+      disabled={isDisabled}
+      title={
+        isRenderedNatively
+          ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
+          : `This layer is rendered with ${
+              typeToLabel[transform.type]
+            } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
+      }
+      icon={
         <img
           src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
           alt="Transformed Layer Icon"
-          style={style}
-          onClick={isDisabled ? () => {} : toggleLayerTransforms}
+          style={{ width: "0.9em", height: "0.9em", marginTop: "-3px" }}
         />
-      </FastTooltip>
-    </div>
+      }
+    />
   );
 }
 
@@ -355,7 +349,13 @@ function LayerInfoIconWithTooltip({
 
   return (
     <FastTooltip dynamicRenderer={renderTooltipContent} placement="left">
-      <InfoCircleOutlined className="icon-margin-right" />
+      <ButtonComponent
+        icon={<InfoCircleOutlined />}
+        disabled
+        color="default"
+        size="small"
+        variant="text"
+      />
     </FastTooltip>
   );
 }
@@ -376,12 +376,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   }
 
-  getFindDataButton = (
+  getFindDataItem = (
     layerName: string,
     isDisabled: boolean,
     isColorLayer: boolean,
     maybeVolumeTracing: VolumeTracing | null | undefined,
-  ) => {
+  ): ItemType => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
       : "If you are having trouble finding your data, WEBKNOSSOS can try to find a position which contains data.";
@@ -391,100 +391,92 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "WEBKNOSSOS will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
 
-    return (
-      <FastTooltip title={tooltipText}>
-        <div
-          onClick={
-            !isDisabled
-              ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
-              : () => Promise.resolve()
-          }
-          style={{
-            cursor: !isDisabled ? "pointer" : "not-allowed",
-          }}
-        >
-          <ScanOutlined className="icon-margin-right" />
-          Jump to data
-        </div>
-      </FastTooltip>
-    );
+    return {
+      key: "findDataButton",
+      icon: <ScanOutlined />,
+      disabled: isDisabled,
+      label: (
+        <FastTooltip title={tooltipText}>
+          <span>Jump to data</span>
+        </FastTooltip>
+      ),
+      onClick: () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing),
+    };
   };
 
-  getReloadDataButton = (
+  getReloadDataItem = (
     layerName: string,
     isHistogramAvailable: boolean,
     maybeFallbackLayerName: string | null,
-  ) => {
+  ): ItemType => {
     const tooltipText = "Use this when the data on the server changed.";
-    return (
-      <FastTooltip title={tooltipText}>
-        <div
-          onClick={() =>
-            this.reloadLayerData(layerName, isHistogramAvailable, maybeFallbackLayerName)
-          }
-        >
-          <ReloadOutlined className="icon-margin-right" />
-          Reload data from server
-        </div>
-      </FastTooltip>
-    );
+    return {
+      key: "reloadDataButton",
+      icon: <ReloadOutlined />,
+      label: (
+        <FastTooltip title={tooltipText}>
+          <span>Reload data from server</span>
+        </FastTooltip>
+      ),
+      onClick: () => this.reloadLayerData(layerName, isHistogramAvailable, maybeFallbackLayerName),
+    };
   };
 
-  getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
+  getEditMinMaxItem = (layerName: string, isInEditMode: boolean): ItemType => {
     const tooltipText = isInEditMode
       ? "Stop editing the possible range of the histogram."
       : "Manually set the possible range of the histogram.";
-    return (
-      <FastTooltip title={tooltipText}>
-        <div onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}>
-          <EditOutlined
-            style={{
-              cursor: "pointer",
-              color: isInEditMode ? "var(--ant-color-primary)" : undefined,
-            }}
-            className="icon-margin-right"
-          />
-          {isInEditMode ? "Stop editing" : "Edit"} histogram range
-        </div>
-      </FastTooltip>
-    );
+    return {
+      key: "editMinMax",
+      icon: (
+        <EditOutlined
+          style={{
+            color: isInEditMode ? "var(--ant-color-primary)" : undefined,
+          }}
+        />
+      ),
+      label: (
+        <FastTooltip title={tooltipText}>
+          <span>{isInEditMode ? "Stop editing" : "Edit"} histogram range</span>
+        </FastTooltip>
+      ),
+      onClick: () => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode),
+    };
   };
 
-  getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
-    <div onClick={() => this.setState({ layerToMergeWithFallback: layer })}>
-      <i className="fas fa-object-ungroup icon-margin-right" />
-      Merge this volume annotation with its fallback layer
-    </div>
-  );
+  getMergeWithFallbackLayerItem = (layer: APIDataLayer): ItemType => ({
+    key: "mergeWithFallbackLayerButton",
+    icon: <MergeCellsOutlined />,
+    label: "Merge this volume annotation with its fallback layer",
+    onClick: () => this.setState({ layerToMergeWithFallback: layer }),
+  });
 
   getDeleteAnnotationLayerButton = (
     readableName: string,
     type: AnnotationLayerType,
     tracingId: string,
   ) => (
-    <div className="flex-item">
-      <FastTooltip title="Delete this annotation layer.">
-        <i
-          onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId)}
-          className="fas fa-trash icon-margin-right"
-        />
-      </FastTooltip>
-    </div>
+    <ButtonComponent
+      variant="text"
+      color="default"
+      size="small"
+      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId)}
+      icon={<DeleteOutlined />}
+      title="Delete this annotation layer."
+    />
   );
 
-  getDeleteAnnotationLayerDropdownOption = (
+  getDeleteAnnotationLayerItem = (
     readableName: string,
     type: AnnotationLayerType,
     tracingId: string,
     layer?: APIDataLayer,
-  ) => (
-    <div
-      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId, layer)}
-    >
-      <i className="fas fa-trash icon-margin-right" />
-      Delete this annotation layer
-    </div>
-  );
+  ): ItemType => ({
+    key: "deleteAnnotationLayer",
+    icon: <DeleteOutlined />,
+    label: "Delete this annotation layer",
+    onClick: () => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId, layer),
+  });
 
   deleteAnnotationLayerIfConfirmed = async (
     readableAnnotationLayerName: string,
@@ -515,29 +507,31 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     location.reload();
   };
 
-  getClipButton = (layerName: string, isInEditMode: boolean) => {
+  getClipItem = (layerName: string, isInEditMode: boolean): ItemType => {
     const editModeAddendum = isInEditMode
       ? "In Edit Mode, the histogram's range will be adjusted, too."
       : "";
     const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
-    return (
-      <FastTooltip title={tooltipText}>
-        <div onClick={() => this.props.onClipHistogram(layerName, isInEditMode)}>
-          <VerticalAlignMiddleOutlined
-            style={{
-              cursor: "pointer",
-              transform: "rotate(90deg)",
-            }}
-            className="icon-margin-right"
-          />
-          Clip histogram
-        </div>
-      </FastTooltip>
-    );
+    return {
+      key: "clipButton",
+      icon: (
+        <VerticalAlignMiddleOutlined
+          style={{
+            transform: "rotate(90deg)",
+          }}
+        />
+      ),
+      label: (
+        <FastTooltip title={tooltipText}>
+          <span>Clip histogram</span>
+        </FastTooltip>
+      ),
+      onClick: () => this.props.onClipHistogram(layerName, isInEditMode),
+    };
   };
 
-  getComputeSegmentIndexFileButton = (layerName: string, isSegmentation: boolean) => {
-    if (!(this.props.isSuperUser && isSegmentation)) return <></>;
+  getComputeSegmentIndexFileItem = (layerName: string, isSegmentation: boolean): ItemType => {
+    if (!(this.props.isSuperUser && isSegmentation)) return null;
 
     const triggerComputeSegmentIndexFileJob = async () => {
       await startComputeSegmentIndexFileJob(this.props.dataset.id, layerName);
@@ -554,12 +548,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       );
     };
 
-    return (
-      <div onClick={triggerComputeSegmentIndexFileJob}>
-        <i className="fas fa-database icon-margin-right" />
-        Compute a Segment Index file
-      </div>
-    );
+    return {
+      key: "computeSegmentIndexFileButton",
+      icon: <i className="fas fa-database" />,
+      label: "Compute a Segment Index file",
+      onClick: triggerComputeSegmentIndexFileJob,
+    };
   };
 
   setVisibilityForAllLayers = (isVisible: boolean) => {
@@ -683,50 +677,22 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
     const possibleItems: MenuProps["items"] = [
       isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
-        ? {
-            label: this.getMergeWithFallbackLayerButton(layer),
-            key: "mergeWithFallbackLayerButton",
-          }
+        ? this.getMergeWithFallbackLayerItem(layer)
         : null,
       this.props.dataset.isEditable
-        ? {
-            label: this.getReloadDataButton(layerName, isHistogramAvailable, maybeFallbackLayer),
-            key: "reloadDataButton",
-          }
+        ? this.getReloadDataItem(layerName, isHistogramAvailable, maybeFallbackLayer)
         : null,
-      {
-        label: this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
-        key: "findDataButton",
-      },
+      this.getFindDataItem(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
       isAnnotationLayer && !isOnlyAnnotationLayer
-        ? {
-            label: (
-              <div className="flex-item">
-                {this.getDeleteAnnotationLayerDropdownOption(
-                  readableName,
-                  layerType,
-                  layer.tracingId,
-                  layer,
-                )}
-              </div>
-            ),
-            key: "deleteAnnotationLayer",
-          }
+        ? this.getDeleteAnnotationLayerItem(readableName, layerType, layer.tracingId, layer)
         : null,
-      !isDisabled
-        ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
-        : null,
-      hasHistogram && !isDisabled
-        ? { label: this.getClipButton(layerName, isInEditMode), key: "clipButton" }
-        : null,
+      !isDisabled ? this.getEditMinMaxItem(layerName, isInEditMode) : null,
+      hasHistogram && !isDisabled ? this.getClipItem(layerName, isInEditMode) : null,
       this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
         APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
       )
-        ? {
-            label: this.getComputeSegmentIndexFileButton(layerName, isSegmentation),
-            key: "computeSegmentIndexFileButton",
-          }
+        ? this.getComputeSegmentIndexFileItem(layerName, isSegmentation)
         : null,
     ];
     const items = possibleItems.filter((el) => el);
@@ -741,14 +707,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
 
     return (
-      <div className="flex-container">
+      <Flex align="center">
         {dragHandle}
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
-          className="flex-item"
           style={{
             fontWeight: 700,
             paddingRight: 5,
+            flexGrow: 1,
           }}
         >
           {volumeDescriptor != null ? (
@@ -789,77 +755,73 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             layerName
           )}
         </div>
-        <div
-          className="flex-container"
+        <Flex
           style={{
             paddingRight: 1,
           }}
+          align="center"
         >
-          <div className="flex-item">
-            <LayerInfoIconWithTooltip layer={layer} dataset={this.props.dataset} />
-            {canBeMadeEditable ? (
-              <FastTooltip
-                title="Make this segmentation editable by adding a Volume Annotation Layer."
-                placement="left"
-              >
-                <HoverIconButton
-                  icon={<LockOutlined className="icon-margin-right" />}
-                  hoveredIcon={<UnlockOutlined className="icon-margin-right" />}
-                  onClick={() => {
-                    this.setState({
-                      isAddVolumeLayerModalVisible: true,
-                      segmentationLayerWasPreselected: true,
-                      preselectedSegmentationLayerName: layer.name,
-                    });
-                  }}
-                />
-              </FastTooltip>
-            ) : null}
-          </div>
+          <LayerInfoIconWithTooltip layer={layer} dataset={this.props.dataset} />
+          {canBeMadeEditable ? (
+            <FastTooltip
+              title="Make this segmentation editable by adding a Volume Annotation Layer."
+              placement="left"
+            >
+              <HoverIconButton
+                variant="text"
+                color="default"
+                size="small"
+                icon={<LockOutlined />}
+                hoveredIcon={<UnlockOutlined />}
+                onClick={() => {
+                  this.setState({
+                    isAddVolumeLayerModalVisible: true,
+                    segmentationLayerWasPreselected: true,
+                    preselectedSegmentationLayerName: layer.name,
+                  });
+                }}
+              />
+            </FastTooltip>
+          ) : null}
           <TransformationIcon layer={layer} />
-          <div className="flex-item">
-            {isVolumeTracing ? (
-              <FastTooltip
-                title={`This layer is a volume annotation.${
-                  maybeFallbackLayer
-                    ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
-                    : ""
-                }`}
-                placement="left"
-              >
-                <i
-                  className="fas fa-paint-brush icon-margin-right"
-                  style={{
-                    opacity: 0.7,
-                  }}
-                />
-              </FastTooltip>
-            ) : null}
-          </div>
-          <div className="flex-item">
-            {intensityRange != null && intensityRange[0] === intensityRange[1] && !isDisabled ? (
-              <FastTooltip
-                title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
+          {isVolumeTracing ? (
+            <ButtonComponent
+              variant="text"
+              color="default"
+              size="small"
+              disabled
+              title={`This layer is a volume annotation.${
+                maybeFallbackLayer
+                  ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
+                  : ""
+              }`}
+              tooltipPlacement="left"
+              icon={<i className="fas fa-paint-brush" />}
+            />
+          ) : null}
+          {intensityRange != null && intensityRange[0] === intensityRange[1] && !isDisabled ? (
+            <FastTooltip
+              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
-              >
-                <WarningOutlined
-                  style={{
-                    color: "var(--ant-color-warning)",
-                  }}
-                />
-              </FastTooltip>
-            ) : null}
-            {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
-          </div>
-        </div>
-        <div className="flex-container" style={{ cursor: "pointer" }}>
-          <div className="flex-item">
-            <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
-              <EllipsisOutlined />
-            </Dropdown>
-          </div>
-        </div>
-      </div>
+            >
+              <WarningOutlined
+                style={{
+                  color: "var(--ant-color-warning)",
+                }}
+              />
+            </FastTooltip>
+          ) : null}
+          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
+          <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
+            <ButtonComponent
+              variant="text"
+              color="default"
+              size="small"
+              icon={<EllipsisOutlined rotate={90} />}
+            />
+          </Dropdown>
+        </Flex>
+      </Flex>
     );
   };
 
@@ -902,23 +864,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
           </Col>
           <Col span={SETTING_VALUE_SPAN}>
-            <FastTooltip title="Invert the color of this layer.">
-              <div
-                onClick={() =>
-                  this.props.onChangeLayer(
-                    layerName,
-                    "isInverted",
-                    layerConfiguration ? !layerConfiguration.isInverted : false,
-                  )
-                }
-                style={{
-                  top: 4,
-                  right: 0,
-                  marginTop: 0,
-                  marginLeft: 10,
-                  display: "inline-flex",
-                }}
-              >
+            <ButtonComponent
+              variant="text"
+              color="default"
+              size="small"
+              title="Invert the color of this layer."
+              onClick={() =>
+                this.props.onChangeLayer(
+                  layerName,
+                  "isInverted",
+                  layerConfiguration ? !layerConfiguration.isInverted : false,
+                )
+              }
+              icon={
                 <i
                   className={classnames("fas", "fa-adjust", {
                     "flip-horizontally": layerConfiguration.isInverted,
@@ -926,13 +884,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   style={{
                     margin: 0,
                     transition: "transform 0.5s ease 0s",
-                    color: layerConfiguration.isInverted
-                      ? "var(--ant-color-primary)"
-                      : "var(--ant-color-text-secondary)",
+                    color: layerConfiguration.isInverted ? "var(--ant-color-primary)" : undefined,
                   }}
                 />
-              </div>
-            </FastTooltip>
+              }
+              style={{
+                marginLeft: 10,
+              }}
+            />
           </Col>
         </Row>
       </div>
@@ -1203,16 +1162,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
     return (
       <React.Fragment>
-        <div
-          className="flex-container"
+        <Flex
           style={{
             paddingRight: 1,
           }}
+          align="center"
         >
           <DummyDragHandle tooltipTitle="Layer not movable: Skeleton layers are always rendered on top." />
           <div
-            className="flex-item"
             style={{
+              flexGrow: 1,
               marginRight: 8,
             }}
           >
@@ -1238,13 +1197,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               style={{
                 fontWeight: 700,
                 wordWrap: "break-word",
+                flex: 1,
               }}
             >
               {readableName}
             </span>
           </div>
-          <div
-            className="flex-container"
+          <Flex
             style={{
               paddingRight: 1,
             }}
@@ -1257,8 +1216,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   annotation.skeleton.tracingId,
                 )
               : null}
-          </div>
-        </div>
+          </Flex>
+        </Flex>
         {showSkeletons ? (
           <div
             style={{

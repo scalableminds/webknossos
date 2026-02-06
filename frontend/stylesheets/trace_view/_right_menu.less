@@ -86,6 +86,14 @@
 
 .padded-tab-content {
   padding: 10px;
+  padding-top: 2px;
+
+  // Adjust the first Antd divider to be closer to the action buttons above it, matching the small outer top padding.
+  // Target only the first divider in the container regardless of other element types (like headers).
+  // This "funny" selector matches an .ant-divider that is NOT preceded by another .ant-divider.
+  .ant-divider:not(.ant-divider ~ .ant-divider) {
+    margin-top: 2px;
+  }
 }
 
 .markdown-small {

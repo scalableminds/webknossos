@@ -3,6 +3,7 @@ import Request from "libs/request";
 import { location } from "libs/window";
 import memoize from "lodash-es/memoize";
 import type {
+  APICreditTransaction,
   APIOrganization,
   APIOrganizationCompact,
   APIPricingPlanStatus,
@@ -83,6 +84,10 @@ export async function getOrganization(organizationId: string): Promise<APIOrgani
     includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
     includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
   };
+}
+
+export async function getCreditTransactions(): Promise<APICreditTransaction[]> {
+  return Request.receiveJSON("/api/creditTransactions");
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {

@@ -1,4 +1,4 @@
-import { DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { BankOutlined, DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ const { Sider, Content } = Layout;
 const BREADCRUMB_LABELS = {
   overview: "Overview",
   notifications: "Notification Settings",
+  "credit-activity": "Credit Activity",
   delete: "Delete Organization",
 };
 
@@ -31,6 +32,17 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         key: "delete",
         icon: <DeleteOutlined />,
         label: "Delete",
+      },
+      {
+        label: "Activity Logs",
+        type: "group",
+        children: [
+          {
+            key: "credit-activity",
+            icon: <BankOutlined />,
+            label: "Credit Activity",
+          },
+        ],
       },
     ],
   },
@@ -61,7 +73,7 @@ const OrganizationView = () => {
         backgroundColor: "var(--ant-layout-body-bg)",
       }}
     >
-      <Sider width={200}>
+      <Sider width={250}>
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
@@ -70,7 +82,7 @@ const OrganizationView = () => {
           onClick={({ key }) => navigate(`/organization/${key}`)}
         />
       </Sider>
-      <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1000 }}>
+      <Content style={{ padding: "32px", minHeight: 280, maxWidth: 1200 }}>
         <Breadcrumb style={{ marginBottom: "16px" }} items={breadcrumbItems} />
         <Outlet />
       </Content>

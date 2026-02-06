@@ -49,8 +49,7 @@ export function OrganizationPlanActivityView() {
         title: "Description",
         dataIndex: "description",
         key: "description",
-        render: (value: APIOrganizationPricingPlanUpdate["description"]) =>
-          value ? value : EMPTY_LABEL,
+        render: (value: APIOrganizationPricingPlanUpdate["description"]) => value || EMPTY_LABEL,
       },
       {
         title: "Plan",

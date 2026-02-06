@@ -78,7 +78,6 @@ export const ArbitraryViewsToName = {
   TDView: "3D",
 };
 export type Viewport = OrthoView | typeof ArbitraryViewport;
-const _allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
 export type ViewportMap<T> = Record<Viewport, T>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
@@ -272,7 +271,6 @@ const VIEWPORT_WIDTH = 376;
 // viewport.
 export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
-const _ensureSmallerEdge = false;
 export const Unicode = {
   ThinSpace: "\u202f",
   NonBreakingSpace: "\u00a0",

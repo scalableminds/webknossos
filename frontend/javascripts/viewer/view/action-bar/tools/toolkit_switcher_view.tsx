@@ -66,7 +66,7 @@ export default function ToolkitView() {
         }}
       >
         <Button style={NARROW_BUTTON_STYLE}>
-          <i className="fas fa-tools" />
+          <i className="fa-regular fa-tools" />
         </Button>
       </Badge>
     </Dropdown>

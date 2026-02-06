@@ -185,8 +185,8 @@ export function OverwriteModeSwitch({
 }
 
 const INTERPOLATION_ICON = {
-  [InterpolationModeEnum.INTERPOLATE]: <i className="fas fa-align-center fa-rotate-90" />,
-  [InterpolationModeEnum.EXTRUDE]: <i className="fas fa-align-justify fa-rotate-90" />,
+  [InterpolationModeEnum.INTERPOLATE]: <i className="fa-regular fa-align-center fa-rotate-90" />,
+  [InterpolationModeEnum.EXTRUDE]: <i className="fa-regular fa-align-justify fa-rotate-90" />,
 };
 
 export function VolumeInterpolationButton() {
@@ -455,7 +455,7 @@ export function ProofreadingComponents() {
         style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
       >
-        <i className="fas fa-dice-d20" />
+        <i className="fa-regular fa-dice-d20" />
       </ToggleButton>
       <ToggleButton
         active={selectiveVisibilityInProofreading}
@@ -467,7 +467,7 @@ export function ProofreadingComponents() {
           handleToggleSelectiveVisibilityInProofreading(!selectiveVisibilityInProofreading)
         }
       >
-        <i className="fas fa-highlighter" />
+        <i className="fa-regular fa-highlighter" />
       </ToggleButton>
       <ToggleButton
         active={isMultiSplitActive}

@@ -45,7 +45,7 @@ const TextWithDescription: React.FC<Props> = (props) => {
           <Tooltip title="Show description" placement="bottom">
             <Popover title="Description" trigger="click" content={markdownDescription}>
               <i
-                className="fas fa-align-justify"
+                className="fa-regular fa-align-justify"
                 style={{
                   cursor: "pointer",
                 }}

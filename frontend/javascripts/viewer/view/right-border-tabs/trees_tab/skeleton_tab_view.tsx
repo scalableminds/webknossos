@@ -975,13 +975,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
                     disabled={isEditingDisabled}
-                    icon={<i className="fas fa-toggle-on" />}
+                    icon={<i className="fa-regular fa-toggle-on" />}
                   />
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
                     disabled={isEditingDisabled}
-                    icon={<i className="fas fa-toggle-off" />}
+                    icon={<i className="fa-regular fa-toggle-off" />}
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}

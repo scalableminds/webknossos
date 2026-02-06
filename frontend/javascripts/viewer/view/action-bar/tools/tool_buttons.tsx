@@ -41,7 +41,7 @@ function MaybeMultiSliceAnnotationInfoIcon() {
   const maybeMultiSliceAnnotationInfoIcon = hasMagWithHigherDimension ? (
     <FastTooltip title="You are annotating in a low magnification. Depending on the used viewport, you might be annotating multiple slices at once.">
       <i
-        className="fas fa-layer-group"
+        className="fa-regular fa-layer-group"
         style={{
           marginLeft: 4,
         }}
@@ -60,7 +60,7 @@ export function MoveTool(_props: ToolButtonProps) {
       disabled={false}
       value={AnnotationTool.MOVE.id}
     >
-      <i className="fas fa-arrows-alt" />
+      <i className="fa-regular fa-arrows-alt" />
     </ToolRadioButton>
   );
 }
@@ -90,7 +90,7 @@ export function SkeletonTool(_props: ToolButtonProps) {
         style={{
           opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
         }}
-        className="fas fa-project-diagram"
+        className="fa-regular fa-project-diagram"
       />
     </ToolRadioButton>
   );
@@ -119,7 +119,7 @@ export function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
       value={AnnotationTool.BRUSH.id}
     >
       <i
-        className="fas fa-paint-brush"
+        className="fa-regular fa-paint-brush"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
         }}
@@ -154,7 +154,7 @@ export function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
       value={AnnotationTool.ERASE_BRUSH.id}
     >
       <i
-        className="fas fa-eraser"
+        className="fa-regular fa-eraser"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled ? 0.5 : 1,
         }}
@@ -217,7 +217,7 @@ export function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
       value={AnnotationTool.ERASE_TRACE.id}
     >
       <i
-        className="fas fa-eraser"
+        className="fa-regular fa-eraser"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled ? 0.5 : 1,
         }}
@@ -245,7 +245,7 @@ export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
       value={AnnotationTool.FILL_CELL.id}
     >
       <i
-        className="fas fa-fill-drip"
+        className="fa-regular fa-fill-drip"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
           transform: "scaleX(-1)",
@@ -269,7 +269,7 @@ export function VoxelPipetteTool(_props: ToolButtonProps) {
       value={AnnotationTool.VOXEL_PIPETTE.id}
     >
       <i
-        className="fas fa-eye-dropper"
+        className="fa-regular fa-eye-dropper"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled ? 0.5 : 1,
         }}
@@ -367,7 +367,7 @@ export function ProofreadTool(_props: ToolButtonProps) {
       }}
     >
       <i
-        className="fas fa-clipboard-check"
+        className="fa-regular fa-clipboard-check"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.PROOFREAD.id].isDisabled ? 0.5 : 1,
           padding: "0 4px",
@@ -386,7 +386,7 @@ export function LineMeasurementTool(_props: ToolButtonProps) {
       disabled={false}
       value={AnnotationTool.LINE_MEASUREMENT.id}
     >
-      <i className="fas fa-ruler" />
+      <i className="fa-regular fa-ruler" />
     </ToolRadioButton>
   );
 }

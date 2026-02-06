@@ -522,7 +522,7 @@ function OnboardingView() {
             of Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
           </Fragment>
         }
-        icon={<i className="far fa-building icon-big" />}
+        icon={<i className="fa-regular fa-building icon-big" />}
       >
         <OrganizationForm onComplete={onCreateOrganizationComplete} />
       </StepHeader>

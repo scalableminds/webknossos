@@ -1073,7 +1073,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "changeGroupColor",
-      icon: <i className="fas fa-eye-dropper fa-sm fa-icon fa-fw" />,
+      icon: <i className="fa-regular fa-eye-dropper fa-sm fa-icon fa-fw" />,
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
@@ -1093,7 +1093,7 @@ class SegmentsView extends React.Component<Props, State> {
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "resetGroupColor",
-      icon: <i className="fas fa-undo" />,
+      icon: <i className="fa-regular fa-undo" />,
       label: (
         <div
           onClick={() => {
@@ -1142,7 +1142,7 @@ class SegmentsView extends React.Component<Props, State> {
   getComputeMeshesAdHocMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "computeAdHoc",
-      icon: <i className="fas fa-dice-d20 fa-fw fa-icon" />,
+      icon: <i className="fa-regular fa-dice-d20 fa-fw fa-icon" />,
       label: (
         <div
           onClick={() => {
@@ -1176,7 +1176,7 @@ class SegmentsView extends React.Component<Props, State> {
           </div>
         </>
       ),
-      icon: <i className="fas fa-ruler fa-fw fa-icon" />,
+      icon: <i className="fa-regular fa-ruler fa-fw fa-icon" />,
     };
   };
 
@@ -1184,7 +1184,7 @@ class SegmentsView extends React.Component<Props, State> {
     return {
       key: "loadByFile",
       disabled: this.props.currentMeshFile == null,
-      icon: <i className="fas fa-dice-d20 fa-icon fa-fw" />,
+      icon: <i className="fa-regular fa-dice-d20 fa-icon fa-fw" />,
       label: (
         <div
           onClick={() => {

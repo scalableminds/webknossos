@@ -110,7 +110,7 @@ export function SkeletonSpecificButtons() {
         style={NARROW_BUTTON_STYLE}
         title="When activated, clicking and dragging creates nodes like a drawing tool."
       >
-        <i className="fas fa-pen" />
+        <i className="fa-regular fa-pen" />
       </ToggleButton>
 
       {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrManager && (
@@ -165,10 +165,10 @@ function CreateTreeButton() {
             transform: "scale(0.9) translate(-2px, -1px)",
             marginRight: 3,
           }}
-          className="fas fa-project-diagram"
+          className="fa-regular fa-project-diagram"
         />
         <i
-          className="fas fa-plus"
+          className="fa-regular fa-plus"
           style={{
             position: "absolute",
             top: 13,

@@ -200,9 +200,7 @@ export function ChangeBrushSizePopover() {
                 <BrushPresetButton
                   name="Small"
                   onClick={() => handleUpdateBrushSize(smallBrushSize)}
-                  icon={
-                    <i className="fa-regular fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />
-                  }
+                  icon={<i className="far fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />}
                   brushSize={Math.round(smallBrushSize)}
                 />
               </Col>
@@ -210,7 +208,7 @@ export function ChangeBrushSizePopover() {
                 <BrushPresetButton
                   name="Medium"
                   onClick={() => handleUpdateBrushSize(mediumBrushSize)}
-                  icon={<i className="fa-regular fa-circle fa-sm" />}
+                  icon={<i className="far fa-circle fa-sm" />}
                   brushSize={Math.round(mediumBrushSize)}
                 />
               </Col>
@@ -218,7 +216,7 @@ export function ChangeBrushSizePopover() {
                 <BrushPresetButton
                   name="Large"
                   onClick={() => handleUpdateBrushSize(largeBrushSize)}
-                  icon={<i className="fa-regular fa-circle fa-lg" />}
+                  icon={<i className="far fa-circle fa-lg" />}
                   brushSize={Math.round(largeBrushSize)}
                 />
               </Col>

@@ -248,7 +248,7 @@ function measureAndShowLengthBetweenNodes(
       lengthInUnit,
       LongUnitToShortUnitMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
-    icon: <i className="fa-regular fa-ruler" />,
+    icon: <i className="far fa-ruler" />,
   });
 }
 
@@ -273,7 +273,7 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSiz
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
     ),
-    icon: <i className="fa-regular fa-ruler" />,
+    icon: <i className="far fa-ruler" />,
   });
 }
 
@@ -1874,8 +1874,8 @@ function ContextMenuInner() {
         "distanceInfo",
         <FastTooltip title="Distance to the active Node of the active Tree">
           <>
-            <i className="fa-regular fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}
-            ) to this {maybeClickedNodeId != null ? "Node" : "Position"}
+            <i className="far fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
+            this {maybeClickedNodeId != null ? "Node" : "Position"}
             {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
           </>
         </FastTooltip>,
@@ -1903,7 +1903,7 @@ function ContextMenuInner() {
         getInfoMenuItem(
           "copy-cell",
           <>
-            <i className="fa-regular fa-tag segment-context-icon" />
+            <i className="far fa-tag segment-context-icon" />
             Segment Name:{" "}
             {segmentName.length > maxNameLength
               ? truncateStringToLength(segmentName, maxNameLength)
@@ -1942,7 +1942,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "boundingBoxPositionInfo",
         <>
-          <i className="fa-regular fa-dice-d6 segment-context-icon" />
+          <i className="far fa-dice-d6 segment-context-icon" />
           <>Bounding Box: </>
           <div style={{ marginLeft: 22, marginTop: -5 }}>
             {boundingBoxInfoLabel}

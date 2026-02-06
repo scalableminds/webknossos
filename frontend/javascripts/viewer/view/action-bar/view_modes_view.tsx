@@ -11,13 +11,10 @@ import {
 import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 const VIEW_MODE_TO_ICON = {
-  [constants.MODE_PLANE_TRACING]: <i className="fa-regular fa-th-large" />,
-  [constants.MODE_ARBITRARY]: <i className="fa-regular fa-globe" />,
+  [constants.MODE_PLANE_TRACING]: <i className="far fa-th-large" />,
+  [constants.MODE_ARBITRARY]: <i className="far fa-globe" />,
   [constants.MODE_ARBITRARY_PLANE]: (
-    <i
-      className="fa-regular fa-square-full"
-      style={{ transform: "scale(0.8, 1) rotate(-45deg)" }}
-    />
+    <i className="far fa-square-full" style={{ transform: "scale(0.8, 1) rotate(-45deg)" }} />
   ),
 };
 

@@ -649,7 +649,7 @@ function _SegmentListItem({
           {isCentered ? (
             <FastTooltip title="This segment is currently centered in the data viewports.">
               <i
-                className="fa-regular fa-crosshairs deemphasized"
+                className="far fa-crosshairs deemphasized"
                 style={{
                   marginLeft: 4,
                 }}
@@ -659,7 +659,7 @@ function _SegmentListItem({
           {segment.id === activeCellId ? (
             <FastTooltip title="The currently active segment id belongs to this segment.">
               <i
-                className="fa-regular fa-paint-brush deemphasized"
+                className="far fa-paint-brush deemphasized"
                 style={{
                   marginLeft: 4,
                 }}

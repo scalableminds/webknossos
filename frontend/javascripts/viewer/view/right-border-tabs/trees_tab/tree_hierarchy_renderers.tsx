@@ -95,7 +95,7 @@ export function renderTreeNode(
   const maybeProofreadingIcon =
     tree.type === TreeTypeEnum.AGGLOMERATE ? (
       <FastTooltip title="Agglomerate Skeleton">
-        <i className="fa-regular fa-clipboard-check icon-margin-right" />
+        <i className="far fa-clipboard-check icon-margin-right" />
       </FastTooltip>
     ) : null;
 
@@ -140,7 +140,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       {
         key: "changeTreeColor",
         disabled: isEditingDisabled,
-        icon: <i className="fa-regular fa-eye-dropper fa-sm " />,
+        icon: <i className="far fa-eye-dropper fa-sm " />,
         label: (
           <ChangeColorMenuItemContent
             key={`changeTreeColor-${tree.treeId}`}
@@ -158,7 +158,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         onClick: () => shuffleTreeColor(tree.treeId),
         title: "Shuffle Tree Color",
         disabled: isEditingDisabled,
-        icon: <i className="fa-regular fa-adjust" />,
+        icon: <i className="far fa-adjust" />,
         label: "Shuffle Tree Color",
       },
       {
@@ -171,7 +171,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         },
         title: "Duplicate Tree",
         disabled: isEditingDisabled,
-        icon: <i className="fa-regular fa-clone" />,
+        icon: <i className="far fa-clone" />,
         label: "Duplicate Tree",
       },
       {
@@ -183,7 +183,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         },
         title: "Delete Tree",
         disabled: isEditingDisabled,
-        icon: <i className="fa-regular fa-trash" />,
+        icon: <i className="far fa-trash" />,
         label: "Delete Tree",
       },
       {
@@ -193,7 +193,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
           hideContextMenu();
         },
         title: "Measure Tree Length",
-        icon: <i className="fa-regular fa-ruler" />,
+        icon: <i className="far fa-ruler" />,
         label: "Measure Tree Length",
       },
       {
@@ -204,7 +204,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
           hideContextMenu();
         },
         title: "Hide/Show All Other Trees",
-        icon: <i className="fa-regular fa-eye" />,
+        icon: <i className="far fa-eye" />,
         label: "Hide/Show All Other Trees",
       },
       {
@@ -226,7 +226,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
               hideContextMenu();
             },
             title: "Convert to Normal Tree",
-            icon: <span className="fa-regular fa-clipboard-check" />,
+            icon: <span className="far fa-clipboard-check" />,
             label: "Convert to Normal Tree",
           }
         : null,
@@ -459,7 +459,7 @@ const createMenuForTreeGroup = (
           toggleHideInactiveTrees();
           hideContextMenu();
         },
-        icon: <i className="fa-regular fa-eye" />,
+        icon: <i className="far fa-eye" />,
         label: "Hide/Show all other trees",
       },
       {
@@ -468,13 +468,13 @@ const createMenuForTreeGroup = (
           if (id === MISSING_GROUP_ID) shuffleAllTreeColors();
           else shuffleTreeGroupColors(id);
         },
-        icon: <i className="fa-regular fa-adjust" />,
+        icon: <i className="far fa-adjust" />,
         label: "Shuffle Tree Group Colors",
       },
       {
         key: "setTreeGroupColor",
         disabled: isEditingDisabled,
-        icon: <i className="fa-regular fa-eye-dropper fa-sm " />,
+        icon: <i className="far fa-eye-dropper fa-sm " />,
         label: (
           <ChangeColorMenuItemContent
             key={`changeTreeGroupColor-${id}`}
@@ -549,6 +549,6 @@ function handleMeasureSkeletonLength(treeId: number, treeName: string) {
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
       formatLengthAsVx(lengthInVx),
     ),
-    icon: <i className="fa-regular fa-ruler" />,
+    icon: <i className="far fa-ruler" />,
   });
 }

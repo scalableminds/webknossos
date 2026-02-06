@@ -210,7 +210,7 @@ function ToolSpecificSettings({
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
           >
-            <i className="fa-regular fa-magic icon-margin-right" /> AI
+            <i className="far fa-magic icon-margin-right" /> AI
           </ToggleButton>
 
           <QuickSelectSettingsPopover />

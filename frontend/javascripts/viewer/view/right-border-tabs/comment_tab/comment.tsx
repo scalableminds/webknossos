@@ -85,7 +85,7 @@ function Comment({ comment, isActive }: CommentProps) {
             }}
           >
             <a onClick={handleClick}>
-              <i className="fa-regular fa-comment-dots" />
+              <i className="far fa-comment-dots" />
             </a>
           </span>
         </ActiveCommentPopover>

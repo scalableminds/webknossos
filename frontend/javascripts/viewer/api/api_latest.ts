@@ -197,19 +197,19 @@ type TransformSpec =
   | { type: "translate"; args: Vector3 };
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
-export function assertExists<T>(value: any, message: string): asserts value is NonNullable<T> {
+function assertExists<T>(value: any, message: string): asserts value is NonNullable<T> {
   if (value == null) {
     throw new Error(message);
   }
 }
-export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
+function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
   if (annotation.skeleton == null) {
     throw new Error("This API function should only be called in a skeleton annotation.");
   }
 
   return annotation.skeleton;
 }
-export function assertVolume(state: WebknossosState): VolumeTracing {
+function assertVolume(state: WebknossosState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {
     throw new Error(
       "This API function should only be called when a volume annotation layer exists.",

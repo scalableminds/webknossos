@@ -29,4 +29,3 @@ export function HoverIconButton(props: HoverButtonProps) {
     onMouseLeave,
   });
 }
-export default {};

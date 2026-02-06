@@ -37,4 +37,3 @@ export function reuseInstanceOnEquality<R, F extends (...args: Array<any>) => R>
     }
   };
 }
-export default {};

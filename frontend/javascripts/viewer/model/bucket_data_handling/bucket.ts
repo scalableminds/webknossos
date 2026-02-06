@@ -73,7 +73,7 @@ export type Bucket = DataBucket | NullBucket;
 // This set saves whether a bucket is already added to the current undo volume batch
 // and gets cleared when a volume transaction is ended (marked by the action
 // FINISH_ANNOTATION_STROKE).
-export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
+const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
 export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }

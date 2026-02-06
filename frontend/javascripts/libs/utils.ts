@@ -41,11 +41,6 @@ export function entries<T>(o: { [s: string]: T } | ArrayLike<T>): [string, T][] 
   return Object.entries(o);
 }
 
-export function map2<A, B>(fn: (arg0: A, arg1: 0 | 1) => B, tuple: [A, A]): [B, B] {
-  const [x, y] = tuple;
-  return [fn(x, 0), fn(y, 1)];
-}
-
 export function map3<A, B>(fn: (arg0: A, arg1: 0 | 1 | 2) => B, tuple: [A, A, A]): [B, B, B] {
   const [x, y, z] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
@@ -72,7 +67,7 @@ export function floor3(tuple: Vector3): Vector3 {
   return [Math.floor(x), Math.floor(y), Math.floor(z)];
 }
 
-export function iterateThroughBounds(
+function _iterateThroughBounds(
   minVoxel: Vector3,
   maxVoxel: Vector3,
   fn: (arg0: number, arg1: number, arg2: number) => void,
@@ -134,7 +129,7 @@ export function union<T>(iterables: Array<Iterable<T>>): Set<T> {
   return set;
 }
 
-export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
+function _enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
   return (nullableA: A | null | undefined) => {
     if (nullableA == null) {
       throw new Error("Could not enforce while unwrapping maybe");
@@ -238,7 +233,7 @@ export function hexToRgb(hex: string): Vector3 {
  * Taken from:
  * https://stackoverflow.com/a/9493060
  */
-export function hslaToRgba(hsla: Vector4): Vector4 {
+function _hslaToRgba(hsla: Vector4): Vector4 {
   const [h, s, l, a] = hsla;
   let r: number;
   let g: number;
@@ -460,7 +455,7 @@ export function point3ToVector3({ x, y, z }: Point3): Vector3 {
   return [x, y, z];
 }
 
-export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
+function _vector3ToPoint3([x, y, z]: Vector3): Point3 {
   return {
     x,
     y,
@@ -480,7 +475,7 @@ export function isUserAdminOrTeamManager(user: APIUser): boolean {
   return isUserAdmin(user) || isUserTeamManager(user);
 }
 
-export function isUserDatasetManager(user: APIUser): boolean {
+function isUserDatasetManager(user: APIUser): boolean {
   return user.isDatasetManager;
 }
 
@@ -583,7 +578,7 @@ export function parseCTimeDefaultDate(dateString: string) {
 // Only use this function if you really need a busy wait (useful
 // for testing performance-related edge cases). Prefer `sleep`
 // otherwise.
-export function busyWaitDevHelper(time: number) {
+function _busyWaitDevHelper(time: number) {
   const start = new Date();
   let now: Date;
 
@@ -792,12 +787,12 @@ export function addEventListenerWithDelegation(
   };
 }
 
-export function median8(dataArray: Array<number>): number {
+function _median8(dataArray: Array<number>): number {
   // Returns the median of an already *sorted* array of size 8 (e.g., with sortArray8)
   return Math.round((dataArray[3] + dataArray[4]) / 2);
 }
 
-export function mode8(arr: Array<number>): number {
+function _mode8(arr: Array<number>): number {
   // Returns the mode of an already *sorted* array of size 8 (e.g., with sortArray8)
   let currentConsecCount = 0;
   let currentModeCount = 0;
@@ -824,7 +819,7 @@ export function mode8(arr: Array<number>): number {
   return currentMode;
 }
 
-export function sortArray8(arr: Array<number>): void {
+function _sortArray8(arr: Array<number>): void {
   // This function sorts an array of size 8.
   // Swap instructions were generated here:
   // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
@@ -880,7 +875,7 @@ export function waitForElementWithId(elementId: string): Promise<any> {
   return new Promise(tryToResolve);
 }
 
-export function convertDecToBase256(num: number): Vector4 {
+function convertDecToBase256(num: number): Vector4 {
   const sign = Math.sign(num);
 
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
@@ -906,7 +901,7 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
     : uncastNumber;
 }
 
-export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
+function _convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
   const [bigNumHigh, bigNumLow] = convertNumberTo64BitTuple(num);
 
   const low = convertDecToBase256(bigNumLow);
@@ -1066,7 +1061,7 @@ export function getIsInIframe() {
   }
 }
 
-export function getWindowBounds(): [number, number] {
+function _getWindowBounds(): [number, number] {
   // Function taken from https://stackoverflow.com/questions/3333329/javascript-get-browser-height.
   let width = 0;
   let height = 0;
@@ -1114,7 +1109,7 @@ export function diffObjects<K extends string | number | symbol, V, Dict extends 
   return fromPairs(differenceWith(toPairs(b), toPairs(a), isEqual)) as Partial<Dict>;
 }
 
-export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
+function _diffSets<T>(setA: Set<T>, setB: Set<T>) {
   const aWithoutB = new Set<T>();
   const bWithoutA = new Set<T>();
   const intersection = new Set<T>();
@@ -1178,7 +1173,7 @@ export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
   };
 }
 
-export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
+function _areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
   return a.every((v, i) => Math.abs(v - b[i]) < epsilon);
 }
 
@@ -1289,7 +1284,7 @@ export function isBigInt(x: NumberLike): x is bigint {
   return typeof x === "bigint";
 }
 
-export function assertNever(value: never): never {
+function _assertNever(value: never): never {
   throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
 }
 
@@ -1437,7 +1432,7 @@ export async function retryAsyncFunction<T>(
  * Converts a string to a boolean value.
  * Returns false for invalid inputs.
  */
-export function stringToBoolean(value: string): boolean {
+function _stringToBoolean(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   if (normalized === "true") return true;
   return false;

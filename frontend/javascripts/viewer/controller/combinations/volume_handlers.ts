@@ -43,10 +43,7 @@ export function handleDrawStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(addToContourListAction(layerPos));
 }
 
-export function getUntransformedSegmentationPosition(
-  state: WebknossosState,
-  globalPosRounded: Vector3,
-) {
+function getUntransformedSegmentationPosition(state: WebknossosState, globalPosRounded: Vector3) {
   /*
    * Converts the given position from world space to layer space.
    */
@@ -216,7 +213,7 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
   );
 }
-export function handlePickCellFromGlobalPosition(
+function handlePickCellFromGlobalPosition(
   globalPos: PositionWithRounding,
   additionalCoordinates: AdditionalCoordinate[],
 ) {

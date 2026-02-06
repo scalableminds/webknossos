@@ -42,7 +42,7 @@ import {
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
 
-export function* setupSavingToServer(): Saga<void> {
+function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
   yield* fork(pushSaveQueueAsync);
   // The following sagas are responsible for filling the save queue with the update actions.
@@ -312,7 +312,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     return { successful: false, shouldTerminate: true };
   }
 }
-export const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
+const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
 
 function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkInitialized);

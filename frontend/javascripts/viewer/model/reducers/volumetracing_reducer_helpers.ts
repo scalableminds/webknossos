@@ -14,7 +14,6 @@ import {
 import { updateKey, updateKey2 } from "viewer/model/helpers/deep_update";
 import { setDirectionReducer } from "viewer/model/reducers/flycam_reducer";
 import type {
-  EditableMapping,
   LabelAction,
   MappingType,
   SegmentGroup,
@@ -57,22 +56,7 @@ export function updateVolumeTracing(
     volumes: newVolumes,
   });
 }
-export function updateEditableMapping(
-  state: WebknossosState,
-  volumeTracingId: string,
-  shape: Partial<EditableMapping>,
-) {
-  const newMappings = state.annotation.mappings.map((mapping) => {
-    if (mapping.tracingId === volumeTracingId) {
-      return { ...mapping, ...shape };
-    } else {
-      return mapping;
-    }
-  });
-  return updateKey(state, "annotation", {
-    mappings: newMappings,
-  });
-}
+
 export function setActiveCellReducer(
   state: WebknossosState,
   volumeTracing: VolumeTracing,
@@ -207,7 +191,7 @@ export function setMappingNameReducer(
   });
 }
 
-export function removeMissingGroupsFromSegments(
+function removeMissingGroupsFromSegments(
   volumeTracing: VolumeTracing,
   segmentGroups: Array<SegmentGroup>,
 ): SegmentMap {

@@ -102,4 +102,3 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     return pullQueue;
   }
 }
-export default {};

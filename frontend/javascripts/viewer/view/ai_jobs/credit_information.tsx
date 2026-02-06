@@ -109,7 +109,7 @@ interface CreditInformationProps {
   areParametersValid: boolean;
 }
 
-export const CreditInformation: React.FC<CreditInformationProps> = ({
+const CreditInformation: React.FC<CreditInformationProps> = ({
   selectedModel,
   selectedJobType,
   selectedBoundingBox,

@@ -181,7 +181,7 @@ export function convertServerAdditionalAxesToFrontEnd(
   }));
 }
 
-export function isToolAvailable(
+function isToolAvailable(
   state: WebknossosState,
   disabledToolInfo: Record<AnnotationToolId, DisabledInfo>,
   tool: AnnotationTool,

@@ -4,7 +4,7 @@ import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import { compareBy, filterWithSearchQueryAND } from "libs/utils";
 import type React from "react";
-import { memo, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { APIPublication } from "types/api_types";
 
 const { Search } = Input;
@@ -88,5 +88,3 @@ function PublicationView(props: Props) {
     />
   );
 }
-
-export default memo<Props>(PublicationView);

@@ -5,7 +5,8 @@
   ],
   "entry": [
     "./frontend/javascripts/main.tsx",
-    "./frontend/stylesheets/main.less"
+    "./frontend/stylesheets/main.less",
+    "frontend/javascripts/test/**/*"
   ],
   "project": [
     "./frontend/**/*"

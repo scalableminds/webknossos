@@ -125,7 +125,7 @@ export function callDeep(
     }
   });
 }
-export function callDeepWithChildren(
+function callDeepWithChildren(
   groups: TreeGroup[],
   groupId: number | undefined,
   callback: (
@@ -170,7 +170,7 @@ export function findParentIdForGroupId(
   return foundParentGroupId;
 }
 
-export function forEachTreeNode(groups: TreeNode[], callback: (arg0: TreeNode) => void) {
+function forEachTreeNode(groups: TreeNode[], callback: (arg0: TreeNode) => void) {
   for (const group of groups) {
     callback(group);
 
@@ -193,16 +193,6 @@ export function anySatisfyDeep(groups: TreeNode[], testFunction: (arg0: TreeNode
   }
 
   return false;
-}
-
-export function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: TreeNode) => any) {
-  for (const group of groups) {
-    if (group.id === id) {
-      callback(group);
-    } else if (group.children) {
-      findTreeNode(group.children, id, callback);
-    }
-  }
 }
 
 function _createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
@@ -308,10 +298,6 @@ export function getGroupNodeKey(groupId: number): string {
   return getNodeKey(GroupTypeEnum.GROUP, groupId);
 }
 
-export function getNodeKeyFromNode(node: TreeNode): string {
-  return getNodeKey(node.type, node.id);
-}
-
 export function findParentGroupNode(nodes: TreeNode[], parentGroupId: number): TreeNode | null {
   let foundParentNode: TreeNode | null = null;
   forEachTreeNode(nodes, (node) => {
@@ -342,10 +328,7 @@ export function additionallyExpandGroup<T extends string | number>(
   return expandedGroups;
 }
 
-export function mapGroupsWithRoot(
-  groups: TreeGroup[],
-  fn: (g: TreeGroup) => TreeGroup,
-): TreeGroup[] {
+function mapGroupsWithRoot(groups: TreeGroup[], fn: (g: TreeGroup) => TreeGroup): TreeGroup[] {
   // Add the virtual root group so that the map function can also mutate
   // the high-level elements (e.g., filtering elements in the first level).
   return mapGroups(

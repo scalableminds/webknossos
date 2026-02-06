@@ -96,7 +96,7 @@ function getOrAddMapForSegment(
   return maybeMap;
 }
 
-export function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
+function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
   const { layerName } = action;

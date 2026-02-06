@@ -93,7 +93,7 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
-export function* watchVolumeTracingAsync(): Saga<void> {
+function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
   yield* takeEveryUnlessBusy(
     "INTERPOLATE_SEGMENTATION_LAYER",
@@ -394,7 +394,7 @@ export function* finishSectionLabeler(
   yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
 }
 
-export function* ensureToolIsAllowedInMag(): Saga<void> {
+function* ensureToolIsAllowedInMag(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
 
   while (true) {
@@ -651,9 +651,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 }
 
-export function* updateClickedSegments(
-  action: ClickSegmentAction | SetActiveCellAction,
-): Saga<void> {
+function* updateClickedSegments(action: ClickSegmentAction | SetActiveCellAction): Saga<void> {
   // If one or zero segments are selected, update selected segments in store
   // Otherwise, the multiselection is kept.
   const { segmentId } = action;
@@ -670,7 +668,7 @@ export function* updateClickedSegments(
   }
 }
 
-export function* maintainHoveredSegmentId(): Saga<void> {
+function* maintainHoveredSegmentId(): Saga<void> {
   yield* takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
 }
 

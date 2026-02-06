@@ -44,7 +44,7 @@ type DatasetSettingsProviderProps = {
   form?: FormInstance<DatasetSettingsFormData>;
 };
 
-export function getRotationFromCoordinateTransformations(
+function getRotationFromCoordinateTransformations(
   dataSource: APIDataSource,
 ): DatasetRotationAndMirroringSettings | undefined {
   if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {

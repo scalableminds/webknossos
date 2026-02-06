@@ -8,7 +8,6 @@ import {
   hsvToRgb,
   jsColormapJet,
   jsGetElementOfPermutation,
-  jsRgb2hsv,
 } from "viewer/shaders/utils.glsl";
 import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -309,16 +308,6 @@ export const jsConvertCellIdToRGBA = (
   }
 
   return [...rgb, alpha];
-};
-// Output is in [0,1] for H, S, L, and A
-const jsConvertCellIdToHSLA = (
-  id: number,
-  customColors?: Array<Vector3> | null | undefined,
-  alpha: number = 1,
-): Vector4 => {
-  const [r, g, b] = jsConvertCellIdToRGBA(id, customColors, alpha);
-  const hue = (1 / 360) * jsRgb2hsv([r, g, b])[0];
-  return [hue, 1, 0.5, alpha];
 };
 
 export const getBrushOverlay: ShaderModule = {

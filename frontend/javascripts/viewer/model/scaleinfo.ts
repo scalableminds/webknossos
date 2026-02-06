@@ -32,15 +32,6 @@ export function getBaseVoxelFactorsInUnit(voxelSize: VoxelSize): Vector3 {
   return [baseVoxel / scaleFactor[0], baseVoxel / scaleFactor[1], baseVoxel / scaleFactor[2]];
 }
 
-function getVoxelPerUnit(voxelSize: VoxelSize): Vector3 {
-  const voxelPerUnit = [0, 0, 0] as Vector3;
-
-  for (let i = 0; i < 3; i++) {
-    voxelPerUnit[i] = 1 / voxelSize.factor[i];
-  }
-  return voxelPerUnit;
-}
-
 export function voxelToUnit(voxelSize: VoxelSize, posArray: Vector3): Vector3 {
   const result = [0, 0, 0] as Vector3;
 

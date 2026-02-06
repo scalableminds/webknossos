@@ -19,8 +19,6 @@ export function getDefaultLayerViewConfiguration(
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
 
-const defaultIntensityRange = [0, 255];
-
 // Note that these values will only be used as a default,
 // if the property is marked as required in the corresponding JSON schema.
 export const layerViewConfiguration = {

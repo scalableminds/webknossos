@@ -37,13 +37,6 @@ export function hasPricingPlanExpired(organization: APIOrganization): boolean {
   return Date.now() > organization.paidUntil;
 }
 
-function hasPricingPlanExceededUsers(
-  organization: APIOrganization,
-  activeUserCount: number,
-): boolean {
-  return activeUserCount > organization.includedUsers;
-}
-
 export function hasPricingPlanExceededStorage(organization: APIOrganization): boolean {
   return organization.usedStorageBytes > organization.includedStorageBytes;
 }

@@ -195,16 +195,6 @@ export function anySatisfyDeep(groups: TreeNode[], testFunction: (arg0: TreeNode
   return false;
 }
 
-function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: TreeNode) => any) {
-  for (const group of groups) {
-    if (group.id === id) {
-      callback(group);
-    } else if (group.children) {
-      findTreeNode(group.children, id, callback);
-    }
-  }
-}
-
 function _createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
   return groupBy(trees.values().toArray(), (tree) =>
     tree.groupId != null ? tree.groupId : MISSING_GROUP_ID,
@@ -306,10 +296,6 @@ export function getNodeKey(type: GroupTypeEnum, id: number): string {
 
 export function getGroupNodeKey(groupId: number): string {
   return getNodeKey(GroupTypeEnum.GROUP, groupId);
-}
-
-function getNodeKeyFromNode(node: TreeNode): string {
-  return getNodeKey(node.type, node.id);
 }
 
 export function findParentGroupNode(nodes: TreeNode[], parentGroupId: number): TreeNode | null {

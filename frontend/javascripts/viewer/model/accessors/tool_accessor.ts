@@ -1,5 +1,4 @@
 import without from "lodash-es/without";
-import type { WebknossosState } from "viewer/store";
 
 abstract class AbstractAnnotationTool {
   static id: keyof typeof _AnnotationToolHelper;
@@ -156,8 +155,6 @@ export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.LINE_MEASUREMENT,
   AnnotationTool.AREA_MEASUREMENT,
 ];
-
-function getAvailableTools(_state: WebknossosState) {}
 
 export function isVolumeDrawingTool(activeTool: AnnotationTool): boolean {
   return (

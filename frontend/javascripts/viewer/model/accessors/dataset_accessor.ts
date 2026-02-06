@@ -196,18 +196,11 @@ export function getMappings(dataset: APIDataset, layerName: string): string[] {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'mappings' does not exist on type 'APIDat... Remove this comment to see the full error message
   return getLayerByName(dataset, layerName).mappings || [];
 }
-function isRgb(dataset: APIDataset, layerName: string): boolean {
-  return (
-    getLayerByName(dataset, layerName).category === "color" &&
-    getByteCount(dataset, layerName) === 3
-  );
-}
+
 export function getByteCountFromLayer(layerInfo: DataLayerType): number {
   return getBitDepth(layerInfo) / 8;
 }
-function getByteCount(dataset: APIDataset, layerName: string): number {
-  return getByteCountFromLayer(getLayerByName(dataset, layerName));
-}
+
 export function getElementClass(dataset: APIDataset, layerName: string): ElementClass {
   return getLayerByName(dataset, layerName).elementClass;
 }
@@ -635,7 +628,7 @@ export function isLayerVisible(
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
 
-function hasFallbackLayer(layer: APIDataLayer) {
+function _hasFallbackLayer(layer: APIDataLayer) {
   return "fallbackLayer" in layer && layer.fallbackLayer != null;
 }
 

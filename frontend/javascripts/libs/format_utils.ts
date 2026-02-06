@@ -441,15 +441,6 @@ export function formatSeconds(durationSeconds: number): string {
 
   return timeString;
 }
-function formatDurationToMinutesAndSeconds(durationInMillisecons: number) {
-  const duration = dayjs.duration(durationInMillisecons);
-  return duration.format("mm:ss");
-}
-
-function formatDurationToSeconds(durationInMillisecons: number) {
-  const duration = dayjs.duration(durationInMillisecons);
-  return duration.format("s");
-}
 
 export function formatDateMedium(date: Date | number): string {
   return dayjs(date).format("lll");
@@ -488,7 +479,7 @@ export function formatCPU(cpuShare: number) {
   return `${(cpuShare * 100).toFixed(0)}%`;
 }
 
-function formatBytes(nbytes: number) {
+function _formatBytes(nbytes: number) {
   if (nbytes == null || !Number.isFinite(nbytes)) {
     return "";
   }

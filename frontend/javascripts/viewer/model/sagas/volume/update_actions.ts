@@ -1,9 +1,20 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
-import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import type {
+  AdditionalCoordinate,
+  APIMagRestrictions,
+  MetadataEntryProto,
+  TreeAgglomerateInfo,
+} from "types/api_types";
+import type { TreeType, Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
-import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type {
+  MutableBranchPoint,
+  MutableCommentType,
+  Node,
+  Tree,
+  TreeGroup,
+} from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
   NumberLike,
@@ -141,6 +152,39 @@ export type WithoutServerSpecificFields<T extends { value: Record<string, any> }
 export type ApplicableSkeletonUpdateAction =
   WithoutServerSpecificFields<ApplicableSkeletonServerUpdateAction>;
 
+// This helper dict exists so that we can ensure via typescript that
+// the list contains all members of ApplicableSkeletonUpdateAction. As soon as
+// ApplicableSkeletonUpdateAction is extended with another action, TS will complain
+// if the following dictionary doesn't contain that action.
+const ApplicableSkeletonUpdateActionNamesHelper: Record<
+  ApplicableSkeletonUpdateAction["name"],
+  true
+> = {
+  updateTree: true,
+  createTree: true,
+  updateNode: true,
+  createNode: true,
+  createEdge: true,
+  deleteTree: true,
+  deleteEdge: true,
+  deleteNode: true,
+  moveTreeComponent: true,
+  updateTreeGroups: true,
+  updateTreeGroupsExpandedState: true,
+  updateTreeEdgesVisibility: true,
+  addUserBoundingBoxInSkeletonTracing: true,
+  updateUserBoundingBoxInSkeletonTracing: true,
+  updateUserBoundingBoxVisibilityInSkeletonTracing: true,
+  deleteUserBoundingBoxInSkeletonTracing: true,
+  updateActiveNode: true,
+  updateTreeVisibility: true,
+  updateTreeGroupVisibility: true,
+  updateActiveTree: true,
+};
+export const ApplicableSkeletonUpdateActionNamesHelperNamesList = Object.keys(
+  ApplicableSkeletonUpdateActionNamesHelper,
+);
+
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
   | UpdateSegmentUpdateAction
@@ -253,13 +297,34 @@ export type ServerUpdateAction = AsServerAction<
   | CreateTracingUpdateAction
 >;
 
-export function createTree(tree: Tree, actionTracingId: string) {
+export function createTree(
+  tree: Tree,
+  actionTracingId: string,
+): {
+  name: "createTree";
+  value: {
+    actionTracingId: string;
+    id: number;
+    updatedId: number;
+    color: Vector3;
+    name: string;
+    timestamp: number;
+    comments: Readonly<MutableCommentType>[];
+    branchPoints: Readonly<MutableBranchPoint>[];
+    groupId: number | undefined | null;
+    isVisible: boolean;
+    type: TreeType;
+    edgesAreVisible: boolean;
+    metadata: MetadataEntryProto[];
+    agglomerateInfo?: TreeAgglomerateInfo;
+  };
+} {
   return {
     name: "createTree",
     value: {
       actionTracingId,
       id: tree.treeId,
-      updatedId: undefined, // was never really used, but is kept to keep the type information precise
+      updatedId: tree.treeId, // was never really used, but is kept to keep the type information precise
       color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,
@@ -270,6 +335,7 @@ export function createTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateInfo: tree.agglomerateInfo,
     },
   } as const;
 }
@@ -299,6 +365,7 @@ export function updateTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateId: tree.agglomerateInfo,
     },
   } as const;
 }

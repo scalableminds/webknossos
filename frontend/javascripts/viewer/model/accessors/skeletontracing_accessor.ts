@@ -122,6 +122,23 @@ export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefin
   return trees.values().find((tree: Tree) => tree.name === treeName);
 }
 
+export function findTreeByAgglomerateId(
+  trees: TreeMap,
+  agglomerateId: number,
+  editableMappingId: string,
+  mappingName: string,
+): Tree | undefined {
+  return trees
+    .values()
+    .find(
+      (tree: Tree) =>
+        tree.agglomerateInfo &&
+        tree.agglomerateInfo.agglomerateId === agglomerateId &&
+        tree.agglomerateInfo.tracingId === editableMappingId &&
+        tree.agglomerateInfo.tracingId === mappingName,
+    );
+}
+
 export function getTreesWithType(
   skeletonTracing: SkeletonTracing,
   type?: TreeType | null | undefined,

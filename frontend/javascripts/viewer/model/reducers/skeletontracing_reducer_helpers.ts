@@ -920,6 +920,7 @@ export function createMutableTreeMapFromTreeArray(
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
         edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
         metadata: tree.metadata,
+        agglomerateInfo: tree.agglomerateInfo,
       }),
     );
   }

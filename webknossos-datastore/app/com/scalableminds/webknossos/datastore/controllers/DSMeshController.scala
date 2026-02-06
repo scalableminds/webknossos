@@ -61,6 +61,7 @@ class DSMeshController @Inject()(
             dataLayer,
             targetMappingName,
             editableMappingTracingId,
+            request.body.annotationVersion,
             request.body.segmentId,
             mappingNameForMeshFile,
             omitMissing = false

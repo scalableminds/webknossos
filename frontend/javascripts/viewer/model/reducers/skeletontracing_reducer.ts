@@ -1185,6 +1185,28 @@ function SkeletonTracingReducer(
       });
     }
 
+    case "SET_TREE_AGGLOMERATE_ID": {
+      const tree = getTree(skeletonTracing, action.treeId);
+      if (tree == null || tree.agglomerateInfo == null) {
+        return state;
+      }
+
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
+        ...tree,
+        agglomerateInfo: { ...tree.agglomerateInfo, agglomerateId: action.agglomerateId },
+      });
+
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: newTrees,
+            },
+          },
+        },
+      });
+    }
+
     case "SET_EDGES_ARE_VISIBLE": {
       const tree = getTree(skeletonTracing, action.treeId);
       if (tree == null) {

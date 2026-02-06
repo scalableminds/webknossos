@@ -189,6 +189,7 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
       action.segmentId,
       false,
       layer.name,
+      action.isProofreadingAuxiliaryMesh,
       action.extraInfo,
     );
   } catch (exc) {
@@ -243,6 +244,7 @@ function* loadAdHocMesh(
   segmentId: number,
   removeExistingMesh: boolean = false,
   layerName: string,
+  isProofreadingAuxiliaryMesh: boolean,
   maybeExtraInfo?: AdHocMeshInfo,
 ): Saga<void> {
   const layer = Model.getLayerByName(layerName);
@@ -273,6 +275,7 @@ function* loadAdHocMesh(
       meshExtraInfo,
       magInfo,
       removeExistingMesh,
+      isProofreadingAuxiliaryMesh,
     ),
     cancel: take(
       ((action: Action) =>
@@ -325,6 +328,7 @@ function* loadFullAdHocMesh(
   meshExtraInfo: AdHocMeshInfo,
   magInfo: MagInfo,
   removeExistingMesh: boolean,
+  isProofreadingAuxiliaryMesh: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
   const { mappingName, mappingType, opacity } = meshExtraInfo;
@@ -338,6 +342,7 @@ function* loadFullAdHocMesh(
       mappingName,
       mappingType,
       opacity,
+      isProofreadingAuxiliaryMesh,
     ),
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
@@ -391,6 +396,7 @@ function* loadFullAdHocMesh(
         clippedPosition,
         additionalCoordinates,
         mappingName,
+        annotation.version,
       )
     : [clippedPosition];
 
@@ -438,6 +444,7 @@ function* getChunkPositionsFromSegmentIndex(
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  tracingVersion: number,
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
@@ -447,6 +454,7 @@ function* getChunkPositionsFromSegmentIndex(
     mag,
     additionalCoordinates,
     mappingName,
+    tracingVersion,
   );
   const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
@@ -469,6 +477,7 @@ function* maybeLoadMeshChunk(
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
@@ -525,6 +534,7 @@ function* maybeLoadMeshChunk(
           cubeSize: paddedCubeSize,
           scaleFactor,
           findNeighbors,
+          annotationVersion,
           ...meshExtraInfo,
         },
       );
@@ -630,6 +640,7 @@ function* refreshMeshes(): Saga<void> {
       segmentationLayer.name,
       additionalCoordinates,
       meshInfo?.opacity,
+      meshInfo?.isProofreadingAuxiliaryMesh ?? false,
     );
   }
 }
@@ -659,6 +670,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         meshInfo.opacity,
+        meshInfo.isProofreadingAuxiliaryMesh,
         layerName,
       ),
     );
@@ -675,6 +687,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
       layerName,
       additionalCoordinates,
       meshInfo.opacity,
+      meshInfo.isProofreadingAuxiliaryMesh,
     );
   }
 }
@@ -685,6 +698,7 @@ function* refreshMeshWithMap(
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | null,
   opacity: number | undefined,
+  isProofreadingAuxiliaryMesh: boolean,
 ): Saga<void> {
   const meshInfo = yield* select((state) =>
     getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
@@ -722,6 +736,7 @@ function* refreshMeshWithMap(
       segmentId,
       shouldBeRemoved,
       layerName,
+      isProofreadingAuxiliaryMesh,
       {
         mappingName,
         mappingType,

@@ -20,7 +20,8 @@ import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
     meshFileName: String,
-    segmentId: Long
+    segmentId: Long,
+    annotationVersion: Option[Long],
 )
 
 object ListMeshChunksRequest {

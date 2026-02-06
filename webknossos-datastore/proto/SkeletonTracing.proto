@@ -44,6 +44,11 @@ message TreeBody {
   repeated Edge edges = 2;
 }
 
+message AgglomerateInfo {
+  required int64 agglomerateId = 1;
+  required string tracingId = 2;
+}
+
 message Tree {
   required int32 treeId = 1;
   repeated Node nodes = 2; // empty for skeletons with storedWithExternalTreeBodies=true
@@ -58,6 +63,7 @@ message Tree {
   optional TreeTypeProto type = 11;
   optional bool edgesAreVisible = 12; // `None` means `true`
   repeated MetadataEntryProto metadata = 13;
+  optional AgglomerateInfo agglomerateInfo = 14;
 }
 
 message TreeGroup {

@@ -61,7 +61,7 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeC, edgeD]);
     const edgeCollectionB = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([edgeD]);
     expect(onlyB).toEqual([edgeA, edgeB]);
   });
@@ -85,7 +85,7 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC, edgeD]);
     const edgeCollectionB = new EdgeCollection().addEdges([edgeA, edgeB, edgeC, edgeD]);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([]);
   });
@@ -143,7 +143,7 @@ describe("EdgeCollection", () => {
     ];
     const edgeCollectionA = new EdgeCollection(5).addEdges(edges);
     const edgeCollectionB = new EdgeCollection(5).addEdges(edges);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([]);
   });
@@ -201,7 +201,7 @@ describe("EdgeCollection", () => {
     ].sort(edgeSort);
     const edgeCollectionA = new EdgeCollection(5).addEdges(edges.slice(0, 8));
     const edgeCollectionB = new EdgeCollection(5).addEdges(edges.slice(1));
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA.sort(edgeSort)).toEqual([edges[0]]);
     expect(onlyB.sort(edgeSort)).toEqual(edges.slice(8));
   });
@@ -225,7 +225,7 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
     const edgeCollectionB = edgeCollectionA.addEdge(edgeD);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([edgeD]);
   });
@@ -249,8 +249,10 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
     const edgeCollectionB = edgeCollectionA.addEdge(edgeD, true);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([]);
   });
+
+  // TODOM: Write test to test diffEdgeCollections with useDeepEqualityCheck = true.
 });

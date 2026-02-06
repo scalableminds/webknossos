@@ -1623,7 +1623,7 @@ class SegmentsView extends React.Component<Props, State> {
                     onSelectAllMatches={this.handleSelectAllMatchingSegments}
                   >
                     <ButtonComponent
-                      title="Open the search via CTRL + Shift + F"
+                      title="Open search via CTRL + Shift + F"
                       icon={<SearchOutlined />}
                       variant="text"
                       color="default"

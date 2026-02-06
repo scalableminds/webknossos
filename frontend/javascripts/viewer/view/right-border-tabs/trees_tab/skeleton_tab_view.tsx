@@ -960,8 +960,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onSelectAllMatches={this.handleSelectAllMatchingTrees}
                   >
                     <ButtonComponent
-                      title="Open the search via CTRL + Shift + F"
-                      className="firstButton"
+                      title="Open search via CTRL + Shift + F"
                       icon={<SearchOutlined />}
                       variant="text"
                       color="default"

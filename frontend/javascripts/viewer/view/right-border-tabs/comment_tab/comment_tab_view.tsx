@@ -469,11 +469,12 @@ function CommentTabView(props: Props) {
                     tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
                   )}
                   searchKey="content"
+                  provideShortcut
                   targetId={commentListId}
                 >
                   <ButtonComponent
                     icon={<SearchOutlined />}
-                    title="Search through comments"
+                    title="Open search via CTRL + Shift + F"
                     variant="text"
                     color="default"
                   />

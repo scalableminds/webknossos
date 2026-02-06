@@ -230,7 +230,9 @@ export function OrganizationCreditActivityView() {
               );
             }}
             filterIcon={(filtered) => (
-              <CalendarOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+              <CalendarOutlined
+                style={{ color: filtered ? "var(--ant-color-primary" : undefined }}
+              />
             )}
             onFilter={(value, record) => {
               const [startDate, endDate] = parseRangeValue(value as string);

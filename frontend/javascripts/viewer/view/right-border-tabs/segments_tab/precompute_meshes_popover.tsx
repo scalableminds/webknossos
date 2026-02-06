@@ -8,7 +8,7 @@ import { Button, Flex, Select, Space, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { usePolling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { Fragment, useCallback, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobCommand } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
@@ -25,7 +25,11 @@ import { formatMagWithLabel, getBaseSegmentationName } from "./segments_view_hel
 const { Option } = Select;
 const REFRESH_INTERVAL = 5000;
 
-export const PrecomputeMeshesPopover = () => {
+type PrecomputeMeshesPopoverProps = {
+  onActiveJobChange?: (isRunning: boolean) => void;
+};
+
+export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesPopoverProps) => {
   const dispatch = useDispatch();
   const [activeMeshJobId, setActiveMeshJobId] = useState<string | null>(null);
 
@@ -63,6 +67,12 @@ export const PrecomputeMeshesPopover = () => {
   }, [activeUser, activeMeshJobId, dataset.name]);
 
   usePolling(pollJobData, activeMeshJobId != null ? REFRESH_INTERVAL : null);
+
+  useEffect(() => {
+    if (onActiveJobChange != null) {
+      onActiveJobChange(activeMeshJobId != null);
+    }
+  }, [activeMeshJobId, onActiveJobChange]);
 
   const getTooltipInfo = () => {
     let title = "";

@@ -9,6 +9,7 @@ import {
   EyeInvisibleOutlined,
   EyeOutlined,
   FolderOutlined,
+  LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -323,6 +324,7 @@ type State = {
   activeStatisticsModalGroupId: number | null;
   contextMenuPosition: [number, number] | null | undefined;
   menu: MenuProps | null | undefined;
+  isMeshPrecomputeRunning: boolean;
 };
 
 // Redundant, moved to segments_view_helper.tsx
@@ -405,6 +407,7 @@ class SegmentsView extends React.Component<Props, State> {
     activeStatisticsModalGroupId: null,
     contextMenuPosition: null,
     menu: null,
+    isMeshPrecomputeRunning: false,
   };
   tree: React.RefObject<GetRef<typeof Tree> | null>;
 
@@ -711,6 +714,12 @@ class SegmentsView extends React.Component<Props, State> {
       maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, true),
     );
 
+  handleMeshPrecomputeRunningChange = (isRunning: boolean) => {
+    if (this.state.isMeshPrecomputeRunning !== isRunning) {
+      this.setState({ isMeshPrecomputeRunning: isRunning });
+    }
+  };
+
   getMeshSettings = () => {
     const { preferredQualityForMeshAdHocComputation, magInfoOfVisibleSegmentationLayer: magInfo } =
       this.props;
@@ -773,10 +782,16 @@ class SegmentsView extends React.Component<Props, State> {
 
   getMeshesHeader = () => (
     <Space>
-      <Popover content={<PrecomputeMeshesPopover />} trigger="click" placement="bottom">
+      <Popover
+        content={
+          <PrecomputeMeshesPopover onActiveJobChange={this.handleMeshPrecomputeRunningChange} />
+        }
+        trigger="click"
+        placement="bottom"
+      >
         <ButtonComponent
           title="Add a precomputed mesh file"
-          icon={<PlusOutlined />}
+          icon={this.state.isMeshPrecomputeRunning ? <LoadingOutlined spin /> : <PlusOutlined />}
           variant="text"
           color="default"
         />

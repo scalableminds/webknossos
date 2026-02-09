@@ -103,6 +103,7 @@ def delete_path(path: str) -> None:
     )
 
     logger.info(f"Deleting {path} ...")
+    # //LOESCH
     upath.fs.delete(upath.path, recursive=True)
 
 

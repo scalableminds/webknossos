@@ -59,7 +59,9 @@ export function createWorker<T extends (...args: any[]) => any>(
     // In a node context (e.g., when executing tests), we don't create web workers.
     // Instead, we dynamically import the worker and return its default export.
     return (async (...params: Parameters<T>) => {
-      const workerModule = await import(`./${pathToWorker}`);
+      const pathToWorkerWithoutExtension = pathToWorker.replace(/\.worker\.ts$/, "");
+      // This import statement requires a file extension for proper static analysis by Vite during build step.
+      const workerModule = await import(`./${pathToWorkerWithoutExtension}.worker.ts`);
       return workerModule.default(...params);
     }) as any;
   }

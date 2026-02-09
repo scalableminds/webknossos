@@ -206,7 +206,7 @@ async function copyToClipboard(code: string) {
   Toast.success("Snippet copied to clipboard.");
 }
 
-export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
+function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
       <Button

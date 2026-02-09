@@ -127,7 +127,7 @@ function isDescendant(
    * Checks whether ancestorId is an ancestor
    * of possibleDescendantId.
    */
-  const stack = childrenMap.get(ancestorId) ?? [];
+  const stack = [...(childrenMap.get(ancestorId) ?? [])];
   const visited = new Set<number>();
 
   while (stack.length > 0) {

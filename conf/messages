@@ -47,6 +47,8 @@ organization.users.userLimitReached=Cannot add new user to this organization bec
 organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization WEBKNOSSOS plan. Please ask the organization owner for permission.
 organization.creditOrder.notAuthorized=You are not authorized to order WEBKNOSSOS credits for your organization. Please ask the organization owner to do this instead.
 organization.creditOrder.notPositive=You cannot order a negative number of WEBKNOSSOS credits.
+organization.listCreditTransactions.onlyAdmin=Only organization admins can list credit transactions.
+organization.listPlanUpdates.onlyAdmin=Only organization admins can list plan updates.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 

@@ -9,6 +9,7 @@ import mail.{DefaultMails, Send}
 import javax.inject.Inject
 import models.organization.{
   FreeCreditTransactionService,
+  Organization,
   OrganizationDAO,
   OrganizationPlanUpdate,
   OrganizationService,
@@ -327,7 +328,25 @@ class OrganizationController @Inject()(
         isSuperUser <- userService.isSuperUser(request.identity._multiUser)
         _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listPlanUpdates.onlyAdmin"
         planUpdates <- organizationDAO.findPlanUpdates(request.identity._organization)
-      } yield Ok(Json.toJson(planUpdates))
+        planUpdatesWithFallback <- if (planUpdates.nonEmpty) {
+          Fox.successful(planUpdates)
+        } else {
+          organizationDAO
+            .findOne(request.identity._organization)
+            .map(organization => Seq(defaultPlanUpdate(organization)))
+        }
+      } yield Ok(Json.toJson(planUpdatesWithFallback))
     }
+
+  private def defaultPlanUpdate(organization: Organization): OrganizationPlanUpdate =
+    OrganizationPlanUpdate(
+      organizationId = organization._id,
+      description = Some("Organization created"),
+      pricingPlan = Some(organization.pricingPlan),
+      paidUntil = organization.paidUntil.map(Some(_)),
+      includedUsers = organization.includedUsers.map(Some(_)),
+      includedStorageBytes = organization.includedStorageBytes.map(Some(_)),
+      created = organization.created
+    )
 
 }

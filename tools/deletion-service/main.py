@@ -22,6 +22,7 @@ import argparse
 import time
 import os
 import traceback
+from typing import Any
 from upath import UPath
 from urllib.parse import urlparse
 
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 WK_API_VERSION = 12
 
 
-def main():
+def main() -> None:
     setup_logging()
     logger.info("Hello from S3 Path Deletion Service!")
 
@@ -58,7 +59,7 @@ def main():
         time.sleep(args.polling_interval_seconds)
 
 
-def poll_for_work(args):
+def poll_for_work(args: argparse.Namespace) -> None:
     paths_to_delete = fetch_paths_to_delete(args)
     if not paths_to_delete:
         return
@@ -79,7 +80,7 @@ def poll_for_work(args):
     logger.debug("Continuing polling ...")
 
 
-def delete_path(path: str):
+def delete_path(path: str) -> None:
     # endpoint URL must be parsed from the path string.
     parsed_url = urlparse(path)
     endpoint_url = f"https://{parsed_url.netloc}"
@@ -105,9 +106,9 @@ def delete_path(path: str):
     upath.fs.delete(upath.path, recursive=True)
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Service to delete remote paths listed by WEBKNOSSOS."
+        description="Service to delete remote paths listed by WEBKNOSSOS. Expects environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
     )
     parser.add_argument(
         "--wk_uri", help="URI of the WEBKNOSSOS instance", type=str, default="http://localhost:9000"
@@ -121,7 +122,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def fetch_paths_to_delete(args):
+def fetch_paths_to_delete(args: argparse.Namespace) -> Any:
     response = httpx.request(
         "GET",
         f"{args.wk_uri}/api/v{WK_API_VERSION}/datasets/pathsToDelete",
@@ -139,7 +140,7 @@ def assert_good_response(response: httpx.Response) -> None:
         raise e
 
 
-def mark_paths_as_deleted(args, paths: list[str]):
+def mark_paths_as_deleted(args: argparse.Namespace, paths: list[str]) -> None:
     response = httpx.request(
         "POST",
         f"{args.wk_uri}/api/v{WK_API_VERSION}/datasets/pathsToDelete/markAsDeleted",
@@ -149,7 +150,7 @@ def mark_paths_as_deleted(args, paths: list[str]):
     response.raise_for_status()
 
 
-def check_env_vars_ok():
+def check_env_vars_ok() -> None:
     required_env_vars = ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
     for required_env_var in required_env_vars:
         if required_env_var not in os.environ:
@@ -158,7 +159,7 @@ def check_env_vars_ok():
             raise KeyError(f"Environment variable {required_env_var} must be non-empty")
 
 
-def setup_logging():
+def setup_logging() -> None:
     log_formatter = logging.Formatter(
         f"%(asctime)s %(levelname)-8s %(message)s"
     )

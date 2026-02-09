@@ -77,7 +77,7 @@ def poll_for_work(args: argparse.Namespace) -> None:
     if deleted_paths:
         logger.info(f"Marking {len(deleted_paths)} paths as deleted in WEBKNOSSOS ...")
         mark_paths_as_deleted(args, deleted_paths)
-    logger.debug("Continuing polling ...")
+    logger.info("Continuing polling ...")
 
 
 def delete_path(path: str) -> None:
@@ -148,7 +148,7 @@ def mark_paths_as_deleted(args: argparse.Namespace, paths: list[str]) -> None:
         params={"key": args.wk_key},
         json=paths
     )
-    response.raise_for_status()
+    assert_good_response(response)
 
 
 def check_env_vars_ok() -> None:
@@ -162,7 +162,7 @@ def check_env_vars_ok() -> None:
 
 def setup_logging() -> None:
     log_formatter = logging.Formatter(
-        f"%(asctime)s %(levelname)-8s %(message)s"
+        "%(asctime)s %(levelname)-8s %(message)s"
     )
     handler = logging.StreamHandler()
     handler.setFormatter(log_formatter)

@@ -32,4 +32,3 @@ export function HoverIconButton(props: HoverButtonProps) {
     />
   );
 }
-export default {};

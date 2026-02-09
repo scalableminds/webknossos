@@ -53,7 +53,7 @@ import { createSectionLabeler, getBoundingBoxForViewport, labelWithVoxelBuffer2D
  * - for extrusion, no distance transform is necessary (since a simple copy operation is done)
  */
 
-export const MAXIMUM_INTERPOLATION_DEPTH = 100;
+const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
 function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string) {
   const isAllowed = state.annotation.restrictions.volumeInterpolationAllowed;

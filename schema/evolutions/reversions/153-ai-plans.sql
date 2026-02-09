@@ -1,14 +1,11 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 151 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
-
-
-CREATE TYPE webknossos.AI_PLANS AS ENUM ('Team_AI', 'Power_AI');
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 153 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.organizations_;
 
-ALTER TABLE webknossos.organizations ADD COLUMN aiPlan webknossos.AI_PLANS DEFAULT NULL;
+ALTER TABLE webknossos.organizations DROP COLUMN aiPlan;
 
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 
@@ -23,8 +20,11 @@ JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
-ALTER TABLE webknossos.organization_plan_updates ADD COLUMN aiPlan webknossos.Ai_PLANS DEFAULT NULL;
-ALTER TABLE webknossos.organization_plan_updates ADD COLUMN aiPlanChanged BOOLEAN NOT NULL;
+
+ALTER TABLE webknossos.organization_plan_updates DROP COLUMN aiPlan webknossos.Ai_PLANS;
+ALTER TABLE webknossos.organization_plan_updates DROP COLUMN aiPlanChanged;
+
+DROP TYPE webknossos.AI_PLANS AS ENUM ('Team_AI', 'Power_AI');
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 152;
 

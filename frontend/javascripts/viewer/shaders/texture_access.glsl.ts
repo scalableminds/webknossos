@@ -4,7 +4,7 @@ import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
 import { transDim } from "./utils.glsl";
 
-export const linearizeVec3ToIndex: ShaderModule = {
+const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
   code: `
     // E.g., the vector [9, 5, 2] will be linearized to the scalar index 900 + 50 + 2, when base == 10
@@ -17,7 +17,7 @@ export const linearizeVec3ToIndex: ShaderModule = {
     }
 `,
 };
-export const linearizeVec3ToIndexWithMod: ShaderModule = {
+const linearizeVec3ToIndexWithMod: ShaderModule = {
   requirements: [],
   code: `
     // Same as linearizeVec3ToIndex. However, a mod parameter m can be passed when the final index
@@ -28,7 +28,7 @@ export const linearizeVec3ToIndexWithMod: ShaderModule = {
 `,
 };
 
-export const getRgbaAtXYIndex: ShaderModule = {
+const getRgbaAtXYIndex: ShaderModule = {
   code: `
     // Define this function for each segmentation and color layer, since iOS cannot handle
     // sampler2D textures[dataTextureCountPerLayer]

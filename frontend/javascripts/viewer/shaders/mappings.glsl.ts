@@ -39,4 +39,3 @@ export const attemptMappingLookUp: ShaderModule = {
     }
   `,
 };
-export default {};

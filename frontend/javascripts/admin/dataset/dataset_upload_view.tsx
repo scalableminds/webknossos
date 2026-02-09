@@ -224,7 +224,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   blockTimeoutId: number | null = null;
-  formRef: React.RefObject<FormInstance<UploadFormFieldTypes>> = React.createRef<FormInstance>();
+  formRef = React.createRef<FormInstance<UploadFormFieldTypes>>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");

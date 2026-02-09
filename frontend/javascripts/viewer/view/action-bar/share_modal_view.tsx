@@ -120,7 +120,7 @@ export function getUrl(sharingToken: string, includeToken: boolean) {
   return url;
 }
 
-export async function copyUrlToClipboard(url: string) {
+async function copyUrlToClipboard(url: string) {
   await navigator.clipboard.writeText(url);
   Toast.success("URL copied to clipboard.");
 }

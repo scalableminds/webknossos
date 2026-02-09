@@ -47,7 +47,7 @@ export type JobCreditCostInfo = {
   organizationMilliCredits: number;
 };
 
-export async function getJobCreditCost(
+async function getJobCreditCost(
   command: string,
   boundingBoxInMag: Vector6,
 ): Promise<JobCreditCostInfo> {
@@ -403,7 +403,7 @@ export type BaseCustomModelInferenceParameters = {
 type RunCustomNeuronModelInferenceParameters = BaseCustomModelInferenceParameters;
 
 type RunCustomInstanceModelInferenceParameters = BaseCustomModelInferenceParameters & {
-  seedGeneratorDistanceThreshold: number;
+  seedGeneratorDistanceThreshold: number | null;
 };
 
 export function runCustomNeuronModelInferenceJob(params: RunCustomNeuronModelInferenceParameters) {

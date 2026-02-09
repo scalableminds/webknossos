@@ -13,7 +13,7 @@ export function useInterval(
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef<ArbitraryFunction>();
+  const savedCallback = useRef<ArbitraryFunction>(null);
   // Remember the latest callback.
   useEffect(() => {
     savedCallback.current = callback;
@@ -134,5 +134,3 @@ export function useIsActiveUserAdminOrManager() {
   const user = useWkSelector((state) => state.activeUser);
   return user != null && isUserAdminOrManager(user);
 }
-
-export default {};

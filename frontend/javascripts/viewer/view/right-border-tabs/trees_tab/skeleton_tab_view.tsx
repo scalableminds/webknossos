@@ -4,8 +4,8 @@ import {
   ArrowsAltOutlined,
   DeleteOutlined,
   DownloadOutlined,
-  DownOutlined,
   ExclamationCircleOutlined,
+  MenuOutlined,
   PlusOutlined,
   SearchOutlined,
   SortAscendingOutlined,
@@ -1021,9 +1021,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     />
                   </Dropdown>
                   <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                    <ButtonComponent icon={<DownOutlined />} variant="text" color="default">
-                      More
-                    </ButtonComponent>
+                    <ButtonComponent
+                      icon={<MenuOutlined />}
+                      variant="text"
+                      color="default"
+                      title="More actions"
+                    />
                   </Dropdown>
                 </Space>
                 <Divider size="small" />

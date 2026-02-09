@@ -252,9 +252,9 @@ class OrganizationController @Inject()(
 
   private def aiAddonLabelForPricingPlan(pricingPlan: PricingPlan.PricingPlan): String =
     pricingPlan match {
-      case PricingPlan.Team | PricingPlan.Team_Trial  => "Team AI"
+      case PricingPlan.Team | PricingPlan.Team_Trial   => "Team AI"
       case PricingPlan.Power | PricingPlan.Power_Trial => "Power AI"
-      case _                                          => "AI Add-on"
+      case _                                           => "AI Add-on"
     }
 
   def sendUpgradeAiAddonEmail(): Action[AnyContent] =
@@ -266,7 +266,8 @@ class OrganizationController @Inject()(
         aiPlanLabel = aiAddonLabelForPricingPlan(organization.pricingPlan)
         pricingPlanLabel = organization.pricingPlan.toString
         _ = Mailer ! Send(
-          defaultMails.upgradeAiAddonMail(request.identity, userEmail, organization.name, aiPlanLabel, pricingPlanLabel))
+          defaultMails
+            .upgradeAiAddonMail(request.identity, userEmail, organization.name, aiPlanLabel, pricingPlanLabel))
       } yield Ok
     }
 

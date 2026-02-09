@@ -160,8 +160,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS Upgrade: AI Add-on ($aiPlan)",
-      bodyHtml =
-        html.mail.upgradeAiAddon(user.name, aiPlan, pricingPlan, additionalFooter, organizationName).body,
+      bodyHtml = html.mail.upgradeAiAddon(user.name, aiPlan, pricingPlan, additionalFooter, organizationName).body,
       recipients = List(supportEmail, userEmail),
       replyTo = List(userEmail, supportEmail)
     )

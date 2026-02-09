@@ -49,6 +49,7 @@ const { Content } = Layout;
 import AccountAuthTokenView from "admin/account/account_auth_token_view";
 import AccountProfileView from "admin/account/account_profile_view";
 import AccountSecurityView from "admin/account/account_security_view";
+import { OrganizationCreditActivityView } from "admin/organization/organization_credit_activity_view";
 import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
 import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
 import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
@@ -371,6 +372,7 @@ const routes = createRoutesFromElements(
       <Route index element={<Navigate to="overview" replace />} />
       <Route path="overview" element={<OrganizationOverviewView />} />
       <Route path="notifications" element={<OrganizationNotificationsView />} />
+      <Route path="credit-activity" element={<OrganizationCreditActivityView />} />
       <Route path="planupdates" element={<OrganizationPlanActivityView />} />
       <Route path="delete" element={<OrganizationDangerZoneView />} />
     </Route>

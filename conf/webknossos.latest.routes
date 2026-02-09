@@ -313,6 +313,7 @@ DELETE        /aiModels/:id                                                     
 # CreditTransactions
 POST          /creditTransactions/addCredits                                                    controllers.CreditTransactionController.addCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
 PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: String)
+GET           /creditTransactions                                                               controllers.CreditTransactionController.list
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

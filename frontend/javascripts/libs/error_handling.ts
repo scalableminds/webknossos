@@ -105,14 +105,13 @@ class ErrorHandling {
 
   initializeAirbrake() {
     // read Airbrake config from DOM
-    // config is inject from backend
-    // const scriptTag = document.querySelector("[data-airbrake-project-id]");
-    // if (!scriptTag) throw new Error("failed to initialize airbrake");
-    // // @ts-expect-error
-    // const { dataset } = scriptTag;
-    const projectId = 123; // dataset.airbrakeProjectId;
-    const projectKey = "123"; // dataset.airbrakeProjectKey;
-    const envName = "development"; // dataset.airbrakeEnvironmentName;
+    // config is inject from backend for production builds
+    const scriptTag = document.querySelector("[data-airbrake-project-id]");
+    // @ts-expect-error
+    const { dataset } = scriptTag || { dataset: {} };
+    const projectId = dataset.airbrakeProjectId || 123;
+    const projectKey = dataset.airbrakeProjectKey || "123";
+    const envName = dataset.airbrakeEnvironmentName || "development";
     this.airbrake = new Notifier({
       projectId,
       projectKey,

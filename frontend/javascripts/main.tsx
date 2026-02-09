@@ -89,7 +89,7 @@ async function loadOrganization() {
   }
 }
 
-if (document.readyState === 'loading') {
+if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initApp);
 } else {
   // With vite dev server, javascript loaded as <script type="module"> might already be ready

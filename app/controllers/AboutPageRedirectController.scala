@@ -12,6 +12,9 @@ import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig
 import security.WkEnv
 import utils.WkConf
+import play.api.Environment
+import scala.io.Source
+import models.user.Theme
 
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
@@ -21,9 +24,17 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
                                             val cspConfig: CSPConfig,
                                             multiUserDAO: MultiUserDAO,
                                             openGraphService: OpenGraphService,
+                                            environment: Environment,
                                             assets: controllers.Assets)(implicit ec: ExecutionContext)
     extends Controller
     with CspHeaders {
+
+  private lazy val indexHtmlTemplate: String = {
+    environment
+      .resourceAsStream("public/index.html")
+      .map(is => Source.fromInputStream(is).mkString)
+      .getOrElse("Error: index.html not found")
+  }
 
   def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (matchesRedirectRoute(request)) {
@@ -36,10 +47,65 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
           request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
-        result <- Fox.fromFuture(assets.at("/public", "index.html").apply(request).map(addCspHeader))
-      } yield result
+      } yield {
+        val theme = getTheme(multiUserOpt)
+        val themeCss = getThemeCss(theme)
+        val openGraphMeta = getOpenGraphMeta(openGraphTags)
+        val wkOrgMeta = getWkOrgMeta
+        val airbrakeConfig = getAirbrakeConfig
+
+        val html = indexHtmlTemplate
+          .replace("""<meta name="commit-hash" content="" />""",
+                   s"""<meta name="commit-hash" content="${webknossos.BuildInfo.commitHash}" />""")
+          .replace("""<meta name="selected-theme" content="" />""",
+                   s"""<meta name="selected-theme" content="$theme" />""")
+          .replace("<!-- INJECT_THEME_CSS -->", themeCss)
+          .replace("<!-- INJECT_OPENGRAPH_METADATA -->", openGraphMeta)
+          .replace("<!-- INJECT_WKORG_METADATA -->", wkOrgMeta)
+          .replace("<!-- INJECT_AIRBRAKE_CONFIG -->", airbrakeConfig)
+
+        Ok(html).as("text/html").withHeaders(addCspHeader(Ok).header.headers.toSeq: _*)
+      }
     }
   }
+
+  private def getTheme(multiUserOpt: Option[MultiUser]): String =
+    multiUserOpt.map(_.selectedTheme.toString).getOrElse("auto")
+
+  private def getThemeCss(theme: String): String =
+    theme match {
+      case "auto" => "<style>@media (prefers-color-scheme: dark) { html { background: black } }</style>"
+      case "dark" => "<style>html { background: black }</style>"
+      case _      => ""
+    }
+
+  private def getOpenGraphMeta(openGraphTags: OpenGraphTags): String =
+    List(
+      openGraphTags.title.map(t => s"""<meta property="og:title" content="$t" />"""),
+      openGraphTags.description.map(d => s"""<meta property="og:description" content="$d" />"""),
+      openGraphTags.image.map(i => s"""<meta property="og:image" content="$i" />""")
+    ).flatten.mkString("\n    ")
+
+  private def getWkOrgMeta: String =
+    if (conf.Features.isWkorgInstance) {
+      """<meta
+      name="description"
+      content="Annotate and explore large 3D datasets with WEBKNOSSOS. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."
+    />
+    <meta
+      name="keywords"
+      content="connectomics, data annotation, image segmentation, electron microscopy, light microscopy, fluorescence microscopy, skeletonization, webknossos"
+    />"""
+    } else {
+      ""
+    }
+
+  private def getAirbrakeConfig: String =
+    s"""<script
+      data-airbrake-project-id="${conf.Airbrake.projectID}"
+      data-airbrake-project-key="${conf.Airbrake.projectKey}"
+      data-airbrake-environment-name="${conf.Airbrake.environment}"
+    ></script>"""
 
   private def matchesRedirectRoute(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =
     conf.Features.isWkorgInstance && conf.AboutPageRedirect.routes.exists(route =>

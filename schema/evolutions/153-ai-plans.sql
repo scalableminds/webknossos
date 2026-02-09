@@ -24,7 +24,7 @@ JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
 ALTER TABLE webknossos.organization_plan_updates ADD COLUMN aiPlan webknossos.Ai_PLANS DEFAULT NULL;
-ALTER TABLE webknossos.organization_plan_updates ADD COLUMN aiPlanChanged BOOLEAN NOT NULL;
+ALTER TABLE webknossos.organization_plan_updates ADD COLUMN aiPlanChanged BOOLEAN NOT NULL DEFAULT FALSE;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 153;
 

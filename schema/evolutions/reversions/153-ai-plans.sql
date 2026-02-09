@@ -21,10 +21,10 @@ JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
 
-ALTER TABLE webknossos.organization_plan_updates DROP COLUMN aiPlan webknossos.Ai_PLANS;
+ALTER TABLE webknossos.organization_plan_updates DROP COLUMN aiPlan;
 ALTER TABLE webknossos.organization_plan_updates DROP COLUMN aiPlanChanged;
 
-DROP TYPE webknossos.AI_PLANS AS ENUM ('Team_AI', 'Power_AI');
+DROP TYPE webknossos.AI_PLANS;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 152;
 

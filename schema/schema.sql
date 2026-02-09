@@ -366,7 +366,7 @@ CREATE TABLE webknossos.organization_plan_updates(
   description TEXT DEFAULT NULL,
   pricingPlan webknossos.PRICING_PLANS DEFAULT NULL,
   aiPlan webknossos.Ai_PLANS DEFAULT NULL,
-  aiPlanChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
+  aiPlanChanged BOOLEAN NOT NULL DEFAULT FALSE, -- bool is necessary because set to null is distinct from did not change
   paidUntil TIMESTAMPTZ DEFAULT NULL,
   paidUntilChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   includedUsers INTEGER DEFAULT NULL,

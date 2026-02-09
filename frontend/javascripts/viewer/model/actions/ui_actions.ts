@@ -101,7 +101,7 @@ export const setBorderOpenStatusAction = (borderOpenStatus: BorderOpenStatus) =>
     type: "SET_BORDER_OPEN_STATUS",
     borderOpenStatus,
   }) as const;
-export const setImportingMeshStateAction = (isImporting: boolean) =>
+const setImportingMeshStateAction = (isImporting: boolean) =>
   ({
     type: "SET_IMPORTING_MESH_STATE",
     isImporting,

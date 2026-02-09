@@ -40,7 +40,7 @@ export const getSpecificDefaultsForLayer = (
   alpha: isColorLayer ? 100 : 20,
 });
 
-export function ensureDatasetSettingsHasLayerOrder(
+function ensureDatasetSettingsHasLayerOrder(
   datasetConfiguration: Record<string, any>,
   dataset: APIDataset,
 ) {

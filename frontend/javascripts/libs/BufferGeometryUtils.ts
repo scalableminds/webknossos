@@ -395,7 +395,7 @@ function mergeAttributes( attributes ) {
  * @param {BufferAttribute}
  * @return {BufferAttribute}
  */
-export function deepCloneAttribute( attribute ) {
+function deepCloneAttribute( attribute ) {
 
   if ( attribute.isInstancedInterleavedBufferAttribute || attribute.isInterleavedBufferAttribute ) {
 
@@ -479,7 +479,7 @@ function interleaveAttributes( attributes ) {
 }
 
 // returns a new, non-interleaved version of the provided attribute
-export function deinterleaveAttribute( attribute ) {
+function deinterleaveAttribute( attribute ) {
 
   const cons = attribute.data.array.constructor;
   const count = attribute.count;
@@ -527,7 +527,7 @@ export function deinterleaveAttribute( attribute ) {
 }
 
 // deinterleaves all attributes on the geometry
-export function deinterleaveGeometry( geometry ) {
+function deinterleaveGeometry( geometry ) {
 
   const attributes = geometry.attributes;
   const morphTargets = geometry.morphTargets;
@@ -1363,14 +1363,14 @@ function toCreasedNormals( geometry, creaseAngle = Math.PI / 3 /* 60 degrees */ 
 }
 
 export {
-  computeMikkTSpaceTangents,
+  
   mergeGeometries,
-  mergeAttributes,
-  interleaveAttributes,
-  estimateBytesUsed,
+  
+  
+  
   mergeVertices,
-  toTrianglesDrawMode,
-  computeMorphedAttributes,
-  mergeGroups,
-  toCreasedNormals
+  
+  
+  
+  
 };

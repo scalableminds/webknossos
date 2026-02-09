@@ -1,5 +1,5 @@
 import { compress, decompress } from "lz4-wasm";
-import { expose } from "./comlink_wrapper";
+import { expose } from "./comlink_core";
 
 function compressLz4Block(
   data: Uint8Array<ArrayBuffer>,

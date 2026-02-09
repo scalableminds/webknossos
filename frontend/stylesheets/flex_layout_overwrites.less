@@ -21,6 +21,8 @@
 
 .flexlayout__tabset_tabbar_inner_tab_container_top {
   border: none !important;
+  // make the tab container slightly taller so that the tab borders are not cut off at the top
+  margin-top: 2px;
 }
 
 // The horizontal/vertical splitter is the UI element that is used to resize the borders between the tabs/viewports. 
@@ -92,14 +94,23 @@
   }
 }
 
+// Divider/space between tabs
+.flexlayout__tabset_tab_divider {
+  // Make the divider invisible so the tabs look like they are directly next to each other.
+  // Tabs have the propper padding around them to offset this
+  width: 0px;
+}
+
 .flexlayout__tab_button {
   margin: 0;
-  padding: 0px 5px;
+  padding: 0px 8px;
   // These properties are copied from antd's styling:
   font-size: 14px;
   font-weight: 400;
   font-family: @font-family;
   box-sizing: border-box;
+  overflow: hidden; // required, otherwise the content may overflow the borders :-/
+
 
   border-left: 1px solid transparent;
   border-right: 1px solid transparent;
@@ -133,6 +144,8 @@
     border-right: 1px solid var(--ant-color-border);
     border-top: 1px solid var(--ant-color-border);
     border-bottom: 1px solid var(--ant-color-bg-base);
+    border-top-left-radius: var(--ant-border-radius-sm);
+    border-top-right-radius: var(--ant-border-radius-sm);
     position: relative;
     z-index: 200;
     margin-bottom: -1px;

@@ -373,7 +373,7 @@ export const getGlobalMousePositionFloating = reuseInstanceOnEquality(
   _getGlobalMousePositionFloating,
 );
 
-export function getViewMode(state: WebknossosState): ViewMode {
+function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }
 export function isPlaneMode(state: WebknossosState): boolean {
@@ -397,5 +397,3 @@ export function getPlaneExtentInVoxelFromStore(
   const { width, height } = getInputCatcherRect(state, planeID);
   return [width * zoomStep, height * zoomStep];
 }
-
-export default {};

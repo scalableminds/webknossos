@@ -817,4 +817,3 @@ export function initializeSceneController() {
 
 // Please use scene_controller_provider to get a reference to SceneController. This avoids
 // problems with circular dependencies.
-export default {};

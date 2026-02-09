@@ -57,13 +57,6 @@ export function hasPricingPlanExpired(organization: APIOrganization): boolean {
   return Date.now() > organization.paidUntil;
 }
 
-export function hasPricingPlanExceededUsers(
-  organization: APIOrganization,
-  activeUserCount: number,
-): boolean {
-  return activeUserCount > organization.includedUsers;
-}
-
 export function hasPricingPlanExceededStorage(organization: APIOrganization): boolean {
   return organization.usedStorageBytes > organization.includedStorageBytes;
 }
@@ -85,10 +78,7 @@ const PLAN_TO_RANK = {
   [PricingPlanEnum.Custom]: 2,
 };
 
-export function isPricingPlanGreaterEqualThan(
-  planA: PricingPlanEnum,
-  planB: PricingPlanEnum,
-): boolean {
+function isPricingPlanGreaterEqualThan(planA: PricingPlanEnum, planB: PricingPlanEnum): boolean {
   return PLAN_TO_RANK[planA] >= PLAN_TO_RANK[planB];
 }
 

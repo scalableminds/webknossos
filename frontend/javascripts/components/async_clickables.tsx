@@ -113,4 +113,3 @@ export function AsyncLink(props: AsyncButtonProps) {
     </a>
   );
 }
-export default {};

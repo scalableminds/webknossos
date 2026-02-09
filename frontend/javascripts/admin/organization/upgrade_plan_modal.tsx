@@ -48,7 +48,7 @@ const ModalInformationFooter = (
   </>
 );
 
-export function extendPricingPlan(organization: APIOrganization) {
+function extendPricingPlan(organization: APIOrganization) {
   const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
   Modal.confirm({
@@ -81,7 +81,7 @@ export function extendPricingPlan(organization: APIOrganization) {
   });
 }
 
-export function upgradeUserQuota() {
+function upgradeUserQuota() {
   renderIndependently((destroyCallback) => <UpgradeUserQuotaModal destroy={destroyCallback} />);
 }
 
@@ -126,7 +126,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
   );
 }
 
-export function upgradeStorageQuota() {
+function upgradeStorageQuota() {
   renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
@@ -314,7 +314,7 @@ function upgradePricingPlan(
   });
 }
 
-export function UpgradePricingPlanModal({
+function UpgradePricingPlanModal({
   title,
   modalBody,
   destroy,
@@ -365,7 +365,7 @@ export function UpgradePricingPlanModal({
   );
 }
 
-export function orderWebknossosCredits() {
+function orderWebknossosCredits() {
   renderIndependently((destroyCallback) => (
     <OrderWebknossosCreditsModal destroy={destroyCallback} />
   ));

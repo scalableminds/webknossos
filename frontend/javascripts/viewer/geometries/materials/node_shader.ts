@@ -284,11 +284,13 @@ void main() {
       return;
     }
 
+    vec3 positionWithOffset = position + vec3(0.5);
+
     <% if (tpsTransform != null) { %>
-      vec3 tpsOffset = calculateTpsOffsetForSkeleton(position);
-      vec4 transformedCoord = vec4(position + tpsOffset, 1.);
+      vec3 tpsOffset = calculateTpsOffsetForSkeleton(positionWithOffset);
+      vec4 transformedCoord = vec4(positionWithOffset + tpsOffset, 1.);
     <% } else { %>
-      vec4 transformedCoord = transform * vec4(position, 1.);
+      vec4 transformedCoord = transform * vec4(positionWithOffset, 1.);
     <% } %>
     gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 

@@ -105,6 +105,7 @@ function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeIdOpt?: OrthoView | null | undefined,
+  useRound: boolean = false,
 ): PositionWithRounding | null | undefined {
   let roundedPosition: Vector3, floatingPosition: Vector3;
   const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
@@ -137,8 +138,8 @@ function _calculateMaybeGlobalPos(
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [
-        Math.round(globalFloatingPosition.x),
-        Math.round(globalFloatingPosition.y),
+        useRound ? Math.round(globalFloatingPosition.x) : Math.floor(globalFloatingPosition.x),
+        useRound ? Math.round(globalFloatingPosition.y) : Math.floor(globalFloatingPosition.y),
         Math.floor(globalFloatingPosition.z),
       ];
       break;
@@ -147,17 +148,17 @@ function _calculateMaybeGlobalPos(
     case OrthoViews.PLANE_YZ: {
       roundedPosition = [
         Math.floor(globalFloatingPosition.x),
-        Math.round(globalFloatingPosition.y),
-        Math.round(globalFloatingPosition.z),
+        useRound ? Math.round(globalFloatingPosition.y) : Math.floor(globalFloatingPosition.y),
+        useRound ? Math.round(globalFloatingPosition.z) : Math.floor(globalFloatingPosition.z),
       ];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
       roundedPosition = [
-        Math.round(globalFloatingPosition.x),
+        useRound ? Math.round(globalFloatingPosition.x) : Math.floor(globalFloatingPosition.x),
         Math.floor(globalFloatingPosition.y),
-        Math.round(globalFloatingPosition.z),
+        useRound ? Math.round(globalFloatingPosition.z) : Math.floor(globalFloatingPosition.z),
       ];
       break;
     }
@@ -280,8 +281,9 @@ function _calculateGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
+  useRound: boolean = false,
 ): PositionWithRounding {
-  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId);
+  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId, useRound);
 
   if (!positions || !positions.rounded) {
     console.error("Trying to calculate the global position, but no data viewport is active.");

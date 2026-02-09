@@ -315,7 +315,7 @@ export function handleResizingBoundingBox(
   secondaryEdge: SelectedEdge | null | undefined,
 ) {
   const state = Store.getState();
-  const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
+  const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId, true);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize || globalMousePosition == null || globalMousePosition.rounded == null) {

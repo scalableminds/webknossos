@@ -1,27 +1,14 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http } from "msw";
 import { setupServer } from "msw/node";
 import { Resumable, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
 import { sleep } from "libs/utils";
+import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
-type RequestLogEntry = {
-  method: string;
-  url: string;
-};
-
-let requestLog: Array<RequestLogEntry> = [];
-let responseResolver: ((request: Request) => HttpResponse | Promise<HttpResponse>) | undefined;
+let backendMock: ResumableBackendMock;
 
 const server = setupServer(
-  http.all("http://localhost/upload", async ({ request }) => {
-    requestLog.push({ method: request.method, url: request.url });
-
-    if (responseResolver) {
-      return await responseResolver(request);
-    }
-
-    return HttpResponse.text("success", { status: 200 });
-  }),
+  http.all("http://localhost/upload", ({ request }) => backendMock.handle(request)),
 );
 
 const stubLocation = () => {
@@ -36,13 +23,15 @@ beforeAll(() => {
 
 afterEach(() => {
   server.resetHandlers();
-  requestLog = [];
-  responseResolver = undefined;
   vi.unstubAllGlobals();
 });
 
 afterAll(() => {
   server.close();
+});
+
+beforeEach(() => {
+  backendMock = new ResumableBackendMock();
 });
 
 describe("Resumable", () => {
@@ -495,7 +484,7 @@ describe("ResumableChunk", () => {
       // we might need to wait a tick to see success
       await sleep(0);
 
-      expect(requestLog.length).toBeGreaterThan(0);
+      expect(backendMock.getUploadRequestCount()).toBeGreaterThan(0);
       expect(chunk.status()).toBe("success");
     });
   });

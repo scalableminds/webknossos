@@ -395,7 +395,7 @@ type UserBoundingBoxInputProps = {
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
-export function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
+function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
     bboxId,
     value: propValue,

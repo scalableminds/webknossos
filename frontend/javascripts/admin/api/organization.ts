@@ -1,4 +1,3 @@
-import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import { location } from "libs/window";
 import memoize from "lodash-es/memoize";
@@ -11,13 +10,6 @@ import type {
 } from "types/api_types";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import type { TraceOrViewCommand } from "viewer/store";
-
-export function getOrganizationPayingForActiveUser(
-  activeUserId: string,
-  options?: RequestOptions,
-): Promise<string> {
-  return Request.receiveJSON(`/api/user/${activeUserId}/payingOrganization`, options);
-}
 
 // ### Organizations
 export async function getDefaultOrganization(): Promise<APIOrganization | null> {

@@ -145,7 +145,7 @@ type OptionCardProps = {
   action: React.ReactNode;
   height: number;
 };
-export function OptionCard({ icon, header, children, action, height }: OptionCardProps) {
+function OptionCard({ icon, header, children, action, height }: OptionCardProps) {
   return (
     <div
       style={{

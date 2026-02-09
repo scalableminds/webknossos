@@ -5,7 +5,7 @@
 // - perform multiple invalid calls which TS should catch (--> ts-expect-error)
 // - perform one valid call
 
-import { updateKey, updateKey2, updateKey3, updateKey4 } from "viewer/model/helpers/deep_update";
+import { updateKey, updateKey2, updateKey3 } from "viewer/model/helpers/deep_update";
 import type { WebknossosState } from "viewer/store";
 
 export function test1(state: WebknossosState) {
@@ -65,24 +65,5 @@ export function test3(state: WebknossosState) {
   // No error
   updateKey3(state, "viewModeData", "plane", "tdCamera", {
     near: 3,
-  });
-}
-
-export function test4(state: WebknossosState) {
-  // @ts-expect-error
-  updateKey4(state, "notExisting", "notExisting", "notExisting", "notExisting", {
-    someKey: true,
-  });
-  updateKey4(state, "viewModeData", "plane", "inputCatcherRects", "PLANE_XY", {
-    // @ts-expect-error
-    notExisting: true,
-  });
-  updateKey4(state, "viewModeData", "plane", "inputCatcherRects", "PLANE_XY", {
-    // @ts-expect-error
-    top: "incorrect value type",
-  });
-  // No error
-  updateKey4(state, "viewModeData", "plane", "inputCatcherRects", "PLANE_XY", {
-    top: 3,
   });
 }

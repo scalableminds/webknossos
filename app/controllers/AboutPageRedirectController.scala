@@ -6,17 +6,16 @@ import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.CspHeaders
 import com.scalableminds.util.tools.Fox
-import models.user.MultiUserDAO
-import opengraph.OpenGraphService
+import models.user.{MultiUser, MultiUserDAO}
+import opengraph.{OpenGraphService, OpenGraphTags}
 import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig
 import security.WkEnv
 import utils.WkConf
 import play.twirl.api.HtmlFormat
 import play.api.Environment
-import scala.io.Source
-import models.user.Theme
 
+import scala.io.Source
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
 
@@ -25,8 +24,7 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
                                             val cspConfig: CSPConfig,
                                             multiUserDAO: MultiUserDAO,
                                             openGraphService: OpenGraphService,
-                                            environment: Environment,
-                                            assets: controllers.Assets)(implicit ec: ExecutionContext)
+                                            environment: Environment)(implicit ec: ExecutionContext)
     extends Controller
     with CspHeaders {
 

@@ -13,11 +13,16 @@
 }
 
 .flexlayout__tabset_tabbar_outer_top {
-  border-color: var(--ant-color-border);
+  // Use an inset shadow instead of a real border so the active tab can visually "cut" the line.
+  // Borders live outside the box and can't be masked by children; shadows are inside and can be covered.
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--ant-color-border);
 }
 
 .flexlayout__tabset_tabbar_inner_tab_container_top {
   border: none !important;
+  // make the tab container slightly taller so that the tab borders are not cut off at the top
+  margin-top: 2px;
 }
 
 // The horizontal/vertical splitter is the UI element that is used to resize the borders between the tabs/viewports. 
@@ -45,6 +50,16 @@
   left: -5px;
 }
 
+// remove a 1px line of white pixel at the very left/right side of the screen
+.flexlayout__border_left {
+  border-right: none;
+}
+
+.flexlayout__border_right {
+  border-left: none;
+}
+
+
 .flexlayout__splitter_horz::before {
   height: 11px;
   display: inline-block;
@@ -70,6 +85,8 @@
 // Fix min/max window button in dark mode
 .flexlayout__tab_toolbar_button:hover {
   background-color: var(--ant-color-bg-base);
+  position: relative;
+
   cursor: pointer;
 
   svg {
@@ -77,14 +94,30 @@
   }
 }
 
+// Divider/space between tabs
+.flexlayout__tabset_tab_divider {
+  // Make the divider invisible so the tabs look like they are directly next to each other.
+  // Tabs have the proper padding around them to offset this
+  width: 0px;
+}
+
 .flexlayout__tab_button {
   margin: 0;
-  padding: 0px 5px;
-  line-height: 1;
+  padding: 0px 8px;
   // These properties are copied from antd's styling:
   font-size: 14px;
   font-weight: 400;
   font-family: @font-family;
+  box-sizing: border-box;
+  overflow: hidden; // required, otherwise the content may overflow the borders :-/
+
+
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid var(--ant-color-border);
+  // Draw the 1px underline on all tabs so the tabbar line looks continuous.
+  // The active tab will mask this line to create the "interrupt" effect.
 
   &:hover {
     cursor: move;
@@ -95,25 +128,52 @@
   .flexlayout__tab_button_content {
     background-color: var(--ant-color-bg-base);
     color: var(--ant-color-text-secondary);
+    // Keep borders defined at all times to avoid layout shifts on hover.
+    border-left: 1px solid transparent;
+    border-right: 1px solid transparent;
+    border-top: 1px solid transparent;
     border-bottom: 1px solid transparent;
+    box-sizing: border-box;
+
   }
 
   &.flexlayout__tab_button--selected {
     background-color: var(--ant-color-bg-base);
+    // Minimalist active tab: only left/right/top borders, no bottom.
+    border-left: 1px solid var(--ant-color-border);
+    border-right: 1px solid var(--ant-color-border);
+    border-top: 1px solid var(--ant-color-border);
+    border-bottom: 1px solid var(--ant-color-bg-base);
+    border-top-left-radius: var(--ant-border-radius-sm);
+    border-top-right-radius: var(--ant-border-radius-sm);
+    position: relative;
+    z-index: 200;
+    margin-bottom: -1px;
 
     .flexlayout__tab_button_content {
       background-color: var(--ant-color-bg-base);
-      color: var(--ant-color-link);
+      color: var(--ant-color-primary-text);
+
+    }
+
+    // Mask the tabbar underline (an inset shadow) so the active tab "cuts" the line.
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background-color: var(--ant-color-bg-base);
     }
   }
 
   &:hover {
-    background-color: var(--ant-color-bg-base);
+    background-color: var(--ant-color-primary-bg-hover);
 
     .flexlayout__tab_button_content {
-      background-color: var(--ant-color-bg-base);
-      color: var(--ant-color-link);
-      border-bottom: 1px solid var(--ant-color-link);
+      background-color: var(--ant-color-primary-bg-hover);
+      color: var(--ant-color-text-secondary);
     }
   }
 }

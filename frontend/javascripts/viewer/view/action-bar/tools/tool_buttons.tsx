@@ -51,7 +51,7 @@ function MaybeMultiSliceAnnotationInfoIcon() {
   return maybeMultiSliceAnnotationInfoIcon;
 }
 
-export function MoveTool(_props: ToolButtonProps) {
+function MoveTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.MOVE.readableName}
@@ -65,7 +65,7 @@ export function MoveTool(_props: ToolButtonProps) {
   );
 }
 
-export function SkeletonTool(_props: ToolButtonProps) {
+function SkeletonTool(_props: ToolButtonProps) {
   const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -102,7 +102,7 @@ function getIsVolumeModificationAllowed(state: WebknossosState) {
   return hasVolume && !isReadOnly && !hasEditableMapping(state);
 }
 
-export function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
+function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -129,7 +129,7 @@ export function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-export function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
+function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
@@ -166,7 +166,7 @@ export function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-export function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
+function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -194,7 +194,7 @@ export function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-export function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
+function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
@@ -229,7 +229,7 @@ export function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
+function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -258,7 +258,7 @@ export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-export function VoxelPipetteTool(_props: ToolButtonProps) {
+function VoxelPipetteTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   return (
     <ToolRadioButton
@@ -278,7 +278,7 @@ export function VoxelPipetteTool(_props: ToolButtonProps) {
   );
 }
 
-export function QuickSelectTool(_props: ToolButtonProps) {
+function QuickSelectTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -304,7 +304,7 @@ export function QuickSelectTool(_props: ToolButtonProps) {
   );
 }
 
-export function BoundingBoxTool(_props: ToolButtonProps) {
+function BoundingBoxTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
   if (isReadOnly) {
@@ -330,7 +330,7 @@ export function BoundingBoxTool(_props: ToolButtonProps) {
   );
 }
 
-export function ProofreadTool(_props: ToolButtonProps) {
+function ProofreadTool(_props: ToolButtonProps) {
   const dispatch = useDispatch();
   const isAgglomerateMappingEnabled = useWkSelector(hasAgglomerateMapping);
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
@@ -377,7 +377,7 @@ export function ProofreadTool(_props: ToolButtonProps) {
   );
 }
 
-export function LineMeasurementTool(_props: ToolButtonProps) {
+function LineMeasurementTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.LINE_MEASUREMENT.readableName}

@@ -43,7 +43,7 @@ const compressionPool = new WebworkerPool(
   COMPRESSION_WORKER_COUNT,
 );
 
-export const REQUEST_TIMEOUT = 60000;
+const REQUEST_TIMEOUT = 60000;
 
 export type SendBucketInfo = {
   position: Vector3;
@@ -169,7 +169,7 @@ export async function requestWithFallback(
     }
   });
 }
-export async function requestFromStore(
+async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,

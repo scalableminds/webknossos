@@ -42,7 +42,7 @@ import type { CameraData, StoreAnnotation, WebknossosState } from "viewer/store"
 import Store from "viewer/store";
 import type PlaneView from "viewer/view/plane_view";
 
-export function threeCameraToCameraData(camera: OrthographicCamera): CameraData {
+function threeCameraToCameraData(camera: OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;
 
   const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
@@ -394,7 +394,7 @@ class TDController extends PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: WebknossosState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     voxelSize: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,

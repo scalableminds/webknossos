@@ -58,7 +58,7 @@ export type DatasetCollectionContextValue = {
   usedStorageInOrga: number | undefined;
 };
 
-export const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
+const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
   undefined,
 );
 

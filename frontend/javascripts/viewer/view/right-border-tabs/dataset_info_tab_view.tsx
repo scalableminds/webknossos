@@ -284,7 +284,7 @@ export function AnnotationStats({
   );
 }
 
-export class DatasetInfoTabView extends React.PureComponent<Props, State> {
+class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
     owningOrganizationName: null,

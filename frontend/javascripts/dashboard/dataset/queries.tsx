@@ -566,7 +566,7 @@ type FolderHierarchy = {
   flatItems: FlatFolderTreeItem[];
 };
 
-export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHierarchy {
+function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHierarchy {
   const roots: FolderItem[] = [];
   const itemById: Record<string, FolderItem> = {};
   for (const folderTreeItem of folderTree) {

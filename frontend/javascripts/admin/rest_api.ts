@@ -1424,7 +1424,7 @@ export async function triggerDatasetCheck(
   });
 }
 
-export async function triggerDatasetClearCache(
+async function triggerDatasetClearCache(
   datastoreHost: string,
   dataSourceId: APIDataSourceId,
   datasetId: string,
@@ -1452,7 +1452,7 @@ export async function deleteDatasetOnDisk(datasetId: string): Promise<void> {
   });
 }
 
-export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
+async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
   await Request.triggerRequest(`/api/datasets/${datasetId}/clearThumbnailCache`, {
     method: "PUT",
   });
@@ -1625,7 +1625,7 @@ export async function getDatastores(): Promise<APIDataStore[]> {
 
 export const getDataStoresCached = memoize(getDatastores);
 
-export function getTracingstore(): Promise<APITracingStore> {
+function getTracingstore(): Promise<APITracingStore> {
   return Request.receiveJSON("/api/tracingstore");
 }
 
@@ -1799,7 +1799,7 @@ export async function listCurrentAndUpcomingMaintenances(): Promise<Array<Mainte
   return Request.receiveJSON("/api/maintenances/listCurrentAndUpcoming");
 }
 
-export function setMaintenance(bool: boolean): Promise<void> {
+function setMaintenance(bool: boolean): Promise<void> {
   return Request.triggerRequest("/api/maintenance", {
     method: bool ? "POST" : "DELETE",
   });

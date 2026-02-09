@@ -221,7 +221,7 @@ function getVolumeTracingFromAction(state: WebknossosState, action: VolumeTracin
   return getVolumeTracingById(state.annotation, maybeVolumeLayer.tracingId);
 }
 
-export function toggleAllSegmentsReducer(
+function toggleAllSegmentsReducer(
   state: WebknossosState,
   layerName: string,
   isVisible: boolean | undefined,

@@ -83,5 +83,3 @@ export function getGlobalDataConnectionInfo(): DataConnectionInfo {
   }
   return globalDataConnectionInfo;
 }
-
-export default DataConnectionInfo;

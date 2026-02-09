@@ -72,12 +72,12 @@ enum SpecificationEnum {
 }
 type Specification = keyof typeof SpecificationEnum;
 
-export function taskToShortText(task: APITask) {
+function taskToShortText(task: APITask) {
   const { id, creationInfo, editPosition } = task;
   return `${id},${creationInfo || "null"},(${editPosition.join(",")})`;
 }
 
-export function taskToText(task: APITask) {
+function taskToText(task: APITask) {
   const {
     id,
     datasetName,
@@ -248,7 +248,7 @@ export function handleTaskCreationResponse(
   });
 }
 
-export function CreateResourceButton({ text, link }: { text: string; link: string }) {
+function CreateResourceButton({ text, link }: { text: string; link: string }) {
   return (
     <Col span={4} style={{ marginBottom: "var(--ant-form-item-margin-bottom)" }}>
       <Button block href={link} target="_blank" rel="noreferrer">
@@ -258,7 +258,7 @@ export function CreateResourceButton({ text, link }: { text: string; link: strin
   );
 }
 
-export function ReloadResourceButton({
+function ReloadResourceButton({
   tooltip,
   onReload,
 }: {

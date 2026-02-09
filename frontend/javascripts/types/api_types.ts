@@ -711,6 +711,15 @@ export type APICreditTransaction = {
   readonly createdAt: number;
   readonly updatedAt: number;
 };
+export type APIOrganizationPricingPlanUpdate = {
+  readonly organizationId: string;
+  readonly description?: string | null;
+  readonly pricingPlan?: PricingPlanEnum | null;
+  readonly paidUntil?: number | null;
+  readonly includedUsers?: number | null;
+  readonly includedStorageBytes?: number | null;
+  readonly created: number;
+};
 
 export type APIBuildInfoWk = {
   webknossos: {

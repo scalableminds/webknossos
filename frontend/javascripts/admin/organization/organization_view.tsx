@@ -1,4 +1,10 @@
-import { BankOutlined, DeleteOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  BankOutlined,
+  DeleteOutlined,
+  HistoryOutlined,
+  MailOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { Breadcrumb, Layout, Menu } from "antd";
 import type { MenuItemGroupType } from "antd/es/menu/interface";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -10,6 +16,7 @@ const BREADCRUMB_LABELS = {
   overview: "Overview",
   notifications: "Notification Settings",
   "credit-activity": "Credit Activity",
+  planupdates: "Plan Updates",
   delete: "Delete Organization",
 };
 
@@ -43,6 +50,17 @@ const MENU_ITEMS: MenuItemGroupType[] = [
             label: "Credit Activity",
           },
         ],
+      },
+    ],
+  },
+  {
+    label: "Activity Logs",
+    type: "group",
+    children: [
+      {
+        key: "planupdates",
+        icon: <HistoryOutlined />,
+        label: "Plan Updates",
       },
     ],
   },

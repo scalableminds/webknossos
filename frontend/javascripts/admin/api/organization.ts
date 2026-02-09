@@ -1,4 +1,3 @@
-import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import { location } from "libs/window";
 import memoize from "lodash-es/memoize";
@@ -6,18 +5,12 @@ import type {
   APICreditTransaction,
   APIOrganization,
   APIOrganizationCompact,
+  APIOrganizationPricingPlanUpdate,
   APIPricingPlanStatus,
   APITeamMembership,
 } from "types/api_types";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import type { TraceOrViewCommand } from "viewer/store";
-
-export function getOrganizationPayingForActiveUser(
-  activeUserId: string,
-  options?: RequestOptions,
-): Promise<string> {
-  return Request.receiveJSON(`/api/user/${activeUserId}/payingOrganization`, options);
-}
 
 // ### Organizations
 export async function getDefaultOrganization(): Promise<APIOrganization | null> {
@@ -185,3 +178,7 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
 }
 
 export const cachedGetPricingPlanStatus = memoize(getPricingPlanStatus);
+
+export async function getPricingPlanUpdates(): Promise<APIOrganizationPricingPlanUpdate[]> {
+  return Request.receiveJSON("/api/pricing/planUpdates");
+}

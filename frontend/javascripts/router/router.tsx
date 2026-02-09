@@ -53,6 +53,7 @@ import { OrganizationCreditActivityView } from "admin/organization/organization_
 import { OrganizationDangerZoneView } from "admin/organization/organization_danger_zone_view";
 import { OrganizationNotificationsView } from "admin/organization/organization_notifications_view";
 import { OrganizationOverviewView } from "admin/organization/organization_overview_view";
+import { OrganizationPlanActivityView } from "admin/organization/organization_plan_activity_view";
 import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
@@ -372,6 +373,7 @@ const routes = createRoutesFromElements(
       <Route path="overview" element={<OrganizationOverviewView />} />
       <Route path="notifications" element={<OrganizationNotificationsView />} />
       <Route path="credit-activity" element={<OrganizationCreditActivityView />} />
+      <Route path="planupdates" element={<OrganizationPlanActivityView />} />
       <Route path="delete" element={<OrganizationDangerZoneView />} />
     </Route>
     <Route

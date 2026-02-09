@@ -66,7 +66,7 @@ const rawRgbs = [
   185, 0, 0, 123, 123, 123, 88, 79, 211, 149, 211, 51, 102, 153, 128, 1, 179, 0, 255, 255,
 ];
 
-export const rgbs: Vector3[] = chunk3(rawRgbs).map((rgb) => rgb.map((el) => el / 255) as Vector3);
+const rgbs: Vector3[] = chunk3(rawRgbs).map((rgb) => rgb.map((el) => el / 255) as Vector3);
 
 const ColorGenerator = {
   distinctColorForId(id: number): Vector3 {

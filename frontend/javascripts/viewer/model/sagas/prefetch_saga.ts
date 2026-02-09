@@ -229,4 +229,3 @@ export function* prefetchForArbitraryMode(
   previousProperties.lastZoomStep = zoomStep;
   previousProperties.lastBucketPickerTick = currentBucketPickerTick;
 }
-export default {};

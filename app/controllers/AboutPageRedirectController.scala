@@ -12,6 +12,7 @@ import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig
 import security.WkEnv
 import utils.WkConf
+import play.twirl.api.HtmlFormat
 import play.api.Environment
 import scala.io.Source
 import models.user.Theme
@@ -81,9 +82,9 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
 
   private def getOpenGraphMeta(openGraphTags: OpenGraphTags): String =
     List(
-      openGraphTags.title.map(t => s"""<meta property="og:title" content="$t" />"""),
-      openGraphTags.description.map(d => s"""<meta property="og:description" content="$d" />"""),
-      openGraphTags.image.map(i => s"""<meta property="og:image" content="$i" />""")
+      openGraphTags.title.map(t => s"""<meta property="og:title" content="${HtmlFormat.escape(t)}" />"""),
+      openGraphTags.description.map(d => s"""<meta property="og:description" content="${HtmlFormat.escape(d)}" />"""),
+      openGraphTags.image.map(i => s"""<meta property="og:image" content="${HtmlFormat.escape(i)}" />""")
     ).flatten.mkString("\n    ")
 
   private def getWkOrgMeta: String =

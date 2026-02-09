@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { ServerErrorMessage } from "types/api_types";
 import { Store } from "viewer/singletons";
 
-export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
+const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
 
 export const handleResendVerificationEmail = async () => {
   const { activeUser } = Store.getState();

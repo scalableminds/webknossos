@@ -33,7 +33,7 @@ export function QuickSelectControls() {
   return isQuickSelectHeuristic ? <HeuristicQuickSelectControls /> : <AiQuickSelectControls />;
 }
 
-export function AiQuickSelectControls() {
+function AiQuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
 
   const dispatch = useDispatch();
@@ -82,7 +82,7 @@ export function AiQuickSelectControls() {
     </div>
   );
 }
-export function HeuristicQuickSelectControls() {
+function HeuristicQuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
   const isQuickSelectActive = useWkSelector(
     (state) => state.uiInformation.quickSelectState === "active",

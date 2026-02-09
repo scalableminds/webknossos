@@ -328,7 +328,7 @@ function _getRotationInRadianFromMatrix(flycamMatrix: Matrix4x4, invertZ: boolea
   ];
 }
 
-export const getRotationInRadianFromMatrix = memoizeOne(_getRotationInRadianFromMatrix);
+const getRotationInRadianFromMatrix = memoizeOne(_getRotationInRadianFromMatrix);
 
 function _getRotationInRadian(flycam: Flycam, invertZ: boolean = true): Vector3 {
   return getRotationInRadianFromMatrix(flycam.currentMatrix, invertZ);
@@ -571,7 +571,7 @@ export function isMagRestrictionViolated(state: WebknossosState): boolean {
   return false;
 }
 
-export function getPlaneExtentInVoxel(
+function getPlaneExtentInVoxel(
   rects: OrthoViewRects,
   zoomStep: number,
   planeID: OrthoView,

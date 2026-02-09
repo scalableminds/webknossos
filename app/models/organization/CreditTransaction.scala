@@ -225,7 +225,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
             WHERE _id = $transactionId
               AND transaction_state = ${CreditTransactionState.Pending}
               AND credit_state = ${CreditState.Pending}
-              AND milli_credit_delta < 0
+              AND milli_credit_delta <= 0
           ),
           $refundComment,
           ${CreditTransactionState.Complete},
@@ -235,7 +235,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       setToRefunded = q"""UPDATE webknossos.credit_transactions
           SET transaction_state = ${CreditTransactionState.Complete}, credit_state = ${CreditState.Refunded}, updated_at = NOW()
           WHERE _id = $transactionId AND transaction_state = ${CreditTransactionState.Pending}
-          AND milli_credit_delta < 0
+          AND milli_credit_delta <= 0
           """.asUpdate
       updatedRows <- run(
         DBIO

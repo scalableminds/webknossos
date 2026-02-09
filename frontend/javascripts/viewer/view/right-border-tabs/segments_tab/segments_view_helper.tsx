@@ -3,7 +3,7 @@ import { type MenuProps, Modal } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { waitForCondition } from "libs/utils";
 import type { APIDataLayer, APIDataset } from "types/api_types";
-import { MappingStatusEnum } from "viewer/constants";
+import { MappingStatusEnum, type Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getEditableMappingForVolumeTracingId,
@@ -38,6 +38,15 @@ export type SegmentHierarchyLeaf = BasicDataNode &
   };
 
 export type SegmentHierarchyNode = SegmentHierarchyLeaf | SegmentHierarchyGroup;
+
+export const formatMagWithLabel = (mag: Vector3, index: number) => {
+  // index refers to the array of available mags. Thus, we can directly
+  // use that index to pick an adequate label.
+  const labels = ["Highest", "High", "Medium", "Low", "Very Low"];
+  // Use "Very Low" for all low Mags which don't have extra labels
+  const clampedIndex = Math.min(labels.length - 1, index);
+  return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
+};
 
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   return (

@@ -522,9 +522,8 @@ export class ResumableChunk {
       case "error":
         return 1 * factor;
       case "pending":
-        return 0 * factor;
       default:
-        return 0 * factor;
+        return 0;
     }
   }
 }

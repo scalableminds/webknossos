@@ -5,6 +5,7 @@ import {
   Euler,
   Matrix4,
   type OrthographicCamera,
+  PerspectiveCamera,
   Quaternion,
   Vector3 as ThreeVector3,
 } from "three";
@@ -29,7 +30,7 @@ import type { CameraData } from "viewer/store";
 import Store from "viewer/store";
 
 type Props = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
   onCameraPositionChanged: () => void;
   onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
@@ -83,6 +84,48 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
   };
 }
 
+const DEFAULT_TD_FOV = 45;
+const MIN_PERSPECTIVE_FOV = 1;
+const MAX_PERSPECTIVE_FOV = 179;
+
+function getCameraBasis(position: Vector3, target: Vector3, up: Vector3) {
+  const forward = V3.sub(target, position);
+  const forwardLength = V3.length(forward);
+  const upLength = V3.length(up);
+  const normalizedUp = upLength === 0 ? ([0, 1, 0] as Vector3) : V3.normalize(up);
+  if (forwardLength === 0) {
+    return {
+      forward: [0, 0, -1] as Vector3,
+      right: [1, 0, 0] as Vector3,
+      up: normalizedUp,
+    };
+  }
+  const normalizedForward = V3.normalize(forward);
+  const right = V3.normalize(V3.cross(normalizedForward, normalizedUp));
+  const rightLength = V3.length(right);
+  if (rightLength === 0) {
+    return {
+      forward: normalizedForward,
+      right: [1, 0, 0] as Vector3,
+      up: normalizedUp,
+    };
+  }
+  const correctedUp = V3.normalize(V3.cross(right, normalizedForward));
+  return {
+    forward: normalizedForward,
+    right,
+    up: correctedUp,
+  };
+}
+
+function getTDCameraTarget(cameraData: CameraData): Vector3 {
+  if (cameraData.target != null) {
+    return cameraData.target;
+  }
+  const state = Store.getState();
+  return voxelToUnit(state.dataset.dataSource.scale, getPosition(state.flycam));
+}
+
 class CameraController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
@@ -103,7 +146,7 @@ class CameraController extends PureComponent<Props> {
     const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
     for (const cam of Object.values(this.props.cameras)) {
-      cam.near = 0;
+      cam.near = cam instanceof PerspectiveCamera ? Math.max(cam.near, 0.1) : 0;
       cam.far = far;
     }
 
@@ -111,10 +154,13 @@ class CameraController extends PureComponent<Props> {
     this.bindToEvents();
     waitForElementWithId(tdId).then(() => {
       this.props.setTargetAndFixPosition();
+      const state = Store.getState();
+      const flycamPosition = voxelToUnit(state.dataset.dataSource.scale, getPosition(state.flycam));
       Store.dispatch(
         setTDCameraWithoutTimeTrackingAction({
-          near: 0,
+          near: this.props.cameras[OrthoViews.TDView] instanceof PerspectiveCamera ? 0.1 : 0,
           far,
+          target: flycamPosition,
         }),
       );
       api.tracing.rotate3DViewToDiagonal(false);
@@ -141,35 +187,47 @@ class CameraController extends PureComponent<Props> {
         state.flycam.zoomStep,
         planeId,
       ).map((x) => x * scaleFactor);
-      this.props.cameras[planeId].left = -width / 2;
-      this.props.cameras[planeId].right = width / 2;
-      this.props.cameras[planeId].bottom = -height / 2;
-      this.props.cameras[planeId].top = height / 2;
+      const camera = this.props.cameras[planeId] as OrthographicCamera;
+      camera.left = -width / 2;
+      camera.right = width / 2;
+      camera.bottom = -height / 2;
+      camera.top = height / 2;
       // We only set the `near` value here. The effect of far=clippingDistance is
       // achieved by offsetting the plane onto which is rendered by the amount
       // of clippingDistance. Theoretically, `far` could be set here too, however,
       // this leads to imprecision related bugs which cause the planes to not render
       // for certain clippingDistance values.
-      this.props.cameras[planeId].near = -clippingDistance;
-      this.props.cameras[planeId].updateProjectionMatrix();
+      camera.near = -clippingDistance;
+      camera.updateProjectionMatrix();
     }
 
     if (inputCatcherRects != null) {
-      // Update td camera's aspect ratio
-      const tdCamera = this.props.cameras[OrthoViews.TDView];
-      const oldMid = (tdCamera.right + tdCamera.left) / 2;
-      const oldWidth = tdCamera.right - tdCamera.left;
-      const oldHeight = tdCamera.top - tdCamera.bottom;
+      // Update td camera's aspect ratio (stored as left/right)
       const tdRect = inputCatcherRects[OrthoViews.TDView];
       // Do not update the tdCamera if the tdView is not visible
       if (tdRect.height === 0 || tdRect.width === 0) return;
+      const tdCameraData = Store.getState().viewModeData.plane.tdCamera;
+      const oldMid = (tdCameraData.right + tdCameraData.left) / 2;
+      const oldWidth = tdCameraData.right - tdCameraData.left;
+      const oldHeight = tdCameraData.top - tdCameraData.bottom;
+      if (oldHeight === 0) {
+        Store.dispatch(
+          setTDCameraWithoutTimeTrackingAction({
+            left: tdCameraData.left,
+            right: tdCameraData.right,
+          }),
+        );
+        return;
+      }
       const oldAspectRatio = oldWidth / oldHeight;
       const newAspectRatio = tdRect.width / tdRect.height;
       const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
-      tdCamera.left = oldMid - newWidth / 2;
-      tdCamera.right = oldMid + newWidth / 2;
-      tdCamera.updateProjectionMatrix();
-      this.props.onTDCameraChanged(false);
+      Store.dispatch(
+        setTDCameraWithoutTimeTrackingAction({
+          left: oldMid - newWidth / 2,
+          right: oldMid + newWidth / 2,
+        }),
+      );
     }
   }
 
@@ -230,12 +288,39 @@ class CameraController extends PureComponent<Props> {
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    tdCamera.position.set(...cameraData.position);
-    tdCamera.left = cameraData.left;
-    tdCamera.right = cameraData.right;
-    tdCamera.top = cameraData.top;
-    tdCamera.bottom = cameraData.bottom;
-    tdCamera.up = new ThreeVector3(...cameraData.up);
+    const target = getTDCameraTarget(cameraData);
+    const { right, up } = getCameraBasis(cameraData.position, target, cameraData.up);
+    const centerX = (cameraData.left + cameraData.right) / 2;
+    const centerY = (cameraData.top + cameraData.bottom) / 2;
+    const offset = V3.add(V3.scale(right, centerX), V3.scale(up, centerY));
+    const effectivePosition = V3.add(cameraData.position, offset);
+    const effectiveTarget = V3.add(target, offset);
+
+    tdCamera.position.set(...effectivePosition);
+    tdCamera.up = new ThreeVector3(...up);
+    tdCamera.lookAt(new ThreeVector3(...effectiveTarget));
+
+    if (tdCamera instanceof PerspectiveCamera) {
+      const height = cameraData.top - cameraData.bottom;
+      const distance = V3.length(V3.sub(effectiveTarget, effectivePosition));
+      const fov =
+        height > 0 && distance > 0
+          ? Math.min(
+              MAX_PERSPECTIVE_FOV,
+              Math.max(MIN_PERSPECTIVE_FOV, (Math.atan(height / (2 * distance)) * 360) / Math.PI),
+            )
+          : DEFAULT_TD_FOV;
+      tdCamera.fov = fov;
+      tdCamera.aspect = getInputCatcherAspectRatio(Store.getState(), OrthoViews.TDView);
+    } else {
+      tdCamera.left = cameraData.left;
+      tdCamera.right = cameraData.right;
+      tdCamera.top = cameraData.top;
+      tdCamera.bottom = cameraData.bottom;
+    }
+    tdCamera.near =
+      tdCamera instanceof PerspectiveCamera ? Math.max(cameraData.near, 0.1) : cameraData.near;
+    tdCamera.far = cameraData.far;
     tdCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
@@ -346,6 +431,7 @@ export function rotate3DViewTo(
         right,
         top,
         bottom,
+        target: flycamPos,
       }),
     );
   };

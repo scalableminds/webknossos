@@ -5,7 +5,7 @@ import { clamp, waitForElementWithId } from "libs/utils";
 import get from "lodash-es/get";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
+import { type OrthographicCamera, type PerspectiveCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import {
   type OrthoView,
@@ -42,21 +42,28 @@ import type { CameraData, StoreAnnotation, WebknossosState } from "viewer/store"
 import Store from "viewer/store";
 import type PlaneView from "viewer/view/plane_view";
 
-export function threeCameraToCameraData(camera: OrthographicCamera): CameraData {
-  const { position, up, near, far, left, right, top, bottom } = camera;
+const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
 
-  const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
+function getCameraBasis(camera: OrthographicCamera | PerspectiveCamera) {
+  const forward = new ThreeVector3();
+  camera.getWorldDirection(forward);
+  const up = camera.up.clone().normalize();
+  const right = new ThreeVector3().crossVectors(forward, up).normalize();
+  const correctedUp = new ThreeVector3().crossVectors(right, forward).normalize();
+  return { right, up: correctedUp };
+}
 
-  return {
-    left,
-    right,
-    top,
-    bottom,
-    near,
-    far,
-    position: objToArr(position),
-    up: objToArr(up),
-  };
+function getTDViewPanOffset(
+  camera: OrthographicCamera | PerspectiveCamera,
+  cameraData: CameraData,
+): ThreeVector3 {
+  const centerX = (cameraData.left + cameraData.right) / 2;
+  const centerY = (cameraData.top + cameraData.bottom) / 2;
+  if (centerX === 0 && centerY === 0) {
+    return new ThreeVector3(0, 0, 0);
+  }
+  const { right, up } = getCameraBasis(camera);
+  return right.multiplyScalar(centerX).add(up.multiplyScalar(centerY));
 }
 
 function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, any> {
@@ -85,7 +92,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
   planeView?: PlaneView;
   annotation?: StoreAnnotation;
 };
@@ -180,7 +187,11 @@ class TDController extends PureComponent<Props> {
     if (!this.controls) {
       return;
     }
-
+    const cameraData = Store.getState().viewModeData.plane.tdCamera;
+    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const offset = getTDViewPanOffset(tdCamera, cameraData);
+    const target = new ThreeVector3(...(cameraData.target || [0, 0, 0])).add(offset);
+    this.controls.target.copy(target);
     this.controls.update(true);
   };
 
@@ -378,8 +389,24 @@ class TDController extends PureComponent<Props> {
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
+    const prevCameraData = Store.getState().viewModeData.plane.tdCamera;
+    const offset = getTDViewPanOffset(tdCamera, prevCameraData);
+    const basePosition = tdCamera.position.clone().sub(offset);
+    const baseTarget =
+      this.controls != null
+        ? this.controls.target.clone().sub(offset)
+        : new ThreeVector3(...prevCameraData.target);
     // Write threeJS camera into store
-    Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
+    Store.dispatch(
+      setCameraAction({
+        ...prevCameraData,
+        near: tdCamera.near,
+        far: tdCamera.far,
+        position: objToArr(basePosition),
+        up: objToArr(tdCamera.up),
+        target: objToArr(baseTarget),
+      }),
+    );
   };
 
   render() {

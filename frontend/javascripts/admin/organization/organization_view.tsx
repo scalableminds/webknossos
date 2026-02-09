@@ -40,17 +40,6 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         icon: <DeleteOutlined />,
         label: "Delete",
       },
-      {
-        label: "Activity Logs",
-        type: "group",
-        children: [
-          {
-            key: "credit-activity",
-            icon: <BankOutlined />,
-            label: "Credit Activity",
-          },
-        ],
-      },
     ],
   },
   {
@@ -61,6 +50,11 @@ const MENU_ITEMS: MenuItemGroupType[] = [
         key: "planupdates",
         icon: <HistoryOutlined />,
         label: "Plan Updates",
+      },
+      {
+        key: "credit-activity",
+        icon: <BankOutlined />,
+        label: "Credit Activity",
       },
     ],
   },

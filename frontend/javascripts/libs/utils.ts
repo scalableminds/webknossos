@@ -67,30 +67,6 @@ export function floor3(tuple: Vector3): Vector3 {
   return [Math.floor(x), Math.floor(y), Math.floor(z)];
 }
 
-function _iterateThroughBounds(
-  minVoxel: Vector3,
-  maxVoxel: Vector3,
-  fn: (arg0: number, arg1: number, arg2: number) => void,
-): void {
-  for (let x = minVoxel[0]; x < maxVoxel[0]; x++) {
-    for (let y = minVoxel[1]; y < maxVoxel[1]; y++) {
-      for (let z = minVoxel[2]; z < maxVoxel[2]; z++) {
-        fn(x, y, z);
-      }
-    }
-  }
-}
-
-function swap<T>(arr: Array<T>, a: number, b: number) {
-  let tmp: T;
-
-  if (arr[a] > arr[b]) {
-    tmp = arr[b];
-    arr[b] = arr[a];
-    arr[a] = tmp;
-  }
-}
-
 naturalSort.insensitive = true;
 
 function getRecursiveValues(obj: ArbitraryObject | Array<any> | string): Array<any> {
@@ -127,16 +103,6 @@ export function union<T>(iterables: Array<Iterable<T>>): Set<T> {
   }
 
   return set;
-}
-
-function _enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
-  return (nullableA: A | null | undefined) => {
-    if (nullableA == null) {
-      throw new Error("Could not enforce while unwrapping maybe");
-    }
-
-    return fn(nullableA);
-  };
 }
 
 export function parseMaybe(str: string | null | undefined): unknown | null {
@@ -817,31 +783,6 @@ function _mode8(arr: Array<number>): number {
   }
 
   return currentMode;
-}
-
-function _sortArray8(arr: Array<number>): void {
-  // This function sorts an array of size 8.
-  // Swap instructions were generated here:
-  // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
-  swap(arr, 0, 1);
-  swap(arr, 2, 3);
-  swap(arr, 0, 2);
-  swap(arr, 1, 3);
-  swap(arr, 1, 2);
-  swap(arr, 4, 5);
-  swap(arr, 6, 7);
-  swap(arr, 4, 6);
-  swap(arr, 5, 7);
-  swap(arr, 5, 6);
-  swap(arr, 0, 4);
-  swap(arr, 1, 5);
-  swap(arr, 1, 4);
-  swap(arr, 2, 6);
-  swap(arr, 3, 7);
-  swap(arr, 3, 6);
-  swap(arr, 2, 4);
-  swap(arr, 3, 5);
-  swap(arr, 3, 4);
 }
 
 // When an interval greater than RAF_INTERVAL_THRESHOLD is used,

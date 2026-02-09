@@ -56,7 +56,7 @@ const VERSION_LIST_PLACEHOLDER = {
   emptyText: "No versions created yet.",
 };
 
-export async function previewVersion(version?: number) {
+async function previewVersion(version?: number) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
   const { annotationId, tracingStore, annotationLayers } = state.annotation;

@@ -185,7 +185,7 @@ function _getOriginalTransformsForLayerOrNull(
   );
 }
 
-export const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
+const getOriginalTransformsForLayerOrNull = memoizeWithTwoKeys(
   _getOriginalTransformsForLayerOrNull,
 );
 

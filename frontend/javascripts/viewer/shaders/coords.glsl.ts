@@ -26,7 +26,7 @@ export const getAbsoluteCoords: ShaderModule = {
   `,
 };
 
-export const worldCoordToUVW: ShaderModule = {
+const worldCoordToUVW: ShaderModule = {
   requirements: [getW, isFlightMode],
   code: `
     vec3 worldCoordToUVW(vec4 worldCoord) {

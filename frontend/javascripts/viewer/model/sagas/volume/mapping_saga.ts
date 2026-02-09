@@ -169,7 +169,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   yield* takeEvery("SET_MAPPING", keepMappingInfoInUpdated);
 }
 
-export function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
+function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
   const newMapping = new Map();
 
   yield* put(
@@ -499,7 +499,7 @@ function* handleSetHdf5Mapping(
   }
 }
 
-export function* updateLocalHdf5Mapping(
+function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,

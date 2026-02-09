@@ -25,12 +25,12 @@ export const viteConfig = {
     },
   },
   plugins: [
-    // analyzer(),
-    react({ skipFastRefresh: true, fastRefresh: false }),
+    analyzer(),
+    react(),
     tsconfigPaths(),
     wasm(),
     viteProtobufPlugin({
-      protoDir: "webknossos-datastore/proto", // Your proto directory
+      protoDir: "webknossos-datastore/proto",
     }),
   ],
   optimizeDeps: {
@@ -64,7 +64,7 @@ export const viteConfig = {
         changeOrigin: true,
       },
     },
-    hmr: false,
+    hmr: false, // disable Hot Module Replacement for now
   },
   define: {
     global: "globalThis",

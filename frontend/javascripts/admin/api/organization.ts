@@ -4,6 +4,7 @@ import memoize from "lodash-es/memoize";
 import type {
   APIOrganization,
   APIOrganizationCompact,
+  APIOrganizationPricingPlanUpdate,
   APIPricingPlanStatus,
   APITeamMembership,
 } from "types/api_types";
@@ -172,3 +173,7 @@ export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
 }
 
 export const cachedGetPricingPlanStatus = memoize(getPricingPlanStatus);
+
+export async function getPricingPlanUpdates(): Promise<APIOrganizationPricingPlanUpdate[]> {
+  return Request.receiveJSON("/api/pricing/planUpdates");
+}

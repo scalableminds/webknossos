@@ -1,9 +1,34 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Resumable } from "../../libs/resumable-upload";
+import { sleep } from "libs/utils";
+
+type RequestLogEntry = {
+  method: string;
+  url: string;
+};
 
 describe("Resumable Use Cases (WebKnossos Patterns)", () => {
   let resumable: Resumable;
-  let mockFetch: any;
+  let requestLog: Array<RequestLogEntry> = [];
+  let responseResolver: ((request: Request) => HttpResponse | Promise<HttpResponse>) | undefined;
+
+  const server = setupServer(
+    http.all("http://localhost/upload", async ({ request }) => {
+      requestLog.push({ method: request.method, url: request.url });
+
+      if (responseResolver) {
+        return await responseResolver(request);
+      }
+
+      return HttpResponse.text("success", { status: 200 });
+    }),
+  );
+
+  beforeAll(() => {
+    server.listen({ onUnhandledRequest: "error" });
+  });
 
   beforeEach(() => {
     const mockLocation = new URL("http://localhost");
@@ -12,20 +37,17 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
     // Reset mocks
     vi.restoreAllMocks();
-    mockFetch = vi.fn().mockImplementation(() => {
-      // console.log("Fetch called:", url, init?.method);
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve("success"),
-        headers: new Headers(),
-      });
-    });
-    vi.stubGlobal("fetch", mockFetch);
+    requestLog = [];
+    responseResolver = undefined;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    server.resetHandlers();
+  });
+
+  afterAll(() => {
+    server.close();
   });
 
   describe("Dynamic Query Parameters (Token Injection)", () => {
@@ -46,10 +68,10 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       // trigger upload
       resumable.upload();
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await sleep(10);
 
       expect(queryFn).toHaveBeenCalled();
-      const firstCallUrl = mockFetch.mock.calls[0][0];
+      const firstCallUrl = requestLog[0]?.url ?? "";
       expect(firstCallUrl).toContain("token=initial-token");
 
       // Rotate token and retry/upload next
@@ -59,9 +81,9 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       const chunk = resumable.files[0].chunks[0];
       chunk.send();
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await sleep(10);
 
-      const secondCallUrl = mockFetch.mock.calls[mockFetch.mock.calls.length - 1][0];
+      const secondCallUrl = requestLog[requestLog.length - 1]?.url ?? "";
       expect(secondCallUrl).toContain("token=new-token");
     });
   });
@@ -78,29 +100,21 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.addFile(file);
 
       resumable.upload();
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await sleep(10);
 
       // First call should be GET (test)
-      const firstCallArgs = mockFetch.mock.calls[0];
-      expect(firstCallArgs[1].method).toBe("GET");
+      const firstCall = requestLog[0];
+      expect(firstCall?.method).toBe("GET");
     });
 
     it("should not upload chunk if it already exists on server)", async () => {
       // Conditionally return 200 for GET, fail for POST (to ensure we don't post)
-      mockFetch.mockImplementation((_url: string, init: any) => {
-        if (init?.method === "GET") {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            text: () => Promise.resolve("Found"),
-          });
+      responseResolver = (request) => {
+        if (request.method === "GET") {
+          return HttpResponse.text("Found", { status: 200 });
         }
-        return Promise.resolve({
-          ok: true,
-          status: 400, // Fail if POST is attempted
-          text: () => Promise.resolve("Should not POST"),
-        });
-      });
+        return HttpResponse.text("Should not POST", { status: 400 });
+      };
 
       const errorHandler = vi.fn();
 
@@ -115,15 +129,14 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.addFile(file);
       resumable.upload();
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
 
       // Should have made at least one GET
-      expect(mockFetch).toHaveBeenCalled();
-      const calls = mockFetch.mock.calls;
-      expect(calls[0][1].method).toBe("GET");
+      expect(requestLog.length).toBeGreaterThan(0);
+      expect(requestLog[0]?.method).toBe("GET");
 
       // should never have called POST to upload the actual data as it was already present
-      const hasPost = calls.some((c: any) => c[1]?.method === "POST");
+      const hasPost = requestLog.some((entry) => entry.method === "POST");
       expect(hasPost).toBe(false);
 
       expect(errorHandler).not.toHaveBeenCalled();
@@ -133,20 +146,12 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should upload chunk if it does not exist on server", async () => {
-      mockFetch.mockImplementation((_url: string, init: any) => {
-        if (init?.method === "GET") {
-          return Promise.resolve({
-            ok: true,
-            status: 204, // No Content
-            text: () => Promise.resolve(""),
-          });
+      responseResolver = (request) => {
+        if (request.method === "GET") {
+          return HttpResponse.text("", { status: 204 });
         }
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve(""),
-        });
-      });
+        return HttpResponse.text("", { status: 200 });
+      };
 
       resumable = new Resumable({
         target: "/upload",
@@ -158,32 +163,23 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.addFile(file);
       resumable.upload();
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
 
-      expect(mockFetch).toHaveBeenCalled();
-      const calls = mockFetch.mock.calls;
-      const hasPost = calls.some((c: any) => c[1]?.method === "POST");
+      expect(requestLog.length).toBeGreaterThan(0);
+      const hasPost = requestLog.some((entry) => entry.method === "POST");
       expect(hasPost).toBe(true);
     });
 
     it("should proceed to POST if GET returns 404 (chunk missing)", async () => {
-      mockFetch.mockImplementation((_url: string, init: any) => {
-        if (init?.method === "GET") {
-          return Promise.resolve({
-            ok: false,
-            status: 404,
-            text: () => Promise.resolve("Not Found"),
-          });
+      responseResolver = (request) => {
+        if (request.method === "GET") {
+          return HttpResponse.text("Not Found", { status: 404 });
         }
-        if (init?.method === "POST") {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            text: () => Promise.resolve("Uploaded"),
-          });
+        if (request.method === "POST") {
+          return HttpResponse.text("Uploaded", { status: 200 });
         }
-        return Promise.resolve({ ok: false, status: 500 });
-      });
+        return HttpResponse.text("Error", { status: 500 });
+      };
 
       resumable = new Resumable({
         target: "/upload",
@@ -195,11 +191,10 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.addFile(file);
       resumable.upload();
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
 
-      const calls = mockFetch.mock.calls;
-      const hasGet = calls.some((c: any) => c[1]?.method === "GET");
-      const hasPost = calls.some((c: any) => c[1]?.method === "POST");
+      const hasGet = requestLog.some((entry) => entry.method === "GET");
+      const hasPost = requestLog.some((entry) => entry.method === "POST");
       expect(hasGet).toBe(true);
       expect(hasPost).toBe(true);
     });
@@ -237,21 +232,17 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.addFile(file);
 
       // Mock 500 Error
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: () => Promise.resolve("Internal Server Error"),
-      });
+      responseResolver = () => HttpResponse.text("Internal Server Error", { status: 500 });
 
       const fileErrorSpy = vi.fn();
       resumable.addEventListener("fileError", fileErrorSpy);
 
       resumable.upload();
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await sleep(20);
 
       // Should have failed immediately without retries due to permanent error
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(requestLog.length).toBe(1);
       expect(fileErrorSpy).toHaveBeenCalled();
       const errorDetail = fileErrorSpy.mock.calls[0][0].detail;
       expect(errorDetail.message).toBe("Internal Server Error");
@@ -260,19 +251,15 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
       // Now Manual Retry
       // Reset mock to success
-      mockFetch.mockClear();
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve("Success"),
-      });
+      requestLog = [];
+      responseResolver = () => HttpResponse.text("Success", { status: 200 });
 
       resumable.files[0].retry();
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await sleep(20);
 
       // Should have retried and succeeded
-      expect(mockFetch).toHaveBeenCalled();
+      expect(requestLog.length).toBeGreaterThan(0);
 
       // Chunks should be present again and succeeding (or done)
       // Since it's fast, checking successful completion or presence is good
@@ -292,20 +279,16 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.addFile(file);
 
       // Mock 500 (not permanent in this config)
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: () => Promise.resolve("Error"),
-      });
+      responseResolver = () => HttpResponse.text("Error", { status: 500 });
 
       const fileErrorSpy = vi.fn();
       resumable.addEventListener("fileError", fileErrorSpy);
 
       resumable.upload();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
 
       // Should have retried multiple times (initial + retries)
-      expect(mockFetch.mock.calls.length).toBeGreaterThan(1);
+      expect(requestLog.length).toBeGreaterThan(1);
       expect(fileErrorSpy).toHaveBeenCalled(); // Eventually fails after retries exhaustion
       // Chunks cleared after exhaustion
       expect(resumable.files[0].chunks.length).toBe(0);
@@ -328,14 +311,14 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       const chunk = resumableFile.chunks[0];
       chunk.send();
 
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await sleep(0);
 
       const bootstrapSpy = vi.spyOn(resumableFile, "bootstrap");
 
       resumableFile.retry();
 
       // Wait for bootstrap timeout (0ms) and event loop
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
 
       expect(bootstrapSpy).toHaveBeenCalled();
 
@@ -349,7 +332,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
   });
 
   describe("Files Added Trigger", () => {
-    it("should fire filesAdded event", () => {
+    it("should fire filesAdded event", async () => {
       const filesAddedSpy = vi.fn();
       resumable = new Resumable({ target: "/upload" });
       resumable.addEventListener("filesAdded", filesAddedSpy);
@@ -357,12 +340,8 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       const file = new File(["content"], "test.txt");
       resumable.addFile(file);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          expect(filesAddedSpy).toHaveBeenCalled();
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      expect(filesAddedSpy).toHaveBeenCalled();
     });
   });
 });

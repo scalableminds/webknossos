@@ -1,21 +1,48 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Resumable, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
+import { sleep } from "libs/utils";
 
-// Helper to mock Fetch API
-function mockFetch(status = 200, ok = true, text = "success") {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({
-      ok,
-      status,
-      text: () => Promise.resolve(text),
-      headers: new Headers(),
-    }),
-  );
-}
+type RequestLogEntry = {
+  method: string;
+  url: string;
+};
+
+let requestLog: Array<RequestLogEntry> = [];
+let responseResolver: ((request: Request) => HttpResponse | Promise<HttpResponse>) | undefined;
+
+const server = setupServer(
+  http.all("http://localhost/upload", async ({ request }) => {
+    requestLog.push({ method: request.method, url: request.url });
+
+    if (responseResolver) {
+      return await responseResolver(request);
+    }
+
+    return HttpResponse.text("success", { status: 200 });
+  }),
+);
+
+const stubLocation = () => {
+  const mockLocation = new URL("http://localhost");
+  vi.stubGlobal("location", mockLocation);
+  vi.stubGlobal("window", { location: mockLocation });
+};
+
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: "error" });
+});
+
+afterEach(() => {
+  server.resetHandlers();
+  requestLog = [];
+  responseResolver = undefined;
+  vi.unstubAllGlobals();
+});
 
 afterAll(() => {
-  vi.unstubAllGlobals();
+  server.close();
 });
 
 describe("Resumable", () => {
@@ -23,13 +50,10 @@ describe("Resumable", () => {
 
   beforeEach(() => {
     // Mock window and location for URL construction
-    const mockLocation = new URL("http://localhost");
-    vi.stubGlobal("location", mockLocation);
-    vi.stubGlobal("window", { location: mockLocation });
+    stubLocation();
 
     // Reset mocks
     vi.restoreAllMocks();
-    mockFetch();
 
     resumable = new Resumable({
       target: "/upload",
@@ -131,61 +155,45 @@ describe("Resumable", () => {
       mockFile = new File(["test content"], "test.txt", { type: "text/plain" });
     });
 
-    it("should add a file", () => {
+    it("should add a file", async () => {
       const fileAddedCallback = vi.fn();
       resumable.addEventListener("fileAdded", fileAddedCallback);
 
       resumable.addFile(mockFile);
 
-      // Wait for async operations
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          expect(resumable.files.length).toBe(1);
-          expect(resumable.files[0].fileName).toBe("test.txt");
-          expect(fileAddedCallback).toHaveBeenCalled();
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+
+      expect(resumable.files.length).toBe(1);
+      expect(resumable.files[0].fileName).toBe("test.txt");
+      expect(fileAddedCallback).toHaveBeenCalled();
     });
 
-    it("should add multiple files", () => {
+    it("should add multiple files", async () => {
       const file1 = new File(["content1"], "file1.txt", { type: "text/plain" });
       const file2 = new File(["content2"], "file2.txt", { type: "text/plain" });
 
       resumable.addFiles([file1, file2]);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          expect(resumable.files.length).toBe(2);
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      expect(resumable.files.length).toBe(2);
     });
 
-    it("should remove a file", () => {
+    it("should remove a file", async () => {
       resumable.addFile(mockFile);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const file = resumable.files[0];
-          resumable.removeFile(file);
-          expect(resumable.files.length).toBe(0);
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      const file = resumable.files[0];
+      resumable.removeFile(file);
+      expect(resumable.files.length).toBe(0);
     });
 
-    it("should get file by unique identifier", () => {
+    it("should get file by unique identifier", async () => {
       resumable.addFile(mockFile);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const file = resumable.files[0];
-          const found = resumable.getFromUniqueIdentifier(file.uniqueIdentifier);
-          expect(found).toBe(file);
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      const file = resumable.files[0];
+      const found = resumable.getFromUniqueIdentifier(file.uniqueIdentifier);
+      expect(found).toBe(file);
     });
 
     it("should return false for non-existent unique identifier", () => {
@@ -193,23 +201,19 @@ describe("Resumable", () => {
       expect(found).toBe(false);
     });
 
-    it("should calculate total size", () => {
+    it("should calculate total size", async () => {
       const file1 = new File(["12345"], "file1.txt", { type: "text/plain" });
       const file2 = new File(["1234567890"], "file2.txt", { type: "text/plain" });
 
       resumable.addFiles([file1, file2]);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          expect(resumable.getSize()).toBe(15);
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      expect(resumable.getSize()).toBe(15);
     });
   });
 
   describe("File Validation", () => {
-    it("should reject files exceeding maxFiles limit", () => {
+    it("should reject files exceeding maxFiles limit", async () => {
       const cb = vi.fn();
       const r = new Resumable({
         maxFiles: 2,
@@ -224,13 +228,8 @@ describe("Resumable", () => {
 
       r.addFiles(files);
 
-      // Wait for immediate processing
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          expect(cb).toHaveBeenCalled();
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      expect(cb).toHaveBeenCalled();
     });
 
     it("should reject files smaller than minFileSize", () => {
@@ -276,7 +275,7 @@ describe("Resumable", () => {
       expect(r.files.length).toBe(0);
     });
 
-    it("should handle wildcard file types", () => {
+    it("should handle wildcard file types", async () => {
       const r = new Resumable({
         fileType: ["image/*"],
       });
@@ -286,15 +285,11 @@ describe("Resumable", () => {
 
       r.addFiles([pngFile, jpgFile]);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          expect(r.files.length).toBe(2);
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      expect(r.files.length).toBe(2);
     });
 
-    it("should handle file extensions in fileType", () => {
+    it("should handle file extensions in fileType", async () => {
       const r = new Resumable({
         fileType: [".txt", ".pdf"],
       });
@@ -302,12 +297,8 @@ describe("Resumable", () => {
       const txtFile = new File(["text"], "document.txt", { type: "text/plain" });
       r.addFile(txtFile);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          expect(r.files.length).toBe(1);
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      expect(r.files.length).toBe(1);
     });
   });
 
@@ -352,7 +343,8 @@ describe("ResumableFile", () => {
   let file: File;
   let resumableFile: ResumableFile;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    stubLocation();
     resumable = new Resumable({
       target: "/upload",
       chunkSize: 10,
@@ -360,13 +352,9 @@ describe("ResumableFile", () => {
 
     file = new File(["1234567890123456789012345"], "test.txt", { type: "text/plain" });
 
-    return new Promise((resolve) => {
-      resumable.addFile(file);
-      setTimeout(() => {
-        resumableFile = resumable.files[0];
-        resolve(undefined);
-      }, 10);
-    });
+    resumable.addFile(file);
+    await sleep(10);
+    resumableFile = resumable.files[0];
   });
 
   describe("Properties", () => {
@@ -461,8 +449,8 @@ describe("ResumableChunk", () => {
   let resumableFile: ResumableFile;
   let chunk: ResumableChunk;
 
-  beforeEach(() => {
-    mockFetch();
+  beforeEach(async () => {
+    stubLocation();
     resumable = new Resumable({
       target: "/upload",
       chunkSize: 10,
@@ -471,14 +459,10 @@ describe("ResumableChunk", () => {
 
     const file = new File(["1234567890"], "test.txt", { type: "text/plain" });
 
-    return new Promise((resolve) => {
-      resumable.addFile(file);
-      setTimeout(() => {
-        resumableFile = resumable.files[0];
-        chunk = resumableFile.chunks[0];
-        resolve(undefined);
-      }, 10);
-    });
+    resumable.addFile(file);
+    await sleep(10);
+    resumableFile = resumable.files[0];
+    chunk = resumableFile.chunks[0];
   });
 
   describe("Properties", () => {
@@ -509,9 +493,9 @@ describe("ResumableChunk", () => {
 
       // Since fetch is mocked to resolve immediately in tests,
       // we might need to wait a tick to see success
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await sleep(0);
 
-      expect(global.fetch).toHaveBeenCalled();
+      expect(requestLog.length).toBeGreaterThan(0);
       expect(chunk.status()).toBe("success");
     });
   });
@@ -535,41 +519,33 @@ describe("Helper Functions", () => {
   });
 
   describe("Unique Identifier Generation", () => {
-    it("should generate consistent identifiers for same file", () => {
+    it("should generate consistent identifiers for same file", async () => {
       const r = new Resumable();
       const file1 = new File(["test"], "test.txt", { type: "text/plain" });
       const file2 = new File(["test"], "test.txt", { type: "text/plain" });
 
       r.addFiles([file1, file2]);
 
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          // Should create only one file since identifier is the same
-          expect(r.files.length).toBe(1);
-          resolve(undefined);
-        }, 10);
-      });
+      await sleep(10);
+      // Should create only one file since identifier is the same
+      expect(r.files.length).toBe(1);
     });
   });
 });
 
 describe("Edge Cases", () => {
-  it("should handle empty file", () => {
+  it("should handle empty file", async () => {
     const r = new Resumable({ minFileSize: 0 });
     const emptyFile = new File([], "empty.txt");
 
     r.addFile(emptyFile);
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        expect(r.files.length).toBe(1);
-        expect(r.files[0].size).toBe(0);
-        resolve(undefined);
-      }, 10);
-    });
+    await sleep(10);
+    expect(r.files.length).toBe(1);
+    expect(r.files[0].size).toBe(0);
   });
 
-  it("should handle very large chunk size", () => {
+  it("should handle very large chunk size", async () => {
     const r = new Resumable({
       chunkSize: 100 * 1024 * 1024, // 100MB
     });
@@ -577,15 +553,11 @@ describe("Edge Cases", () => {
     const file = new File(["small content"], "small.txt");
     r.addFile(file);
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        expect(r.files[0].chunks.length).toBe(1);
-        resolve(undefined);
-      }, 10);
-    });
+    await sleep(10);
+    expect(r.files[0].chunks.length).toBe(1);
   });
 
-  it("should handle forceChunkSize option", () => {
+  it("should handle forceChunkSize option", async () => {
     const r = new Resumable({
       chunkSize: 10,
       forceChunkSize: true,
@@ -594,31 +566,23 @@ describe("Edge Cases", () => {
     const file = new File(["1234567890123"], "test.txt");
     r.addFile(file);
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const chunks = r.files[0].chunks;
-        expect(chunks.length).toBeGreaterThan(1);
-        // Last chunk should be <= chunkSize
-        const lastChunk = chunks[chunks.length - 1];
-        expect(lastChunk.endByte - lastChunk.startByte).toBeLessThanOrEqual(10);
-        resolve(undefined);
-      }, 10);
-    });
+    await sleep(10);
+    const chunks = r.files[0].chunks;
+    expect(chunks.length).toBeGreaterThan(1);
+    // Last chunk should be <= chunkSize
+    const lastChunk = chunks[chunks.length - 1];
+    expect(lastChunk.endByte - lastChunk.startByte).toBeLessThanOrEqual(10);
   });
 
-  it("should handle special characters in filename", () => {
+  it("should handle special characters in filename", async () => {
     const r = new Resumable();
     const file = new File(["test"], "test file (1) [special].txt");
 
     r.addFile(file);
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        expect(r.files.length).toBe(1);
-        expect(r.files[0].fileName).toBe("test file (1) [special].txt");
-        resolve(undefined);
-      }, 10);
-    });
+    await sleep(10);
+    expect(r.files.length).toBe(1);
+    expect(r.files[0].fileName).toBe("test file (1) [special].txt");
   });
 
   it("should handle beforeAdd event", () => {
@@ -632,26 +596,20 @@ describe("Edge Cases", () => {
     expect(beforeAddCallback).toHaveBeenCalled();
   });
 
-  it("should skip duplicate files", () => {
+  it("should skip duplicate files", async () => {
     const r = new Resumable();
     const file = new File(["test"], "test.txt");
 
     r.addFile(file);
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const initialCount = r.files.length;
-        r.addFile(file);
-
-        setTimeout(() => {
-          expect(r.files.length).toBe(initialCount);
-          resolve(undefined);
-        }, 10);
-      }, 10);
-    });
+    await sleep(10);
+    const initialCount = r.files.length;
+    r.addFile(file);
+    await sleep(10);
+    expect(r.files.length).toBe(initialCount);
   });
 
-  it("should fire filesAdded with skipped files", () => {
+  it("should fire filesAdded with skipped files", async () => {
     const filesAddedCallback = vi.fn();
     const r = new Resumable();
     r.addEventListener("filesAdded", filesAddedCallback);
@@ -660,19 +618,13 @@ describe("Edge Cases", () => {
 
     r.addFile(file);
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        r.addFile(file); // Add same file again
-
-        setTimeout(() => {
-          expect(filesAddedCallback).toHaveBeenCalled();
-          // Access details from the event object
-          const event = filesAddedCallback.mock.calls[1][0];
-          expect(event.detail.files).toEqual([]); // no new files
-          expect(event.detail.skippedFiles.length).toBe(1); // one skipped
-          resolve(undefined);
-        }, 10);
-      }, 10);
-    });
+    await sleep(10);
+    r.addFile(file); // Add same file again
+    await sleep(10);
+    expect(filesAddedCallback).toHaveBeenCalled();
+    // Access details from the event object
+    const event = filesAddedCallback.mock.calls[1][0];
+    expect(event.detail.files).toEqual([]); // no new files
+    expect(event.detail.skippedFiles.length).toBe(1); // one skipped
   });
 });

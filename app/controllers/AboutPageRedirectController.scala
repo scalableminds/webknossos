@@ -6,7 +6,7 @@ import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.CspHeaders
 import com.scalableminds.util.tools.Fox
-import models.user.{MultiUser, MultiUserDAO}
+import models.user.{MultiUser, MultiUserDAO, Theme}
 import opengraph.{OpenGraphService, OpenGraphTags}
 import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig
@@ -28,13 +28,6 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
     extends Controller
     with CspHeaders {
 
-  private lazy val indexHtmlTemplate: String = {
-    environment
-      .resourceAsStream("public/index.html")
-      .map(is => Source.fromInputStream(is).mkString)
-      .getOrElse("Error: index.html not found")
-  }
-
   def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (matchesRedirectRoute(request)) {
       val status = if (request.uri == "/") SEE_OTHER else MOVED_PERMANENTLY
@@ -46,46 +39,43 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
           request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
-      } yield {
-        val theme = getTheme(multiUserOpt)
-        val themeCss = getThemeCss(theme)
-        val openGraphMeta = getOpenGraphMeta(openGraphTags)
-        val wkOrgMeta = getWkOrgMeta
-        val airbrakeConfig = getAirbrakeConfig
-
-        val html = indexHtmlTemplate
-          .replace("""<meta name="commit-hash" content="" />""",
-                   s"""<meta name="commit-hash" content="${webknossos.BuildInfo.commitHash}" />""")
-          .replace("""<meta name="selected-theme" content="" />""",
-                   s"""<meta name="selected-theme" content="$theme" />""")
-          .replace("<!-- INJECT_THEME_CSS -->", themeCss)
-          .replace("<!-- INJECT_OPENGRAPH_METADATA -->", openGraphMeta)
-          .replace("<!-- INJECT_WKORG_METADATA -->", wkOrgMeta)
-          .replace("<!-- INJECT_AIRBRAKE_CONFIG -->", airbrakeConfig)
-
-        Ok(html).as("text/html").withHeaders(addCspHeader(Ok).header.headers.toSeq: _*)
-      }
+        mainViewTemplate <- mainViewTemplateOpt.toFox ?~> "Could not load main view template"
+        mainView = renderMainViewFromTemplate(mainViewTemplate, multiUserOpt, openGraphTags)
+      } yield addCspHeader(Ok(mainView).as("text/html"))
     }
   }
 
-  private def getTheme(multiUserOpt: Option[MultiUser]): String =
-    multiUserOpt.map(_.selectedTheme.toString).getOrElse("auto")
+  private def renderMainViewFromTemplate(mainViewTemplate: String,
+                                         multiUserOpt: Option[MultiUser],
+                                         openGraphTags: OpenGraphTags): String = {
+    val themeName = multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString
+    mainViewTemplate
+      .replace("""<meta name="commit-hash" content="" />""",
+               s"""<meta name="commit-hash" content="${webknossos.BuildInfo.commitHash}" />""")
+      .replace("""<meta name="selected-theme" content="" />""",
+               s"""<meta name="selected-theme" content="$themeName" />""")
+      .replace("<!-- INJECT_THEME_CSS -->", renderThemeCss(multiUserOpt))
+      .replace("<!-- INJECT_OPENGRAPH_METADATA -->", renderOpenGraphMetadata(openGraphTags))
+      .replace("<!-- INJECT_WKORG_METADATA -->", wkOrgMetadata)
+      .replace("<!-- INJECT_AIRBRAKE_CONFIG -->", airbrakeConfig)
+  }
 
-  private def getThemeCss(theme: String): String =
-    theme match {
-      case "auto" => "<style>@media (prefers-color-scheme: dark) { html { background: black } }</style>"
-      case "dark" => "<style>html { background: black }</style>"
-      case _      => ""
+  private def renderThemeCss(multiUserOpt: Option[MultiUser]): String =
+    multiUserOpt.map(_.selectedTheme) match {
+      case Some(Theme.dark)  => "<style>html { background: black }</style>"
+      case Some(Theme.light) => ""
+      case _ =>
+        "<style>@media (prefers-color-scheme: dark) { html { background: black } }</style>"
     }
 
-  private def getOpenGraphMeta(openGraphTags: OpenGraphTags): String =
+  private def renderOpenGraphMetadata(openGraphTags: OpenGraphTags): String =
     List(
       openGraphTags.title.map(t => s"""<meta property="og:title" content="${HtmlFormat.escape(t)}" />"""),
       openGraphTags.description.map(d => s"""<meta property="og:description" content="${HtmlFormat.escape(d)}" />"""),
       openGraphTags.image.map(i => s"""<meta property="og:image" content="${HtmlFormat.escape(i)}" />""")
     ).flatten.mkString("\n    ")
 
-  private def getWkOrgMeta: String =
+  private lazy val wkOrgMetadata: String =
     if (conf.Features.isWkorgInstance) {
       """<meta
       name="description"
@@ -95,16 +85,17 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
       name="keywords"
       content="connectomics, data annotation, image segmentation, electron microscopy, light microscopy, fluorescence microscopy, skeletonization, webknossos"
     />"""
-    } else {
-      ""
-    }
+    } else ""
 
-  private def getAirbrakeConfig: String =
+  private lazy val airbrakeConfig: String =
     s"""<script
       data-airbrake-project-id="${conf.Airbrake.projectID}"
       data-airbrake-project-key="${conf.Airbrake.projectKey}"
       data-airbrake-environment-name="${conf.Airbrake.environment}"
     ></script>"""
+
+  private lazy val mainViewTemplateOpt: Option[String] =
+    environment.resourceAsStream("public/index.html").map(is => Source.fromInputStream(is).mkString)
 
   private def matchesRedirectRoute(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =
     conf.Features.isWkorgInstance && conf.AboutPageRedirect.routes.exists(route =>

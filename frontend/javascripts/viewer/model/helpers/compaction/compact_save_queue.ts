@@ -2,6 +2,7 @@ import flow from "lodash-es/flow";
 import isEqual from "lodash-es/isEqual";
 import without from "lodash-es/without";
 import type {
+  UpdateAction,
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
 } from "viewer/model/sagas/volume/update_actions";
@@ -91,6 +92,7 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
     string,
     UpdateUserBoundingBoxInSkeletonTracingAction | UpdateUserBoundingBoxInVolumeTracingAction
   > = {};
+
   const relevantActions = [];
   for (let i = updateActionsBatches.length - 1; i >= 0; i--) {
     const currentActions = updateActionsBatches[i].actions;
@@ -123,26 +125,60 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
   return relevantActions;
 }
 
-function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQueueEntry>) {
-  const obsoleteUpdateActions = [];
+function removeSubsequentUpdateSegmentActions(
+  updateActionsBatches: SaveQueueEntry[],
+): SaveQueueEntry[] {
+  // todop: make more readable
+  const result: SaveQueueEntry[] = [];
 
-  // If two updateSegment update actions for the same segment id follow one another, the first one is obsolete
-  for (let i = 0; i < updateActionsBatches.length - 1; i++) {
-    const actions1 = updateActionsBatches[i].actions;
-    const actions2 = updateActionsBatches[i + 1].actions;
+  let i = 0;
 
-    if (
-      actions1.length === 1 &&
-      actions1[0].name === "updateSegment" &&
-      actions2.length === 1 &&
-      actions2[0].name === "updateSegment" &&
-      actions1[0].value.id === actions2[0].value.id
-    ) {
-      obsoleteUpdateActions.push(updateActionsBatches[i]);
+  while (i < updateActionsBatches.length) {
+    const currentBatch = updateActionsBatches[i];
+    const current = currentBatch.actions;
+
+    // only candidate if exactly one updateSegmentPartial
+    const first = current[0];
+
+    if (current.length === 1 && first.name === "updateSegmentPartial") {
+      let mergedValue = { ...first.value };
+      let j = i + 1;
+
+      // merge all following same-id updates
+      while (j < updateActionsBatches.length) {
+        const next = updateActionsBatches[j].actions;
+        const nextFirst = next[0];
+
+        if (
+          next.length === 1 &&
+          nextFirst.name === "updateSegmentPartial" &&
+          nextFirst.value.id === first.value.id
+        ) {
+          mergedValue = { ...mergedValue, ...nextFirst.value };
+          j++;
+        } else {
+          break;
+        }
+      }
+
+      result.push({
+        ...currentBatch,
+        actions: [
+          {
+            name: "updateSegmentPartial",
+            value: mergedValue,
+          },
+        ],
+      });
+
+      i = j;
+    } else {
+      result.push(currentBatch);
+      i++;
     }
   }
 
-  return without(updateActionsBatches, ...obsoleteUpdateActions);
+  return result;
 }
 
 const compactAll = flow([

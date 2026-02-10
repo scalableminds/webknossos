@@ -26,11 +26,13 @@ import {
   updateActiveNode,
   updateActiveSegmentId,
   updateCameraAnnotation,
+  updateSegmentPartialVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
 import { describe, expect, it, vi } from "vitest";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import "test/helpers/apiHelpers"; // ensures Store is available
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 import { MutexFetchingStrategy } from "viewer/model/sagas/saving/save_mutex_saga";
 
 vi.mock("viewer/model/sagas/root_saga", () => {
@@ -99,6 +101,92 @@ describe("Save Saga", () => {
       TIMESTAMP,
     );
     expect(compactSaveQueue(saveQueue)).toEqual([saveQueue[3], saveQueue[4], saveQueue[5]]);
+  });
+
+  it.only("should compact multiple updateSegmentPartial update actions", () => {
+    const saveQueue = createSaveQueueFromUpdateActions(
+      [
+        [
+          updateSegmentPartialVolumeAction(
+            {
+              id: 3,
+              color: [1, 2, 3],
+            },
+            VOLUME_TRACING_ID,
+          ),
+        ],
+        [
+          updateSegmentPartialVolumeAction(
+            {
+              id: 3,
+              name: "3 some name",
+            },
+            VOLUME_TRACING_ID,
+          ),
+        ],
+        [
+          updateSegmentPartialVolumeAction(
+            {
+              id: 4,
+              color: [1, 2, 4],
+            },
+            VOLUME_TRACING_ID,
+          ),
+        ],
+        [
+          updateSegmentPartialVolumeAction(
+            {
+              id: 4,
+              name: "4 some name",
+              anchorPosition: [1, 2, 3],
+            },
+            VOLUME_TRACING_ID,
+          ),
+        ],
+        [
+          updateSegmentPartialVolumeAction(
+            {
+              id: 3,
+              name: "3 some name (changed)",
+            },
+            VOLUME_TRACING_ID,
+          ),
+        ],
+      ],
+      TIMESTAMP,
+    );
+    const compactedQueue = compactSaveQueue(saveQueue);
+    expect(compactedQueue.length).toEqual(3);
+    expect(compactedQueue[0].actions).toEqual([
+      updateSegmentPartialVolumeAction(
+        {
+          id: 3,
+          color: [1, 2, 3],
+          name: "3 some name",
+        },
+        VOLUME_TRACING_ID,
+      ),
+    ]);
+    expect(compactedQueue[1].actions).toEqual([
+      updateSegmentPartialVolumeAction(
+        {
+          id: 4,
+          name: "4 some name",
+          color: [1, 2, 4],
+          anchorPosition: [1, 2, 3],
+        },
+        VOLUME_TRACING_ID,
+      ),
+    ]);
+    expect(compactedQueue[2].actions).toEqual([
+      updateSegmentPartialVolumeAction(
+        {
+          id: 3,
+          name: "3 some name (changed)",
+        },
+        VOLUME_TRACING_ID,
+      ),
+    ]);
   });
 
   it("should send update actions", () => {

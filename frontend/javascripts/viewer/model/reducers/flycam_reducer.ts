@@ -133,7 +133,7 @@ export function zoomReducer(state: WebknossosState, zoomStep: number): Webknosso
   const [min, max] = getValidZoomRangeForUser(state);
   let newZoomStep = clamp(min, zoomStep, max);
 
-  if (isNaN(newZoomStep)) {
+  if (Number.isNaN(newZoomStep)) {
     newZoomStep = 1;
   }
 
@@ -169,7 +169,7 @@ export function setDirectionReducer(state: WebknossosState, direction: Vector3) 
 
 // The way rotations are currently handled / interpreted is quirky. See here for more information:
 // https://www.notion.so/scalableminds/3D-Rotations-3D-Scene-210b51644c6380c2a4a6f5f3c069738a?source=copy_link#22bb51644c63800fb874e717e49da7bc
-export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
+function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
     let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
@@ -226,15 +226,15 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       const matrix = cloneMatrix(state.flycam.currentMatrix);
       const { position } = action;
 
-      if (action.dimensionToSkip !== 0 && !isNaN(position[0])) {
+      if (action.dimensionToSkip !== 0 && !Number.isNaN(position[0])) {
         matrix[12] = action.position[0];
       }
 
-      if (action.dimensionToSkip !== 1 && !isNaN(position[1])) {
+      if (action.dimensionToSkip !== 1 && !Number.isNaN(position[1])) {
         matrix[13] = action.position[1];
       }
 
-      if (action.dimensionToSkip !== 2 && !isNaN(position[2])) {
+      if (action.dimensionToSkip !== 2 && !Number.isNaN(position[2])) {
         matrix[14] = action.position[2];
       }
 

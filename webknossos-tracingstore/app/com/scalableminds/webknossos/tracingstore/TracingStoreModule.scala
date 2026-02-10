@@ -4,6 +4,8 @@ import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services.mesh.AdHocMeshServiceHolder
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
+import com.scalableminds.webknossos.tracingstore.cleanup.TSCleanUpService
+import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{TSDatasetErrorLoggingService, VolumeTracingService}
@@ -28,6 +30,8 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[TSChunkCacheService]).asEagerSingleton()
     bind(classOf[TemporaryTracingService]).asEagerSingleton()
     bind(classOf[TSDatasetErrorLoggingService]).asEagerSingleton()
+    bind(classOf[TsTempFileService]).asEagerSingleton()
+    bind(classOf[TSCleanUpService]).asEagerSingleton()
   }
 
 }

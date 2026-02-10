@@ -47,7 +47,7 @@ export type JobCreditCostInfo = {
   organizationMilliCredits: number;
 };
 
-export async function getJobCreditCost(
+async function getJobCreditCost(
   command: string,
   boundingBoxInMag: Vector6,
 ): Promise<JobCreditCostInfo> {

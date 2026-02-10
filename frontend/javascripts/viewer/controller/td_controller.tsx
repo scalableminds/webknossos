@@ -421,7 +421,7 @@ class TDController extends PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: WebknossosState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     voxelSize: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,

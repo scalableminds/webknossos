@@ -10,6 +10,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
 import min from "lodash-es/min";
+import messages from "messages";
 import { buffers, eventChannel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import {
@@ -44,6 +45,7 @@ import {
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
   getVolumeTracingByLayerName,
   isMappingActivationAllowed,
+  isZoomThresholdExceededForAgglomerateMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   type EnsureLayerMappingsAreLoadedAction,
@@ -515,6 +517,21 @@ function* updateLocalHdf5Mapping(
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, layerName),
   );
+
+  const isZoomThresholdExceeded = yield* select((state) =>
+    isZoomThresholdExceededForAgglomerateMapping(state, layerName),
+  );
+
+  if (isZoomThresholdExceeded) {
+    // We do not try to look up all segment ids because these are usually too many
+    // in coarse magnifications.
+    Toast.warning(messages["tracing.segmentation_zoom_warning_agglomerate"], {
+      sticky: true,
+    });
+    return;
+  } else {
+    Toast.close(messages["tracing.segmentation_zoom_warning_agglomerate"]);
+  }
 
   const cube = Model.getCubeByLayerName(layerName);
   const segmentIds = cube.getValueSetForAllBuckets();

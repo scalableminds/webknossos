@@ -15,6 +15,7 @@ import type {
 } from "types/api_types";
 import Constants, {
   type ContourMode,
+  MAX_MAG_FOR_AGGLOMERATE_MAPPING,
   MappingStatusEnum,
   type Vector3,
   type Vector4,
@@ -846,6 +847,16 @@ export function hasAgglomerateMapping(state: WebknossosState) {
   }
 
   return AGGLOMERATE_STATES.YES;
+}
+
+export function isZoomThresholdExceededForAgglomerateMapping(
+  state: WebknossosState,
+  segmentationLayerName: string,
+) {
+  return (
+    getActiveMagIndexForLayer(state, segmentationLayerName) >
+    Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING)
+  );
 }
 
 export function getMeshesForAdditionalCoordinates(

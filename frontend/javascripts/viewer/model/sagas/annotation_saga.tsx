@@ -9,7 +9,6 @@ import type { ActionPattern } from "redux-saga/effects";
 import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, is2dDataset } from "viewer/model/accessors/dataset_accessor";
-import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import type {
   EditAnnotationLayerAction,
@@ -28,16 +27,14 @@ import { determineLayout } from "viewer/view/layouting/default_layout_configs";
 import { is3dViewportMaximized } from "viewer/view/layouting/flex_layout_helper";
 import { getLastActiveLayout, getLayoutConfig } from "viewer/view/layouting/layout_persistence";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
-import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
+import {
+  isZoomThresholdExceededForAgglomerateMapping,
+  needsLocalHdf5Mapping,
+} from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { acquireAnnotationMutexMaybe } from "./saving/save_mutex_saga";
 import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/update_actions";
-
-/* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
-  compare https://github.com/scalableminds/webknossos/issues/5223.
- */
-const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
@@ -156,10 +153,8 @@ function* warnAboutSegmentationZoom(): Saga<never> {
         !needsLocalHdf5Mapping(storeState, segmentationLayer.name)
       );
     });
-    const isZoomThresholdExceeded = yield* select(
-      (storeState) =>
-        getActiveMagIndexForLayer(storeState, segmentationLayer.name) >
-        Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
+    const isZoomThresholdExceeded = yield* select((state) =>
+      isZoomThresholdExceededForAgglomerateMapping(state, segmentationLayer.name),
     );
 
     if (
@@ -167,9 +162,8 @@ function* warnAboutSegmentationZoom(): Saga<never> {
       isRemoteAgglomerateMappingEnabled &&
       isZoomThresholdExceeded
     ) {
-      Toast.error(messages["tracing.segmentation_zoom_warning_agglomerate"], {
-        sticky: false,
-        timeout: 3000,
+      Toast.warning(messages["tracing.segmentation_zoom_warning_agglomerate"], {
+        sticky: true,
       });
     } else {
       Toast.close(messages["tracing.segmentation_zoom_warning_agglomerate"]);

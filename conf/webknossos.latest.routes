@@ -273,7 +273,7 @@ GET           /time/overview                                                    
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
-GET           /jobs                                                                             controllers.JobController.list()
+GET           /jobs                                                                             controllers.JobController.list(command: Option[String], skipForDeletedDatasets: Option[Boolean])
 GET           /jobs/status                                                                      controllers.JobController.status()
 GET           /jobs/getCreditCost                                                               controllers.JobController.getJobCreditCost(command: String, boundingBoxInMag: String)
 POST          /jobs/run/convertToWkw/:datasetId                                                 controllers.JobController.runConvertToWkwJob(datasetId: ObjectId, scale: String, unit: Option[String])

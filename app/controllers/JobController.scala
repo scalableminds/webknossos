@@ -84,12 +84,14 @@ class JobController @Inject()(jobDAO: JobDAO,
     } yield Ok(jsStatus)
   }
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      jobsCompact <- jobDAO.findAllCompact
-    } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
-  }
+  def list(command: Option[String], skipForDeletedDatasets: Option[Boolean]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+        commandValidatedOpt <- Fox.runOptional(command)(JobCommand.fromString(_).toFox)
+        jobsCompact <- jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
+      } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
+    }
 
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

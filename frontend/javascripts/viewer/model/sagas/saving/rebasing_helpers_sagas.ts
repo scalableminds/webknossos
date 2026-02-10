@@ -256,8 +256,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               return newAction;
             }
             case "updateSegmentPartial": {
-              // ColoredLogger.logGreen("adapting updateSegment action?", action);
-
               const { actionTracingId } = action.value;
 
               const tracing = annotationBeforeUpdate.volumes.find(

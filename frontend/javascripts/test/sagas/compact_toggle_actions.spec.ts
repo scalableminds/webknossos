@@ -1,5 +1,5 @@
 import DiffableMap from "libs/diffable_map";
-import { withoutUpdateSegment, withoutUpdateTree } from "test/helpers/saveHelpers";
+import { withoutUpdateTree } from "test/helpers/saveHelpers";
 import defaultState from "viewer/default_state";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -170,12 +170,8 @@ function testSkeletonDiffing(prevState: WebknossosState, nextState: WebknossosSt
 }
 
 function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosState) {
-  // Let's remove updateTree actions as well, as these will occur here
-  // because we don't do shallow updates within the tests (instead, we are
-  // are creating completely new trees, so that we don't have to go through the
-  // action->reducer pipeline)
-  return withoutUpdateSegment(
-    Array.from(diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0])),
+  return Array.from(
+    diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0]),
   );
 }
 

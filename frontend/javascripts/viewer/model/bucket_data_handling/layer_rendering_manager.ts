@@ -34,6 +34,7 @@ import {
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import {
   getHideUnregisteredSegmentsForLayer,
+  getSegmentJournalForLayer,
   getSegmentsForLayer,
 } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
@@ -357,23 +358,29 @@ export default class LayerRenderingManager {
 
     const updateToNewSegments = (newSegments: SegmentMap) => {
       const cuckoo = this.getCustomColorCuckooTable();
-      const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(
-        Store.getState(),
-        this.name,
-      );
-      // todop: passing [] as the segment journals doesn't make optimal use of caching (the
-      // diffing will always run twice per change).
-      // beware: passing/ the journal will create the need to also properly handle the
-      // mergeSegments action.
+      const storeState = Store.getState();
+      const segmentJournal = getSegmentJournalForLayer(storeState, this.name);
+      const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(storeState, this.name);
+
       for (const updateAction of cachedDiffSegmentLists(
         this.name,
         prevSegments,
         newSegments,
-        [],
-        [],
+        // The diffing function actually wants the previous and current segment journal.
+        // However, we just pass the most up to date segment journal here twice which is
+        // not completely correct, but done for the following reasons:
+        // - that way we don't need to keep a reference to the previous segment journal
+        //   (which would be a bit tedious)
+        // - we don't need to handle the mergeSegments case which the differ could emit
+        //   otherwise
+        // A small disadvantage is that — when the user merges two segments — the differ
+        // runs twice (instead of being cached). However, this should happen so rarely
+        // that it's not a big impact.
+        segmentJournal,
+        segmentJournal,
       )) {
         if (
-          updateAction.name === "updateSegment" ||
+          updateAction.name === "updateSegmentPartial" ||
           updateAction.name === "createSegment" ||
           updateAction.name === "deleteSegment" ||
           updateAction.name === "updateSegmentVisibility"

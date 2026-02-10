@@ -44,6 +44,7 @@ import type {
   ActiveMappingInfo,
   LabelAction,
   SegmentGroup,
+  SegmentJournalEntry,
   SegmentMap,
   StoreAnnotation,
   VolumeTracing,
@@ -432,6 +433,20 @@ export function getHideUnregisteredSegmentsForLayer(
   }
 
   return state.localSegmentationData[layer.name].hideUnregisteredSegments;
+}
+
+const EMPTY_SEGMENT_JOURNAL: SegmentJournalEntry[] = [];
+export function getSegmentJournalForLayer(
+  state: WebknossosState,
+  layerName: string,
+): SegmentJournalEntry[] {
+  const layer = getSegmentationLayerByName(state.dataset, layerName);
+
+  if (layer.tracingId != null) {
+    return getVolumeTracingById(state.annotation, layer.tracingId).segmentJournal;
+  }
+
+  return EMPTY_SEGMENT_JOURNAL;
 }
 
 // Next to returning a clean list of selected segments or group, this method returns

@@ -6,6 +6,7 @@ import { zeroPad } from "libs/utils";
 import clamp from "lodash-es/clamp";
 import identity from "lodash-es/identity";
 import orderBy from "lodash-es/orderBy";
+import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
@@ -58,7 +59,6 @@ import {
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
-import uniqBy from "lodash-es/uniqBy";
 
 function SkeletonTracingReducer(
   state: WebknossosState,
@@ -1323,21 +1323,24 @@ export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
   // extra safe. Actually, duplicate keys should never be saved to the back-end,
   // as duplicate keys will collapse during diffing and only one of the entries
   // will survive.
-  return uniqBy(metadata.map((prop) => {
-    // If stringList value is defined, but it's an empty array, it should
-    // be switched to undefined
-    const needsCorrection =
-      prop.stringListValue != null &&
-      prop.stringListValue.length === 0 &&
-      (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
-    if (needsCorrection) {
-      return {
-        ...prop,
-        stringListValue: undefined,
-      };
-    }
-    return prop;
-  }), entry => entry.key);
+  return uniqBy(
+    metadata.map((prop) => {
+      // If stringList value is defined, but it's an empty array, it should
+      // be switched to undefined
+      const needsCorrection =
+        prop.stringListValue != null &&
+        prop.stringListValue.length === 0 &&
+        (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
+      if (needsCorrection) {
+        return {
+          ...prop,
+          stringListValue: undefined,
+        };
+      }
+      return prop;
+    }),
+    (entry) => entry.key,
+  );
 }
 
 export default SkeletonTracingReducer;

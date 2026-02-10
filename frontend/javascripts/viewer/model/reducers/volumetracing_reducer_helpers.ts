@@ -412,7 +412,7 @@ export function handleUpdateSegment(state: WebknossosState, action: UpdateSegmen
       name: null,
       color: null,
       isVisible: true,
-      groupId: getSelectedIds(state)[0].group,
+      groupId: getSelectedIds(state).group,
       metadata: [],
       ...oldSegment,
       ...segment,

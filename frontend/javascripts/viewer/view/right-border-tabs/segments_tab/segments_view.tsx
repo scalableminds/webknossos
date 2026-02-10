@@ -213,7 +213,7 @@ const mapStateToProps = (state: WebknossosState) => {
 };
 
 const getCleanedSelectedSegmentsOrGroup = (state: WebknossosState) => {
-  const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
+  const { maybeUpdateStoreAction, ...cleanedSelectedIds } = getSelectedIds(state);
   if (maybeUpdateStoreAction != null) {
     maybeUpdateStoreAction();
   }

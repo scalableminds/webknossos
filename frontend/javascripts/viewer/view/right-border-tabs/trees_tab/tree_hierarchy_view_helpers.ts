@@ -260,6 +260,10 @@ export function moveGroupsHelper(
   groupId: number,
   targetGroupId: number | null | undefined,
 ): TreeGroup[] | SegmentGroup[] {
+  if (targetGroupId == null) {
+    // Guard against explicitly passed null or undefined.
+    targetGroupId = MISSING_GROUP_ID;
+  }
   const movedGroup = findGroup(groups, groupId);
   if (!movedGroup) {
     throw new Error("Could not find group to move");

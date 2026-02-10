@@ -58,6 +58,7 @@ import {
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
+import uniqBy from "lodash-es/uniqBy";
 
 function SkeletonTracingReducer(
   state: WebknossosState,
@@ -1318,8 +1319,11 @@ export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
   // should be null. This workaround is necessary because protobuf cannot
   // distinguish between an empty list and a not existent property.
   // Therefore, we clean this up here.
-  // todop: should we also ensure uniqueness here?
-  return metadata.map((prop) => {
+  // Additionally, we ensure uniqueness of the metadata keys just to be
+  // extra safe. Actually, duplicate keys should never be saved to the back-end,
+  // as duplicate keys will collapse during diffing and only one of the entries
+  // will survive.
+  return uniqBy(metadata.map((prop) => {
     // If stringList value is defined, but it's an empty array, it should
     // be switched to undefined
     const needsCorrection =
@@ -1333,7 +1337,7 @@ export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
       };
     }
     return prop;
-  });
+  }), entry => entry.key);
 }
 
 export default SkeletonTracingReducer;

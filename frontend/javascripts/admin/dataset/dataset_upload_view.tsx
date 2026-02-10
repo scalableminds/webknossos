@@ -1221,126 +1221,124 @@ function FileUploadArea({
             </div>
           )}
           {isDatasetConversionEnabled ? (
-            <>
-              <div
-                style={{
-                  textAlign: "left",
-                  display: "inline-block",
-                  marginTop: 10,
-                }}
+            <div
+              style={{
+                textAlign: "left",
+                display: "inline-block",
+                marginTop: 10,
+              }}
+            >
+              The following file formats are supported:
+              <ul>
+                <li>
+                  <Popover content={<Zarr3Example />} trigger="hover">
+                    Zarr or WKW dataset
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+
+                <li>
+                  <Popover content={<SingleLayerImageStackExample />} trigger="hover">
+                    Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+
+                <li>
+                  <Popover content={<MultiLayerImageStackExample />} trigger="hover">
+                    Multi-Layer Image File Sequence
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>
+                  <Popover
+                    content={
+                      <a
+                        href="https://docs.webknossos.org/webknossos/data/zarr.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Read more in docs
+                      </a>
+                    }
+                    trigger="hover"
+                  >
+                    OME-Zarr 0.4+ (NGFF) datasets{" "}
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>
+                  <Popover
+                    content={
+                      <a
+                        href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Read more in docs
+                      </a>
+                    }
+                    trigger="hover"
+                  >
+                    Neuroglancer Precomputed datasets{" "}
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>
+                  <Popover
+                    content={
+                      <a
+                        href="https://docs.webknossos.org/webknossos/data/n5.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Read more in docs
+                      </a>
+                    }
+                    trigger="hover"
+                  >
+                    N5 datasets{" "}
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
+              </ul>
+              Have a look at{" "}
+              <a
+                href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
+                onClick={(e) => e.stopPropagation()}
               >
-                The following file formats are supported:
-                <ul>
-                  <li>
-                    <Popover content={<Zarr3Example />} trigger="hover">
-                      Zarr or WKW dataset
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-
-                  <li>
-                    <Popover content={<SingleLayerImageStackExample />} trigger="hover">
-                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-
-                  <li>
-                    <Popover content={<MultiLayerImageStackExample />} trigger="hover">
-                      Multi-Layer Image File Sequence
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>
-                    <Popover
-                      content={
-                        <a
-                          href="https://docs.webknossos.org/webknossos/data/zarr.html"
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Read more in docs
-                        </a>
-                      }
-                      trigger="hover"
-                    >
-                      OME-Zarr 0.4+ (NGFF) datasets{" "}
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>
-                    <Popover
-                      content={
-                        <a
-                          href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Read more in docs
-                        </a>
-                      }
-                      trigger="hover"
-                    >
-                      Neuroglancer Precomputed datasets{" "}
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>
-                    <Popover
-                      content={
-                        <a
-                          href="https://docs.webknossos.org/webknossos/data/n5.html"
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Read more in docs
-                        </a>
-                      }
-                      trigger="hover"
-                    >
-                      N5 datasets{" "}
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
-                </ul>
-                Have a look at{" "}
-                <a
-                  href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  our documentation
-                </a>{" "}
-                to learn more.
-              </div>
-            </>
+                our documentation
+              </a>{" "}
+              to learn more.
+            </div>
           ) : null}
         </div>
       </div>

@@ -33,5 +33,3 @@ export function getContributorById(
   }
   return keyContributors(contributors)[userId];
 }
-
-export default {};

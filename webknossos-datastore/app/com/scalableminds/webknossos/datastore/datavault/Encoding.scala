@@ -19,4 +19,11 @@ object Encoding extends ExtendedEnumeration {
       case ""         => Full(identity)
       case _          => Failure(s"Unsupported encoding: $s")
     }
+
+  def toRfc7231String(e: Encoding.Value): Option[String] =
+    e match {
+      case Encoding.gzip     => Some("gzip")
+      case Encoding.brotli   => Some("br")
+      case Encoding.identity => None
+    }
 }

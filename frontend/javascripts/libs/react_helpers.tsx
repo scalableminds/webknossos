@@ -134,5 +134,3 @@ export function useIsActiveUserAdminOrManager() {
   const user = useWkSelector((state) => state.activeUser);
   return user != null && isUserAdminOrManager(user);
 }
-
-export default {};

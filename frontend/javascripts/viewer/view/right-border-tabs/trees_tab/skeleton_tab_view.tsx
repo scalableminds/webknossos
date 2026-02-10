@@ -4,8 +4,8 @@ import {
   ArrowsAltOutlined,
   DeleteOutlined,
   DownloadOutlined,
-  DownOutlined,
   ExclamationCircleOutlined,
+  MenuOutlined,
   PlusOutlined,
   SearchOutlined,
   SortAscendingOutlined,
@@ -15,7 +15,17 @@ import {
 } from "@ant-design/icons";
 import type { Entry } from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
-import { Dropdown, Empty, type MenuProps, Modal, notification, Space, Spin, Tooltip } from "antd";
+import {
+  Divider,
+  Dropdown,
+  Empty,
+  type MenuProps,
+  Modal,
+  notification,
+  Space,
+  Spin,
+  Tooltip,
+} from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
@@ -941,11 +951,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <Space.Compact
-                  block
-                  className="compact-wrap"
-                  style={{ marginBottom: "var(--ant-margin-sm)" }}
-                >
+                <Space wrap>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -955,9 +961,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onSelectAllMatches={this.handleSelectAllMatchingTrees}
                   >
                     <ButtonComponent
-                      title="Open the search via CTRL + Shift + F"
-                      className="firstButton"
+                      title="Open search via CTRL + Shift + F"
                       icon={<SearchOutlined />}
+                      variant="text"
+                      color="default"
                     />
                   </AdvancedSearchPopover>
                   <ButtonComponent
@@ -965,42 +972,65 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
                     disabled={isEditingDisabled}
                     icon={<PlusOutlined />}
+                    variant="text"
+                    color="default"
                   />
                   <ButtonComponent
                     onClick={this.handleDelete}
                     title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
                     disabled={isEditingDisabled}
                     icon={<DeleteOutlined />}
+                    variant="text"
+                    color="default"
                   />
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
                     disabled={isEditingDisabled}
                     icon={<i className="fas fa-toggle-on" />}
+                    variant="text"
+                    color="default"
                   />
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
                     disabled={isEditingDisabled}
                     icon={<i className="fas fa-toggle-off" />}
+                    variant="text"
+                    color="default"
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}
                     title="Select previous tree"
                     icon={<ArrowLeftOutlined />}
+                    variant="text"
+                    color="default"
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeForward}
                     title="Select next tree"
                     icon={<ArrowRightOutlined />}
+                    variant="text"
+                    color="default"
                   />
                   <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent title="Sort" icon={<SortAscendingOutlined />} />
+                    <ButtonComponent
+                      title="Sort"
+                      icon={<SortAscendingOutlined />}
+                      variant="text"
+                      color="default"
+                    />
                   </Dropdown>
                   <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                    <ButtonComponent icon={<DownOutlined />}>More</ButtonComponent>
+                    <ButtonComponent
+                      icon={<MenuOutlined />}
+                      variant="text"
+                      color="default"
+                      title="More actions"
+                    />
                   </Dropdown>
-                </Space.Compact>
+                </Space>
+                <Divider size="small" />
                 {!showSkeletons ? (
                   <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
                     <WarningOutlined

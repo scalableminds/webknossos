@@ -2,6 +2,7 @@ import {
   BarChartOutlined,
   CopyOutlined,
   PushpinOutlined,
+  TagOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
@@ -14,6 +15,7 @@ import {
   Modal,
   notification,
   Popover,
+  Space,
 } from "antd";
 import type {
   ItemType,
@@ -222,9 +224,6 @@ function copyIconWithTooltip(value: string | number, title: string) {
   return (
     <FastTooltip title={title}>
       <CopyOutlined
-        style={{
-          margin: "0 0 0 5px",
-        }}
         onClick={async () => {
           await navigator.clipboard.writeText(value.toString());
           Toast.success(`"${value}" copied to clipboard`);
@@ -1846,11 +1845,11 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "positionInfo",
-        <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
-          {nodePositionAsString}
+        <Space size="small">
+          <PushpinOutlined rotate={-45} />
+          {`Position: ${nodePositionAsString}`}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-        </>,
+        </Space>,
       ),
     );
   } else if (globalPosition != null) {
@@ -1859,11 +1858,11 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "positionInfo",
-        <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
-          {positionAsString}
+        <Space size="small">
+          <PushpinOutlined rotate={-45} />
+          {`Position: ${positionAsString}`}
           {copyIconWithTooltip(positionAsString, "Copy position")}
-        </>,
+        </Space>,
       ),
     );
   }
@@ -1872,11 +1871,14 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "distanceInfo",
-        <FastTooltip title="Distance to the active Node of the active Tree">
-          <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
-          {maybeClickedNodeId != null ? "Node" : "Position"}
+        <Space size="small">
+          <i className="fas fa-ruler" />
+          <FastTooltip title="Distance to the active Node of the active Tree">
+            {`${distanceToSelection[0]} (${distanceToSelection[1]}) to this
+            ${maybeClickedNodeId != null ? "Node" : "Position"}`}
+          </FastTooltip>
           {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-        </FastTooltip>,
+        </Space>,
       ),
     );
   }
@@ -1885,11 +1887,11 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "copy-cell",
-        <>
+        <Space size="small">
           <div className="cell-context-icon" />
-          Segment ID: {`${clickedSegmentOrMeshId}`}{" "}
+          {`Segment ID: ${clickedSegmentOrMeshId}`}
           {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
-        </>,
+        </Space>,
       ),
     );
   }
@@ -1897,17 +1899,18 @@ function ContextMenuInner() {
     const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
     if (segmentName != null) {
       const maxNameLength = 20;
+      const segmentNameLabel =
+        segmentName.length > maxNameLength
+          ? truncateStringToLength(segmentName, maxNameLength)
+          : segmentName;
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",
-          <>
-            <i className="fas fa-tag segment-context-icon" />
-            Segment Name:{" "}
-            {segmentName.length > maxNameLength
-              ? truncateStringToLength(segmentName, maxNameLength)
-              : segmentName}
+          <Space size="small">
+            <TagOutlined />
+            {`Segment Name: ${segmentNameLabel}`}
             {copyIconWithTooltip(segmentName, "Copy Segment Name")}
-          </>,
+          </Space>,
         ),
       );
     }
@@ -1917,39 +1920,33 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "surfaceInfo",
-        <>
-          <i className="segment-context-icon">m²</i>
-          Surface Area: {segmentSurfaceAreaLabel}
+        <Space size="small">
+          <i>m²</i>
+          {`Surface Area: ${segmentSurfaceAreaLabel}`}
           {copyIconWithTooltip(segmentSurfaceAreaLabel as string, "Copy surface area")}
-        </>,
+        </Space>,
       ),
     );
 
     infoRows.push(
       getInfoMenuItem(
         "volumeInfo",
-        <>
-          <i className="segment-context-icon">m³</i>
-          Volume: {segmentVolumeLabel}
+        <Space size="small">
+          <i>m³</i>
+          {`Volume: ${segmentVolumeLabel}`}
           {copyIconWithTooltip(segmentVolumeLabel as string, "Copy volume")}
-        </>,
+        </Space>,
       ),
     );
 
     infoRows.push(
       getInfoMenuItem(
         "boundingBoxPositionInfo",
-        <>
-          <i className="fas fa-dice-d6 segment-context-icon" />
-          Bounding Box:
-          <div style={{ marginLeft: 22, marginTop: -5 }}>
-            {boundingBoxInfoLabel}
-            {copyIconWithTooltip(
-              boundingBoxInfoLabel as string,
-              "Copy BBox top left point and extent",
-            )}
-          </div>
-        </>,
+        <Space size="small">
+          <i className="fas fa-dice-d6 " />
+          {`Bounding Box: ${boundingBoxInfoLabel}`}
+          {copyIconWithTooltip(boundingBoxInfoLabel, "Copy BBox top left point and extent")}
+        </Space>,
       ),
     );
   }

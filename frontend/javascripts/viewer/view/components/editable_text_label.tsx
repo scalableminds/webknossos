@@ -1,5 +1,5 @@
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-import { Input, type InputProps, Space } from "antd";
+import { Button, Input, type InputProps, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
@@ -131,10 +131,6 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     }
   };
 
-  const iconStyle = {
-    cursor: "pointer",
-    marginLeft: 5,
-  };
   const currentMargin = margin != null ? margin : "0 10px";
   const inputComponentProps: InputProps = {
     value: value,
@@ -154,12 +150,15 @@ function EditableTextLabel(props: EditableTextLabelProp) {
       <Space.Compact block>
         <Input {...inputComponentProps} onBlur={() => handleOnChange()} />
         <FastTooltip key="save" title={`Save ${label}`} placement="bottom">
-          <CheckOutlined
-            style={iconStyle}
+          <Button
             onClick={(evt) => {
               evt.stopPropagation();
               handleOnChange();
             }}
+            size="small"
+            color="default"
+            variant="text"
+            icon={<CheckOutlined />}
           />
         </FastTooltip>
       </Space.Compact>
@@ -194,14 +193,17 @@ function EditableTextLabel(props: EditableTextLabelProp) {
         )}
         {disableEditing || hideEditIcon ? null : (
           <FastTooltip key="edit" title={`Edit ${label}`} placement="bottom">
-            <EditOutlined
+            <Button
+              onClick={onRename}
+              size="small"
+              color="default"
+              variant="text"
+              icon={<EditOutlined />}
               className={iconClassName + " " + (markdown ? "flex-item" : "")}
               style={{
-                ...iconStyle,
                 display: "inline",
                 whiteSpace: "nowrap",
               }}
-              onClick={onRename}
             />
           </FastTooltip>
         )}

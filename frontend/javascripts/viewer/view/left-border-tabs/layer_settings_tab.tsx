@@ -1,4 +1,5 @@
 import {
+  DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
@@ -550,7 +551,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return {
       key: "computeSegmentIndexFileButton",
-      icon: <i className="fas fa-database" />,
+      icon: <DatabaseOutlined />,
       label: "Compute a Segment Index file",
       onClick: triggerComputeSegmentIndexFileJob,
     };

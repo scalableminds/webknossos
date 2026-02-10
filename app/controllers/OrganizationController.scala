@@ -343,6 +343,7 @@ class OrganizationController @Inject()(
       organizationId = organization._id,
       description = Some("Organization created"),
       pricingPlan = Some(organization.pricingPlan),
+      aiPlan = Some(organization.aiPlan),
       paidUntil = organization.paidUntil.map(Some(_)),
       includedUsers = organization.includedUsers.map(Some(_)),
       includedStorageBytes = organization.includedStorageBytes.map(Some(_)),

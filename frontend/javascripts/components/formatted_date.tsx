@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import FastTooltip from "./fast_tooltip";
 
 const defaultTimeFormat = "YYYY-MM-DD HH:mm";
+const defaultDateFormat = "YYYY-MM-DD";
 
 /**
  * Return current date and time. Please only use this function if you need
@@ -20,14 +21,16 @@ export default function FormattedDate({
   timestamp,
   format,
   tooltipFormat,
+  dateOnly,
 }: {
   timestamp: string | number | Date;
   format?: string;
   tooltipFormat?: string;
+  dateOnly?: boolean;
 }) {
   const _timestamp = dayjs.utc(timestamp);
 
-  const _format = format || defaultTimeFormat;
+  const _format = format || (dateOnly ? defaultDateFormat : defaultTimeFormat);
   const _tooltipFormat = tooltipFormat || format;
 
   return (

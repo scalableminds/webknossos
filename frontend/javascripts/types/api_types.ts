@@ -713,6 +713,7 @@ export type APICreditTransaction = {
   readonly updatedAt: number;
 };
 export type APIOrganizationPricingPlanUpdate = {
+  readonly aiPlan?: AiPlanEnum | null;
   readonly organizationId: string;
   readonly description?: string | null;
   readonly pricingPlan?: PricingPlanEnum | null;

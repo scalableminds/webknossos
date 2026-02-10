@@ -103,9 +103,12 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
   }
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
-        OR (_organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)))
+    q"""${listAccessQ(requestingUserId)}
         OR TRUE in (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId))"""
+
+  private def listAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"""(_organization IN (SELECT _organization FROM webknossos.users_ WHERE (isAdmin OR isDatasetManager) AND _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
+      OR (_organization IN (SELECT _organization FROM webknossos.teams_ WHERE _id IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)))"""
 
   // Any user from an organization can update their credit transactions as for now all users can start paid jobs.
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
@@ -114,7 +117,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
     for {
-      accessQuery <- readAccessQuery
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[CreditTransactionsRow])
       parsed <- parseAll(r)
     } yield parsed

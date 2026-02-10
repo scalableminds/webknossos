@@ -1,6 +1,6 @@
 import org.apache.pekko.actor.{ActorSystem, Props}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.webknossos.tracingstore.cleanup.CleanUpService
+import com.scalableminds.webknossos.tracingstore.cleanup.WkCleanUpService
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import files.WkTempFileService
@@ -25,7 +25,7 @@ import scala.sys.process._
 class Startup @Inject()(actorSystem: ActorSystem,
                         conf: WkConf,
                         initialDataService: InitialDataService,
-                        cleanUpService: CleanUpService,
+                        cleanUpService: WkCleanUpService,
                         annotationDAO: AnnotationDAO,
                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                         lifecycle: ApplicationLifecycle,

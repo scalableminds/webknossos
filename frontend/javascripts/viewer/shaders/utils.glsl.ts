@@ -38,18 +38,6 @@ export function jsHsv2rgb(h: number, s: number, v: number): Vector3 {
   return [f(5), f(3), f(1)];
 }
 
-// From: https://stackoverflow.com/a/54070620/896760
-// Input: r,g,b in [0,1], out: h in [0,360) and s,v in [0,1]
-export function jsRgb2hsv(rgb: Vector3): Vector3 {
-  const [r, g, b] = rgb;
-  const v = Math.max(r, g, b);
-  const n = v - Math.min(r, g, b);
-
-  const h = n !== 0 && (v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n);
-  // @ts-expect-error ts-migrate(2365) FIXME: Operator '+' cannot be applied to types 'number | ... Remove this comment to see the full error message
-  return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
-}
-
 /**
  * Adapted from https://stackoverflow.com/a/9493060.
  *

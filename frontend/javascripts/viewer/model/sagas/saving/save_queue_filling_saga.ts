@@ -182,7 +182,7 @@ export function* setupSavingForTracingType(
   }
 }
 
-export function performDiffTracing(
+function performDiffTracing(
   prevTracing: SkeletonTracing | VolumeTracing,
   tracing: SkeletonTracing | VolumeTracing,
 ): Array<UpdateActionWithoutIsolationRequirement> {
@@ -199,7 +199,7 @@ export function performDiffTracing(
   return actions;
 }
 
-export function performDiffAnnotation(
+function performDiffAnnotation(
   prevFlycam: Flycam,
   flycam: Flycam,
   prevTdCamera: CameraData,

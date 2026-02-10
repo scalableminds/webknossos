@@ -85,5 +85,3 @@ if (typeof window !== "undefined") {
   // @ts-expect-error
   window.testContextLoss = testContextLoss;
 }
-
-export default {};

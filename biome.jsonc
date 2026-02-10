@@ -63,7 +63,7 @@
         "useSimplifiedLogicExpression": "off", // TODO: consider removing
         "noForEach": "off",
         "noBannedTypes": "error",
-        "noUselessFragments": "off", // TODO: consider removing
+        "noUselessFragments": "error",
         "useLiteralKeys": "off",
         "useArrowFunction": "off",
         "noStaticOnlyClass": "off",
@@ -98,7 +98,7 @@
         "noShadowRestrictedNames": "off",
         "noImplicitAnyLet": "off",
         "noConfusingVoidType": "off",
-        "noGlobalIsNan": "off", // TODO: consider turning this into an error
+        "noGlobalIsNan": "error",
         "noArrayIndexKey": "off",
         "noConstEnum": "off",
         "noRedeclare": "off",

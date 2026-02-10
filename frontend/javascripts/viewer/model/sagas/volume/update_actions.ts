@@ -550,7 +550,7 @@ export function moveTreeComponent(
 
 // This action only exists for legacy reasons. Old annotations may have this
 // action in the action log. Don't use it.
-export function LEGACY_updateVolumeTracingAction(
+function LEGACY_updateVolumeTracingAction(
   tracing: VolumeTracing,
   position: Vector3,
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,

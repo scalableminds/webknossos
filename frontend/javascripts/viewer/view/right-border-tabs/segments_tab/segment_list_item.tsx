@@ -366,7 +366,7 @@ function _MeshInfoItem(props: {
         >
           <RefreshButton
             segment={segment}
-            isLoading={isHovered}
+            isLoading={isLoading}
             visibleSegmentationLayer={props.visibleSegmentationLayer}
           />
           {downloadButton}

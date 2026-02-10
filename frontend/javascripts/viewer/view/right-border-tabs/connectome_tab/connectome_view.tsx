@@ -1,3 +1,4 @@
+import { CloseCircleOutlined } from "@ant-design/icons";
 import {
   getSynapseDestinations,
   getSynapsePositions,
@@ -5,7 +6,7 @@ import {
   getSynapsesOfAgglomerates,
   getSynapseTypes,
 } from "admin/rest_api";
-import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
+import { Alert, Divider, Empty, Space, Tooltip, type TreeProps } from "antd";
 import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
@@ -753,12 +754,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const disabled = currentConnectomeFile == null;
     return (
       <>
-        <Space.Compact
-          block
-          style={{
-            marginBottom: 10,
-          }}
-        >
+        <Space>
           <Tooltip title="Show Synaptic Connections for Segment ID(s)">
             <InputComponent
               value={activeAgglomerateIdString}
@@ -770,9 +766,14 @@ class ConnectomeView extends React.Component<Props, State> {
               disabled={disabled}
             />
           </Tooltip>
-          <ButtonComponent onClick={() => this.reset()} disabled={disabled}>
-            Reset
-          </ButtonComponent>
+          <ButtonComponent
+            onClick={() => this.reset()}
+            disabled={disabled}
+            icon={<CloseCircleOutlined />}
+            title="Reset"
+            variant="text"
+            color="default"
+          />
           <ConnectomeFilters
             availableSynapseTypes={availableSynapseTypes}
             connectomeData={connectomeData}
@@ -780,7 +781,8 @@ class ConnectomeView extends React.Component<Props, State> {
             disabled={disabled}
           />
           <ConnectomeSettings segmentationLayer={segmentationLayer} />
-        </Space.Compact>
+        </Space>
+        <Divider size="small" />
         {this.getConnectomeMappingActivationAlert()}
       </>
     );

@@ -290,7 +290,12 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
             case "mergeSegments": {
               const mergeActions = appliedBackendUpdateActions
                 .flatMap((batch) => batch.value)
-                .filter((action) => action.name === "mergeSegments");
+                // These filters cannot be combined because TS cannot do type narrowing then.
+                .filter((mergeAction) => mergeAction.name === "mergeSegments")
+                .filter(
+                  (mergeAction) =>
+                    mergeAction.value.actionTracingId === action.value.actionTracingId,
+                );
 
               // After partialMapping is constructed, it contains the information
               // how segment ids were changed by the most recent backend actions. A key-value pair

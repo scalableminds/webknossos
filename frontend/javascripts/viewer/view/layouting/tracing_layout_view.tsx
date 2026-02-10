@@ -287,7 +287,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
       UrlManager.updateToHash(pastedText.slice(hashPos + 1));
     } else {
       const numbers = pastedText.split(",").map(Number);
-      if (numbers.length === 3 && !numbers.some(isNaN)) {
+      if (numbers.length === 3 && !numbers.some(Number.isNaN)) {
         applyState({ position: numbers as Vector3 });
       }
     }

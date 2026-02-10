@@ -341,29 +341,27 @@ export function QuickSelectSettingsPopover() {
   const Wrapper = showNux ? NuxPopConfirm : IdentityComponent;
 
   return (
-    <>
-      <Wrapper>
-        <Popover
-          trigger="click"
-          placement="bottom"
-          open={areQuickSelectSettingsOpen}
-          content={<QuickSelectControls />}
-          onOpenChange={(open: boolean) => {
-            dispatch(showQuickSelectSettingsAction(open));
-          }}
+    <Wrapper>
+      <Popover
+        trigger="click"
+        placement="bottom"
+        open={areQuickSelectSettingsOpen}
+        content={<QuickSelectControls />}
+        onOpenChange={(open: boolean) => {
+          dispatch(showQuickSelectSettingsAction(open));
+        }}
+      >
+        <ToggleButton
+          title="Configure Quick Select"
+          tooltipPlacement="right"
+          className="narrow"
+          active={isQuickSelectActive || showNux}
+          style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
         >
-          <ToggleButton
-            title="Configure Quick Select"
-            tooltipPlacement="right"
-            className="narrow"
-            active={isQuickSelectActive || showNux}
-            style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
-          >
-            <SettingOutlined />
-          </ToggleButton>
-        </Popover>
-      </Wrapper>
-    </>
+          <SettingOutlined />
+        </ToggleButton>
+      </Popover>
+    </Wrapper>
   );
 }
 

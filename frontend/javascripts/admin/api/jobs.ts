@@ -23,13 +23,16 @@ function transformBackendJobToAPIJob(job: any): APIJob {
   };
 }
 
-export async function getJobs(command?: string, skipForDeletedDatasets?: boolean): Promise<APIJob[]> {
+export async function getJobs(
+  command?: string,
+  skipForDeletedDatasets?: boolean,
+): Promise<APIJob[]> {
   const params = new URLSearchParams();
   if (command) {
-    params.set("command", command)
+    params.set("command", command);
   }
   if (skipForDeletedDatasets != null) {
-    params.set("skipForDeletedDatasets", skipForDeletedDatasets ? "true" : "false")
+    params.set("skipForDeletedDatasets", skipForDeletedDatasets ? "true" : "false");
   }
 
   const jobs = await Request.receiveJSON(`/api/jobs?${params}`);
@@ -339,14 +342,14 @@ export function startAlignSectionsJob(
 ): Promise<APIJob> {
   const urlParams = annotationId
     ? new URLSearchParams({
-      layerName,
-      newDatasetName,
-      annotationId,
-    })
+        layerName,
+        newDatasetName,
+        annotationId,
+      })
     : new URLSearchParams({
-      layerName,
-      newDatasetName,
-    });
+        layerName,
+        newDatasetName,
+      });
   return Request.receiveJSON(`/api/jobs/run/alignSections/${datasetId}?${urlParams.toString()}`, {
     method: "POST",
   });

@@ -40,7 +40,13 @@ import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { APIJobCommand, type APIDatasetCompact, type APIJob, type APIUser, type FolderItem } from "types/api_types";
+import {
+  type APIDatasetCompact,
+  type APIJob,
+  APIJobCommand,
+  type APIUser,
+  type FolderItem,
+} from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
@@ -130,18 +136,19 @@ function DatasetView({
     let cancelled = false;
 
     if (features().jobsEnabled) {
-      const poll = () => getJobs(APIJobCommand.CONVERT_TO_WKW, true).then((newJobs) => {
-        if (!cancelled) {
-          setJobs(newJobs);
-        }
-      });
+      const poll = () =>
+        getJobs(APIJobCommand.CONVERT_TO_WKW, true).then((newJobs) => {
+          if (!cancelled) {
+            setJobs(newJobs);
+          }
+        });
       poll();
       interval = setInterval(poll, CONVERSION_JOBS_REFRESH_INTERVAL);
     }
 
     return () => {
       cancelled = true;
-      return (interval != null ? clearInterval(interval) : undefined);
+      return interval != null ? clearInterval(interval) : undefined;
     };
   }, []);
 

@@ -64,7 +64,7 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
     multiUserOpt.map(_.selectedTheme) match {
       case Some(Theme.dark)  => "<style>html { background: black }</style>"
       case Some(Theme.light) => ""
-      case Some(Theme.auto) | None =>
+      case _ =>
         "<style>@media (prefers-color-scheme: dark) { html { background: black } }</style>"
     }
 

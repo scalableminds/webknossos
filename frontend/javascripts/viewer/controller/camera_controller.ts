@@ -95,6 +95,7 @@ function getTDCameraTarget(cameraData: CameraData): Vector3 {
 class CameraController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  tdViewDiagonalDatasetExtent: number = 0;
   // Properties are only created here to avoid creating new objects for each update call.
   flycamRotationEuler = new Euler();
   flycamRotationMatrix = new Matrix4();
@@ -109,6 +110,7 @@ class CameraController extends PureComponent<Props> {
     const diagonalDatasetExtent = Math.sqrt(
       datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
     );
+    this.tdViewDiagonalDatasetExtent = diagonalDatasetExtent;
     const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
     for (const cam of Object.values(this.props.cameras)) {
@@ -221,6 +223,21 @@ class CameraController extends PureComponent<Props> {
       );
       this.props.cameras[viewport].updateProjectionMatrix();
     }
+
+    // Keep the TDView's rotation center in sync with the other viewports while
+    // the user interacts outside of the TDView. This avoids a small "catch up"
+    // jump when hovering the TDView afterwards.
+    if (state.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+      const prevTarget = state.viewModeData.plane.tdCamera.target;
+      if (
+        prevTarget == null ||
+        prevTarget[0] !== cameraPosition[0] ||
+        prevTarget[1] !== cameraPosition[1] ||
+        prevTarget[2] !== cameraPosition[2]
+      ) {
+        Store.dispatch(setTDCameraWithoutTimeTrackingAction({ target: cameraPosition }));
+      }
+    }
   }
 
   bindToEvents() {
@@ -263,9 +280,12 @@ class CameraController extends PureComponent<Props> {
     if (tdCamera instanceof PerspectiveCamera) {
       // Interpret left/right/top/bottom as viewplane extents at the target depth and
       // use an off-axis perspective projection to preserve pan/zoom semantics.
-      const near = Math.max(cameraData.near, 0.1);
-      const far = cameraData.far;
       const distance = V3.length(V3.sub(target, cameraData.position)) || 1;
+      // Increase the near plane with distance to improve depth precision (reduces z-fighting),
+      // while keeping the visible projection identical (left/right/top/bottom are scaled by near/distance).
+      const near = Math.max(0.1, distance / 1000);
+      const farPadding = Math.max(1000, this.tdViewDiagonalDatasetExtent * 2);
+      const far = Math.max(near + 1, distance + farPadding);
       const scale = near / distance;
       const left = cameraData.left * scale;
       const right = cameraData.right * scale;

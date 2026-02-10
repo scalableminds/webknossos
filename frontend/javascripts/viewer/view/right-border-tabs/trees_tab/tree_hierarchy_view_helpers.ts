@@ -126,7 +126,7 @@ export function callDeep(
     }
   });
 }
-function callDeepWithChildren(
+export function callDeepWithChildren(
   groups: TreeGroup[],
   groupId: number | undefined,
   callback: (

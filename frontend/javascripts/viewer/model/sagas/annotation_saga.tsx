@@ -27,10 +27,7 @@ import { determineLayout } from "viewer/view/layouting/default_layout_configs";
 import { is3dViewportMaximized } from "viewer/view/layouting/flex_layout_helper";
 import { getLastActiveLayout, getLayoutConfig } from "viewer/view/layouting/layout_persistence";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
-import {
-  isZoomThresholdExceededForAgglomerateMapping,
-  needsLocalHdf5Mapping,
-} from "../accessors/volumetracing_accessor";
+import { isZoomThresholdExceededForAgglomerateMapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { acquireAnnotationMutexMaybe } from "./saving/save_mutex_saga";
@@ -131,6 +128,8 @@ function shouldDisplaySegmentationData(): boolean {
   return !onlyViewing3dViewport;
 }
 
+const AGGLOMERATE_WARNING_KEY = "segmentation_zoom_warning_agglomerate";
+
 function* warnAboutSegmentationZoom(): Saga<never> {
   function* warnMaybe(): Saga<void> {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
@@ -139,7 +138,7 @@ function* warnAboutSegmentationZoom(): Saga<never> {
       return;
     }
 
-    const isRemoteAgglomerateMappingEnabled = yield* select((storeState) => {
+    const isAgglomerateMappingEnabled = yield* select((storeState) => {
       if (!segmentationLayer) {
         return false;
       }
@@ -149,24 +148,20 @@ function* warnAboutSegmentationZoom(): Saga<never> {
       );
       return (
         mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
-        mappingInfo.mappingType !== "JSON" &&
-        !needsLocalHdf5Mapping(storeState, segmentationLayer.name)
+        mappingInfo.mappingType !== "JSON"
       );
     });
     const isZoomThresholdExceeded = yield* select((state) =>
       isZoomThresholdExceededForAgglomerateMapping(state, segmentationLayer.name),
     );
 
-    if (
-      shouldDisplaySegmentationData() &&
-      isRemoteAgglomerateMappingEnabled &&
-      isZoomThresholdExceeded
-    ) {
+    if (shouldDisplaySegmentationData() && isAgglomerateMappingEnabled && isZoomThresholdExceeded) {
       Toast.warning(messages["tracing.segmentation_zoom_warning_agglomerate"], {
         sticky: true,
+        key: AGGLOMERATE_WARNING_KEY,
       });
     } else {
-      Toast.close(messages["tracing.segmentation_zoom_warning_agglomerate"]);
+      Toast.close(AGGLOMERATE_WARNING_KEY);
     }
   }
 

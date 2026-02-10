@@ -10,7 +10,6 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
 import min from "lodash-es/min";
-import messages from "messages";
 import { buffers, eventChannel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import {
@@ -525,12 +524,8 @@ function* updateLocalHdf5Mapping(
   if (isZoomThresholdExceeded) {
     // We do not try to look up all segment ids because these are usually too many
     // in coarse magnifications.
-    Toast.warning(messages["tracing.segmentation_zoom_warning_agglomerate"], {
-      sticky: true,
-    });
+    // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
     return;
-  } else {
-    Toast.close(messages["tracing.segmentation_zoom_warning_agglomerate"]);
   }
 
   const cube = Model.getCubeByLayerName(layerName);
@@ -557,21 +552,21 @@ function* updateLocalHdf5Mapping(
     newEntries =
       editableMapping != null
         ? yield* call(
-            getAgglomeratesForSegmentsFromTracingstore,
-            annotation.tracingStore.url,
-            editableMapping.tracingId,
-            Array.from(newSegmentIds),
-            annotation.annotationId,
-            annotation.version,
-          )
+          getAgglomeratesForSegmentsFromTracingstore,
+          annotation.tracingStore.url,
+          editableMapping.tracingId,
+          Array.from(newSegmentIds),
+          annotation.annotationId,
+          annotation.version,
+        )
         : yield* call(
-            getAgglomeratesForSegmentsFromDatastore,
-            dataset.dataStore.url,
-            dataset,
-            mappingLayerName,
-            mappingName,
-            Array.from(newSegmentIds),
-          );
+          getAgglomeratesForSegmentsFromDatastore,
+          dataset.dataStore.url,
+          dataset,
+          mappingLayerName,
+          mappingName,
+          Array.from(newSegmentIds),
+        );
   } catch (exception) {
     console.error("Could not load agglomerate ids for segments due to", exception);
     Toast.error(

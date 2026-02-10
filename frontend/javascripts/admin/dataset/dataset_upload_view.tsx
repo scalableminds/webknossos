@@ -6,6 +6,7 @@ import {
   InfoCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
+import { BlobReader, ZipReader } from "@zip.js/zip.js";
 import {
   AllowedTeamsFormItem,
   CardContainer,
@@ -562,9 +563,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
 
       if (fileExtension === "zip") {
-        // @zip.js is a fairly large module (150kb)
-        // Dynamically import it to avoid loading it on Dashboard/admin pages.
-        const { BlobReader, ZipReader } = await import("@zip.js/zip.js");
         try {
           const reader = new ZipReader(new BlobReader(file));
           const entries = await reader.getEntries();

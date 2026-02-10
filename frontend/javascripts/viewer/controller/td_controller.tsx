@@ -28,7 +28,6 @@ import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetraci
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
-  moveTDViewByVectorWithoutTimeTrackingAction,
   moveTDViewXAction,
   moveTDViewYAction,
   setTDCameraAction,
@@ -38,33 +37,11 @@ import {
 } from "viewer/model/actions/view_mode_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
 import { voxelToUnit } from "viewer/model/scaleinfo";
-import type { CameraData, StoreAnnotation, WebknossosState } from "viewer/store";
+import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import type PlaneView from "viewer/view/plane_view";
 
 const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
-
-function getCameraBasis(camera: OrthographicCamera | PerspectiveCamera) {
-  const forward = new ThreeVector3();
-  camera.getWorldDirection(forward);
-  const up = camera.up.clone().normalize();
-  const right = new ThreeVector3().crossVectors(forward, up).normalize();
-  const correctedUp = new ThreeVector3().crossVectors(right, forward).normalize();
-  return { right, up: correctedUp };
-}
-
-function getTDViewPanOffset(
-  camera: OrthographicCamera | PerspectiveCamera,
-  cameraData: CameraData,
-): ThreeVector3 {
-  const centerX = (cameraData.left + cameraData.right) / 2;
-  const centerY = (cameraData.top + cameraData.bottom) / 2;
-  if (centerX === 0 && centerY === 0) {
-    return new ThreeVector3(0, 0, 0);
-  }
-  const { right, up } = getCameraBasis(camera);
-  return right.multiplyScalar(centerX).add(up.multiplyScalar(centerY));
-}
 
 function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, any> {
   return {
@@ -111,12 +88,9 @@ function maybeGetActiveNodeFromProps(props: Props) {
 class TDController extends PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
-  oldUnitPos!: Vector3;
   isStarted: boolean = false;
 
   componentDidMount() {
-    const { dataset, flycam } = Store.getState();
-    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -188,11 +162,11 @@ class TDController extends PureComponent<Props> {
       return;
     }
     const cameraData = Store.getState().viewModeData.plane.tdCamera;
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
-    const offset = getTDViewPanOffset(tdCamera, cameraData);
-    const target = new ThreeVector3(...(cameraData.target || [0, 0, 0])).add(offset);
+    const target = new ThreeVector3(...(cameraData.target || [0, 0, 0]));
     this.controls.target.copy(target);
-    this.controls.update(true);
+    // Ensure that external target updates don't shift the camera (TrackballControls
+    // derives the eye vector from `lastTarget`).
+    this.controls.lastTarget = target.clone();
   };
 
   getTDViewMouseControls(): Record<string, any> {
@@ -337,34 +311,15 @@ class TDController extends PureComponent<Props> {
     position = position || getPosition(flycam);
     const nmPosition = voxelToUnit(this.props.voxelSize, position);
 
+    // Update the rotation center without letting TrackballControls translate the camera.
+    const effectiveTarget = new ThreeVector3(...nmPosition);
+
     if (controls != null) {
-      controls.target.set(...nmPosition);
-      controls.update();
+      controls.target.copy(effectiveTarget);
+      controls.lastTarget = effectiveTarget.clone();
     }
 
-    // The following code is a dirty hack. If someone figures out
-    // how the trackball control's target can be set without affecting
-    // the camera position, go ahead.
-    // As the previous step will also move the camera, we need to
-    // fix this by offsetting the viewport
-    const invertedDiff = [];
-
-    for (let i = 0; i <= 2; i++) {
-      invertedDiff.push(this.oldUnitPos[i] - nmPosition[i]);
-    }
-
-    if (invertedDiff.every((el) => el === 0)) return;
-    this.oldUnitPos = nmPosition;
-    const nmVector = new ThreeVector3(...invertedDiff);
-    // moves camera by the nm vector
-    const camera = this.props.cameras[OrthoViews.TDView];
-    const rotation = ThreeVector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
-    // reverse euler order
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.
-    rotation.order = rotation.order.split("").reverse().join("");
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3' is not assignable to pa... Remove this comment to see the full error message
-    nmVector.applyEuler(rotation);
-    Store.dispatch(moveTDViewByVectorWithoutTimeTrackingAction(nmVector.x, nmVector.y));
+    Store.dispatch(setTDCameraWithoutTimeTrackingAction({ target: nmPosition }));
   };
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {
@@ -390,21 +345,19 @@ class TDController extends PureComponent<Props> {
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
     const prevCameraData = Store.getState().viewModeData.plane.tdCamera;
-    const offset = getTDViewPanOffset(tdCamera, prevCameraData);
-    const basePosition = tdCamera.position.clone().sub(offset);
-    const baseTarget =
+    const target =
       this.controls != null
-        ? this.controls.target.clone().sub(offset)
-        : new ThreeVector3(...prevCameraData.target);
+        ? this.controls.target.clone()
+        : new ThreeVector3(...(prevCameraData.target || [0, 0, 0]));
     // Write threeJS camera into store
     Store.dispatch(
       setCameraAction({
         ...prevCameraData,
         near: tdCamera.near,
         far: tdCamera.far,
-        position: objToArr(basePosition),
+        position: objToArr(tdCamera.position),
         up: objToArr(tdCamera.up),
-        target: objToArr(baseTarget),
+        target: objToArr(target),
       }),
     );
   };

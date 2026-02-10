@@ -51,6 +51,7 @@ interface ITrackballControls {
   maxDistance: number;
   keys: number[];
   target: Vector3;
+  lastTarget: Vector3;
 
   rotateCamera: () => void;
   destroy: () => void;

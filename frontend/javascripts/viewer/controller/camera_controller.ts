@@ -84,40 +84,6 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
   };
 }
 
-const DEFAULT_TD_FOV = 45;
-const MIN_PERSPECTIVE_FOV = 1;
-const MAX_PERSPECTIVE_FOV = 179;
-
-function getCameraBasis(position: Vector3, target: Vector3, up: Vector3) {
-  const forward = V3.sub(target, position);
-  const forwardLength = V3.length(forward);
-  const upLength = V3.length(up);
-  const normalizedUp = upLength === 0 ? ([0, 1, 0] as Vector3) : V3.normalize(up);
-  if (forwardLength === 0) {
-    return {
-      forward: [0, 0, -1] as Vector3,
-      right: [1, 0, 0] as Vector3,
-      up: normalizedUp,
-    };
-  }
-  const normalizedForward = V3.normalize(forward);
-  const right = V3.normalize(V3.cross(normalizedForward, normalizedUp));
-  const rightLength = V3.length(right);
-  if (rightLength === 0) {
-    return {
-      forward: normalizedForward,
-      right: [1, 0, 0] as Vector3,
-      up: normalizedUp,
-    };
-  }
-  const correctedUp = V3.normalize(V3.cross(right, normalizedForward));
-  return {
-    forward: normalizedForward,
-    right,
-    up: correctedUp,
-  };
-}
-
 function getTDCameraTarget(cameraData: CameraData): Vector3 {
   if (cameraData.target != null) {
     return cameraData.target;
@@ -289,39 +255,35 @@ class CameraController extends PureComponent<Props> {
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     const target = getTDCameraTarget(cameraData);
-    const { right, up } = getCameraBasis(cameraData.position, target, cameraData.up);
-    const centerX = (cameraData.left + cameraData.right) / 2;
-    const centerY = (cameraData.top + cameraData.bottom) / 2;
-    const offset = V3.add(V3.scale(right, centerX), V3.scale(up, centerY));
-    const effectivePosition = V3.add(cameraData.position, offset);
-    const effectiveTarget = V3.add(target, offset);
 
-    tdCamera.position.set(...effectivePosition);
-    tdCamera.up = new ThreeVector3(...up);
-    tdCamera.lookAt(new ThreeVector3(...effectiveTarget));
+    tdCamera.position.set(...cameraData.position);
+    tdCamera.up = new ThreeVector3(...cameraData.up);
+    tdCamera.lookAt(new ThreeVector3(...target));
 
     if (tdCamera instanceof PerspectiveCamera) {
-      const height = cameraData.top - cameraData.bottom;
-      const distance = V3.length(V3.sub(effectiveTarget, effectivePosition));
-      const fov =
-        height > 0 && distance > 0
-          ? Math.min(
-              MAX_PERSPECTIVE_FOV,
-              Math.max(MIN_PERSPECTIVE_FOV, (Math.atan(height / (2 * distance)) * 360) / Math.PI),
-            )
-          : DEFAULT_TD_FOV;
-      tdCamera.fov = fov;
-      tdCamera.aspect = getInputCatcherAspectRatio(Store.getState(), OrthoViews.TDView);
+      // Interpret left/right/top/bottom as viewplane extents at the target depth and
+      // use an off-axis perspective projection to preserve pan/zoom semantics.
+      const near = Math.max(cameraData.near, 0.1);
+      const far = cameraData.far;
+      const distance = V3.length(V3.sub(target, cameraData.position)) || 1;
+      const scale = near / distance;
+      const left = cameraData.left * scale;
+      const right = cameraData.right * scale;
+      const top = cameraData.top * scale;
+      const bottom = cameraData.bottom * scale;
+      tdCamera.near = near;
+      tdCamera.far = far;
+      tdCamera.projectionMatrix.makePerspective(left, right, top, bottom, near, far);
+      tdCamera.projectionMatrixInverse.copy(tdCamera.projectionMatrix).invert();
     } else {
       tdCamera.left = cameraData.left;
       tdCamera.right = cameraData.right;
       tdCamera.top = cameraData.top;
       tdCamera.bottom = cameraData.bottom;
+      tdCamera.near = cameraData.near;
+      tdCamera.far = cameraData.far;
+      tdCamera.updateProjectionMatrix();
     }
-    tdCamera.near =
-      tdCamera instanceof PerspectiveCamera ? Math.max(cameraData.near, 0.1) : cameraData.near;
-    tdCamera.far = cameraData.far;
-    tdCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
 

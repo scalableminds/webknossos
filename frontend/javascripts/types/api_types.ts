@@ -688,6 +688,39 @@ export type APIPricingPlanStatus = {
   readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
 };
 
+export type APICreditTransactionState = "Pending" | "Complete";
+export type APICreditState =
+  | "Pending"
+  | "Spent"
+  | "Refunded"
+  | "Revoked"
+  | "PartiallyRevoked"
+  | "Refunding"
+  | "Revoking"
+  | "AddCredits";
+export type APICreditTransaction = {
+  readonly id: string;
+  readonly organization_id: string;
+  readonly relatedTransaction?: string | null;
+  readonly paidJob?: APIJob | null;
+  readonly creditChange: number;
+  readonly comment: string;
+  readonly transactionState: APICreditTransactionState;
+  readonly creditState: APICreditState;
+  readonly expirationDate?: number | null;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+};
+export type APIOrganizationPricingPlanUpdate = {
+  readonly organizationId: string;
+  readonly description?: string | null;
+  readonly pricingPlan?: PricingPlanEnum | null;
+  readonly paidUntil?: number | null;
+  readonly includedUsers?: number | null;
+  readonly includedStorageBytes?: number | null;
+  readonly created: number;
+};
+
 export type APIBuildInfoWk = {
   webknossos: {
     name: string;

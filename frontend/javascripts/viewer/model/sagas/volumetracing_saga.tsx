@@ -4,6 +4,7 @@ import Toast from "libs/toast";
 import isEqual from "lodash-es/isEqual";
 import memoizeOne from "memoize-one";
 import messages from "messages";
+import type { Channel } from "redux-saga";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { AnnotationLayerEnum } from "types/api_types";
@@ -92,7 +93,7 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
-export function* watchVolumeTracingAsync(): Saga<void> {
+function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
   yield* takeEveryUnlessBusy(
     "INTERPOLATE_SEGMENTATION_LAYER",
@@ -261,7 +262,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
     }
 
     let lastPosition = startEditingAction.positionInLayerSpace;
-    const channel = yield* actionChannel(["ADD_TO_CONTOUR_LIST", "FINISH_EDITING"]);
+    const channel: Channel<Action> = yield* actionChannel([
+      "ADD_TO_CONTOUR_LIST",
+      "FINISH_EDITING",
+    ]);
 
     while (true) {
       const currentAction = yield* take(channel);
@@ -390,7 +394,7 @@ export function* finishSectionLabeler(
   yield* put(registerLabelPointAction(sectionLabeler.getUnzoomedCentroid()));
 }
 
-export function* ensureToolIsAllowedInMag(): Saga<void> {
+function* ensureToolIsAllowedInMag(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
 
   while (true) {
@@ -647,9 +651,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 }
 
-export function* updateClickedSegments(
-  action: ClickSegmentAction | SetActiveCellAction,
-): Saga<void> {
+function* updateClickedSegments(action: ClickSegmentAction | SetActiveCellAction): Saga<void> {
   // If one or zero segments are selected, update selected segments in store
   // Otherwise, the multiselection is kept.
   const { segmentId } = action;
@@ -666,7 +668,7 @@ export function* updateClickedSegments(
   }
 }
 
-export function* maintainHoveredSegmentId(): Saga<void> {
+function* maintainHoveredSegmentId(): Saga<void> {
   yield* takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
 }
 

@@ -35,7 +35,7 @@ const ModalInformationFooter = (
   </>
 );
 
-export function extendPricingPlan(organization: APIOrganization) {
+function extendPricingPlan(organization: APIOrganization) {
   const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
   Modal.confirm({
@@ -68,7 +68,7 @@ export function extendPricingPlan(organization: APIOrganization) {
   });
 }
 
-export function upgradeUserQuota() {
+function upgradeUserQuota() {
   renderIndependently((destroyCallback) => <UpgradeUserQuotaModal destroy={destroyCallback} />);
 }
 
@@ -113,7 +113,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
   );
 }
 
-export function upgradeStorageQuota() {
+function upgradeStorageQuota() {
   renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
@@ -254,7 +254,7 @@ function upgradePricingPlan(
   });
 }
 
-export function UpgradePricingPlanModal({
+function UpgradePricingPlanModal({
   title,
   modalBody,
   destroy,
@@ -305,7 +305,7 @@ export function UpgradePricingPlanModal({
   );
 }
 
-export function orderWebknossosCredits() {
+function orderWebknossosCredits() {
   renderIndependently((destroyCallback) => (
     <OrderWebknossosCreditsModal destroy={destroyCallback} />
   ));
@@ -355,18 +355,17 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             value={creditAmount}
           />
         </div>
-        <>
-          <Divider style={{ marginTop: 40 }} />
-          <p style={{ color: "#aaa", fontSize: 12 }}>
-            Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
-            sales team. We typically respond within one business day to discuss payment options and
-            purchasing requirements. See our{" "}
-            <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
-              FAQ
-            </a>{" "}
-            for more information.
-          </p>
-        </>
+
+        <Divider style={{ marginTop: 40 }} />
+        <p style={{ color: "#aaa", fontSize: 12 }}>
+          Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
+          sales team. We typically respond within one business day to discuss payment options and
+          purchasing requirements. See our{" "}
+          <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
+            FAQ
+          </a>{" "}
+          for more information.
+        </p>
       </div>
     </Modal>
   );

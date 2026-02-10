@@ -86,4 +86,3 @@ export function parseProtoAnnotation(annotationArrayBuffer: ArrayBuffer): any {
     longs: Number,
   }) as APITracingStoreAnnotation;
 }
-export default {};

@@ -124,18 +124,21 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     } yield dataStore
   }
 
-  private lazy val configuredUploadToPathsPrefixes: Box[Seq[UPath]] =
+  private lazy val configuredUploadToPathsPrefixes: Box[Seq[UPath]] = {
+    val fallbackFromBaseFolder = for {
+      datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
+      fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
+    } yield Seq(fromDatastoreBaseFolder.toAbsolute)
     conf.WebKnossos.Datasets.uploadToPathsPrefixes match {
+      case None => fallbackFromBaseFolder
+      case Some(fromConfigStrs) if fromConfigStrs.isEmpty =>
+        fallbackFromBaseFolder
       case Some(fromConfigStrs) =>
         (for {
           fromConfig <- fromConfigStrs.map(UPath.fromString)
         } yield fromConfig.map(_.toAbsolute)).toList.toSingleBox("Could not parse config uploadToPathsPrefixes")
-      case None =>
-        for {
-          datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
-          fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
-        } yield Seq(fromDatastoreBaseFolder.toAbsolute)
     }
+  }
 
   private def selectPathPrefix(requestedPrefix: Option[UPath]): Box[UPath] =
     for {
@@ -148,7 +151,10 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       }
     } yield selectedPrefix
 
-  private lazy val uploadToPathsInfixOpt: Option[String] = conf.WebKnossos.Datasets.uploadToPathsInfix
+  private lazy val uploadToPathsInfixOpt: Option[String] = conf.WebKnossos.Datasets.uploadToPathsInfix match {
+    case Some(infix) if infix == "" => None
+    case other                      => other
+  }
 
   private def addPathsToDatasource(
       dataSource: UsableDataSource,

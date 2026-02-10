@@ -27,20 +27,6 @@
   },
   "linter": {
     "enabled": true,
-    "includes": [
-      "!**/libs/keyboard.ts",
-      "!**/libs/stl_exporter.ts",
-      "!**/libs/DRACOLoader.ts",
-      "!**/libs/DRACOWorker.worker.js",
-      "!**/libs/BufferGeometryUtils.ts",
-      "!**/libs/fps_meter.ts",
-      "!**/libs/parse_stl_buffer.ts",
-      "!**/libs/trackball_controls.ts",
-      "!**/*.d.ts",
-      "!**/*.json",
-      "!**/frontend/javascripts/test/snapshots/**/*",
-      "**"
-    ],
     "rules": {
       "recommended": true,
       "style": {
@@ -77,7 +63,7 @@
         "useSimplifiedLogicExpression": "off", // TODO: consider removing
         "noForEach": "off",
         "noBannedTypes": "error",
-        "noUselessFragments": "off", // TODO: consider removing
+        "noUselessFragments": "error",
         "useLiteralKeys": "off",
         "useArrowFunction": "off",
         "noStaticOnlyClass": "off",
@@ -111,14 +97,16 @@
         "noShadowRestrictedNames": "off",
         "noImplicitAnyLet": "off",
         "noConfusingVoidType": "off",
-        "noGlobalIsNan": "off", // TODO: consider turning this into an error
+        "noGlobalIsNan": "error",
         "noArrayIndexKey": "off",
         "noConstEnum": "off",
         "noRedeclare": "off",
         "noFallthroughSwitchClause": "off",
         "noAssignInExpressions": "off"
       },
-      "nursery": {}
+      "nursery": {
+        "noReactForwardRef": "error"
+      }
     }
   },
   "formatter": {

@@ -140,12 +140,14 @@ type _ApplicableSkeletonUpdateAction =
   | UpdateTreeGroupsExpandedStateAction;
 
 export type ApplicableSkeletonServerUpdateAction = AsServerAction<_ApplicableSkeletonUpdateAction>;
-export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = Omit<
-  T,
-  "value"
-> & {
-  value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
-};
+export type ApplicableVolumeServerUpdateAction = AsServerAction<ApplicableVolumeUpdateAction>;
+
+export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = T extends any
+  ? Omit<T, "value"> & {
+      value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
+    }
+  : never;
+
 export type ApplicableSkeletonUpdateAction =
   WithoutServerSpecificFields<ApplicableSkeletonServerUpdateAction>;
 

@@ -30,6 +30,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import type {
+  ApplicableVolumeServerUpdateAction,
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
@@ -67,6 +68,18 @@ const initialState: WebknossosState = update(defaultVolumeState, {
     },
   },
 });
+
+const addMissingTimestampProp = (
+  actions: UpdateActionWithoutIsolationRequirement[],
+): ApplicableVolumeServerUpdateAction[] => {
+  return actions.map(
+    (a) =>
+      ({
+        ...a,
+        value: { ...a.value, actionTimestamp: 0 },
+      }) as ApplicableVolumeServerUpdateAction,
+  );
+};
 
 const { tracingId } = initialState.annotation.volumes[0];
 
@@ -235,11 +248,9 @@ describe("Update Action Application for VolumeTracing", () => {
         const maybeCompact = withCompaction
           ? compactUpdateActions
           : (updateActions: UpdateActionWithoutIsolationRequirement[]) => updateActions;
-        const updateActions = maybeCompact(
-          updateActionsBeforeCompaction,
-          volumeTracing2,
-          volumeTracing3,
-        ) as ApplicableVolumeUpdateAction[];
+        const updateActions = addMissingTimestampProp(
+          maybeCompact(updateActionsBeforeCompaction, volumeTracing2, volumeTracing3),
+        );
 
         for (const action of updateActions) {
           seenActionTypes.add(action.name);
@@ -284,9 +295,9 @@ describe("Update Action Application for VolumeTracing", () => {
     const volumeTracing1 = enforceVolumeTracing(state1);
     const volumeTracing2 = enforceVolumeTracing(state2);
 
-    const updateActions = Array.from(
-      diffVolumeTracing(volumeTracing1, volumeTracing2),
-    ) as ApplicableVolumeUpdateAction[];
+    const updateActions = addMissingTimestampProp(
+      Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2)),
+    );
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
@@ -310,9 +321,9 @@ describe("Update Action Application for VolumeTracing", () => {
     const volumeTracing1 = enforceVolumeTracing(state1);
     const volumeTracing2 = enforceVolumeTracing(state2);
 
-    const updateActions = Array.from(
-      diffVolumeTracing(volumeTracing1, volumeTracing2),
-    ) as ApplicableVolumeUpdateAction[];
+    const updateActions = addMissingTimestampProp(
+      Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2)),
+    );
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [
@@ -336,9 +347,9 @@ describe("Update Action Application for VolumeTracing", () => {
     const volumeTracing1 = enforceVolumeTracing(state1);
     const volumeTracing2 = enforceVolumeTracing(state2);
 
-    const updateActions = Array.from(
-      diffVolumeTracing(volumeTracing1, volumeTracing2),
-    ) as ApplicableVolumeUpdateAction[];
+    const updateActions = addMissingTimestampProp(
+      Array.from(diffVolumeTracing(volumeTracing1, volumeTracing2)),
+    );
 
     let reappliedNewState = transformStateAsReadOnly(state1, (state) =>
       applyActions(state, [

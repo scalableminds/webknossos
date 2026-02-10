@@ -25,7 +25,7 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type {
   ApplicableSkeletonServerUpdateAction,
-  ApplicableVolumeUpdateAction,
+  ApplicableVolumeServerUpdateAction,
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
@@ -113,7 +113,7 @@ export class BackendMock {
       state = combinedReducer(
         state,
         applyVolumeUpdateActionsFromServerAction(
-          actionBatch.value as ApplicableVolumeUpdateAction[],
+          actionBatch.value as ApplicableVolumeServerUpdateAction[],
           true,
         ),
       );

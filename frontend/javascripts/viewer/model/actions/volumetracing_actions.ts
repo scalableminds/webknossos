@@ -12,7 +12,7 @@ import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
 import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
-import type { ApplicableVolumeUpdateAction } from "../sagas/volume/update_actions";
+import type { ApplicableVolumeServerUpdateAction } from "../sagas/volume/update_actions";
 import type { Action } from "./actions";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
@@ -524,7 +524,7 @@ export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (
-  actions: Array<ApplicableVolumeUpdateAction>,
+  actions: Array<ApplicableVolumeServerUpdateAction>,
   ignoreUnsupportedActionTypes: boolean = false,
 ) =>
   ({

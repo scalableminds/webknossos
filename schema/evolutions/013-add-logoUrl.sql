@@ -7,5 +7,5 @@ ALTER TABLE webknossos.organizations ADD COLUMN logoUrl VARCHAR(2048) NOT NULL D
 ALTER TABLE webknossos.dataSets ADD COLUMN logoUrl VARCHAR(2048);
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
-UPDATE webknossos.organizations SET logoUrl = '/images/mpi-logos.svg';
+UPDATE webknossos.organizations SET logoUrl = '/assets/images/mpi-logos.svg';
 COMMIT TRANSACTION;

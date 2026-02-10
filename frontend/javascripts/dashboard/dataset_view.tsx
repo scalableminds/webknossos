@@ -40,7 +40,7 @@ import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_types";
+import { APIJobCommand, type APIDatasetCompact, type APIJob, type APIUser, type FolderItem } from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
@@ -123,22 +123,26 @@ function DatasetView({
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-
-    if (features().jobsEnabled) {
-      getJobs().then((newJobs) => setJobs(newJobs));
-    }
   }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
     if (features().jobsEnabled) {
-      interval = setInterval(() => {
-        getJobs().then((newJobs) => setJobs(newJobs));
-      }, CONVERSION_JOBS_REFRESH_INTERVAL);
+      const poll = () => getJobs(APIJobCommand.CONVERT_TO_WKW, true).then((newJobs) => {
+        if (!cancelled) {
+          setJobs(newJobs);
+        }
+      });
+      poll();
+      interval = setInterval(poll, CONVERSION_JOBS_REFRESH_INTERVAL);
     }
 
-    return () => (interval != null ? clearInterval(interval) : undefined);
+    return () => {
+      cancelled = true;
+      return (interval != null ? clearInterval(interval) : undefined);
+    };
   }, []);
 
   useEffect(() => {

@@ -552,21 +552,21 @@ function* updateLocalHdf5Mapping(
     newEntries =
       editableMapping != null
         ? yield* call(
-          getAgglomeratesForSegmentsFromTracingstore,
-          annotation.tracingStore.url,
-          editableMapping.tracingId,
-          Array.from(newSegmentIds),
-          annotation.annotationId,
-          annotation.version,
-        )
+            getAgglomeratesForSegmentsFromTracingstore,
+            annotation.tracingStore.url,
+            editableMapping.tracingId,
+            Array.from(newSegmentIds),
+            annotation.annotationId,
+            annotation.version,
+          )
         : yield* call(
-          getAgglomeratesForSegmentsFromDatastore,
-          dataset.dataStore.url,
-          dataset,
-          mappingLayerName,
-          mappingName,
-          Array.from(newSegmentIds),
-        );
+            getAgglomeratesForSegmentsFromDatastore,
+            dataset.dataStore.url,
+            dataset,
+            mappingLayerName,
+            mappingName,
+            Array.from(newSegmentIds),
+          );
   } catch (exception) {
     console.error("Could not load agglomerate ids for segments due to", exception);
     Toast.error(

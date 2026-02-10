@@ -355,18 +355,17 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             value={creditAmount}
           />
         </div>
-        <>
-          <Divider style={{ marginTop: 40 }} />
-          <p style={{ color: "#aaa", fontSize: 12 }}>
-            Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
-            sales team. We typically respond within one business day to discuss payment options and
-            purchasing requirements. See our{" "}
-            <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
-              FAQ
-            </a>{" "}
-            for more information.
-          </p>
-        </>
+
+        <Divider style={{ marginTop: 40 }} />
+        <p style={{ color: "#aaa", fontSize: 12 }}>
+          Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
+          sales team. We typically respond within one business day to discuss payment options and
+          purchasing requirements. See our{" "}
+          <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
+            FAQ
+          </a>{" "}
+          for more information.
+        </p>
       </div>
     </Modal>
   );

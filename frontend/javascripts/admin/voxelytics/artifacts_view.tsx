@@ -128,13 +128,11 @@ function ArtifactsView({
       <>
         <span>
           {artifact.foreignWorkflow != null ? (
-            <>
-              <Link
-                to={`/workflows/${artifact.foreignWorkflow[0]}?runId=${artifact.foreignWorkflow[1]}`}
-              >
-                {artifactName} <ExportOutlined />
-              </Link>
-            </>
+            <Link
+              to={`/workflows/${artifact.foreignWorkflow[0]}?runId=${artifact.foreignWorkflow[1]}`}
+            >
+              {artifactName} <ExportOutlined />
+            </Link>
           ) : (
             artifactName
           )}

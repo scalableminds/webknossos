@@ -33,7 +33,7 @@ import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO, OrganizationService, PricingPlan}
+import models.organization.{Organization, OrganizationDAO, OrganizationService, PricingPlan, AiPlan}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
@@ -93,7 +93,7 @@ Samplecountry
       "/assets/images/logo.svg",
       "Sample Organization",
       PricingPlan.Custom,
-      None,
+      Some(AiPlan.Power_AI),
       None,
       None,
       None,

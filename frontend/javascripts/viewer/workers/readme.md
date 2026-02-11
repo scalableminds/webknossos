@@ -9,9 +9,9 @@ When using a web worker module, you need to import it and turn it into an execut
 
 ```js
 import { createWorker } from "viewer/workers/comlink_wrapper";
-import SomeFunctionWorker from "viewer/workers/some_function.worker";
+import type SomeFunctionWorker from "viewer/workers/some_function.worker";
 
-const someFunction = createWorker(SomeFunctionWorker);
+const someFunction = createWorker<typeof SomeFunctionWorker>("some_function.worker.ts");
 
 // Use it
 const result = await someFunction(parameters);

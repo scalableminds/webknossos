@@ -1,4 +1,4 @@
-import { wrap } from "./comlink_core";
+import { type UseCreateWorkerToUseMe, wrap } from "./comlink_core";
 
 export { expose, transfer } from "./comlink_core";
 
@@ -11,18 +11,23 @@ export { expose, transfer } from "./comlink_core";
 // The unwrapping is done with `createWorker` which either instantiates the web worker module
 // or returns the dynamically imported function.
 
-export function createWorker<T extends (...args: any[]) => any>(
+type AnyFn = (...args: any[]) => any;
+type UnwrapExposedWorkerFn<T> = T extends UseCreateWorkerToUseMe<infer Fn extends AnyFn> ? Fn : T;
+
+export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | AnyFn>(
   pathToWorker: string,
-): (...params: Parameters<T>) => Promise<ReturnType<T>> {
+): (
+  ...params: Parameters<UnwrapExposedWorkerFn<TExposed>>
+) => Promise<Awaited<ReturnType<UnwrapExposedWorkerFn<TExposed>>>> {
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers.
     // Instead, we dynamically import the worker and return its default export.
-    return (async (...params: Parameters<T>) => {
+    return async (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
       const pathToWorkerWithoutExtension = pathToWorker.replace(/\.worker\.ts$/, "");
       // This import statement requires a file extension for proper static analysis by Vite during build step.
       const workerModule = await import(`./${pathToWorkerWithoutExtension}.worker.ts`);
       return workerModule.default(...params);
-    }) as any;
+    };
   }
 
   // this URL is relative to <root>/frontend/javascripts/viewer/workers

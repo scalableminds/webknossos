@@ -7,11 +7,16 @@ import map from "lodash-es/map";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
 import { createWorker } from "viewer/workers/comlink_wrapper";
+import type Compress from "../viewer/workers/compress.worker";
+import type FetchBuffer from "../viewer/workers/fetch_buffer.worker";
+import type FetchBufferWithHeaders from "../viewer/workers/fetch_buffer_with_headers.worker";
 import { handleError } from "./handle_request_error_helper";
 
-const fetchBufferViaWorker = createWorker("fetch_buffer.worker.ts");
-const fetchBufferWithHeaders = createWorker("fetch_buffer_with_headers.worker.ts");
-const compress = createWorker("compress.worker.ts");
+const fetchBufferViaWorker = createWorker<typeof FetchBuffer>("fetch_buffer.worker.ts");
+const fetchBufferWithHeaders = createWorker<typeof FetchBufferWithHeaders>(
+  "fetch_buffer_with_headers.worker.ts",
+);
+const compress = createWorker<typeof Compress>("compress.worker.ts");
 
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 

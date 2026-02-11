@@ -6,7 +6,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import models.annotation.AnnotationState._
+import models.annotation.AnnotationState.AnnotationState
+import models.annotation.CollaborationMode.CollaborationMode
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
 import slick.jdbc.GetResult
@@ -39,12 +40,12 @@ case class Annotation(
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
     name: String = AnnotationDefaults.defaultName,
     viewConfiguration: Option[JsObject] = None,
-    state: AnnotationState.Value = Active,
+    state: AnnotationState.Value = AnnotationState.Active,
     isLockedByOwner: Boolean = false,
     tags: Set[String] = Set.empty,
     tracingTime: Option[Long] = None,
     typ: AnnotationType.Value = AnnotationType.Explorational,
-    othersMayEdit: Boolean = false,
+    collaborationMode: CollaborationMode.Value = CollaborationMode.OwnerOnly,
     created: Instant = Instant.now,
     modified: Instant = Instant.now,
     isDeleted: Boolean = false
@@ -76,6 +77,8 @@ case class Annotation(
 
   def skeletonAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
 
+  def othersMayEdit: Boolean =
+    collaborationMode == CollaborationMode.Exclusive || collaborationMode == CollaborationMode.Concurrent
 }
 
 case class AnnotationCompactInfo(id: ObjectId,
@@ -85,13 +88,13 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  ownerId: ObjectId,
                                  ownerFirstName: String,
                                  ownerLastName: String,
-                                 othersMayEdit: Boolean,
+                                 collaborationMode: CollaborationMode,
                                  teamIds: Seq[ObjectId],
                                  teamNames: Seq[String],
                                  teamOrganizationIds: Seq[String],
                                  modified: Instant,
                                  tags: Set[String],
-                                 state: AnnotationState.Value = Active,
+                                 state: AnnotationState.Value = AnnotationState.Active,
                                  isLockedByOwner: Boolean,
                                  dataSetName: String,
                                  visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
@@ -202,6 +205,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       typ <- AnnotationType.fromString(r.typ).toFox
       viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAs[JsObject](_).toFox)
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
+      collaborationMode <- CollaborationMode.fromString(r.collaborationmode).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
     } yield {
       Annotation(
@@ -220,7 +224,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         parseArrayLiteral(r.tags).toSet,
         r.tracingtime,
         typ,
-        r.othersmayedit,
+        collaborationMode,
         Instant.fromSql(r.created),
         Instant.fromSql(r.modified),
         r.isdeleted
@@ -331,7 +335,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val ownerId = <<[ObjectId]
     val ownerFirstName = <<[String]
     val ownerLastName = <<[String]
-    val othersMayEdit = <<[Boolean]
+    val collaborationMode = CollaborationMode.fromString(<<[String]).getOrElse(CollaborationMode.OwnerOnly)
     val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
     val teamNames = parseArrayLiteral(<<[String])
     val teamOrganizationIds = parseArrayLiteral(<<[String])
@@ -351,9 +355,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
 
     // format: off
-    AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
-      teamNames,teamOrganizationIds,modified,tags,state,isLockedByOwner,dataSetName,visibility,tracingTime,
-      organizationId,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
+    AnnotationCompactInfo(id, typ, name, description, ownerId, ownerFirstName, ownerLastName, collaborationMode, teamIds,
+      teamNames, teamOrganizationIds, modified, tags, state, isLockedByOwner, dataSetName, visibility, tracingTime,
+      organizationId, tracingIds, annotationLayerNames, annotationLayerTypes, annotationLayerStatistics
     )
     // format: on
   }
@@ -399,7 +403,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
               a._user,
               u.firstname,
               u.lastname,
-              a.othersmayedit,
+              a.collaborationMode,
               a.modified,
               a.tags,
               a.state,
@@ -420,7 +424,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
             WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
             GROUP BY
-              a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
+              a._id, a.name, a.description, a._user, a.collaborationMode, a.modified,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
               u.firstname, u.lastname,
               d.name, o._id
@@ -435,7 +439,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             an._user,
             an.firstname,
             an.lastname,
-            an.othersmayedit,
+            an.collaborationMode,
             ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
             ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
             ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids,
@@ -463,7 +467,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             an._user,
             an.firstname,
             an.lastname,
-            an.othersmayedit,
+            an.collaborationMode,
             an.modified,
             an.tags,
             an.state,
@@ -656,13 +660,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def insertOne(a: Annotation): Fox[Unit] = {
     val insertAnnotationQuery = q"""
         INSERT INTO webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility,
-                                           name, viewConfiguration, state, tags, tracingTime, typ, othersMayEdit, created, modified, isDeleted)
+                                           name, viewConfiguration, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
         VALUES(${a._id}, ${a._dataset}, ${a._task}, ${a._team},
          ${a._user}, ${a.description}, ${a.visibility}, ${a.name},
          ${a.viewConfiguration},
          ${a.state},
          ${a.tags}, ${a.tracingTime}, ${a.typ},
-         ${a.othersMayEdit},
+         ${a.collaborationMode},
          ${a.created}, ${a.modified}, ${a.isDeleted})
          """.asUpdate
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
@@ -687,7 +691,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                tags = ${a.tags.toList},
                tracingTime = ${a.tracingTime},
                typ = ${a.typ},
-               othersMayEdit = ${a.othersMayEdit},
+               collaborationMode = ${a.collaborationMode},
                created = ${a.created},
                modified = ${a.modified},
                isDeleted = ${a.isDeleted}
@@ -755,13 +759,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- updateStringCol(id, _.description, description)
+      _ <- run(q"UPDATE webknossos.annotations SET description = $description WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- updateStringCol(id, _.name, name)
+      _ <- run(q"UPDATE webknossos.annotations SET name = $name WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateVisibility(id: ObjectId, visibility: AnnotationVisibility.Value)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -783,10 +787,17 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield ()
 
   def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateObjectIdCol(id, _._User, userId)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.annotations SET _user = $userId WHERE _id = $id".asUpdate)
+    } yield ()
 
-  def updateOthersMayEdit(id: ObjectId, othersMayEdit: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateBooleanCol(id, _.othersmayedit, othersMayEdit)
+  def updateCollaborationMode(id: ObjectId, collaborationMode: CollaborationMode)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.annotations SET collaborationMode = $collaborationMode WHERE _id = $id".asUpdate)
+    } yield ()
 
   def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(
       implicit ctx: DBAccessContext): Fox[Unit] =

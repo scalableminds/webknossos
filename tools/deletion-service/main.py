@@ -2,18 +2,8 @@
 # dependencies = [
 #   "httpx",
 #   "universal-pathlib ~=0.2.0",
-#   "s3fs"
+#   "s3fs >=2026.2.0"
 # ]
-# [tool.uv]
-# override-dependencies = [
-#   "s3fs >= 0",
-#   "aiobotocore >=2.24.3"  # To use botocore>=1.40.2 to avoid deprecated utcfromtimestamp
-# ]
-# # We require a custom version of s3fs (provided via our own github repo) which has a version tag that is not compatible with the versions requested by other packages.
-# # Therefore, the automatic dependency constraints checker would fail. Here, we avoid this by overwriting the s3fs constraint manually.
-# # Basically, we do this by allowing any version of s3fs (>=0). This way, the only available version (provided by our github s3fs repository configured below) is always accepted.
-# [tool.uv.sources]
-# s3fs = { git = "https://github.com/scalableminds/s3fs", branch = "retries" }
 # ///
 
 import logging
@@ -25,15 +15,20 @@ import traceback
 from typing import Any
 from upath import UPath
 from urllib.parse import urlparse
+from botocore.exceptions import ClientError, ConnectionClosedError
+import s3fs
 
 logger = logging.getLogger(__name__)
 
 WK_API_VERSION = 12
+NUM_REQUEST_RETRIES = 10
 
 
 def main() -> None:
     setup_logging()
     logger.info("Hello from S3 Path Deletion Service!")
+
+    setup_s3fs_config()
 
     args = parse_args()
 
@@ -89,7 +84,7 @@ def delete_path(path: str) -> None:
 
     config_kwargs = {
         "retries": {
-            "max_attempts": 10,
+            "max_attempts": NUM_REQUEST_RETRIES,
             "mode": "standard",
         }
     }
@@ -99,7 +94,6 @@ def delete_path(path: str) -> None:
         protocol="s3",
         endpoint_url=endpoint_url,
         config_kwargs=config_kwargs,
-        retries=10,
     )
 
     logger.info(f"Deleting {path} ...")
@@ -168,6 +162,40 @@ def setup_logging() -> None:
     handler.setFormatter(log_formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
+
+
+def setup_s3fs_config() -> None:
+    s3fs.add_retryable_error(ConnectionClosedError)
+    s3fs.set_custom_error_handler(custom_s3fs_error_handler)
+
+    s3fs.S3FileSystem.read_timeout = 60
+    s3fs.S3FileSystem.connect_timeout = 30
+    s3fs.S3FileSystem.retries = NUM_REQUEST_RETRIES
+
+
+def custom_s3fs_error_handler(exception: Exception) -> bool:
+    if isinstance(exception, ClientError):
+        # don't retry 404 errors
+        if "Not Found" in str(exception):
+            return False
+
+        # otherwise retry all other ClientErrors
+        logger.warning(
+            f"Retrying unexpected ClientError: {exception}",
+            exc_info=exception,
+            stack_info=True,
+        )
+        return True
+
+    if isinstance(exception, OSError):
+        logger.warning(
+            f"Retrying unexpected OSError: {exception}",
+            exc_info=exception,
+            stack_info=True,
+        )
+        return True
+
+    return False
 
 
 if __name__ == '__main__':

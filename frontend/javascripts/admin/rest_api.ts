@@ -547,8 +547,9 @@ export function setOthersMayEditForAnnotation(
   annotationType: APIAnnotationType,
   othersMayEdit: boolean,
 ): Promise<void> {
+  const collaborationMode = othersMayEdit ? "Concurrent" : "OwnerOnly";
   return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
     },

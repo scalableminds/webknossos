@@ -389,14 +389,15 @@ class AnnotationController @Inject()(
       }
   }
 
-  def updateOthersMayEdit(typ: String, id: ObjectId, othersMayEdit: Boolean): Action[AnyContent] =
+  def updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- Fox.fromBool(annotation.typ == AnnotationType.Explorational || annotation.typ == AnnotationType.Task) ?~> "annotation.othersMayEdit.onlyExplorationalOrTask"
+        _ <- Fox.fromBool(annotation.typ == AnnotationType.Explorational || annotation.typ == AnnotationType.Task) ?~> "annotation.collaborationMode.onlyExplorationalOrTask"
         _ <- Fox.fromBool(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- annotationDAO.updateOthersMayEdit(annotation._id, othersMayEdit)
-      } yield Ok(Json.toJson(othersMayEdit))
+        collaborationModeValidated <- CollaborationMode.fromString(collaborationMode).toFox
+        _ <- annotationDAO.updateCollaborationMode(annotation._id, collaborationModeValidated)
+      } yield Ok
     }
 
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
@@ -435,7 +436,8 @@ class AnnotationController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-          _ <- Fox.fromBool(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(
+            annotation.collaborationMode == CollaborationMode.Concurrent || annotation.collaborationMode == CollaborationMode.Exclusive) ?~> "notAllowed" ~> FORBIDDEN
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"

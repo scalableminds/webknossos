@@ -334,6 +334,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       _ <- run(q"""INSERT INTO webknossos.organization_plan_updates(
                      _organization, description, pricingPlan,
+                     aiPlan, aiPlanChanged,
                      paidUntil, paidUntilChanged,
                      includedUsers, includedUsersChanged,
                      includedStorage, includedStorageChanged,
@@ -373,8 +374,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findPlanUpdates(organizationId: String): Fox[Seq[OrganizationPlanUpdate]] =
     for {
-      rows <- run(q"""SELECT _organization, description, pricingPlan, paidUntil, paidUntilChanged, includedUsers,
-                              includedUsersChanged, includedStorage, includedStorageChanged, created
+      rows <- run(
+        q"""SELECT _organization, description, pricingPlan, aiPlan, aiPlanChanged, paidUntil, paidUntilChanged,
+                              includedUsers, includedUsersChanged, includedStorage, includedStorageChanged, created
                       FROM webknossos.organization_plan_updates
                       WHERE _organization = $organizationId
                       ORDER BY created

@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { getPublications } from "admin/rest_api";
 import { Flex, Input, List, Spin } from "antd";
 import PublicationCard from "dashboard/publication_card";
@@ -10,22 +11,23 @@ import type { APIPublication } from "types/api_types";
 const { Search } = Input;
 
 export function PublicationViewWithHeader() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [publications, setPublications] = useState<APIPublication[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const {
+    data: publications = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["publications"],
+    queryFn: getPublications,
+    refetchOnWindowFocus: false,
+  });
+
   useEffect(() => {
-    (async () => {
-      try {
-        setIsLoading(true);
-        setPublications(await getPublications());
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, []);
+    if (error) {
+      handleGenericError(error as Error);
+    }
+  }, [error]);
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>) {
     setSearchQuery(event.target.value);

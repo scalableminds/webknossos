@@ -5,8 +5,14 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
-import models.job.{JobCommand, _}
-import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, OrganizationService}
+import models.job._
+import models.organization.{
+  CreditTransactionDAO,
+  CreditTransactionService,
+  OrganizationDAO,
+  OrganizationService,
+  PricingPlan
+}
 import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -24,7 +30,6 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import models.team.PricingPlan
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value

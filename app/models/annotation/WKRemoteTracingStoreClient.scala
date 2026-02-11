@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
 }
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -334,5 +335,14 @@ class WKRemoteTracingStoreClient(
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .postEmpty()
     } yield ()
+
+  def getLargestIdOfDomain(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain): Fox[Long] =
+    for {
+      id <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/largestId")
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .addQueryParam("tracingId", tracingId)
+        .addQueryParam("domain", domain.toString)
+        .postEmptyWithJsonResponse[Long]()
+    } yield id
 
 }

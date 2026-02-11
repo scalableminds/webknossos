@@ -43,6 +43,7 @@ class AnnotationController @Inject()(
     datasetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
+    annotationIdReservationService: AnnotationIdReservationService,
     userService: UserService,
     teamService: TeamService,
     projectDAO: ProjectDAO,
@@ -459,5 +460,34 @@ class AnnotationController @Inject()(
       } yield Ok
     }
   }
+
+  def reservedIds(id: ObjectId, tracingId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+      for {
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        restrictions <- provider
+          .restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        ids: Seq[Long] <- annotationIdReservationService.reservedIds(id, annotation, tracingId, request.identity)
+        _ <- annotationMutexService.release(id, request.identity._id) ?~> "annotation.mutex.release.failed"
+      } yield Ok(Json.toJson(ids))
+    }
+  }
+
+  def reserveIds(id: ObjectId, tracingId: String): Action[Seq[Long]] =
+    sil.SecuredAction.async(validateJson[Seq[Long]]) { implicit request =>
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+        for {
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          ids: Seq[Long] <- annotationIdReservationService.reserveIds(id,
+                                                                      annotation,
+                                                                      tracingId,
+                                                                      request.identity,
+                                                                      request.body)
+        } yield Ok(Json.toJson(ids))
+      }
+    }
 
 }

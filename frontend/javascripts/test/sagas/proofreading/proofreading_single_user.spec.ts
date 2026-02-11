@@ -121,7 +121,7 @@ describe("Proofreading (Single User)", () => {
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 10));
+      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping1 = yield select(

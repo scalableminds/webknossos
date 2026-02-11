@@ -36,6 +36,7 @@ const MINIMUM_VALID_CSV_LENGTH = 5;
 type BaseMeshUrlDescriptor = {
   readonly segmentId: number;
   readonly seedPosition: Vector3;
+  readonly isProofreadingAuxiliaryMesh?: boolean;
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[];
 };
 type AdHocMeshUrlDescriptor = BaseMeshUrlDescriptor & {

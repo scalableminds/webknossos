@@ -91,7 +91,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
       localSegmentationData: {
         [layerName]: {
           meshes: {
-            [additionalCoordKey]: { $set: [] },
+            [additionalCoordKey]: { $set: {} },
           },
         },
       },
@@ -348,6 +348,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       );
       if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
         // No meshes exist for the segment id. No need to do anything.
+        console.log("Could not find mesh", segmentId, "which was requested to be removed");
         return state;
       }
       const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
@@ -373,6 +374,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         opacity,
+        isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -384,6 +386,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         mappingName,
         mappingType,
+        isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -419,6 +422,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         opacity,
+        isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -430,6 +434,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         meshFileName,
         mappingName,
+        isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);

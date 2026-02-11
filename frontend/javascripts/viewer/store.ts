@@ -424,7 +424,7 @@ export type AnnotationMutexInformation = {
 // - user A adds a new node to tree 1 and saves.
 //   Meanwhile user B already added a node to another tree and already stored this on the server.
 // - user A rebases by resetting the store state to the info stored in RebaseRelevantAnnotationState.
-//   Then missing backend updates are pulled and applyied on top of that.
+//   Then missing backend updates are pulled and applied on top of that.
 //   - Update RebaseRelevantAnnotationState as the current state is a newest version stored on the server.
 //   Re-apply local changes of adding a node to tree 1 via reapplying the actions stored in the save queue.
 //   Now save the changes and as this is now in sync with the backend, update RebaseRelevantAnnotationState again.
@@ -439,6 +439,24 @@ export type RebaseRelevantAnnotationState = {
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly isRebasing: boolean;
 };
+
+// Additionally, the proofreading sagas need knowledge of the mapping info last stored in the backend,
+// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons
+// as part of the post processing of a proofreading interaction.
+// This info is also stored in ProofreadingPostProcessingInfo.
+// TODOM: Naming open to debate.
+
+export type ProofreadingActionInfo = {
+  agglomerateId: number;
+  unmappedId: number;
+  position?: Vector3;
+};
+
+export type ProofreadingPostProcessingInfo = {
+  readonly sourceInfo: Readonly<ProofreadingActionInfo>;
+  readonly targetInfo: Readonly<ProofreadingActionInfo> | null;
+  readonly tracingId: string;
+};
 export type SaveState = {
   readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
@@ -446,6 +464,7 @@ export type SaveState = {
   readonly progressInfo: ProgressInfo;
   readonly mutexState: AnnotationMutexInformation;
   readonly rebaseRelevantServerAnnotationState: RebaseRelevantAnnotationState;
+  readonly proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | undefined | null;
 };
 export type Flycam = {
   readonly zoomStep: number;
@@ -554,6 +573,7 @@ type BaseMeshInformation = {
   readonly isVisible: boolean;
   readonly opacity: number;
   readonly mappingName: string | null | undefined;
+  readonly isProofreadingAuxiliaryMesh: boolean;
 };
 export type AdHocMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: false;
@@ -572,10 +592,13 @@ type ConnectomeData = {
   readonly skeleton: SkeletonTracing | null | undefined;
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
+export type LocalMeshesInfo =
+  | Record<string, Record<number, MeshInformation> | undefined>
+  | undefined;
 export type LocalSegmentationData = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
-  readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  readonly meshes: LocalMeshesInfo;
   readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
   readonly currentMeshFile: APIMeshFileInfo | null | undefined;
   // Note that for a volume tracing, this information should be stored

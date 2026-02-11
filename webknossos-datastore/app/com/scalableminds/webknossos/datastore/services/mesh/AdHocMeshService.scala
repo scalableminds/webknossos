@@ -38,7 +38,9 @@ case class AdHocMeshRequest(datasetId: Option[ObjectId],
                             mapping: Option[String] = None,
                             mappingType: Option[String] = None,
                             additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                            findNeighbors: Boolean = true)
+                            annotationVersion: Option[Long],
+                            findNeighbors: Boolean = true,
+)
 
 case class DataTypeFunctors[T, B](
     getTypedBufferFn: ByteBuffer => B,
@@ -128,7 +130,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                   request.dataSourceId,
                   request.dataLayer,
                   request.cuboid,
-                  DataServiceRequestSettings(halfByte = false, request.mapping, None)
+                  DataServiceRequestSettings(halfByte = false, request.mapping, request.annotationVersion)
                 )
                 agglomerateService.applyAgglomerate(dataRequest)(data)
               }.getOrElse(Fox.successful(data))
@@ -188,7 +190,8 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       request.dataSourceId,
       request.dataLayer,
       cuboid,
-      DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates)
+      DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates,
+                                              version = request.annotationVersion)
     )
 
     val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)

@@ -1,91 +1,60 @@
 [
-  {
-    "actions": [
-      {
-        "name": "moveTreeComponent",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "nodeIds": [
-            7,
-            8,
-          ],
-          "sourceId": 4,
-          "targetId": 3,
-        },
-      },
-      {
-        "name": "deleteTree",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "id": 4,
-        },
-      },
-      {
-        "name": "createEdge",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 6,
-          "target": 7,
-          "treeId": 3,
-        },
-      },
-      {
-        "name": "updateActiveNode",
-        "value": {
-          "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "activeNode": 6,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["SET_VERSION_NUMBER","SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","MERGE_TREES","SET_BUSY_BLOCKING_INFO_ACTION"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 5,
-        "nodeCount": 8,
-        "treeCount": 3,
-      },
-      "volumeTracingId": {
-        "segmentCount": 1,
+  [
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          7,
+          8,
+        ],
+        "sourceId": 4,
+        "targetId": 3,
       },
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 10,
-  },
-  {
-    "actions": [
-      {
-        "name": "mergeAgglomerate",
-        "value": {
-          "actionTracingId": "volumeTracingId",
-          "agglomerateId1": 1,
-          "agglomerateId2": 1,
-          "segmentId1": 3,
-          "segmentId2": 4,
-        },
-      },
-    ],
-    "authorId": "dummy-user-id",
-    "info": "["DONE_SAVING","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","MERGE_TREES","SET_BUSY_BLOCKING_INFO_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE"]",
-    "stats": {
-      "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
-        "branchPointCount": 2,
-        "edgeCount": 5,
-        "nodeCount": 8,
-        "treeCount": 3,
-      },
-      "volumeTracingId": {
-        "segmentCount": 1,
+    {
+      "name": "deleteTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "id": 4,
       },
     },
-    "timestamp": 1494695001688,
-    "transactionGroupCount": 1,
-    "transactionGroupIndex": 0,
-    "transactionId": "dummyRequestId",
-    "version": 11,
-  },
+    {
+      "name": "createEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 6,
+        "target": 7,
+        "treeId": 3,
+      },
+    },
+    {
+      "name": "updateActiveNode",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "activeNode": 6,
+      },
+    },
+  ],
+  [
+    {
+      "name": "mergeAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId1": 1,
+        "agglomerateId2": 1,
+        "segmentId1": 3,
+        "segmentId2": 4,
+      },
+    },
+  ],
+  [
+    {
+      "name": "deleteSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "id": 1,
+      },
+    },
+  ],
 ]

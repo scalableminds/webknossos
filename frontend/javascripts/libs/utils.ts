@@ -593,6 +593,46 @@ export function diffArrays<T>(
   };
 }
 
+export function diffNumberArrays(a: number[], b: number[]) {
+  // Create sorted copies to avoid mutating inputs
+  const A = [...a].sort((x, y) => x - y);
+  const B = [...b].sort((x, y) => x - y);
+
+  const both: number[] = [];
+  const onlyA: number[] = [];
+  const onlyB: number[] = [];
+
+  let indexA = 0;
+  let indexB = 0;
+
+  while (indexA < A.length && indexB < B.length) {
+    if (A[indexA] === B[indexB]) {
+      both.push(A[indexA]);
+      indexA++;
+      indexB++;
+    } else if (A[indexA] < B[indexB]) {
+      onlyA.push(A[indexA]);
+      indexA++;
+    } else {
+      onlyB.push(B[indexB]);
+      indexB++;
+    }
+  }
+
+  // Remaining elements
+  while (indexA < A.length) {
+    onlyA.push(A[indexA]);
+    indexA++;
+  }
+
+  while (indexB < B.length) {
+    onlyB.push(B[indexB]);
+    indexB++;
+  }
+
+  return { both, onlyA, onlyB };
+}
+
 export function diffMaps<K, V>(
   stateA: Map<K, V>,
   stateB: Map<K, V>,

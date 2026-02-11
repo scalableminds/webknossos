@@ -8,7 +8,7 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
+import type { ProofreadingPostProcessingInfo, SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 import { areSetsEqual } from "libs/utils";
@@ -32,9 +32,10 @@ type DisableSavingAction = ReturnType<typeof disableSavingAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
-export type EnsureHasAnnotationMutexAction = ReturnType<typeof ensureHasAnnotationMutexAction>;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
-export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
+export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
+  typeof snapshotAnnotationStateForNextRebaseAction
+>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
 export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
@@ -44,6 +45,9 @@ export type UpdateMappingRebaseInformationAction = ReturnType<
 >;
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
+>;
+export type SetPendingProofreadingOperationInfoAction = ReturnType<
+  typeof setPendingProofreadingOperationInfoAction
 >;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
 
@@ -60,15 +64,15 @@ export type SaveAction =
   | RedoAction
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
-  | EnsureHasAnnotationMutexAction
   | EnsureHasNewestVersionAction
-  | DoneSavingAction
+  | SnapshotAnnotationStateForNextRebaseAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
   | PrepareRebaseAction
   | FinishedRebaseAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
+  | SetPendingProofreadingOperationInfoAction
   | ReplaceSaveQueueAction;
 
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
@@ -193,21 +197,6 @@ export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
   }
 };
 
-export const ensureHasAnnotationMutexAction = (callback: () => void) =>
-  ({
-    type: "ENSURE_HAS_ANNOTATION_MUTEX",
-    callback,
-  }) as const;
-
-export const dispatchEnsureHasAnnotationMutexAsync = async (
-  dispatch: Dispatch<any>,
-): Promise<void> => {
-  const readyDeferred = new Deferred();
-  const action = ensureHasAnnotationMutexAction(() => readyDeferred.resolve(null));
-  dispatch(action);
-  await readyDeferred.promise();
-};
-
 export const ensureHasNewestVersionAction = (callback: () => void) =>
   ({
     type: "ENSURE_HAS_NEWEST_VERSION",
@@ -223,9 +212,9 @@ export const dispatchEnsureHasNewestVersionAsync = async (
   await readyDeferred.promise();
 };
 
-export const doneSavingAction = () =>
+export const snapshotAnnotationStateForNextRebaseAction = () =>
   ({
-    type: "DONE_SAVING",
+    type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
   }) as const;
 
 export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
@@ -264,6 +253,13 @@ export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: st
 export const finishedApplyingMissingUpdatesAction = () =>
   ({
     type: "FINISHED_APPLYING_MISSING_UPDATES",
+  }) as const;
+export const setPendingProofreadingOperationInfoAction = (
+  proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | null | undefined,
+) =>
+  ({
+    type: "SET_PENDING_PROOFREADING_OPERATION_INFO",
+    proofreadingPostProcessingInfo,
   }) as const;
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>

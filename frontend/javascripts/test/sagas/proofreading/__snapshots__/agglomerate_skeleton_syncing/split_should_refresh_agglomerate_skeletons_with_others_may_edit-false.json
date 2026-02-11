@@ -1,0 +1,62 @@
+[
+  [
+    {
+      "name": "splitAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId": 1,
+        "segmentId1": 1,
+        "segmentId2": 2,
+      },
+    },
+  ],
+  [
+    {
+      "name": "createTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateInfo": {
+          "agglomerateId": 1339,
+          "tracingId": "volumeTracingId",
+        },
+        "branchPoints": [],
+        "color": [
+          0.6784313725490196,
+          0.1411764705882353,
+          0.050980392156862744,
+        ],
+        "comments": [],
+        "edgesAreVisible": true,
+        "groupId": undefined,
+        "id": 4,
+        "isVisible": true,
+        "metadata": [],
+        "name": "agglomerate 1339 (volumeTracingId)",
+        "timestamp": 1494695001688,
+        "type": "AGGLOMERATE",
+        "updatedId": 4,
+      },
+    },
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          5,
+          6,
+        ],
+        "sourceId": 3,
+        "targetId": 4,
+      },
+    },
+    {
+      "name": "deleteEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 4,
+        "target": 5,
+        "treeId": 3,
+      },
+    },
+  ],
+]

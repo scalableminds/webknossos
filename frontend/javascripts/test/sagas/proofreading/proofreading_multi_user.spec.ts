@@ -1,23 +1,17 @@
-import type { NeighborInfo } from "admin/rest_api";
 import { actionChannel, call, flush, put, take } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import {
-  cutAgglomerateFromNeighborsAction,
-  proofreadMergeAction,
-} from "viewer/model/actions/proofread_actions";
+import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
-import { type NumberLike, startSaga } from "viewer/store";
+import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   expectedMappingAfterMerge,
@@ -26,7 +20,10 @@ import {
 } from "./proofreading_fixtures";
 import {
   initializeMappingAndTool,
+  makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
+  performCutFromAllNeighbours,
+  prepareGetNeighborsForAgglomerateNode,
 } from "./proofreading_test_utils";
 
 describe("Proofreading (Multi User)", () => {
@@ -77,7 +74,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
 
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
@@ -159,7 +156,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -221,83 +218,10 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  function prepareGetNeighborsForAgglomerateNode(mocks: WebknossosTestContext["mocks"]) {
-    // Prepare getNeighborsForAgglomerateNode mock
-    mocks.getNeighborsForAgglomerateNode.mockImplementation(
-      async (
-        _tracingStoreUrl: string,
-        _tracingId: string,
-        version: number,
-        segmentInfo: {
-          segmentId: NumberLike;
-          mag: Vector3;
-          agglomerateId: NumberLike;
-          editableMappingId: string;
-        },
-      ): Promise<NeighborInfo> => {
-        if (version !== 6) {
-          throw new Error(
-            `Version mismatch. Expected requested version to be 6 but got ${version}`,
-          );
-        }
-        if (segmentInfo.segmentId === 2) {
-          return {
-            segmentId: 2,
-            neighbors: [
-              {
-                segmentId: 3,
-                position: [3, 3, 3],
-              },
-            ],
-          };
-        }
-        return {
-          segmentId: Number.parseInt(segmentInfo.segmentId.toString(), 10),
-          neighbors: [],
-        };
-      },
-    );
-  }
-
-  function* performCutFromAllNeighbours(
-    context: WebknossosTestContext,
-    tracingId: string,
-  ): Generator<any, void, any> {
-    yield call(initializeMappingAndTool, context, tracingId);
-    const mapping0 = yield select(
-      (state) =>
-        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-    );
-    expect(mapping0).toEqual(initialMapping);
-
-    // Set up the merge-related segment partners. Normally, this would happen
-    // due to the user's interactions.
-    yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
-    yield put(setActiveCellAction(2));
-
-    yield call(createEditableMapping);
-    // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-    const mapping1 = yield select(
-      (state) =>
-        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-    );
-    expect(mapping1).toEqual(initialMapping);
-    yield put(setOthersMayEditForAnnotationAction(true));
-
-    // Execute the actual merge and wait for the finished mapping.
-    yield put(
-      cutAgglomerateFromNeighborsAction(
-        [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
-      ),
-    );
-    yield take("DONE_SAVING");
-    yield call(() => context.api.tracing.save());
-  }
-
-  it("should cut agglomerate from all neighbors after incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+  it("should cut agglomerate from all neighbors after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-    prepareGetNeighborsForAgglomerateNode(mocks);
+    prepareGetNeighborsForAgglomerateNode(mocks, 6, false);
 
     backendMock.planVersionInjection(7, [
       {
@@ -315,7 +239,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield performCutFromAllNeighbours(context, tracingId);
+      yield performCutFromAllNeighbours(context, tracingId, false);
 
       const splitSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
@@ -330,7 +254,6 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -355,7 +278,7 @@ describe("Proofreading (Multi User)", () => {
   it("should not cut agglomerate from all neighbors due to interfering merge action", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-    prepareGetNeighborsForAgglomerateNode(mocks);
+    prepareGetNeighborsForAgglomerateNode(mocks, 6, false);
 
     backendMock.planVersionInjection(7, [
       {
@@ -374,7 +297,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield performCutFromAllNeighbours(context, tracingId);
+      yield performCutFromAllNeighbours(context, tracingId, false);
 
       const splitSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
@@ -389,7 +312,6 @@ describe("Proofreading (Multi User)", () => {
           },
         },
       ]);
-      yield take("FINISH_MAPPING_INITIALIZATION");
       const finalMapping = yield select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -446,7 +368,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(3, { somePosition: [3, 3, 3] }, tracingId));
       yield put(setActiveCellAction(3));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -464,7 +386,7 @@ describe("Proofreading (Multi User)", () => {
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      yield take("DONE_SAVING");
+      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
       const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
 
       expect(mergeSaveActionBatch).toEqual([
@@ -501,7 +423,6 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate a new merge action from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
-    const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     /* Should lead to the following full mapping:
@@ -544,7 +465,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -579,9 +500,10 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(() => api.tracing.save());
+      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION");
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(3)![0]?.actions;
 
       expect(mergeSaveActionBatch).toEqual([
         {
@@ -619,8 +541,6 @@ describe("Proofreading (Multi User)", () => {
   });
 
   it("should merge two agglomerates optimistically and incorporate new split and merge actions from backend referring to a not loaded segment", async (context: WebknossosTestContext) => {
-    const { api } = context;
-
     /* Initial mapping should now be
      * [[ 1, 1 ],
      *  [ 2, 1 ],
@@ -707,7 +627,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
       const mapping1 = yield select(
         (state) =>
@@ -743,9 +663,11 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(() => api.tracing.save());
+      yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION");
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(4)![0]?.actions;
+      console.log(context.receivedDataPerSaveRequest);
 
       expect(mergeSaveActionBatch).toEqual([
         {
@@ -798,7 +720,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield call(createEditableMapping);
+      yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
       // Execute the actual merge and wait for the finished mapping.
       yield put(

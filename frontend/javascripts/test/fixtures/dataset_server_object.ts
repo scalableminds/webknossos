@@ -23,6 +23,7 @@ const sampleColorLayer: APIColorLayer = {
 };
 
 export const sampleHdf5AgglomerateName = "sampleHdf5Mapping";
+export const sampleMappingFileName = "sampleMappingFile";
 // this is a uint32 segmentation layer
 const sampleSegmentationLayer: APISegmentationLayer = {
   name: "segmentation",

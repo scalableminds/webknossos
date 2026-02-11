@@ -230,7 +230,15 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     seedPosition: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) {
-    dispatch(loadAdHocMeshAction(segmentId, seedPosition, additionalCoordinates));
+    const isProofreadingAuxiliaryMesh = false;
+    dispatch(
+      loadAdHocMeshAction(
+        segmentId,
+        seedPosition,
+        additionalCoordinates,
+        isProofreadingAuxiliaryMesh,
+      ),
+    );
   },
 
   loadPrecomputedMesh(
@@ -239,6 +247,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) {
+    const isProofreadingAuxiliaryMesh = false;
     dispatch(
       loadPrecomputedMeshAction(
         segmentId,
@@ -246,6 +255,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
         seedAdditionalCoordinates,
         meshFileName,
         undefined,
+        isProofreadingAuxiliaryMesh,
       ),
     );
   },

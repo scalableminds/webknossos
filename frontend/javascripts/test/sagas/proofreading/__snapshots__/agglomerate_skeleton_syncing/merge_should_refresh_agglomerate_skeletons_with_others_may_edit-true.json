@@ -1,0 +1,30 @@
+[
+  {
+    "name": "moveTreeComponent",
+    "value": {
+      "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+      "nodeIds": [
+        7,
+        8,
+      ],
+      "sourceId": 4,
+      "targetId": 3,
+    },
+  },
+  {
+    "name": "deleteTree",
+    "value": {
+      "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+      "id": 4,
+    },
+  },
+  {
+    "name": "createEdge",
+    "value": {
+      "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+      "source": 4,
+      "target": 7,
+      "treeId": 3,
+    },
+  },
+]

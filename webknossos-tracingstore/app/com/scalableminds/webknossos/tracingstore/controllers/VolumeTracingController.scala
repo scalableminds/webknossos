@@ -287,7 +287,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body) ?~> "mesh.loadFull.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body, version = None) ?~> "mesh.loadFull.failed"
         } yield Ok(data)
       }
     }
@@ -323,7 +323,8 @@ class VolumeTracingController @Inject()(
                                                             segmentId,
                                                             request.body.mag,
                                                             mappingName,
-                                                            request.body.additionalCoordinates)
+                                                            request.body.additionalCoordinates,
+                                                            request.body.annotationVersion)
           }
         } yield Ok(Json.toJson(segmentVolumes))
       }
@@ -342,7 +343,8 @@ class VolumeTracingController @Inject()(
                                                                  segmentId,
                                                                  request.body.mag,
                                                                  mappingName,
-                                                                 request.body.additionalCoordinates)
+                                                                 request.body.additionalCoordinates,
+                                                                 request.body.annotationVersion)
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
       }
@@ -362,13 +364,17 @@ class VolumeTracingController @Inject()(
               segmentId = segmentId,
               mappingName = baseMappingName,
               mappingType = baseMappingName.map(_ => "HDF5"),
-              editableMappingTracingId = None,
+              editableMappingTracingId = None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
+              annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
             )
             for {
-              data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, fullMeshRequest) ?~> "mesh.loadFull.failed"
+              data: Array[Byte] <- fullMeshService.loadFor(annotationId,
+                                                           tracingId,
+                                                           fullMeshRequest,
+                                                           request.body.annotationVersion) ?~> "mesh.loadFull.failed"
               surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
             } yield surfaceArea
           }
@@ -393,7 +399,8 @@ class VolumeTracingController @Inject()(
             request.body.mag,
             additionalCoordinates = request.body.additionalCoordinates,
             mappingName = mappingName,
-            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
+            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+            annotationVersion = request.body.annotationVersion.getOrElse(tracing.version)
           )
           bucketPositionsForCubeSize = bucketPositions.toSeq
             .map(vec3IntFromProto)

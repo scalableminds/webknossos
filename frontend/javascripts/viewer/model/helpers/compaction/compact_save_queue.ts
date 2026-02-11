@@ -2,7 +2,6 @@ import flow from "lodash-es/flow";
 import isEqual from "lodash-es/isEqual";
 import without from "lodash-es/without";
 import type {
-  UpdateAction,
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
 } from "viewer/model/sagas/volume/update_actions";

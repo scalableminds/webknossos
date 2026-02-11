@@ -103,7 +103,7 @@ describe("Save Saga", () => {
     expect(compactSaveQueue(saveQueue)).toEqual([saveQueue[3], saveQueue[4], saveQueue[5]]);
   });
 
-  it.only("should compact multiple updateSegmentPartial update actions", () => {
+  it("should compact multiple updateSegmentPartial update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
         [

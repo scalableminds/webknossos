@@ -28,6 +28,7 @@ COMMIT TRANSACTION;
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Internal', 'Public');
+CREATE TYPE webknossos.ANNOTATION_COLLABORATION_MODE AS ENUM('OwnerOnly', 'Exclusive', 'Concurrent');
 CREATE TABLE webknossos.annotations(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -44,7 +45,7 @@ CREATE TABLE webknossos.annotations(
   tags TEXT[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
-  othersMayEdit BOOLEAN NOT NULL DEFAULT FALSE,
+  collaborationMode webknossos.ANNOTATION_COLLABORATION_MODE NOT NULL DEFAULT 'OwnerOnly',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -81,6 +82,15 @@ CREATE TABLE webknossos.annotation_mutexes(
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   expiry TIMESTAMP NOT NULL
 );
+
+CREATE TYPE webknossos.ANNOTATION_ID_DOMAIN AS ENUM ('Segment', 'SegmentGroup', 'Tree', 'Node', 'TreeGroup', 'BoundingBox');
+CREATE TABLE webknossos.annotation_reserved_ids(
+  _annotation TEXT NOT NULL  CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
+  _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
+  tracingId TEXT NOT NULL,
+  id BIGINT NOT NULL,
+  domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL
+); -- todo foreign key constraints
 
 CREATE TABLE webknossos.publications(
   _id TEXT PRIMARY KEY,

@@ -183,9 +183,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           <Text>Available Credits</Text>
         </Col>
         <Col>
-          <Title level={2} style={{ margin: 0 }}>
-            {formatMilliCreditsString(organizationMilliCredits)}
-          </Title>
+          <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
         </Col>
       </Row>
       <hr style={{ margin: "24px 0" }} />
@@ -227,9 +225,9 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           {isFetching && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
-            <Text strong>
+            <Title level={3} style={{ margin: 0 }}>
               {costInCredits != null ? `${formatMilliCreditsString(costInCredits)} credits` : "-"}
-            </Text>
+            </Title>
           )}
         </Col>
       </Row>

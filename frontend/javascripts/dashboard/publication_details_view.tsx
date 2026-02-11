@@ -43,20 +43,18 @@ function PublicationDetailView() {
             </Link>
           </Space>
           <Spin size="large" spinning={isLoading}>
-            {publication != null && (
-              <List
-                dataSource={[publication]}
-                locale={{
-                  emptyText: "Could not find the requested publication.",
-                }}
-                className="antd-no-border-list publication-list"
-                renderItem={(publication) => (
-                  <List.Item key={publication.id}>
-                    <PublicationCard publication={publication} showDetailedLink={false} />
-                  </List.Item>
-                )}
-              />
-            )}
+            <List
+              dataSource={publication ? [publication] : []}
+              locale={{
+                emptyText: "Could not find the requested publication.",
+              }}
+              className="antd-no-border-list publication-list"
+              renderItem={(publicationItem) => (
+                <List.Item key={publicationItem.id}>
+                  <PublicationCard publication={publicationItem} showDetailedLink={false} />
+                </List.Item>
+              )}
+            />
           </Spin>
         </Flex>
       </Content>

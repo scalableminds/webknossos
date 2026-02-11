@@ -54,7 +54,7 @@ public/assets
 public/images
 public/wasm
 public/index.html
-
+frontend/stylesheets/fontawesome*
 src/main/scala/rebel.xml
 target/
 temp-webknossos-schema**

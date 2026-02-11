@@ -63,7 +63,7 @@ export function OrganizationPlanActivityView() {
         title: "Paid Until",
         dataIndex: "paidUntil",
         key: "paidUntil",
-        width: 180,
+        width: 140,
         render: (value: APIOrganizationPricingPlanUpdate["paidUntil"]) => {
           if (value === undefined) {
             return UNCHANGED_LABEL;
@@ -71,7 +71,7 @@ export function OrganizationPlanActivityView() {
           if (value === null) {
             return CLEARED_LABEL;
           }
-          return <FormattedDate timestamp={value} />;
+          return <FormattedDate dateOnly timestamp={value} />;
         },
       },
       {
@@ -103,6 +103,13 @@ export function OrganizationPlanActivityView() {
           }
           return Number.isFinite(value) ? formatCountToDataAmountUnit(value, true) : "∞";
         },
+      },
+      {
+        title: "AI Plan",
+        dataIndex: "aiPlan",
+        key: "aiPlan",
+        width: 140,
+        render: (value: APIOrganizationPricingPlanUpdate["aiPlan"]) => value ?? UNCHANGED_LABEL,
       },
     ],
     [],

@@ -1,4 +1,4 @@
-package models.team
+package models.organization
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 

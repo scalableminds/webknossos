@@ -165,11 +165,7 @@ class ConnectomeFilters extends React.Component<Props, State> {
         >
           Reset
         </ButtonComponent>
-        <Divider
-          style={{
-            margin: "10px 0",
-          }}
-        />
+        <Divider size="small" />
         <h4>by Synapse Direction</h4>
         <Checkbox.Group
           options={synapseDirectionOptions}
@@ -197,17 +193,23 @@ class ConnectomeFilters extends React.Component<Props, State> {
     return (
       <Tooltip title="Configure Filters">
         <Popover content={this.getFilterSettings} trigger="click">
-          <ButtonComponent disabled={disabled || !isSynapseTypeFilterAvailable}>
-            <FilterOutlined
-              style={
-                isAnyFilterActive
-                  ? {
-                      color: "red",
-                    }
-                  : {}
-              }
-            />
-          </ButtonComponent>
+          <ButtonComponent
+            disabled={disabled || !isSynapseTypeFilterAvailable}
+            icon={
+              <FilterOutlined
+                style={
+                  isAnyFilterActive
+                    ? {
+                        color: "red",
+                      }
+                    : {}
+                }
+              />
+            }
+            title="Configure Filters"
+            variant="text"
+            color="default"
+          />
         </Popover>
       </Tooltip>
     );

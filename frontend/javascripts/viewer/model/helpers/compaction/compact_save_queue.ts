@@ -128,33 +128,39 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
 function removeSubsequentUpdateSegmentActions(
   updateActionsBatches: SaveQueueEntry[],
 ): SaveQueueEntry[] {
-  // todop: make more readable
+  /*
+   * Multiple updateSegmentPartial actions are merged if they
+   * are consecutive and refer to the same segment.
+   * The most important use case for this is when using the color
+   * picker for changing a segment's color as this emits update
+   * actions on each change.
+   */
   const result: SaveQueueEntry[] = [];
 
   let i = 0;
-
   while (i < updateActionsBatches.length) {
     const currentBatch = updateActionsBatches[i];
-    const current = currentBatch.actions;
+    const currentActions = currentBatch.actions;
 
-    // only candidate if exactly one updateSegmentPartial
-    const first = current[0];
-
-    if (current.length === 1 && first.name === "updateSegmentPartial") {
-      let mergedValue = { ...first.value };
+    // Merging of subsequent update actions is only done
+    // when a batch contains exactly one updateSegmentPartial action.
+    const currentAction = currentActions[0];
+    if (currentActions.length === 1 && currentAction.name === "updateSegmentPartial") {
+      let mergedValue = { ...currentAction.value };
       let j = i + 1;
 
-      // merge all following same-id updates
+      // Merge all following same-id updates
       while (j < updateActionsBatches.length) {
-        const next = updateActionsBatches[j].actions;
-        const nextFirst = next[0];
+        const nextActions = updateActionsBatches[j].actions;
+        const nextAction = nextActions[0];
 
         if (
-          next.length === 1 &&
-          nextFirst.name === "updateSegmentPartial" &&
-          nextFirst.value.id === first.value.id
+          nextActions.length === 1 &&
+          nextAction.name === "updateSegmentPartial" &&
+          nextAction.value.id === currentAction.value.id &&
+          nextAction.value.actionTracingId === currentAction.value.actionTracingId
         ) {
-          mergedValue = { ...mergedValue, ...nextFirst.value };
+          mergedValue = { ...mergedValue, ...nextAction.value };
           j++;
         } else {
           break;

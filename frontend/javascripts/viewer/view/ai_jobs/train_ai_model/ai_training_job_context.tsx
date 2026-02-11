@@ -15,10 +15,10 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { useDispatch } from "react-redux";
 import { type APIAnnotation, type APIDataset, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
-import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
 import { getIntersectingMagList } from "../utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";

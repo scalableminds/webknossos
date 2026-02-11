@@ -4,7 +4,9 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationIdDomain,
   AnnotationLayer,
   AnnotationLayerStatistics,
   AnnotationLayerType
@@ -33,6 +35,16 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+
+case class ReserveIdRequest(
+    domain: AnnotationIdDomain,
+    tracingId: String,
+    numberOfIdsToReserve: Int,
+    idsToRelease: Seq[Long]
+)
+object ReserveIdRequest {
+  implicit val jsonFormat: OFormat[ReserveIdRequest] = Json.format[ReserveIdRequest]
+}
 
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
@@ -461,31 +473,37 @@ class AnnotationController @Inject()(
     }
   }
 
-  def reservedIds(id: ObjectId, tracingId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
-      for {
-        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        restrictions <- provider
-          .restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
-        _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        ids: Seq[Long] <- annotationIdReservationService.reservedIds(id, annotation, tracingId, request.identity)
-        _ <- annotationMutexService.release(id, request.identity._id) ?~> "annotation.mutex.release.failed"
-      } yield Ok(Json.toJson(ids))
-    }
+  def reservedIds(id: ObjectId, tracingId: String, domain: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+        for {
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          restrictions <- provider
+            .restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          domainValidated <- AnnotationIdDomain.fromString(domain).toFox
+          ids: Seq[Long] <- annotationIdReservationService.reservedIds(id,
+                                                                       annotation,
+                                                                       tracingId,
+                                                                       request.identity,
+                                                                       domainValidated)
+        } yield Ok(Json.toJson(ids))
+      }
   }
 
-  def reserveIds(id: ObjectId, tracingId: String): Action[Seq[Long]] =
-    sil.SecuredAction.async(validateJson[Seq[Long]]) { implicit request =>
+  def reserveIds(id: ObjectId): Action[ReserveIdRequest] =
+    sil.SecuredAction.async(validateJson[ReserveIdRequest]) { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           ids: Seq[Long] <- annotationIdReservationService.reserveIds(id,
-                                                                      annotation,
-                                                                      tracingId,
+                                                                      request.body.tracingId,
                                                                       request.identity,
-                                                                      request.body)
+                                                                      request.body.domain,
+                                                                      request.body.numberOfIdsToReserve,
+                                                                      request.body.idsToRelease)
         } yield Ok(Json.toJson(ids))
       }
     }

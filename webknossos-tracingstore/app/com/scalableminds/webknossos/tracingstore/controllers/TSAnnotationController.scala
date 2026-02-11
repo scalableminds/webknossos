@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationIdDomain, AnnotationLayer}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
@@ -155,6 +155,21 @@ class TSAnnotationController @Inject()(
                                                                          currentVersion,
                                                                          ResetToBaseAnnotationAction())
             } yield Ok
+          }
+        }
+      }
+    }
+
+  def largestId(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            for {
+              domainValidated <- AnnotationIdDomain.fromString(domain).toFox
+              // TODO
+              id <- Fox.successful(0L)
+            } yield Ok(Json.toJson(id))
           }
         }
       }

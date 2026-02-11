@@ -178,8 +178,8 @@ POST          /annotations/:id/merge/:mergedTyp/:mergedId                       
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId)
 DELETE        /annotations/:id/mutex                                                            controllers.AnnotationController.releaseMutex(id: ObjectId)
-GET           /annotations/:id/reservedIds                                                      controllers.AnnotationController.reservedIds(id: ObjectId, tracingId: String)
-POST          /annotations/:id/reserveIds                                                       controllers.AnnotationController.reserveIds(id: ObjectId, tracingId: String)
+GET           /annotations/:id/reservedIds                                                      controllers.AnnotationController.reservedIds(id: ObjectId, tracingId: String, domain: String)
+POST          /annotations/:id/reserveIds                                                       controllers.AnnotationController.reserveIds(id: ObjectId)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)

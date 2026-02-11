@@ -118,9 +118,13 @@ export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {
   );
 }
 
-export function formatAiPlanLabel(aiPlan: AiPlanEnum | null | undefined): string {
-  if (!aiPlan) return "Upgrade to Team or Power plan for advanced AI features";
-  return AI_PLAN_LABELS[aiPlan] ?? aiPlan;
+export function formatAiPlanLabel(organization: APIOrganization): string {
+  if (!isAiAddonEligiblePlan(organization.pricingPlan))
+    return "Upgrade to Team or Power plan for advanced AI features";
+
+  if (organization.aiPlan) return AI_PLAN_LABELS[organization.aiPlan] ?? organization.aiPlan;
+
+  return "No AI add-on";
 }
 
 export function getFeatureNotAvailableInPlanMessage(

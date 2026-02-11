@@ -98,7 +98,7 @@ export function OrganizationOverviewView() {
       : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
-  const aiPlanLabel = formatAiPlanLabel(organization.aiPlan);
+  const aiPlanLabel = formatAiPlanLabel(organization);
   const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
   const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
   const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;

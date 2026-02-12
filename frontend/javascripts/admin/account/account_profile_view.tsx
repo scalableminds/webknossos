@@ -37,9 +37,7 @@ function AccountProfileView() {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, newTheme);
       dispatch(setActiveUserAction(newUser));
 
-        dispatch(setThemeAction(
-          newTheme === "auto" ? getSystemColorTheme() : newTheme
-        ));
+      dispatch(setThemeAction(newTheme === "auto" ? getSystemColorTheme() : newTheme));
     }
   };
 

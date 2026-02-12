@@ -160,16 +160,58 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def largestId(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
+  def largestIdOrMinusOne(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            val fallbackId: Long = -1
             for {
               domainValidated <- AnnotationIdDomain.fromString(domain).toFox
-              // TODO
-              id <- Fox.successful(0L)
-            } yield Ok(Json.toJson(id))
+              largestIdWithFallback: Long <- domainValidated match {
+                case AnnotationIdDomain.Segment =>
+                  for {
+                    volume <- annotationService.findVolume(annotationId, tracingId)
+                  } yield volume.segments.map(_.segmentId).maxOption.getOrElse(fallbackId)
+                case AnnotationIdDomain.SegmentGroup =>
+                  for {
+                    volume <- annotationService.findVolume(annotationId, tracingId)
+                    maxGroupIdWithFallback = if (volume.segmentGroups.isEmpty) fallbackId
+                    else GroupUtils.getMaximumSegmentGroupId(volume.segmentGroups).toLong
+                  } yield maxGroupIdWithFallback
+                case AnnotationIdDomain.Node =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                    maxIdsPerTree: Seq[Long] = skeleton.trees.map(
+                      _.nodes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                  } yield maxIdsPerTree.maxOption.getOrElse(fallbackId)
+                case AnnotationIdDomain.Tree =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                  } yield skeleton.trees.map(_.treeId).maxOption.map(_.toLong).getOrElse(fallbackId)
+                case AnnotationIdDomain.TreeGroup =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                    maxGroupIdWithFallback = if (skeleton.treeGroups.isEmpty) fallbackId
+                    else GroupUtils.getMaximumTreeGroupId(skeleton.treeGroups).toLong
+                  } yield maxGroupIdWithFallback
+                case AnnotationIdDomain.BoundingBox =>
+                  for {
+                    // bounding boxes can appear both in skeleton and volume, so we do not know at this point what kind the tracingId refers to. Try both.
+                    skeletonBox <- annotationService.findSkeleton(annotationId, tracingId).shiftBox
+                    maxBboxId <- skeletonBox match {
+                      case Full(skeleton) =>
+                        Fox.successful(
+                          skeleton.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                      case Empty =>
+                        for {
+                          volume <- annotationService.findVolume(annotationId, tracingId)
+                        } yield volume.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId)
+                      case f: Failure => f.toFox
+                    }
+                  } yield maxBboxId
+              }
+            } yield Ok(Json.toJson(largestIdWithFallback))
           }
         }
       }

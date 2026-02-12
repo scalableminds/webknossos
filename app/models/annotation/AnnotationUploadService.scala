@@ -17,6 +17,7 @@ import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
 import com.scalableminds.util.tools.{Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
 import play.api.i18n.MessagesProvider
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -120,23 +121,16 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
   }
 
   private def wrapInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
-    def getMaximumTreeGroupId(treeGroups: Seq[TreeGroup]): Int =
-      if (treeGroups.isEmpty) 0
-      else Math.max(treeGroups.map(_.groupId).max, getMaximumTreeGroupId(treeGroups.flatMap(_.children)))
-
-    def getMaximumSegmentGroupId(segmentGroups: Seq[SegmentGroup]): Int =
-      if (segmentGroups.isEmpty) 0
-      else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
-      val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
+      val unusedGroupId = GroupUtils.getMaximumTreeGroupId(tracing.treeGroups) + 1
       val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
       val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups, isExpanded = Some(true)))
       tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 
     def wrapSegmentsInGroup(name: String, tracing: VolumeTracing): VolumeTracing = {
-      val unusedGroupId = getMaximumSegmentGroupId(tracing.segmentGroups) + 1
+      val unusedGroupId = GroupUtils.getMaximumSegmentGroupId(tracing.segmentGroups) + 1
       val newSegments =
         tracing.segments.map(segment => segment.copy(groupId = Some(segment.groupId.getOrElse(unusedGroupId))))
       val newSegmentGroups = Seq(SegmentGroup(name, unusedGroupId, tracing.segmentGroups))

@@ -40,7 +40,6 @@ import play.silhouette.api.{LoginInfo, Silhouette}
 import play.silhouette.impl.providers.CredentialsProvider
 import security._
 import utils.WkConf
-import views.html.mail.invite
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets

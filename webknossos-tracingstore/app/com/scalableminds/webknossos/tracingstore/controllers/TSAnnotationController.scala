@@ -160,24 +160,24 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def largestIdOrMinusOne(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
+  def largestIdOrZero(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-            val fallbackId: Long = -1
+            val fallbackId: Long = 0
             for {
               domainValidated <- AnnotationIdDomain.fromString(domain).toFox
               largestIdWithFallback: Long <- domainValidated match {
                 case AnnotationIdDomain.Segment =>
                   for {
                     volume <- annotationService.findVolume(annotationId, tracingId)
+                    // TODO fallback segmentation layer
                   } yield volume.segments.map(_.segmentId).maxOption.getOrElse(fallbackId)
                 case AnnotationIdDomain.SegmentGroup =>
                   for {
                     volume <- annotationService.findVolume(annotationId, tracingId)
-                    maxGroupIdWithFallback = if (volume.segmentGroups.isEmpty) fallbackId
-                    else GroupUtils.getMaximumSegmentGroupId(volume.segmentGroups).toLong
+                    maxGroupIdWithFallback = GroupUtils.getMaximumSegmentGroupId(volume.segmentGroups).toLong
                   } yield maxGroupIdWithFallback
                 case AnnotationIdDomain.Node =>
                   for {
@@ -192,8 +192,7 @@ class TSAnnotationController @Inject()(
                 case AnnotationIdDomain.TreeGroup =>
                   for {
                     skeleton <- annotationService.findSkeleton(annotationId, tracingId)
-                    maxGroupIdWithFallback = if (skeleton.treeGroups.isEmpty) fallbackId
-                    else GroupUtils.getMaximumTreeGroupId(skeleton.treeGroups).toLong
+                    maxGroupIdWithFallback = GroupUtils.getMaximumTreeGroupId(skeleton.treeGroups).toLong
                   } yield maxGroupIdWithFallback
                 case AnnotationIdDomain.BoundingBox =>
                   for {

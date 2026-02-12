@@ -255,6 +255,8 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               };
               return newAction;
             }
+            case "updateSegmentVisibility":
+            case "updateMetadataOfSegment":
             case "updateSegmentPartial": {
               const { actionTracingId } = action.value;
 

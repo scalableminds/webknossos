@@ -959,7 +959,7 @@ describe("Proofreading (Multi User)", () => {
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
 
-      const backendState = backendMock.getState()!;
+      const backendState = backendMock.getState();
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
@@ -1183,7 +1183,7 @@ describe("Proofreading (Multi User)", () => {
       yield call(() => api.tracing.save());
       yield call(() => api.tracing.save());
 
-      const backendState = backendMock.getState()!;
+      const backendState = backendMock.getState();
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {

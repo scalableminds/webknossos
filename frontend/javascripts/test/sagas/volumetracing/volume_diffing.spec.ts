@@ -146,7 +146,8 @@ describe("diffSegmentGroups for volume tracings", () => {
      *   3
      *     4
      *   2
-     * Move 1 into 3. 2 should still be parent of 1 AFTERwards:
+     * Move 1 into 3. 2 should still be a child of 1.
+     * Afterwards:
      * 3
      *   4
      *   1

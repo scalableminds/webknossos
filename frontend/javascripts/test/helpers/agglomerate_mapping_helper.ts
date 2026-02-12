@@ -25,7 +25,7 @@ export class AgglomerateMapping {
    * of segment ids (nodes) and edges. The components in that graph
    * define to which agglomerate ids segment ids are mapped.
    * The class supports adding and removing edges. Each operation
-   * creates a new version so that map requests can be paramaterized
+   * creates a new version so that map requests can be parameterized
    * with the version.
    */
 
@@ -61,8 +61,8 @@ export class AgglomerateMapping {
       true,
     );
 
-    for (const [a, b] of edges) {
-      this.addEdge(a, b, true);
+    for (const [source, target] of edges) {
+      this.addEdge(source, target, true);
     }
 
     this.resetVersionCounter(initialVersion);
@@ -125,6 +125,7 @@ export class AgglomerateMapping {
     if (!didRemove) {
       // Commit the current version again.
       this.commit(this.versions.at(-1)!, bumpVersion);
+      console.warn(`There is no edge between ${segmentIdA} and ${segmentIdB}. Edge removal is handled as a no-op.`)
       return;
     }
 
@@ -216,8 +217,9 @@ export class AgglomerateMapping {
   getMap(version: number): Map<number, number> {
     /*
      * Get the entire mapping for a specific version.
+     * It is a deep clone to avoid direct manipulation from outside.
      */
-    return this.getSnapshot(version).map;
+    return cloneDeep(this.getSnapshot(version).map);
   }
 
   getAdjacencyList(version: number): Map<number, Set<number>> {

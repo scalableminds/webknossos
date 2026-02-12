@@ -288,7 +288,7 @@ describe("Update Action Application for VolumeTracing", () => {
     });
   });
 
-  it("should be able to apply actions basic group editing", () => {
+  it("should be able to apply basic group editing actions", () => {
     const state1 = applyActions(initialState, [setSegmentGroupsAction(SEGMENT_GROUPS, tracingId)]);
     const state2 = applyActions(state1, [setSegmentGroupsAction(SEGMENT_GROUPS_EDITED, tracingId)]);
 

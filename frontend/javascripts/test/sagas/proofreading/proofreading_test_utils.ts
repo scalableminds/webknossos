@@ -338,7 +338,6 @@ export class BackendMock {
     _tracingId: string,
     agglomerateId: number,
   ): Promise<ArrayBuffer> => {
-    // Does not currently support versioning as this would require a versioned adjacency list.
     const version = this.agglomerateMapping.currentVersion;
     const adjacencyList = this.agglomerateMapping.getAdjacencyList(version);
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();

@@ -13,12 +13,12 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
-import { updateMetadataOfSegmentUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import {
   diffMetadataOfSegments,
   diffSegmentGroups,
   uncachedDiffSegmentLists,
-} from "viewer/model/sagas/volume/volume_diffing";
+} from "viewer/model/sagas/diffing/volume_diffing";
+import { updateMetadataOfSegmentUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Segment } from "viewer/store";
 import { describe, expect, it, test } from "vitest";
 import {

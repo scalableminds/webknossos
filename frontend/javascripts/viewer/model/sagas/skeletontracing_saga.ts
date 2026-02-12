@@ -83,12 +83,13 @@ import {
 import { api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
+import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
+import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
@@ -364,8 +365,8 @@ function* getAgglomerateSkeletonTracing(
 function handleAgglomerateLoadingError(
   e:
     | {
-      messages: Array<Message>;
-    }
+        messages: Array<Message>;
+      }
     | Error,
 ) {
   if (!(e instanceof Error)) {

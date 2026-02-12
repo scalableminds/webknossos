@@ -125,7 +125,9 @@ export class AgglomerateMapping {
     if (!didRemove) {
       // Commit the current version again.
       this.commit(this.versions.at(-1)!, bumpVersion);
-      console.warn(`There is no edge between ${segmentIdA} and ${segmentIdB}. Edge removal is handled as a no-op.`)
+      console.warn(
+        `There is no edge between ${segmentIdA} and ${segmentIdB}. Edge removal is handled as a no-op.`,
+      );
       return;
     }
 

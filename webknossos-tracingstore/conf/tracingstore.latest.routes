@@ -11,7 +11,7 @@ GET         /annotation/:annotationId/updateActionLog                           
 GET         /annotation/:annotationId/newestVersion                                 @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.newestVersion(annotationId: ObjectId)
 POST        /annotation/:annotationId/duplicate                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.duplicate(annotationId: ObjectId, newAnnotationId: ObjectId, ownerId: ObjectId, requestingUserId: ObjectId, version: Option[Long], isFromTask: Boolean, datasetBoundingBox: Option[String])
 POST        /annotation/:annotationId/resetToBase                                   @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.resetToBase(annotationId: ObjectId)
-GET         /annotation/:annotationId/largestId                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.largestId(annotationId: ObjectId, tracingId: String, domain: String)
+GET         /annotation/:annotationId/largestIdOrMinusOne                           @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.largestIdOrMinusOne(annotationId: ObjectId, tracingId: String, domain: String)
 POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: ObjectId, requestingUserId: ObjectId)
 
 # Volume tracings

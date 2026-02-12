@@ -336,7 +336,7 @@ class WKRemoteTracingStoreClient(
         .postEmpty()
     } yield ()
 
-  def getLargestIdOfDomain(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain): Fox[Long] =
+  def getLargestIdOfDomainOrMinusOne(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain): Fox[Long] =
     for {
       id <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/largestId")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)

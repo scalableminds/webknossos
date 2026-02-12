@@ -48,14 +48,13 @@ object ReserveIdRequest {
 
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
-    annotationLayerDAO: AnnotationLayerDAO,
     taskDAO: TaskDAO,
     userDAO: UserDAO,
     datasetDAO: DatasetDAO,
     datasetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
-    annotationIdReservationService: AnnotationIdReservationService,
+    annotationIdReservationService: AnnotationReservedIdsService,
     userService: UserService,
     teamService: TeamService,
     projectDAO: ProjectDAO,
@@ -410,6 +409,10 @@ class AnnotationController @Inject()(
         _ <- Fox.fromBool(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
         collaborationModeValidated <- CollaborationMode.fromString(collaborationMode).toFox
         _ <- annotationDAO.updateCollaborationMode(annotation._id, collaborationModeValidated)
+        _ <- Fox.runIf(
+          annotation.collaborationMode == CollaborationMode.Concurrent && collaborationModeValidated != CollaborationMode.Concurrent) {
+          annotationIdReservationService.releaseAllForAnnotation(id)
+        }
       } yield Ok
     }
 
@@ -483,10 +486,9 @@ class AnnotationController @Inject()(
           _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           domainValidated <- AnnotationIdDomain.fromString(domain).toFox
           ids: Seq[Long] <- annotationIdReservationService.reservedIds(id,
-                                                                       annotation,
                                                                        tracingId,
-                                                                       request.identity,
-                                                                       domainValidated)
+                                                                       domainValidated,
+                                                                       request.identity._id)
         } yield Ok(Json.toJson(ids))
       }
   }
@@ -500,8 +502,8 @@ class AnnotationController @Inject()(
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           ids: Seq[Long] <- annotationIdReservationService.reserveIds(id,
                                                                       request.body.tracingId,
-                                                                      request.identity,
                                                                       request.body.domain,
+                                                                      request.identity._id,
                                                                       request.body.numberOfIdsToReserve,
                                                                       request.body.idsToRelease)
         } yield Ok(Json.toJson(ids))

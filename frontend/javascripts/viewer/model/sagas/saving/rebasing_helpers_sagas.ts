@@ -1,5 +1,5 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
+import { getAdaptToTypeFunction } from "libs/utils";
 import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -134,7 +134,7 @@ function* addMissingSegmentsToLoadedMappings(idsToReload: IdsToReloadPerMappingI
 }
 
 // During rebasing, the front-end rolls back to the last version that is known to be saved on the server
-// (pending update actions are "stashed").
+// (pending update actions are "stashed" by keeping them in the save queue).
 // Then, the front-end is forwarded to the newest state known to the server.
 // Afterwards, the stashed update actions need to be applied again. However, these update actions
 // need to be adapted to the newest state.
@@ -153,13 +153,13 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
   appliedBackendUpdateActions: APIUpdateActionBatch[],
 ): Saga<
   | {
-      success: false;
-      updatedSaveQueue: undefined;
-    }
+    success: false;
+    updatedSaveQueue: undefined;
+  }
   | {
-      success: true;
-      updatedSaveQueue: SaveQueueEntry[];
-    }
+    success: true;
+    updatedSaveQueue: SaveQueueEntry[];
+  }
 > {
   const saveQueue = yield* select((state) => state.save.queue);
   const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
@@ -322,11 +322,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 partialMapping.get(action.value.sourceId) ?? action.value.sourceId;
               const newTargetId =
                 partialMapping.get(action.value.targetId) ?? action.value.targetId;
-
-              ColoredLogger.logYellow("Adapting mergeSegments from", action.value, "to", {
-                newSourceId,
-                newTargetId,
-              });
 
               return {
                 ...action,

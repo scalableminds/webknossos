@@ -74,7 +74,10 @@ function applySingleAction(
     }
     case "createSegment": {
       const segment = ua.value;
-      return VolumeTracingReducer(state, updateSegmentAction(segment.id, segment, actionTracingId));
+      return VolumeTracingReducer(
+        state,
+        updateSegmentAction(segment.id, segment, actionTracingId, actionTimestamp, false),
+      );
     }
     case "updateSegmentPartial": {
       const segment = ua.value;
@@ -240,7 +243,13 @@ function applySingleAction(
     case "updateSegmentVisibility": {
       return VolumeTracingReducer(
         state,
-        updateSegmentAction(ua.value.id, { isVisible: ua.value.isVisible }, actionTracingId),
+        updateSegmentAction(
+          ua.value.id,
+          { isVisible: ua.value.isVisible },
+          actionTracingId,
+          actionTimestamp,
+          false,
+        ),
       );
     }
     case "updateActiveSegmentId": {

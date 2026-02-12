@@ -1,7 +1,7 @@
 import { CreditCardOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
-import { Button, Card, Col, Flex, Row, Space, Spin, Typography } from "antd";
+import { Button, Card, Col, Divider, Flex, Row, Space, Spin, Typography } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -186,7 +186,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
         </Col>
       </Row>
-      <hr style={{ margin: "24px 0" }} />
+      <Divider />
       <Title level={5}>Cost Breakdown:</Title>
       <Row justify="space-between">
         <Col>
@@ -216,7 +216,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           </Text>
         </Col>
       </Row>
-      <hr style={{ margin: "24px 0" }} />
+      <Divider />
       <Row justify="space-between">
         <Col>
           <Text>Total Cost:</Text>

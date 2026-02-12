@@ -134,7 +134,7 @@ describe("Proofreading (with mesh actions)", () => {
           [7, 6],
           // [1337, 1], not loaded due to no rebasing performed as this test has no injected updated actions.
           // If there would be injected updates (simulating other users' changes) the segment id 1337 would
-          // been looked up for rebasing adn thus added to the loaded mapping.
+          // been looked up for rebasing and thus added to the loaded mapping.
           // [1338, 1], not loaded
         ]),
       );

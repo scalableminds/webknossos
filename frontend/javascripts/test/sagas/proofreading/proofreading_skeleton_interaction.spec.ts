@@ -560,7 +560,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      // Agglomerate 1 was splitted twice between 2 and 3.
+      // Agglomerate 1 was split twice between 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
           [1, 1],
@@ -631,7 +631,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
 
-      // Agglomerate 4 and 6 were merged and then agglomerate 1 was splitted between segment 2 and 3.
+      // Agglomerate 4 and 6 were merged and then agglomerate 1 was split between segment 2 and 3.
       expect(finalMapping).toEqual(
         new Map([
           [1, 1339],

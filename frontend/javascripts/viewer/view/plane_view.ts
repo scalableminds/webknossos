@@ -409,7 +409,7 @@ class PlaneView {
     // much earlier. It is not reloaded when opening a dataset or annotation from the dashboard and also might
     // not be reloaded when navigating from the tracing view back to the dashboard.
     // Therefore, we use performance.mark in the router to mark the start time ourselves. The downside of that
-    // is that the time for the intitial resource loading is not included, then.
+    // is that the time for the initial resource loading is not included, then.
     let timeToFirstRenderInMs, timeToCompileShaderInMs;
     if (performance.getEntriesByName(PerformanceMarkEnum.TRACING_VIEW_LOAD, "mark").length > 0) {
       timeToFirstRenderInMs = Math.round(

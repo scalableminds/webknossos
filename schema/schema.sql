@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(152);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(153);
 COMMIT TRANSACTION;
 
 
@@ -338,6 +338,7 @@ CREATE TABLE webknossos.timespans(
 );
 
 CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Personal', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
+CREATE TYPE webknossos.AI_PLANS AS ENUM ('Team_AI', 'Power_AI');
 CREATE TABLE webknossos.organizations(
   _id_old TEXT CONSTRAINT _id_old_objectId CHECK (_id_old ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   _id TEXT PRIMARY KEY,
@@ -348,6 +349,7 @@ CREATE TABLE webknossos.organizations(
   newUserMailingList TEXT NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT FALSE,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
+  aiPlan webknossos.AI_PLANS DEFAULT NULL,
   paidUntil TIMESTAMPTZ DEFAULT NULL,
   includedUsers INTEGER DEFAULT NULL,
   includedStorage BIGINT DEFAULT NULL,
@@ -363,6 +365,8 @@ CREATE TABLE webknossos.organization_plan_updates(
   _organization TEXT NOT NULL,
   description TEXT DEFAULT NULL,
   pricingPlan webknossos.PRICING_PLANS DEFAULT NULL,
+  aiPlan webknossos.Ai_PLANS DEFAULT NULL,
+  aiPlanChanged BOOLEAN NOT NULL DEFAULT FALSE, -- bool is necessary because set to null is distinct from did not change
   paidUntil TIMESTAMPTZ DEFAULT NULL,
   paidUntilChanged BOOLEAN NOT NULL, -- bool is necessary because set to null is distinct from did not change
   includedUsers INTEGER DEFAULT NULL,

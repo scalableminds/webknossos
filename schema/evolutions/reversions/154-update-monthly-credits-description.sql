@@ -33,7 +33,7 @@ $$ LANGUAGE plpgsql;
 -- Revert existing credit transaction comments back to generic text
 UPDATE webknossos.credit_transactions
 SET comment = 'Free credits for this month'
-WHERE comment ~ '^Free credits for \d{2}/\d{4}$';
+WHERE comment = 'Complimentary credits (' || TO_CHAR(created_at, 'YYYY-MM') || ')';
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 153;
 

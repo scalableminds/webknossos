@@ -3,10 +3,10 @@ import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
 import { Button, Col, Divider, Flex, Form, type FormInstance, List, Modal, Row } from "antd";
 import BrainSpinner from "components/brain_spinner";
 import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings_context";
-import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
-import {
-  DatasetSettingsProvider, // Sync simple with advanced and get newest datasourceJson
-} from "dashboard/dataset/dataset_settings_provider";
+import DatasetSettingsDataTab, {
+  TransformationsMode,
+} from "dashboard/dataset/dataset_settings_data_tab";
+import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";
@@ -16,7 +16,12 @@ import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
-import type { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type {
+  DataLayer,
+  DataLayerWithTransformations,
+  DatasourceConfiguration,
+} from "types/schemas/datasource.types";
+import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
 
@@ -103,6 +108,39 @@ function DatasetAddRemoteView(props: Props) {
     );
   };
 
+  const setEmptyTransformations = (mergedConfig: DatasourceConfiguration) => {
+    const initialRotationSettingsPerAxis: RotationAndMirroringSettings = {
+      rotationInDegrees: 0,
+      isMirrored: false,
+    };
+    const initialRotationSettings = {
+      x: initialRotationSettingsPerAxis,
+      y: initialRotationSettingsPerAxis,
+      z: initialRotationSettingsPerAxis,
+    };
+
+    form.setFieldsValue({
+      datasetRotation: initialRotationSettings,
+    });
+    form.setFieldValue("isRotationOnly", true);
+
+    const dataLayersWithTransformations: DataLayerWithTransformations[] =
+      mergedConfig.dataLayers.map((layer: DataLayer) => ({
+        name: layer.name,
+        coordinateTransformations: [],
+      }));
+    const layersWithCoordTransformationsJSON = JSON.stringify(
+      dataLayersWithTransformations,
+      null,
+      2,
+    );
+    form.setFieldsValue({
+      coordinateTransformations: layersWithCoordTransformationsJSON,
+    });
+
+    form.setFieldValue("transformationsMode", TransformationsMode.SIMPLE);
+  };
+
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
@@ -110,6 +148,8 @@ function DatasetAddRemoteView(props: Props) {
     const datasourceConfig = form.getFieldValue("dataSource");
     const mergedConfig = mergeNewLayers(datasourceConfig, newDataSourceConfig);
     form.setFieldValue("dataSource", mergedConfig);
+
+    setEmptyTransformations(mergedConfig);
 
     if (defaultDatasetUrl == null) {
       setShowLoadingOverlay(false);

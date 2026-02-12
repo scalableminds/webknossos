@@ -18,8 +18,9 @@ import size from "lodash-es/size";
 import messages from "messages";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
+import type { APIDataLayer, APIDataSource, APIDataset, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import type { DataLayerWithTransformations } from "types/schemas/datasource.types";
 import {
   doAllLayersHaveTheSameRotation,
   EXPECTED_TRANSFORMATION_LENGTH,
@@ -32,6 +33,7 @@ import {
   DatasetSettingsContext,
   type DatasetSettingsContextValue,
 } from "./dataset_settings_context";
+import { TransformationsMode } from "./dataset_settings_data_tab";
 import { hasFormError } from "./helper_components";
 import useBeforeUnload from "./useBeforeUnload_hook";
 
@@ -129,9 +131,32 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         dataSource,
       });
 
+      const initialRotationSettings = getRotationFromCoordinateTransformations(dataSource);
+
       form.setFieldsValue({
-        datasetRotation: getRotationFromCoordinateTransformations(dataSource),
+        datasetRotation: initialRotationSettings,
       });
+
+      const isRotationOnly = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
+      form.setFieldValue("isRotationOnly", isRotationOnly);
+
+      const dataLayersWithTransformations: DataLayerWithTransformations[] =
+        dataSource.dataLayers.map((layer: APIDataLayer) => ({
+          name: layer.name,
+          coordinateTransformations: layer.coordinateTransformations || [],
+        }));
+      const layersWithCoordTransformationsJSON = JSON.stringify(
+        dataLayersWithTransformations,
+        null,
+        2,
+      );
+      form.setFieldsValue({
+        coordinateTransformations: layersWithCoordTransformationsJSON,
+      });
+
+      const initialTransformationsMode =
+        initialRotationSettings == null ? TransformationsMode.ADVANCED : TransformationsMode.SIMPLE;
+      form.setFieldValue("transformationsMode", initialTransformationsMode);
 
       const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);
       enforceValidatedDatasetViewConfiguration(
@@ -158,7 +183,7 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       setIsLoading(false);
       form.validateFields();
     }
-  }, [datasetId, form.setFieldsValue, form.validateFields]);
+  }, [datasetId, form.setFieldsValue, form.validateFields, form.setFieldValue]);
 
   const getFormValidationSummary = useCallback((): Record<
     "data" | "general" | "defaultConfig",

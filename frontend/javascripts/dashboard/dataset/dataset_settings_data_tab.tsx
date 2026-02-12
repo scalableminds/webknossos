@@ -23,9 +23,10 @@ import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
-import type { DataLayer } from "types/schemas/datasource.types";
-import { syncValidator } from "types/validation";
+import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
+import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
@@ -34,13 +35,11 @@ import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 export default function DatasetSettingsDataTab() {
   const { dataset, form } = useDatasetSettingsContext();
-  const dataSource = Form.useWatch("dataSource", { form, preserve: true });
 
   return (
     <div>
       <SettingsTitle title="Data Source" description="Configure the data source" />
-
-      <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
+      <SimpleDatasetForm dataset={dataset} form={form} />
     </div>
   );
 }
@@ -55,13 +54,50 @@ function copyDatasetID(datasetId: string | null | undefined) {
 
 const LEFT_COLUMN_ITEMS_WIDTH = 408;
 const COPY_ICON_BUTTON_WIDTH = 32;
+const MARGIN_BOTTOM: React.CSSProperties = {
+  marginBottom: 24,
+};
+
+function DatasetTransformationsModeCard() {
+  return (
+    <SettingsCard
+      title="Transformation Configuration"
+      content={
+        <Form.Item
+          name={["coordinateTransformations"]}
+          label={
+            <Space size="small">
+              Coordinate Transformations JSON.
+              <Link to="https://docs.webknossos.org/webknossos/datasets/settings.html">
+                Read more about the format
+              </Link>
+            </Space>
+          }
+          rules={[
+            {
+              validator: (rule, value) =>
+                value !== "" ? validateTransformationsJSON(rule, value) : Promise.resolve(),
+            },
+          ]}
+        >
+          <Input.TextArea autoSize={{ minRows: 10, maxRows: 20 }} />
+        </Form.Item>
+      }
+      style={MARGIN_BOTTOM}
+    />
+  );
+}
+
+export enum TransformationsMode {
+  NONE = "none",
+  SIMPLE = "simple",
+  ADVANCED = "advanced",
+}
 
 function SimpleDatasetForm({
-  dataSource,
   form,
   dataset,
 }: {
-  dataSource: Record<string, any>;
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
@@ -77,15 +113,85 @@ function SimpleDatasetForm({
       },
     });
   };
-  const marginBottom: React.CSSProperties = {
-    marginBottom: 24,
+
+  const transformationItems = [
+    { value: TransformationsMode.NONE, label: "None" },
+    { value: TransformationsMode.SIMPLE, label: "Simple" },
+    { value: TransformationsMode.ADVANCED, label: "Advanced" },
+  ];
+
+  const dataSource: Record<string, any> = Form.useWatch("dataSource", { form, preserve: true });
+  const transformationsMode: TransformationsMode = Form.useWatch(["transformationsMode"], form);
+  const coordinateTransformationsJSON: string = Form.useWatch(["coordinateTransformations"], form);
+
+  useEffect(() => {
+    // Prevent unnecessary re-renders by not having the dataSource, which
+    // might be changed below, as a dependency
+    const currentDataSource: Record<string, any> = form.getFieldValue("dataSource");
+    if (currentDataSource == null || currentDataSource.dataLayers?.length === 0) return;
+    if (transformationsMode === TransformationsMode.NONE) {
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          return {
+            ...layer,
+            coordinateTransformations: [],
+          };
+        },
+      );
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    }
+    if (form.getFieldError(["coordinateTransformations"]).length > 0) {
+      return;
+    }
+    if (transformationsMode === TransformationsMode.ADVANCED) {
+      if (coordinateTransformationsJSON == null) return;
+      const layersWithCoordTransformations: DataLayerWithTransformations[] =
+        coordinateTransformationsJSON === "" ? [] : JSON.parse(coordinateTransformationsJSON);
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          const coordinateTransformation = layersWithCoordTransformations?.find(
+            (ct) => ct.name === layer.name,
+          );
+          return {
+            ...layer,
+            coordinateTransformations: coordinateTransformation?.coordinateTransformations || [],
+          };
+        },
+      );
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+    }
+  }, [coordinateTransformationsJSON, form, transformationsMode]);
+
+  const getTransformationSettings = () => {
+    switch (transformationsMode) {
+      case TransformationsMode.NONE:
+        return null;
+      case TransformationsMode.SIMPLE:
+        return (
+          <SettingsCard
+            title="Axis Rotation"
+            style={MARGIN_BOTTOM}
+            content={
+              <Row gutter={[24, 24]}>
+                <Col span={24}>
+                  <AxisRotationSettingForDataset form={form} />
+                </Col>
+              </Row>
+            }
+          />
+        );
+      case TransformationsMode.ADVANCED:
+        return <DatasetTransformationsModeCard />;
+      default:
+        return null;
+    }
   };
 
   return (
     <div>
       <SettingsCard
         title="General Dataset Settings"
-        style={marginBottom}
+        style={MARGIN_BOTTOM}
         content={
           <Row gutter={[24, 24]}>
             <Col span={24} xl={12}>
@@ -136,6 +242,19 @@ function SimpleDatasetForm({
                     <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
                   </Tooltip>
                 </Space.Compact>
+              </FormItemWithInfo>
+              <FormItemWithInfo
+                name={["transformationsMode"]}
+                label="Transformation Mode"
+                info={
+                  <>
+                    You can remove all transformations by selecting "None", add rotational and
+                    mirroring transformations in "Simple" mode, or define custom transformations per
+                    layer in "Advanced" mode.
+                  </>
+                }
+              >
+                <Select options={transformationItems} style={{ width: LEFT_COLUMN_ITEMS_WIDTH }} />
               </FormItemWithInfo>
             </Col>
             <Col span={24} xl={12}>
@@ -191,17 +310,7 @@ function SimpleDatasetForm({
         }
       />
 
-      <SettingsCard
-        title="Axis Rotation"
-        style={marginBottom}
-        content={
-          <Row gutter={[24, 24]}>
-            <Col span={24}>
-              <AxisRotationSettingForDataset form={form} />
-            </Col>
-          </Row>
-        }
-      />
+      {getTransformationSettings()}
 
       {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
         // the layer name may change in this view, the order does not, so idx is the right key choice here
@@ -209,7 +318,7 @@ function SimpleDatasetForm({
           <Col span={24}>
             <SettingsCard
               title={`Layer: ${layer.name}`}
-              style={marginBottom}
+              style={MARGIN_BOTTOM}
               content={
                 <SimpleLayerForm
                   dataset={dataset}

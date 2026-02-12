@@ -991,12 +991,4 @@ class VolumeTracingService @Inject()(
       }
     } yield fallbackLayer
 
-  def getFallbackLayerLargestSegmentId(annotatioId: ObjectId, tracing: VolumeTracing)(
-      implicit tc: TokenContext): Fox[Long] =
-    for {
-      fallbackLayerOpt <- getFallbackLayer(annotatioId, tracing)
-      fallbackLayer <- fallbackLayerOpt.toFox ?~> "no fallback layer"
-      largestSegmentId <- remoteDatastoreClient.getLargestSegmentId(fallbackLayer)
-    } yield largestSegmentId
-
 }

@@ -175,7 +175,8 @@ class TSAnnotationController @Inject()(
                     maxSegmentId <- volume.segments.map(_.segmentId).maxOption match {
                       case Some(fromTracing) => Fox.successful(fromTracing)
                       case None if volume.fallbackLayer.isDefined =>
-                        volumeTracingService.getFallbackLayerLargestSegmentId(annotationId, volume)
+                        Fox.failure(
+                          "Reserving segment ids is not supported for volume annotations with fallback layer.")
                       case _ => Fox.successful(fallbackId)
                     }
                   } yield maxSegmentId

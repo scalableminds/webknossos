@@ -461,13 +461,13 @@ case class UpdateSegmentPartialVolumeAction(id: Long,
   }
 }
 
-case class UpdateSegmentMetadataVolumeAction(id: Long,
-                                             upsertEntriesByKey: Seq[MetadataEntry],
-                                             removeEntriesByKey: Seq[String],
-                                             actionTracingId: String,
-                                             actionTimestamp: Option[Long] = None,
-                                             actionAuthorId: Option[ObjectId] = None,
-                                             info: Option[String] = None)
+case class UpdateMetadataOfSegmentVolumeAction(id: Long,
+                                               upsertEntriesByKey: Seq[MetadataEntry],
+                                               removeEntriesByKey: Seq[String],
+                                               actionTracingId: String,
+                                               actionTimestamp: Option[Long] = None,
+                                               actionAuthorId: Option[ObjectId] = None,
+                                               info: Option[String] = None)
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
@@ -962,9 +962,9 @@ object UpdateSegmentPartialVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateSegmentPartialVolumeAction] =
     Json.configured(tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
 }
-object UpdateSegmentMetadataVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateSegmentMetadataVolumeAction] =
-    Json.format[UpdateSegmentMetadataVolumeAction]
+object UpdateMetadataOfSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =
+    Json.format[UpdateMetadataOfSegmentVolumeAction]
 }
 object MergeSegmentsVolumeAction {
   implicit val jsonFormat: OFormat[MergeSegmentsVolumeAction] = Json.format[MergeSegmentsVolumeAction]

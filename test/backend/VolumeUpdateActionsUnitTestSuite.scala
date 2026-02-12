@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   LegacyUpdateSegmentVolumeAction,
   MergeSegmentsVolumeAction,
   UpdateActionSegmentGroup,
-  UpdateSegmentMetadataVolumeAction,
+  UpdateMetadataOfSegmentVolumeAction,
   UpdateSegmentPartialVolumeAction,
   UpsertSegmentGroupVolumeAction
 }
@@ -248,7 +248,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
       // insert
       val updateMetadataAction =
-        UpdateSegmentMetadataVolumeAction(
+        UpdateMetadataOfSegmentVolumeAction(
           id = 5,
           upsertEntriesByKey = Seq(
             MetadataEntry(key = "testString", stringValue = Some("string")),
@@ -273,7 +273,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
       // delete
       val deleteMetadataAction =
-        UpdateSegmentMetadataVolumeAction(
+        UpdateMetadataOfSegmentVolumeAction(
           id = 5,
           upsertEntriesByKey = Seq(),
           removeEntriesByKey = Seq("testString", "testNumber"),

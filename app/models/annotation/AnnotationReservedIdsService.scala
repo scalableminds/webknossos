@@ -11,7 +11,7 @@ import slick.jdbc.PostgresProfile.api._
 
 import java.util.concurrent.Semaphore
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: AnnotationReservedIdsDAO,
                                              tracingStoreService: TracingStoreService)
@@ -22,10 +22,10 @@ class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: Annotatio
 
   private def withMutex[T](annotationId: ObjectId)(block: => Fox[T])(implicit ec: ExecutionContext): Fox[T] = {
     val semaphore = mutexes.getOrElseUpdate(annotationId, new Semaphore(1))
-    Fox.fromFutureBox(for {
-      _ <- Future(semaphore.acquire())
-      result <- block.futureBox.andThen { case _ => semaphore.release() }
-    } yield result)
+    for {
+      _ <- Fox.successful(semaphore.acquire())
+      result <- block.andThen { case _ => semaphore.release() }
+    } yield result
   }
 
   def reservedIds(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain, userId: ObjectId)(
@@ -50,9 +50,6 @@ class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: Annotatio
         largestExistingIdFromDatabaseBox <- annotationReservedIdsDAO
           .findLargestReservedId(annotationId, tracingId, domain)
           .shiftBox
-        _ = logger.info("Sleeping...")
-        _ = Thread.sleep(10000)
-        _ = logger.info("Done sleeping.")
         largestExistingId <- largestExistingIdFromDatabaseBox match {
           case Full(largestFromDatabase) => Fox.successful(largestFromDatabase)
           case Empty =>

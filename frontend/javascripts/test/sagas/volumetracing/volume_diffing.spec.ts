@@ -171,7 +171,7 @@ describe("diffSegmentGroups for volume tracings", () => {
 });
 
 describe("uncachedDiffSegmentLists should diff segment lists", () => {
-  // Each list defines which segment itesm should already exist before
+  // Each list defines which segment items should already exist before
   // the merge is executed.
   describe.for([
     [],

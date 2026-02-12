@@ -189,6 +189,12 @@ object WebAuthnKeyDescriptor {
   implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
 }
 
+case class CreateOrganizationWithExistingUserParams(userId: ObjectId, newOrganizationName: String)
+object CreateOrganizationWithExistingUserParams {
+  implicit val jsonFormat: OFormat[CreateOrganizationWithExistingUserParams] =
+    Json.format[CreateOrganizationWithExistingUserParams]
+}
+
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
@@ -858,6 +864,28 @@ class AuthenticationController @Inject()(
   private def shaHex(key: String, valueToDigest: String): String =
     new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)
 
+  def createOrganizationWithExistingUser: Action[CreateOrganizationWithExistingUserParams] =
+    sil.SecuredAction.async(validateJson[CreateOrganizationWithExistingUserParams]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        newOrganizationId = RandomIDGenerator.generateBlocking(12)
+        organization <- organizationService.createOrganization(Some(newOrganizationId),
+                                                               request.body.newOrganizationName)
+        user <- userDAO.findOne(request.body.userId)(GlobalAccessContext)
+        _ <- organizationService.createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
+        teamMemberships <- userService.initialTeamMemberships(organization._id, None)
+        _ <- userService.joinOrganization(
+          user,
+          organization._id,
+          autoActivate = true,
+          isAdmin = true,
+          isDatasetManager = false,
+          teamMemberships = teamMemberships
+        )
+        _ = analyticsService.track(JoinOrganizationEvent(user, organization))
+      } yield Ok(Json.toJson(organization._id))
+    }
+
   def createOrganizationWithAdmin: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     signUpForm
       .bindFromRequest()
@@ -895,19 +923,16 @@ class AuthenticationController @Inject()(
                     ) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)
-                    dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
-                      .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
+                      .createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
                     _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
                       acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService))
-                  } yield {
-                    Mailer ! Send(defaultMails
+                    _ = Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse("")))
-                    if (conf.Features.isWkorgInstance) {
+                    _ = if (conf.Features.isWkorgInstance) {
                       mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }
-                    Ok
-                  }
+                  } yield Ok
                 }
               } yield result
             case _ => Fox.failure(Messages("organization.create.forbidden"))

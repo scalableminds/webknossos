@@ -106,8 +106,6 @@ class TSRemoteDatastoreClient @Inject()(
     )
   }
 
-  def getLargestSegmentId(remoteFallbackLayer: RemoteFallbackLayer): Fox[Long] // TODO mappings?
-
   def hasSegmentIndexFile(remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Boolean] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)

@@ -36,15 +36,15 @@
   border-radius: 2px;
   min-height: var(--ant-control-height-sm); // make the list items the same height as <Button size="small">
 
-  // .ant-btn {
-  //   // Hide edit and ellipsis icon buttons (unless hovered)
-  //   display: none;
-  // }
+  .ant-btn:has(.anticon-ellipsis) {
+    // Hide ellipsis icon buttons (unless hovered)
+    display: none;
+  }
 
   &:hover {
     background-color: var(--ant-blue-1);
 
-    .ant-btn {
+    .ant-btn:has(.anticon-ellipsis) {
       display: inline-block;
     }
   }

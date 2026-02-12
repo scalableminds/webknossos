@@ -598,7 +598,7 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
         )
       case (Some(sourceSegment), Some(targetSegment)) =>
         sourceSegment.copy(
-          name = mergeSegmentNames(sourceSegmentOpt.flatMap(_.name), targetSegment.name),
+          name = mergeSegmentNames(sourceSegment.name, targetSegment.name),
           metadata = mergeSegmentMetadata(sourceSegment, targetSegment)
         )
     }

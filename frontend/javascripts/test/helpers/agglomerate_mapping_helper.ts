@@ -7,7 +7,7 @@ export class AgglomerateMapping {
    * of segment ids (nodes) and edges. The components in that graph
    * define to which agglomerate ids segment ids are mapped.
    * The class supports adding and removing edges. Each operation
-   * creates a new version so that map requests can be paramaterized
+   * creates a new version so that map requests can be parameterized
    * with the version.
    */
 

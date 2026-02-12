@@ -5,7 +5,7 @@ import { call, put, take } from "redux-saga/effects";
 import { sampleTracingLayer } from "test/fixtures/dataset_server_object";
 import { initialState as defaultVolumeState } from "test/fixtures/volumetracing_object";
 import { tracing as serverVolumeTracing } from "test/fixtures/volumetracing_server_objects";
-import { execCall, expectValueDeepEqual } from "test/helpers/sagaHelpers";
+import { execCall, expectValueDeepEqual } from "test/helpers/saga_test_helpers";
 import {
   ContourModeEnum,
   MappingStatusEnum,

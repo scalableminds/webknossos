@@ -36,7 +36,7 @@ import {
 } from "./proofreading_test_utils";
 import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
+import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,

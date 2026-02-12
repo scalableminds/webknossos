@@ -172,8 +172,13 @@ class TSAnnotationController @Inject()(
                 case AnnotationIdDomain.Segment =>
                   for {
                     volume <- annotationService.findVolume(annotationId, tracingId)
-                    // TODO fallback segmentation layer
-                  } yield volume.segments.map(_.segmentId).maxOption.getOrElse(fallbackId)
+                    maxSegmentId <- volume.segments.map(_.segmentId).maxOption match {
+                      case Some(fromTracing) => Fox.successful(fromTracing)
+                      case None if volume.fallbackLayer.isDefined =>
+                        volumeTracingService.getFallbackLayerLargestSegmentId(annotationId, volume)
+                      case _ => Fox.successful(fallbackId)
+                    }
+                  } yield maxSegmentId
                 case AnnotationIdDomain.SegmentGroup =>
                   for {
                     volume <- annotationService.findVolume(annotationId, tracingId)

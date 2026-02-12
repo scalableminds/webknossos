@@ -7,7 +7,7 @@ import {
   ShrinkOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
-import { type MenuProps, notification } from "antd";
+import { type MenuProps, notification, Space } from "antd";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
@@ -100,14 +100,16 @@ export function renderTreeNode(
     ) : null;
 
   return (
-    <div
+    <Space
+      size={4}
+      align="center"
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ wordBreak: "break-word", display: "inline-flex", width: "100%" }}
+      style={{ wordBreak: "break-word" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
-      <span style={{ marginRight: 4, whiteSpace: "nowrap" }}>
+      <span style={{ whiteSpace: "nowrap" }}>
         {`(${tree.nodes.size()}) `} {maybeProofreadingIcon}
       </span>
       <EditableTextLabel
@@ -119,14 +121,11 @@ export function renderTreeNode(
         hideEditIcon
       />
       {(tree.metadata || []).length > 0 ? (
-        <FastTooltip
-          className="deemphasized icon-margin-left"
-          title="This tree has assigned metadata properties."
-        >
+        <FastTooltip className="deemphasized" title="This tree has assigned metadata properties.">
           <TagsOutlined />
         </FastTooltip>
       ) : null}
-    </div>
+    </Space>
   );
 }
 
@@ -248,7 +247,8 @@ export function renderGroupNode(
   // Make sure the displayed name is not empty
   const displayableName = name.trim() || "<Unnamed Group>";
   return (
-    <div
+    <Space
+      size={4}
       onContextMenu={(evt) =>
         onOpenContextMenu(
           createMenuForTreeGroup(props, hideContextMenu, node, expandedNodeKeys),
@@ -257,7 +257,7 @@ export function renderGroupNode(
       }
       style={{ wordBreak: "break-word" }}
     >
-      <FolderOutlined className="icon-margin-right" />
+      <FolderOutlined />
       <EditableTextLabel
         value={displayableName}
         label="Group Name"
@@ -266,8 +266,7 @@ export function renderGroupNode(
         onRenameStart={increaseEditCounter}
         onRenameEnd={decreaseEditCounter}
       />
-      {}
-    </div>
+    </Space>
   );
 }
 

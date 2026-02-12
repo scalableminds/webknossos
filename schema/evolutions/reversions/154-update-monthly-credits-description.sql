@@ -1,5 +1,7 @@
 START TRANSACTION;
 
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 154 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+
 -- Revert the function definition to the original
 CREATE OR REPLACE FUNCTION webknossos.hand_out_monthly_free_credits(free_milli_credits_amount INT) RETURNS VOID AS $$
 DECLARE

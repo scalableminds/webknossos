@@ -171,7 +171,7 @@ describe("diffSegmentGroups for volume tracings", () => {
 });
 
 describe("uncachedDiffSegmentLists should diff segment lists", () => {
-  // Each list defines which segment itesm should already exist before
+  // Each list defines which segment items should already exist before
   // the merge is executed.
   describe.for([
     [],
@@ -252,20 +252,23 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
       ),
     );
 
-    /*
-     * Only applying mergeSegments on the initial segment items, would produce
+    /* The above code transforms the state by applying an updateSegmentPartial
+     * action and afterwards a mergeSegments action.
+     * The differ will detect these actions in a swapped order because it will
+     * always detect merges first (this is not problematic). For that reason,
+     * the updateAction will look a bit differently than what is defined above.
+     * We can derive the necessary updateAction by looking at what only applying
+     * mergeSegments on the initial segment items would produce:
         { key: "someKey1-1", stringValue: "someStringValue - segment 1" },
         { key: "someKey2", stringListValue: ["list", "value", "segment 1"] },
-
+        // the following three lines are identical to the metadata below
         { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
         { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
         { key: "identicalKey", stringValue: "identicalValue" },
-     * However, segment 1 was edited before the merge.
-     * Therefore, we need another update action which transforms from the above
-     * to this (note that the last 3 lines are identical):
+     * In contrast, the following metadata is what's captured in `stateAfterMerge`:
         { key: "someKey1-1", stringValue: "someStringValue - segment 1 - changed" },
         { key: "someKey4", boolValue: true },
-
+        // the following three lines are identical to the metadata above
         { key: "someKey1-2", stringValue: "someStringValue - segment 2" },
         { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
         { key: "identicalKey", stringValue: "identicalValue" },

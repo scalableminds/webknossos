@@ -26,7 +26,7 @@ type ListMeshChunksRequest = {
   segmentId: number;
 };
 
-export function getMeshfileChunksForSegment(
+export function getMeshFileChunksForSegment(
   dataStoreUrl: string,
   datasetId: string,
   layerName: string,
@@ -76,7 +76,7 @@ type MeshChunkDataRequestList = {
   requests: MeshChunkDataRequest[];
 };
 
-export function getMeshfileChunkData(
+export function getMeshFileChunkData(
   dataStoreUrl: string,
   datasetId: string,
   layerName: string,

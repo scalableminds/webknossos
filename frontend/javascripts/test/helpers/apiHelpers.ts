@@ -205,7 +205,7 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
-  const getMeshfilesForDatasetLayer = vi.fn(async () => {
+  const getMeshFilesForDatasetLayer = vi.fn(async () => {
     return [dummyMeshFile];
   });
 
@@ -215,7 +215,7 @@ vi.mock("admin/rest_api.ts", async () => {
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
     getMappingsForDatasetLayer: vi.fn(() => []),
-    getMeshfilesForDatasetLayer,
+    getMeshFilesForDatasetLayer: getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
@@ -267,7 +267,7 @@ vi.mock("libs/compute_bvh_async", () => ({
 
 vi.mock("admin/api/mesh", async () => {
   const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
-  const getMeshfileChunksForSegment = async (..._args: any[]): Promise<MeshSegmentInfo> => {
+  const getMeshFileChunksForSegment = async (..._args: any[]): Promise<MeshSegmentInfo> => {
     return {
       meshFormat: "draco",
       lods: [],
@@ -277,7 +277,7 @@ vi.mock("admin/api/mesh", async () => {
 
   return {
     ...actual,
-    getMeshfileChunksForSegment,
+    getMeshFileChunksForSegment: getMeshFileChunksForSegment,
   };
 });
 

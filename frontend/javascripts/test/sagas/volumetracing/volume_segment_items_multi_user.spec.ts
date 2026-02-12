@@ -39,7 +39,7 @@ describe("Collaborative editing of segment items", () => {
 
   it("should handle concurrent createSegment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const segmentId = 1;
     const { annotation } = Store.getState();
@@ -100,13 +100,19 @@ describe("Collaborative editing of segment items", () => {
           },
         },
       ]);
-      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
 
-      expect(finalSegment).toMatchObject({
-        anchorPosition: injectedSegmentProps.anchorPosition,
-        name: updateSegmentProps.name,
-        color: updateSegmentProps.color,
-      });
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+
+        expect(finalSegment).toMatchObject({
+          anchorPosition: injectedSegmentProps.anchorPosition,
+          name: updateSegmentProps.name,
+          color: updateSegmentProps.color,
+        });
+      }
     });
 
     await task.toPromise();
@@ -114,7 +120,7 @@ describe("Collaborative editing of segment items", () => {
 
   it("should handle concurrent updateSegment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const segmentId = 1;
     const { annotation } = Store.getState();
@@ -169,7 +175,7 @@ describe("Collaborative editing of segment items", () => {
       );
       expect(mapping0).toEqual(initialMapping);
       yield put(setOthersMayEditForAnnotationAction(true));
-      yield call(() => api.tracing.save()); // todop: without this save, the mutex strategy is not switched correctly. can we improve this?
+      yield call(() => api.tracing.save()); // TODO: without this save, the mutex strategy is not switched correctly. can we improve this?
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
       // and save so that it exists in the base version.
@@ -239,21 +245,27 @@ describe("Collaborative editing of segment items", () => {
           },
         },
       ]);
-      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
 
-      expect(finalSegment).toMatchObject({
-        anchorPosition: injectedSegmentProps.anchorPosition,
-        color: updateSegmentProps.color,
-        name: injectedSegmentProps.name,
-        groupId: injectedSegmentProps.groupId,
-        metadata: [
-          injectedMetadataValue.upsertEntriesByKey[1], // ADDED_BY_REMOTE
-          updateSegmentProps.metadata[0], // BASE_1 (was changed by both but local user won the race)
-          // BASE_2 was deleted by remote user
-          // BASE_3 was deleted by local user
-          updateSegmentProps.metadata[2], // ADDED_BY_LOCAL_USER
-        ],
-      });
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+
+        expect(finalSegment).toMatchObject({
+          anchorPosition: injectedSegmentProps.anchorPosition,
+          color: updateSegmentProps.color,
+          name: injectedSegmentProps.name,
+          groupId: injectedSegmentProps.groupId,
+          metadata: [
+            injectedMetadataValue.upsertEntriesByKey[1], // ADDED_BY_REMOTE
+            updateSegmentProps.metadata[0], // BASE_1 (was changed by both but local user won the race)
+            // BASE_2 was deleted by remote user
+            // BASE_3 was deleted by local user
+            updateSegmentProps.metadata[2], // ADDED_BY_LOCAL_USER
+          ],
+        });
+      }
     });
 
     await task.toPromise();
@@ -261,7 +273,7 @@ describe("Collaborative editing of segment items", () => {
 
   it("should handle concurrent two 'create and update segment' update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const segmentId = 1;
     const { annotation } = Store.getState();
@@ -334,14 +346,19 @@ describe("Collaborative editing of segment items", () => {
           color: updateSegmentProps1.color,
         },
       });
-      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
 
-      expect(finalSegment).toMatchObject({
-        anchorPosition: injectedInitialSegmentProps.anchorPosition,
-        color: updateSegmentProps1.color,
-        name: updateSegmentProps2.name,
-        groupId: updateSegmentProps2.groupId,
-      });
+      for (const state of [frontendState, backendState]) {
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+
+        expect(finalSegment).toMatchObject({
+          anchorPosition: injectedInitialSegmentProps.anchorPosition,
+          color: updateSegmentProps1.color,
+          name: updateSegmentProps2.name,
+          groupId: updateSegmentProps2.groupId,
+        });
+      }
     });
 
     await task.toPromise();
@@ -349,7 +366,7 @@ describe("Collaborative editing of segment items", () => {
 
   it("should handle concurrent update and delete segment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const segmentId = 1;
     const { annotation } = Store.getState();
@@ -406,8 +423,14 @@ describe("Collaborative editing of segment items", () => {
           },
         },
       ]);
-      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
-      expect(finalSegment).toBeUndefined();
+
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        expect(finalSegment).toBeUndefined();
+      }
     });
 
     await task.toPromise();
@@ -415,7 +438,7 @@ describe("Collaborative editing of segment items", () => {
 
   it("should handle concurrent delete and update segment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const segmentId = 1;
     const { annotation } = Store.getState();
@@ -443,12 +466,20 @@ describe("Collaborative editing of segment items", () => {
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
-      const updateSegmentProps1 = { name: "Some Other Name", color: [128, 0, 0] as Vector3 };
+      // todop
+      const updateSegmentProps1 = {
+        name: "Some Other Name",
+        color: [128, 0, 0] as Vector3,
+      };
       yield put(updateSegmentAction(segmentId, updateSegmentProps1, tracingId));
 
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
-      const updateSegmentProps2 = { groupId: 4 };
+      const updateSegmentProps2 = {
+        groupId: 4,
+        metadata: [{ key: "key", someStringValue: "someStringValue" }],
+        isVisible: false,
+      };
       yield put(updateSegmentAction(segmentId, updateSegmentProps2, tracingId));
 
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
@@ -464,8 +495,14 @@ describe("Collaborative editing of segment items", () => {
           },
         },
       ]);
-      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
-      expect(finalSegment).toBeUndefined();
+
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        expect(finalSegment).toBeUndefined();
+      }
     });
 
     await task.toPromise();
@@ -473,7 +510,7 @@ describe("Collaborative editing of segment items", () => {
 
   it("should handle multiple pending update segment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const segmentId = 1;
     const { annotation } = Store.getState();
@@ -536,8 +573,13 @@ describe("Collaborative editing of segment items", () => {
           ...updateSegmentProps3,
         },
       });
-      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
-      expect(finalSegment).toMatchObject(expectedShape);
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        expect(finalSegment).toMatchObject(expectedShape);
+      }
     });
 
     await task.toPromise();
@@ -545,7 +587,7 @@ describe("Collaborative editing of segment items", () => {
 
   it("should handle concurrent delete segment update actions", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const segmentId = 1;
     const { annotation } = Store.getState();
@@ -573,7 +615,12 @@ describe("Collaborative editing of segment items", () => {
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
-      const updateSegmentProps1 = { name: "Some Name", color: [128, 0, 0] as Vector3 };
+      const updateSegmentProps1 = {
+        name: "Some Name",
+        color: [128, 0, 0] as Vector3,
+        metadata: [{ key: "key", someStringValue: "someStringValue" }],
+        isVisible: false,
+      };
       yield put(updateSegmentAction(segmentId, updateSegmentProps1, tracingId));
 
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
@@ -589,8 +636,14 @@ describe("Collaborative editing of segment items", () => {
           version: 5,
         },
       ]);
-      const finalSegment = Store.getState().annotation.volumes[0].segments.getNullable(1);
-      expect(finalSegment).toBeUndefined();
+
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        expect(finalSegment).toBeUndefined();
+      }
     });
 
     await task.toPromise();

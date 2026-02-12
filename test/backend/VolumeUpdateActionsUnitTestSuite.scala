@@ -88,6 +88,8 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     groupId = Some(2)
   )
 
+  // Note: The tests for MergeSegmentsVolumeAction have parity with those in the frontend.
+  // If the action changes, tests should be adapted both in frontend and here.
   "MergeSegmentsVolumeAction" should {
     "merge two segments (simple)" in {
       val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)

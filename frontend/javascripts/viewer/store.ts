@@ -224,7 +224,20 @@ export type VolumeTracing = TracingBase & {
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
   readonly hideUnregisteredSegments: boolean;
-  readonly segmentJournal: Array<SegmentJournalEntry>; // should always be stored with ascending entryIndex
+  // The segmentJournal keeps track of how segments were edited. Currently,
+  // this only includes mergeSegments actions which can be created during
+  // proofreading.
+  // This is necessary so that the differ can correctly emit mergeSegments
+  // update actions.
+  //
+  // Note the following:
+  //  - These entries should always be stored with ascending entryIndex.
+  //  - This list only grows right now which should be alright. Even
+  //    when we assume 150 B per entry (which is very pessimistic as
+  //    it's simply the JSON-encoded length) and 10,000 merge requests
+  //    per session (which is also quite far fetched), we are in the
+  //    realm of 1.5 MB of RAM.
+  readonly segmentJournal: Array<SegmentJournalEntry>;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

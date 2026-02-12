@@ -87,10 +87,10 @@ CREATE TYPE webknossos.ANNOTATION_ID_DOMAIN AS ENUM ('Segment', 'SegmentGroup', 
 CREATE TABLE webknossos.annotation_reserved_ids(
   _annotation TEXT NOT NULL  CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   tracingId TEXT NOT NULL,
-  domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL
+  domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
   _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
-  id BIGINT NOT NULL,
-); -- todo foreign key constraints
+  id BIGINT NOT NULL
+);
 
 CREATE TABLE webknossos.publications(
   _id TEXT PRIMARY KEY,
@@ -906,6 +906,9 @@ ALTER TABLE webknossos.annotation_contributors
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.annotation_mutexes
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.annotation_reserved_ids
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.datasets

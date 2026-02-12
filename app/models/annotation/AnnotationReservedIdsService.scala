@@ -11,8 +11,8 @@ import slick.jdbc.PostgresProfile.api._
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class AnnotationReservedIdsService @Inject()(tracingStoreClient: WKRemoteTracingStoreClient,
-                                             annotationReservedIdsDAO: AnnotationReservedIdsDAO)
+class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: AnnotationReservedIdsDAO,
+                                             tracingStoreService: TracingStoreService)
     extends FoxImplicits {
 
   def reservedIds(annotationId: ObjectId,
@@ -36,8 +36,12 @@ class AnnotationReservedIdsService @Inject()(tracingStoreClient: WKRemoteTracing
         .shiftBox
       largestExistingId <- largestExistingIdFromDatabaseBox match {
         case Full(largestFromDatabase) => Fox.successful(largestFromDatabase)
-        case Empty                     => tracingStoreClient.getLargestIdOfDomainOrMinusOne(annotationId, tracingId, domain)
-        case f: Failure                => f.toFox
+        case Empty =>
+          for {
+            tracingStoreClient <- tracingStoreService.client
+            idFromTracingStore <- tracingStoreClient.getLargestIdOfDomainOrZero(annotationId, tracingId, domain)
+          } yield idFromTracingStore
+        case f: Failure => f.toFox
       }
       idsToReserve = (largestExistingId + 1) until (largestExistingId + 1 + numberOfIdsToReserve)
       _ <- annotationReservedIdsDAO.reserveIdsFor(annotationId, tracingId, domain, userId, idsToReserve)
@@ -53,7 +57,7 @@ class AnnotationReservedIdsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
                              tracingId: String,
                              domain: AnnotationIdDomain,
                              userId: ObjectId): Fox[Seq[Long]] =
-    run(q"""SELECT _id FROM webknossos.annotation_reserved_ids
+    run(q"""SELECT id FROM webknossos.annotation_reserved_ids
           WHERE _annotation = $annotationId
           AND tracingId = $tracingId
           AND _user = $userId
@@ -67,7 +71,7 @@ class AnnotationReservedIdsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
   def findLargestReservedId(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain): Fox[Long] =
     for {
       rows <- run(q"""
-           SELECT MAX(_id) FROM webknossos.annotation_reserved_ids
+           SELECT MAX(id) FROM webknossos.annotation_reserved_ids
            WHERE _annotation = $annotationId
            AND tracingId = $tracingId
            AND domain = $domain

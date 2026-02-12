@@ -105,7 +105,7 @@ class ErrorHandling {
 
   initializeAirbrake() {
     // read Airbrake config from DOM
-    // config is inject from backend for production builds
+    // config is injected from backend for production builds
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     // @ts-expect-error
     const { dataset } = scriptTag || { dataset: {} };

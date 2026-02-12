@@ -58,6 +58,7 @@ import {
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
+import { WkDevFlags } from "viewer/api/wk_dev";
 
 function SkeletonTracingReducer(
   state: WebknossosState,
@@ -798,6 +799,14 @@ function SkeletonTracingReducer(
         return state;
       }
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
+      if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
+        // If live collab is active and the user did a proofreading split via edge deletion,
+        // wait for the proofreading saga to replay the action before deleting the edge as
+        // the affected agglomerate tree may not be in sync with the backend yet.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
 
       const sourceTree = getTreeAndNode(skeletonTracing, sourceNodeId, null, treeType);

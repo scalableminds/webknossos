@@ -235,7 +235,7 @@ export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
   timestamp: number = Date.now(),
-  initiator: "PROOFREADING" | "UNKNOWN" = "UNKNOWN",
+  initiator: "PROOFREADING" | "USER" = "USER",
 ) =>
   ({
     type: "DELETE_EDGE",
@@ -468,11 +468,16 @@ export const deselectActiveTreeGroupAction = () =>
     type: "DESELECT_ACTIVE_TREE_GROUP",
   }) as const;
 
-export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number) =>
+export const mergeTreesAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  initiator: "PROOFREADING" | "USER" = "USER",
+) =>
   ({
     type: "MERGE_TREES",
     sourceNodeId,
     targetNodeId,
+    initiator,
   }) as const;
 
 export const setTreeNameAction = (

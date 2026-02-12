@@ -81,6 +81,8 @@ import {
   type SetNodePositionAction,
   setTreeAgglomerateIdAction,
   setTreeNameAction,
+  DeleteEdgeAction,
+  MergeTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
   allowSagaWhileBusyAction,
@@ -461,13 +463,39 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   ) {
     return;
   }
-  if (action.type === "DELETE_EDGE" && action.initiator === "PROOFREADING") {
-    // Ignore DeleteEdge actions that were dispatched by the proofreading saga itself
+  if (
+    (action.type === "DELETE_EDGE" || action.type === "MERGE_TREES") &&
+    action.initiator === "PROOFREADING"
+  ) {
+    // Ignore DeleteEdge and MergeTrees actions that were dispatched by the proofreading saga itself.
     return;
   }
 
   const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
+
+  // Reserve the mutex early to be able to synchronize the agglomerate trees with the newest backend state,
+  // in case of live collab being active.
+  // The reason is that in the meantime another user might have already manipulated the same agglomerate tree
+  // as done by the current action. Thus, to avoid inconsistent states between the mappping and the agglomerate trees,
+  // we first sync with the backend to have the newest agglomerate trees.
+  // Additionally, the skeletontracing reducer ignores direct proofreading agglomerate tree updates, in case live collab is active.
+  // We therefore explicitly replay the received actions after syncing with the backend, but setting this saga as the initiator.
+  // This should ensure, that the agglomerate tree updates done by the user are always in sync with the backend state.
+  const unsubscribeFromAnnotationMutex = yield* call(
+    subscribeToAnnotationMutexInLiveCollab,
+    "Proofreading via Skeleton",
+  );
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const isLiveCollabActive = WkDevFlags.liveCollab && othersMayEdit;
+  if (isLiveCollabActive) {
+    yield* call(syncWithBackend);
+    // Replay the current action with the proofreading saga as the initiator.
+    const actionWithSagaAsInitiator = { ...action, initiator: "PROOFREADING" } as
+      | DeleteEdgeAction
+      | MergeTreesAction;
+    yield* put(actionWithSagaAsInitiator);
+  }
 
   const { sourceNodeId, targetNodeId } = action;
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
@@ -599,10 +627,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
 
   yield* put(pushSaveQueueTransaction(items));
-  const unsubscribeFromAnnotationMutex = yield* call(
-    subscribeToAnnotationMutexInLiveCollab,
-    "Proofreading via Skeleton",
-  );
   yield* call(syncWithBackend);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
   if (proofreadingPostProcessingInfo) {

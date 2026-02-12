@@ -167,7 +167,7 @@ function JobListView() {
   const { modal } = App.useApp();
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["jobs"],
-    queryFn: () => getJobs(),
+    queryFn: getJobs,
     refetchInterval: refreshInterval,
   });
   const [searchQuery, setSearchQuery] = useState("");

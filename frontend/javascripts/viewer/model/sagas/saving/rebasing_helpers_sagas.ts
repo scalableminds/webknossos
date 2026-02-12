@@ -153,13 +153,13 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
   appliedBackendUpdateActions: APIUpdateActionBatch[],
 ): Saga<
   | {
-    success: false;
-    updatedSaveQueue: undefined;
-  }
+      success: false;
+      updatedSaveQueue: undefined;
+    }
   | {
-    success: true;
-    updatedSaveQueue: SaveQueueEntry[];
-  }
+      success: true;
+      updatedSaveQueue: SaveQueueEntry[];
+    }
 > {
   const saveQueue = yield* select((state) => state.save.queue);
   const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);

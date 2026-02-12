@@ -508,7 +508,7 @@ function getMeshItems(
       : maybeUnmappedSegmentId == null
         ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
         : meshFileMappingName != null
-          ? "This mesh was created for a mapping. Please use a meshfile that is based on unmapped oversegmentation data."
+          ? "This mesh was created for a mapping. Please use a mesh file that is based on unmapped oversegmentation data."
           : actionNeedsActiveSegment && activeSegmentMissing
             ? "Select a segment first."
             : null;

@@ -2017,7 +2017,7 @@ export function getEditableAgglomerateSkeleton(
   });
 }
 
-export async function getMeshfilesForDatasetLayer(
+export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,

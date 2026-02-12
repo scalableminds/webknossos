@@ -1,5 +1,5 @@
 import type { MeshLodInfo } from "admin/api/mesh";
-import { getMeshfilesForDatasetLayer, meshApi } from "admin/rest_api";
+import { getMeshFilesForDatasetLayer, meshApi } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
 import processTaskWithPool from "libs/async/task_pool";
 import { mergeGeometries } from "libs/BufferGeometryUtils";
@@ -99,7 +99,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   fetchDeferredsPerLayer[layerName] = deferred;
 
   const availableMeshFiles = yield* call(
-    getMeshfilesForDatasetLayer,
+    getMeshFilesForDatasetLayer,
     dataset.dataStore.url,
     dataset,
     getBaseSegmentationName(segmentationLayer),
@@ -287,7 +287,7 @@ function* _getChunkLoadingDescriptors(
   }
 
   const segmentInfo = yield* call(
-    meshApi.getMeshfileChunksForSegment,
+    meshApi.getMeshFileChunksForSegment,
     dataset.dataStore.url,
     dataset.id,
     getBaseSegmentationName(segmentationLayer),
@@ -367,7 +367,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     (chunks) =>
       function* loadChunks(): Saga<void> {
         const dataForChunks = yield* call(
-          meshApi.getMeshfileChunkData,
+          meshApi.getMeshFileChunkData,
           dataset.dataStore.url,
           dataset.id,
           getBaseSegmentationName(segmentationLayer),

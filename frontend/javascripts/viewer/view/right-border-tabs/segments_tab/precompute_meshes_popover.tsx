@@ -118,15 +118,15 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
 
   const { disabled, title } = getTooltipInfo();
 
-  const startComputingMeshfile = async () => {
+  const startComputingMeshFile = async () => {
     const defaultOrHigherIndex = magInfo.getIndexOrClosestHigherIndex(
       preferredQualityForMeshPrecomputation,
     );
-    const meshfileMagIndex =
+    const meshFileMagIndex =
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
         : magInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileMag = magInfo.getMagByIndexWithFallback(meshfileMagIndex, null);
+    const meshFileMag = magInfo.getMagByIndexWithFallback(meshFileMagIndex, null);
 
     if (visibleSegmentationLayer != null) {
       const isEditableMapping = hasEditableMapping(Store.getState(), visibleSegmentationLayer.name);
@@ -142,7 +142,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
       const job = await startComputeMeshFileJob(
         dataset.id,
         getBaseSegmentationName(visibleSegmentationLayer),
-        meshfileMag,
+        meshFileMag,
         maybeMappingName,
       );
       setActiveMeshJobId(job.id);
@@ -211,7 +211,7 @@ export const PrecomputeMeshesPopover = ({ onActiveJobChange }: PrecomputeMeshesP
             loading={activeMeshJobId != null}
             type="primary"
             disabled={disabled}
-            onClick={startComputingMeshfile}
+            onClick={startComputingMeshFile}
           >
             Precompute Meshes
           </Button>

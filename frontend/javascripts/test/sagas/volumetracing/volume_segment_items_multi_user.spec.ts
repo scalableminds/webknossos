@@ -175,7 +175,7 @@ describe("Collaborative editing of segment items", () => {
       );
       expect(mapping0).toEqual(initialMapping);
       yield put(setOthersMayEditForAnnotationAction(true));
-      yield call(() => api.tracing.save()); // TODO: without this save, the mutex strategy is not switched correctly. can we improve this?
+      yield call(() => api.tracing.save()); // TODO (#9036): without this save, the mutex strategy is not switched correctly. can we improve this?
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
       // and save so that it exists in the base version.
@@ -466,7 +466,6 @@ describe("Collaborative editing of segment items", () => {
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
-      // todop
       const updateSegmentProps1 = {
         name: "Some Other Name",
         color: [128, 0, 0] as Vector3,

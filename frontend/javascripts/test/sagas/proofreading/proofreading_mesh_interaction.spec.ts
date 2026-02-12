@@ -550,7 +550,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   }
 
-  // TODO: this test creates a segment item 6 (for agglomerate 6) with an incorrect anchor position (1337^3).
+  // TODO (#9036): this test creates a segment item 6 (for agglomerate 6) with an incorrect anchor position (1337^3).
   // This is likely an incorrect mock.
   it("should perform partitioned min-cut correctly", async (context: WebknossosTestContext) => {
     const { mocks } = context;

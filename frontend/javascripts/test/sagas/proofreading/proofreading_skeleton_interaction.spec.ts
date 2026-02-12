@@ -510,7 +510,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   });
 
-  // TODO: the same split update action is sent twice to the server
+  // TODO (#9036): the same split update action is sent twice to the server
   it("should split two agglomerate skeletons if interfering split makes it an no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const injectedSplit = {
@@ -576,7 +576,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   }, 8000);
 
-  // TODO: the loaded agglomerate skeleton doesnt have the same amount of edges as the actual agglomerate 1
+  // TODO (#9036): the loaded agglomerate skeleton doesnt have the same amount of edges as the actual agglomerate 1
   it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]], Store.getState());
@@ -687,7 +687,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   }, 8000);
 
   it("should try to min cut agglomerate via node ids but interfering merge adds new edge which is not cut. Resulting mapping should be correct.", async (context: WebknossosTestContext) => {
-    // TODO: this test succeeds even though the final agglomerate skeleton is incorrect.
+    // TODO (#9036): this test succeeds even though the final agglomerate skeleton is incorrect.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     // Mock backend answer telling saga to split edges 3-2.
     const onlyThreeTwoEdge = true;

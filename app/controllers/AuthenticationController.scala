@@ -881,7 +881,7 @@ class AuthenticationController @Inject()(
           autoActivate = true,
           isAdmin = true,
           isDatasetManager = false,
-          teamMemberships = Seq.empty
+          teamMemberships = teamMemberships
         )
         _ = analyticsService.track(JoinOrganizationEvent(user, organization))
       } yield Ok(Json.toJson(organization._id))
@@ -933,10 +933,7 @@ class AuthenticationController @Inject()(
                     _ = if (conf.Features.isWkorgInstance) {
                       mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }
-                  } yield {
-
-                    Ok
-                  }
+                  } yield Ok
                 }
               } yield result
             case _ => Fox.failure(Messages("organization.create.forbidden"))

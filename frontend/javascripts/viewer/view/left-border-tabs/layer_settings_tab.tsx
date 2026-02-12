@@ -728,7 +728,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             >
               <span style={{ display: "inline-block" }}>
                 <EditableTextLabel
-                  margin="0 10px 0 0"
                   width={150}
                   value={readableName}
                   isInvalid={!readableLayerNameValidationResult.isValid}

@@ -1,4 +1,4 @@
-import { AppstoreOutlined, GlobalOutlined } from "@ant-design/icons";
+import { AppstoreFilled, GlobalOutlined } from "@ant-design/icons";
 import { Button, Dropdown, type MenuProps, Space } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import capitalize from "lodash-es/capitalize";
@@ -12,7 +12,7 @@ import {
 import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 const VIEW_MODE_TO_ICON = {
-  [constants.MODE_PLANE_TRACING]: <AppstoreOutlined />,
+  [constants.MODE_PLANE_TRACING]: <AppstoreFilled />,
   [constants.MODE_ARBITRARY]: <GlobalOutlined />,
   [constants.MODE_ARBITRARY_PLANE]: (
     <i className="fas fa-square-full" style={{ transform: "scale(0.8, 1) rotate(-45deg)" }} />

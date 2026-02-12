@@ -1,5 +1,5 @@
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-import { Button, Input, type InputProps, Space } from "antd";
+import { Button, Input, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
@@ -41,7 +41,6 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     rows = 1,
     markdown,
     label,
-    margin,
     onClick,
     disableEditing,
     hideEditIcon,
@@ -131,33 +130,30 @@ function EditableTextLabel(props: EditableTextLabelProp) {
     }
   };
 
-  const currentMargin = margin != null ? margin : "0 10px";
-  const inputComponentProps: InputProps = {
-    value: value,
-    onChange: handleInputChangeFromEvent,
-    onPressEnter: handleOnChange,
-    style: {
-      width: width != null ? width : "calc(100% - 24px)",
-      margin: currentMargin,
-    },
-    size: "small",
-    autoFocus: true,
-  };
   const isInvalidStyleMaybe = isInvalid ? { color: "var(--ant-color-error)" } : {};
 
   if (isEditing) {
     return rows === 1 ? (
-      <Space.Compact block>
-        <Input {...inputComponentProps} onBlur={() => handleOnChange()} />
+      <Space.Compact block size="small">
+        <Input
+          value={value}
+          onChange={handleInputChangeFromEvent}
+          onPressEnter={handleOnChange}
+          style={{
+            width: width != null ? width : "calc(100% - 24px)",
+          }}
+          size="small"
+          autoFocus={true}
+          onBlur={() => handleOnChange()}
+        />
         <FastTooltip key="save" title={`Save ${label}`} placement="bottom">
           <Button
+            type="primary"
             onClick={(evt) => {
               evt.stopPropagation();
               handleOnChange();
             }}
             size="small"
-            color="default"
-            variant="text"
             icon={<CheckOutlined />}
           />
         </FastTooltip>
@@ -171,45 +167,31 @@ function EditableTextLabel(props: EditableTextLabelProp) {
         label={label}
       />
     );
-  } else {
-    return (
-      <div
-        style={{
-          margin: currentMargin,
-          display: "inline-flex",
-          alignItems: "center",
-        }}
-        className={onClick != null ? "clickable-text" : undefined}
-        onClick={onClick}
-        onDoubleClick={onRename}
-        onContextMenu={onContextMenu}
-      >
-        {markdown ? (
-          <span style={isInvalidStyleMaybe}>
-            <Markdown className="flex-item">{value}</Markdown>
-          </span>
-        ) : (
-          <span style={isInvalidStyleMaybe}>{value}</span>
-        )}
-        {disableEditing || hideEditIcon ? null : (
-          <FastTooltip key="edit" title={`Edit ${label}`} placement="bottom">
-            <Button
-              onClick={onRename}
-              size="small"
-              color="default"
-              variant="text"
-              icon={<EditOutlined />}
-              className={iconClassName + " " + (markdown ? "flex-item" : "")}
-              style={{
-                display: "inline",
-                whiteSpace: "nowrap",
-              }}
-            />
-          </FastTooltip>
-        )}
-      </div>
-    );
   }
+
+  return (
+    <Space onClick={onClick} onDoubleClick={onRename} onContextMenu={onContextMenu} size={4}>
+      {markdown ? (
+        <span style={isInvalidStyleMaybe}>
+          <Markdown>{value}</Markdown>
+        </span>
+      ) : (
+        <span style={isInvalidStyleMaybe}>{value}</span>
+      )}
+      {disableEditing || hideEditIcon ? null : (
+        <FastTooltip key="edit" title={`Edit ${label}`} placement="bottom">
+          <Button
+            onClick={onRename}
+            size="small"
+            color="default"
+            variant="text"
+            icon={<EditOutlined />}
+            className={iconClassName}
+          />
+        </FastTooltip>
+      )}
+    </Space>
+  );
 }
 
 export default EditableTextLabel;

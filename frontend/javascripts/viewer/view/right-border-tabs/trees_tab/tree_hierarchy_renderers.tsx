@@ -117,7 +117,6 @@ export function renderTreeNode(
         onRenameEnd={decreaseEditCounter}
         onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
         hideEditIcon
-        margin={0}
       />
       {(tree.metadata || []).length > 0 ? (
         <FastTooltip
@@ -264,7 +263,6 @@ export function renderGroupNode(
         label="Group Name"
         onChange={(newValue) => api.tracing.renameSkeletonGroup(id, newValue)}
         hideEditIcon
-        margin={0}
         onRenameStart={increaseEditCounter}
         onRenameEnd={decreaseEditCounter}
       />

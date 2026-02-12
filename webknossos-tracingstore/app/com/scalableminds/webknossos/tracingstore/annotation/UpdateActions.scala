@@ -82,10 +82,10 @@ object UpdateAction {
           case "removeFallbackLayer"          => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
           case "importVolumeTracing"          => deserialize[ImportVolumeDataVolumeAction](jsonValue)
           case "createSegment"                => deserialize[CreateSegmentVolumeAction](jsonValue)
-          case "updateSegment"                => deserialize[LEGACY_UpdateSegmentVolumeAction](jsonValue)
+          case "updateSegment"                => deserialize[LegacyUpdateSegmentVolumeAction](jsonValue)
           case "updateSegmentPartial"         => deserialize[UpdateSegmentPartialVolumeAction](jsonValue)
-          case "updateMetadataOfSegment"      => deserialize[UpdateMetadataOfSegmentVolumeAction](jsonValue)
-          case "updateSegmentGroups"          => deserialize[LEGACY_UpdateSegmentGroupsVolumeAction](jsonValue)
+          case "updateMetadataOfSegment"      => deserialize[UpdateSegmentMetadataVolumeAction](jsonValue)
+          case "updateSegmentGroups"          => deserialize[LegacyUpdateSegmentGroupsVolumeAction](jsonValue)
           case "upsertSegmentGroup"           => deserialize[UpsertSegmentGroupVolumeAction](jsonValue)
           case "deleteSegmentGroup"           => deserialize[DeleteSegmentGroupVolumeAction](jsonValue)
           case "updateSegmentGroupVisibility" => deserialize[UpdateSegmentGroupVisibilityVolumeAction](jsonValue)
@@ -216,23 +216,23 @@ object UpdateAction {
         Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeDataVolumeAction.jsonFormat))
       case s: CreateSegmentVolumeAction =>
         Json.obj("name" -> "createSegment", "value" -> Json.toJson(s)(CreateSegmentVolumeAction.jsonFormat))
-      case s: LEGACY_UpdateSegmentVolumeAction =>
-        Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(LEGACY_UpdateSegmentVolumeAction.jsonFormat))
+      case s: LegacyUpdateSegmentVolumeAction =>
+        Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(LegacyUpdateSegmentVolumeAction.jsonFormat))
       case s: UpdateSegmentPartialVolumeAction =>
         Json.obj("name" -> "updateSegmentPartial",
                  "value" -> Json.toJson(s)(UpdateSegmentPartialVolumeAction.jsonFormat))
-      case s: UpdateMetadataOfSegmentVolumeAction =>
+      case s: UpdateSegmentMetadataVolumeAction =>
         Json.obj("name" -> "updateMetadataOfSegment",
-                 "value" -> Json.toJson(s)(UpdateMetadataOfSegmentVolumeAction.jsonFormat))
+                 "value" -> Json.toJson(s)(UpdateSegmentMetadataVolumeAction.jsonFormat))
       case s: MergeSegmentsVolumeAction =>
         Json.obj("name" -> "mergeSegments", "value" -> Json.toJson(s)(MergeSegmentsVolumeAction.jsonFormat))
       case s: DeleteSegmentVolumeAction =>
         Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
       case s: DeleteSegmentDataVolumeAction =>
         Json.obj("name" -> "deleteSegmentData", "value" -> Json.toJson(s)(DeleteSegmentDataVolumeAction.jsonFormat))
-      case s: LEGACY_UpdateSegmentGroupsVolumeAction =>
+      case s: LegacyUpdateSegmentGroupsVolumeAction =>
         Json.obj("name" -> "updateSegmentGroups",
-                 "value" -> Json.toJson(s)(LEGACY_UpdateSegmentGroupsVolumeAction.jsonFormat))
+                 "value" -> Json.toJson(s)(LegacyUpdateSegmentGroupsVolumeAction.jsonFormat))
       case s: UpsertSegmentGroupVolumeAction =>
         Json.obj("name" -> "upsertSegmentGroup", "value" -> Json.toJson(s)(UpsertSegmentGroupVolumeAction.jsonFormat))
       case s: DeleteSegmentGroupVolumeAction =>

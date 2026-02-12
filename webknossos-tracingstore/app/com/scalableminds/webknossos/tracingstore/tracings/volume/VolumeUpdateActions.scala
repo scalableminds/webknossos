@@ -381,18 +381,18 @@ case class CreateSegmentVolumeAction(id: Long,
   }
 }
 
-case class LEGACY_UpdateSegmentVolumeAction(id: Long,
-                                            anchorPosition: Option[Vec3Int],
-                                            name: Option[String],
-                                            color: Option[com.scalableminds.util.image.Color],
-                                            creationTime: Option[Long],
-                                            groupId: Option[Int],
-                                            additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                            metadata: Option[Seq[MetadataEntry]] = None,
-                                            actionTracingId: String,
-                                            actionTimestamp: Option[Long] = None,
-                                            actionAuthorId: Option[ObjectId] = None,
-                                            info: Option[String] = None)
+case class LegacyUpdateSegmentVolumeAction(id: Long,
+                                           anchorPosition: Option[Vec3Int],
+                                           name: Option[String],
+                                           color: Option[com.scalableminds.util.image.Color],
+                                           creationTime: Option[Long],
+                                           groupId: Option[Int],
+                                           additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                           metadata: Option[Seq[MetadataEntry]] = None,
+                                           actionTracingId: String,
+                                           actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[ObjectId] = None,
+                                           info: Option[String] = None)
     extends ApplyableVolumeUpdateAction
     with ProtoGeometryImplicits
     with VolumeUpdateActionHelper {
@@ -427,7 +427,6 @@ case class UpdateSegmentPartialVolumeAction(id: Long,
                                             creationTime: Option[Option[Long]],
                                             groupId: Option[Option[Int]],
                                             additionalCoordinates: Option[Option[Seq[AdditionalCoordinate]]] = None,
-                                            // metadata should be updated with TODO
                                             actionTracingId: String,
                                             actionTimestamp: Option[Long] = None,
                                             actionAuthorId: Option[ObjectId] = None,
@@ -462,13 +461,13 @@ case class UpdateSegmentPartialVolumeAction(id: Long,
   }
 }
 
-case class UpdateMetadataOfSegmentVolumeAction(id: Long,
-                                               upsertEntriesByKey: Seq[MetadataEntry],
-                                               removeEntriesByKey: Seq[String],
-                                               actionTracingId: String,
-                                               actionTimestamp: Option[Long] = None,
-                                               actionAuthorId: Option[ObjectId] = None,
-                                               info: Option[String] = None)
+case class UpdateSegmentMetadataVolumeAction(id: Long,
+                                             upsertEntriesByKey: Seq[MetadataEntry],
+                                             removeEntriesByKey: Seq[String],
+                                             actionTracingId: String,
+                                             actionTimestamp: Option[Long] = None,
+                                             actionAuthorId: Option[ObjectId] = None,
+                                             info: Option[String] = None)
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
@@ -554,11 +553,11 @@ case class UpdateMappingNameVolumeAction(mappingName: Option[String],
                    mappingIsLocked = Some(isLocked.getOrElse(false)))
 }
 
-case class LEGACY_UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
-                                                  actionTracingId: String,
-                                                  actionTimestamp: Option[Long] = None,
-                                                  actionAuthorId: Option[ObjectId] = None,
-                                                  info: Option[String] = None)
+case class LegacyUpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
+                                                 actionTracingId: String,
+                                                 actionTimestamp: Option[Long] = None,
+                                                 actionAuthorId: Option[ObjectId] = None,
+                                                 info: Option[String] = None)
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
@@ -599,7 +598,7 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
         )
       case (Some(sourceSegment), Some(targetSegment)) =>
         sourceSegment.copy(
-          name = mergeSegmentNames(sourceSegmentOpt.flatMap(_.name), targetSegment.name),
+          name = mergeSegmentNames(sourceSegment.name, targetSegment.name),
           metadata = mergeSegmentMetadata(sourceSegment, targetSegment)
         )
     }
@@ -647,7 +646,7 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
 case class UpsertSegmentGroupVolumeAction(groupId: Int,
                                           // If not set, the name is not updated. A group must always have a name.
                                           name: Option[String],
-                                          // Includes moving the groups current subgroups.
+                                          // Includes moving the group's current subgroups.
                                           newParentId: Option[Int],
                                           actionTracingId: String,
                                           actionTimestamp: Option[Long] = None,
@@ -656,15 +655,15 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newGroup = SegmentGroup(
-      name = name.getOrElse(s"Default Name $groupId"), // TODOM: undo default name - used for debugging
-      groupId = groupId,
-      children = Seq(),
-      isExpanded = Some(true))
+    val newGroup = SegmentGroup(name = name.getOrElse(s"Group $groupId"),
+                                groupId = groupId,
+                                children = Seq(),
+                                isExpanded = Some(true))
     val updatedGroups = newParentId
       .map(parentId => {
-        val (groupsWithoutMovee, moveeOpt) = this.removeGroup(tracing.segmentGroups)
+        val (groupsWithoutMovee, moveeOpt) = removeGroup(tracing.segmentGroups)
         val movee = moveeOpt.getOrElse(newGroup)
+        // If parentId is -1, the group should be inserted at root level.
         if (parentId == -1)
           groupsWithoutMovee :+ movee
         else {
@@ -673,7 +672,7 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
         }
       })
       .getOrElse {
-        val (maybeUpdatedGroups, didRename) = this.renameInGroups(tracing.segmentGroups)
+        val (maybeUpdatedGroups, didRename) = renameInGroups(tracing.segmentGroups)
         if (didRename) maybeUpdatedGroups else maybeUpdatedGroups :+ newGroup
 
       }
@@ -681,8 +680,8 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
   }
 
   private def renameInGroups(groups: Seq[SegmentGroup]): (Seq[SegmentGroup], Boolean) = {
-    // Fold left saves unnecessary recursive calls upon the renaming is done.
-    // This is stored in the second part of the accumulator.
+    // To avoid traversing into the subbranch of the group which should be renamed, we pass the second argument to fold left.
+    // It keeps track of whether the renaming was already done and then earlies out instead of traversing deeper.
     val updated = groups.foldLeft((Vector.empty[SegmentGroup], false)) {
       // Pass as already renamed.
       case ((acc, true), g) =>
@@ -956,16 +955,16 @@ object AddSegmentIndexVolumeAction {
 object CreateSegmentVolumeAction {
   implicit val jsonFormat: OFormat[CreateSegmentVolumeAction] = Json.format[CreateSegmentVolumeAction]
 }
-object LEGACY_UpdateSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[LEGACY_UpdateSegmentVolumeAction] = Json.format[LEGACY_UpdateSegmentVolumeAction]
+object LegacyUpdateSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[LegacyUpdateSegmentVolumeAction] = Json.format[LegacyUpdateSegmentVolumeAction]
 }
 object UpdateSegmentPartialVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateSegmentPartialVolumeAction] =
     Json.configured(tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
 }
-object UpdateMetadataOfSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =
-    Json.format[UpdateMetadataOfSegmentVolumeAction]
+object UpdateSegmentMetadataVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentMetadataVolumeAction] =
+    Json.format[UpdateSegmentMetadataVolumeAction]
 }
 object MergeSegmentsVolumeAction {
   implicit val jsonFormat: OFormat[MergeSegmentsVolumeAction] = Json.format[MergeSegmentsVolumeAction]
@@ -979,9 +978,9 @@ object DeleteSegmentDataVolumeAction {
 object UpdateMappingNameVolumeAction {
   implicit val jsonFormat: OFormat[UpdateMappingNameVolumeAction] = Json.format[UpdateMappingNameVolumeAction]
 }
-object LEGACY_UpdateSegmentGroupsVolumeAction {
-  implicit val jsonFormat: OFormat[LEGACY_UpdateSegmentGroupsVolumeAction] =
-    Json.format[LEGACY_UpdateSegmentGroupsVolumeAction]
+object LegacyUpdateSegmentGroupsVolumeAction {
+  implicit val jsonFormat: OFormat[LegacyUpdateSegmentGroupsVolumeAction] =
+    Json.format[LegacyUpdateSegmentGroupsVolumeAction]
 }
 object UpsertSegmentGroupVolumeAction {
   implicit val jsonFormat: OFormat[UpsertSegmentGroupVolumeAction] = Json.format[UpsertSegmentGroupVolumeAction]

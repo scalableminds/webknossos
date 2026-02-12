@@ -12,11 +12,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   CreateSegmentVolumeAction,
   DeleteSegmentGroupVolumeAction,
   DeleteSegmentVolumeAction,
-  LEGACY_UpdateSegmentGroupsVolumeAction,
-  LEGACY_UpdateSegmentVolumeAction,
+  LegacyUpdateSegmentGroupsVolumeAction,
+  LegacyUpdateSegmentVolumeAction,
   MergeSegmentsVolumeAction,
   UpdateActionSegmentGroup,
-  UpdateMetadataOfSegmentVolumeAction,
+  UpdateSegmentMetadataVolumeAction,
   UpdateSegmentPartialVolumeAction,
   UpsertSegmentGroupVolumeAction
 }
@@ -88,6 +88,8 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     groupId = Some(2)
   )
 
+  // Note: The tests for MergeSegmentsVolumeAction have parity with those in the frontend.
+  // If the action changes, tests should be adapted both in frontend and here.
   "MergeSegmentsVolumeAction" should {
     "merge two segments (simple)" in {
       val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)
@@ -172,7 +174,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
   "LEGACY_UpdateSegmentVolumeAction" should {
     "update the specified segment" in {
-      val updateSegmentAction = LEGACY_UpdateSegmentVolumeAction(
+      val updateSegmentAction = LegacyUpdateSegmentVolumeAction(
         id = 5,
         anchorPosition = Some(Vec3Int(8, 8, 8)),
         name = Some("aRenamedSegment"),
@@ -248,7 +250,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
       // insert
       val updateMetadataAction =
-        UpdateMetadataOfSegmentVolumeAction(
+        UpdateSegmentMetadataVolumeAction(
           id = 5,
           upsertEntriesByKey = Seq(
             MetadataEntry(key = "testString", stringValue = Some("string")),
@@ -273,7 +275,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
       // delete
       val deleteMetadataAction =
-        UpdateMetadataOfSegmentVolumeAction(
+        UpdateSegmentMetadataVolumeAction(
           id = 5,
           upsertEntriesByKey = Seq(),
           removeEntriesByKey = Seq("testString", "testNumber"),
@@ -294,7 +296,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
   "LEGACY_UpdateSegmentGroupsVolumeAction" should {
     "update a top level segment group" in {
       val updatedName = "Segment Group 2 updated"
-      val updateSegmentGroupsVolumeAction = new LEGACY_UpdateSegmentGroupsVolumeAction(
+      val updateSegmentGroupsVolumeAction = new LegacyUpdateSegmentGroupsVolumeAction(
         List(UpdateActionSegmentGroup(updatedName, 2, isExpanded = Some(true), List())),
         actionTracingId = Dummies.tracingId
       )
@@ -306,7 +308,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     "update a nested segment group" in {
       val updatedNameTop = "Segment Group 1 updated"
       val updatedNameNested = "Segment Group 3 updated"
-      val updateSegmentGroupsVolumeAction = new LEGACY_UpdateSegmentGroupsVolumeAction(
+      val updateSegmentGroupsVolumeAction = new LegacyUpdateSegmentGroupsVolumeAction(
         List(
           UpdateActionSegmentGroup(
             updatedNameTop,
@@ -325,12 +327,10 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
   }
 
   "UpsertSegmentGroupVolumeAction" should {
-    "insert and update new segment groups" in {
+    "insert a new segment group" in {
       val groupId = 1
       val initialName = "Group 1"
-      val renamedName = "Group 2"
 
-      // Tests insert.
       val upsertGroupAction = UpsertSegmentGroupVolumeAction(
         groupId = groupId,
         name = Some(initialName),
@@ -345,7 +345,11 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
                                                   children = Seq(),
                                                   isExpanded = Some(true)))
 
-      // Tests renaming.
+    }
+
+    "rename a segment group" in {
+      val groupId = 1
+      val renamedName = "Group Renamed"
       val renameGroupAction = UpsertSegmentGroupVolumeAction(
         groupId = groupId,
         name = Some(renamedName),
@@ -353,13 +357,14 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
 
-      val result2 = renameGroupAction.applyOn(result)
-      assert(result2.segmentGroups.length == 1)
+      val result = renameGroupAction.applyOn(tracingWithSegmentGroups)
       assert(
-        result2.segmentGroups.head == SegmentGroup(renamedName,
-                                                   groupId = groupId,
-                                                   children = Seq(),
-                                                   isExpanded = Some(true)))
+        result.segmentGroups.head == SegmentGroup(
+          renamedName,
+          groupId = groupId,
+          children = tracingWithSegmentGroups.segmentGroups.head.children,
+          isExpanded = tracingWithSegmentGroups.segmentGroups.head.isExpanded
+        ))
     }
 
     "reparent a segment group recursively correctly to root" in {
@@ -372,40 +377,53 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
       val result = upsertGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result.segmentGroups.length == 3)
-      assert(result.segmentGroups.head.groupId == groupId1)
-      assert(result.segmentGroups.head.children.length == 1)
-      assert(result.segmentGroups.head.children.head.groupId == groupId2)
-      assert(result.segmentGroups.head.children.head.children.isEmpty)
-      assert(result.segmentGroups(1).groupId == groupId5)
-      assert(result.segmentGroups(1).children.length == 2)
-      assert(result.segmentGroups(2).groupId == groupId3)
-      assert(result.segmentGroups(2).children.length == 1)
-      assert(result.segmentGroups(2).children.head.groupId == groupId4)
-      assert(result.segmentGroups(2).children.head.children.isEmpty)
 
+      val expectedGroupsAfterReparenting = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(SegmentGroup("Group 2", groupId2, Seq(), Some(true))),
+          Some(true)
+        ),
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true)),
+        SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))
+      )
+      assert(result.segmentGroups == expectedGroupsAfterReparenting)
+    }
+
+    "reparent a segment group recursively correctly to root 2nd" in {
+      val newParent = -1
       val upsertGroup2Action = UpsertSegmentGroupVolumeAction(
         groupId = groupId2,
         name = None,
         newParentId = Some(newParent),
         actionTracingId = Dummies.tracingId
       )
-      val result2 = upsertGroup2Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups.length == 3)
-      assert(result2.segmentGroups.head.groupId == 1)
-      assert(result2.segmentGroups.head.children.isEmpty)
-      assert(result2.segmentGroups(1).groupId == groupId5)
-      assert(result2.segmentGroups(1).children.length == 2)
-      assert(result2.segmentGroups(1).children.head.groupId == groupId6)
-      assert(result2.segmentGroups(1).children.head.children.isEmpty)
-      assert(result2.segmentGroups(1).children(1).groupId == groupId7)
-      assert(result2.segmentGroups(1).children(1).children.isEmpty)
-      assert(result2.segmentGroups(2).groupId == groupId2)
-      assert(result2.segmentGroups(2).children.length == 1)
-      assert(result2.segmentGroups(2).children.head.groupId == groupId3)
-      assert(result2.segmentGroups(2).children.head.children.length == 1)
-      assert(result2.segmentGroups(2).children.head.children.head.groupId == groupId4)
-      assert(result2.segmentGroups(2).children.head.children.head.children.isEmpty)
+      val result = upsertGroup2Action.applyOn(tracingWithSegmentGroups)
+
+      val expectedGroupsAfterReparenting = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(),
+          Some(true)
+        ),
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true)),
+        SegmentGroup(
+          "Group 2",
+          groupId2,
+          Seq(SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
+          Some(true))
+      )
+      assert(result.segmentGroups == expectedGroupsAfterReparenting)
 
     }
 
@@ -419,16 +437,21 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
       val result = upsertGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result.segmentGroups.length == 2)
-      assert(result.segmentGroups.head.groupId == groupId1)
-      assert(result.segmentGroups(1).groupId == groupId5)
-      assert(result.segmentGroups.head.children.length == 2)
-      assert(result.segmentGroups.head.children.head.groupId == groupId2)
-      assert(result.segmentGroups.head.children.head.children.isEmpty)
-      assert(result.segmentGroups.head.children(1).groupId == groupId3)
-      assert(result.segmentGroups.head.children(1).children.length == 1)
-      assert(result.segmentGroups.head.children(1).children.head.groupId == groupId4)
-      assert(result.segmentGroups.head.children(1).children.head.children.isEmpty)
+      val expectedGroupsAfterReparenting = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(SegmentGroup("Group 2", groupId2, Seq(), Some(true)),
+              SegmentGroup("Group 3", groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
+          Some(true)
+        ),
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true))
+      )
+      assert(result.segmentGroups == expectedGroupsAfterReparenting)
     }
 
     "reparent a segment group into a different root subtree with children" in {
@@ -440,29 +463,36 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         newParentId = Some(newParent2),
         actionTracingId = Dummies.tracingId
       )
-      val result2 = upsertGroup5Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups.length == 1)
-      val group1 = result2.segmentGroups.head
-      assert(group1.groupId == groupId1)
-      assert(group1.children.length == 1)
-      val group2 = group1.children.head
-      assert(group2.groupId == groupId2)
-      assert(group2.children.length == 1)
-      val group3 = group2.children.head
-      assert(group3.groupId == groupId3)
-      assert(group3.children.length == 1)
-      val group4 = group3.children.head
-      assert(group4.groupId == groupId4)
-      assert(group4.children.length == 1)
-      val group5 = group4.children.head
-      assert(group5.groupId == groupId5)
-      assert(group5.children.length == 2)
-      val group6 = group5.children.head
-      val group7 = group5.children(1)
-      assert(group6.groupId == groupId6)
-      assert(group6.children.isEmpty)
-      assert(group7.groupId == groupId7)
-      assert(group7.children.isEmpty)
+      val result = upsertGroup5Action.applyOn(tracingWithSegmentGroups)
+      val expectedGroupsAfterReparenting = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(
+            SegmentGroup(
+              "Group 2",
+              groupId2,
+              Seq(SegmentGroup(
+                "Group 3",
+                groupId3,
+                Seq(SegmentGroup(
+                  "Group 4",
+                  groupId4,
+                  Seq(SegmentGroup("Group 5",
+                                   groupId5,
+                                   Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                                       SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                                   Some(true))),
+                  Some(true)
+                )),
+                Some(true)
+              )),
+              Some(true)
+            )),
+          Some(true)
+        ),
+      )
+      assert(result.segmentGroups == expectedGroupsAfterReparenting)
     }
 
     "rename a group in first root subtree" in {
@@ -474,9 +504,27 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         newParentId = None,
         actionTracingId = Dummies.tracingId
       )
-      val result2 = renameGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups.head.children.head.children.head.groupId == groupId3)
-      assert(result2.segmentGroups.head.children.head.children.head.name == newName)
+      val result = renameGroup3Action.applyOn(tracingWithSegmentGroups)
+      val expectedGroupsAfterRenaming = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(
+            SegmentGroup(
+              "Group 2",
+              groupId2,
+              Seq(
+                SegmentGroup(newName, groupId3, Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))), Some(true))),
+              Some(true))),
+          Some(true)
+        ),
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true))
+      )
+      assert(result.segmentGroups == expectedGroupsAfterRenaming)
     }
 
     "rename a group in second root subtree" in {
@@ -489,41 +537,88 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         actionTracingId = Dummies.tracingId
       )
       val result2 = renameGroup6Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups(1).children.head.groupId == groupId6)
-      assert(result2.segmentGroups(1).children.head.name == newName)
+      val expectedGroupsAfterRenaming = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(
+            SegmentGroup("Group 2",
+                         groupId2,
+                         Seq(
+                           SegmentGroup("Group 3",
+                                        groupId3,
+                                        Seq(SegmentGroup("Group 4", groupId4, Seq(), Some(true))),
+                                        Some(true))),
+                         Some(true))),
+          Some(true)
+        ),
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup(newName, groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true))
+      )
+      assert(result2.segmentGroups == expectedGroupsAfterRenaming)
     }
   }
   "DeleteSegmentGroupVolumeAction" should {
 
-    "delete a segment group recursively correctly" in {
+    "delete a segment group recursively correctly - delete group 1" in {
       val deleteGroup1Action = DeleteSegmentGroupVolumeAction(
         groupId = groupId1,
         actionTracingId = Dummies.tracingId
       )
       val result = deleteGroup1Action.applyOn(tracingWithSegmentGroups)
-      assert(result.segmentGroups.length == 1)
-      assert(result.segmentGroups.head.groupId == groupId5)
-      assert(result.segmentGroups.head.children.length == 2)
-
+      val expectedGroupsAfterDeletion = Seq(
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true))
+      )
+      assert(result.segmentGroups == expectedGroupsAfterDeletion)
+    }
+    "delete a segment group recursively correctly - delete group 2" in {
       val deleteGroup2Action = DeleteSegmentGroupVolumeAction(
         groupId = groupId2,
         actionTracingId = Dummies.tracingId
       )
-      val result2 = deleteGroup2Action.applyOn(tracingWithSegmentGroups)
-      assert(result2.segmentGroups.length == 2)
-      assert(result2.segmentGroups.head.groupId == groupId1)
-      assert(result2.segmentGroups.head.children.isEmpty)
-
+      val result = deleteGroup2Action.applyOn(tracingWithSegmentGroups)
+      val expectedGroupsAfterDeletion = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(),
+          Some(true)
+        ),
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true))
+      )
+      assert(result.segmentGroups == expectedGroupsAfterDeletion)
+    }
+    "delete a segment group recursively correctly - delete group 3" in {
       val deleteGroup3Action = DeleteSegmentGroupVolumeAction(
         groupId = groupId3,
         actionTracingId = Dummies.tracingId
       )
-      val result3 = deleteGroup3Action.applyOn(tracingWithSegmentGroups)
-      assert(result3.segmentGroups.length == 2)
-      assert(result3.segmentGroups.head.groupId == groupId1)
-      assert(result3.segmentGroups.head.children.length == 1)
-      assert(result3.segmentGroups.head.children.head.groupId == groupId2)
-      assert(result3.segmentGroups.head.children.head.children.isEmpty)
+      val result = deleteGroup3Action.applyOn(tracingWithSegmentGroups)
+      val expectedGroupsAfterDeletion = Seq(
+        SegmentGroup(
+          "Group 1",
+          groupId1,
+          Seq(SegmentGroup("Group 2", groupId2, Seq(), Some(true))),
+          Some(true)
+        ),
+        SegmentGroup("Group 5",
+                     groupId5,
+                     Seq(SegmentGroup("Group 6", groupId6, Seq(), Some(true)),
+                         SegmentGroup("Group 7", groupId7, Seq(), Some(true))),
+                     Some(true))
+      )
+      assert(result.segmentGroups == expectedGroupsAfterDeletion)
     }
   }
 

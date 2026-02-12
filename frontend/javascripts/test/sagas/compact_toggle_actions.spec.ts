@@ -4,6 +4,7 @@ import defaultState from "viewer/default_state";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
+import { diffVolumeTracing } from "viewer/model/sagas/diffing/volume_diffing";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import {
   updateSegmentGroupVisibilityVolumeAction,
@@ -11,7 +12,6 @@ import {
   updateTreeGroupVisibility,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, WebknossosState } from "viewer/store";
 import { describe, expect, it } from "vitest";

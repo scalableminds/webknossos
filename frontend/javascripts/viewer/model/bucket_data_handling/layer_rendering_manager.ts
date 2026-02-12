@@ -38,7 +38,7 @@ import {
   getSegmentsForLayer,
 } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
-import { cachedDiffSegmentLists } from "../sagas/volume/volume_diffing";
+import { cachedDiffSegmentLists } from "../sagas/diffing/volume_diffing";
 
 // 512**2 (entries) * 0.25 (load capacity) == 65_536 custom segment colors
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;

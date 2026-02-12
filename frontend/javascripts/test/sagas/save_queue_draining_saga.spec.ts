@@ -29,7 +29,7 @@ import {
   updateSegmentPartialVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
 import { describe, expect, it, vi } from "vitest";
-import { expectValueDeepEqual } from "../helpers/sagaHelpers";
+import { expectValueDeepEqual } from "../helpers/saga_test_helpers";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import "test/helpers/apiHelpers"; // ensures Store is available
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";

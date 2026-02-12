@@ -5,15 +5,14 @@ import keyBy from "lodash-es/keyBy";
 import sortedIndexBy from "lodash-es/sortedIndexBy";
 import memoizeOne from "memoize-one";
 import { AnnotationLayerEnum } from "types/api_types";
+import { getUpdatedSourcePropsAfterMerge } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import {
   buildOrderDependencies,
-  diffBoundingBoxes,
   diffGroupsGranular,
   type GranularGroupDiff,
   type ParentUpdate,
   topologicallySortUpdates,
-} from "viewer/model/helpers/diff_helpers";
-import { getUpdatedSourcePropsAfterMerge } from "viewer/model/reducers/volumetracing_reducer_helpers";
+} from "viewer/model/sagas/diffing/group_diffing";
 import {
   createSegmentVolumeAction,
   deleteSegmentGroupUpdateAction,
@@ -38,6 +37,7 @@ import {
   SegmentPropertiesWithoutUserState,
   type VolumeTracing,
 } from "viewer/store";
+import { diffBoundingBoxes } from "./bounding_box_diffing";
 
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,

@@ -28,7 +28,7 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { waitUntilNotBusy } from "test/helpers/sagaHelpers";
+import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {

@@ -29,12 +29,12 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
+import { diffVolumeTracing } from "viewer/model/sagas/diffing/volume_diffing";
 import type {
   ApplicableVolumeServerUpdateAction,
   ApplicableVolumeUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volume/volume_diffing";
 import { combinedReducer, type WebknossosState } from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, it, test } from "vitest";
@@ -288,7 +288,7 @@ describe("Update Action Application for VolumeTracing", () => {
     });
   });
 
-  it("should be able to apply actions basic group editing", () => {
+  it("should be able to apply basic group editing actions", () => {
     const state1 = applyActions(initialState, [setSegmentGroupsAction(SEGMENT_GROUPS, tracingId)]);
     const state2 = applyActions(state1, [setSegmentGroupsAction(SEGMENT_GROUPS_EDITED, tracingId)]);
 

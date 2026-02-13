@@ -64,6 +64,7 @@ export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedActio
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
   typeof setVolumeBucketDataHasChangedAction
 >;
+export type SetIdReservationsAction = ReturnType<typeof setIdReservationsAction>;
 export type ApplyVolumeUpdateActionsFromServerAction = ReturnType<
   typeof applyVolumeUpdateActionsFromServerAction
 >;
@@ -127,6 +128,7 @@ export type VolumeTracingAction =
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
   | SetVolumeBucketDataHasChangedAction
+  | SetIdReservationsAction
   | BatchUpdateGroupsAndSegmentsAction
   | ApplyVolumeUpdateActionsFromServerAction;
 
@@ -521,6 +523,18 @@ export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   ({
     type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
     tracingId,
+  }) as const;
+
+export const setIdReservationsAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+  ids: number[],
+) =>
+  ({
+    type: "SET_ID_RESERVATIONS",
+    tracingId,
+    domain,
+    ids,
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (

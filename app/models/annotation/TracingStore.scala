@@ -1,10 +1,11 @@
 package models.annotation
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.dataset.Dataset
 import play.api.i18n.{Messages, MessagesProvider}
@@ -12,7 +13,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -55,10 +56,15 @@ class TracingStoreService @Inject()(
           Forbidden(Messages("tracingStore.notFound"))
         }) // Default error
 
-  def clientFor(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
+  def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {
-      tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
-    } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
+      tracingStore <- tracingStoreDAO.findFirst(GlobalAccessContext) ?~> "tracingStore.notFound"
+    } yield new WKRemoteTracingStoreClient(tracingStore, Some(dataset), rpc, tracingDataSourceTemporaryStore)
+
+  def client: Fox[WKRemoteTracingStoreClient] =
+    for {
+      tracingStore <- tracingStoreDAO.findFirst(GlobalAccessContext) ?~> "tracingStore.notFound"
+    } yield new WKRemoteTracingStoreClient(tracingStore, None, rpc, tracingDataSourceTemporaryStore)
 }
 
 class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

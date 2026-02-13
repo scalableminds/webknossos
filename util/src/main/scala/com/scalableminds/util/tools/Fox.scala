@@ -303,6 +303,9 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       }
     }
 
+  def andThen[U](pf: PartialFunction[Try[Box[A]], U])(implicit ec: ExecutionContext): Fox[A] =
+    Fox.fromFutureBox(futureBox.andThen(pf))
+
   /*
    * Returns new Fox[Box[A]] that is always successful, such that the original’s box is shifted “inwards”.
    * Use to access the box.

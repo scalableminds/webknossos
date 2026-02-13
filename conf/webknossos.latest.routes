@@ -178,6 +178,8 @@ POST          /annotations/:id/merge/:mergedTyp/:mergedId                       
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId)
 DELETE        /annotations/:id/mutex                                                            controllers.AnnotationController.releaseMutex(id: ObjectId)
+GET           /annotations/:id/reservedIds                                                      controllers.AnnotationController.reservedIds(id: ObjectId, tracingId: String, domain: String)
+POST          /annotations/:id/reserveIds                                                       controllers.AnnotationController.reserveIds(id: ObjectId)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)
@@ -189,7 +191,7 @@ GET           /annotations/source/:accessTokenOrId                              
 GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.getSharedTeams(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.updateSharedTeams(typ: String, id: ObjectId)
-PATCH         /annotations/:typ/:id/othersMayEdit                                               controllers.AnnotationController.updateOthersMayEdit(typ: String, id: ObjectId, othersMayEdit: Boolean)
+PATCH         /annotations/:typ/:id/collaborationMode                                           controllers.AnnotationController.updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String)
 
 # Annotation Private Links
 GET           /zarrPrivateLinks                                                                 controllers.AnnotationPrivateLinkController.list()

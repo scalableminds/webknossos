@@ -166,7 +166,10 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateBooleanCol(id, _.paused, isPaused)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.projects SET paused = $isPaused WHERE _id = $id".asUpdate)
+    } yield ()
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {

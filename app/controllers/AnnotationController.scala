@@ -4,7 +4,9 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationIdDomain,
   AnnotationLayer,
   AnnotationLayerStatistics,
   AnnotationLayerType
@@ -34,15 +36,25 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+case class ReserveIdRequest(
+    domain: AnnotationIdDomain,
+    tracingId: String,
+    numberOfIdsToReserve: Int,
+    idsToRelease: Seq[Long]
+)
+object ReserveIdRequest {
+  implicit val jsonFormat: OFormat[ReserveIdRequest] = Json.format[ReserveIdRequest]
+}
+
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
-    annotationLayerDAO: AnnotationLayerDAO,
     taskDAO: TaskDAO,
     userDAO: UserDAO,
     datasetDAO: DatasetDAO,
     datasetService: DatasetService,
     annotationService: AnnotationService,
     annotationMutexService: AnnotationMutexService,
+    annotationIdReservationService: AnnotationReservedIdsService,
     userService: UserService,
     teamService: TeamService,
     projectDAO: ProjectDAO,
@@ -389,18 +401,22 @@ class AnnotationController @Inject()(
       }
   }
 
-  def updateOthersMayEdit(typ: String, id: ObjectId, othersMayEdit: Boolean): Action[AnyContent] =
+  def updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- Fox.fromBool(annotation.typ == AnnotationType.Explorational || annotation.typ == AnnotationType.Task) ?~> "annotation.othersMayEdit.onlyExplorationalOrTask"
+        _ <- Fox.fromBool(annotation.typ == AnnotationType.Explorational || annotation.typ == AnnotationType.Task) ?~> "annotation.collaborationMode.onlyExplorationalOrTask"
         _ <- Fox.fromBool(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- annotationDAO.updateOthersMayEdit(annotation._id, othersMayEdit)
-      } yield Ok(Json.toJson(othersMayEdit))
+        collaborationModeValidated <- CollaborationMode.fromString(collaborationMode).toFox
+        _ <- annotationDAO.updateCollaborationMode(annotation._id, collaborationModeValidated)
+        _ <- Fox.runIf(
+          annotation.collaborationMode == CollaborationMode.Concurrent && collaborationModeValidated != CollaborationMode.Concurrent) {
+          annotationIdReservationService.releaseAllForAnnotation(id)
+        }
+      } yield Ok
     }
 
-  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
-                                                                      m: MessagesProvider): Fox[Annotation] =
+  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit m: MessagesProvider): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
@@ -435,7 +451,8 @@ class AnnotationController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-          _ <- Fox.fromBool(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(
+            annotation.collaborationMode == CollaborationMode.Concurrent || annotation.collaborationMode == CollaborationMode.Exclusive) ?~> "notAllowed" ~> FORBIDDEN
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
@@ -457,5 +474,39 @@ class AnnotationController @Inject()(
       } yield Ok
     }
   }
+
+  def reservedIds(id: ObjectId, tracingId: String, domain: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+        for {
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          restrictions <- provider
+            .restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          domainValidated <- AnnotationIdDomain.fromString(domain).toFox
+          ids: Seq[Long] <- annotationIdReservationService.reservedIds(id,
+                                                                       tracingId,
+                                                                       domainValidated,
+                                                                       request.identity._id)
+        } yield Ok(Json.toJson(ids))
+      }
+  }
+
+  def reserveIds(id: ObjectId): Action[ReserveIdRequest] =
+    sil.SecuredAction.async(validateJson[ReserveIdRequest]) { implicit request =>
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+        for {
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          ids: Seq[Long] <- annotationIdReservationService.reserveIds(id,
+                                                                      request.body.tracingId,
+                                                                      request.body.domain,
+                                                                      request.identity._id,
+                                                                      request.body.numberOfIdsToReserve,
+                                                                      request.body.idsToRelease)
+        } yield Ok(Json.toJson(ids))
+      }
+    }
 
 }

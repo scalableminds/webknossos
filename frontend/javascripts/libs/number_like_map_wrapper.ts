@@ -1,4 +1,4 @@
-import type { Mapping, NumberLike } from "viewer/store";
+import type { Mapping } from "viewer/store";
 import { getAdaptToTypeFunction } from "./utils";
 
 export class NumberLikeMapWrapper<T extends number | bigint> {
@@ -32,7 +32,7 @@ export class NumberLikeMapWrapper<T extends number | bigint> {
     return this.map.delete(this.k(key));
   }
 
-  get(key: number): NumberLike | undefined {
+  get(key: number): T | undefined {
     return this.map.get(this.k(key));
   }
 

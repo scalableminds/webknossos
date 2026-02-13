@@ -547,17 +547,15 @@ export function getUpdatedSourcePropsAfterMerge(
   }
 
   // For some properties, the data in source segment should simply "win".
-  // However, if the source item didn't exist before, we use the data from targetSegment.
-  if (sourceSegment == null) {
-    if (targetSegment.anchorPosition != null) {
-      props.anchorPosition = targetSegment.anchorPosition;
-    }
-    if (targetSegment.additionalCoordinates != null) {
-      props.additionalCoordinates = targetSegment.additionalCoordinates;
-    }
-    if (targetSegment.groupId != null) {
-      props.groupId = targetSegment.groupId;
-    }
+  // However, only if the source item had these properties before.
+  if (sourceSegment?.anchorPosition == null && targetSegment.anchorPosition != null) {
+    props.anchorPosition = targetSegment.anchorPosition;
+  }
+  if (sourceSegment?.additionalCoordinates == null && targetSegment.additionalCoordinates != null) {
+    props.additionalCoordinates = targetSegment.additionalCoordinates;
+  }
+  if (sourceSegment?.groupId == null && targetSegment.groupId != null) {
+    props.groupId = targetSegment.groupId;
   }
 
   return props;

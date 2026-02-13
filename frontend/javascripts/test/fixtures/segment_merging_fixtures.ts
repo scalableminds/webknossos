@@ -39,3 +39,14 @@ export const createSegment3 = createAction(id3, {
   name: "Name 3",
   metadata: [],
 });
+
+export const createSegment1WithoutOptionalProps = createAction(id1, {
+  anchorPosition: null,
+  groupId: null,
+  metadata: [],
+});
+export const createSegment2WithAdditionalProps = createAction(id2, {
+  name: "Name 2",
+  metadata: [{ key: "someKey1", stringValue: "someStringValue - segment 2" }],
+  additionalCoordinates: [{ name: "t", value: 3 }],
+});

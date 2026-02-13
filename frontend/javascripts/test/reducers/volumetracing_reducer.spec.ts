@@ -1,7 +1,9 @@
 import update from "immutability-helper";
 import {
   createSegment1,
+  createSegment1WithoutOptionalProps,
   createSegment2,
+  createSegment2WithAdditionalProps,
   getSegment,
   id1,
   id2,
@@ -298,7 +300,7 @@ describe("VolumeTracing", () => {
   });
 
   describe("should merge segments", () => {
-    it("should merge two segments (simple)", () => {
+    it("should merge two segments (both segments exist; source should take precedence)", () => {
       let newState = VolumeTracingReducer(initialState, createSegment1);
       newState = VolumeTracingReducer(newState, createSegment2);
       newState = VolumeTracingReducer(
@@ -321,6 +323,30 @@ describe("VolumeTracing", () => {
           { key: "someKey3", stringListValue: ["list", "value", "segment 2"] },
         ],
         anchorPosition: [1, 1, 1],
+      });
+      expect(segment2).toBeUndefined();
+    });
+
+    it("should merge two segments (both segments exist, but source lacks some properties)", () => {
+      let newState = VolumeTracingReducer(initialState, createSegment1WithoutOptionalProps);
+      newState = VolumeTracingReducer(newState, createSegment2WithAdditionalProps);
+      const segment2BeforeMerge = getSegment(newState, id2)!;
+
+      newState = VolumeTracingReducer(
+        newState,
+        mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+      );
+
+      const segment1 = getSegment(newState, id1);
+      const segment2 = getSegment(newState, id2);
+
+      expect(segment1).toMatchObject({
+        id: id1,
+        name: "Segment 1 and Name 2",
+        metadata: [{ key: "someKey1", stringValue: "someStringValue - segment 2" }],
+        additionalCoordinates: segment2BeforeMerge.additionalCoordinates,
+        groupId: segment2BeforeMerge.groupId,
+        anchorPosition: segment2BeforeMerge.anchorPosition,
       });
       expect(segment2).toBeUndefined();
     });

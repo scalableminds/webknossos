@@ -1003,6 +1003,52 @@ export async function downloadAnnotation(
   await downloadWithFilename(downloadUrl);
 }
 
+type AnnotationIdDomain =
+  | "Segment"
+  | "SegmentGroup"
+  | "Tree"
+  | "Node"
+  | "TreeGroup"
+  | "BoundingBox";
+
+export async function getIdReservationsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) {
+  const params = new URLSearchParams({ tracingId, domain });
+
+  const ids: number[] = await Request.receiveJSON(
+    `api/annotations/${annotationId}/reservedIds?${params}`,
+  );
+  return ids;
+}
+
+export async function reserveIdsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+  numberOfIdsToReserve: number,
+  idsToRelease: number[] = [],
+) {
+  /*
+   * Will newly reserved ids for the specified domain.
+   */
+  const ids: number[] = await Request.sendJSONReceiveJSON(
+    `api/annotations/${annotationId}/reserveIds`,
+    {
+      data: {
+        domain,
+        tracingId,
+        numberOfIdsToReserve,
+        idsToRelease,
+      },
+      method: "POST",
+    },
+  );
+  return ids;
+}
+
 // ### Datasets
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,

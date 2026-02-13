@@ -26,8 +26,8 @@ import {
   type RadioChangeEvent,
   Row,
   Space,
-  Tooltip,
   Switch,
+  Tooltip,
 } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";

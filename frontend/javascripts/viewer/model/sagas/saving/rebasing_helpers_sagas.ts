@@ -1,6 +1,6 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { NumberLikeMap } from "libs/number_like_map";
-import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
+import { getAdaptToTypeFunction } from "libs/utils";
 import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -64,7 +64,9 @@ function* getAllUnknownSegmentIdsInPendingUpdates(
             continue;
           }
 
-          const mappingSyncedWithBackend = new NumberLikeMap(unwrappedMappingSyncedWithBackend);
+          const mappingSyncedWithBackend = new NumberLikeMapWrapper(
+            unwrappedMappingSyncedWithBackend,
+          );
           const updatedAgglomerateId1 = mappingSyncedWithBackend.get(segmentId1);
           const updatedAgglomerateId2 = mappingSyncedWithBackend.get(segmentId2);
           if (!updatedAgglomerateId1) {
@@ -83,7 +85,6 @@ function* getAllUnknownSegmentIdsInPendingUpdates(
       }
     }
   }
-  ColoredLogger.logGreen("idsToReloadByMappingId", idsToReloadByMappingId);
   return idsToReloadByMappingId;
 }
 
@@ -325,8 +326,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 success = false;
                 return null;
               }
-
-              ColoredLogger.logGreen("adapting", segmentId1, "to", upToDateAgglomerateId1);
 
               return {
                 ...action,

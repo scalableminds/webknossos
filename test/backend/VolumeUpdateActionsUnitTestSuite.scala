@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   DeleteSegmentVolumeAction,
   LegacyUpdateSegmentGroupsVolumeAction,
   LegacyUpdateSegmentVolumeAction,
-  MergeSegmentsVolumeAction,
+  MergeSegmentItemsVolumeAction,
   UpdateActionSegmentGroup,
   UpdateMetadataOfSegmentVolumeAction,
   UpdateSegmentPartialVolumeAction,
@@ -92,7 +92,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
   // If the action changes, tests should be adapted both in frontend and here.
   "MergeSegmentsVolumeAction" should {
     "merge two segments (simple)" in {
-      val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)
+      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1, segmentWithMetadata2)))
 
       assert(
@@ -112,7 +112,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     }
 
     "merge two segments (segment 1 doesn't exist, though)" in {
-      val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)
+      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata2)))
 
       assert(
@@ -132,7 +132,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     }
 
     "merge two segments (segment 2 doesn't exist, though)" in {
-      val action = MergeSegmentsVolumeAction(1, 2, Dummies.tracingId)
+      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1)))
 
       assert(result.segments == Seq(segmentWithMetadata1))

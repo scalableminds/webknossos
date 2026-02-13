@@ -571,24 +571,26 @@ case class LegacyUpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActio
     this.copy(actionTracingId = newTracingId)
 }
 
-case class MergeSegmentsVolumeAction(sourceId: Long,
-                                     targetId: Long, // is "swallowed" by source
-                                     actionTracingId: String,
-                                     actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[ObjectId] = None,
-                                     info: Option[String] = None)
+case class MergeSegmentItemsVolumeAction(agglomerateId1: Long, // merged into
+                                         agglomerateId2: Long, // is "swallowed" by source
+                                         segmentId1: Long, // only used by frontend to resolve live collab conflicts
+                                         segmentId2: Long, // only used by frontend to resolve live collab conflicts
+                                         actionTracingId: String,
+                                         actionTimestamp: Option[Long] = None,
+                                         actionAuthorId: Option[ObjectId] = None,
+                                         info: Option[String] = None)
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val sourceSegmentOpt = tracing.segments.find(_.segmentId == sourceId)
-    val targetSegmentOpt = tracing.segments.find(_.segmentId == targetId)
+    val sourceSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId1)
+    val targetSegmentOpt = tracing.segments.find(_.segmentId == agglomerateId2)
 
     val resultSegment = (sourceSegmentOpt, targetSegmentOpt) match {
-      case (None, None)                => Segment(segmentId = sourceId, creationTime = actionTimestamp, isVisible = Some(true))
+      case (None, None)                => Segment(segmentId = agglomerateId1, creationTime = actionTimestamp, isVisible = Some(true))
       case (Some(sourceSegment), None) => sourceSegment
       case (None, Some(targetSegment)) =>
         Segment(
-          segmentId = sourceId,
+          segmentId = agglomerateId1,
           creationTime = actionTimestamp,
           isVisible = targetSegment.isVisible,
           metadata = targetSegment.metadata,
@@ -605,10 +607,10 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
 
     val withResultSegment =
       if (sourceSegmentOpt.isDefined) tracing.segments.map { segment: Segment =>
-        if (segment.segmentId == sourceId) resultSegment else segment
+        if (segment.segmentId == agglomerateId1) resultSegment else segment
       } else tracing.segments :+ resultSegment
 
-    tracing.withSegments(withResultSegment.filter(_.segmentId != targetId))
+    tracing.withSegments(withResultSegment.filter(_.segmentId != agglomerateId2))
   }
 
   private def mergeSegmentNames(sourceSegmentNameOpt: Option[String],
@@ -616,7 +618,7 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
     (sourceSegmentNameOpt, targetSegmentNameOpt) match {
       case (None, None)                                       => None
       case (Some(sourceSegmentName), None)                    => Some(sourceSegmentName)
-      case (None, Some(targetSegmentName))                    => Some(s"Segment $sourceId and $targetSegmentName")
+      case (None, Some(targetSegmentName))                    => Some(s"Segment $agglomerateId1 and $targetSegmentName")
       case (Some(sourceSegmentName), Some(targetSegmentName)) => Some(s"$sourceSegmentName and $targetSegmentName")
     }
 
@@ -629,7 +631,7 @@ case class MergeSegmentsVolumeAction(sourceId: Long,
         if (byKey(entry.key).distinct.length == 1) {
           entry
         } else {
-          val originalSegmentId = if (index < pivotIndex) sourceId else targetId
+          val originalSegmentId = if (index < pivotIndex) agglomerateId1 else agglomerateId2
           entry.copy(key = s"${entry.key}-$originalSegmentId")
         }
     }.distinctBy(_.key)
@@ -966,8 +968,8 @@ object UpdateMetadataOfSegmentVolumeAction {
   implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =
     Json.format[UpdateMetadataOfSegmentVolumeAction]
 }
-object MergeSegmentsVolumeAction {
-  implicit val jsonFormat: OFormat[MergeSegmentsVolumeAction] = Json.format[MergeSegmentsVolumeAction]
+object MergeSegmentItemsVolumeAction {
+  implicit val jsonFormat: OFormat[MergeSegmentItemsVolumeAction] = Json.format[MergeSegmentItemsVolumeAction]
 }
 object DeleteSegmentVolumeAction {
   implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]

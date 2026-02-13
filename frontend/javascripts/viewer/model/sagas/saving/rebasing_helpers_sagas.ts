@@ -180,6 +180,9 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
             case "mergeAgglomerate":
             case "mergeSegmentItems":
             case "splitAgglomerate": {
+              // Merge/split related actions are updated by remapping the super-voxel ids
+              // to the most-recent agglomerate ids.
+              // This resolves conflicts around concurrent merges/splits.
               const { segmentId1, segmentId2, actionTracingId } = action.value;
               const mappingSyncedWithBackendUnwrapped =
                 activeMappingByLayer[actionTracingId]?.mapping;
@@ -242,6 +245,8 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               }
             }
             case "createSegment": {
+              // createSegment update actions might need to be changed to updateSegmentPartial
+              // if another user created that segment in the meantime.
               const { actionTracingId } = action.value;
 
               const tracing = annotationBeforeUpdate.volumes.find(
@@ -268,7 +273,10 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
             }
             case "updateSegmentVisibility":
             case "updateMetadataOfSegment":
-            case "updateSegmentPartial": {
+            case "updateSegmentPartial":
+            case "deleteSegment": {
+              // Updates to segments (including deletions) will be dropped
+              // when another user already removed that segment in the meantime.
               const { actionTracingId } = action.value;
 
               const tracing = annotationBeforeUpdate.volumes.find(
@@ -283,19 +291,6 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
 
               // Since the update action precisely encodes what changed within the segment,
               // we don't need to adapt the action itself.
-              return action;
-            }
-            case "deleteSegment": {
-              const { actionTracingId } = action.value;
-              const tracing = annotationBeforeUpdate.volumes.find(
-                (v) => v.tracingId === actionTracingId,
-              );
-              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
-
-              if (!maybeExistingSegment) {
-                // Another user removed the segment. The update action of the current user gets lost now.
-                return null;
-              }
               return action;
             }
 

@@ -166,13 +166,24 @@ module.exports = function (env = {}) {
       ],
       splitChunks: {
         chunks: "all",
-        // Use a consistent name for the vendors chunk
-        name: "vendors~main",
         cacheGroups: {
+          defaultVendors: {
+            test: /[\\/]node_modules[\\/]/,
+            priority: -10,
+            reuseExistingChunk: true,
+            name: "vendors~main",
+          },
           html2canvas: {
             test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
             chunks: "all",
             name: "vendors~html2canvas",
+            priority: 10,
+          },
+          zipjs: {
+            test: /[\\/]node_modules[\\/](@zip\.js[\\/]zip\.js)[\\/]/,
+            chunks: "all",
+            name: "vendors~zipjs",
+            priority: 10,
           },
         },
       },

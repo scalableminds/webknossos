@@ -2,7 +2,7 @@ import deepFreezeLib from "deep-freeze";
 import identity from "lodash-es/identity";
 
 // Do not use the deep-freeze library in production
-// process.env.NODE_ENV is being substituted by webpack
+// import.meta.env.MODE is set by vite
 let deepFreeze = deepFreezeLib;
 if (process.env.NODE_ENV === "production") deepFreeze = identity;
 

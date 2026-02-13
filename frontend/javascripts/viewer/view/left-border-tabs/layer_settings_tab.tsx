@@ -283,7 +283,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       }
       icon={
         <img
-          src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
+          src={`/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
           alt="Transformed Layer Icon"
           style={{ width: "0.9em", height: "0.9em", marginTop: "-3px" }}
         />

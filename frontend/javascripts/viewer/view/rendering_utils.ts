@@ -112,7 +112,7 @@ export function renderToTexture(
 
 function getScreenshotLogoImage(): Promise<HTMLImageElement> {
   const logo = document.createElement("img");
-  logo.src = "/assets/images/logo-screenshot.svg";
+  logo.src = "/images/logo-screenshot.svg";
   return new Promise((resolve) => {
     logo.onload = () => resolve(logo);
   });

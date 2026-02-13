@@ -49,7 +49,6 @@ import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
 import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
-import TabTitle from "../components/tab_title_component";
 import VoxelValueTooltip from "../voxel_pipette_tooltip";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
@@ -341,7 +340,7 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
           isUpdateAllowed={isUpdateTracingAllowed}
         >
-          <TabTitle title={this.getTabTitle()} />
+          {/* <TabTitle title={this.getTabTitle()} /> */}
           <WebKnossosController
             initialMaybeCompoundType={this.props.initialMaybeCompoundType}
             initialCommandType={this.props.initialCommandType}

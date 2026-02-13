@@ -62,7 +62,7 @@ export function FloatingMobileControls() {
           icon={
             <img
               alt="Toggle left sidebar"
-              src="/assets/images/icon-sidebar-hide-left-bright.svg"
+              src="/images/icon-sidebar-hide-left-bright.svg"
               style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }
@@ -76,7 +76,7 @@ export function FloatingMobileControls() {
           icon={
             <img
               alt="Toggle right sidebar"
-              src="/assets/images/icon-sidebar-hide-right-bright.svg"
+              src="/images/icon-sidebar-hide-right-bright.svg"
               style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }

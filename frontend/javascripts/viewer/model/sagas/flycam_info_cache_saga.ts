@@ -8,8 +8,8 @@ import constants from "viewer/constants";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { call, select, take } from "viewer/model/sagas/effect-generators";
 import type { LoadingStrategy, WebknossosState } from "viewer/store";
-import AsyncGetMaximumZoomForAllMags from "viewer/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
+import type AsyncGetMaximumZoomForAllMags from "../../workers/async_get_maximum_zoom_for_all_mags.worker";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
   getTransformsForLayer,
@@ -21,7 +21,9 @@ import type { Action } from "../actions/actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 
-const asyncGetMaximumZoomForAllMags = createWorker(AsyncGetMaximumZoomForAllMags);
+const asyncGetMaximumZoomForAllMags = createWorker<typeof AsyncGetMaximumZoomForAllMags>(
+  "async_get_maximum_zoom_for_all_mags.worker.ts",
+);
 
 const getComputeFunction = memoize((_layerName: string) => {
   // The argument _layerName is not used in this function, but

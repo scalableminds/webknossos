@@ -100,17 +100,17 @@ export function recalculateInputCatcherSizes() {
 const cursorForTool: Record<AnnotationToolId, string> = {
   MOVE: "move",
   SKELETON: "crosshair",
-  BRUSH: "url(/assets/images/paint-brush-solid-border.svg) 0 10,auto",
-  ERASE_BRUSH: "url(/assets/images/eraser-solid-border.svg) 0 8,auto",
-  TRACE: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
-  ERASE_TRACE: "url(/assets/images/eraser-pointed-solid-border.svg) 0 16,auto",
-  FILL_CELL: "url(/assets/images/fill-pointed-solid-border.svg) 0 16,auto",
-  VOXEL_PIPETTE: "url(/assets/images/eye-dropper-solid-border.svg) 0 12,auto",
+  BRUSH: "url(/images/paint-brush-solid-border.svg) 0 10,auto",
+  ERASE_BRUSH: "url(/images/eraser-solid-border.svg) 0 8,auto",
+  TRACE: "url(/images/lasso-pointed-solid-border.svg) 0 14,auto",
+  ERASE_TRACE: "url(/images/eraser-pointed-solid-border.svg) 0 16,auto",
+  FILL_CELL: "url(/images/fill-pointed-solid-border.svg) 0 16,auto",
+  VOXEL_PIPETTE: "url(/images/eye-dropper-solid-border.svg) 0 12,auto",
   BOUNDING_BOX: "copy",
   QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",
-  LINE_MEASUREMENT: "url(/assets/images/ruler-pointed-border.svg) 0 14,auto",
-  AREA_MEASUREMENT: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
+  LINE_MEASUREMENT: "url(/images/ruler-pointed-border.svg) 0 14,auto",
+  AREA_MEASUREMENT: "url(/images/lasso-pointed-solid-border.svg) 0 14,auto",
 };
 
 function InputCatcher({

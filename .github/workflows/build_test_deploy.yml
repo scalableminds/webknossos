@@ -178,7 +178,7 @@ jobs:
         env:
           WK_VERSION: ${{ github.run_id }}
 
-      - name: Build webknossos (webpack)
+      - name: Build webknossos (vite)
         run: yarn build
 
       - name: Build webknossos (sbt)

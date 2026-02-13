@@ -36,7 +36,7 @@ class ApiLoader {
    * });
    */
   apiReady(version: number = latestVersion): Promise<ApiInterface> {
-    if (!process.env.IS_TESTING) {
+    if (import.meta.env.MODE !== "test") {
       if (version !== latestVersion) {
         console.warn(`
           Attention! You requested api version ${version} which is

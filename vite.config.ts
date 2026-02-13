@@ -3,8 +3,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
+import topLevelAwait from "vite-plugin-top-level-await";
 import analyzer from "vite-bundle-analyzer";
-import { visualizer } from "rollup-plugin-visualizer";
 
 import path from "node:path";
 
@@ -26,12 +26,13 @@ export const viteConfig = {
     },
   },
   plugins: [
-    analyzer(),
-    react({ skipFastRefresh: true, fastRefresh: false }),
+    // analyzer(),
+    react(),
     tsconfigPaths(),
     wasm(),
+    topLevelAwait(),
     viteProtobufPlugin({
-      protoDir: "webknossos-datastore/proto", // Your proto directory
+      protoDir: "webknossos-datastore/proto",
     }),
   ],
   optimizeDeps: {
@@ -43,12 +44,6 @@ export const viteConfig = {
     emptyOutDir: false,
     sourcemap: true,
     rollupOptions: {
-      plugins: [
-        visualizer({
-          // filename: "stats.html",
-          template: "network",
-        }),
-      ],
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/html2canvas")) {
@@ -61,17 +56,21 @@ export const viteConfig = {
       },
     },
   },
+  worker: {
+    format: "es",
+    plugins: () => [wasm()],
+  },
   server: {
     port: 9000,
     cors: true,
     proxy: {
       // You can add more routes here, e.g. "^/(api|binary|auth)"
-      "^/(api|data|tracings)": {
+      "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,
       },
     },
-    hmr: false,
+    hmr: false, // disable Hot Module Replacement for now
   },
   define: {
     global: "globalThis",

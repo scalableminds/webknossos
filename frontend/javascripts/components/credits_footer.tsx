@@ -25,23 +25,19 @@ const creditsFooter = () => (
           <a href="https://www.brain.mpg.de/connectomics">
             <img
               alt="Max Planck Gesellschaft logo"
-              src="/assets/images/Max-Planck-Gesellschaft.svg"
+              src="/images/Max-Planck-Gesellschaft.svg"
               style={logoStyle}
             />
           </a>
           <a href="https://www.brain.mpg.de/connectomics">
             <img
               alt="Max Planck Institute for Brain Research logo"
-              src="/assets/images/MPI-brain-research.svg"
+              src="/images/MPI-brain-research.svg"
               style={logoStyle}
             />
           </a>
           <a href="https://scalableminds.com">
-            <img
-              alt="scalable minds logo"
-              src="/assets/images/scalableminds_logo.svg"
-              style={logoStyle}
-            />
+            <img alt="scalable minds logo" src="/images/scalableminds_logo.svg" style={logoStyle} />
           </a>
         </Typography.Paragraph>
         <Typography.Paragraph>

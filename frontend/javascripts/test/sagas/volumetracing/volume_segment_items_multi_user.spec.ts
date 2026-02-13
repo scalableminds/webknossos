@@ -336,6 +336,9 @@ describe("Collaborative editing of segment items", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
+      expect(receivedUpdateActions.at(-2)).toMatchObject({
+        injected: true
+      });
       expect(receivedUpdateActions.at(-1)).toMatchObject({
         name: "updateSegmentPartial",
         value: {
@@ -565,6 +568,9 @@ describe("Collaborative editing of segment items", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
+      expect(receivedUpdateActions.at(-2)).toMatchObject({
+        injected: true
+      });
       expect(receivedUpdateActions.at(-1)).toMatchObject({
         name: "updateSegmentPartial",
         value: {

@@ -329,7 +329,7 @@ export class BackendMock {
     // but making the version number explicit strengthens the assumptions that the
     // tests expect.
     this.sendSaveRequestWithToken("unused", {
-      data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
+      data: createSaveQueueFromUpdateActions([updateActions.map(ua => ({ ...ua, injected: true }))], 0, null, false, targetVersion),
     });
   }
 

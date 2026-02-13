@@ -1,4 +1,10 @@
-import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
+import {
+  CheckOutlined,
+  CloseOutlined,
+  CompressOutlined,
+  CopyOutlined,
+  ShareAltOutlined,
+} from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -21,6 +27,7 @@ import {
   Row,
   Space,
   Tooltip,
+  Switch,
 } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
@@ -446,34 +453,33 @@ function _ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
+      <Row style={{ marginBottom: 8 }}>
+        <Col span={6} style={LEFT_COL_STYLE}>
+          For which teams should this annotation be listed?
+        </Col>
+        <Col span={18}>
+          <TeamSelectionComponent
+            mode="multiple"
+            allowNonEditableTeams
+            value={sharedTeams}
+            onChange={handleSharedTeamsChange}
+            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
+          />
+          <Hint
+            style={{
+              margin: "6px 12px",
+            }}
+          >
+            Choose the teams to share your annotation with. Members of these teams can see this
+            annotation in their Annotations tab.
+          </Hint>
+        </Col>
+      </Row>
       <DividerWithSubtitle>
         <ShareAltOutlined className="icon-margin-right" />
-        Team Sharing
+        Editing
       </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
-        <Row style={{ marginBottom: 8 }}>
-          <Col span={6} style={LEFT_COL_STYLE}>
-            For which teams should this annotation be listed?
-          </Col>
-          <Col span={18}>
-            <TeamSelectionComponent
-              mode="multiple"
-              allowNonEditableTeams
-              value={sharedTeams}
-              onChange={handleSharedTeamsChange}
-              disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
-            />
-            <Hint
-              style={{
-                margin: "6px 12px",
-              }}
-            >
-              Choose the teams to share your annotation with. Members of these teams can see this
-              annotation in their Annotations tab.
-            </Hint>
-          </Col>
-        </Row>
-
         <Row>
           <Col span={6} style={LEFT_COL_STYLE}>
             Who can edit this annotation?
@@ -513,35 +519,21 @@ function _ShareModalView(props: Props) {
             Concurrent editing?
           </Col>
           <Col span={18}>
-            <RadioGroup
-              // onChange={handleOthersMayEditCheckboxChange}
-              value={newOthersMayEdit}
-              disabled={isChangingInProgress}
+            <Switch
+              checkedChildren={<CheckOutlined />}
+              unCheckedChildren={<CloseOutlined />}
+              defaultChecked
+            />
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
             >
-              <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
-                Exclusive editing
-              </Radio>
-              <Hint
-                style={{
-                  marginLeft: 24,
-                }}
-              >
-                While one user is editing the annotation, no other user can edit it. We recommend to
-                coordinate the collaboration with your peers to avoid being blocked.
-              </Hint>
-
-              <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
-                Concurrent editing (Experimental)
-              </Radio>
-              <Hint
-                style={{
-                  marginLeft: 24,
-                }}
-              >
-                This feature is experimental and is currently limited to the proofreading tool
-                (skeleton and brushing will be disabled).
-              </Hint>
-            </RadioGroup>
+              When enabled, users can edit the annotation in parallel. This feature is experimental
+              and is currently limited to the proofreading tool (skeleton and brushing will be
+              disabled). When disabled, only one user can edit at the same time. We recommend to
+              coordinate the collaboration with your peers to avoid being blocked.
+            </Hint>
           </Col>
         </Row>
       </PricingEnforcedBlur>

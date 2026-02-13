@@ -5,7 +5,7 @@ import { clamp, waitForElementWithId } from "libs/utils";
 import get from "lodash-es/get";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import { type OrthographicCamera, Vector3 as ThreeVector3 } from "three";
+import { type OrthographicCamera, type PerspectiveCamera, Vector3 as ThreeVector3 } from "three";
 import type { VoxelSize } from "types/api_types";
 import {
   type OrthoView,
@@ -28,7 +28,6 @@ import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetraci
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { toggleSegmentInPartitionAction } from "viewer/model/actions/proofread_actions";
 import {
-  moveTDViewByVectorWithoutTimeTrackingAction,
   moveTDViewXAction,
   moveTDViewYAction,
   setTDCameraAction,
@@ -38,26 +37,11 @@ import {
 } from "viewer/model/actions/view_mode_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
 import { voxelToUnit } from "viewer/model/scaleinfo";
-import type { CameraData, StoreAnnotation, WebknossosState } from "viewer/store";
+import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import type PlaneView from "viewer/view/plane_view";
 
-function threeCameraToCameraData(camera: OrthographicCamera): CameraData {
-  const { position, up, near, far, left, right, top, bottom } = camera;
-
-  const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
-
-  return {
-    left,
-    right,
-    top,
-    bottom,
-    near,
-    far,
-    position: objToArr(position),
-    up: objToArr(up),
-  };
-}
+const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
 
 function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, any> {
   return {
@@ -85,7 +69,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
   planeView?: PlaneView;
   annotation?: StoreAnnotation;
 };
@@ -104,12 +88,9 @@ function maybeGetActiveNodeFromProps(props: Props) {
 class TDController extends PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
-  oldUnitPos!: Vector3;
   isStarted: boolean = false;
 
   componentDidMount() {
-    const { dataset, flycam } = Store.getState();
-    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -180,8 +161,12 @@ class TDController extends PureComponent<Props> {
     if (!this.controls) {
       return;
     }
-
-    this.controls.update(true);
+    const cameraData = Store.getState().viewModeData.plane.tdCamera;
+    const target = new ThreeVector3(...(cameraData.target || [0, 0, 0]));
+    this.controls.target.copy(target);
+    // Ensure that external target updates don't shift the camera (TrackballControls
+    // derives the eye vector from `lastTarget`).
+    this.controls.lastTarget = target.clone();
   };
 
   getTDViewMouseControls(): Record<string, any> {
@@ -326,34 +311,15 @@ class TDController extends PureComponent<Props> {
     position = position || getPosition(flycam);
     const nmPosition = voxelToUnit(this.props.voxelSize, position);
 
+    // Update the rotation center without letting TrackballControls translate the camera.
+    const effectiveTarget = new ThreeVector3(...nmPosition);
+
     if (controls != null) {
-      controls.target.set(...nmPosition);
-      controls.update();
+      controls.target.copy(effectiveTarget);
+      controls.lastTarget = effectiveTarget.clone();
     }
 
-    // The following code is a dirty hack. If someone figures out
-    // how the trackball control's target can be set without affecting
-    // the camera position, go ahead.
-    // As the previous step will also move the camera, we need to
-    // fix this by offsetting the viewport
-    const invertedDiff = [];
-
-    for (let i = 0; i <= 2; i++) {
-      invertedDiff.push(this.oldUnitPos[i] - nmPosition[i]);
-    }
-
-    if (invertedDiff.every((el) => el === 0)) return;
-    this.oldUnitPos = nmPosition;
-    const nmVector = new ThreeVector3(...invertedDiff);
-    // moves camera by the nm vector
-    const camera = this.props.cameras[OrthoViews.TDView];
-    const rotation = ThreeVector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
-    // reverse euler order
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.
-    rotation.order = rotation.order.split("").reverse().join("");
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3' is not assignable to pa... Remove this comment to see the full error message
-    nmVector.applyEuler(rotation);
-    Store.dispatch(moveTDViewByVectorWithoutTimeTrackingAction(nmVector.x, nmVector.y));
+    Store.dispatch(setTDCameraWithoutTimeTrackingAction({ target: nmPosition }));
   };
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {
@@ -378,8 +344,22 @@ class TDController extends PureComponent<Props> {
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
+    const prevCameraData = Store.getState().viewModeData.plane.tdCamera;
+    const target =
+      this.controls != null
+        ? this.controls.target.clone()
+        : new ThreeVector3(...(prevCameraData.target || [0, 0, 0]));
     // Write threeJS camera into store
-    Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
+    Store.dispatch(
+      setCameraAction({
+        ...prevCameraData,
+        near: tdCamera.near,
+        far: tdCamera.far,
+        position: objToArr(tdCamera.position),
+        up: objToArr(tdCamera.up),
+        target: objToArr(target),
+      }),
+    );
   };
 
   render() {

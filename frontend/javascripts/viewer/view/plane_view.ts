@@ -6,8 +6,10 @@ import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import {
+  type Camera,
   DirectionalLight,
   OrthographicCamera,
+  PerspectiveCamera,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
@@ -44,12 +46,7 @@ type RaycasterHit = {
   point: Vector3;
 } | null;
 
-const createDirLight = (
-  position: Vector3,
-  target: Vector3,
-  intensity: number,
-  camera: OrthographicCamera,
-) => {
+const createDirLight = (position: Vector3, target: Vector3, intensity: number, camera: Camera) => {
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);
@@ -66,7 +63,7 @@ const MESH_HOVER_THROTTLING_DELAY = 50;
 let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
   isRunning: boolean = false;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
@@ -74,12 +71,15 @@ class PlaneView {
   constructor() {
     const { scene } = getSceneController();
     // Initialize main js components
-    const cameras = {} as OrthoViewMap<OrthographicCamera>;
+    const cameras = {} as OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
 
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      cameras[plane] = new OrthographicCamera(0, 0, 0, 0);
+      cameras[plane] =
+        plane === OrthoViews.TDView
+          ? new PerspectiveCamera(45, 1, 0.1, 1000)
+          : new OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
       cameras[plane].name = plane;
       scene.add(cameras[plane]);
@@ -290,7 +290,7 @@ class PlaneView {
     }
   };
 
-  getCameras(): OrthoViewMap<OrthographicCamera> {
+  getCameras(): OrthoViewMap<OrthographicCamera | PerspectiveCamera> {
     return this.cameras;
   }
 

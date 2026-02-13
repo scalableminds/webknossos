@@ -92,7 +92,7 @@ object UpdateAction {
           case "updateSegmentVisibility"      => deserialize[UpdateSegmentVisibilityVolumeAction](jsonValue)
           case "updateSegmentGroupsExpandedState" =>
             deserialize[UpdateSegmentGroupsExpandedStateVolumeAction](jsonValue)
-          case "mergeSegments"         => deserialize[MergeSegmentItemsVolumeAction](jsonValue)
+          case "mergeSegmentItems"         => deserialize[MergeSegmentItemsVolumeAction](jsonValue)
           case "deleteSegment"         => deserialize[DeleteSegmentVolumeAction](jsonValue)
           case "deleteSegmentData"     => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
           case "updateMappingName"     => deserialize[UpdateMappingNameVolumeAction](jsonValue)
@@ -225,7 +225,7 @@ object UpdateAction {
         Json.obj("name" -> "updateMetadataOfSegment",
                  "value" -> Json.toJson(s)(UpdateMetadataOfSegmentVolumeAction.jsonFormat))
       case s: MergeSegmentItemsVolumeAction =>
-        Json.obj("name" -> "mergeSegments", "value" -> Json.toJson(s)(MergeSegmentItemsVolumeAction.jsonFormat))
+        Json.obj("name" -> "mergeSegmentItems", "value" -> Json.toJson(s)(MergeSegmentItemsVolumeAction.jsonFormat))
       case s: DeleteSegmentVolumeAction =>
         Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
       case s: DeleteSegmentDataVolumeAction =>

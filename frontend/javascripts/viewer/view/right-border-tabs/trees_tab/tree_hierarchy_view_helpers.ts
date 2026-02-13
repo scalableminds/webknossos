@@ -311,6 +311,22 @@ export function createGroupHelper(
   return { newSegmentGroups, newGroupId };
 }
 
+export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
+  nodes: T[],
+  predicate: (node: T) => boolean,
+): T[] {
+  // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
+  return nodes.reduce((acc: T[], node: T) => {
+    if (predicate(node)) {
+      acc.push({
+        ...node,
+        children: deepFilter(node.children as T[], predicate),
+      });
+    }
+    return acc;
+  }, []);
+}
+
 export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
   nodes: T[],
   predicate: (node: T) => boolean,

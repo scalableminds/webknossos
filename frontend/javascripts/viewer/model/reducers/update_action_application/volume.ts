@@ -18,9 +18,10 @@ import type {
   DeleteUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SegmentGroup, WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import {
   createGroupHelper,
+  deepFilter,
   findGroup,
   mapGroups,
   moveGroupsHelper,
@@ -164,23 +165,6 @@ function applySingleAction(
     case "deleteSegmentGroup": {
       const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
       const oldSegmentGroups = volumeTracing.segmentGroups;
-
-      // todop: use sth similar to how moveGroupsHelper does it?
-      function deepFilter<T extends SegmentGroup>(
-        nodes: T[],
-        predicate: (node: T) => boolean,
-      ): T[] {
-        // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
-        return nodes.reduce((acc: T[], node: T) => {
-          if (predicate(node)) {
-            acc.push({
-              ...node,
-              children: deepFilter(node.children as T[], predicate),
-            });
-          }
-          return acc;
-        }, []);
-      }
 
       const newSegmentGroups = deepFilter(
         oldSegmentGroups,

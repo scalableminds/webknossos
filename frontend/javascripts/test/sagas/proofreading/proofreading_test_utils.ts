@@ -81,10 +81,11 @@ export class BackendMock {
   agglomerateMapping: AgglomerateMapping;
   injectionsPerVersion: Record<number, UpdateActionWithoutIsolationRequirement[]> = {};
 
-  // todop: this is a reference to the same variable that is
-  // set up in apiHelpers. when BackendMock is used in other tests,
-  // too, it probably makes sense to remove it in favor of
-  // `updateActionLog` which is mostly equivalent.
+  // TODO (could be done in #9036 or later):
+  // This is a reference to the same variable that is
+  // set up in apiHelpers. We should probably try to remove this
+  // variable here and instead use `backendMock.updateActionLog`
+  // everywhere which is mostly equivalent.
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]> = [];
 
   constructor(

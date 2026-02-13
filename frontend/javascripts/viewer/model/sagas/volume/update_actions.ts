@@ -866,6 +866,9 @@ export function upsertSegmentGroupUpdateAction(
 }
 
 export function deleteSegmentGroupUpdateAction(groupId: number, actionTracingId: string) {
+  /*
+   * Will delete the specified group including all its subgroups.
+   */
   return {
     name: "deleteSegmentGroup",
     value: {

@@ -475,13 +475,8 @@ function _ShareModalView(props: Props) {
         </Row>
 
         <Row>
-          <Col
-            span={6}
-            style={{
-              lineHeight: "22px",
-            }}
-          >
-            Are other users allowed to edit this annotation?
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Who can edit this annotation?
           </Col>
           <Col span={18}>
             <RadioGroup
@@ -490,27 +485,40 @@ function _ShareModalView(props: Props) {
               disabled={isChangingInProgress}
             >
               <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
-                No, keep it read-only
+                Owner
               </Radio>
               <Hint
                 style={{
                   marginLeft: 24,
                 }}
               >
-                Only you can edit the content of this annotation.
+                Only the owner can edit the content of this annotation.
               </Hint>
 
               <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
-                Yes, allow editing
+                Exclusive editing
               </Radio>
               <Hint
                 style={{
                   marginLeft: 24,
                 }}
               >
-                All registered users that can view this annotation can edit it. Note that you should
-                coordinate the collaboration, because parallel changes to this annotation will
-                result in a conflict.
+                All registered users that can view this annotation can also edit it. While one user
+                is editing the annotation, no other user can edit it. We recommend to coordinate the
+                collaboration with your peers to avoid being blocked.
+              </Hint>
+
+              <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
+                Concurrent editing (Experimental)
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                All registered users that can view this annotation can also edit it. Note that this
+                feature is experimental and is currently limited to the proofreading tool (skeleton
+                and brushing will be disabled).
               </Hint>
             </RadioGroup>
           </Col>

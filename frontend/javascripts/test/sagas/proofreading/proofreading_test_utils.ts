@@ -79,6 +79,7 @@ export class BackendMock {
   updateActionLog: APIUpdateActionBatch[] = [];
   onSavedListeners: Array<() => void> = [];
   agglomerateMapping: AgglomerateMapping;
+  injectionsPerVersion: Record<number, UpdateActionWithoutIsolationRequirement[]> = {}
 
   // todop: this is a reference to the same variable that is
   // set up in apiHelpers. when BackendMock is used in other tests,
@@ -322,6 +323,7 @@ export class BackendMock {
         this.injectVersion(updateActions, targetVersion);
       }
     });
+    this.injectionsPerVersion[targetVersion] = updateActions;
   }
 
   injectVersion(updateActions: UpdateActionWithoutIsolationRequirement[], targetVersion: number) {
@@ -329,7 +331,7 @@ export class BackendMock {
     // but making the version number explicit strengthens the assumptions that the
     // tests expect.
     this.sendSaveRequestWithToken("unused", {
-      data: createSaveQueueFromUpdateActions([updateActions.map(ua => ({ ...ua, injected: true }))], 0, null, false, targetVersion),
+      data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
     });
   }
 

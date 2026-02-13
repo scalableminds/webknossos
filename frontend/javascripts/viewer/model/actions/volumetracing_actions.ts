@@ -52,7 +52,7 @@ export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAct
 export type SetSelectedSegmentsOrGroupAction = ReturnType<typeof setSelectedSegmentsOrGroupAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
-export type MergeSegmentsAction = ReturnType<typeof mergeSegmentsAction>;
+export type MergeSegmentItemsAction = ReturnType<typeof mergeSegmentItemsAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
@@ -107,7 +107,7 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
-  | MergeSegmentsAction
+  | MergeSegmentItemsAction
   | RemoveSegmentAction
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
@@ -138,7 +138,7 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "SET_SEGMENT_GROUPS",
   "SET_EXPANDED_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
-  "MERGE_SEGMENTS",
+  "MERGE_SEGMENTS_ITEMS",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
   // Note that the following three actions are defined in settings_actions.ts
@@ -308,17 +308,21 @@ export const updateSegmentAction = (
   } as const;
 };
 
-export const mergeSegmentsAction = (
-  sourceId: NumberLike,
-  targetId: NumberLike,
+export const mergeSegmentItemsAction = (
+  sourceAgglomerateId: NumberLike,
+  targetAgglomerateId: NumberLike,
+  sourceSegmentId: NumberLike,
+  targetSegmentId: NumberLike,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
   ({
-    type: "MERGE_SEGMENTS",
+    type: "MERGE_SEGMENTS_ITEMS",
     // TODO: Proper 64 bit support (#6921)
-    sourceId: Number(sourceId),
-    targetId: Number(targetId),
+    sourceAgglomerateId: Number(sourceAgglomerateId),
+    targetAgglomerateId: Number(targetAgglomerateId),
+    sourceSegmentId: Number(sourceSegmentId),
+    targetSegmentId: Number(targetSegmentId),
     layerName,
     timestamp,
   }) as const;

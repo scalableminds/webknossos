@@ -489,7 +489,7 @@ export function* tryToIncorporateActions(
         }
         case "updateLargestSegmentId":
         case "createSegment":
-        case "mergeSegments":
+        case "mergeSegmentItems":
         case "deleteSegment":
         case "updateSegmentPartial":
         case "updateMetadataOfSegment":

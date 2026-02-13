@@ -111,11 +111,13 @@ describe("Proofreading (with mesh actions)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          sourceId: 1,
-          targetId: 1337,
+          segmentId1: 1,
+          segmentId2: 1337,
+          agglomerateId1: 1,
+          agglomerateId2: 1337,
         },
       },
     ]);
@@ -171,11 +173,13 @@ describe("Proofreading (with mesh actions)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          sourceId: 4,
-          targetId: 6,
+          segmentId1: 5,
+          segmentId2: 6,
+          agglomerateId1: 4,
+          agglomerateId2: 6,
         },
       },
     ]);
@@ -387,11 +391,13 @@ describe("Proofreading (with mesh actions)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          sourceId: 4,
-          targetId: 6,
+          segmentId1: 5,
+          segmentId2: 6,
+          agglomerateId1: 4,
+          agglomerateId2: 6,
         },
       },
     ]);
@@ -702,11 +708,13 @@ describe("Proofreading (with mesh actions)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          sourceId: 1,
-          targetId: 4,
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
         },
       },
     ]);

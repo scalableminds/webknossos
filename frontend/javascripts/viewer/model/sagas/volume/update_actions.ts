@@ -53,7 +53,7 @@ export type UpdateSegmentVisibilityVolumeAction = ReturnType<
 export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
   typeof updateSegmentGroupVisibilityVolumeAction
 >;
-export type MergeSegmentsUpdateAction = ReturnType<typeof mergeSegmentsVolumeAction>;
+export type MergeSegmentItemsUpdateAction = ReturnType<typeof mergeSegmentItemsVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -158,7 +158,7 @@ export type ApplicableVolumeUpdateAction =
   | UpsertSegmentGroupUpdateAction
   | DeleteSegmentGroupUpdateAction
   | CreateSegmentUpdateAction
-  | MergeSegmentsUpdateAction
+  | MergeSegmentItemsUpdateAction
   | DeleteSegmentUpdateAction
   | AddUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
@@ -208,7 +208,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpsertSegmentGroupUpdateAction
   | DeleteSegmentGroupUpdateAction
   | UpdateSegmentVisibilityVolumeAction
-  | MergeSegmentsUpdateAction
+  | MergeSegmentItemsUpdateAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
@@ -890,17 +890,21 @@ export function updateSegmentVisibilityVolumeAction(
   } as const;
 }
 
-export function mergeSegmentsVolumeAction(
-  sourceId: number,
-  targetId: number,
+export function mergeSegmentItemsVolumeAction(
+  agglomerateId1: number,
+  agglomerateId2: number,
+  segmentId1: number,
+  segmentId2: number,
   actionTracingId: string,
 ) {
   return {
-    name: "mergeSegments",
+    name: "mergeSegmentItems",
     value: {
       actionTracingId,
-      sourceId,
-      targetId, // is "swallowed" by source
+      agglomerateId1, // aka "source"
+      agglomerateId2, // aka "target"; will be "swallowed" by source
+      segmentId1, // the unmapped ID (supervoxel) that belongs to agglomerateId1
+      segmentId2, // the unmapped ID (supervoxel) that belongs to agglomerateId2
     },
   } as const;
 }

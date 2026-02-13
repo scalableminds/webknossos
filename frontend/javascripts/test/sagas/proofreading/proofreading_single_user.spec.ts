@@ -88,11 +88,13 @@ describe("Proofreading (Single User)", () => {
           },
         },
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            sourceId: 1,
-            targetId: 4,
+            agglomerateId1: 1,
+            agglomerateId2: 4,
+            segmentId1: 1,
+            segmentId2: 4,
           },
         },
       ]);

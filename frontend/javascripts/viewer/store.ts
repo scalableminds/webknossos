@@ -193,9 +193,11 @@ export type LabelAction = {
 
 export type SegmentJournalEntry = {
   entryIndex: number;
-  type: "MERGE_SEGMENTS";
-  sourceId: number;
-  targetId: number; // will be swallowed by source
+  type: "MERGE_SEGMENTS_ITEMS";
+  agglomerateId1: number; // aka source
+  agglomerateId2: number; // aka target; will be swallowed by source
+  segmentId1: number; // the unmapped ID (supervoxel) that belongs to agglomerateId1
+  segmentId2: number; // the unmapped ID (supervoxel) that belongs to agglomerateId2
 };
 
 export type VolumeTracing = TracingBase & {

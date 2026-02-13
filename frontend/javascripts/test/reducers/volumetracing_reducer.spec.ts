@@ -15,7 +15,7 @@ import {
   addToContourListAction,
   createCellAction,
   finishAnnotationStrokeAction,
-  mergeSegmentsAction,
+  mergeSegmentItemsAction,
   registerLabelPointAction,
   resetContourAction,
   setActiveCellAction,
@@ -301,7 +301,10 @@ describe("VolumeTracing", () => {
     it("should merge two segments (simple)", () => {
       let newState = VolumeTracingReducer(initialState, createSegment1);
       newState = VolumeTracingReducer(newState, createSegment2);
-      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+      newState = VolumeTracingReducer(
+        newState,
+        mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+      );
 
       const segment1 = getSegment(newState, id1);
       const segment2 = getSegment(newState, id2);
@@ -324,7 +327,10 @@ describe("VolumeTracing", () => {
 
     it("should merge two segments (segment 1 doesn't exist, though)", () => {
       let newState = VolumeTracingReducer(initialState, createSegment2);
-      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+      newState = VolumeTracingReducer(
+        newState,
+        mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+      );
 
       const segment1 = getSegment(newState, id1);
       const segment2 = getSegment(newState, id2);
@@ -349,7 +355,10 @@ describe("VolumeTracing", () => {
     it("should merge two segments (segment 2 doesn't exist, though)", () => {
       let newState = VolumeTracingReducer(initialState, createSegment1);
       const segment1BeforeMerge = getSegment(newState, id1);
-      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+      newState = VolumeTracingReducer(
+        newState,
+        mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+      );
 
       const segment1 = getSegment(newState, id1);
       const segment2 = getSegment(newState, id2);

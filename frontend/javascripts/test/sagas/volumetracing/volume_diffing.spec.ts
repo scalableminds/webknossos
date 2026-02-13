@@ -9,7 +9,7 @@ import {
 import { initialState, VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { MetadataEntryProto } from "types/api_types";
 import {
-  mergeSegmentsAction,
+  mergeSegmentItemsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
@@ -188,7 +188,10 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
         newState = VolumeTracingReducer(newState, createSegment2);
       }
       const stateBeforeMerge = newState;
-      newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+      newState = VolumeTracingReducer(
+        newState,
+        mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+      );
       const stateAfterMerge = newState;
 
       const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
@@ -206,11 +209,13 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
 
       expect(updateActions).toEqual([
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            sourceId: id1,
-            targetId: id2,
+            agglomerateId1: id1,
+            agglomerateId2: id2,
+            segmentId1: id1,
+            segmentId2: id2,
           },
         },
       ]);
@@ -235,7 +240,10 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
       updateSegmentAction(id1, newSegmentPartial, VOLUME_TRACING_ID),
     );
 
-    newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
+    newState = VolumeTracingReducer(
+      newState,
+      mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+    );
 
     const stateAfterMerge = newState;
 
@@ -275,11 +283,13 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
      */
     expect(updateActions).toEqual([
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          sourceId: id1,
-          targetId: id2,
+          agglomerateId1: id1,
+          agglomerateId2: id2,
+          segmentId1: id1,
+          segmentId2: id2,
         },
       },
       {
@@ -304,8 +314,14 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
     newState = VolumeTracingReducer(newState, createSegment3);
 
     const stateBeforeMerge = newState;
-    newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id2, VOLUME_TRACING_ID));
-    newState = VolumeTracingReducer(newState, mergeSegmentsAction(id1, id3, VOLUME_TRACING_ID));
+    newState = VolumeTracingReducer(
+      newState,
+      mergeSegmentItemsAction(id1, id2, id1, id2, VOLUME_TRACING_ID),
+    );
+    newState = VolumeTracingReducer(
+      newState,
+      mergeSegmentItemsAction(id1, id3, id1, id3, VOLUME_TRACING_ID),
+    );
     const stateAfterMerge = newState;
 
     const prevVolumeTracing = stateBeforeMerge.annotation.volumes[0];
@@ -323,19 +339,23 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
 
     expect(updateActions).toEqual([
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          sourceId: id1,
-          targetId: id2,
+          agglomerateId1: id1,
+          agglomerateId2: id2,
+          segmentId1: id1,
+          segmentId2: id2,
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          sourceId: id1,
-          targetId: id3,
+          agglomerateId1: id1,
+          agglomerateId2: id3,
+          segmentId1: id1,
+          segmentId2: id3,
         },
       },
     ]);

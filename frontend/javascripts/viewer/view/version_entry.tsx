@@ -48,7 +48,7 @@ import type {
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
-  MergeSegmentsUpdateAction,
+  MergeSegmentItemsUpdateAction,
   MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
   ServerUpdateAction,
@@ -395,8 +395,8 @@ const descriptionFns: Record<
       icon: <EditOutlined />,
     };
   },
-  mergeSegments: (
-    firstAction: AsServerAction<MergeSegmentsUpdateAction>,
+  mergeSegmentItems: (
+    firstAction: AsServerAction<MergeSegmentItemsUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -405,7 +405,7 @@ const descriptionFns: Record<
       firstAction.value.actionTracingId,
     );
     return {
-      description: `Merged segment with id ${firstAction.value.targetId} into segment ${firstAction.value.sourceId} from the segments list of layer ${layerName}.`,
+      description: `Merged segment with id ${firstAction.value.agglomerateId2} into segment ${firstAction.value.agglomerateId1} from the segments list of layer ${layerName}.`,
       icon: <DeleteOutlined />,
     };
   },

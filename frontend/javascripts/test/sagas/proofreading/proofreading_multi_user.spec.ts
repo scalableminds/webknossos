@@ -125,11 +125,13 @@ describe("Proofreading (Multi User)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          sourceId: 4,
-          targetId: 6,
+          segmentId1: 5,
+          segmentId2: 6,
+          agglomerateId1: 4,
+          agglomerateId2: 6,
         },
       },
     ]);
@@ -166,11 +168,13 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            sourceId: 1,
-            targetId: 4,
+            segmentId1: 1,
+            segmentId2: 4,
+            agglomerateId1: 1,
+            agglomerateId2: 4,
           },
         },
       ]);
@@ -261,11 +265,13 @@ describe("Proofreading (Multi User)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          sourceId: 1,
-          targetId: 4,
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
         },
       },
     ]);
@@ -301,11 +307,13 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            sourceId: 1,
-            targetId: 6,
+            segmentId1: 4,
+            segmentId2: 6,
+            agglomerateId1: 1,
+            agglomerateId2: 6,
           },
         },
         {
@@ -428,11 +436,13 @@ describe("Proofreading (Multi User)", () => {
         },
       });
       expect(receivedUpdateActions.at(-2)).toEqual({
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          sourceId: 1339,
-          targetId: 4,
+          segmentId1: 1,
+          segmentId2: 4,
+          agglomerateId1: 1339,
+          agglomerateId2: 4,
         },
       });
 
@@ -611,11 +621,13 @@ describe("Proofreading (Multi User)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: "volumeTracingId",
-          sourceId: 1,
-          targetId: 4,
+          segmentId1: 4,
+          segmentId2: 2,
+          agglomerateId1: 1,
+          agglomerateId2: 4,
         },
       },
     ]);
@@ -661,7 +673,6 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  // todoppp
   it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
       - Backend splits agglomerate 1 (segments 1 and 2)
@@ -714,11 +725,13 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            sourceId: 1339,
-            targetId: 4,
+            segmentId1: 3,
+            segmentId2: 4,
+            agglomerateId1: 1339,
+            agglomerateId2: 4,
           },
         },
       ]);
@@ -772,11 +785,13 @@ describe("Proofreading (Multi User)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          sourceId: 1337,
-          targetId: 4,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
         },
       },
     ]);
@@ -825,11 +840,13 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            sourceId: 1337,
-            targetId: 1,
+            segmentId1: 4,
+            segmentId2: 1,
+            agglomerateId1: 1337,
+            agglomerateId2: 1,
           },
         },
       ]);
@@ -921,11 +938,13 @@ describe("Proofreading (Multi User)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          sourceId: 1339,
-          targetId: 4,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1339,
+          agglomerateId2: 4,
         },
       },
       {
@@ -1021,11 +1040,13 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            sourceId: 1339,
-            targetId: 1,
+            segmentId1: 4,
+            segmentId2: 1,
+            agglomerateId1: 1339,
+            agglomerateId2: 1,
           },
         },
       ]);
@@ -1097,11 +1118,13 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "mergeSegments",
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            sourceId: 1,
-            targetId: 4,
+            segmentId1: 1,
+            segmentId2: 4,
+            agglomerateId1: 1,
+            agglomerateId2: 4,
           },
         },
       ]);
@@ -1144,11 +1167,13 @@ describe("Proofreading (Multi User)", () => {
         },
       },
       {
-        name: "mergeSegments",
+        name: "mergeSegmentItems",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
-          sourceId: 1337,
-          targetId: 4,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
         },
       },
     ]);

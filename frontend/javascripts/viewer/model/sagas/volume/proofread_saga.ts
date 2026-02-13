@@ -77,7 +77,7 @@ import {
 import {
   clickSegmentAction,
   initializeEditableMappingAction,
-  mergeSegmentsAction,
+  mergeSegmentItemsAction,
   removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
@@ -1055,7 +1055,15 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       sourceAgglomerateId,
       targetAgglomerateId,
     );
-    yield* put(mergeSegmentsAction(sourceAgglomerateId, targetAgglomerateId, volumeTracingId));
+    yield* put(
+      mergeSegmentItemsAction(
+        sourceAgglomerateId,
+        targetAgglomerateId,
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
+        volumeTracingId,
+      ),
+    );
   }
 
   yield* call(syncWithBackend);

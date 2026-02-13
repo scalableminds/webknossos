@@ -17,7 +17,7 @@ import {
   createSegmentVolumeAction,
   deleteSegmentGroupUpdateAction,
   deleteSegmentVolumeAction,
-  mergeSegmentsVolumeAction,
+  mergeSegmentItemsVolumeAction,
   removeFallbackLayer,
   type UpdateActionWithoutIsolationRequirement,
   updateActiveSegmentId,
@@ -166,7 +166,13 @@ export function* uncachedDiffSegmentLists(
   prevSegments = applyJournalDiffOnSegments(prevSegments, newSegments, journalDiff);
 
   for (const journalEntry of journalDiff) {
-    yield mergeSegmentsVolumeAction(journalEntry.sourceId, journalEntry.targetId, tracingId);
+    yield mergeSegmentItemsVolumeAction(
+      journalEntry.agglomerateId1,
+      journalEntry.agglomerateId2,
+      journalEntry.segmentId1,
+      journalEntry.segmentId2,
+      tracingId,
+    );
   }
 
   const {
@@ -353,13 +359,13 @@ function applyJournalDiffOnSegments(
    * reconstructed otherwise.
    */
   for (const journalEntry of journalDiff) {
-    const prevSourceSegment = prevSegments.getNullable(journalEntry.sourceId);
-    const fallbackCreationTime = newSegments.getNullable(journalEntry.sourceId)?.creationTime;
+    const prevSourceSegment = prevSegments.getNullable(journalEntry.agglomerateId1);
+    const fallbackCreationTime = newSegments.getNullable(journalEntry.agglomerateId1)?.creationTime;
     const updatedSourceProps = getUpdatedSourcePropsAfterMerge(
-      journalEntry.sourceId,
-      journalEntry.targetId,
+      journalEntry.agglomerateId1,
+      journalEntry.agglomerateId2,
       prevSourceSegment,
-      prevSegments.getNullable(journalEntry.targetId),
+      prevSegments.getNullable(journalEntry.agglomerateId2),
     );
 
     const newSourceSegment: Segment =
@@ -369,7 +375,7 @@ function applyJournalDiffOnSegments(
             ...updatedSourceProps,
           }
         : {
-            id: journalEntry.sourceId,
+            id: journalEntry.agglomerateId1,
             creationTime: fallbackCreationTime ?? 0,
             name: null,
             color: null,
@@ -381,8 +387,8 @@ function applyJournalDiffOnSegments(
           };
 
     // Note the immutability of set and delete.
-    prevSegments = prevSegments.set(journalEntry.sourceId, newSourceSegment);
-    prevSegments = prevSegments.delete(journalEntry.targetId);
+    prevSegments = prevSegments.set(journalEntry.agglomerateId1, newSourceSegment);
+    prevSegments = prevSegments.delete(journalEntry.agglomerateId2);
   }
 
   return prevSegments;

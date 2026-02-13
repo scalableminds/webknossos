@@ -249,7 +249,7 @@ function VolumeTracingReducer(
       return handleUpdateSegment(state, action);
     }
 
-    case "MERGE_SEGMENTS": {
+    case "MERGE_SEGMENTS_ITEMS": {
       return handleMergeSegments(state, action);
     }
 

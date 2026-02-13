@@ -49,7 +49,7 @@ import type {
 } from "../actions/settings_actions";
 import {
   type ClickSegmentAction,
-  type MergeSegmentsAction,
+  type MergeSegmentItemsAction,
   type RemoveSegmentAction,
   removeSegmentAction,
   type SetSegmentsAction,
@@ -433,43 +433,48 @@ export function handleUpdateSegment(state: WebknossosState, action: UpdateSegmen
   });
 }
 
-export function handleMergeSegments(state: WebknossosState, action: MergeSegmentsAction) {
+export function handleMergeSegments(state: WebknossosState, action: MergeSegmentItemsAction) {
   const updateInfo = getSegmentUpdateInfo(state, action.layerName);
   if (updateInfo.type !== "UPDATE_VOLUME_TRACING") {
     return state;
   }
   const { volumeTracing } = updateInfo;
   const { segments } = volumeTracing;
-  const sourceSegment = segments.getNullable(action.sourceId);
-  const targetSegment = segments.getNullable(action.targetId);
+  const sourceSegment = segments.getNullable(action.sourceAgglomerateId);
+  const targetSegment = segments.getNullable(action.targetAgglomerateId);
 
-  let newState = handleRemoveSegment(state, removeSegmentAction(action.targetId, action.layerName));
+  let newState = handleRemoveSegment(
+    state,
+    removeSegmentAction(action.targetAgglomerateId, action.layerName),
+  );
   const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
   newState = updateVolumeTracing(newState, volumeTracing.tracingId, {
     segmentJournal: volumeTracing.segmentJournal.concat([
       {
-        type: "MERGE_SEGMENTS",
-        sourceId: action.sourceId,
-        targetId: action.targetId,
+        type: "MERGE_SEGMENTS_ITEMS",
+        agglomerateId1: action.sourceAgglomerateId,
+        agglomerateId2: action.targetAgglomerateId,
+        segmentId1: action.sourceSegmentId,
+        segmentId2: action.targetSegmentId,
         entryIndex,
       },
     ]),
   });
 
   const updatedSourceProps = getUpdatedSourcePropsAfterMerge(
-    action.sourceId,
-    action.targetId,
+    action.sourceAgglomerateId,
+    action.targetAgglomerateId,
     sourceSegment,
     targetSegment,
   );
 
   // Even when updatedSourceProps is empty, the following statement is important
-  // because there might be no segment item for sourceId, yet. In that case,
+  // because there might be no segment item for agglomerateId1, yet. In that case,
   // it will be created here.
   newState = handleUpdateSegment(
     newState,
-    updateSegmentAction(action.sourceId, updatedSourceProps, action.layerName),
+    updateSegmentAction(action.sourceAgglomerateId, updatedSourceProps, action.layerName),
   );
 
   return newState;

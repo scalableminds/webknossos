@@ -1,5 +1,4 @@
 import type { RequestOptionsWithData } from "libs/request";
-import { sleep } from "libs/utils";
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
@@ -11,7 +10,7 @@ import {
 } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import type { APIUpdateActionBatch } from "types/api_types";
-import Constants, { type Vector2, type Vector3 } from "viewer/constants";
+import type { Vector2, Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -148,36 +147,6 @@ export class BackendMock {
     // save-request. This can be used to inject other versions (simulating
     // other users).
     this.onSavedListeners.push(fn);
-  };
-
-  // todop: DRY with createBucketResponseFunction?
-  sendJSONReceiveArraybufferWithHeaders = async (
-    _url: string,
-    payload: { data: Array<unknown> },
-  ) => {
-    await sleep(this.requestDelay);
-    const bucketCount = payload.data.length;
-    const TypedArrayClass = this.typedArrayClass;
-    const typedArray = new TypedArrayClass(bucketCount * 32 ** 3).fill(this.fillValue);
-
-    for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {
-      for (const { position, value } of this.overrides) {
-        const [x, y, z] = position;
-        const indexInBucket =
-          bucketIdx * Constants.BUCKET_WIDTH ** 3 +
-          z * Constants.BUCKET_WIDTH ** 2 +
-          y * Constants.BUCKET_WIDTH +
-          x;
-        typedArray[indexInBucket] = value;
-      }
-    }
-
-    return {
-      buffer: new Uint8Array(typedArray.buffer).buffer,
-      headers: {
-        "missing-buckets": "[]",
-      },
-    };
   };
 
   getCurrentMappingEntriesFromServer = (version?: number | null | undefined): Vector2[] => {

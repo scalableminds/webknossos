@@ -43,14 +43,13 @@ import { Store } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   LabelAction,
-  Segment,
   SegmentGroup,
+  SegmentJournalEntry,
   SegmentMap,
   StoreAnnotation,
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import type { SegmentHierarchyNode } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
@@ -436,29 +435,47 @@ export function getHideUnregisteredSegmentsForLayer(
   return state.localSegmentationData[layer.name].hideUnregisteredSegments;
 }
 
+const EMPTY_SEGMENT_JOURNAL: SegmentJournalEntry[] = [];
+export function getSegmentJournalForLayer(
+  state: WebknossosState,
+  layerName: string,
+): SegmentJournalEntry[] {
+  const layer = getSegmentationLayerByName(state.dataset, layerName);
+
+  if (layer.tracingId != null) {
+    return getVolumeTracingById(state.annotation, layer.tracingId).segmentJournal;
+  }
+
+  return EMPTY_SEGMENT_JOURNAL;
+}
+
 // Next to returning a clean list of selected segments or group, this method returns
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.
 // The returned segment and group ids are all visible in the segments view tab.
-function _getSelectedIds(state: WebknossosState): [
-  {
-    segments: number[];
-    group: number | null;
-  },
-  (() => void) | null,
-] {
+function _getSelectedIds(state: WebknossosState): {
+  segments: number[];
+  group: number | null;
+  maybeUpdateStoreAction: (() => void) | null;
+} {
   // Ensure that the ids of previously selected segments are removed
   // if these segments aren't visible in the segments tab anymore.
   const nothingSelectedObject = { segments: [], group: null };
   let maybeSetSelectedSegmentsOrGroupsAction = null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   if (visibleSegmentationLayer == null) {
-    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+    return {
+      ...nothingSelectedObject,
+      maybeUpdateStoreAction: maybeSetSelectedSegmentsOrGroupsAction,
+    };
   }
   const segmentationLayerData = state.localSegmentationData[visibleSegmentationLayer.name];
   const { segments, group } = segmentationLayerData.selectedIds;
   if (segments.length === 0 && group == null) {
-    return [nothingSelectedObject, maybeSetSelectedSegmentsOrGroupsAction];
+    return {
+      ...nothingSelectedObject,
+      maybeUpdateStoreAction: maybeSetSelectedSegmentsOrGroupsAction,
+    };
   }
   const currentVisibleSegments = getVisibleSegments(state);
   const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
@@ -487,7 +504,7 @@ function _getSelectedIds(state: WebknossosState): [
       );
     };
   }
-  return [selectedIds, maybeSetSelectedSegmentsOrGroupsAction];
+  return { ...selectedIds, maybeUpdateStoreAction: maybeSetSelectedSegmentsOrGroupsAction };
 }
 
 export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
@@ -699,10 +716,11 @@ export function getLabelActionFromPreviousSlice(
 }
 
 export function getSegmentName(
-  segment: Segment | SegmentHierarchyNode,
-  fallbackToId: boolean = false,
+  segment: { id: number; name?: string | undefined | null },
+  fallbackToIdOnly: boolean = false,
 ): string {
-  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  const fallback = fallbackToIdOnly ? `${segment.id}` : `Segment ${segment.id}`;
+  // Note that we don't use ?? here because empty strings should also be disregarded.
   return segment.name || fallback;
 }
 

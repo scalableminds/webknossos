@@ -26,7 +26,7 @@ import type {
   RecommendedConfiguration,
   SegmentGroup,
 } from "viewer/store";
-import type { EmptyObject } from "./globals";
+import type { EmptyObject } from "./type_utils";
 
 // Re-export
 export type { BoundingBoxProto } from "types/bounding_box";
@@ -949,7 +949,7 @@ type ServerSegment = {
   additionalCoordinates: AdditionalCoordinate[] | null;
   creationTime: number | null | undefined;
   color: ColorObject | null;
-  groupId: number | null | undefined;
+  groupId?: number | null | undefined;
   isVisible?: boolean;
   metadata: MetadataEntryProto[];
 };

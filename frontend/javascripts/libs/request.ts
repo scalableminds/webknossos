@@ -4,7 +4,7 @@ import isArrayBuffer from "lodash-es/isArrayBuffer";
 import isObject from "lodash-es/isObject";
 import isString from "lodash-es/isString";
 import map from "lodash-es/map";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import urljoin from "url-join";
 import { createWorker } from "viewer/workers/comlink_wrapper";
 import CompressWorker from "viewer/workers/compress.worker";

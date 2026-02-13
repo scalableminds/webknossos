@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agglomerate Mapping Visualizer</title>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/json-viewer-js@1.0.8/lib/json-viewer.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/json-viewer-js@1.0.8/src/style.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+
+    #sidebar {
+      width: 200px;
+      border-right: 1px solid #ccc;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    #sidebar div {
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 4px;
+    }
+
+    #sidebar div.active {
+      background: #007acc;
+      color: white;
+    }
+
+    #content-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #main {
+      flex: 1;
+      position: relative;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #segment-view {
+      border-bottom: 1px solid #ccc;
+    }
+
+    #main2 {
+      flex: 0.1;
+      position: relative;
+    }
+
+    #action-log {
+      flex: 1;
+      position: relative;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    textarea {
+      border: 1px solid #ccc;
+    }
+
+    #publish-date {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 1;
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="publish-date"></div>
+  <div id="sidebar"></div>
+  <div id="content-wrapper">
+    <div id="segment-view"></div>
+    <div id="main"></div>
+    <div id="main2"></div>
+  </div>
+  <div id="action-log">
+    <textarea id="action-log-area" style="height: 100%; width: 100%"></textarea>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

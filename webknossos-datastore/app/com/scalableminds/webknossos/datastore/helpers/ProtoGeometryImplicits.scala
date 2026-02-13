@@ -15,6 +15,9 @@ trait ProtoGeometryImplicits {
 
   implicit def vec3IntToProto(p: Vec3Int): Vec3IntProto = Vec3IntProto(p.x, p.y, p.z)
 
+  implicit def vec3IntOptToProto(pOpt: Option[Vec3Int]): Option[Vec3IntProto] =
+    pOpt.map(vec3IntToProto)
+
   implicit def vec3IntFromProto(p: Vec3IntProto): Vec3Int = Vec3Int(p.x, p.y, p.z)
 
   implicit def vec3DoubleToProto(v: Vec3Double): Vec3DoubleProto = Vec3DoubleProto(v.x, v.y, v.z)
@@ -38,6 +41,9 @@ trait ProtoGeometryImplicits {
 
   implicit def colorToProto(c: com.scalableminds.util.image.Color): ColorProto =
     ColorProto(c.r, c.g, c.b, c.a)
+
+  implicit def colorFromProto(c: ColorProto): com.scalableminds.util.image.Color =
+    com.scalableminds.util.image.Color(c.r, c.g, c.b, c.a)
 
   implicit def colorOptToProto(cOpt: Option[com.scalableminds.util.image.Color]): Option[ColorProto] =
     cOpt.map(colorToProto)

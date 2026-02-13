@@ -1,4 +1,3 @@
-import { ColoredLogger } from "libs/utils";
 import { call, put } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { actionChannel, flush } from "typed-redux-saga";
@@ -51,7 +50,6 @@ describe("Proofreading (Poll only)", () => {
 
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
-      ColoredLogger.logGreen("1");
 
       const mapping0 = yield select(
         (state) =>

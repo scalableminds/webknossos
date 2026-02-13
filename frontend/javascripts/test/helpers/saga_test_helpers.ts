@@ -1,3 +1,4 @@
+import { type Saga, select, take } from "viewer/model/sagas/effect-generators";
 import type { ExpectStatic } from "vitest";
 
 /**
@@ -23,4 +24,17 @@ export function execCall(expect: ExpectStatic, block: any) {
   expect(block.value.type).toBe("CALL");
 
   return block.value.payload.fn.apply(block.value.payload.context, block.value.payload.args);
+}
+
+export function* waitUntilNotBusy(): Saga<void> {
+  const isBusy = yield select((state) => state.uiInformation.busyBlockingInfo.isBusy);
+  if (!isBusy) {
+    return;
+  }
+  while (true) {
+    const setBusyAction = yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    if (!setBusyAction.value.isBusy) {
+      return;
+    }
+  }
 }

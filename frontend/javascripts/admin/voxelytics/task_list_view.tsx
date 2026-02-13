@@ -49,7 +49,7 @@ import {
   type VoxelyticsTaskInfo,
   type VoxelyticsWorkflowReport,
 } from "types/api_types";
-import type { ArrayElement } from "types/globals";
+import type { ArrayElement } from "types/type_utils";
 import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";

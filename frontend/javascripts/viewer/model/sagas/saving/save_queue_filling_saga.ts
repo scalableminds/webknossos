@@ -21,6 +21,7 @@ import {
   VolumeTracingSaveRelevantActions,
 } from "viewer/model/actions/volumetracing_actions";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
+import { diffVolumeTracing } from "viewer/model/sagas/diffing/volume_diffing";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
@@ -30,7 +31,6 @@ import {
   updateCameraAnnotation,
   updateTdCamera,
 } from "viewer/model/sagas/volume/update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import type {
   CameraData,
   Flycam,
@@ -151,10 +151,9 @@ export function* setupSavingForTracingType(
     }
 
     // The allowUpdate setting could have changed in the meantime.
-    const allowUpdate = yield* select(
-      (state) =>
-        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
-    );
+    const allowUpdate = yield* select((state) => {
+      return state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave;
+    });
     // Ignore changes while rebasing as during this time actions are simply replayed on top of the server's state.
     // Therefore, these actions were already added to the save queue and should not be added again.
     const isRebasing = yield* select(

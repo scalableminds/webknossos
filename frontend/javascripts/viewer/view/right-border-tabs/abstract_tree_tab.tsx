@@ -4,7 +4,7 @@ import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import type { NodeListItem } from "viewer/view/right-border-tabs/abstract_tree_renderer";
 import AbstractTreeRenderer from "viewer/view/right-border-tabs/abstract_tree_renderer";

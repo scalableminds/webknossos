@@ -1,7 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
-import { colorObjectToRGBArray, floor3, mapEntriesToMap, point3ToVector3 } from "libs/utils";
-import type { AdditionalCoordinate, APIUserBase, ServerVolumeTracing } from "types/api_types";
+import { colorObjectToRGBArray, mapEntriesToMap, point3ToVector3, replaceOrAdd } from "libs/utils";
+import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,
@@ -11,16 +11,9 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import {
   getSegmentationLayerForTracing,
-  getSelectedIds,
   getVisibleSegments,
   getVolumeTracingById,
 } from "viewer/model/accessors/volumetracing_accessor";
-import type {
-  ClickSegmentAction,
-  RemoveSegmentAction,
-  SetSegmentsAction,
-  UpdateSegmentAction,
-} from "viewer/model/actions/volumetracing_actions";
 import {
   applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
@@ -30,7 +23,12 @@ import {
 import {
   addToContourListReducer,
   createCellReducer,
+  expandSegmentParents,
   getSegmentUpdateInfo,
+  handleMergeSegments,
+  handleRemoveSegment,
+  handleSetSegments,
+  handleUpdateSegment,
   hideBrushReducer,
   resetContourReducer,
   setActiveCellReducer,
@@ -46,109 +44,18 @@ import {
 } from "viewer/model/reducers/volumetracing_reducer_helpers";
 import type { EditableMapping, Segment, VolumeTracing, WebknossosState } from "viewer/store";
 import {
-  findParentIdForGroupId,
   getGroupNodeKey,
   mapGroups,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
-import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { applyVolumeUpdateActionsFromServer } from "./update_action_application/volume";
-
-function handleSetSegments(state: WebknossosState, action: SetSegmentsAction) {
-  const { segments, layerName } = action;
-  return updateSegments(state, layerName, (_oldSegments) => segments);
-}
-
-function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction) {
-  return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
-}
-
-function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
-  return updateSegments(state, action.layerName, (segments) => {
-    const { segmentId, segment } = action;
-    if (segmentId === 0) {
-      return segments;
-    }
-    const oldSegment = segments.getNullable(segmentId);
-
-    let somePosition;
-    let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
-    if (segment.somePosition) {
-      somePosition = floor3(segment.somePosition);
-      someAdditionalCoordinates = segment.someAdditionalCoordinates;
-    } else if (oldSegment != null) {
-      somePosition = oldSegment.somePosition;
-      someAdditionalCoordinates = oldSegment.someAdditionalCoordinates;
-    } else {
-      // UPDATE_SEGMENT was called for a non-existing segment without providing
-      // a position. This is necessary to define custom colors for segments
-      // which are listed in a JSON mapping. The action will store the segment
-      // without a position.
-    }
-
-    const metadata = sanitizeMetadata(segment.metadata || oldSegment?.metadata || []);
-
-    const newSegment: Segment = {
-      // If oldSegment exists, its creationTime will be
-      // used by ...oldSegment
-      creationTime: action.timestamp,
-      name: null,
-      color: null,
-      isVisible: true,
-      groupId: getSelectedIds(state)[0].group,
-      someAdditionalCoordinates: someAdditionalCoordinates,
-      ...oldSegment,
-      ...segment,
-      metadata,
-      somePosition,
-      id: segmentId,
-    };
-
-    const newSegmentMap = segments.set(segmentId, newSegment);
-    return newSegmentMap;
-  });
-}
-
-function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction) {
-  const maybeVolumeLayer =
-    action.layerName != null
-      ? getLayerByName(state.dataset, action.layerName)
-      : getVisibleSegmentationLayer(state);
-
-  const layerName = maybeVolumeLayer?.name;
-  if (layerName == null) return state;
-
-  const getNewGroups = () => {
-    const { segments, segmentGroups } = getVisibleSegments(state);
-    if (segments == null) return segmentGroups;
-    const { segmentId } = action;
-    const segmentForId = segments.getNullable(segmentId);
-    if (segmentForId == null) return segmentGroups;
-    // Expand recursive parents of group too, if necessary
-    const pathToRoot = new Set([segmentForId.groupId]);
-    if (segmentForId.groupId != null) {
-      let currentParent = findParentIdForGroupId(segmentGroups, segmentForId.groupId);
-      while (currentParent != null) {
-        pathToRoot.add(currentParent);
-        currentParent = findParentIdForGroupId(segmentGroups, currentParent);
-      }
-    }
-    return mapGroups(segmentGroups, (group) => {
-      if (pathToRoot.has(group.groupId) && !group.isExpanded) {
-        return { ...group, isExpanded: true };
-      }
-      return group;
-    });
-  };
-  return setSegmentGroups(state, layerName, getNewGroups());
-}
 
 export function serverVolumeToClientVolumeTracing(
   tracing: ServerVolumeTracing,
   activeUser: APIUserBase | null | undefined,
   owner: APIUserBase | null | undefined,
 ): VolumeTracing {
-  // As the frontend doesn't know all cells, we have to keep track of the highest id
+  // As the frontend doesn't know all segments, we have to keep track of the highest id
   // and cannot compute it
   const largestSegmentId = tracing.largestSegmentId;
   const userState = getUserStateForTracing(tracing, activeUser, owner);
@@ -170,12 +77,13 @@ export function serverVolumeToClientVolumeTracing(
         const clientSegment: Segment = {
           ...segment,
           id: segment.segmentId,
-          somePosition: segment.anchorPosition
+          anchorPosition: segment.anchorPosition
             ? point3ToVector3(segment.anchorPosition)
             : undefined,
-          someAdditionalCoordinates: segment.additionalCoordinates,
+          additionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? colorObjectToRGBArray(segment.color) : null,
           isVisible: segmentVisibilityMap[segment.segmentId] ?? segment.isVisible ?? true,
+          groupId: segment.groupId ?? null,
         };
         return [segment.segmentId, clientSegment];
       }),
@@ -198,6 +106,7 @@ export function serverVolumeToClientVolumeTracing(
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
     proofreadingMarkerPosition: undefined,
+    segmentJournal: [],
   };
   return volumeTracing;
 }
@@ -258,11 +167,11 @@ function VolumeTracingReducer(
         state.activeUser,
         state.annotation.owner,
       );
-      const newVolumes = state.annotation.volumes.filter(
-        (tracing) => tracing.tracingId !== volumeTracing.tracingId,
-      );
-      newVolumes.push(volumeTracing);
-      const newState = update(state, {
+      const tracingPredicate = (tracing: VolumeTracing) =>
+        tracing.tracingId === volumeTracing.tracingId;
+      const newVolumes = replaceOrAdd(state.annotation.volumes, volumeTracing, tracingPredicate);
+
+      let newState = update(state, {
         annotation: {
           volumes: {
             $set: newVolumes,
@@ -281,18 +190,37 @@ function VolumeTracingReducer(
         const newSegmentId = volumeTracing.largestSegmentId + 1;
         if (newSegmentId > getMaximumSegmentIdForLayer(newState.dataset, segmentationLayer.name)) {
           // If the new segment ID would overflow the maximum segment ID, simply set the active cell to largestSegmentId.
-          return setActiveCellReducer(
+          newState = setActiveCellReducer(
             newState,
             volumeTracing,
             volumeTracing.largestSegmentId,
             null,
           );
         } else {
-          return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
+          newState = createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
         }
       }
 
-      return newState;
+      // Extract volumeTracing again because it can have changed by the code from above.
+      const newVolumeTracing = newState.annotation.volumes.find(tracingPredicate);
+      if (newVolumeTracing == null) {
+        // Satisfy TS
+        throw new Error("Could not find volume tracing that was just created.");
+      }
+
+      return update(newState, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            volumes: {
+              $set: replaceOrAdd(
+                newState.save.rebaseRelevantServerAnnotationState.volumes,
+                newVolumeTracing,
+                tracingPredicate,
+              ),
+            },
+          },
+        },
+      });
     }
 
     case "INITIALIZE_EDITABLE_MAPPING": {
@@ -319,6 +247,10 @@ function VolumeTracingReducer(
 
     case "UPDATE_SEGMENT": {
       return handleUpdateSegment(state, action);
+    }
+
+    case "MERGE_SEGMENTS_ITEMS": {
+      return handleMergeSegments(state, action);
     }
 
     case "REMOVE_SEGMENT": {
@@ -521,8 +453,13 @@ function VolumeTracingReducer(
     }
 
     case "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER": {
-      const { actions } = action;
-      return applyVolumeUpdateActionsFromServer(actions, state, VolumeTracingReducer);
+      const { actions, ignoreUnsupportedActionTypes } = action;
+      return applyVolumeUpdateActionsFromServer(
+        actions,
+        state,
+        VolumeTracingReducer,
+        ignoreUnsupportedActionTypes,
+      );
     }
 
     default:

@@ -33,7 +33,7 @@ import messages from "messages";
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
-import type { Comparator } from "types/globals";
+import type { Comparator } from "types/type_utils";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import { getActiveNode, getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {

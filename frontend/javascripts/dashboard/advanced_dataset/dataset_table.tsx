@@ -45,7 +45,7 @@ import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import CategorizationLabel from "viewer/view/components/categorization_label";

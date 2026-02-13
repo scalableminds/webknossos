@@ -12,7 +12,6 @@ import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError }
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
-import uniq from "lodash-es/uniq";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
@@ -38,7 +37,6 @@ import {
   getActiveSegmentationTracingLayer,
   getEditableMappingForVolumeTracingId,
   getMeshInfoForSegment,
-  getSegmentName,
   getSegmentsForLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -77,11 +75,12 @@ import {
   type EscapeAction,
 } from "viewer/model/actions/ui_actions";
 import {
+  clickSegmentAction,
   initializeEditableMappingAction,
+  mergeSegmentItemsAction,
   removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
-  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
@@ -201,10 +200,6 @@ function proofreadCoarseMagIndex(): number {
       window.__proofreadCoarseResolutionIndex
     : 3;
 }
-function proofreadUsingMeshes(): boolean {
-  // @ts-expect-error
-  return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
-}
 
 function* syncWithBackend() {
   yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
@@ -214,12 +209,14 @@ function* syncWithBackend() {
 
 let coarselyLoadedSegmentIds: number[] = [];
 
-function* loadCoarseMesh(
+function* ensureSegmentItemAndLoadCoarseMesh(
   layerName: string,
   segmentId: number,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
+  yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
+
   const autoRenderMeshInProofreading = yield* select(
     (state) => state.userConfiguration.autoRenderMeshInProofreading,
   );
@@ -320,10 +317,14 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
-  if (!proofreadUsingMeshes()) return;
-
-  /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
-  yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
+  /* Load a coarse mesh of the agglomerate at the click position */
+  yield* call(
+    ensureSegmentItemAndLoadCoarseMesh,
+    layerName,
+    segmentId,
+    position,
+    additionalCoordinates,
+  );
 }
 
 export function* createEditableMapping(): Saga<string> {
@@ -396,8 +397,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const { sourceNodeId, targetNodeId } = action;
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
   const { trees } = skeletonTracing;
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
-  const targetTree = findTreeByNodeId(trees, targetNodeId);
+  let sourceTree = findTreeByNodeId(trees, sourceNodeId);
+  let targetTree = findTreeByNodeId(trees, targetNodeId);
 
   if (sourceTree == null || targetTree == null) {
     return;
@@ -579,6 +580,24 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     call(getDataValue, targetNodePosition, newMapping),
   ]);
 
+  if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
+    // The other actions are handled after the trees were already mutated by the reducer.
+    // However, in case of the min-cut, we need to update the tree variables.
+    const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
+    const { trees } = skeletonTracing;
+    sourceTree = findTreeByNodeId(trees, sourceNodeId);
+    targetTree = findTreeByNodeId(trees, targetNodeId);
+    if (sourceTree == null || targetTree == null) {
+      console.error("Couldn't find trees for nodes. Details:", {
+        sourceNodeId,
+        sourceTree,
+        targetNodeId,
+        targetTree,
+      });
+      throw new Error("Couldn't find trees for source and/or tree nodes. See console for details");
+    }
+  }
+
   /* Rename agglomerate skeleton(s) according to their new id and mapping name */
   yield* put(
     setTreeNameAction(
@@ -605,7 +624,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     nodePosition,
   });
 
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     pack(sourceAgglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetAgglomerateId, newTargetAgglomerateId, targetNodePosition),
   ]);
@@ -715,7 +734,6 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   }
   const volumeTracingId = preparation.volumeTracing.tracingId;
   const { agglomerateFileMag, annotationVersion } = preparation;
-  const agglomerate = preparation.volumeTracing.segments.getNullable(Number(agglomerateId));
 
   const items: UpdateActionWithoutIsolationRequirement[] = [];
 
@@ -801,19 +819,6 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     partitions[2][0],
     newMapping,
   );
-  // Preserving custom names across merges & splits.
-  if (agglomerate && agglomerate.name != null) {
-    // Assign custom name to split-off target.
-    yield* put(
-      updateSegmentAction(
-        Number(newAgglomerateIdFromPartition2),
-        { name: agglomerate.name },
-        volumeTracingId,
-      ),
-    );
-
-    Toast.info(`Assigned name "${agglomerate.name}" to new split-off segment.`);
-  }
 
   // Get positions of new meshes from first split edge information.
   const firstEdgeFirstSegmentNewAgglomerate = yield* call(
@@ -830,7 +835,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       ? edgesToRemove[0].position1
       : edgesToRemove[0].position2;
 
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: agglomerateId,
       newAgglomerateId: newAgglomerateIdFromPartition1,
@@ -974,12 +979,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const [sourceInfo, targetInfo] = idInfos;
   let sourceAgglomerateId = sourceInfo.agglomerateId;
   let targetAgglomerateId = targetInfo.agglomerateId;
-  const sourceAgglomerate = volumeTracing.segments.getNullable(Number(sourceAgglomerateId));
-  const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
-
   const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   if (action.type === "PROOFREAD_MERGE") {
@@ -1046,6 +1048,24 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   }
 
   yield* put(pushSaveQueueTransaction(updateActions));
+  if (action.type === "PROOFREAD_MERGE") {
+    // Remove the segment that doesn't exist anymore.
+    console.log(
+      "sourceAgglomerateId, targetAgglomerateId",
+      sourceAgglomerateId,
+      targetAgglomerateId,
+    );
+    yield* put(
+      mergeSegmentItemsAction(
+        sourceAgglomerateId,
+        targetAgglomerateId,
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
+        volumeTracingId,
+      ),
+    );
+  }
+
   yield* call(syncWithBackend);
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {
@@ -1107,11 +1127,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     console.log("finished updating the mapping after a min-cut");
   }
 
-  if (action.type === "PROOFREAD_MERGE") {
-    // Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracingId));
-  }
-
   /* Reload meshes */
   const newMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId].mapping,
@@ -1126,40 +1141,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     targetInfo.unmappedId,
     newMapping,
   );
-  // Preserving custom names across merges & splits.
-  if (
-    action.type === "PROOFREAD_MERGE" &&
-    sourceAgglomerate &&
-    targetAgglomerate &&
-    (sourceAgglomerate.name || targetAgglomerate.name)
-  ) {
-    const mergedName = uniq([sourceAgglomerate.name, targetAgglomerate.name])
-      .filter((name) => name != null)
-      .join(",");
-    if (mergedName !== sourceAgglomerate.name) {
-      yield* put(
-        updateSegmentAction(newSourceAgglomerateId, { name: mergedName }, volumeTracingId),
-      );
-      Toast.info(`Renamed segment "${getSegmentName(sourceAgglomerate)}" to "${mergedName}."`);
-    }
-  } else if (
-    action.type === "MIN_CUT_AGGLOMERATE" &&
-    sourceAgglomerate &&
-    sourceAgglomerate.name != null
-  ) {
-    // Assign custom name to split-off target.
-    yield* put(
-      updateSegmentAction(
-        Number(newTargetAgglomerateId),
-        { name: sourceAgglomerate.name },
-        volumeTracingId,
-      ),
-    );
 
-    Toast.info(`Assigned name "${sourceAgglomerate.name}" to new split-off segment.`);
-  }
-
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: sourceAgglomerateId,
       newAgglomerateId: newSourceAgglomerateId,
@@ -1217,11 +1200,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   let targetAgglomerateId = idInfos[0].agglomerateId;
   const targetSegmentId = idInfos[0].unmappedId;
 
-  const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
-
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
-
   const updateActions: UpdateActionWithoutIsolationRequirement[] = [];
 
   const { didCancel, neighborInfo } = yield* call(
@@ -1284,24 +1264,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     ),
   ]);
 
-  if (targetAgglomerate != null && targetAgglomerate.name != null) {
-    // Assign custom name to split-off target.
-    const updateNeighborNamesActions = newNeighborAgglomerateIds.map((newNeighborAgglomerateId) =>
-      put(
-        updateSegmentAction(
-          Number(newNeighborAgglomerateId),
-          { name: targetAgglomerate.name },
-          volumeTracingId,
-        ),
-      ),
-    );
-    yield* all(updateNeighborNamesActions);
-
-    Toast.info(`Assigned name "${targetAgglomerate.name}" to all new split-off segments.`);
-  }
-
   /* Reload meshes */
-  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       agglomerateId: targetAgglomerateId,
       newAgglomerateId: newTargetAgglomerateId,
@@ -1483,7 +1447,7 @@ function* getAgglomerateInfos(
   }
 }
 
-function* refreshAffectedMeshes(
+function* refreshAffectedSegmentItemsAndMeshes(
   layerName: string,
   items: Array<{
     agglomerateId: number;
@@ -1493,9 +1457,7 @@ function* refreshAffectedMeshes(
 ) {
   // ATTENTION: This saga should usually be called with `spawn` to avoid that the user
   // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
-  if (!proofreadUsingMeshes()) {
-    return;
-  }
+
   // Segmentations with more than 3 dimensions are currently not compatible
   // with proofreading. Once such datasets appear, this parameter needs to be
   // adapted.
@@ -1513,7 +1475,7 @@ function* refreshAffectedMeshes(
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
       yield* call(
-        loadCoarseMesh,
+        ensureSegmentItemAndLoadCoarseMesh,
         layerName,
         Number(item.newAgglomerateId),
         item.nodePosition,
@@ -1726,7 +1688,7 @@ function* gatherInfoForOperation(
     console.warn("[Proofreading] Cannot execute operation because no active segment item exists");
     return null;
   }
-  const activeSegmentPositionFloat = activeSegment.somePosition;
+  const activeSegmentPositionFloat = activeSegment.anchorPosition;
   if (activeSegmentPositionFloat == null) {
     console.warn("[Proofreading] Cannot execute operation because active segment has no position");
     return null;

@@ -1,3 +1,4 @@
+import type { MeshSegmentInfo } from "admin/api/mesh";
 import {
   acquireAnnotationMutex,
   getDataset,
@@ -15,6 +16,8 @@ import { __setFeatures } from "features";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
+import flattenDeep from "lodash-es/flattenDeep";
+import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
 import dummyOrga from "test/fixtures/dummy_organization";
 import dummyUser from "test/fixtures/dummy_user";
 import {
@@ -36,18 +39,20 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
+import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
 import {
   resetStoreAction,
   restartSagaAction,
+  sceneControllerInitializedAction,
   wkInitializedAction,
 } from "viewer/model/actions/actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
@@ -100,6 +105,33 @@ export interface WebknossosTestContext extends BaseTestContext {
   api: ApiInterface;
   tearDownPullQueues: () => void;
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
+}
+
+export function getFlattenedUpdateActions(context: WebknossosTestContext) {
+  /*
+   * Returns a list of all update actions
+   */
+  return flattenDeep(
+    context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
+      saveQueueEntries.map((entry) => entry.actions),
+    ),
+  );
+}
+
+export function getNestedUpdateActions(context: WebknossosTestContext) {
+  /*
+   * Returns a nested list of all update actions. Each sublist groups
+   * update actions that were sent in the same request (not necessarily
+   * in the same transaction).
+   */
+  const versions = [];
+  for (const saveQueueEntries of context.receivedDataPerSaveRequest) {
+    for (const entry of saveQueueEntries) {
+      versions.push(entry.actions);
+    }
+  }
+
+  return versions;
 }
 
 // Create mock objects
@@ -173,12 +205,17 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
+  const getMeshFilesForDatasetLayer = vi.fn(async () => {
+    return [dummyMeshFile];
+  });
+
   return {
     ...actual,
     getDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
     getMappingsForDatasetLayer: vi.fn(() => []),
+    getMeshFilesForDatasetLayer: getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
@@ -227,6 +264,22 @@ vi.mock("admin/rest_api.ts", async () => {
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock("admin/api/mesh", async () => {
+  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
+  const getMeshFileChunksForSegment = async (..._args: any[]): Promise<MeshSegmentInfo> => {
+    return {
+      meshFormat: "draco",
+      lods: [],
+      chunkScale: [1, 1, 1],
+    };
+  };
+
+  return {
+    ...actual,
+    getMeshFileChunksForSegment: getMeshFileChunksForSegment,
+  };
+});
 
 vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
@@ -484,12 +537,9 @@ export async function setupWebknossosForTesting(
   vi.mocked(parseProtoAnnotation).mockReturnValue(cloneDeep(annotationProto));
 
   setSceneController({
-    name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-expect-error
-    segmentMeshController: {
-      meshesGroupsPerSegmentId: {},
-      updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
-    },
+    name: "This is a dummy scene controller so that getSceneController works in the tests.",
+    segmentMeshController: new SegmentMeshController(),
   });
 
   __setFeatures({});
@@ -515,6 +565,7 @@ export async function setupWebknossosForTesting(
     if (!options?.dontDispatchWkInitialized) {
       // Dispatch the wkInitializedAction, so the sagas are started
       Store.dispatch(wkInitializedAction());
+      Store.dispatch(sceneControllerInitializedAction());
     }
   } catch (error) {
     console.error("model.fetch() failed", error);

@@ -508,7 +508,7 @@ function getMeshItems(
       : maybeUnmappedSegmentId == null
         ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
         : meshFileMappingName != null
-          ? "This mesh was created for a mapping. Please use a meshfile that is based on unmapped oversegmentation data."
+          ? "This mesh was created for a mapping. Please use a mesh file that is based on unmapped oversegmentation data."
           : actionNeedsActiveSegment && activeSegmentMissing
             ? "Select a segment first."
             : null;
@@ -1129,8 +1129,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         clickedSegmentId,
         {
           isVisible: true,
-          somePosition: globalPosition,
-          someAdditionalCoordinates: additionalCoordinates,
+          anchorPosition: globalPosition,
+          additionalCoordinates: additionalCoordinates,
         },
         visibleSegmentationLayer.name,
         undefined,
@@ -2041,10 +2041,10 @@ const Actions = {
   setActiveCell(
     dispatch: Dispatch<any>,
     segmentId: number,
-    somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[],
+    anchorPosition?: Vector3,
+    additionalCoordinates?: AdditionalCoordinate[],
   ) {
-    dispatch(setActiveCellAction(segmentId, somePosition, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, anchorPosition, additionalCoordinates));
   },
 
   setBoundingBoxName(dispatch: Dispatch<any>, id: number, name: string) {

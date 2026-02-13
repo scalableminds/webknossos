@@ -5,7 +5,7 @@ import {
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
 import type { NeighborInfo } from "admin/rest_api";
-import { actionChannel, call, flush, put, take } from "redux-saga/effects";
+import { actionChannel, type ActionPattern, call, flush, put, take } from "redux-saga/effects";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -38,6 +38,7 @@ import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
+import type { Action } from "viewer/model/actions/actions";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -1232,10 +1233,11 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
+      yield take(
+        ((action: Action) =>
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
+      );
       yield call(waitUntilNotBusy);
-      // Unfortunately, save has to be called twice to ensure that
-      // everything is saved.
-      yield call(() => api.tracing.save());
       yield call(() => api.tracing.save());
 
       const backendState = backendMock.getState();

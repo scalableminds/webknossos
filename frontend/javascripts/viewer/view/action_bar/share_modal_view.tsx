@@ -506,6 +506,29 @@ function _ShareModalView(props: Props) {
                 Only the owner can edit the content of this annotation.
               </Hint>
 
+              <Radio style={radioStyle} value={true} disabled={!hasUpdatePermissions}>
+                Everybody that can view
+              </Radio>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                All registered users that can view this annotation can also edit it.
+              </Hint>
+            </RadioGroup>
+          </Col>
+        </Row>
+        <Row>
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Concurrent editing?
+          </Col>
+          <Col span={18}>
+            <RadioGroup
+              // onChange={handleOthersMayEditCheckboxChange}
+              value={newOthersMayEdit}
+              disabled={isChangingInProgress}
+            >
               <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
                 Exclusive editing
               </Radio>
@@ -514,12 +537,11 @@ function _ShareModalView(props: Props) {
                   marginLeft: 24,
                 }}
               >
-                All registered users that can view this annotation can also edit it. While one user
-                is editing the annotation, no other user can edit it. We recommend to coordinate the
-                collaboration with your peers to avoid being blocked.
+                While one user is editing the annotation, no other user can edit it. We recommend to
+                coordinate the collaboration with your peers to avoid being blocked.
               </Hint>
 
-              <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
+              <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
                 Concurrent editing (Experimental)
               </Radio>
               <Hint
@@ -527,9 +549,8 @@ function _ShareModalView(props: Props) {
                   marginLeft: 24,
                 }}
               >
-                All registered users that can view this annotation can also edit it. Note that this
-                feature is experimental and is currently limited to the proofreading tool (skeleton
-                and brushing will be disabled).
+                This feature is experimental and is currently limited to the proofreading tool
+                (skeleton and brushing will be disabled).
               </Hint>
             </RadioGroup>
           </Col>

@@ -78,14 +78,6 @@ describe("Proofreading (Single User)", () => {
 
       expect(receivedUpdateActions).toEqual([
         {
-          name: "mergeSegments",
-          value: {
-            actionTracingId: "volumeTracingId",
-            sourceId: 1,
-            targetId: 4,
-          },
-        },
-        {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: "volumeTracingId",
@@ -93,6 +85,14 @@ describe("Proofreading (Single User)", () => {
             agglomerateId2: 4,
             segmentId1: 1,
             segmentId2: 4,
+          },
+        },
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1,
+            targetId: 4,
           },
         },
       ]);

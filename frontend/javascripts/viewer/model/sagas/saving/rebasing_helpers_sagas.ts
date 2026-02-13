@@ -1,5 +1,5 @@
 import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
-import { getAdaptToTypeFunction } from "libs/utils";
+import { ColoredLogger, getAdaptToTypeFunction } from "libs/utils";
 import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -14,6 +14,7 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
+import { NumberLikeMapWrapper } from "libs/number_like_map";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,
@@ -51,21 +52,28 @@ function* getAllUnknownSegmentIdsInPendingUpdates(
   for (const saveQueueEntry of saveQueue) {
     for (const action of saveQueueEntry.actions) {
       switch (action.name) {
+        case "mergeSegments":
         case "mergeAgglomerate":
         case "splitAgglomerate": {
-          const { segmentId1, segmentId2, actionTracingId } = action.value;
-          const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
-          if (!mappingSyncedWithBackend || segmentId1 == null || segmentId2 == null) {
+          const { actionTracingId } = action.value;
+          let segmentId1, segmentId2;
+          if (action.name === "mergeSegments") {
+            segmentId1 = action.value.sourceId;
+            segmentId2 = action.value.targetId;
+          } else {
+            segmentId1 = action.value.segmentId1;
+            segmentId2 = action.value.segmentId2;
+          }
+          const unwrappedMappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
+          if (!unwrappedMappingSyncedWithBackend || segmentId1 == null || segmentId2 == null) {
             continue;
           }
 
-          const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
-          const updatedAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
-            adaptToType(segmentId1),
+          const mappingSyncedWithBackend = new NumberLikeMapWrapper(
+            unwrappedMappingSyncedWithBackend,
           );
-          const updatedAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
-            adaptToType(segmentId2),
-          );
+          const updatedAgglomerateId1 = mappingSyncedWithBackend.get(segmentId1);
+          const updatedAgglomerateId2 = mappingSyncedWithBackend.get(segmentId2);
           if (!updatedAgglomerateId1) {
             if (!(actionTracingId in idsToReloadByMappingId)) {
               idsToReloadByMappingId[actionTracingId] = [];
@@ -150,7 +158,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
   // appliedBackendUpdateActions contains the backend actions that were used to forward the local state
   // during rebase. These actions can be used as additional information to adapt the local, pending
   // save queue entries to the rebase.
-  appliedBackendUpdateActions: APIUpdateActionBatch[],
+  _appliedBackendUpdateActions: APIUpdateActionBatch[],
 ): Saga<
   | {
       success: false;
@@ -288,49 +296,86 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               return action;
             }
             case "mergeSegments": {
-              const mergeActions = appliedBackendUpdateActions
-                .flatMap((batch) => batch.value)
-                // These filters cannot be combined because TS cannot do type narrowing then.
-                .filter((mergeAction) => mergeAction.name === "mergeSegments")
-                .filter(
-                  (mergeAction) =>
-                    mergeAction.value.actionTracingId === action.value.actionTracingId,
-                );
+              // const mergeActions = appliedBackendUpdateActions
+              //   .flatMap((batch) => batch.value)
+              //   // These filters cannot be combined because TS cannot do type narrowing then.
+              //   .filter((mergeAction) => mergeAction.name === "mergeSegments")
+              //   .filter(
+              //     (mergeAction) =>
+              //       mergeAction.value.actionTracingId === action.value.actionTracingId,
+              //   );
 
-              // After partialMapping is constructed, it contains the information
-              // how segment ids were changed by the most recent backend actions. A key-value pair
-              // denotes that segment $key was mapped to $value (potentially, as a result of
-              // multiple update actions)
-              // Keys that don't exist in partialMapping denote an identity mapping (i.e., key === value).
-              const partialMapping = new Map<number, number>();
-              for (const mergeAction of mergeActions) {
-                // sourceId "swallows" targetId (i.e., targetId will be overwritten
-                // with sourceId)
-                const { sourceId, targetId } = mergeAction.value;
-                if (partialMapping.get(targetId) == null) {
-                  // targetId wasn't mapped yet. Do that now.
-                  partialMapping.set(targetId, sourceId);
-                }
-                // Iterate through all entries to see whether the value
-                // needs to be adapted.
-                for (const [key, value] of partialMapping.entries()) {
-                  if (value === targetId) {
-                    partialMapping.set(key, sourceId);
-                  }
-                }
+              // // After partialMapping is constructed, it contains the information
+              // // how segment ids were changed by the most recent backend actions. A key-value pair
+              // // denotes that segment $key was mapped to $value (potentially, as a result of
+              // // multiple update actions)
+              // // Keys that don't exist in partialMapping denote an identity mapping (i.e., key === value).
+              // const partialMapping = new Map<number, number>();
+              // for (const mergeAction of mergeActions) {
+              //   // sourceId "swallows" targetId (i.e., targetId will be overwritten
+              //   // with sourceId)
+              //   const { sourceId, targetId } = mergeAction.value;
+              //   if (partialMapping.get(targetId) == null) {
+              //     // targetId wasn't mapped yet. Do that now.
+              //     partialMapping.set(targetId, sourceId);
+              //   }
+              //   // Iterate through all entries to see whether the value
+              //   // needs to be adapted.
+              //   for (const [key, value] of partialMapping.entries()) {
+              //     if (value === targetId) {
+              //       partialMapping.set(key, sourceId);
+              //     }
+              //   }
+              // }
+
+              // const newSourceId =
+              //   partialMapping.get(action.value.sourceId) ?? action.value.sourceId;
+              // const newTargetId =
+              //   partialMapping.get(action.value.targetId) ?? action.value.targetId;
+
+              const { sourceId, targetId, actionTracingId } = action.value;
+              const mappingSyncedWithBackend = activeMappingByLayer[actionTracingId]?.mapping;
+              if (!mappingSyncedWithBackend) {
+                console.error(
+                  "Found proofreading action without matching mapping in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+              if (sourceId == null || targetId == null) {
+                console.error(
+                  "Found proofreading action without given segmentIds in save queue. This should never happen.",
+                  action,
+                );
+                success = false;
+                return null;
               }
 
-              const newSourceId =
-                partialMapping.get(action.value.sourceId) ?? action.value.sourceId;
-              const newTargetId =
-                partialMapping.get(action.value.targetId) ?? action.value.targetId;
+              const adaptToType = getAdaptToTypeFunction(mappingSyncedWithBackend);
+              let upToDateAgglomerateId1 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(sourceId),
+              );
+              let upToDateAgglomerateId2 = (mappingSyncedWithBackend as NumberLikeMap).get(
+                adaptToType(targetId),
+              );
+              if (!upToDateAgglomerateId1 || !upToDateAgglomerateId2) {
+                console.error(
+                  "Found proofreading action without loaded agglomerate ids. This should never occur.",
+                  action,
+                );
+                success = false;
+                return null;
+              }
+
+              ColoredLogger.logGreen("adapting", sourceId, "to", upToDateAgglomerateId1);
 
               return {
                 ...action,
                 value: {
                   ...action.value,
-                  sourceId: newSourceId,
-                  targetId: newTargetId,
+                  sourceId: Number(upToDateAgglomerateId1),
+                  targetId: Number(upToDateAgglomerateId2),
                 },
               };
             }

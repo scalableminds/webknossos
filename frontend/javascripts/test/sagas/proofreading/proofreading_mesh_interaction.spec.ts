@@ -101,14 +101,6 @@ describe("Proofreading (with mesh actions)", () => {
 
     expect(receivedUpdateActions).toEqual([
       {
-        name: "mergeSegments",
-        value: {
-          actionTracingId: "volumeTracingId",
-          sourceId: 1,
-          targetId: 1337,
-        },
-      },
-      {
         name: "mergeAgglomerate",
         value: {
           actionTracingId: "volumeTracingId",
@@ -116,6 +108,14 @@ describe("Proofreading (with mesh actions)", () => {
           segmentId2: 1337,
           agglomerateId1: 1,
           agglomerateId2: 1337,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 1,
+          targetId: 1337,
         },
       },
     ]);
@@ -168,6 +168,14 @@ describe("Proofreading (with mesh actions)", () => {
           segmentId2: 6,
           agglomerateId1: 4,
           agglomerateId2: 6,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 4,
+          targetId: 6,
         },
       },
     ]);
@@ -378,6 +386,14 @@ describe("Proofreading (with mesh actions)", () => {
           agglomerateId2: 6,
         },
       },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 4,
+          targetId: 6,
+        },
+      },
     ]);
 
     mockEdgesForNormalAgglomerateMinCut(mocks);
@@ -390,7 +406,7 @@ describe("Proofreading (with mesh actions)", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      expect(receivedUpdateActions.slice(-3)).toEqual([
+      expect(receivedUpdateActions.slice(-2)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -400,20 +416,6 @@ describe("Proofreading (with mesh actions)", () => {
             // but the merge made it a 4, because the split operation is after the injected version 7.
             segmentId1: 1337,
             segmentId2: 1338,
-          },
-        },
-        {
-          name: "createSegment",
-          value: {
-            actionTracingId: "volumeTracingId",
-            additionalCoordinates: undefined,
-            anchorPosition: [1337, 1337, 1337],
-            color: null,
-            creationTime: 1494695001688,
-            groupId: null,
-            id: 4,
-            metadata: [],
-            name: null,
           },
         },
         {
@@ -668,10 +670,14 @@ describe("Proofreading (with mesh actions)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Thus, there should be the following circle of edges: 1-2-3-1337-1338-1.
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [
-      [1, 1338],
-      [3, 1337],
-    ]);
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [1, 1338],
+        [3, 1337],
+      ],
+      Store.getState(),
+    );
 
     // Mapping after interference should be
     // [[1, 1],
@@ -693,6 +699,14 @@ describe("Proofreading (with mesh actions)", () => {
           segmentId2: 4,
           agglomerateId1: 1,
           agglomerateId2: 4,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 1,
+          targetId: 4,
         },
       },
     ]);
@@ -739,17 +753,11 @@ describe("Proofreading (with mesh actions)", () => {
           },
         },
         {
-          name: "createSegment",
+          name: "updateSegmentPartial",
           value: {
             actionTracingId: "volumeTracingId",
-            additionalCoordinates: undefined,
             anchorPosition: [1, 1, 1],
-            color: null,
-            creationTime: 1494695001688,
-            groupId: null,
             id: 1,
-            metadata: [],
-            name: null,
           },
         },
       ]);

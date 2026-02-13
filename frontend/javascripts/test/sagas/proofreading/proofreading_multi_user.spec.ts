@@ -37,6 +37,7 @@ import {
 import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -114,14 +115,6 @@ describe("Proofreading (Multi User)", () => {
         },
       },
       {
-        name: "mergeSegments",
-        value: {
-          actionTracingId: "volumeTracingId",
-          sourceId: 4,
-          targetId: 6,
-        },
-      },
-      {
         name: "mergeAgglomerate",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
@@ -129,6 +122,14 @@ describe("Proofreading (Multi User)", () => {
           segmentId2: 6,
           agglomerateId1: 4,
           agglomerateId2: 6,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 4,
+          targetId: 6,
         },
       },
     ]);
@@ -155,14 +156,6 @@ describe("Proofreading (Multi User)", () => {
 
       expect(receivedUpdateActions).toEqual([
         {
-          name: "mergeSegments",
-          value: {
-            actionTracingId: "volumeTracingId",
-            sourceId: 1,
-            targetId: 4,
-          },
-        },
-        {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
@@ -170,6 +163,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 4,
             agglomerateId1: 1,
             agglomerateId2: 4,
+          },
+        },
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1,
+            targetId: 4,
           },
         },
       ]);
@@ -290,14 +291,6 @@ describe("Proofreading (Multi User)", () => {
       const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.slice(-3)).toEqual([
         {
-          name: "mergeSegments",
-          value: {
-            actionTracingId: "volumeTracingId",
-            sourceId: 1,
-            targetId: 6,
-          },
-        },
-        {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
@@ -305,6 +298,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 6,
             agglomerateId1: 1,
             agglomerateId2: 6,
+          },
+        },
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1,
+            targetId: 6,
           },
         },
         {
@@ -416,7 +417,7 @@ describe("Proofreading (Multi User)", () => {
       yield call(() => api.tracing.save());
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.at(-2)).toEqual({
+      expect(receivedUpdateActions.at(-3)).toEqual({
         name: "mergeAgglomerate",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
@@ -424,6 +425,14 @@ describe("Proofreading (Multi User)", () => {
           segmentId2: 4,
           agglomerateId1: 1339,
           agglomerateId2: 4,
+        },
+      });
+      expect(receivedUpdateActions.at(-2)).toEqual({
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 1339,
+          targetId: 4,
         },
       });
 
@@ -601,6 +610,14 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId2: 4,
         },
       },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: "volumeTracingId",
+          sourceId: 1,
+          targetId: 4,
+        },
+      },
     ]);
 
     const { annotation } = Store.getState();
@@ -644,6 +661,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
+  // todoppp
   it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
       - Backend splits agglomerate 1 (segments 1 and 2)
@@ -681,8 +699,10 @@ describe("Proofreading (Multi User)", () => {
 
       yield take("DONE_SAVING");
 
+      yield call(publishDebuggingState, backendMock);
+
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.slice(-1)).toEqual([
+      expect(receivedUpdateActions.slice(-2)).toEqual([
         {
           name: "mergeAgglomerate",
           value: {
@@ -691,6 +711,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 4,
             agglomerateId1: 1339,
             agglomerateId2: 4,
+          },
+        },
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: "volumeTracingId",
+            sourceId: 1339,
+            targetId: 4,
           },
         },
       ]);
@@ -743,6 +771,14 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId2: 4,
         },
       },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: 1337,
+          targetId: 4,
+        },
+      },
     ]);
 
     const { annotation } = Store.getState();
@@ -789,17 +825,11 @@ describe("Proofreading (Multi User)", () => {
           },
         },
         {
-          name: "createSegment",
+          name: "mergeSegments",
           value: {
-            actionTracingId: "volumeTracingId",
-            additionalCoordinates: undefined,
-            anchorPosition: [4, 4, 4],
-            color: null,
-            creationTime: 1494695001688,
-            groupId: null,
-            id: 1337,
-            metadata: [],
-            name: null,
+            actionTracingId: VOLUME_TRACING_ID,
+            sourceId: 1337,
+            targetId: 1,
           },
         },
       ]);
@@ -881,14 +911,6 @@ describe("Proofreading (Multi User)", () => {
      */
     backendMock.planVersionInjection(6, [
       {
-        name: "mergeSegments",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          sourceId: 1339,
-          targetId: 4,
-        },
-      },
-      {
         name: "mergeAgglomerate",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
@@ -896,6 +918,14 @@ describe("Proofreading (Multi User)", () => {
           segmentId2: 5,
           agglomerateId1: 1339,
           agglomerateId2: 4,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: 1339,
+          targetId: 4,
         },
       },
       {
@@ -981,14 +1011,6 @@ describe("Proofreading (Multi User)", () => {
 
       expect(receivedUpdateActions).toEqual([
         {
-          name: "mergeSegments",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            sourceId: 1339,
-            targetId: 1,
-          },
-        },
-        {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
@@ -996,6 +1018,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 1,
             agglomerateId1: 1339,
             agglomerateId2: 1,
+          },
+        },
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            sourceId: 1339,
+            targetId: 1,
           },
         },
       ]);
@@ -1057,14 +1087,6 @@ describe("Proofreading (Multi User)", () => {
 
       expect(mergeSaveActionBatch).toEqual([
         {
-          name: "mergeSegments",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            sourceId: 1,
-            targetId: 4,
-          },
-        },
-        {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
@@ -1072,6 +1094,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 4,
             agglomerateId1: 1,
             agglomerateId2: 4,
+          },
+        },
+        {
+          name: "mergeSegments",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            sourceId: 1,
+            targetId: 4,
           },
         },
       ]);
@@ -1104,14 +1134,6 @@ describe("Proofreading (Multi User)", () => {
 
     backendMock.planVersionInjection(5, [
       {
-        name: "mergeSegments",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          sourceId: 1337,
-          targetId: 4,
-        },
-      },
-      {
         name: "mergeAgglomerate",
         value: {
           actionTracingId: VOLUME_TRACING_ID,
@@ -1119,6 +1141,14 @@ describe("Proofreading (Multi User)", () => {
           segmentId2: 5,
           agglomerateId1: 1337,
           agglomerateId2: 4,
+        },
+      },
+      {
+        name: "mergeSegments",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          sourceId: 1337,
+          targetId: 4,
         },
       },
     ]);

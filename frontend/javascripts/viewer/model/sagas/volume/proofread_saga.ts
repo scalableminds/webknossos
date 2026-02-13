@@ -1047,12 +1047,17 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
+  yield* put(pushSaveQueueTransaction(updateActions));
   if (action.type === "PROOFREAD_MERGE") {
     // Remove the segment that doesn't exist anymore.
+    console.log(
+      "sourceAgglomerateId, targetAgglomerateId",
+      sourceAgglomerateId,
+      targetAgglomerateId,
+    );
     yield* put(mergeSegmentsAction(sourceAgglomerateId, targetAgglomerateId, volumeTracingId));
   }
 
-  yield* put(pushSaveQueueTransaction(updateActions));
   yield* call(syncWithBackend);
 
   if (action.type === "MIN_CUT_AGGLOMERATE") {

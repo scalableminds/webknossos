@@ -105,7 +105,7 @@ describe("Collaborative editing of segment items", () => {
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
-        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(segmentId);
 
         expect(finalSegment).toMatchObject({
           anchorPosition: injectedSegmentProps.anchorPosition,
@@ -143,7 +143,7 @@ describe("Collaborative editing of segment items", () => {
 
     const injectedMetadataValue = {
       actionTracingId: "volumeTracingId",
-      id: 1,
+      id: segmentId,
       upsertEntriesByKey: [
         {
           key: "BASE_1",
@@ -228,7 +228,7 @@ describe("Collaborative editing of segment items", () => {
           name: "updateMetadataOfSegment",
           value: {
             actionTracingId: "volumeTracingId",
-            id: 1,
+            id: segmentId,
             removeEntriesByKey: ["BASE_3"],
             upsertEntriesByKey: [
               updateSegmentProps.metadata[0], // BASE_1
@@ -250,7 +250,7 @@ describe("Collaborative editing of segment items", () => {
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
-        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(segmentId);
 
         expect(finalSegment).toMatchObject({
           anchorPosition: injectedSegmentProps.anchorPosition,
@@ -350,7 +350,7 @@ describe("Collaborative editing of segment items", () => {
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
-        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(segmentId);
 
         expect(finalSegment).toMatchObject({
           anchorPosition: injectedInitialSegmentProps.anchorPosition,
@@ -428,7 +428,7 @@ describe("Collaborative editing of segment items", () => {
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
-        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(segmentId);
         expect(finalSegment).toBeUndefined();
       }
     });
@@ -499,7 +499,7 @@ describe("Collaborative editing of segment items", () => {
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
-        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(segmentId);
         expect(finalSegment).toBeUndefined();
       }
     });
@@ -576,7 +576,7 @@ describe("Collaborative editing of segment items", () => {
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
-        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(segmentId);
         expect(finalSegment).toMatchObject(expectedShape);
       }
     });
@@ -640,7 +640,7 @@ describe("Collaborative editing of segment items", () => {
       const frontendState = Store.getState();
 
       for (const state of [frontendState, backendState]) {
-        const finalSegment = state.annotation.volumes[0].segments.getNullable(1);
+        const finalSegment = state.annotation.volumes[0].segments.getNullable(segmentId);
         expect(finalSegment).toBeUndefined();
       }
     });

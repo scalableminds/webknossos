@@ -369,7 +369,7 @@ const descriptionFns: Record<
       firstAction.value.actionTracingId,
     );
     return {
-      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list of layer ${layerName}.`,
       icon: <EditOutlined />,
     };
   },
@@ -383,7 +383,7 @@ const descriptionFns: Record<
       firstAction.value.actionTracingId,
     );
     return {
-      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list of layer ${layerName}.`,
       icon: <EditOutlined />,
     };
   },

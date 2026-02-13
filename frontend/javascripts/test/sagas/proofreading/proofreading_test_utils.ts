@@ -79,7 +79,7 @@ export class BackendMock {
   updateActionLog: APIUpdateActionBatch[] = [];
   onSavedListeners: Array<() => void> = [];
   agglomerateMapping: AgglomerateMapping;
-  injectionsPerVersion: Record<number, UpdateActionWithoutIsolationRequirement[]> = {}
+  injectionsPerVersion: Record<number, UpdateActionWithoutIsolationRequirement[]> = {};
 
   // todop: this is a reference to the same variable that is
   // set up in apiHelpers. when BackendMock is used in other tests,

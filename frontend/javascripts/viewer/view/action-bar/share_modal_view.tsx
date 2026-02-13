@@ -180,6 +180,11 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
   );
 }
 
+const LEFT_COL_STYLE = {
+  lineHeight: "22px",
+  paddingRight: 6,
+};
+
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
   const dispatch = useDispatch();
@@ -338,9 +343,8 @@ function _ShareModalView(props: Props) {
   };
 
   const radioStyle = {
-    display: "block",
-    height: "30px",
-    lineHeight: "30px",
+    height: "20px",
+    lineHeight: "20px",
   };
   const iconMap = {
     Public: "globe",
@@ -363,7 +367,8 @@ function _ShareModalView(props: Props) {
         <Col
           span={6}
           style={{
-            lineHeight: "30px",
+            ...LEFT_COL_STYLE,
+            marginTop: 6,
           }}
         >
           Sharing Link
@@ -385,12 +390,7 @@ function _ShareModalView(props: Props) {
       </DividerWithSubtitle>
       {maybeShowWarning()}
       <Row>
-        <Col
-          span={6}
-          style={{
-            lineHeight: "28px",
-          }}
-        >
+        <Col span={6} style={LEFT_COL_STYLE}>
           <div>Who can view this annotation?</div>
           <p
             style={{
@@ -451,13 +451,8 @@ function _ShareModalView(props: Props) {
         Team Sharing
       </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
-        <Row>
-          <Col
-            span={6}
-            style={{
-              lineHeight: "22px",
-            }}
-          >
+        <Row style={{ marginBottom: 8 }}>
+          <Col span={6} style={LEFT_COL_STYLE}>
             For which teams should this annotation be listed?
           </Col>
           <Col span={18}>

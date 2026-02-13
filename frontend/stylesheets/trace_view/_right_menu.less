@@ -34,22 +34,17 @@
   padding-left: 5px;
   padding-right: 5px;
   border-radius: 2px;
+  min-height: var(--ant-control-height-sm); // make the list items the same height as <Button size="small">
 
-  .anticon-edit,
-  .anticon-ellipsis {
-    // Hide edit and ellipsis icon (unless hovered)
+  .ant-btn:has(.anticon-ellipsis) {
+    // Hide ellipsis icon buttons (unless hovered)
     display: none;
-  }
-
-  &.is-selected-segment {
-    background-color: var(--ant-blue-3);
   }
 
   &:hover {
     background-color: var(--ant-blue-1);
 
-    .anticon-edit,
-    .anticon-ellipsis {
+    .ant-btn:has(.anticon-ellipsis) {
       display: inline-block;
     }
   }

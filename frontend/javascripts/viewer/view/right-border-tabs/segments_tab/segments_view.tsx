@@ -1556,8 +1556,8 @@ class SegmentsView extends React.Component<Props, State> {
       const displayableName = name?.trim() || "<Unnamed Group>";
 
       return (
-        <div onContextMenu={onOpenContextMenu}>
-          <FolderOutlined className="icon-margin-right" />
+        <Space onContextMenu={onOpenContextMenu} size={4}>
+          <FolderOutlined />
           <EditableTextLabel
             value={displayableName}
             label="Group Name"
@@ -1566,14 +1566,13 @@ class SegmentsView extends React.Component<Props, State> {
                 api.tracing.renameSegmentGroup(id, name, this.props.visibleSegmentationLayer.name);
               }
             }}
-            margin={0}
             // The root group must not be removed or renamed
             disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
             onRenameStart={this.onRenameStart}
             onRenameEnd={this.onRenameEnd}
           />
           {this.getSegmentStatisticsModal(id)}
-        </div>
+        </Space>
       );
     }
   };

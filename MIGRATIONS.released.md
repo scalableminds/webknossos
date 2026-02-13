@@ -11,8 +11,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions
 - [146-invite-roles.sql](schema/evolutions/146-invite-roles.sql)
-- [148-job-last-retry.sql](schema/evolutions/148-job-last-retry.sql)
 - [147-organization-plan-updates.sql](schema/evolutions/147-organization-plan-updates.sql)
+- [148-job-last-retry.sql](schema/evolutions/148-job-last-retry.sql)
 
 ## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
 [Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)

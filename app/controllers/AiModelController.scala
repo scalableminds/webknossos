@@ -1,13 +1,13 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
-import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
+import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService, UploadToPathsService}
 import models.job.{JobCommand, JobService}
-import models.user.UserService
+import models.user.{User, UserService}
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -17,6 +17,7 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.{OrganizationDAO, OrganizationService}
 import play.api.i18n.Messages
@@ -73,14 +74,17 @@ object UpdateAiModelParameters {
   implicit val jsonFormat: OFormat[UpdateAiModelParameters] = Json.format[UpdateAiModelParameters]
 }
 
-case class RegisterAiModelParameters(id: ObjectId, // must be a valid MongoDB ObjectId
-                                     dataStoreName: String,
-                                     name: String,
-                                     comment: Option[String],
-                                     category: Option[AiModelCategory])
+case class ReserveAiModelUploadToPathParameters(
+    existingAiModelId: Option[ObjectId], // if empty, a new model entry is generated and returned
+    dataStoreName: String,
+    name: String,
+    comment: Option[String],
+    category: Option[AiModelCategory],
+    pathPrefix: Option[UPath])
 
-object RegisterAiModelParameters {
-  implicit val jsonFormat: OFormat[RegisterAiModelParameters] = Json.format[RegisterAiModelParameters]
+object ReserveAiModelUploadToPathParameters {
+  implicit val jsonFormat: OFormat[ReserveAiModelUploadToPathParameters] =
+    Json.format[ReserveAiModelUploadToPathParameters]
 }
 
 class AiModelController @Inject()(
@@ -96,7 +100,8 @@ class AiModelController @Inject()(
     datasetService: DatasetService,
     jobService: JobService,
     datasetDAO: DatasetDAO,
-    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    dataStoreDAO: DataStoreDAO,
+    uploadToPathsService: UploadToPathsService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -160,16 +165,17 @@ class AiModelController @Inject()(
         _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
+        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
+                                                                       request.identity._organization)
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         jobCommand = JobCommand.train_neuron_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
           "organization_id" -> organization._id,
           "model_id" -> modelId,
+          "model_name" -> request.body.name,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
-        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
-                                                                       request.identity._organization)
-        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         creditTransactionComment = s"AI training for neuron model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
                                                    commandArgs,
@@ -185,6 +191,8 @@ class AiModelController @Inject()(
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
+          path = None,
+          uploadToPathIsPending = true,
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -214,17 +222,18 @@ class AiModelController @Inject()(
         _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
+        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
+                                                                       request.identity._organization)
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         jobCommand = JobCommand.train_instance_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
           "organization_id" -> organization._id,
           "model_id" -> modelId,
+          "model_name" -> request.body.name,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "instance_diameter_nm" -> request.body.instanceDiameterNm
         )
-        existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
-                                                                       request.identity._organization)
-        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         creditTransactionComment = s"AI training for instance model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
                                                    commandArgs,
@@ -240,6 +249,8 @@ class AiModelController @Inject()(
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
+          path = None,
+          uploadToPathIsPending = true,
           name = request.body.name,
           comment = request.body.comment,
           category = request.body.aiModelCategory
@@ -385,26 +396,62 @@ class AiModelController @Inject()(
       }
     }
 
-  def registerAiModel: Action[RegisterAiModelParameters] =
-    sil.SecuredAction.async(validateJson[RegisterAiModelParameters]) { implicit request =>
+  def reserveUploadToPath: Action[ReserveAiModelUploadToPathParameters] =
+    sil.SecuredAction.async(validateJson[ReserveAiModelUploadToPathParameters]) { implicit request =>
       for {
-        _ <- userService.assertIsSuperUser(request.identity)
         _ <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
-        _ <- aiModelDAO.findOne(request.body.id).reverse ?~> "aiModel.id.taken"
-        _ <- aiModelDAO.findOneByName(request.body.name).reverse ?~> "aiModel.name.taken"
-        _ <- aiModelDAO.insertOne(
-          AiModel(
-            request.body.id,
-            _organization = request.identity._organization,
-            _sharedOrganizations = List(request.identity._organization),
-            request.body.dataStoreName,
-            request.identity._id,
-            None,
-            List.empty,
-            request.body.name,
-            request.body.comment,
-            request.body.category
-          ))
+        aiModelId <- request.body.existingAiModelId match {
+          case Some(existingAiModelId) =>
+            reserveUploadToPathForPreliminary(existingAiModelId, request.body, request.identity)
+          case None => reserveUploadToPathNew(request.body, request.identity)
+        }
+        aiModel <- aiModelDAO.findOne(aiModelId)
+        aiModelJs <- aiModelService.publicWrites(aiModel, request.identity)
+      } yield Ok(aiModelJs)
+    }
+
+  private def reserveUploadToPathForPreliminary(existingAiModelId: ObjectId,
+                                                params: ReserveAiModelUploadToPathParameters,
+                                                user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      existingModel <- aiModelDAO.findOne(existingAiModelId)
+      _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> "aiModel.reserve.wrongOrga" ~> FORBIDDEN
+      _ <- Fox.fromBool(existingModel.uploadToPathIsPending) ?~> "aiModel.reserve.notPending"
+      path <- uploadToPathsService.generateAiModelPath(existingAiModelId, user._organization, params.pathPrefix)
+      _ <- aiModelDAO.updatePath(existingAiModelId, path)
+      _ <- aiModelDAO.updateOne(
+        existingModel.copy(name = params.name, comment = params.comment, modified = Instant.now))
+    } yield existingAiModelId
+
+  private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User): Fox[ObjectId] = {
+    val newId = ObjectId.generate
+    for {
+      path <- uploadToPathsService.generateAiModelPath(newId, user._organization, params.pathPrefix)
+      newAiModel = AiModel(
+        _id = newId,
+        _organization = user._organization,
+        _sharedOrganizations = List(user._organization),
+        _dataStore = params.dataStoreName,
+        _user = user._id,
+        _trainingJob = None,
+        _trainingAnnotations = List.empty,
+        path = Some(path),
+        uploadToPathIsPending = true,
+        name = params.name,
+        comment = params.comment,
+        category = params.category
+      )
+      _ <- aiModelDAO.insertOne(newAiModel)
+    } yield newAiModel._id
+  }
+
+  def finishUploadToPath(id: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        existingAiModel <- aiModelDAO.findOne(id)
+        _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> "aiModel.finish.notPending"
+        _ <- Fox.fromBool(existingAiModel._organization == request.identity._organization) ?~> "aiModel.finish.wrongOrga" ~> FORBIDDEN
+        _ <- aiModelDAO.finishUploadToPath(id)
       } yield Ok
     }
 

@@ -37,14 +37,14 @@ import security.RandomIDGenerator
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
-                                            organizationDAO: OrganizationDAO,
-                                            datasetDAO: DatasetDAO,
-                                            dataStoreDAO: DataStoreDAO,
-                                            layerToLinkService: LayerToLinkService,
-                                            datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                            datasetMagsDAO: DatasetMagsDAO,
-                                            conf: WkConf)
+class UploadToPathsService @Inject()(datasetService: DatasetService,
+                                     organizationDAO: OrganizationDAO,
+                                     datasetDAO: DatasetDAO,
+                                     dataStoreDAO: DataStoreDAO,
+                                     layerToLinkService: LayerToLinkService,
+                                     datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                     datasetMagsDAO: DatasetMagsDAO,
+                                     conf: WkConf)
     extends FoxImplicits
     with DataSourceValidation {
 
@@ -161,7 +161,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       organizationId: String,
       requestedPrefix: Option[UPath])(implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       orgaDir = uploadToPathsPrefix / organizationId
       datasetParent = uploadToPathsInfixOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
       datasetPath = datasetParent / dataSource.id.directoryName
@@ -222,6 +222,12 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
 
+  def generateAiModelPath(id: ObjectId, organizationId: String, pathPrefix: Option[UPath])(
+      implicit ec: ExecutionContext): Fox[UPath] =
+    for {
+      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
+    } yield uploadToPathsPrefix / organizationId / ".aiModels" / id
+
   private def generateMagPath(mag: Vec3Int, layerPath: UPath): UPath =
     layerPath / f"${mag.toMagLiteral(allowScalar = true)}__${RandomIDGenerator.generateBlocking(12)}"
 
@@ -238,7 +244,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         parameters.attachmentType)
       existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       attachmentPath = generateAttachmentPath(parameters.attachmentName,
@@ -259,7 +265,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
       datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
       magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)

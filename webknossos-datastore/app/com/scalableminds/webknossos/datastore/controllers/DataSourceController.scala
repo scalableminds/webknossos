@@ -76,6 +76,7 @@ class DataSourceController @Inject()(
     exploreRemoteLayerService: ExploreRemoteLayerService,
     fullMeshService: DSFullMeshService,
     uploadService: UploadService,
+    managedS3Service: ManagedS3Service,
     meshFileService: MeshFileService,
     dataVaultService: DataVaultService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
@@ -426,12 +427,13 @@ class DataSourceController @Inject()(
       }
     }
 
+  // Of the passed paths, it deletes the local ones from disk and returns those in managed S3
   def deletePaths(): Action[Seq[UPath]] =
     Action.async(validateJson[Seq[UPath]]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          _ <- dataSourceService.deletePathsFromDiskOrManagedS3(request.body)
-        } yield Ok
+          _ <- dataSourceService.deleteLocalPathsFromDisk(request.body).toFox
+        } yield Ok(Json.toJson(request.body.filter(managedS3Service.pathIsInManagedS3)))
       }
     }
 

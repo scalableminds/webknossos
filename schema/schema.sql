@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(153);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(154);
 COMMIT TRANSACTION;
 
 
@@ -220,6 +220,10 @@ CREATE TABLE webknossos.dataset_thumbnails(
   PRIMARY KEY (_dataset, dataLayerName, width, height, mappingName)
 );
 
+CREATE TABLE webknossos.remote_paths_to_delete(
+  path TEXT NOT NULL PRIMARY KEY,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
 CREATE TABLE webknossos.dataStores(

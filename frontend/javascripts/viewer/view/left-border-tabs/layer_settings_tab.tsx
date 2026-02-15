@@ -715,6 +715,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             fontWeight: 700,
             paddingRight: 5,
             flexGrow: 1,
+            wordBreak: "break-all",
           }}
         >
           {volumeDescriptor != null ? (
@@ -1173,6 +1174,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             style={{
               flexGrow: 1,
               marginRight: 8,
+              wordBreak: "break-all",
             }}
           >
             <FastTooltip

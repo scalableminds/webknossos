@@ -1,72 +1,62 @@
 import { ArrowLeftOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { getPublication } from "admin/rest_api";
-import { Layout, Spin, Tooltip } from "antd";
+import { Button, Flex, Layout, List, Space, Spin, Tooltip } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { APIPublication } from "types/api_types";
 
 const { Content } = Layout;
 
 function PublicationDetailView() {
   const { id: publicationId = "" } = useParams();
 
-  const [publication, setPublication] = useState<APIPublication | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    data: publication = null,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["publication", publicationId],
+    queryFn: () => getPublication(publicationId),
+    refetchOnWindowFocus: false,
+    enabled: publicationId !== "",
+  });
 
   useEffect(() => {
-    (async () => {
-      try {
-        setIsLoading(true);
-        setPublication(await getPublication(publicationId));
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, [publicationId]);
+    if (error) {
+      handleGenericError(error as Error);
+    }
+  }, [error]);
 
   return (
-    <Layout>
-      <Content className="centered-content" style={{ marginTop: "4em" }}>
-        <Spin size="large" spinning={isLoading}>
-          {publication != null && (
-            <>
-              <Link to="/">
-                <Tooltip title="Back to the frontpage.">
-                  <ArrowLeftOutlined
-                    style={{
-                      fontSize: 24,
-                      color: "#555",
-                      marginBottom: 18,
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: "inline-block",
-                      verticalAlign: "top",
-                    }}
-                  >
-                    Back
-                  </div>
-                </Tooltip>
-              </Link>
-              <h3>Featured Publication</h3>
-              <PublicationCard publication={publication} showDetailedLink={false} />
-            </>
-          )}
-          {!isLoading && publication == null && (
-            <p
-              style={{
-                textAlign: "center",
+    <Layout className="container">
+      <Content style={{ marginTop: "4em" }}>
+        <Flex orientation="vertical" gap="medium">
+          <Space>
+            <Link to="/">
+              <Tooltip title="Back to the frontpage.">
+                <Button type="link" icon={<ArrowLeftOutlined />}>
+                  Back
+                </Button>
+              </Tooltip>
+            </Link>
+          </Space>
+          <Spin size="large" spinning={isLoading}>
+            <List
+              dataSource={publication ? [publication] : []}
+              locale={{
+                emptyText: "Could not find the requested publication.",
               }}
-            >
-              Could not find the requested publication.
-            </p>
-          )}
-        </Spin>
+              className="antd-no-border-list publication-list"
+              renderItem={(publicationItem) => (
+                <List.Item key={publicationItem.id}>
+                  <PublicationCard publication={publicationItem} showDetailedLink={false} />
+                </List.Item>
+              )}
+            />
+          </Spin>
+        </Flex>
       </Content>
     </Layout>
   );

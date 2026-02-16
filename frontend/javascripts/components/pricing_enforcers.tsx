@@ -160,9 +160,9 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
       activeOrganization={activeOrganization}
       placement="top"
     >
-      {/* The react element <></> is needed as a wrapper as otherwise
+      {/* The  <div></div> element is needed as a wrapper as otherwise
       the PricingEnforcedPopover will not be rendered. */}
-      <>
+      <div>
         <SwitchSetting
           label={label}
           value={defaultValue}
@@ -170,7 +170,7 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
           disabled
           postSwitchIcon={<LockOutlined style={{ marginLeft: 5 }} />}
         />
-      </>
+      </div>
     </PricingEnforcedPopover>
   );
 };

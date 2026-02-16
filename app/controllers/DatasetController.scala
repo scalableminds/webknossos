@@ -664,7 +664,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
             before = Instant.now
             _ = logger.info(
-              s"Deleting dataset $datasetId (isVirtual=${dataset.isVirtual}) as requested by user ${request.identity._id}...")
+              s"Deleting dataset $datasetId as requested by user ${request.identity._id}. Details: orga=${dataset._organization}, isVirtual=${dataset.isVirtual}, name=${dataset.name}, directoryName=${dataset.directoryName} ...")
             _ <- datasetService.deleteDataset(dataset)
             _ = Instant.logSince(before, s"Deleting dataset $datasetId")
           } yield Ok

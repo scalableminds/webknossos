@@ -22,6 +22,7 @@ import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
@@ -112,8 +113,32 @@ class DataVaultTestSuite extends PlaySpec {
             assertBoxFailure(result)
           }
         }
-      }
+        "decode gzip correctly" in {
+          val upathGzip =
+            UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
+          val vaultPathGzip =
+            new VaultPath(upathGzip, GoogleCloudDataVault.create(CredentializedUPath(upathGzip, None)))
+          val bytes = vaultPathGzip.readBytes()(globalExecutionContext, emptyTokenContext).get(handleFoxJustification)
+          val (_, encoding, _) = vaultPathGzip
+            .readBytesEncodingAndRangeHeader()(globalExecutionContext, emptyTokenContext)
+            .get(handleFoxJustification)
+          val decoded = new String(bytes, StandardCharsets.UTF_8)
+          assert(encoding == Encoding.gzip)
+          assert(decoded.length == 1313)
+          assert(decoded(0) == '{')
+        }
+        "fail when attempting range request on gzipped data" in {
+          val upathGzip =
+            UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
+          val vaultPathGzip =
+            new VaultPath(upathGzip, GoogleCloudDataVault.create(CredentializedUPath(upathGzip, None)))
+          val result = vaultPathGzip
+            .readBytes(ByteRange.startEndExclusive(0, 100))(globalExecutionContext, emptyTokenContext)
+            .await(handleFoxJustification)
+          assertBoxFailure(result)
+        }
 
+      }
       "using S3 data vault" should {
         "return correct response" in {
           val upath = UPath.fromStringUnsafe("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")

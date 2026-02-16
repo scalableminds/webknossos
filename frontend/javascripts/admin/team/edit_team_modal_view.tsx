@@ -113,34 +113,32 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
 
   const renderModalBody = () => {
     return (
-      <>
-        <Spin spinning={isWaitingForRequest}>
-          <AutoComplete
-            style={{ width: "100%", marginBottom: "16px" }}
-            options={options}
-            filterOption={(inputValue, option) => {
-              return (
-                inputValue === "" ||
-                (typeof option?.value === "string" &&
-                  option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
-              );
-            }}
-            onSelect={() => {
-              setAutoCompleteValue("");
-            }}
-            value={autoCompleteValue}
-            onChange={onChange}
-            open={dropDownVisible}
-            onFocus={() => setDropDownVisible(true)}
-            onBlur={() => setDropDownVisible(false)}
-            onSearch={() => setDropDownVisible(true)}
-            onDropdownVisibleChange={() => setAutoCompleteValue("")}
-          >
-            <Input.Search size="large" placeholder="Search users" />
-          </AutoComplete>
-          {renderUsersForTeam(team, users, renderRemoveInStaticTeamList)}
-        </Spin>
-      </>
+      <Spin spinning={isWaitingForRequest}>
+        <AutoComplete
+          style={{ width: "100%", marginBottom: "16px" }}
+          options={options}
+          filterOption={(inputValue, option) => {
+            return (
+              inputValue === "" ||
+              (typeof option?.value === "string" &&
+                option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
+            );
+          }}
+          onSelect={() => {
+            setAutoCompleteValue("");
+          }}
+          value={autoCompleteValue}
+          onChange={onChange}
+          open={dropDownVisible}
+          onFocus={() => setDropDownVisible(true)}
+          onBlur={() => setDropDownVisible(false)}
+          onSearch={() => setDropDownVisible(true)}
+          onDropdownVisibleChange={() => setAutoCompleteValue("")}
+        >
+          <Input.Search size="large" placeholder="Search users" />
+        </AutoComplete>
+        {renderUsersForTeam(team, users, renderRemoveInStaticTeamList)}
+      </Spin>
     );
   };
   const usersHaveLoaded = users !== null;

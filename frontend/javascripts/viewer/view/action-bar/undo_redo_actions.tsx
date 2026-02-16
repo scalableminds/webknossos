@@ -28,9 +28,8 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleUndo}
         disabled={isBusy}
         hideContentWhenLoading
-      >
-        <i className="fas fa-undo" aria-hidden="true" />
-      </AsyncButton>
+        icon={<i className="fas fa-undo" aria-hidden="true" />}
+      />
       <AsyncButton
         className="narrow undo-redo-button hide-on-small-screen"
         key="redo-button"
@@ -38,9 +37,8 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleRedo}
         disabled={isBusy}
         hideContentWhenLoading
-      >
-        <i className="fas fa-redo" aria-hidden="true" />
-      </AsyncButton>
+        icon={<i className="fas fa-redo" aria-hidden="true" />}
+      />
     </Space.Compact>
   );
 }

@@ -1,5 +1,5 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
-import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { AiPlanEnum, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import partition from "lodash-es/partition";
 import type { BoundingBoxProto } from "types/bounding_box";
 import type {
@@ -673,6 +673,7 @@ export type APIOrganizationCompact = {
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;
   readonly pricingPlan: PricingPlanEnum;
+  readonly aiPlan: AiPlanEnum | null;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
   readonly paidUntil: number;
@@ -686,6 +687,40 @@ export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
   readonly isExceeded: boolean;
   readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
+};
+
+export type APICreditTransactionState = "Pending" | "Complete";
+export type APICreditState =
+  | "Pending"
+  | "Spent"
+  | "Refunded"
+  | "Revoked"
+  | "PartiallyRevoked"
+  | "Refunding"
+  | "Revoking"
+  | "AddCredits";
+export type APICreditTransaction = {
+  readonly id: string;
+  readonly organization_id: string;
+  readonly relatedTransaction?: string | null;
+  readonly paidJob?: APIJob | null;
+  readonly creditChange: number;
+  readonly comment: string;
+  readonly transactionState: APICreditTransactionState;
+  readonly creditState: APICreditState;
+  readonly expirationDate?: number | null;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+};
+export type APIOrganizationPricingPlanUpdate = {
+  readonly aiPlan?: AiPlanEnum | null;
+  readonly organizationId: string;
+  readonly description?: string | null;
+  readonly pricingPlan?: PricingPlanEnum | null;
+  readonly paidUntil?: number | null;
+  readonly includedUsers?: number | null;
+  readonly includedStorageBytes?: number | null;
+  readonly created: number;
 };
 
 export type APIBuildInfoWk = {

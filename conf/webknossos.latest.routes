@@ -258,6 +258,7 @@ POST          /pricing/requestUpgrade                                           
 POST          /pricing/requestUsers                                                             controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
 POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
 POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
+POST          /pricing/requestAiAddon                                                           controllers.OrganizationController.sendUpgradeAiAddonEmail()
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
 POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan
 GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates
@@ -311,6 +312,7 @@ DELETE        /aiModels/:id                                                     
 # CreditTransactions
 POST          /creditTransactions/addCredits                                                    controllers.CreditTransactionController.addCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
 PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: String)
+GET           /creditTransactions                                                               controllers.CreditTransactionController.list
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

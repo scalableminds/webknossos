@@ -157,7 +157,7 @@ function* warnAboutSegmentationZoom(): Saga<never> {
 
     if (shouldDisplaySegmentationData() && isAgglomerateMappingEnabled && isZoomThresholdExceeded) {
       Toast.warning(messages["tracing.segmentation_zoom_warning_agglomerate"], {
-        sticky: true,
+        sticky: false,
         key: AGGLOMERATE_WARNING_KEY,
       });
     } else {

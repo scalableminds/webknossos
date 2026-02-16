@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(153);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(155);
 COMMIT TRANSACTION;
 
 
@@ -220,6 +220,10 @@ CREATE TABLE webknossos.dataset_thumbnails(
   PRIMARY KEY (_dataset, dataLayerName, width, height, mappingName)
 );
 
+CREATE TABLE webknossos.remote_paths_to_delete(
+  path TEXT NOT NULL PRIMARY KEY,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
 CREATE TABLE webknossos.dataStores(
@@ -1156,7 +1160,7 @@ BEGIN
                 (_id, _organization, milli_credit_delta, comment, transaction_state, credit_state, expiration_date)
             VALUES
                 (webknossos.generate_object_id(), organization_id, free_milli_credits_amount,
-                 'Free credits for this month', 'Complete', 'Pending', next_month_first_day);
+                 'Complimentary credits (' || TO_CHAR(NOW(), 'YYYY-MM') || ')', 'Complete', 'Pending', next_month_first_day);
         END IF;
     END LOOP;
 END;

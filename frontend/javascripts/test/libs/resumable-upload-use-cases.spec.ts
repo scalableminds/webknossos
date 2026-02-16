@@ -160,6 +160,36 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       expect(hasGet).toBe(true);
       expect(hasPost).toBe(true);
     });
+
+    it("should fall back to POST when chunk test request times out", async () => {
+      server.use(
+        http.get("http://localhost/upload", async () => {
+          await sleep(30);
+          return HttpResponse.text("", { status: 204 });
+        }),
+      );
+
+      resumable = new ResumableUpload({
+        target: "/upload",
+        chunkSize: 10,
+        testChunks: true,
+        fetchTimeout: 5,
+        simultaneousUploads: 1,
+      });
+
+      const complete = new Promise<void>((resolve) =>
+        resumable.addEventListener("complete", () => resolve()),
+      );
+
+      const file = new File(["1234567890"], "test.txt");
+      resumable.addFile(file);
+      resumable.upload();
+      await complete;
+
+      const hasPost = backendMock.requestLog.some((entry) => entry.method === "POST");
+      expect(hasPost).toBe(true);
+      expect(resumable.files[0].chunks[0].status()).toBe("success");
+    });
   });
 
   describe("Custom Unique Identifier", () => {

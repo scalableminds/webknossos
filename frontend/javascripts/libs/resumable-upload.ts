@@ -325,13 +325,22 @@ export class ResumableChunk {
       customHeaders = customHeaders(this.fileObj, this);
     }
 
+    const fetchTimeout = this.getOpt("fetchTimeout");
+    let hasTimedOut = false;
+    const timeoutId =
+      fetchTimeout > 0
+        ? setTimeout(() => {
+            hasTimedOut = true;
+            this.abortController?.abort();
+          }, fetchTimeout)
+        : null;
+
     try {
       const response = await fetch(targetUrl, {
         method: this.getOpt("testMethod") as string,
         headers: customHeaders,
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
-        // TODO: add timeout
       });
 
       this.tested = true;
@@ -347,8 +356,12 @@ export class ResumableChunk {
         this.send();
       }
     } catch (error: any) {
-      if (error.name === "AbortError") return;
+      if (error.name === "AbortError" && !hasTimedOut) return;
+
+      this.tested = true;
       this.send();
+    } finally {
+      if (timeoutId != null) clearTimeout(timeoutId);
     }
   }
 
@@ -442,6 +455,15 @@ export class ResumableChunk {
     }
 
     const targetUrl = helpers.getTargetURI(this.resumableObj, "upload", queryParameters);
+    const fetchTimeout = this.getOpt("fetchTimeout");
+    let hasTimedOut = false;
+    const timeoutId =
+      fetchTimeout > 0
+        ? setTimeout(() => {
+            hasTimedOut = true;
+            this.abortController?.abort();
+          }, fetchTimeout)
+        : null;
 
     try {
       const response = await fetch(targetUrl, {
@@ -450,7 +472,6 @@ export class ResumableChunk {
         body: data,
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
-        // TODO: add timeout
       });
 
       if (response.ok) {
@@ -470,12 +491,12 @@ export class ResumableChunk {
         throw new Error(`Server responded with ${response.status}`);
       }
     } catch (error: any) {
-      if (error.name === "AbortError") {
+      if (error.name === "AbortError" && !hasTimedOut) {
         this._status = "pending";
         return;
       }
 
-      this.callback("retry", error.message);
+      this.callback("retry", hasTimedOut ? "Timeout" : error.message);
       this.abort();
       this.retries++;
 
@@ -486,6 +507,8 @@ export class ResumableChunk {
       } else {
         this.send();
       }
+    } finally {
+      if (timeoutId != null) clearTimeout(timeoutId);
     }
   }
 

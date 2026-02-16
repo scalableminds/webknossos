@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { http } from "msw";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { ResumableUpload, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
 import { sleep } from "libs/utils";
@@ -486,6 +486,45 @@ describe("ResumableChunk", () => {
 
       expect(backendMock.getUploadRequestCount()).toBeGreaterThan(0);
       expect(chunk.status()).toBe("success");
+    });
+
+    it("should retry and complete when an upload request times out", async () => {
+      let postCount = 0;
+      server.use(
+        http.post("http://localhost/upload", async () => {
+          postCount++;
+          if (postCount === 1) {
+            await sleep(30);
+          }
+          return HttpResponse.text("OK", { status: 200 });
+        }),
+      );
+
+      const timeoutResumable = new ResumableUpload({
+        target: "/upload",
+        chunkSize: 10,
+        testChunks: false,
+        fetchTimeout: 5,
+        chunkRetryInterval: 1,
+        simultaneousUploads: 1,
+      });
+      const fileRetrySpy = vi.fn();
+      timeoutResumable.addEventListener("fileRetry", fileRetrySpy);
+
+      const file = new File(["1234567890"], "timeout.txt", { type: "text/plain" });
+      timeoutResumable.addFile(file);
+      await sleep(10);
+
+      const complete = new Promise<void>((resolve) =>
+        timeoutResumable.addEventListener("complete", () => resolve()),
+      );
+
+      timeoutResumable.upload();
+      await complete;
+
+      expect(fileRetrySpy).toHaveBeenCalledTimes(1);
+      expect(postCount).toBeGreaterThanOrEqual(2);
+      expect(timeoutResumable.files[0].chunks[0].status()).toBe("success");
     });
   });
 

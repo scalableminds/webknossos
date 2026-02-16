@@ -868,7 +868,7 @@ class AuthenticationController @Inject()(
     sil.SecuredAction.async(validateJson[CreateOrganizationWithExistingUserParams]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        newOrganizationId = RandomIDGenerator.generateBlocking(12)
+        newOrganizationId = RandomIDGenerator.generateBlocking(8, useHex = true)
         organization <- organizationService.createOrganization(Some(newOrganizationId),
                                                                request.body.newOrganizationName)
         user <- userDAO.findOne(request.body.userId)(GlobalAccessContext)

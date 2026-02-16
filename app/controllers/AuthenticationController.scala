@@ -880,6 +880,7 @@ class AuthenticationController @Inject()(
           autoActivate = true,
           isAdmin = true,
           isDatasetManager = false,
+          isOrganizationOwner = true,
           teamMemberships = teamMemberships
         )
         _ = analyticsService.track(JoinOrganizationEvent(user, organization))

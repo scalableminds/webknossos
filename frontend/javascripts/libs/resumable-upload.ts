@@ -175,6 +175,8 @@ interface ExtendedFile extends File {
   uniqueIdentifier?: string;
 }
 
+type UploadItem = DataTransferItem | File | FileSystemEntry;
+
 export interface ResumableEventDetail {
   file?: ResumableFile;
   message?: string;
@@ -185,6 +187,18 @@ export interface ResumableEventDetail {
 }
 
 export class ResumableUploadErrorEvent extends CustomEvent<ResumableEventDetail> {}
+
+function isFileSystemDirectoryEntry(
+  entry: FileSystemEntry | null | undefined,
+): entry is FileSystemDirectoryEntry {
+  return entry != null && entry.isDirectory;
+}
+
+function isFileSystemFileEntry(
+  entry: FileSystemEntry | null | undefined,
+): entry is FileSystemFileEntry {
+  return entry != null && entry.isFile;
+}
 
 // Helper functions
 const helpers = {
@@ -959,34 +973,38 @@ export class ResumableUpload implements EventTarget {
    * @param items list of files to append new items to
    * @param callback callback invoked when item is processed
    */
-  private processItem(item: any, path: string, items: ExtendedFile[], callback: () => void): void {
-    let entry: any;
-    if (item.isFile) {
+  private processItem(item: UploadItem, path: string, items: ExtendedFile[], callback: () => void): void {
+    let entry: FileSystemEntry | null = null;
+
+    if (isFileSystemFileEntry(item)) {
       item.file((file: File) => {
         (file as ExtendedFile).relativePath = path + file.name;
         items.push(file as ExtendedFile);
         callback();
       });
       return;
-    } else if (item.isDirectory) {
+    } else if (isFileSystemDirectoryEntry(item)) {
       entry = item;
     } else if (item instanceof File) {
       items.push(item);
     }
-    if (typeof item.webkitGetAsEntry === "function") {
+
+    if ("webkitGetAsEntry" in item && typeof item.webkitGetAsEntry === "function") {
       entry = item.webkitGetAsEntry();
     }
-    if (entry?.isDirectory) {
+
+    if (isFileSystemDirectoryEntry(entry)) {
       // directory provided, process it
       this.processDirectory(entry, path + entry.name + "/", items, callback);
       return;
     }
-    if (typeof item.getAsFile === "function") {
+
+    if ("getAsFile" in item && typeof item.getAsFile === "function") {
       // item represents a File object, convert it
-      item = item.getAsFile();
-      if (item instanceof File) {
-        (item as ExtendedFile).relativePath = path + item.name;
-        items.push(item);
+      const file = item.getAsFile();
+      if (file instanceof File) {
+        (file as ExtendedFile).relativePath = path + file.name;
+        items.push(file);
       }
     }
     callback(); // indicate processing is done
@@ -1022,15 +1040,15 @@ export class ResumableUpload implements EventTarget {
    * @param callback callback invoked after traversing directory
    */
   private processDirectory(
-    directory: any,
+    directory: FileSystemDirectoryEntry,
     path: string,
     items: ExtendedFile[],
     callback: () => void,
   ): void {
     const dirReader = directory.createReader();
-    const allEntries: any[] = [];
+    const allEntries: FileSystemEntry[] = [];
     const readEntries = (): void => {
-      dirReader.readEntries((entries: any[]) => {
+      dirReader.readEntries((entries: FileSystemEntry[]) => {
         if (entries.length) {
           allEntries.push(...entries);
           return readEntries();

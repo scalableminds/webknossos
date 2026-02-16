@@ -1,5 +1,5 @@
-import { HttpResponse } from "msw";
 import { sleep } from "libs/utils";
+import { HttpResponse } from "msw";
 
 const PARAMS = {
   chunkNumber: "resumableChunkNumber",
@@ -63,6 +63,7 @@ export class ResumableBackendMock {
     | null = null;
   private testChunkExistsPredicate: ((meta: ChunkMeta) => boolean) | null = null;
   private responseDelayMs = 0;
+  private testResponseDelayMs = 0;
   private tokenParamName = "token";
   private requiredToken: string | null = null;
   private rotateTokenAfterUploads: { after: number; token: string } | null = null;
@@ -85,6 +86,7 @@ export class ResumableBackendMock {
     this.testResponseOverride = null;
     this.testChunkExistsPredicate = null;
     this.responseDelayMs = 0;
+    this.testResponseDelayMs = 0;
     this.tokenParamName = "token";
     this.requiredToken = null;
     this.rotateTokenAfterUploads = null;
@@ -100,6 +102,10 @@ export class ResumableBackendMock {
 
   setResponseDelay(ms: number): void {
     this.responseDelayMs = ms;
+  }
+
+  setTestResponseDelay(ms: number): void {
+    this.testResponseDelayMs = ms;
   }
 
   setTokenParamName(name: string): void {
@@ -226,6 +232,13 @@ export class ResumableBackendMock {
         if (overrideResponse) return overrideResponse;
       }
 
+      if (this.testResponseDelayMs > 0) {
+        await sleep(this.testResponseDelayMs);
+        if (request.signal.aborted) {
+          return HttpResponse.text("Aborted", { status: 499 });
+        }
+      }
+
       const state = this.files.get(meta.identifier);
       const existsFromState = state?.receivedChunks.has(meta.chunkNumber) ?? false;
       const exists = this.testChunkExistsPredicate
@@ -241,7 +254,10 @@ export class ResumableBackendMock {
       return HttpResponse.text("Method not allowed", { status: 405 });
     }
 
-    if (this.rotateTokenAfterUploads && this.uploadRequestCount === this.rotateTokenAfterUploads.after) {
+    if (
+      this.rotateTokenAfterUploads &&
+      this.uploadRequestCount === this.rotateTokenAfterUploads.after
+    ) {
       this.requiredToken = this.rotateTokenAfterUploads.token;
       this.rotateTokenAfterUploads = null;
     }
@@ -265,16 +281,21 @@ export class ResumableBackendMock {
         return HttpResponse.text(failure.body ?? "Error", { status: failure.status });
       }
 
-      if (this.failUploadsAfterCount && this.successfulUploadCount >= this.failUploadsAfterCount.count) {
-        return HttpResponse.text(
-          this.failUploadsAfterCount.body ?? "Upload rejected",
-          { status: this.failUploadsAfterCount.status },
-        );
+      if (
+        this.failUploadsAfterCount &&
+        this.successfulUploadCount >= this.failUploadsAfterCount.count
+      ) {
+        return HttpResponse.text(this.failUploadsAfterCount.body ?? "Upload rejected", {
+          status: this.failUploadsAfterCount.status,
+        });
       }
 
       const bytes = await this.extractChunkBytes(request);
       if (!bytes) {
         return HttpResponse.text("Missing chunk data", { status: 400 });
+      }
+      if (request.signal.aborted) {
+        return HttpResponse.text("Aborted", { status: 499 });
       }
 
       const validationError = this.validateChunk(meta, bytes);
@@ -290,11 +311,14 @@ export class ResumableBackendMock {
         return HttpResponse.text(message, { status: 409 });
       }
 
-      fileState.receivedChunks.set(meta.chunkNumber, bytes);
-
       if (this.responseDelayMs > 0) {
         await sleep(this.responseDelayMs);
+        if (request.signal.aborted) {
+          return HttpResponse.text("Aborted", { status: 499 });
+        }
       }
+
+      fileState.receivedChunks.set(meta.chunkNumber, bytes);
 
       this.successfulUploadCount++;
       this.uploadLog.push({

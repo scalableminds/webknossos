@@ -1,8 +1,8 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
-import { ResumableUpload, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
 import { sleep } from "libs/utils";
+import { http } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { ResumableChunk, type ResumableFile, ResumableUpload } from "../../libs/resumable-upload";
 import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
 let backendMock: ResumableBackendMock;
@@ -489,16 +489,7 @@ describe("ResumableChunk", () => {
     });
 
     it("should retry and complete when an upload request times out", async () => {
-      let postCount = 0;
-      server.use(
-        http.post("http://localhost/upload", async () => {
-          postCount++;
-          if (postCount === 1) {
-            await sleep(30);
-          }
-          return HttpResponse.text("OK", { status: 200 });
-        }),
-      );
+      backendMock.setResponseDelay(30);
 
       const timeoutResumable = new ResumableUpload({
         target: "/upload",
@@ -509,6 +500,7 @@ describe("ResumableChunk", () => {
         simultaneousUploads: 1,
       });
       const fileRetrySpy = vi.fn();
+      timeoutResumable.addEventListener("fileRetry", () => backendMock.setResponseDelay(0));
       timeoutResumable.addEventListener("fileRetry", fileRetrySpy);
 
       const file = new File(["1234567890"], "timeout.txt", { type: "text/plain" });
@@ -523,7 +515,7 @@ describe("ResumableChunk", () => {
       await complete;
 
       expect(fileRetrySpy).toHaveBeenCalledTimes(1);
-      expect(postCount).toBeGreaterThanOrEqual(2);
+      expect(backendMock.getUploadRequestCount()).toBeGreaterThanOrEqual(2);
       expect(timeoutResumable.files[0].chunks[0].status()).toBe("success");
     });
   });
@@ -600,6 +592,67 @@ describe("Edge Cases", () => {
     // Last chunk should be <= chunkSize
     const lastChunk = chunks[chunks.length - 1];
     expect(lastChunk.endByte - lastChunk.startByte).toBeLessThanOrEqual(10);
+  });
+
+  it("should keep webkitRelativePath when files come from a selected directory", async () => {
+    const r = new ResumableUpload();
+    const file = new File(["nested"], "nested.txt");
+    Object.defineProperty(file, "webkitRelativePath", {
+      configurable: true,
+      value: "folder/sub/nested.txt",
+    });
+
+    r.addFile(file);
+
+    await sleep(10);
+    expect(r.files.length).toBe(1);
+    expect(r.files[0].relativePath).toBe("folder/sub/nested.txt");
+  });
+
+  it("should traverse directory entries recursively", async () => {
+    const r = new ResumableUpload();
+    const nestedFile = new File(["nested"], "nested.txt");
+
+    const fileEntry = {
+      isFile: true,
+      isDirectory: false,
+      name: "nested.txt",
+      file: (successCallback: (file: File) => void) => successCallback(nestedFile),
+    } as unknown as FileSystemFileEntry;
+
+    let subReadCount = 0;
+    const subDirectoryEntry = {
+      isFile: false,
+      isDirectory: true,
+      name: "sub",
+      createReader: () =>
+        ({
+          readEntries: (callback: (entries: FileSystemEntry[]) => void) => {
+            callback(subReadCount++ === 0 ? [fileEntry] : []);
+          },
+        }) as unknown as FileSystemDirectoryReader,
+    } as unknown as FileSystemDirectoryEntry;
+
+    let rootReadCount = 0;
+    const rootDirectoryEntry = {
+      isFile: false,
+      isDirectory: true,
+      name: "root",
+      createReader: () =>
+        ({
+          readEntries: (callback: (entries: FileSystemEntry[]) => void) => {
+            callback(rootReadCount++ === 0 ? [subDirectoryEntry] : []);
+          },
+        }) as unknown as FileSystemDirectoryReader,
+    } as unknown as FileSystemDirectoryEntry;
+
+    const collectedFiles: File[] = [];
+    await new Promise<void>((resolve) =>
+      (r as any).processDirectory(rootDirectoryEntry, "root/", collectedFiles, resolve),
+    );
+
+    expect(collectedFiles).toHaveLength(1);
+    expect((collectedFiles[0] as any).relativePath).toBe("root/sub/nested.txt");
   });
 
   it("should handle special characters in filename", async () => {

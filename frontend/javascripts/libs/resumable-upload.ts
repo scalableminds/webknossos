@@ -550,8 +550,7 @@ export class ResumableChunk {
     // NOTE: the fetch API doesn't provide a way to get the progress of the upload so we need to track the uploaded bytes ourselves
     let factor = relative ? (this.endByte - this.startByte) / this.fileObjSize : 1;
     if (this.pendingRetry) return 0;
-    if ((!this.abortController || !this.abortController.signal.aborted) && !this.markComplete)
-      factor *= 0.95; // TODO: is this really necessary?
+    if (this.status() === "uploading" && !this.markComplete) factor *= 0.95;
 
     const s = this.status();
     switch (s) {
@@ -836,6 +835,7 @@ export class ResumableUpload implements EventTarget {
   version = 1.0;
 
   private _eventTarget: EventTarget;
+  private _completeDispatched = false;
 
   constructor(opts: Partial<ConfigurationHash> = {}) {
     this._eventTarget = new EventTarget();
@@ -973,7 +973,12 @@ export class ResumableUpload implements EventTarget {
    * @param items list of files to append new items to
    * @param callback callback invoked when item is processed
    */
-  private processItem(item: UploadItem, path: string, items: ExtendedFile[], callback: () => void): void {
+  private processItem(
+    item: UploadItem,
+    path: string,
+    items: ExtendedFile[],
+    callback: () => void,
+  ): void {
     let entry: FileSystemEntry | null = null;
 
     if (isFileSystemFileEntry(item)) {
@@ -1228,7 +1233,10 @@ export class ResumableUpload implements EventTarget {
 
     // The are no more outstanding chunks to upload, check is everything is done
     const outstanding = this.files.some((file) => !file.isComplete());
-    if (!outstanding) this.dispatch("complete");
+    if (!outstanding && !this._completeDispatched) {
+      this._completeDispatched = true;
+      this.dispatch("complete");
+    }
 
     return false;
   }
@@ -1248,6 +1256,7 @@ export class ResumableUpload implements EventTarget {
     if (this.isUploading()) return;
 
     // Kick off the queue
+    this._completeDispatched = false;
     this.dispatch("uploadStart");
     for (let num = 1; num <= (this.getOpt("simultaneousUploads") as number); num++) {
       this.uploadNextChunk();

@@ -868,10 +868,10 @@ class AuthenticationController @Inject()(
     sil.SecuredAction.async(validateJson[CreateOrganizationWithExistingUserParams]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
+        user <- userDAO.findOne(request.body.userId)(GlobalAccessContext)
         newOrganizationId = RandomIDGenerator.generateBlocking(8, useHex = true)
         organization <- organizationService.createOrganization(Some(newOrganizationId),
                                                                request.body.newOrganizationName)
-        user <- userDAO.findOne(request.body.userId)(GlobalAccessContext)
         _ <- organizationService.createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
         teamMemberships <- userService.initialTeamMemberships(organization._id, None)
         _ <- userService.joinOrganization(

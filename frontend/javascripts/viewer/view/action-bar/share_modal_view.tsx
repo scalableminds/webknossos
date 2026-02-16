@@ -397,7 +397,7 @@ function _ShareModalView(props: Props) {
         Visibility
       </DividerWithSubtitle>
       {maybeShowWarning()}
-      <Row>
+      <Row style={{ marginBottom: 16 }}>
         <Col span={6} style={LEFT_COL_STYLE}>
           <div>Who can view this annotation?</div>
           <p
@@ -454,7 +454,7 @@ function _ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
-      <Row style={{ marginBottom: 8 }}>
+      <Row>
         <Col span={6} style={LEFT_COL_STYLE}>
           For which teams should this annotation be listed?
         </Col>
@@ -481,7 +481,7 @@ function _ShareModalView(props: Props) {
         Editing
       </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
-        <Row>
+        <Row style={{ marginBottom: 16 }}>
           <Col span={6} style={LEFT_COL_STYLE}>
             Who can edit this annotation?
           </Col>
@@ -517,14 +517,12 @@ function _ShareModalView(props: Props) {
         </Row>
         <Row>
           <Col span={6} style={LEFT_COL_STYLE}>
-            Concurrent editing?
+            Can users edit simultaneously?
           </Col>
           <Col span={18}>
-            <Switch
-              checkedChildren={<CheckOutlined />}
-              unCheckedChildren={<CloseOutlined />}
-              defaultChecked
-            />
+            <Checkbox checked={true} onChange={() => {}}>
+              Yes, allow simultaneous editing
+            </Checkbox>
             <Hint
               style={{
                 marginLeft: 24,

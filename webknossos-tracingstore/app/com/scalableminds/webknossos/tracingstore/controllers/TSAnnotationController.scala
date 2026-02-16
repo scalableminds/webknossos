@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationIdDomain, AnnotationLayer}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
@@ -155,6 +155,68 @@ class TSAnnotationController @Inject()(
                                                                          currentVersion,
                                                                          ResetToBaseAnnotationAction())
             } yield Ok
+          }
+        }
+      }
+    }
+
+  def largestIdOrZero(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            val fallbackId: Long = 0
+            for {
+              domainValidated <- AnnotationIdDomain.fromString(domain).toFox
+              largestIdWithFallback: Long <- domainValidated match {
+                case AnnotationIdDomain.Segment =>
+                  for {
+                    volume <- annotationService.findVolume(annotationId, tracingId)
+                    maxSegmentId <- volume.segments.map(_.segmentId).maxOption match {
+                      case Some(fromTracing) => Fox.successful(fromTracing)
+                      case None if volume.fallbackLayer.isDefined =>
+                        Fox.failure(
+                          "Reserving segment ids is not supported for volume annotations with fallback layer.")
+                      case _ => Fox.successful(fallbackId)
+                    }
+                  } yield maxSegmentId
+                case AnnotationIdDomain.SegmentGroup =>
+                  for {
+                    volume <- annotationService.findVolume(annotationId, tracingId)
+                    maxGroupIdWithFallback = GroupUtils.getMaximumSegmentGroupId(volume.segmentGroups).toLong
+                  } yield maxGroupIdWithFallback
+                case AnnotationIdDomain.Node =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                    maxIdsPerTree: Seq[Long] = skeleton.trees.map(
+                      _.nodes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                  } yield maxIdsPerTree.maxOption.getOrElse(fallbackId)
+                case AnnotationIdDomain.Tree =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                  } yield skeleton.trees.map(_.treeId).maxOption.map(_.toLong).getOrElse(fallbackId)
+                case AnnotationIdDomain.TreeGroup =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                    maxGroupIdWithFallback = GroupUtils.getMaximumTreeGroupId(skeleton.treeGroups).toLong
+                  } yield maxGroupIdWithFallback
+                case AnnotationIdDomain.BoundingBox =>
+                  for {
+                    // bounding boxes can appear both in skeleton and volume, so we do not know at this point what kind the tracingId refers to. Try both.
+                    skeletonBox <- annotationService.findSkeleton(annotationId, tracingId).shiftBox
+                    maxBboxId <- skeletonBox match {
+                      case Full(skeleton) =>
+                        Fox.successful(
+                          skeleton.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                      case Empty =>
+                        for {
+                          volume <- annotationService.findVolume(annotationId, tracingId)
+                        } yield volume.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId)
+                      case f: Failure => f.toFox
+                    }
+                  } yield maxBboxId
+              }
+            } yield Ok(Json.toJson(largestIdWithFallback))
           }
         }
       }

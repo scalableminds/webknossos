@@ -107,7 +107,7 @@ export function serverVolumeToClientVolumeTracing(
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
     proofreadingMarkerPosition: undefined,
     segmentJournal: [],
-    idReservations: { "SegmentGroup": [], "Segment": [] }
+    idReservations: { SegmentGroup: [], Segment: [] },
   };
   return volumeTracing;
 }

@@ -58,9 +58,8 @@ export class ResumableBackendMock {
   private invariantViolations: string[] = [];
   private failUploadOnRequest = new Map<number, FailConfig>();
   private failUploadsAfterCount: FailAfterConfig | null = null;
-  private testResponseOverride:
-    | ((meta: ChunkMeta, request: Request) => HttpResponse | null)
-    | null = null;
+  private testResponseOverride: ((meta: ChunkMeta, request: Request) => Response | null) | null =
+    null;
   private testChunkExistsPredicate: ((meta: ChunkMeta) => boolean) | null = null;
   private responseDelayMs = 0;
   private testResponseDelayMs = 0;
@@ -129,9 +128,7 @@ export class ResumableBackendMock {
     this.successfulUploadCount = 0;
   }
 
-  setTestResponseOverride(
-    resolver: (meta: ChunkMeta, request: Request) => HttpResponse | null,
-  ): void {
+  setTestResponseOverride(resolver: (meta: ChunkMeta, request: Request) => Response | null): void {
     this.testResponseOverride = resolver;
   }
 
@@ -212,7 +209,7 @@ export class ResumableBackendMock {
     await this.waitForCondition(() => this.inflightUploads === 0, timeoutMs);
   }
 
-  async handle(request: Request): Promise<HttpResponse> {
+  async handle(request: Request): Promise<Response> {
     this.totalRequestCount++;
     this.requestLog.push({ method: request.method, url: request.url });
 

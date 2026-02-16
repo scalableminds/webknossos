@@ -175,8 +175,6 @@ interface ExtendedFile extends File {
   uniqueIdentifier?: string;
 }
 
-type UploadItem = DataTransferItem | File | FileSystemEntry;
-
 export interface ResumableEventDetail {
   file?: ResumableFile;
   message?: string;
@@ -191,12 +189,14 @@ export class ResumableUploadErrorEvent extends CustomEvent<ResumableEventDetail>
 function isFileSystemDirectoryEntry(
   entry: FileSystemEntry | null | undefined,
 ): entry is FileSystemDirectoryEntry {
+  // biome-ignore lint/complexity/useOptionalChain: Optional chain does not return boolean but boolean | undefined
   return entry != null && entry.isDirectory;
 }
 
 function isFileSystemFileEntry(
   entry: FileSystemEntry | null | undefined,
 ): entry is FileSystemFileEntry {
+  // biome-ignore lint/complexity/useOptionalChain: Optional chain does not return boolean but boolean | undefined
   return entry != null && entry.isFile;
 }
 
@@ -974,7 +974,7 @@ export class ResumableUpload implements EventTarget {
    * @param callback callback invoked when item is processed
    */
   private processItem(
-    item: UploadItem,
+    item: FileSystemEntry,
     path: string,
     items: ExtendedFile[],
     callback: () => void,

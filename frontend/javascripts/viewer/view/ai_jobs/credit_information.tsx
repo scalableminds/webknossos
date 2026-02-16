@@ -1,7 +1,7 @@
 import { CreditCardOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
-import { Button, Card, Col, Flex, Row, Space, Spin, Typography } from "antd";
+import { Button, Card, Col, Divider, Flex, Row, Space, Spin, Typography } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -183,12 +183,10 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           <Text>Available Credits</Text>
         </Col>
         <Col>
-          <Title level={2} style={{ margin: 0 }}>
-            {formatMilliCreditsString(organizationMilliCredits)}
-          </Title>
+          <Text strong>{formatMilliCreditsString(organizationMilliCredits)}</Text>
         </Col>
       </Row>
-      <hr style={{ margin: "24px 0" }} />
+      <Divider />
       <Title level={5}>Cost Breakdown:</Title>
       <Row justify="space-between">
         <Col>
@@ -218,7 +216,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           </Text>
         </Col>
       </Row>
-      <hr style={{ margin: "24px 0" }} />
+      <Divider />
       <Row justify="space-between">
         <Col>
           <Text>Total Cost:</Text>
@@ -227,9 +225,9 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
           {isFetching && selectedBoundingBox && selectedModel ? (
             <Spin size="small" />
           ) : (
-            <Text strong>
+            <Title level={3} style={{ margin: 0 }}>
               {costInCredits != null ? `${formatMilliCreditsString(costInCredits)} credits` : "-"}
-            </Text>
+            </Title>
           )}
         </Col>
       </Row>

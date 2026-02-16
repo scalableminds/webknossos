@@ -62,6 +62,7 @@ import {
   type ToggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import {
+  dispatchEnsureHasNewestVersionAsync,
   pushSaveQueueTransaction,
   setPendingProofreadingOperationInfoAction,
 } from "viewer/model/actions/save_actions";
@@ -76,13 +77,13 @@ import {
 } from "viewer/model/actions/settings_actions";
 import {
   type CreateNodeAction,
+  type DeleteEdgeAction,
   type DeleteNodeAction,
   deleteEdgeAction,
+  type MergeTreesAction,
   type SetNodePositionAction,
-  setTreeAgglomerateIdAction,
+  setTreeAgglomerateInfoAction,
   setTreeNameAction,
-  DeleteEdgeAction,
-  MergeTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
   allowSagaWhileBusyAction,
@@ -237,6 +238,12 @@ function proofreadUsingMeshes(): boolean {
 function* syncWithBackend() {
   yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
   yield* call([Model, Model.ensureSavedState]);
+  yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
+}
+
+function* pollNewestBackendVersion() {
+  yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
+  yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
   yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
 }
 
@@ -489,7 +496,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const isLiveCollabActive = WkDevFlags.liveCollab && othersMayEdit;
   if (isLiveCollabActive) {
-    yield* call(syncWithBackend);
+    yield* call(pollNewestBackendVersion);
     // Replay the current action with the proofreading saga as the initiator.
     const actionWithSagaAsInitiator = { ...action, initiator: "PROOFREADING" } as
       | DeleteEdgeAction
@@ -722,7 +729,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       updatedSourceTree.treeId,
     ),
   );
-  yield* put(setTreeAgglomerateIdAction(newSourceAgglomerateId, updatedSourceTree.treeId));
+  yield* put(setTreeAgglomerateInfoAction(newSourceAgglomerateId, updatedSourceTree.treeId));
 
   if (updatedSourceTree.treeId !== updatedTargetTree.treeId) {
     // A split between the trees was done. Create a segment for the new tree and update its name.
@@ -732,7 +739,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         updatedTargetTree.treeId,
       ),
     );
-    yield* put(setTreeAgglomerateIdAction(newTargetAgglomerateId, updatedTargetTree.treeId));
+    yield* put(setTreeAgglomerateInfoAction(newTargetAgglomerateId, updatedTargetTree.treeId));
     const newSegmentName =
       (yield* select(
         (state) =>

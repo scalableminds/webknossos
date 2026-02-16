@@ -292,6 +292,16 @@ class BackendMock {
     });
   }
 
+  planMultipleVersionInjections(
+    startingVersion: number,
+    updateActionBatches: UpdateActionWithoutIsolationRequirement[][],
+  ) {
+    // Injects each passed update action batch subsequently starting with version startingVersion.
+    updateActionBatches.forEach((actions, index) => {
+      this.planVersionInjection(startingVersion + index, actions);
+    });
+  }
+
   injectVersion(updateActions: UpdateActionWithoutIsolationRequirement[], targetVersion: number) {
     // Theoretically, we could derive targetVersion from the currently stored version,
     // but making the version number explicit strengthens the assumptions that the

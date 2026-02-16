@@ -437,7 +437,7 @@ export type RebaseRelevantAnnotationState = {
   readonly annotationDescription: string;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
-  readonly isRebasing: boolean;
+  readonly isRebasingOrForwarding: boolean;
 };
 
 // Additionally, the proofreading sagas need knowledge of the mapping info last stored in the backend,

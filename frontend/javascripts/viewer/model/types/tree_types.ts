@@ -57,6 +57,7 @@ export type MutableTree = {
   type: TreeType;
   edgesAreVisible: boolean;
   metadata: MetadataEntryProto[];
+  agglomerateInfo?: TreeAgglomerateInfo | undefined;
 };
 
 // When changing Tree, remember to also update MutableTree

@@ -41,10 +41,12 @@ import {
   type EnsureHasNewestVersionAction,
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
+  finishForwardingUpdateActionsAction,
   type NotifyAboutUpdatedBucketsAction,
   prepareRebaseAction,
   setPendingProofreadingOperationInfoAction,
   setVersionNumberAction,
+  startForwardingUpdateActionsAction,
 } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
@@ -311,6 +313,7 @@ function* updatePendingProofreadingOperationInfoAction() {
 
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
+  isRebasing: boolean,
 ): Saga<ApplyingUpdateResults> {
   if (actions.length === 0) {
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
@@ -321,10 +324,18 @@ function* applyNewestMissingUpdateActions(
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
   try {
+    if (!isRebasing) {
+      // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
+      // update actions originate from the server and should not be considered during diffing.
+      yield put(startForwardingUpdateActionsAction());
+    }
     const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
+    // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
+    yield* put(finishedApplyingMissingUpdatesAction());
+    if (!isRebasing) {
+      yield* put(finishForwardingUpdateActionsAction());
+    }
     if (success) {
-      // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
-      yield* put(finishedApplyingMissingUpdatesAction());
       yield* call(updatePendingProofreadingOperationInfoAction);
       return { success: true, artifactInfos };
     }
@@ -424,7 +435,11 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 
   try {
     if (hasNewActionsFromBackend) {
-      const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
+      const applyingResult = yield* call(
+        applyNewestMissingUpdateActions,
+        missingUpdateActions,
+        needsRebasing,
+      );
       if (!applyingResult.success) {
         return { successful: false, shouldTerminate: false };
       }
@@ -825,8 +840,12 @@ export function* tryToIncorporateActions(
         const loadedProofreadingAuxiliaryMeshesOfSplitAction =
           loadedProofreadingAuxiliaryMeshes.intersection(oldAgglomerateIds);
         if (loadedProofreadingAuxiliaryMeshesOfSplitAction.size > 0) {
-          oldAgglomerateIds.forEach((aggloId) => meshIdsToRemove.add(aggloId));
-          newAgglomerateIds.forEach((aggloId) => meshIdsToLoad.add(aggloId));
+          oldAgglomerateIds.forEach((aggloId) => {
+            meshIdsToRemove.add(aggloId);
+          });
+          newAgglomerateIds.forEach((aggloId) => {
+            meshIdsToLoad.add(aggloId);
+          });
         }
       }
     }

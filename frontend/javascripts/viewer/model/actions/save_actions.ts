@@ -40,6 +40,12 @@ export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredActio
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
 export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
 export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
+export type StartForwardingUpdateActionsAction = ReturnType<
+  typeof startForwardingUpdateActionsAction
+>;
+export type FinishForwardingUpdateActionsAction = ReturnType<
+  typeof finishForwardingUpdateActionsAction
+>;
 export type UpdateMappingRebaseInformationAction = ReturnType<
   typeof snapshotMappingDataForNextRebaseAction
 >;
@@ -70,6 +76,8 @@ export type SaveAction =
   | SetUserHoldingMutexAction
   | PrepareRebaseAction
   | FinishedRebaseAction
+  | StartForwardingUpdateActionsAction
+  | FinishForwardingUpdateActionsAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
   | SetPendingProofreadingOperationInfoAction
@@ -238,6 +246,16 @@ export const prepareRebaseAction = () =>
 export const finishedRebaseAction = () =>
   ({
     type: "FINISHED_REBASING",
+  }) as const;
+
+export const startForwardingUpdateActionsAction = () =>
+  ({
+    type: "START_FORWARDING_UPDATE_ACTIONS",
+  }) as const;
+
+export const finishForwardingUpdateActionsAction = () =>
+  ({
+    type: "FINISH_FORWARDING_UPDATE_ACTIONS",
   }) as const;
 
 export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: string) =>

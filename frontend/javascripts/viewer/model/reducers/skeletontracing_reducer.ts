@@ -8,6 +8,7 @@ import identity from "lodash-es/identity";
 import orderBy from "lodash-es/orderBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,
@@ -58,7 +59,6 @@ import {
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
-import { WkDevFlags } from "viewer/api/wk_dev";
 
 function SkeletonTracingReducer(
   state: WebknossosState,
@@ -1120,6 +1120,14 @@ function SkeletonTracingReducer(
     case "MERGE_TREES": {
       const { sourceNodeId, targetNodeId } = action;
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
+      if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
+        // If live collab is active and the user did a proofreading merge via edge creation,
+        // wait for the proofreading saga to replay the action before deleting the edge as
+        // the affected agglomerate tree may not be in sync with the backend yet.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
       const oldTrees = skeletonTracing.trees;
       const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);
@@ -1194,7 +1202,7 @@ function SkeletonTracingReducer(
       });
     }
 
-    case "SET_TREE_AGGLOMERATE_ID": {
+    case "SET_TREE_AGGLOMERATE_INFO": {
       const tree = getTree(skeletonTracing, action.treeId);
       if (tree == null || tree.agglomerateInfo == null) {
         return state;

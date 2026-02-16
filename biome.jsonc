@@ -99,6 +99,7 @@
       },
       "correctness": {
         "noUnusedVariables": "error",
+        "noUnusedFunctionParameters": "error",
         "noUnusedImports": "error",
         "noRenderReturnValue": "off",
         "useHookAtTopLevel": "error",
@@ -116,6 +117,7 @@
         "noConstEnum": "off",
         "noRedeclare": "off",
         "noFallthroughSwitchClause": "off",
+        "noFocusedTests": "error",
         "noAssignInExpressions": "off"
       },
       "nursery": {}
@@ -129,9 +131,7 @@
 
   "overrides": [
     {
-      "includes": [
-        "**/package.json"
-      ],
+      "includes": ["**/package.json"],
       "formatter": {
         "lineWidth": 1
       }

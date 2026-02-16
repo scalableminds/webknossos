@@ -107,7 +107,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
   describe.each([false, true])("With othersMayEdit=%s", (othersMayEdit: boolean) => {
     it("should merge two agglomerates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-      const { api } = context;
       mockInitialBucketAndAgglomerateData(context);
 
       const { annotation } = Store.getState();
@@ -150,7 +149,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           [5, 5, 5],
         ]);
 
-        const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).at(-1)!;
+        const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-2)!;
         yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
@@ -160,7 +159,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     });
 
     it("should merge two agglomerates and not update agglomerate skeleton if not included in update actions.", async (context: WebknossosTestContext) => {
-      const { api } = context;
       mockInitialBucketAndAgglomerateData(context);
 
       const { annotation } = Store.getState();
@@ -270,7 +268,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     });
 
     it("should split an agglomerate and not update an unaffected agglomerate skeleton", async (context: WebknossosTestContext) => {
-      const { api } = context;
       mockInitialBucketAndAgglomerateData(context);
 
       const { annotation } = Store.getState();

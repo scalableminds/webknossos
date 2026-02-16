@@ -1,4 +1,5 @@
 import type { ActionPattern, Task } from "@redux-saga/types";
+import type { MinCutTargetEdge } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
@@ -25,6 +26,10 @@ import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  mergeSegment5And6WithAgglomerateTree1,
+  mergeSegment5And6WithAgglomerateTree1And4,
+} from "./proofreading_interaction_update_action_fixtures";
 import {
   mockEdgesForAgglomerateMinCut,
   performMergeTreesProofreading,
@@ -719,18 +724,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
   it("should reload agglomerate meshes correctly when merging two agglomerate skeletons and incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
-    // TODOM: skeleton updates are missing
-    const injectedMerge = {
-      name: "mergeAgglomerate" as const,
-      value: {
-        actionTracingId: "volumeTracingId",
-        segmentId1: 5,
-        segmentId2: 6,
-        agglomerateId1: 4,
-        agglomerateId2: 6,
-      },
-    };
-    backendMock.planVersionInjection(11, [injectedMerge]);
+    // Merging agglomerates 4 & 6 based on the segments 5 & 6.
+    // As agglomerate trees 1 & 4 are loaded their updates are included as well
+    backendMock.planMultipleVersionInjections(11, mergeSegment5And6WithAgglomerateTree1And4);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -819,19 +815,16 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
-    mockEdgesForAgglomerateMinCut(context.mocks, 9);
+    mockEdgesForAgglomerateMinCut(context.mocks, 10, [
+      {
+        position1: [3, 3, 3],
+        position2: [1, 1, 1],
+        segmentId1: 3,
+        segmentId2: 1,
+      } as MinCutTargetEdge,
+    ]);
 
-    const injectedMerge = {
-      name: "mergeAgglomerate" as const,
-      value: {
-        actionTracingId: "volumeTracingId",
-        segmentId1: 5,
-        segmentId2: 6,
-        agglomerateId1: 4,
-        agglomerateId2: 6,
-      },
-    };
-    backendMock.planVersionInjection(10, [injectedMerge]);
+    backendMock.planMultipleVersionInjections(10, mergeSegment5And6WithAgglomerateTree1);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

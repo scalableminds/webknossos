@@ -365,7 +365,7 @@ export function updateTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
-      agglomerateId: tree.agglomerateInfo,
+      agglomerateInfo: tree.agglomerateInfo,
     },
   } as const;
 }

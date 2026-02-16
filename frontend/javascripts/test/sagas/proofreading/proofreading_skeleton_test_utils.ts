@@ -26,7 +26,7 @@ import { call, type Saga, select, take } from "viewer/model/sagas/effect-generat
 import type { Edge, TreeMap } from "viewer/model/types/tree_types";
 import type { NumberLike, SkeletonTracing, WebknossosState } from "viewer/store";
 import { expect, vi } from "vitest";
-import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtures";
+import { initialMapping } from "./proofreading_fixtures";
 import {
   getAllCurrentlyLoadedMeshIds,
   initializeMappingAndTool,
@@ -244,11 +244,6 @@ export function* performMergeTreesProofreading(
   const targetNode = agglomerateTrees.getOrThrow(4).nodes.getOrThrow(7);
   yield put(mergeTreesAction(sourceNode.id, targetNode.id));
   yield take("FINISH_MAPPING_INITIALIZATION");
-  const mappingAfterOptimisticUpdate = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-
-  expect(mappingAfterOptimisticUpdate).toEqual(expectedMappingAfterMerge);
   yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
 }
 
@@ -343,7 +338,7 @@ export function* performMinCutWithNodesProofreading(
 export const mockEdgesForAgglomerateMinCut = (
   mocks: WebknossosTestContext["mocks"],
   expectedRequestedVersion: number,
-  onlyThreeOneEdge: boolean = false,
+  additionalEdges: Array<MinCutTargetEdge> = [],
 ) =>
   vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
     async (
@@ -364,7 +359,7 @@ export const mockEdgesForAgglomerateMinCut = (
         );
       }
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
-      if (agglomerateId === 1 && isEqual(partition1, [3]) && isEqual(partition2, [2])) {
+      if (agglomerateId === 1 && isEqual(partition1.concat(partition2), [2, 3])) {
         return [
           {
             position1: [3, 3, 3],
@@ -372,15 +367,7 @@ export const mockEdgesForAgglomerateMinCut = (
             segmentId1: 3,
             segmentId2: 2,
           } as MinCutTargetEdge,
-          onlyThreeOneEdge
-            ? undefined
-            : ({
-                position1: [3, 3, 3],
-                position2: [1, 1, 1],
-                segmentId1: 3,
-                segmentId2: 1,
-              } as MinCutTargetEdge),
-        ].filter((a) => a != null);
+        ].concat(additionalEdges);
       }
       throw new Error("Unexpected min cut request");
     },

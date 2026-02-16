@@ -103,13 +103,10 @@ def delete_path(path: str) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Service to delete remote paths listed by WEBKNOSSOS. Expects environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
+        description="Service to delete remote paths listed by WEBKNOSSOS. Expects environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and WK_KEY"
     )
     parser.add_argument(
         "--wk_uri", help="URI of the WEBKNOSSOS instance", type=str, default="http://localhost:9000"
-    )
-    parser.add_argument(
-        "--wk_key", help="Secret key configured in WEBKNOSSOS under externalPathDeletionService.key", type=str, default="something-secure"
     )
     parser.add_argument(
         "--polling_interval_seconds", help="Interval to sleep after each polling of WEBKNOSSOS (in seconds)", type=int, default=3
@@ -118,10 +115,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def fetch_paths_to_delete(args: argparse.Namespace) -> Any:
+    wk_key = os.environ['WK_KEY']
     response = httpx.request(
         "GET",
         f"{args.wk_uri}/api/v{WK_API_VERSION}/datasets/pathsToDelete",
-        params={"key": args.wk_key},
+        params={"key": wk_key},
     )
     assert_good_response(response)
     return response.json()
@@ -136,22 +134,27 @@ def assert_good_response(response: httpx.Response) -> None:
 
 
 def mark_paths_as_deleted(args: argparse.Namespace, paths: list[str]) -> None:
+    wk_key = os.environ['WK_KEY']
     response = httpx.request(
         "POST",
         f"{args.wk_uri}/api/v{WK_API_VERSION}/datasets/pathsToDelete/markAsDeleted",
-        params={"key": args.wk_key},
+        params={"key": wk_key},
         json=paths
     )
     assert_good_response(response)
 
 
 def check_env_vars_ok() -> None:
-    required_env_vars = ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
-    for required_env_var in required_env_vars:
+    required_env_vars_with_help = {
+        "AWS_ACCESS_KEY_ID": "S3 credential access key id",
+        "AWS_SECRET_ACCESS_KEY": "S3 credential secret access key",
+        "WK_KEY": "Secret key configured in WEBKNOSSOS under externalPathDeletionService.key"
+    }
+    for required_env_var, env_var_help in required_env_vars_with_help.items():
         if required_env_var not in os.environ:
-            raise KeyError(f"Environment variable {required_env_var} must be set")
+            raise KeyError(f"Environment variable {required_env_var} ({env_var_help}) must be set")
         if not os.environ[required_env_var]:
-            raise KeyError(f"Environment variable {required_env_var} must be non-empty")
+            raise KeyError(f"Environment variable {required_env_var} ({env_var_help}) must be non-empty")
 
 
 def setup_logging() -> None:

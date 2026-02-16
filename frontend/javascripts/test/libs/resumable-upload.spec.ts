@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http } from "msw";
 import { setupServer } from "msw/node";
-import { Resumable, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
+import { ResumableUpload, ResumableChunk, type ResumableFile } from "../../libs/resumable-upload";
 import { sleep } from "libs/utils";
 import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 describe("Resumable", () => {
-  let resumable: Resumable;
+  let resumable: ResumableUpload;
 
   beforeEach(() => {
     // Mock window and location for URL construction
@@ -44,7 +44,7 @@ describe("Resumable", () => {
     // Reset mocks
     vi.restoreAllMocks();
 
-    resumable = new Resumable({
+    resumable = new ResumableUpload({
       target: "/upload",
       chunkSize: 1024 * 1024,
       simultaneousUploads: 3,
@@ -53,7 +53,7 @@ describe("Resumable", () => {
 
   describe("Constructor and Support", () => {
     it("should initialize with default options", () => {
-      const r = new Resumable();
+      const r = new ResumableUpload();
       // Support might be false in JSDOM if not fully polyfilled, but usually true
       // We manually check if the key properties exist
       expect(r.files).toEqual([]);
@@ -61,7 +61,7 @@ describe("Resumable", () => {
     });
 
     it("should merge custom options with defaults", () => {
-      const r = new Resumable({
+      const r = new ResumableUpload({
         chunkSize: 2 * 1024 * 1024,
         simultaneousUploads: 5,
       });
@@ -204,7 +204,7 @@ describe("Resumable", () => {
   describe("File Validation", () => {
     it("should reject files exceeding maxFiles limit", async () => {
       const cb = vi.fn();
-      const r = new Resumable({
+      const r = new ResumableUpload({
         maxFiles: 2,
         maxFilesErrorCallback: cb,
       });
@@ -223,7 +223,7 @@ describe("Resumable", () => {
 
     it("should reject files smaller than minFileSize", () => {
       const cb = vi.fn();
-      const r = new Resumable({
+      const r = new ResumableUpload({
         minFileSize: 100,
         minFileSizeErrorCallback: cb,
       });
@@ -237,7 +237,7 @@ describe("Resumable", () => {
 
     it("should reject files larger than maxFileSize", () => {
       const cb = vi.fn();
-      const r = new Resumable({
+      const r = new ResumableUpload({
         maxFileSize: 10,
         maxFileSizeErrorCallback: cb,
       });
@@ -252,7 +252,7 @@ describe("Resumable", () => {
 
     it("should validate file types", () => {
       const cb = vi.fn();
-      const r = new Resumable({
+      const r = new ResumableUpload({
         fileType: ["image/png", "image/jpeg"],
         fileTypeErrorCallback: cb,
       });
@@ -265,7 +265,7 @@ describe("Resumable", () => {
     });
 
     it("should handle wildcard file types", async () => {
-      const r = new Resumable({
+      const r = new ResumableUpload({
         fileType: ["image/*"],
       });
 
@@ -279,7 +279,7 @@ describe("Resumable", () => {
     });
 
     it("should handle file extensions in fileType", async () => {
-      const r = new Resumable({
+      const r = new ResumableUpload({
         fileType: [".txt", ".pdf"],
       });
 
@@ -328,13 +328,13 @@ describe("Resumable", () => {
 });
 
 describe("ResumableFile", () => {
-  let resumable: Resumable;
+  let resumable: ResumableUpload;
   let file: File;
   let resumableFile: ResumableFile;
 
   beforeEach(async () => {
     stubLocation();
-    resumable = new Resumable({
+    resumable = new ResumableUpload({
       target: "/upload",
       chunkSize: 10,
     });
@@ -434,13 +434,13 @@ describe("ResumableFile", () => {
 });
 
 describe("ResumableChunk", () => {
-  let resumable: Resumable;
+  let resumable: ResumableUpload;
   let resumableFile: ResumableFile;
   let chunk: ResumableChunk;
 
   beforeEach(async () => {
     stubLocation();
-    resumable = new Resumable({
+    resumable = new ResumableUpload({
       target: "/upload",
       chunkSize: 10,
       testChunks: false,
@@ -501,7 +501,7 @@ describe("ResumableChunk", () => {
 describe("Helper Functions", () => {
   describe("File Size Formatting", () => {
     it("should be accessible through Resumable instance", () => {
-      const r = new Resumable();
+      const r = new ResumableUpload();
       // The helpers are internal, but we can test through error callbacks
       expect(r).toBeDefined();
     });
@@ -509,7 +509,7 @@ describe("Helper Functions", () => {
 
   describe("Unique Identifier Generation", () => {
     it("should generate consistent identifiers for same file", async () => {
-      const r = new Resumable();
+      const r = new ResumableUpload();
       const file1 = new File(["test"], "test.txt", { type: "text/plain" });
       const file2 = new File(["test"], "test.txt", { type: "text/plain" });
 
@@ -524,7 +524,7 @@ describe("Helper Functions", () => {
 
 describe("Edge Cases", () => {
   it("should handle empty file", async () => {
-    const r = new Resumable({ minFileSize: 0 });
+    const r = new ResumableUpload({ minFileSize: 0 });
     const emptyFile = new File([], "empty.txt");
 
     r.addFile(emptyFile);
@@ -535,7 +535,7 @@ describe("Edge Cases", () => {
   });
 
   it("should handle very large chunk size", async () => {
-    const r = new Resumable({
+    const r = new ResumableUpload({
       chunkSize: 100 * 1024 * 1024, // 100MB
     });
 
@@ -547,7 +547,7 @@ describe("Edge Cases", () => {
   });
 
   it("should handle forceChunkSize option", async () => {
-    const r = new Resumable({
+    const r = new ResumableUpload({
       chunkSize: 10,
       forceChunkSize: true,
     });
@@ -564,7 +564,7 @@ describe("Edge Cases", () => {
   });
 
   it("should handle special characters in filename", async () => {
-    const r = new Resumable();
+    const r = new ResumableUpload();
     const file = new File(["test"], "test file (1) [special].txt");
 
     r.addFile(file);
@@ -576,7 +576,7 @@ describe("Edge Cases", () => {
 
   it("should handle beforeAdd event", () => {
     const beforeAddCallback = vi.fn();
-    const r = new Resumable();
+    const r = new ResumableUpload();
     r.addEventListener("beforeAdd", beforeAddCallback);
 
     const file = new File(["test"], "test.txt");
@@ -586,7 +586,7 @@ describe("Edge Cases", () => {
   });
 
   it("should skip duplicate files", async () => {
-    const r = new Resumable();
+    const r = new ResumableUpload();
     const file = new File(["test"], "test.txt");
 
     r.addFile(file);
@@ -600,7 +600,7 @@ describe("Edge Cases", () => {
 
   it("should fire filesAdded with skipped files", async () => {
     const filesAddedCallback = vi.fn();
-    const r = new Resumable();
+    const r = new ResumableUpload();
     r.addEventListener("filesAdded", filesAddedCallback);
 
     const file = new File(["test"], "test.txt");

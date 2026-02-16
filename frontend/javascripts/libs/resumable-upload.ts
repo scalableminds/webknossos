@@ -216,7 +216,7 @@ const helpers = {
     }
   },
 
-  getTargetURI(resumable: Resumable, request: string, params: Record<string, any>): string {
+  getTargetURI(resumable: ResumableUpload, request: string, params: Record<string, any>): string {
     let target = resumable.getOpt("target");
     const testTarget = resumable.getOpt("testTarget");
 
@@ -243,7 +243,7 @@ const helpers = {
  */
 export class ResumableChunk {
   opts: Partial<ConfigurationHash> = {};
-  resumableObj: Resumable;
+  resumableObj: ResumableUpload;
   fileObj: ResumableFile;
   fileObjSize: number;
   fileObjType: string;
@@ -263,7 +263,7 @@ export class ResumableChunk {
   private _message: string = "";
 
   constructor(
-    resumableObj: Resumable,
+    resumableObj: ResumableUpload,
     fileObj: ResumableFile,
     offset: number,
     callback: (event: "progress" | "success" | "error" | "retry", message?: string) => void,
@@ -536,7 +536,7 @@ export class ResumableFile {
   /**
    * A back-reference to the parent `Resumable` object.
    */
-  resumableObj: Resumable;
+  resumableObj: ResumableUpload;
   /**
    * The correlating HTML5 `File` object.
    */
@@ -567,7 +567,7 @@ export class ResumableFile {
   private _pause = false;
   private _error: boolean;
 
-  constructor(resumableObj: Resumable, file: File, uniqueIdentifier: string) {
+  constructor(resumableObj: ResumableUpload, file: File, uniqueIdentifier: string) {
     this.resumableObj = resumableObj;
     this.file = file;
     this.fileName = file.name;
@@ -786,7 +786,7 @@ export class ResumableFile {
  * Main class for managing resumable uploads.
  * Implements EventTarget via composition to ensure compatibility.
  */
-export class Resumable implements EventTarget {
+export class ResumableUpload implements EventTarget {
   /**
    * An array of `ResumableFile` file objects added by the user.
    */
@@ -1289,4 +1289,4 @@ export class Resumable implements EventTarget {
   }
 }
 
-export default Resumable;
+export default ResumableUpload;

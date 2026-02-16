@@ -1,12 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { Resumable } from "../../libs/resumable-upload";
+import { ResumableUpload } from "../../libs/resumable-upload";
 import { sleep } from "libs/utils";
 import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
 describe("Resumable Use Cases (WebKnossos Patterns)", () => {
-  let resumable: Resumable;
+  let resumable: ResumableUpload;
   let backendMock: ResumableBackendMock;
 
   const server = setupServer(
@@ -44,7 +44,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       backendMock.setRequiredToken("initial-token");
       backendMock.rotateTokenAfterUploadCount(1, "new-token");
 
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 10,
         query: queryFn,
@@ -73,7 +73,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
   describe("Chunk Testing (testChunks: true)", () => {
     it("should issue GET request before POST", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 10,
         testChunks: true,
@@ -95,7 +95,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
       const errorHandler = vi.fn();
 
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 10,
         testChunks: true,
@@ -123,7 +123,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should upload chunk if it does not exist on server", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 10,
         testChunks: true,
@@ -143,7 +143,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     it("should proceed to POST if GET returns 404 (chunk missing)", async () => {
       backendMock.setTestResponseOverride(() => HttpResponse.text("Not Found", { status: 404 }));
 
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 10,
         testChunks: true,
@@ -166,7 +166,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     it("should use generateUniqueIdentifier function", async () => {
       const customIdFn = vi.fn().mockReturnValue("custom-id-123");
 
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         generateUniqueIdentifier: customIdFn,
       });
@@ -182,7 +182,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
   describe("Error Handling and Retry", () => {
     it("should handle permanent errors and support manual retry", async () => {
       // Configure permanent errors including 500
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 10,
         testChunks: false,
@@ -227,7 +227,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should respect permanentErrors configuration", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         testChunks: false,
         permanentErrors: [415], // Only 415 is permanent
@@ -257,7 +257,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
   describe("Retry Logic (Manual Retry)", () => {
     it("should reset chunks and restart upload on file.retry()", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 10,
         testChunks: false,
@@ -294,7 +294,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
   describe("Files Added Trigger", () => {
     it("should fire filesAdded event", async () => {
       const filesAddedSpy = vi.fn();
-      resumable = new Resumable({ target: "/upload" });
+      resumable = new ResumableUpload({ target: "/upload" });
       resumable.addEventListener("filesAdded", filesAddedSpy);
 
       const file = new File(["content"], "test.txt");
@@ -307,7 +307,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
   describe("Backend-backed Integration Cases", () => {
     it("should upload correct chunks and reconstruct the original data", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 5,
         testChunks: false,
@@ -337,7 +337,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should retry after a transient failure on the nth upload request", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 5,
         testChunks: false,
@@ -359,7 +359,9 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.upload();
       await complete;
 
-      expect(backendMock.getUploadRequestCount()).toBeGreaterThan(backendMock.getSuccessfulUploadCount());
+      expect(backendMock.getUploadRequestCount()).toBeGreaterThan(
+        backendMock.getSuccessfulUploadCount(),
+      );
 
       const identifier = resumable.files[0].uniqueIdentifier;
       const uploadedBytes = backendMock.getFinalUploadData(identifier);
@@ -368,7 +370,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should resume with a second instance against the same backend state", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 4,
         testChunks: false,
@@ -385,7 +387,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       await backendMock.waitForSuccessfulUploads(2);
       await backendMock.waitForUploadCount(3);
 
-      const resumable2 = new Resumable({
+      const resumable2 = new ResumableUpload({
         target: "/upload",
         chunkSize: 4,
         testChunks: true,
@@ -406,7 +408,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should pause and resume without losing uploaded data", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 5,
         testChunks: false,
@@ -442,7 +444,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should respect simultaneousUploads parallelity", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 3,
         testChunks: false,
@@ -467,7 +469,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should report progress values that are monotonic and end at 1", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 4,
         testChunks: false,
@@ -496,7 +498,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should not fire complete twice when the last file fails permanently", async () => {
-      resumable = new Resumable({
+      resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 4,
         testChunks: false,

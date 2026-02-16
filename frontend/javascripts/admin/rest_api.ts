@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
-import Resumable from "libs/resumable-upload";
+import ResumableUpload from "libs/resumable-upload";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import {
@@ -1171,7 +1171,10 @@ export function createDatasetComposition(
   );
 }
 
-export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<Resumable> {
+export function createResumableUpload(
+  datastoreUrl: string,
+  uploadId: string,
+): Promise<ResumableUpload> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
     if (file.path == null) {
@@ -1191,7 +1194,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       activeToken = newToken;
     };
 
-    const resumable = new Resumable({
+    const resumable = new ResumableUpload({
       testChunks: true,
       target: `${datastoreUrl}/data/datasets`,
       query: function () {

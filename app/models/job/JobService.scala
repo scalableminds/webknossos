@@ -218,16 +218,18 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
+  def inferenceBBoxToTargetMag(mag1BoundingBox: BoundingBox): BoundingBox = ??? // TODO
+
   def submitPaidJob(command: JobCommand,
                     commandArgs: JsObject,
-                    jobBoundingBox: BoundingBox,
+                    jobBoundingBoxInTargetMag: BoundingBox,
                     creditTransactionComment: String,
                     user: User,
                     datastoreName: String)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> "job.paid.noAdminOrManager"
-      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBox, command)
+      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costInMilliCredits,

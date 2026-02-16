@@ -261,13 +261,13 @@ class AiModelController @Inject()(
         aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_instances
-        boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
-          "bbox" -> boundingBox.toLiteral,
+          "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
           "model_organization_id" -> aiModel._organization,
           "dataset_directory_name" -> request.body.datasetDirectoryName,
@@ -276,9 +276,10 @@ class AiModelController @Inject()(
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold
         )
         creditTransactionComment = s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
+        targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
-                                                    boundingBox,
+                                                    targetMagBoundingBox,
                                                     creditTransactionComment,
                                                     request.identity,
                                                     dataStore.name) ?~> "job.couldNotRunInferWithModel"
@@ -288,7 +289,7 @@ class AiModelController @Inject()(
           _aiModel = request.body.aiModelId,
           _newDataset = None,
           _annotation = request.body.annotationId,
-          boundingBox = boundingBox,
+          boundingBox = mag1BoundingBox,
           _inferenceJob = newInferenceJob._id,
           newSegmentationLayerName = "segmentation",
           maskAnnotationLayerName = request.body.maskAnnotationLayerName
@@ -310,13 +311,14 @@ class AiModelController @Inject()(
         aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_neurons
-        boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
-          "bbox" -> boundingBox.toLiteral,
+          "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
           "model_organization_id" -> aiModel._organization,
           "dataset_directory_name" -> request.body.datasetDirectoryName,
@@ -327,7 +329,7 @@ class AiModelController @Inject()(
         creditTransactionComment = s"AI custom neuron segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
-                                                    boundingBox,
+                                                    targetMagBoundingBox,
                                                     creditTransactionComment,
                                                     request.identity,
                                                     dataStore.name) ?~> "job.couldNotRunInferWithModel"
@@ -337,7 +339,7 @@ class AiModelController @Inject()(
           _aiModel = request.body.aiModelId,
           _newDataset = None,
           _annotation = request.body.annotationId,
-          boundingBox = boundingBox,
+          boundingBox = mag1BoundingBox,
           _inferenceJob = newInferenceJob._id,
           newSegmentationLayerName = "segmentation",
           maskAnnotationLayerName = request.body.maskAnnotationLayerName

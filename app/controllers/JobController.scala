@@ -30,6 +30,7 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import spire.std.map
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
@@ -267,7 +268,8 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(layerName)
           annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
-          parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          mag1BoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
@@ -287,7 +289,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           creditTransactionComment = s"AI neuron segmentation for dataset ${dataset.name}"
           job <- jobService.submitPaidJob(command,
                                           commandArgs,
-                                          parsedBoundingBox,
+                                          targetMagBoundingBox,
                                           creditTransactionComment,
                                           request.identity,
                                           dataset._dataStore)
@@ -311,7 +313,8 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_mitochondria
-          parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          mag1BoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
@@ -324,7 +327,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
           job <- jobService.submitPaidJob(command,
                                           commandArgs,
-                                          parsedBoundingBox,
+                                          targetMagBoundingBox,
                                           creditTransactionComment,
                                           request.identity,
                                           dataset._dataStore)
@@ -347,9 +350,9 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          datasetBoundingBox <- datasetService
-            .usableDataSourceFor(dataset)
-            .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
+          dataSource <- datasetService.usableDataSourceFor(dataset) ?~> "dataset.notUsable"
+          layerMag <- dataSource.getDataLayer(layerName).flatMap(_.finestMag).toFox ?~> "dataset.noMags"
+          finestMagDatasetBoundingBox = dataSource.boundingBox / layerMag
           command = JobCommand.align_sections
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
@@ -363,7 +366,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(command,
                                           commandArgs,
-                                          datasetBoundingBox,
+                                          finestMagDatasetBoundingBox,
                                           creditTransactionComment,
                                           request.identity,
                                           dataset._dataStore)

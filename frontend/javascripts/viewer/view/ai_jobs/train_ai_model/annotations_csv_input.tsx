@@ -2,8 +2,11 @@ import { Button, Form, Input, Space } from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useCallback } from "react";
 import { fetchAnnotationInfos } from "../hooks/fetch_annotation_infos";
-import type { AiTrainingAnnotationSelection } from "./ai_training_job_context";
-import { useAiTrainingJobContext } from "./ai_training_job_context";
+import {
+  type AiTrainingAnnotationSelection,
+  applyDefaultLayers,
+  useAiTrainingJobContext,
+} from "./ai_training_job_context";
 
 export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
   const { setSelectedAnnotations } = useAiTrainingJobContext();
@@ -18,12 +21,14 @@ export function AnnotationsCsvInput({ onClose }: { onClose: () => void }) {
 
     if (lines.length > 0) {
       const newItems = await fetchAnnotationInfos(lines);
-      const newSelections: AiTrainingAnnotationSelection[] = newItems.map((item) => ({
-        annotation: item.annotation,
-        dataset: item.dataset,
-        userBoundingBoxes: item.userBoundingBoxes,
-        volumeTracingMags: item.volumeTracingMags,
-      }));
+      const newSelections: AiTrainingAnnotationSelection[] = newItems.map((item) =>
+        applyDefaultLayers({
+          annotation: item.annotation,
+          dataset: item.dataset,
+          userBoundingBoxes: item.userBoundingBoxes,
+          volumeTracingMags: item.volumeTracingMags,
+        }),
+      );
 
       setSelectedAnnotations((prev) => {
         const existingIds = new Set(prev.map((p) => p.annotation.id));

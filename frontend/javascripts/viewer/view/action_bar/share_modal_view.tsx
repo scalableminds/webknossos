@@ -507,14 +507,14 @@ function _ShareModalView(props: Props) {
               </Hint>
 
               <Radio style={radioStyle} value={true} disabled={!hasUpdatePermissions}>
-                Everybody that can view
+                Everybody who can view
               </Radio>
               <Hint
                 style={{
                   marginLeft: 24,
                 }}
               >
-                All registered users that can view this annotation can also edit it.
+                All registered users who can view this annotation can also edit it.
               </Hint>
             </RadioGroup>
           </Col>

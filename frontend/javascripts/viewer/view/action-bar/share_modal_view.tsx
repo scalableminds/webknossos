@@ -510,7 +510,7 @@ function _ShareModalView(props: Props) {
                   marginLeft: 24,
                 }}
               >
-                All registered users who can view this annotation can also edit it.
+                All users in your organization who may view this annotation can also edit it.
               </Hint>
             </RadioGroup>
           </Col>

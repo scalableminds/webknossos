@@ -1160,7 +1160,7 @@ BEGIN
                 (_id, _organization, milli_credit_delta, comment, transaction_state, credit_state, expiration_date)
             VALUES
                 (webknossos.generate_object_id(), organization_id, free_milli_credits_amount,
-                 'Free credits for this month', 'Complete', 'Pending', next_month_first_day);
+                 'Complimentary credits (' || TO_CHAR(NOW(), 'YYYY-MM') || ')', 'Complete', 'Pending', next_month_first_day);
         END IF;
     END LOOP;
 END;

@@ -149,6 +149,9 @@ import {
   SETTING_VALUE_SPAN,
   SwitchSetting,
 } from "viewer/view/components/setting_input_views";
+import iconAffineTransformation from "/images/icon-affine-transformation.svg";
+import iconNoTransformation from "/images/icon-no-transformation.svg";
+import iconTpsTransformation from "/images/icon-tps-transformation.svg";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import { HideUnregisteredSegmentsSwitch } from "./hide_unregistered_segments_switch";
 import Histogram, { isHistogramSupported } from "./histogram_view";
@@ -231,9 +234,9 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   };
 
   const typeToImage = {
-    none: "icon-no-transformation.svg",
-    thin_plate_spline: "icon-tps-transformation.svg",
-    affine: "icon-affine-transformation.svg",
+    none: iconNoTransformation,
+    thin_plate_spline: iconTpsTransformation,
+    affine: iconAffineTransformation,
   };
 
   // Cannot toggle transforms for a layer that cannot have no transforms or turn them on in case the layer has no transforms.
@@ -284,7 +287,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
       }
       icon={
         <img
-          src={`/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
+          src={typeToImage[isRenderedNatively ? "none" : transform.type]}
           alt="Transformed Layer Icon"
           style={{ width: "0.9em", height: "0.9em", marginTop: "-3px" }}
         />

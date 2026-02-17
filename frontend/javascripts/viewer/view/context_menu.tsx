@@ -159,6 +159,9 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import iconStatusbarMouseLeft from "/images/icon-statusbar-mouse-left.svg";
+import iconStatusbarMouseRight from "/images/icon-statusbar-mouse-right.svg";
+import iconStatusbarMouseWheel from "/images/icon-statusbar-mouse-wheel.svg";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
@@ -294,7 +297,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <img
             className="keyboard-mouse-icon"
-            src="/images/icon-statusbar-mouse-left.svg"
+            src={iconStatusbarMouseLeft}
             alt="Mouse Left Click"
             style={mouseIconStyle}
           />
@@ -305,7 +308,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <img
             className="keyboard-mouse-icon"
-            src="/images/icon-statusbar-mouse-right.svg"
+            src={iconStatusbarMouseRight}
             alt="Mouse Right Click"
             style={mouseIconStyle}
           />
@@ -316,7 +319,7 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <img
             className="keyboard-mouse-icon"
-            src="/images/icon-statusbar-mouse-wheel.svg"
+            src={iconStatusbarMouseWheel}
             alt="Mouse Wheel"
             style={mouseIconStyle}
           />

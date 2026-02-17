@@ -44,6 +44,12 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
+import iconDownsampling from "/images/icon-downsampling.svg";
+import iconExtent from "/images/icon-extent.svg";
+import iconMousewheel from "/images/icon-mousewheel.svg";
+import iconSegments from "/images/icon-segments.svg";
+import iconSkeletons from "/images/icon-skeletons.svg";
+import iconVoxelsize from "/images/icon-voxelsize.svg";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -83,7 +89,7 @@ const shortcuts = [
       <img
         key="zoom-4"
         className="keyboard-mouse-icon"
-        src="/images/icon-mousewheel.svg"
+        src={iconMousewheel}
         alt="Mouse Wheel"
         title="Mouse Wheel"
       />,
@@ -96,7 +102,7 @@ const shortcuts = [
       <img
         key="move-1"
         className="keyboard-mouse-icon"
-        src="/images/icon-mousewheel.svg"
+        src={iconMousewheel}
         alt="Mouse Wheel"
         title="Mouse Wheel"
       />,
@@ -171,7 +177,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
           paddingTop: 10,
         }}
       >
-        <img className="info-tab-icon" src="/images/icon-extent.svg" alt="Dataset extent" />
+        <img className="info-tab-icon" src={iconExtent} alt="Dataset extent" />
       </td>
       <td
         style={{
@@ -193,7 +199,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
           paddingRight: 20,
         }}
       >
-        <img className="info-tab-icon" src="/images/icon-voxelsize.svg" alt="Voxel size" />
+        <img className="info-tab-icon" src={iconVoxelsize} alt="Voxel size" />
       </td>
       <td>{formatScale(dataset.dataSource.scale)}</td>
     </FastTooltip>
@@ -253,7 +259,7 @@ export function AnnotationStats({
               wrapper="tr"
             >
               <td>
-                <img className="info-tab-icon" src="/images/icon-skeletons.svg" alt="Skeletons" />
+                <img className="info-tab-icon" src={iconSkeletons} alt="Skeletons" />
               </td>
               <td>
                 {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
@@ -271,7 +277,7 @@ export function AnnotationStats({
               wrapper="tr"
             >
               <td>
-                <img className="info-tab-icon" src="/images/icon-segments.svg" alt="Segments" />
+                <img className="info-tab-icon" src={iconSegments} alt="Segments" />
               </td>
               <td>
                 {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
@@ -603,7 +609,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             paddingTop: 8,
           }}
         >
-          <img className="info-tab-icon" src="/images/icon-downsampling.svg" alt="Magnification" />
+          <img className="info-tab-icon" src={iconDownsampling} alt="Magnification" />
         </td>
         <td
           style={{

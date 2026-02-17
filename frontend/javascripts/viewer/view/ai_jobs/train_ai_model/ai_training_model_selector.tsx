@@ -4,6 +4,8 @@ import type React from "react";
 import { useCallback } from "react";
 import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
+import mitoInferralExample from "/images/mito-inferral-example.jpg";
+import neuronInferralExample from "/images/neuron-inferral-example.jpg";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 const { Text } = Typography;
@@ -24,7 +26,7 @@ const trainingTasks: AiTrainingTask[] = [
       "EM neuron segmentation based on the annotations in this dataset. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "train-neuron-model",
     jobType: APIJobCommand.TRAIN_NEURON_MODEL,
-    image: "/images/neuron_inferral_example.jpg",
+    image: neuronInferralExample,
   },
   {
     name: "EM Instances Model",
@@ -32,7 +34,7 @@ const trainingTasks: AiTrainingTask[] = [
       "EM instance segmentation based on the annotations in this dataset. Optimized for nuclei, mitochondria and other cell types.",
     id: "train-instance-model",
     jobType: APIJobCommand.TRAIN_INSTANCE_MODEL,
-    image: "/images/mito_inferral_example.jpg",
+    image: mitoInferralExample,
   },
 ];
 

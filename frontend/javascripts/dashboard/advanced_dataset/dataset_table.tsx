@@ -55,6 +55,10 @@ import {
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
 } from "viewer/view/context_menu";
+import fileDarkIcon from "/images/file-dark.png";
+import fileLightIcon from "/images/file-light.png";
+import folderThumbnailIcon from "/images/folder-thumbnail.svg";
+import inactiveDatasetThumbnail from "/images/inactive-dataset-thumbnail.svg";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -194,10 +198,10 @@ class DragPreviewProvider {
     // row).
     this.lightIcon = null;
     this.darkIcon = null;
-    this.convertImageURLtoDataURL("/images/file-light.png").then((dataURL) => {
+    this.convertImageURLtoDataURL(fileLightIcon).then((dataURL) => {
       this.lightIcon = dataURL;
     });
-    this.convertImageURLtoDataURL("/images/file-dark.png").then((dataURL) => {
+    this.convertImageURLtoDataURL(fileDarkIcon).then((dataURL) => {
       this.darkIcon = dataURL;
     });
   }
@@ -340,7 +344,7 @@ class DatasetRenderer {
       : null;
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
-      : "/images/inactive-dataset-thumbnail.svg";
+      : inactiveDatasetThumbnail;
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
 
     return (
@@ -421,7 +425,7 @@ class FolderRenderer {
     return (
       <>
         <img
-          src={"/images/folder-thumbnail.svg"}
+          src={folderThumbnailIcon}
           className="dataset-table-thumbnail icon-thumbnail"
           style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
           alt=""

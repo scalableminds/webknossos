@@ -49,6 +49,10 @@ import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
+import iconRestrictFloodfillToBbox from "/images/icon-restrict-floodfill-to-bbox.svg";
+import newCellIcon from "/images/new-cell.svg";
+import overwriteAllIcon from "/images/overwrite-all.svg";
+import overwriteEmptyIcon from "/images/overwrite-empty.svg";
 import { QuickSelectControls } from "../quick_select_settings";
 import {
   ACTIONBAR_MARGIN_LEFT,
@@ -164,18 +168,14 @@ export function OverwriteModeSwitch({
         title="Overwrite everything. This setting can be toggled by holding CTRL."
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
-        <img
-          src="/images/overwrite-all.svg"
-          alt="Overwrite All Icon"
-          style={IMG_STYLE_FOR_SPACEY_ICONS}
-        />
+        <img src={overwriteAllIcon} alt="Overwrite All Icon" style={IMG_STYLE_FOR_SPACEY_ICONS} />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
         <img
-          src="/images/overwrite-empty.svg"
+          src={overwriteEmptyIcon}
           alt="Overwrite Empty Icon"
           style={IMG_STYLE_FOR_SPACEY_ICONS}
         />
@@ -292,7 +292,7 @@ export function CreateSegmentButton() {
         }}
         title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
-        <img src="/images/new-cell.svg" alt="New Segment Icon" />
+        <img src={newCellIcon} alt="New Segment Icon" />
       </ButtonComponent>
     </Badge>
   );
@@ -394,7 +394,7 @@ export function FloodFillSettings() {
         }
         icon={
           <img
-            src="/images/icon-restrict-floodfill-to-bbox.svg"
+            src={iconRestrictFloodfillToBbox}
             alt="Restrict floodfill"
             style={IMG_STYLE_FOR_SPACEY_ICONS}
           />

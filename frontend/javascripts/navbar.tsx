@@ -64,6 +64,7 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
+import logoIconOnly from "/images/logo-icon-only.svg";
 
 const { Header } = Layout;
 
@@ -829,7 +830,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         >
           {getCollapsibleMenuTitle(
             "WEBKNOSSOS",
-            <img src="/images/logo-icon-only.svg" className="logo icon-margin-right" alt="logo" />,
+            <img src={logoIconOnly} className="logo icon-margin-right" alt="logo" />,
             collapseAllNavItems,
           )}
         </Link>

@@ -1,5 +1,7 @@
 import { useWkSelector } from "libs/react_hooks";
 import type { CSSProperties, StyleHTMLAttributes } from "react";
+import iconHideSkeletonEdgesDark from "/images/icon-hide-skeleton-edges-dark.svg";
+import iconHideSkeletonEdgesLight from "/images/icon-hide-skeleton-edges-light.svg";
 
 export function HideTreeEdgesIcon({
   style,
@@ -11,8 +13,8 @@ export function HideTreeEdgesIcon({
   const isDarkTheme = useWkSelector((state) => state.uiInformation.theme === "dark");
 
   const imageUrl = isDarkTheme
-    ? 'url("/images/icon-hide-skeleton-edges-light.svg")'
-    : 'url("/images/icon-hide-skeleton-edges-dark.svg")';
+    ? `url(${iconHideSkeletonEdgesLight})`
+    : `url(${iconHideSkeletonEdgesDark})`;
   const iconStyle: CSSProperties = {
     width: "1em",
     height: "1em",

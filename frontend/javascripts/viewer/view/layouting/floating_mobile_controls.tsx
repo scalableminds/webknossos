@@ -10,6 +10,8 @@ import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_ac
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
 import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
+import iconSidebarHideLeftBright from "/images/icon-sidebar-hide-left-bright.svg";
+import iconSidebarHideRightBright from "/images/icon-sidebar-hide-right-bright.svg";
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
@@ -62,7 +64,7 @@ export function FloatingMobileControls() {
           icon={
             <img
               alt="Toggle left sidebar"
-              src="/images/icon-sidebar-hide-left-bright.svg"
+              src={iconSidebarHideLeftBright}
               style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }
@@ -76,7 +78,7 @@ export function FloatingMobileControls() {
           icon={
             <img
               alt="Toggle right sidebar"
-              src="/images/icon-sidebar-hide-right-bright.svg"
+              src={iconSidebarHideRightBright}
               style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }

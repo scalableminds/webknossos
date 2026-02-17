@@ -11,6 +11,9 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
+import boundingBoxIcon from "/images/bounding-box.svg";
+import lassoIcon from "/images/lasso.svg";
+import quickSelectToolIcon from "/images/quick-select-tool.svg";
 import { IMG_STYLE_FOR_SPACEY_ICONS, ToolRadioButton } from "./tool_helpers";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
@@ -181,7 +184,7 @@ function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
       value={AnnotationTool.TRACE.id}
     >
       <img
-        src="/images/lasso.svg"
+        src={lassoIcon}
         alt="Trace Tool Icon"
         style={{
           marginRight: 4,
@@ -293,7 +296,7 @@ function QuickSelectTool(_props: ToolButtonProps) {
       value={AnnotationTool.QUICK_SELECT.id}
     >
       <img
-        src="/images/quick-select-tool.svg"
+        src={quickSelectToolIcon}
         alt="Quick Select Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled ? 0.5 : 1,
@@ -319,7 +322,7 @@ function BoundingBoxTool(_props: ToolButtonProps) {
       value={AnnotationTool.BOUNDING_BOX.id}
     >
       <img
-        src="/images/bounding-box.svg"
+        src={boundingBoxIcon}
         alt="Bounding Box Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled ? 0.5 : 1,

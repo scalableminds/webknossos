@@ -76,6 +76,7 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import iconHideSkeletonEdgesLight from "/images/icon-hide-skeleton-edges-light.svg";
 
 type Description = {
   description: string;
@@ -290,7 +291,7 @@ const descriptionFns: Record<
     action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
   ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
-    icon: <img src="/images/hide-skeleton-edges-icon-light.svg" alt="Hide Tree Edges Icon" />,
+    icon: <img src={iconHideSkeletonEdgesLight} alt="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (
     action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,

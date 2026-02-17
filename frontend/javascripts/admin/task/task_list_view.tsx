@@ -48,6 +48,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
+import vxManualAnnotationsHorizontal from "/images/vx/manual-annotations-horizontal.png";
 
 const { Search, TextArea } = Input;
 
@@ -445,8 +446,7 @@ function TaskListView({ initialFieldValues }: Props) {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              background:
-                'url("/images/vx/manual-annotations-horizontal.png") center center / 110%',
+              background: `url(${vxManualAnnotationsHorizontal}) center center / 110%`,
               height: "73px",
               padding: "0px",
               width: "800px",

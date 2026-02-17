@@ -1,6 +1,9 @@
 import { ConfigProvider, Layout, Typography } from "antd";
 import { Link } from "react-router-dom";
 import { getAntdTheme } from "theme";
+import maxPlanckGesellschaftLogo from "/images/max-planck-gesellschaft.svg";
+import mpiBrainResearchLogo from "/images/mpi-brain-research.svg";
+import scalablemindsLogo from "/images/scalableminds-logo.svg";
 
 const { Footer } = Layout;
 
@@ -25,19 +28,19 @@ const creditsFooter = () => (
           <a href="https://www.brain.mpg.de/connectomics">
             <img
               alt="Max Planck Gesellschaft logo"
-              src="/images/Max-Planck-Gesellschaft.svg"
+              src={maxPlanckGesellschaftLogo}
               style={logoStyle}
             />
           </a>
           <a href="https://www.brain.mpg.de/connectomics">
             <img
               alt="Max Planck Institute for Brain Research logo"
-              src="/images/MPI-brain-research.svg"
+              src={mpiBrainResearchLogo}
               style={logoStyle}
             />
           </a>
           <a href="https://scalableminds.com">
-            <img alt="scalable minds logo" src="/images/scalableminds_logo.svg" style={logoStyle} />
+            <img alt="scalable minds logo" src={scalablemindsLogo} style={logoStyle} />
           </a>
         </Typography.Paragraph>
         <Typography.Paragraph>

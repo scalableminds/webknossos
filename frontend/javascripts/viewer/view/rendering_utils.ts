@@ -19,6 +19,7 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
+import logoScreenshot from "/images/logo-screenshot.svg";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
@@ -112,7 +113,7 @@ export function renderToTexture(
 
 function getScreenshotLogoImage(): Promise<HTMLImageElement> {
   const logo = document.createElement("img");
-  logo.src = "/images/logo-screenshot.svg";
+  logo.src = logoScreenshot;
   return new Promise((resolve) => {
     logo.onload = () => resolve(logo);
   });

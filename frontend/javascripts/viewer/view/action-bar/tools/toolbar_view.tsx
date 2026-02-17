@@ -19,6 +19,9 @@ import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_action
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
+import areaMeasurementIcon from "/images/area-measurement.svg";
+import lineMeasurementIcon from "/images/line-measurement.svg";
+import newBoundingBoxIcon from "/images/new-bounding-box.svg";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
@@ -54,7 +57,7 @@ function CreateNewBoundingBoxButton() {
       title="Create a new bounding box centered around the current position."
     >
       <img
-        src="/images/new-bounding-box.svg"
+        src={newBoundingBoxIcon}
         alt="New Bounding Box Icon"
         style={IMG_STYLE_FOR_SPACEY_ICONS}
       />
@@ -248,7 +251,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationTool.LINE_MEASUREMENT.id}
       >
-        <img src="/images/line-measurement.svg" alt="Measurement Tool Icon" />
+        <img src={lineMeasurementIcon} alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         disabledTitle={explanation}
@@ -260,7 +263,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         disabled={isDisabled}
       >
         <img
-          src="/images/area-measurement.svg"
+          src={areaMeasurementIcon}
           alt="Measurement Tool Icon"
           style={IMG_STYLE_FOR_SPACEY_ICONS}
         />

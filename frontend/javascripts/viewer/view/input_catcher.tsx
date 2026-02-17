@@ -16,6 +16,13 @@ import Store from "viewer/store";
 import makeRectRelativeToCanvas from "viewer/view/layouting/layout_canvas_adapter";
 import Scalebar from "viewer/view/scalebar";
 import ViewportStatusIndicator from "viewer/view/viewport_status_indicator";
+import eraserPointedSolidBorderCursor from "/images/eraser-pointed-solid-border.svg";
+import eraserSolidBorderCursor from "/images/eraser-solid-border.svg";
+import eyeDropperSolidBorderCursor from "/images/eye-dropper-solid-border.svg";
+import fillPointedSolidBorderCursor from "/images/fill-pointed-solid-border.svg";
+import lassoPointedSolidBorderCursor from "/images/lasso-pointed-solid-border.svg";
+import paintBrushSolidBorderCursor from "/images/paint-brush-solid-border.svg";
+import rulerPointedBorderCursor from "/images/ruler-pointed-border.svg";
 
 const emptyViewportRect = {
   top: 0,
@@ -100,17 +107,17 @@ export function recalculateInputCatcherSizes() {
 const cursorForTool: Record<AnnotationToolId, string> = {
   MOVE: "move",
   SKELETON: "crosshair",
-  BRUSH: "url(/images/paint-brush-solid-border.svg) 0 10,auto",
-  ERASE_BRUSH: "url(/images/eraser-solid-border.svg) 0 8,auto",
-  TRACE: "url(/images/lasso-pointed-solid-border.svg) 0 14,auto",
-  ERASE_TRACE: "url(/images/eraser-pointed-solid-border.svg) 0 16,auto",
-  FILL_CELL: "url(/images/fill-pointed-solid-border.svg) 0 16,auto",
-  VOXEL_PIPETTE: "url(/images/eye-dropper-solid-border.svg) 0 12,auto",
+  BRUSH: `url(${paintBrushSolidBorderCursor}) 0 10,auto`,
+  ERASE_BRUSH: `url(${eraserSolidBorderCursor}) 0 8,auto`,
+  TRACE: `url(${lassoPointedSolidBorderCursor}) 0 14,auto`,
+  ERASE_TRACE: `url(${eraserPointedSolidBorderCursor}) 0 16,auto`,
+  FILL_CELL: `url(${fillPointedSolidBorderCursor}) 0 16,auto`,
+  VOXEL_PIPETTE: `url(${eyeDropperSolidBorderCursor}) 0 12,auto`,
   BOUNDING_BOX: "copy",
   QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",
-  LINE_MEASUREMENT: "url(/images/ruler-pointed-border.svg) 0 14,auto",
-  AREA_MEASUREMENT: "url(/images/lasso-pointed-solid-border.svg) 0 14,auto",
+  LINE_MEASUREMENT: `url(${rulerPointedBorderCursor}) 0 14,auto`,
+  AREA_MEASUREMENT: `url(${lassoPointedSolidBorderCursor}) 0 14,auto`,
 };
 
 function InputCatcher({

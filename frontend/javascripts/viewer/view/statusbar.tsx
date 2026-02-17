@@ -40,6 +40,12 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "viewer/view/components/setting_input_views";
+import iconStatusbarDownsampling from "/images/icon-statusbar-downsampling.svg";
+import iconStatusbarMouseLeft from "/images/icon-statusbar-mouse-left.svg";
+import iconStatusbarMouseLeftDrag from "/images/icon-statusbar-mouse-left-drag.svg";
+import iconStatusbarMouseRight from "/images/icon-statusbar-mouse-right.svg";
+import iconStatusbarMouseRightDrag from "/images/icon-statusbar-mouse-right-drag.svg";
+import iconStatusbarMouseWheel from "/images/icon-statusbar-mouse-wheel.svg";
 import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
@@ -82,11 +88,7 @@ function ZoomShortcut() {
         </span>
       </span>{" "}
       +
-      <img
-        className="keyboard-mouse-icon"
-        src="/images/icon-statusbar-mouse-wheel.svg"
-        alt="Mouse Wheel"
-      />
+      <img className="keyboard-mouse-icon" src={iconStatusbarMouseWheel} alt="Mouse Wheel" />
       Zoom in/out
     </span>
   );
@@ -96,11 +98,7 @@ function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescr
   const leftClick =
     actionDescriptor.leftClick != null ? (
       <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/images/icon-statusbar-mouse-left.svg"
-          alt="Mouse Left Click"
-        />
+        <img className="keyboard-mouse-icon" src={iconStatusbarMouseLeft} alt="Mouse Left Click" />
         {actionDescriptor.leftClick}
       </span>
     ) : null;
@@ -109,7 +107,7 @@ function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescr
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/images/icon-statusbar-mouse-left-drag.svg"
+          src={iconStatusbarMouseLeftDrag}
           alt="Mouse Left Drag"
         />
         {actionDescriptor.leftDrag}
@@ -129,7 +127,7 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/images/icon-statusbar-mouse-right.svg"
+          src={iconStatusbarMouseRight}
           alt="Mouse Right Click"
         />
         {actionDescriptor.rightClick}
@@ -140,7 +138,7 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
-          src="/images/icon-statusbar-mouse-right-drag.svg"
+          src={iconStatusbarMouseRightDrag}
           alt="Mouse Right Drag"
         />
         {actionDescriptor.rightDrag}
@@ -216,7 +214,7 @@ function ShortcutsInfo() {
           >
             <img
               className="keyboard-mouse-icon"
-              src="/images/icon-statusbar-mouse-left-drag.svg"
+              src={iconStatusbarMouseLeftDrag}
               alt="Mouse Left Drag"
             />
             Move
@@ -348,19 +346,11 @@ function ShortcutsInfo() {
       <LeftClickShortcut actionDescriptor={actionDescriptor} />
       <RightClickShortcut actionDescriptor={actionDescriptor} />
       <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/images/icon-statusbar-mouse-wheel.svg"
-          alt="Mouse Wheel"
-        />
+        <img className="keyboard-mouse-icon" src={iconStatusbarMouseWheel} alt="Mouse Wheel" />
         {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
       <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/images/icon-statusbar-mouse-right-drag.svg"
-          alt="Mouse Right"
-        />
+        <img className="keyboard-mouse-icon" src={iconStatusbarMouseRightDrag} alt="Mouse Right" />
         Rotate 3D View
       </span>
       <ZoomShortcut />
@@ -552,11 +542,7 @@ function MagnificationInfo() {
 
   return (
     <span className="info-element">
-      <img
-        src="/images/icon-statusbar-downsampling.svg"
-        className="mag-status-bar-icon"
-        alt="Magnification"
-      />{" "}
+      <img src={iconStatusbarDownsampling} className="mag-status-bar-icon" alt="Magnification" />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
         {representativeMag.join("-")}
         {isActiveMagGlobal ? "" : "*"}{" "}

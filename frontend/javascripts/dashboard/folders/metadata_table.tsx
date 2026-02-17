@@ -36,6 +36,7 @@ import {
   type Folder,
 } from "types/api_types";
 import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
+import metadataTeaserImage from "/images/metadata-teaser.svg";
 
 export type APIMetadataWithError = APIMetadataEntry & { error?: string | null };
 
@@ -86,7 +87,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
     <Tag variant="outlined">
       <div className="flex-center-child empty-metadata-placeholder">
         <img
-          src="/images/metadata-teaser.svg"
+          src={metadataTeaserImage}
           alt="Metadata preview"
           style={{ width: "60%", marginBottom: 16 }}
         />

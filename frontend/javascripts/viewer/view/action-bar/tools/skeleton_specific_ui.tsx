@@ -15,6 +15,8 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
+import mergerModeIcon from "/images/merger-mode-icon.svg";
+import somaClickingIcon from "/images/soma-clicking-icon.svg";
 import {
   ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,
@@ -81,7 +83,7 @@ export function SkeletonSpecificButtons() {
         >
           <img
             style={IMG_STYLE_FOR_SPACEY_ICONS}
-            src="/images/soma-clicking-icon.svg"
+            src={somaClickingIcon}
             alt="Single Node Tree Mode"
           />
         </ToggleButton>
@@ -97,11 +99,7 @@ export function SkeletonSpecificButtons() {
           disabled={isMergerModeDisabled}
           title={mergerModeTooltipText}
         >
-          <img
-            style={IMG_STYLE_FOR_SPACEY_ICONS}
-            src="/images/merger-mode-icon.svg"
-            alt="Merger Mode"
-          />
+          <img style={IMG_STYLE_FOR_SPACEY_ICONS} src={mergerModeIcon} alt="Merger Mode" />
         </ToggleButton>
       )}
       <ToggleButton

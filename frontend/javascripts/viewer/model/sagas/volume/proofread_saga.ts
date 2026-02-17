@@ -344,14 +344,14 @@ export function* createEditableMapping(): Saga<string> {
   const baseMappingName = volumeTracing.mappingName;
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction(volumeTracingId));
-  // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
-  yield* call([Model, Model.ensureSavedState]);
   const editableMapping: ServerEditableMapping = {
     baseMappingName: baseMappingName,
     tracingId: volumeTracingId,
     createdTimestamp: Date.now(),
   };
   yield* put(initializeEditableMappingAction(editableMapping));
+  // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
+  yield* call([Model, Model.ensureSavedState]);
   return volumeTracingId;
 }
 
@@ -1295,7 +1295,6 @@ type Preparation = {
 
 function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  const annotationVersion = yield* select((state) => state.annotation.version);
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
     return null;
@@ -1318,6 +1317,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
       return null;
     }
   }
+  const annotationVersion = yield* select((state) => state.annotation.version);
 
   const magInfo = getMagInfo(volumeTracingLayer.mags);
   const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));

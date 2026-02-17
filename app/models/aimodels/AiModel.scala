@@ -1,11 +1,11 @@
 package models.aimodels
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
-import models.dataset.{DataStoreDAO, DataStoreService}
+import models.dataset.{DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
 import models.job.{JobDAO, JobService}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
@@ -15,7 +15,8 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
-import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -41,7 +42,9 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                userService: UserService,
                                organizationDAO: OrganizationDAO,
                                jobDAO: JobDAO,
-                               jobService: JobService) {
+                               jobService: JobService,
+                               rpc: RPC)
+    extends FoxImplicits {
   def publicWrites(aiModel: AiModel, requestingUser: User)(implicit ec: ExecutionContext,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
@@ -74,6 +77,19 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "sharedOrganizationIds" -> sharedOrganizationIds,
         "category" -> aiModel.category
       )
+
+  def pathWithFallback(aiModel: AiModel)(implicit ec: ExecutionContext): Fox[UPath] =
+    // Currently, all models have only this fallback path.
+    // TODO: unify after https://github.com/scalableminds/webknossos/pull/9150 is merged
+    for {
+      dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(GlobalAccessContext)
+      dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+      dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
+      baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
+      // No custom path, use legacy path schema:
+      fallbackPath = baseDirUPath / aiModel._organization / ".aiModels" / aiModel._id.toString
+    } yield fallbackPath
+
 }
 
 class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

@@ -30,7 +30,6 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import spire.std.map
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value

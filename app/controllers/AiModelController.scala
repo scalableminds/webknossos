@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
-import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
+import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
 import models.job.{JobCommand, JobService}
 import models.user.UserService
 import play.api.libs.json.{Json, OFormat}
@@ -17,6 +17,7 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.{OrganizationDAO, OrganizationService}
 import play.api.i18n.Messages
@@ -83,20 +84,20 @@ object RegisterAiModelParameters {
   implicit val jsonFormat: OFormat[RegisterAiModelParameters] = Json.format[RegisterAiModelParameters]
 }
 
-class AiModelController @Inject()(
-    aiModelDAO: AiModelDAO,
-    aiModelService: AiModelService,
-    sil: Silhouette[WkEnv],
-    userService: UserService,
-    annotationDAO: AnnotationDAO,
-    aiInferenceService: AiInferenceService,
-    aiInferenceDAO: AiInferenceDAO,
-    organizationDAO: OrganizationDAO,
-    organizationService: OrganizationService,
-    datasetService: DatasetService,
-    jobService: JobService,
-    datasetDAO: DatasetDAO,
-    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class AiModelController @Inject()(aiModelDAO: AiModelDAO,
+                                  aiModelService: AiModelService,
+                                  sil: Silhouette[WkEnv],
+                                  userService: UserService,
+                                  annotationDAO: AnnotationDAO,
+                                  aiInferenceService: AiInferenceService,
+                                  aiInferenceDAO: AiInferenceDAO,
+                                  organizationDAO: OrganizationDAO,
+                                  organizationService: OrganizationService,
+                                  datasetService: DatasetService,
+                                  jobService: JobService,
+                                  datasetDAO: DatasetDAO,
+                                  dataStoreDAO: DataStoreDAO,
+                                  rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -312,6 +313,10 @@ class AiModelController @Inject()(
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_neurons
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+        modelPath <- aiModelService.pathWithFallback(aiModel)
+        modelVoxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
+        _ = logger.info(s"model voxel size is $modelVoxelSize")
         targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,

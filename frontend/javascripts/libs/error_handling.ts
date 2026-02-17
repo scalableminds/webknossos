@@ -105,12 +105,12 @@ class ErrorHandling {
 
   initializeAirbrake() {
     // read Airbrake config from DOM
-    // config is inject from backend for production builds
+    // config is injected from backend for production builds
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     // @ts-expect-error
     const { dataset } = scriptTag || { dataset: {} };
-    const projectId = dataset.airbrakeProjectId || 123;
-    const projectKey = dataset.airbrakeProjectKey || "123";
+    const projectId = dataset.airbrakeProjectId || "projectIdNotFound";
+    const projectKey = dataset.airbrakeProjectKey || "projectKeyNotFound";
     const envName = dataset.airbrakeEnvironmentName || "development";
     this.airbrake = new Notifier({
       projectId,

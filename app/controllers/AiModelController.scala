@@ -52,17 +52,22 @@ object RunInstanceModelTrainingParameters {
   implicit val jsonFormat: OFormat[RunInstanceModelTrainingParameters] = Json.format[RunInstanceModelTrainingParameters]
 }
 
-case class RunInferenceParameters(annotationId: Option[ObjectId],
-                                  aiModelId: ObjectId,
-                                  datasetDirectoryName: String,
-                                  organizationId: String,
+case class RunInferenceParameters(datasetId: ObjectId, //NEW, replaces datasetDirectoryName: String,
+                                  aiModelId: Option[ObjectId], // now optional
+                                  // LOESCH organizationId: String,
                                   colorLayerName: String,
                                   boundingBox: String,
-                                  newDatasetName: String,
+                                  annotationId: Option[ObjectId],
                                   maskAnnotationLayerName: Option[String],
+                                  newDatasetName: String,
                                   workflowYaml: Option[String],
                                   invertColorLayer: Option[Boolean],
-                                  seedGeneratorDistanceThreshold: Option[Double])
+                                  seedGeneratorDistanceThreshold: Option[Double],
+                                  doSplitMergerEvaluation: Boolean, // NEW
+                                  evalUseSparseTracing: Option[Boolean], // NEW
+                                  evalMaxEdgeLength: Option[Double], // NEW
+                                  evalSparseTubeThresholdNm: Option[Double], // NEW
+                                  evalMinMergerPathLengthNm: Option[Double]) // NEW
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -250,28 +255,26 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
       } yield Ok(newAiModelJs)
     }
 
-  def runCustomInstanceModelInference: Action[RunInferenceParameters] =
+  // If no model is selected, the pretrained *nuclei model* is used
+  def runInstanceModelInference: Action[RunInferenceParameters] =
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          request.body.organizationId)
-        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
+        dataset <- datasetDAO.findOne(request.body.datasetId)
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_instances
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
-          "organization_id" -> organization._id,
+          "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModel._organization,
-          "dataset_directory_name" -> request.body.datasetDirectoryName,
+          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold
@@ -300,16 +303,13 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
       } yield Ok(newAiModelJs)
     }
 
-  def runCustomNeuronInference: Action[RunInferenceParameters] =
+  def runNeuronModelInference: Action[RunInferenceParameters] =
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          request.body.organizationId)
-        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
+        dataset <- datasetDAO.findOne(request.body.datasetId)
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_neurons
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
@@ -320,13 +320,13 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
         targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
-          "organization_id" -> organization._id,
+          "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModel._organization,
-          "dataset_directory_name" -> request.body.datasetDirectoryName,
+          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer

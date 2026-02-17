@@ -50,7 +50,6 @@ public/commit.txt
 public/docs
 public/docs/frontend-api
 public/test-bundle
-public/assets
 public/images
 public/wasm
 public/index.html

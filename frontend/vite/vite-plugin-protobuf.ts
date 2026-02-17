@@ -15,9 +15,14 @@ interface ProtobufPluginOptions {
  */
 export default function viteProtobufPlugin(options: ProtobufPluginOptions = {}): Plugin {
   const { protoDir = "proto" } = options;
+  let projectRoot: string;
 
   return {
     name: "vite-plugin-protobuf",
+
+    configResolved(config) {
+      projectRoot = config.root;
+    },
 
     async transform(_code, id) {
       if (!id.endsWith(".proto")) {
@@ -43,7 +48,7 @@ export default function viteProtobufPlugin(options: ProtobufPluginOptions = {}):
       if (source.endsWith(".proto")) {
         // Always resolve proto files relative to the proto directory
         const fileName = path.basename(source);
-        return path.resolve(process.cwd(), protoDir, fileName);
+        return path.resolve(projectRoot, protoDir, fileName);
       }
       return null;
     },

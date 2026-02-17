@@ -26,7 +26,7 @@ export const viteConfig = {
     },
   },
   plugins: [
-    // analyzer(),
+    // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
     react(),
     tsconfigPaths(),
     wasm(),

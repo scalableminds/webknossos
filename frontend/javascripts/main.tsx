@@ -108,7 +108,7 @@ async function initApp() {
     return;
   }
 
-  const react_root = createRoot(containerElement);
+  const reactRoot = createRoot(containerElement);
 
   try {
     await Promise.all([
@@ -122,7 +122,7 @@ async function initApp() {
     ]);
     await loadOrganization();
 
-    react_root.render(
+    reactRoot.render(
       <ErrorBoundary>
         <Provider store={Store}>
           <PersistQueryClientProvider
@@ -149,6 +149,6 @@ async function initApp() {
     );
   } catch (e) {
     console.error("Failed to load WEBKNOSSOS due to the following error", e);
-    react_root.render(<FailedToLoadView />);
+    reactRoot.render(<FailedToLoadView />);
   }
 }

@@ -86,6 +86,24 @@ export function selectTracing(
   return tracing;
 }
 
+export function getTracingById(
+  state: WebknossosState,
+  tracingId: string,
+): SkeletonTracing | VolumeTracing | EditableMapping {
+  const allTracings = compact([
+    state.annotation.skeleton,
+    ...state.annotation.volumes,
+    ...state.annotation.mappings,
+  ]);
+  const tracing = allTracings.find((t) => t.tracingId === tracingId);
+
+  if (tracing == null) {
+    throw new Error(`Could not find tracing with id ${tracingId}.`);
+  }
+
+  return tracing;
+}
+
 function _getTaskBoundingBoxes(state: WebknossosState) {
   const { annotation, task } = state;
   if (task == null) return {};

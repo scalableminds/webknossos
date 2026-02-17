@@ -1,10 +1,4 @@
-import {
-  CheckOutlined,
-  CloseOutlined,
-  CompressOutlined,
-  CopyOutlined,
-  ShareAltOutlined,
-} from "@ant-design/icons";
+import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -27,7 +21,6 @@ import {
   type RadioChangeEvent,
   Row,
   Space,
-  Switch,
   Tooltip,
 } from "antd";
 import { AsyncButton } from "components/async_clickables";

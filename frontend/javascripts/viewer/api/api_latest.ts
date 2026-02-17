@@ -93,7 +93,11 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { restartSagaAction, wkInitializedAction } from "viewer/model/actions/actions";
+import {
+  dispatchGetNewIdAsync,
+  restartSagaAction,
+  wkInitializedAction,
+} from "viewer/model/actions/actions";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
@@ -164,7 +168,6 @@ import {
   zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
-import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
@@ -754,7 +757,11 @@ class TracingApi {
 
     let groupId = MISSING_GROUP_ID;
     try {
-      groupId = api.tracing.createSegmentGroup(`Segments for ${bbName}`, -1, segmentationLayerName);
+      groupId = await api.tracing.createSegmentGroup(
+        `Segments for ${bbName}`,
+        -1,
+        segmentationLayerName,
+      );
     } catch (_e) {
       console.info(
         `Volume tracing could not be found for the currently visible segmentation layer, registering segments for ${bbName} within root group.`,
@@ -845,17 +852,17 @@ class TracingApi {
    * Creates a new segment group and returns its id.
    *
    * @example
-   * api.tracing.createSegmentGroup(
+   * await api.tracing.createSegmentGroup(
    *   "Group name",    // optional
    *   parentGroupId,   // optional. use -1 for the root group
    *   volumeLayerName, // see getSegmentationLayerNames
    * );
    */
-  createSegmentGroup(
+  async createSegmentGroup(
     name: string | null = null,
     parentGroupId: number | null = MISSING_GROUP_ID,
     volumeLayerName?: string,
-  ): number {
+  ): Promise<number> {
     const volumeTracing = volumeLayerName
       ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
@@ -863,12 +870,12 @@ class TracingApi {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
     const { segmentGroups } = volumeTracing;
-    const { newSegmentGroups, newGroupId } = createGroupHelper(
-      segmentGroups,
-      name,
-      getMaximumGroupId(segmentGroups) + 1,
-      parentGroupId,
+    const newGroupId = await dispatchGetNewIdAsync(
+      Store.dispatch,
+      volumeTracing.tracingId,
+      "SegmentGroup",
     );
+    const newSegmentGroups = createGroupHelper(segmentGroups, name, newGroupId, parentGroupId);
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
 

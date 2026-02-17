@@ -487,10 +487,10 @@ function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     }
   };
 
-  const onRegisterSegmentsForBB = (value: Vector6, name: string): void => {
+  const onRegisterSegmentsForBB = async (value: Vector6, name: string): Promise<void> => {
     const min: Vector3 = [value[0], value[1], value[2]];
     const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
-    api.tracing
+    await api.tracing
       .registerSegmentsForBoundingBox(min, max, name)
       .catch((error) => Toast.error(error.message));
     maybeCloseContextMenu();

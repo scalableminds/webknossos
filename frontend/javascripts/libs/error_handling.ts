@@ -109,8 +109,8 @@ class ErrorHandling {
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     // @ts-expect-error
     const { dataset } = scriptTag || { dataset: {} };
-    const projectId = dataset.airbrakeProjectId || 123;
-    const projectKey = dataset.airbrakeProjectKey || "123";
+    const projectId = dataset.airbrakeProjectId || "projectIdNotFound";
+    const projectKey = dataset.airbrakeProjectKey || "projectKeyNotFound";
     const envName = dataset.airbrakeEnvironmentName || "development";
     this.airbrake = new Notifier({
       projectId,

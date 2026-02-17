@@ -7,6 +7,7 @@ import topLevelAwait from "vite-plugin-top-level-await";
 import analyzer from "vite-bundle-analyzer";
 
 import path from "node:path";
+import fs from "node:fs";
 
 // https://vite.dev/config/
 
@@ -63,8 +64,18 @@ export const viteConfig = {
   server: {
     port: 9000,
     cors: true,
+    // https: {
+    //   // Enable HTTPS with self-signed certificates for testing passkeys etc
+    //   // Make sure you've generated SSL certificates using the ./tools/proxy/gen-ssl-dev-certs.sh script
+    //   key: fs.readFileSync("./target/dev.key.pem"),
+    //   cert: fs.readFileSync("./target/dev.cert.pem"),
+    // },
     proxy: {
       // You can add more routes here, e.g. "^/(api|binary|auth)"
+      "^/dist/": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
       "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,

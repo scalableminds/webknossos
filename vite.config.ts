@@ -42,8 +42,9 @@ export const viteConfig = {
   build: {
     copyPublicDir: true, // copy all frontend/assets (images, etc.) to public/assets
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
-    emptyOutDir: false,
+    emptyOutDir: true,
     sourcemap: true,
+    base: "/assets/",
     rollupOptions: {
       output: {
         manualChunks(id) {

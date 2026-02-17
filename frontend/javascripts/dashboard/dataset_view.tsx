@@ -18,6 +18,7 @@ import {
   Button,
   Col,
   Dropdown,
+  Flex,
   Input,
   type MenuProps,
   Radio,
@@ -26,6 +27,7 @@ import {
   Space,
   Spin,
   Tooltip,
+  Typography,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
@@ -40,7 +42,13 @@ import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_types";
+import {
+  type APIDatasetCompact,
+  type APIJob,
+  APIJobCommand,
+  type APIUser,
+  type FolderItem,
+} from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
@@ -123,22 +131,27 @@ function DatasetView({
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-
-    if (features().jobsEnabled) {
-      getJobs().then((newJobs) => setJobs(newJobs));
-    }
   }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
     if (features().jobsEnabled) {
-      interval = setInterval(() => {
-        getJobs().then((newJobs) => setJobs(newJobs));
-      }, CONVERSION_JOBS_REFRESH_INTERVAL);
+      const poll = () =>
+        getJobs(APIJobCommand.CONVERT_TO_WKW, true).then((newJobs) => {
+          if (!cancelled) {
+            setJobs(newJobs);
+          }
+        });
+      poll();
+      interval = setInterval(poll, CONVERSION_JOBS_REFRESH_INTERVAL);
     }
 
-    return () => (interval != null ? clearInterval(interval) : undefined);
+    return () => {
+      cancelled = true;
+      return interval != null ? clearInterval(interval) : undefined;
+    };
   }, []);
 
   useEffect(() => {
@@ -383,8 +396,21 @@ function GlobalSearchHeader({
   }
 
   return (
-    <>
-      <div style={{ float: "right" }}>
+    <Flex justify="space-between">
+      <Space>
+        <Typography.Title level={3}>
+          <Space>
+            <SearchOutlined />
+            <span>Search Results for &quot;{searchQuery}&quot;</span>
+          </Space>
+        </Typography.Title>
+        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+          <Typography.Text type="secondary">
+            (only showing the first {SEARCH_RESULTS_LIMIT} results)
+          </Typography.Text>
+        ) : null}
+      </Space>
+      <div>
         <Select
           options={SEARCH_OPTIONS}
           popupMatchSelectWidth={false}
@@ -410,16 +436,7 @@ function GlobalSearchHeader({
           }
         />
       </div>
-      <h3>
-        <SearchOutlined />
-        Search Results for &quot;{searchQuery}&quot;
-        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-          <span style={{ color: "var( --ant-color-text-secondary)", fontSize: 14, marginLeft: 8 }}>
-            (only showing the first {SEARCH_RESULTS_LIMIT} results)
-          </span>
-        ) : null}
-      </h3>
-    </>
+    </Flex>
   );
 }
 

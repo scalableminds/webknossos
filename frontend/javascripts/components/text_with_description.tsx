@@ -1,4 +1,5 @@
-import { Popover, Tooltip } from "antd";
+import { AlignCenterOutlined } from "@ant-design/icons";
+import { Button, Popover, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import type React from "react";
 import type { EditableTextLabelProp } from "viewer/view/components/editable_text_label";
@@ -44,12 +45,7 @@ const TextWithDescription: React.FC<Props> = (props) => {
         {hasDescription ? (
           <Tooltip title="Show description" placement="bottom">
             <Popover title="Description" trigger="click" content={markdownDescription}>
-              <i
-                className="fas fa-align-justify"
-                style={{
-                  cursor: "pointer",
-                }}
-              />
+              <Button size="small" color="default" variant="text" icon={<AlignCenterOutlined />} />
             </Popover>
           </Tooltip>
         ) : null}

@@ -131,11 +131,13 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[String]
 
-  def deletePaths(paths: Seq[UPath]): Fox[Unit] =
+  // Datastore deletes local paths and returns list of paths to be deleted externally.
+  // Should not be called directly, go via PathDeletionService
+  def deletePaths(paths: Seq[UPath]): Fox[Seq[UPath]] =
     for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/deletePaths")
+      pathsToDeleteExternally <- rpc(s"${dataStore.url}/data/datasets/deletePaths")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
-        .deleteJson(paths)
-    } yield ()
+        .deleteJsonWithJsonResponse[Seq[UPath], Seq[UPath]](paths)
+    } yield pathsToDeleteExternally
 
 }

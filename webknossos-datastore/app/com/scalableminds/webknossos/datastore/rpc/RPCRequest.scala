@@ -235,10 +235,10 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
-  def deleteJson[T: Writes](body: T): Fox[WSResponse] = {
+  def deleteJsonWithJsonResponse[T: Writes, J: Reads](body: T): Fox[J] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("DELETE")
-    performRequest
+    parseJsonResponse(performRequest)
   }
 
   def delete(): Fox[WSResponse] = {

@@ -376,6 +376,7 @@ job.updateStatus.failed = Failed to update long-running job’s status
 job.creditTransaction.failed = Failed to perform credit transaction
 job.creditTransaction.refund.failed = Failed to perform credit transaction refund
 job.creditTransaction.notPaidPlan = Only organizations with a paid plan are allowed to start this job.
+job.creditTransaction.noAiPlan = Only organizations with an AI plan are allowed to start this job.
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

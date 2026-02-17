@@ -218,8 +218,6 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  def inferenceBBoxToTargetMag(mag1BoundingBox: BoundingBox): BoundingBox = ??? // TODO
-
   def submitPaidJob(command: JobCommand,
                     commandArgs: JsObject,
                     jobBoundingBoxInTargetMag: BoundingBox,

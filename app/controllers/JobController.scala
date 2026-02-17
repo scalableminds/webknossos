@@ -213,90 +213,6 @@ class JobController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(datasetId: ObjectId,
-                        layerName: String,
-                        newDatasetName: String,
-                        invertColorLayer: Option[Boolean]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      log(Some(slackNotificationService.noticeFailedJobRequest)) {
-        for {
-          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
-          _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerNameLax(layerName)
-          _ <- userService.assertIsSuperUser(request.identity) ?~> "job.inferNuclei.notAllowed.onlySuperUsers"
-          command = JobCommand.infer_nuclei
-          commandArgs = Json.obj(
-            "dataset_id" -> dataset._id,
-            "organization_id" -> dataset._organization,
-            "dataset_name" -> dataset.name,
-            "dataset_directory_name" -> dataset.directoryName,
-            "layer_name" -> layerName,
-            "new_dataset_name" -> newDatasetName,
-            "invert_color_layer" -> invertColorLayer
-          )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNucleiInferral"
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
-      }
-    }
-
-  def runInferNeuronsJob(datasetId: ObjectId,
-                         layerName: String,
-                         bbox: String,
-                         newDatasetName: String,
-                         doSplitMergerEvaluation: Boolean,
-                         annotationId: Option[String],
-                         evalUseSparseTracing: Option[Boolean],
-                         evalMaxEdgeLength: Option[Double],
-                         evalSparseTubeThresholdNm: Option[Double],
-                         evalMinMergerPathLengthNm: Option[Double],
-                         invertColorLayer: Option[Boolean]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      log(Some(slackNotificationService.noticeFailedJobRequest)) {
-        for {
-          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
-          _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerNameLax(layerName)
-          annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
-          command = JobCommand.infer_neurons
-          mag1BoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
-          commandArgs = Json.obj(
-            "dataset_id" -> dataset._id,
-            "organization_id" -> organization._id,
-            "dataset_name" -> dataset.name,
-            "dataset_directory_name" -> dataset.directoryName,
-            "new_dataset_name" -> newDatasetName,
-            "layer_name" -> layerName,
-            "bbox" -> bbox,
-            "do_split_merger_evaluation" -> doSplitMergerEvaluation,
-            "annotation_id" -> annotationIdParsed,
-            "eval_use_sparse_tracing" -> evalUseSparseTracing,
-            "eval_max_edge_length" -> evalMaxEdgeLength,
-            "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,
-            "eval_min_merger_path_length_nm" -> evalMinMergerPathLengthNm,
-            "invert_color_layer" -> invertColorLayer
-          )
-          creditTransactionComment = s"AI neuron segmentation for dataset ${dataset.name}"
-          job <- jobService.submitPaidJob(command,
-                                          commandArgs,
-                                          targetMagBoundingBox,
-                                          creditTransactionComment,
-                                          request.identity,
-                                          dataset._dataStore)
-          jobAsJs <- jobService.publicWrites(job)
-        } yield Ok(jobAsJs)
-      }
-    }
-
   def runInferMitochondriaJob(datasetId: ObjectId,
                               layerName: String,
                               bbox: String,
@@ -313,7 +229,6 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_mitochondria
           mag1BoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
@@ -326,7 +241,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
           job <- jobService.submitPaidJob(command,
                                           commandArgs,
-                                          targetMagBoundingBox,
+                                          mag1BoundingBox, // TODO should be target mag
                                           creditTransactionComment,
                                           request.identity,
                                           dataset._dataStore)

@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
-import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
+import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
 import models.job.{JobCommand, JobService}
 import models.user.UserService
 import play.api.libs.json.{Json, OFormat}
@@ -56,7 +56,7 @@ case class RunInferenceParameters(datasetId: ObjectId, //NEW, replaces datasetDi
                                   aiModelId: Option[ObjectId], // now optional
                                   // LOESCH organizationId: String,
                                   colorLayerName: String,
-                                  boundingBox: String,
+                                  boundingBox: String, // Always in mag1
                                   annotationId: Option[ObjectId],
                                   maskAnnotationLayerName: Option[String],
                                   newDatasetName: String,
@@ -261,6 +261,7 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
@@ -280,7 +281,12 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold
         )
         creditTransactionComment = s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
-        targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
+        targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
+                                                                        layer,
+                                                                        dataSource.scale,
+                                                                        aiModelOpt,
+                                                                        usePretrainedNeuronModel = false,
+                                                                        dataStore)
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
                                                     targetMagBoundingBox,
@@ -308,16 +314,18 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_neurons
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
-        dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-        modelPath <- aiModelService.pathWithFallback(aiModel)
-        modelVoxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
-        _ = logger.info(s"model voxel size is $modelVoxelSize")
-        targetMagBoundingBox = jobService.inferenceBBoxToTargetMag(mag1BoundingBox)
+        targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
+                                                                        layer,
+                                                                        dataSource.scale,
+                                                                        aiModelOpt,
+                                                                        usePretrainedNeuronModel = aiModelOpt.isEmpty,
+                                                                        dataStore)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,

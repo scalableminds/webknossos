@@ -458,6 +458,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
   }
 
+  def getDataSourceAndLayerFor(dataset: Dataset, layerName: String)(
+      implicit mp: MessagesProvider): Fox[(UsableDataSource, StaticLayer)] =
+    for {
+      usableDataSource <- usableDataSourceFor(dataset)
+      dataLayer <- usableDataSource.getDataLayer(layerName).toFox ?~> Messages("dataLayer.notFound", layerName)
+    } yield (usableDataSource, dataLayer)
+
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.notFound"

@@ -3,7 +3,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
-import topLevelAwait from "vite-plugin-top-level-await";
 import analyzer from "vite-bundle-analyzer";
 
 import path from "node:path";
@@ -31,7 +30,6 @@ export const viteConfig = {
     react(),
     tsconfigPaths(),
     wasm(),
-    topLevelAwait(),
     viteProtobufPlugin({
       protoDir: "webknossos-datastore/proto",
     }),
@@ -44,7 +42,6 @@ export const viteConfig = {
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,
     sourcemap: true,
-    base: "/assets/",
     rollupOptions: {
       output: {
         manualChunks(id) {

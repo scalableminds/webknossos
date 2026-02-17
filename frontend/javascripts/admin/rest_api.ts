@@ -1003,7 +1003,7 @@ export async function downloadAnnotation(
   await downloadWithFilename(downloadUrl);
 }
 
-type AnnotationIdDomain =
+export type AnnotationIdDomain =
   | "Segment"
   | "SegmentGroup"
   | "Tree"
@@ -1030,7 +1030,7 @@ export async function reserveIdsForAnnotation(
   domain: AnnotationIdDomain,
   numberOfIdsToReserve: number,
   idsToRelease: number[] = [],
-) {
+): Promise<number[]> {
   /*
    * Will newly reserved ids for the specified domain.
    */

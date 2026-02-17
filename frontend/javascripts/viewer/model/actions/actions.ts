@@ -1,3 +1,6 @@
+import type { AnnotationIdDomain } from "admin/rest_api";
+import Deferred from "libs/async/deferred";
+import type { Dispatch } from "redux";
 import type { AnnotationActionTypes } from "viewer/model/actions/annotation_actions";
 import type { ConnectomeAction } from "viewer/model/actions/connectome_actions";
 import type { DatasetAction } from "viewer/model/actions/dataset_actions";
@@ -16,6 +19,7 @@ import type { ViewModeAction } from "viewer/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "viewer/model/actions/volumetracing_actions";
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
+export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
 
 export type Action =
   | SkeletonTracingAction
@@ -40,7 +44,8 @@ export type Action =
   | ReturnType<typeof restartSagaAction>
   | ReturnType<typeof resetStoreAction>
   | ReturnType<typeof cancelSagaAction>
-  | EscalateErrorAction;
+  | EscalateErrorAction
+  | GetNewIdAction;
 
 // This action indicates that webknossos was initialized successfully, meaning all relevant data
 // was fetched and the controllers, sagas and keyboard handlers were initialized.
@@ -82,3 +87,26 @@ export const escalateErrorAction = (error: unknown) =>
     type: "ESCALATE_ERROR",
     error,
   }) as const;
+
+export const getNewIdAction = (
+  callback: (newId: number) => void,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) =>
+  ({
+    type: "GET_NEW_ID",
+    callback,
+    tracingId,
+    domain,
+  }) as const;
+
+export const dispatchGetNewIdAsync = async (
+  dispatch: Dispatch<any>,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+): Promise<number> => {
+  const readyDeferred = new Deferred<number, unknown>();
+  const action = getNewIdAction((newId) => readyDeferred.resolve(newId), tracingId, domain);
+  dispatch(action);
+  return await readyDeferred.promise();
+};

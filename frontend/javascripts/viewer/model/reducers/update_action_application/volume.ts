@@ -147,7 +147,7 @@ function applySingleAction(
           ua.value.name ?? null,
           groupId,
           newParentId ?? null,
-        ).newSegmentGroups;
+        );
       }
 
       return VolumeTracingReducer(state, setSegmentGroupsAction(newSegmentGroups, actionTracingId));

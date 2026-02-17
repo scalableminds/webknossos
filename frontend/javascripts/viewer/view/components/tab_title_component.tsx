@@ -1,7 +1,10 @@
-import useDocumentTitle from "@rehooks/document-title";
+import { useEffect } from "react";
 
 function TabTitle({ title }: { title: string }) {
-  useDocumentTitle(title);
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
+
   return null;
 }
 

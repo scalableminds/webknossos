@@ -38,10 +38,7 @@ const decodeFourBit = createWorker<typeof DecodeFourBit>("decode_four_bit.worker
 const COMPRESSION_BATCH_SIZE = 128;
 const COMPRESSION_WORKER_COUNT = 2;
 const compressionPool = new WebworkerPool(
-  () =>
-    createWorker<typeof ByteArraysToLz4Base64>(
-      "byte_arrays_to_lz4_base64.worker.ts",
-    ) as unknown as (byteArrays: Uint8Array[]) => Promise<string[]>,
+  () => createWorker<typeof ByteArraysToLz4Base64>("byte_arrays_to_lz4_base64.worker.ts"),
   COMPRESSION_WORKER_COUNT,
 );
 

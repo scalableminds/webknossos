@@ -10,24 +10,22 @@ interface ProtobufPluginOptions {
   protoDir?: string;
 }
 
+/**
+ * Vite plugin for loading and parsing Protobuf (.proto) files into protobufjs JSON descriptors.
+ */
 export default function viteProtobufPlugin(options: ProtobufPluginOptions = {}): Plugin {
   const { protoDir = "proto" } = options;
 
   return {
     name: "vite-plugin-protobuf",
 
-    // Handle .proto file imports
     async transform(_code, id) {
-      // Check if this is a .proto file
       if (!id.endsWith(".proto")) {
         return null;
       }
 
       try {
-        // Load and parse the proto file
-        const root = protobuf.loadSync(id);
-
-        // Convert to JSON descriptor
+        const root = await protobuf.load(id);
         const json = root.toJSON();
 
         // Return as ES module with default export

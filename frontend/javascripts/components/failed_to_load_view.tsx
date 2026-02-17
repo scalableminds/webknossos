@@ -1,27 +1,17 @@
-import { Button, ConfigProvider, Result, Row, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { Button, Card, ConfigProvider, Result, Row, Typography } from "antd";
+import useInterval from "beautiful-react-hooks/useInterval";
 import { ColorWKBlue, getAntdTheme } from "theme";
 import backgroundOrganelles from "/images/background_mixed_cells_drawn.svg";
 
 export function FailedToLoadView() {
-  const [retries] = useState(() =>
-    Number.parseInt(sessionStorage.getItem("wk_load_retries") || "0"),
-  );
-
-  useEffect(() => {
-    if (retries < 3) {
-      const timer = setTimeout(() => {
-        sessionStorage.setItem("wk_load_retries", (retries + 1).toString());
-        window.location.reload();
-      }, 2000);
-      return () => clearTimeout(timer);
+  useInterval(() => {
+    if (import.meta.env.DEV) {
+      window.location.reload();
     }
-  }, [retries]);
-
-  const canAutoRetry = retries < 5;
+  }, 5000);
 
   return (
-    <ConfigProvider theme={getAntdTheme("dark")}>
+    <ConfigProvider theme={getAntdTheme("light")}>
       <Row
         justify="center"
         align="middle"
@@ -35,26 +25,23 @@ export function FailedToLoadView() {
           backgroundColor: ColorWKBlue,
         }}
       >
-        <Result
-          status="error"
-          title="Failed to load WEBKNOSSOS"
-          subTitle={
-            <Typography.Text>
-              The server might still be starting up, please try again in a few seconds or check
-              console output.
-              {canAutoRetry && (
-                <Typography.Paragraph>
-                  Retrying automatically (Attempt {retries + 1}/5)...
-                </Typography.Paragraph>
-              )}
-            </Typography.Text>
-          }
-          extra={[
-            <Button key="reload" type="primary" onClick={() => window.location.reload()}>
-              Reload Page
-            </Button>,
-          ]}
-        />
+        <Card>
+          <Result
+            status="error"
+            title="Failed to load WEBKNOSSOS"
+            subTitle={
+              <Typography.Text>
+                The server might still be starting up, please try again in a few seconds or check
+                console output.
+              </Typography.Text>
+            }
+            extra={[
+              <Button key="reload" type="primary" onClick={() => window.location.reload()}>
+                Reload Page
+              </Button>,
+            ]}
+          />
+        </Card>
       </Row>
     </ConfigProvider>
   );

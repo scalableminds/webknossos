@@ -121,7 +121,6 @@ async function initApp() {
       loadHasOrganizations(),
     ]);
     await loadOrganization();
-    sessionStorage.removeItem("wk_load_retries"); // auto reload while backend is still compiling/starting
 
     react_root.render(
       <ErrorBoundary>

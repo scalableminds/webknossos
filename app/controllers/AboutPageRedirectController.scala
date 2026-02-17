@@ -5,7 +5,7 @@ import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.CspHeaders
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, TextUtils}
 import models.user.{MultiUser, MultiUserDAO, Theme}
 import opengraph.{OpenGraphService, OpenGraphTags}
 import play.api.mvc.{Action, AnyContent}
@@ -26,6 +26,7 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
                                             openGraphService: OpenGraphService,
                                             environment: Environment)(implicit ec: ExecutionContext)
     extends Controller
+    with FoxImplicits
     with CspHeaders {
 
   def redirectToAboutPageOrSendMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -40,24 +41,24 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
           request.path,
           request.getQueryString("sharingToken").orElse(request.getQueryString("token")))
         mainViewTemplate <- mainViewTemplateOpt.toFox ?~> "Could not load main view template"
-        mainView = renderMainViewFromTemplate(mainViewTemplate, multiUserOpt, openGraphTags)
+        mainView <- renderMainViewFromTemplate(mainViewTemplate, multiUserOpt, openGraphTags).toFox ?~> "Could not render main view template"
       } yield addCspHeader(Ok(mainView).as("text/html"))
     }
   }
 
   private def renderMainViewFromTemplate(mainViewTemplate: String,
                                          multiUserOpt: Option[MultiUser],
-                                         openGraphTags: OpenGraphTags): String = {
+                                         openGraphTags: OpenGraphTags): Box[String] = {
     val themeName = multiUserOpt.map(_.selectedTheme).getOrElse(Theme.auto).toString
-    mainViewTemplate
-      .replace("""<meta name="commit-hash" content="" />""",
-               s"""<meta name="commit-hash" content="${webknossos.BuildInfo.commitHash}" />""")
-      .replace("""<meta name="selected-theme" content="" />""",
-               s"""<meta name="selected-theme" content="$themeName" />""")
-      .replace("<!-- INJECT_THEME_CSS -->", renderThemeCss(multiUserOpt))
-      .replace("<!-- INJECT_OPENGRAPH_METADATA -->", renderOpenGraphMetadata(openGraphTags))
-      .replace("<!-- INJECT_WKORG_METADATA -->", wkOrgMetadata)
-      .replace("<!-- INJECT_AIRBRAKE_CONFIG -->", airbrakeConfig)
+    TextUtils.renderTemplateReplacements(
+      mainViewTemplate,
+      """<meta name="commit-hash" content="" />""" -> s"""<meta name="commit-hash" content="${webknossos.BuildInfo.commitHash}" />""",
+      """<meta name="selected-theme" content="" />""" -> s"""<meta name="selected-theme" content="$themeName" />""",
+      "<!-- INJECT_THEME_CSS -->" -> renderThemeCss(multiUserOpt),
+      "<!-- INJECT_OPENGRAPH_METADATA -->" -> renderOpenGraphMetadata(openGraphTags),
+      "<!-- INJECT_WKORG_METADATA -->" -> wkOrgMetadata,
+      "<!-- INJECT_AIRBRAKE_CONFIG -->" -> airbrakeConfig
+    )
   }
 
   private def renderThemeCss(multiUserOpt: Option[MultiUser]): String =

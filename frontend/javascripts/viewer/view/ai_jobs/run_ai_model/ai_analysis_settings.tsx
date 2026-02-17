@@ -60,7 +60,7 @@ export const AiAnalysisSettings: React.FC = () => {
     }
     if ("selectedLayer" in changedValues) {
       setSelectedLayer(
-        colorLayers.find((l) => l.name === changedValues.selectedLayer.name) as APIDataLayer,
+        colorLayers.find((l) => l.name === changedValues.selectedLayer) as APIDataLayer,
       );
     }
     if ("selectedBoundingBox" in changedValues) {

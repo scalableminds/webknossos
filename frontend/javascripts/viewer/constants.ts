@@ -345,6 +345,12 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
 } as const;
+
+/* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
+  compare https://github.com/scalableminds/webknossos/issues/5223.
+ */
+export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
 export default Constants;
 
 export type TypedArray =

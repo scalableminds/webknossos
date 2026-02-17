@@ -44,6 +44,7 @@ import {
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
   getVolumeTracingByLayerName,
   isMappingActivationAllowed,
+  isZoomThresholdExceededForAgglomerateMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   type EnsureLayerMappingsAreLoadedAction,
@@ -515,6 +516,17 @@ function* updateLocalHdf5Mapping(
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, layerName),
   );
+
+  const isZoomThresholdExceeded = yield* select((state) =>
+    isZoomThresholdExceededForAgglomerateMapping(state, layerName),
+  );
+
+  if (isZoomThresholdExceeded) {
+    // We do not try to look up all segment ids because these are usually too many
+    // in coarse magnifications.
+    // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
+    return;
+  }
 
   const cube = Model.getCubeByLayerName(layerName);
   const segmentIds = cube.getValueSetForAllBuckets();

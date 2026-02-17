@@ -525,5 +525,5 @@ Samplecountry
     } else Fox.successful(())
 
   private def createOrganizationDirectory(): Fox[Unit] =
-    organizationService.createOrganizationDirectory(defaultOrganization._id, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
+    organizationService.createOrganizationDirectory(defaultOrganization._id) ?~> "organization.directoryCreation.failed"
 }

@@ -48,6 +48,7 @@ DELETE        /auth/webauthn/keys/:id                                           
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()
 POST          /auth/createOrganizationWithAdmin                                                 controllers.AuthenticationController.createOrganizationWithAdmin()
+POST          /auth/createOrganizationWithExistingUser                                          controllers.AuthenticationController.createOrganizationWithExistingUser()
 POST          /auth/createUserInOrganization/:organizationId                                    controllers.AuthenticationController.createUserInOrganization(organizationId: String)
 
 # Configurations

@@ -18,6 +18,7 @@ import {
   Button,
   Col,
   Dropdown,
+  Flex,
   Input,
   type MenuProps,
   Radio,
@@ -26,6 +27,7 @@ import {
   Space,
   Spin,
   Tooltip,
+  Typography,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
@@ -394,8 +396,21 @@ function GlobalSearchHeader({
   }
 
   return (
-    <>
-      <div style={{ float: "right" }}>
+    <Flex justify="space-between">
+      <Space>
+        <Typography.Title level={3}>
+          <Space>
+            <SearchOutlined />
+            <span>Search Results for &quot;{searchQuery}&quot;</span>
+          </Space>
+        </Typography.Title>
+        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+          <Typography.Text type="secondary">
+            (only showing the first {SEARCH_RESULTS_LIMIT} results)
+          </Typography.Text>
+        ) : null}
+      </Space>
+      <div>
         <Select
           options={SEARCH_OPTIONS}
           popupMatchSelectWidth={false}
@@ -421,16 +436,7 @@ function GlobalSearchHeader({
           }
         />
       </div>
-      <h3>
-        <SearchOutlined />
-        Search Results for &quot;{searchQuery}&quot;
-        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-          <span style={{ color: "var( --ant-color-text-secondary)", fontSize: 14, marginLeft: 8 }}>
-            (only showing the first {SEARCH_RESULTS_LIMIT} results)
-          </span>
-        ) : null}
-      </h3>
-    </>
+    </Flex>
   );
 }
 

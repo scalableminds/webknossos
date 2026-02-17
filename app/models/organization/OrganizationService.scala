@@ -6,6 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
+import controllers.RpcTokenHolder
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
@@ -136,10 +137,10 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization
 
-  def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
+  def createOrganizationDirectory(organizationId: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/createOrganizationDirectory")
-        .addQueryParam("token", dataStoreToken)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .addQueryParam("organizationId", organizationId)
         .postEmpty()
         .futureBox

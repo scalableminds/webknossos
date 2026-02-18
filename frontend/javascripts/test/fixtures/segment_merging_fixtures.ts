@@ -48,5 +48,6 @@ export const createSegment1WithoutOptionalProps = createAction(id1, {
 export const createSegment2WithAdditionalProps = createAction(id2, {
   name: "Name 2",
   metadata: [{ key: "someKey1", stringValue: "someStringValue - segment 2" }],
+  // Note that anchorPosition is already defined by createAction
   additionalCoordinates: [{ name: "t", value: 3 }],
 });

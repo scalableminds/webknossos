@@ -169,7 +169,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       positions: MultiArray <- agglomerateToPositions.readAsMultiArray(offset = Array(positionsRange.getLong(0), 0),
                                                                        shape = Array(nodeCount.toInt, 3))
       agglomerateToSegments <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegments)
-      segmentIdsMA: MultiArray <- agglomerateToSegments.readAsMultiArray(offset = positionsRange.getInt(0),
+      segmentIdsMA: MultiArray <- agglomerateToSegments.readAsMultiArray(offset = positionsRange.getLong(0),
                                                                          shape = nodeCount.toInt)
       segmentIds: Array[Long] <- MultiArrayUtils.toLongArray(segmentIdsMA).toFox
       agglomerateToEdges <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToEdges)

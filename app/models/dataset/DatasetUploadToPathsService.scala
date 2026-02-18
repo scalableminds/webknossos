@@ -75,6 +75,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       dataSourceWithLayersToLink <- layerToLinkService.addLayersToLinkToDataSource(dataSourceWithPaths,
                                                                                    parameters.layersToLink)
       _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
+      folderIdWithFallback = parameters.folderId.getOrElse(organization._rootFolder)
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> "folder.noWriteAccess"
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
         dataStore,
@@ -84,8 +86,6 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         isVirtual = true,
         creationType = DatasetCreationType.UploadToPaths
       )
-      folderIdWithFallback = parameters.folderId.getOrElse(organization._rootFolder)
-      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> "folder.noWriteAccess"
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
       _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser) // called with user access context. Should be fine now that the folder is set correctly

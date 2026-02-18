@@ -66,12 +66,11 @@ def poll_for_work(args: argparse.Namespace) -> None:
         try:
             delete_path(path)
             deleted_paths.append(path)
+        except FileNotFoundError:
+            logger.info(f"Got FileNotFoundError while trying to delete {path} – assuming already deleted.")
+            deleted_paths.append(path)
         except Exception as e:
-            if isinstance(e, FileNotFoundError):
-                logger.info(f"Got FileNotFoundError while trying to delete {path} – assuming already deleted.")
-                deleted_paths.append(path)
-            else:
-                logger.exception(f"Could not delete {path}")
+            logger.exception(f"Could not delete {path}")
 
     if deleted_paths:
         logger.info(f"Marking {len(deleted_paths)} paths as deleted in WEBKNOSSOS ...")

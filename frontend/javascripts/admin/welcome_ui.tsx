@@ -1,4 +1,8 @@
 import Icon, { CloseOutlined } from "@ant-design/icons";
+import IconAnnotate from "@images/backgrounds/annotate.svg?react";
+import IconImportOwnData from "@images/backgrounds/import-own-data.svg?react";
+import IconInviteColleagues from "@images/backgrounds/invite-colleagues.svg?react";
+import IconOpenDemo from "@images/backgrounds/open-demo.svg?react";
 import { InviteUsersModal } from "admin/onboarding";
 import { Button, Tooltip } from "antd";
 import { getDemoDatasetUrl } from "features";
@@ -7,10 +11,6 @@ import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/util
 import type React from "react";
 import { Fragment } from "react";
 import { Link } from "react-router-dom";
-import IconAnnotate from "@images/backgrounds/annotate.svg?react";
-import IconImportOwnData from "@images/backgrounds/import-own-data.svg?react";
-import IconInviteColleagues from "@images/backgrounds/invite-colleagues.svg?react";
-import IconOpenDemo from "@images/backgrounds/open-demo.svg?react";
 import type { APIUser } from "types/api_types";
 
 type WhatsNextActionProps = {

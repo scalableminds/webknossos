@@ -3,10 +3,11 @@
 Script to copy an agglomerate file while incrementing segment and agglomerate IDs by a constant.
 This is useful for testing agglomerate file support for certain dtypes (e.g., uint64 with ids > 2**32).
 Usage:
-First, adapt the module constants if needed.
-python increment_ids_in_agglomerate_file.py dataset/segmentation/agglomerates dataset/segmentation/agglomerates-new
+- first, adapt the module constants if needed
+- source ./activate.sh in voxelytics
+- python increment_ids_in_agglomerate_file.py dataset/segmentation/agglomerates dataset/segmentation/agglomerates-new
 
-Also see the bump_segmentation_layer_values.py script to adapt the corresponding segmentation layer.
+Also see the increment_segmentation_layer_ids.py script to adapt the corresponding segmentation layer.
 """
 
 import sys

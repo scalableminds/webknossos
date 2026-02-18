@@ -4,8 +4,8 @@ Script to increment (in-place) the ids in a segmentation layer by a constant (e.
 value ranges).
 Also see the increment_ids_in_agglomerate_file.py.
 Usage:
-First, adapt the module constants.
-bump_segmentation_layer_values.py
+- first, adapt the module constants
+- python increment_segmentation_layer_ids.py
 
 ATTENTION: Loads the entire dataset into RAM. Only use when the dataset is small.
 """

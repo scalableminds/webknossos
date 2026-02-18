@@ -179,22 +179,32 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       affinities: MultiArray <- agglomerateToAffinities.readAsMultiArray(offset = edgesOffset, shape = edgeCount.toInt)
 
       agglomerateGraph <- tryo {
-        AgglomerateGraph(
-          // unsafeWrapArray is fine, because the underlying arrays are never mutated
-          segments = ArraySeq.unsafeWrapArray(segmentIds),
-          edges = (0 until edges.getShape()(0)).map { edgeIdx: Int =>
+        val computedEdges =
+          (0 until edges.getShape()(0)).map { edgeIdx: Int =>
             AgglomerateEdge(
-              source = segmentIds(edges.getInt(edges.getIndex.set(Array(edgeIdx, 0)))),
-              target = segmentIds(edges.getInt(edges.getIndex.set(Array(edgeIdx, 1))))
+              source = segmentIds(
+                edges.getInt(edges.getIndex.set(Array(edgeIdx, 0)))
+              ),
+              target = segmentIds(
+                edges.getInt(edges.getIndex.set(Array(edgeIdx, 1)))
+              )
             )
-          },
-          positions = (0 until nodeCount.toInt).map { nodeIdx: Int =>
+          }
+
+        val computedPositions =
+          (0 until nodeCount.toInt).map { nodeIdx: Int =>
             Vec3IntProto(
               positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
               positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),
               positions.getInt(positions.getIndex.set(Array(nodeIdx, 2)))
             )
-          },
+          }
+
+        AgglomerateGraph(
+          // unsafeWrapArray is fine, because the underlying arrays are never mutated
+          segments = ArraySeq.unsafeWrapArray(segmentIds),
+          edges = computedEdges,
+          positions = computedPositions,
           affinities = ArraySeq.unsafeWrapArray(affinities.getStorage.asInstanceOf[Array[Float]])
         )
       }.toFox

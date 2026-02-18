@@ -1,4 +1,7 @@
 import Icon from "@ant-design/icons";
+import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
+import LassoIcon from "@images/icons/icon-lasso.svg?react";
+import QuickSelectToolIcon from "@images/icons/icon-quick-select-tool.svg?react";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -12,10 +15,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
-import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
-import LassoIcon from "@images/icons/icon-lasso.svg?react";
-import QuickSelectToolIcon from "@images/icons/icon-quick-select-tool.svg?react";
-import { IMG_STYLE_FOR_SPACEY_ICONS, ToolRadioButton } from "./tool_helpers";
+import { ToolRadioButton } from "./tool_helpers";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
@@ -188,9 +188,7 @@ function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
         component={LassoIcon}
         aria-label="Trace Tool Icon"
         style={{
-          marginRight: 4,
           opacity: disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled ? 0.5 : 1,
-          ...IMG_STYLE_FOR_SPACEY_ICONS,
         }}
       />
       {adaptedActiveTool === AnnotationTool.TRACE ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
@@ -301,7 +299,6 @@ function QuickSelectTool(_props: ToolButtonProps) {
         aria-label="Quick Select Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled ? 0.5 : 1,
-          ...IMG_STYLE_FOR_SPACEY_ICONS,
         }}
       />
     </ToolRadioButton>
@@ -327,7 +324,6 @@ function BoundingBoxTool(_props: ToolButtonProps) {
         aria-label="Bounding Box Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled ? 0.5 : 1,
-          ...IMG_STYLE_FOR_SPACEY_ICONS,
         }}
       />
     </ToolRadioButton>

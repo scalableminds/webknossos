@@ -1,4 +1,5 @@
 import Icon, { SettingOutlined } from "@ant-design/icons";
+import BrushSizeIcon from "@images/icons/icon-brush-size.svg?react";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
@@ -14,7 +15,6 @@ import { setMousePositionAction } from "viewer/model/actions/volumetracing_actio
 import Store, { type BrushPresets } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import { LogSliderSetting } from "viewer/view/components/setting_input_views";
-import BrushSizeIcon from "@images/icons/icon-brush-size.svg?react";
 
 function BrushPresetButton({
   name,
@@ -242,14 +242,7 @@ export function ChangeBrushSizePopover() {
             padding: 0,
           }}
         >
-          <Icon
-            component={BrushSizeIcon}
-            aria-label="Brush Size"
-            style={{
-              width: 20,
-              height: 20,
-            }}
-          />
+          <Icon component={BrushSizeIcon} aria-label="Brush Size" />
         </ButtonComponent>
       </Popover>
     </FastTooltip>

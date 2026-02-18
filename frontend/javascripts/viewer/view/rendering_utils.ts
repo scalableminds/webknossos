@@ -1,3 +1,4 @@
+import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
 import { convertBufferToImage } from "libs/utils";
 import {
@@ -19,7 +20,6 @@ import getSceneController from "viewer/controller/scene_controller_provider";
 import { getFlooredPosition } from "viewer/model/accessors/flycam_accessor";
 import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import Store from "viewer/store";
-import logoScreenshot from "@images/logo-screenshot.svg";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;

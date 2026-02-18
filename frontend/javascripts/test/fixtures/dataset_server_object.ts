@@ -1,6 +1,5 @@
 import type { APIColorLayer, APIDataset, APISegmentationLayer } from "types/api_types";
 import { UnitLong } from "viewer/constants";
-import logoImage from "@images/logo.svg";
 
 const sampleColorLayer: APIColorLayer = {
   name: "color",
@@ -113,7 +112,7 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
     tags: [],
     folderId: "66f3c82466010002752e972c",
     metadata: [],
-    logoUrl: logoImage,
+    logoUrl: "/assets/images/logo.svg",
     lastUsedByUser: 1727268949322,
     sortingKey: 1727252521746,
     publication: null,

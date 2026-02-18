@@ -1,4 +1,6 @@
 import Icon, { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
+import IconSidebarHideLeftBright from "@images/icons/icon-sidebar-hide-left-bright.svg?react";
+import IconSidebarHideRightBright from "@images/icons/icon-sidebar-hide-right-bright.svg?react";
 import { Space, Tooltip } from "antd";
 import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import type * as React from "react";
@@ -10,8 +12,6 @@ import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_ac
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
 import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
-import IconSidebarHideLeftBright from "@images/icons/icon-sidebar-hide-left-bright.svg?react";
-import IconSidebarHideRightBright from "@images/icons/icon-sidebar-hide-right-bright.svg?react";
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
@@ -20,7 +20,6 @@ const moveBackward = (timeFactor: number, isFirst: boolean) =>
   moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
 
 const BUTTON_STYLE = { userSelect: "none", WebkitUserSelect: "none" } as const;
-const ICON_TRANSFORM_VALUE = "scale(1)";
 
 export function FloatingMobileControls() {
   const dispatch = useDispatch();
@@ -65,7 +64,7 @@ export function FloatingMobileControls() {
             <Icon
               component={IconSidebarHideLeftBright}
               aria-label="Toggle left sidebar"
-              style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
+              style={{ filter: "brightness(10)" }}
             />
           }
         />
@@ -79,7 +78,7 @@ export function FloatingMobileControls() {
             <Icon
               component={IconSidebarHideRightBright}
               aria-label="Toggle right sidebar"
-              style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
+              style={{ filter: "brightness(10)" }}
             />
           }
         />
@@ -89,7 +88,7 @@ export function FloatingMobileControls() {
           shape="circle"
           style={BUTTON_STYLE}
           disabled={activeViewport === OrthoViews.TDView}
-          icon={<CaretUpOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
+          icon={<CaretUpOutlined />}
           {...moveForwardProps}
         />
         <ButtonComponent
@@ -98,7 +97,7 @@ export function FloatingMobileControls() {
           shape="circle"
           style={BUTTON_STYLE}
           disabled={activeViewport === OrthoViews.TDView}
-          icon={<CaretDownOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
+          icon={<CaretDownOutlined />}
           {...moveBackwardProps}
         />
         <ButtonComponent
@@ -107,7 +106,7 @@ export function FloatingMobileControls() {
           shape="circle"
           style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit(LayoutEvents.toggleMaximize)}
-          icon={<ExpandAltOutlined style={{ transform: ICON_TRANSFORM_VALUE }} />}
+          icon={<ExpandAltOutlined />}
         />
         {viewMode === "orthogonal" && (
           <Tooltip title="The navigation and maximization button refers to the active viewport. A viewport can be activated by tapping on it.">

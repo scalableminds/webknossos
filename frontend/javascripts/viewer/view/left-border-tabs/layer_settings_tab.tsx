@@ -18,6 +18,9 @@ import Icon, {
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import IconAffineTransformation from "@images/icons/icon-affine-transformation.svg?react";
+import IconNoTransformation from "@images/icons/icon-no-transformation.svg?react";
+import IconTpsTransformation from "@images/icons/icon-tps-transformation.svg?react";
 import {
   clearCache,
   findDataPositionForLayer,
@@ -149,9 +152,6 @@ import {
   SETTING_VALUE_SPAN,
   SwitchSetting,
 } from "viewer/view/components/setting_input_views";
-import IconAffineTransformation from "@images/icons/icon-affine-transformation.svg?react";
-import IconNoTransformation from "@images/icons/icon-no-transformation.svg?react";
-import IconTpsTransformation from "@images/icons/icon-tps-transformation.svg?react";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import { HideUnregisteredSegmentsSwitch } from "./hide_unregistered_segments_switch";
 import Histogram, { isHistogramSupported } from "./histogram_view";
@@ -286,13 +286,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
               typeToLabel[transform.type]
             } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
       }
-      icon={
-        <Icon
-          component={TransformationImage}
-          aria-label="Transformed Layer Icon"
-          style={{ width: "0.9em", height: "0.9em", marginTop: "-3px" }}
-        />
-      }
+      icon={<Icon component={TransformationImage} aria-label="Transformed Layer Icon" />}
     />
   );
 }

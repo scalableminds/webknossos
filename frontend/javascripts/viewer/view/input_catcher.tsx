@@ -1,3 +1,10 @@
+import eraserPointedSolidBorderCursor from "@images/cursors/eraser-pointed-solid-border.svg";
+import eraserSolidBorderCursor from "@images/cursors/eraser-solid-border.svg";
+import eyeDropperSolidBorderCursor from "@images/cursors/eye-dropper-solid-border.svg";
+import fillPointedSolidBorderCursor from "@images/cursors/fill-pointed-solid-border.svg";
+import lassoPointedSolidBorderCursor from "@images/cursors/lasso-pointed-solid-border.svg";
+import paintBrushSolidBorderCursor from "@images/cursors/paint-brush-solid-border.svg";
+import rulerPointedBorderCursor from "@images/cursors/ruler-pointed-border.svg";
 import { useEffectOnlyOnce, useKeyPress, useWkSelector } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
@@ -16,13 +23,6 @@ import Store from "viewer/store";
 import makeRectRelativeToCanvas from "viewer/view/layouting/layout_canvas_adapter";
 import Scalebar from "viewer/view/scalebar";
 import ViewportStatusIndicator from "viewer/view/viewport_status_indicator";
-import eraserPointedSolidBorderCursor from "@images/cursors/eraser-pointed-solid-border.svg";
-import eraserSolidBorderCursor from "@images/cursors/eraser-solid-border.svg";
-import eyeDropperSolidBorderCursor from "@images/cursors/eye-dropper-solid-border.svg";
-import fillPointedSolidBorderCursor from "@images/cursors/fill-pointed-solid-border.svg";
-import lassoPointedSolidBorderCursor from "@images/cursors/lasso-pointed-solid-border.svg";
-import paintBrushSolidBorderCursor from "@images/cursors/paint-brush-solid-border.svg";
-import rulerPointedBorderCursor from "@images/cursors/ruler-pointed-border.svg";
 
 const emptyViewportRect = {
   top: 0,

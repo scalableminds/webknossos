@@ -1,4 +1,6 @@
 import Icon from "@ant-design/icons";
+import drawingWavingPerson from "@images/backgrounds/waving-person.svg";
+import WKLogoIcon from "@images/wk-logo.svg?react";
 import { Button, ConfigProvider, Flex, notification, Space, Typography } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
@@ -6,8 +8,6 @@ import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import defaultsDeep from "lodash-es/defaultsDeep";
 import { ColorWKBlueZircon, getAntdTheme } from "theme";
-import WKLogoIcon from "@images/wk-logo.svg?react";
-import drawingWavingPerson from "@images/backgrounds/waving-person.svg";
 
 const darkThemeWithCyanButton = defaultsDeep(
   { token: { colorPrimary: ColorWKBlueZircon } },

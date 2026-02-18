@@ -5,6 +5,10 @@ import Icon, {
   ScissorOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import NewCellIcon from "@images/icons/icon-new-cell.svg?react";
+import OverwriteAllIcon from "@images/icons/icon-overwrite-all.svg?react";
+import OverwriteEmptyIcon from "@images/icons/icon-overwrite-empty.svg?react";
+import IconRestrictFloodfillToBbox from "@images/icons/icon-restrict-floodfill-to-bbox.svg?react";
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import {
   Badge,
@@ -49,17 +53,8 @@ import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
-import NewCellIcon from "@images/icons/icon-new-cell.svg?react";
-import OverwriteAllIcon from "@images/icons/icon-overwrite-all.svg?react";
-import OverwriteEmptyIcon from "@images/icons/icon-overwrite-empty.svg?react";
-import IconRestrictFloodfillToBbox from "@images/icons/icon-restrict-floodfill-to-bbox.svg?react";
 import { QuickSelectControls } from "../quick_select_settings";
-import {
-  ACTIONBAR_MARGIN_LEFT,
-  IMG_STYLE_FOR_SPACEY_ICONS,
-  NARROW_BUTTON_STYLE,
-  RadioButtonWithTooltip,
-} from "./tool_helpers";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, RadioButtonWithTooltip } from "./tool_helpers";
 
 function toggleOverwriteMode(overwriteMode: OverwriteMode) {
   if (overwriteMode === OverwriteModeEnum.OVERWRITE_ALL) {
@@ -95,12 +90,8 @@ const handleCreateCell = () => {
   }
 };
 
-const handleSetOverwriteMode = (event: {
-  target: {
-    value: OverwriteMode;
-  };
-}) => {
-  Store.dispatch(updateUserSettingAction("overwriteMode", event.target.value));
+const handleSetOverwriteMode = (event: RadioChangeEvent) => {
+  Store.dispatch(updateUserSettingAction("overwriteMode", event.target.value as OverwriteMode));
 };
 
 export function OverwriteModeSwitch({
@@ -158,7 +149,6 @@ export function OverwriteModeSwitch({
   return (
     <Radio.Group
       value={overwriteMode}
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: {    target: {        value: Overwri... Remove this comment to see the full error message
       onChange={handleSetOverwriteMode}
       style={{
         marginLeft: ACTIONBAR_MARGIN_LEFT,
@@ -168,21 +158,13 @@ export function OverwriteModeSwitch({
         title="Overwrite everything. This setting can be toggled by holding CTRL."
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
-        <Icon
-          component={OverwriteAllIcon}
-          aria-label="Overwrite All Icon"
-          style={IMG_STYLE_FOR_SPACEY_ICONS}
-        />
+        <Icon component={OverwriteAllIcon} aria-label="Overwrite All Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
-        <Icon
-          component={OverwriteEmptyIcon}
-          aria-label="Overwrite Empty Icon"
-          style={IMG_STYLE_FOR_SPACEY_ICONS}
-        />
+        <Icon component={OverwriteEmptyIcon} aria-label="Overwrite Empty Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );
@@ -396,13 +378,7 @@ export function FloodFillSettings() {
         title={
           "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
         }
-        icon={
-          <Icon
-            component={IconRestrictFloodfillToBbox}
-            aria-label="Restrict floodfill"
-            style={IMG_STYLE_FOR_SPACEY_ICONS}
-          />
-        }
+        icon={<Icon component={IconRestrictFloodfillToBbox} aria-label="Restrict floodfill" />}
       />
     </div>
   );

@@ -4,8 +4,16 @@ import Icon, {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
+import IconExtent from "@images/icons/icon-extent.svg?react";
+import IconMouseLeftDrag from "@images/icons/icon-mouse-left-light.svg?react";
+import IconMouseRightDrag from "@images/icons/icon-mouse-right-light.svg?react";
+import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
+import IconSegments from "@images/icons/icon-segments.svg?react";
+import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
+import IconVoxelsize from "@images/icons/icon-voxelsize.svg?react";
 import { getOrganization } from "admin/api/organization";
-import { Tag, Typography } from "antd";
+import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
@@ -44,12 +52,6 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
-import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
-import IconExtent from "@images/icons/icon-extent.svg?react";
-import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
-import IconSegments from "@images/icons/icon-segments.svg?react";
-import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
-import IconVoxelsize from "@images/icons/icon-voxelsize.svg?react";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -120,10 +122,12 @@ const shortcuts = [
   {
     key: "3",
     keybinding: [
-      <div
+      <Icon
+        component={IconMouseLeftDrag}
+        title="Mouse Wheel"
         key="move"
-        title="Left Mouse Button Drag"
-        className="keyboard-mouse-icon icon-mouse-left"
+        className="keyboard-mouse-icon"
+        aria-label="Left Mouse Button Drag"
       />,
     ],
     action: "Move",
@@ -131,11 +135,14 @@ const shortcuts = [
   {
     key: "4",
     keybinding: [
-      <div
+      <Icon
+        component={IconMouseRightDrag}
+        title="Mouse Wheel"
         key="rotate"
-        title="Right Mouse Button Drag"
-        className="keyboard-mouse-icon icon-mouse-right"
+        className="keyboard-mouse-icon"
+        aria-label="Right Mouse Button Drag"
       />,
+
       "in 3D View",
     ],
     action: "Rotate 3D View",
@@ -341,7 +348,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                     width: 170,
                   }}
                 >
-                  {shortcut.keybinding}
+                  <Space size="small">{shortcut.keybinding}</Space>
                 </td>
                 <td>{shortcut.action}</td>
               </tr>

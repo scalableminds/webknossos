@@ -1,4 +1,7 @@
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
+import vxAlignmentSchema from "@images/vx/alignment-schema.png";
+import vxManualAnnotationsVertical from "@images/vx/manual-annotations-vertical.png";
+import vxSegmentationL4denseMottaEtAlDemoRotated from "@images/vx/segmentation-l4dense-motta-et-al-demo-rotated.jpg";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
@@ -10,9 +13,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import vxAlignmentSchema from "@images/vx/alignment-schema.png";
-import vxManualAnnotationsVertical from "@images/vx/manual-annotations-vertical.png";
-import vxSegmentationL4denseMottaEtAlDemoRotated from "@images/vx/segmentation-l4dense-motta-et-al-demo-rotated.jpg";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;

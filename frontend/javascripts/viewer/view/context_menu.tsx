@@ -5,6 +5,9 @@ import Icon, {
   TagOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
@@ -159,9 +162,6 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
-import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
-import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
-import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
@@ -297,7 +297,6 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <Icon
             component={IconStatusbarMouseLeft}
-            className="keyboard-mouse-icon"
             aria-label="Mouse Left Click"
             style={mouseIconStyle}
           />
@@ -308,7 +307,6 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <Icon
             component={IconStatusbarMouseRight}
-            className="keyboard-mouse-icon"
             aria-label="Mouse Right Click"
             style={mouseIconStyle}
           />
@@ -319,7 +317,6 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
         return (
           <Icon
             component={IconStatusbarMouseWheel}
-            className="keyboard-mouse-icon"
             aria-label="Mouse Wheel"
             style={mouseIconStyle}
           />

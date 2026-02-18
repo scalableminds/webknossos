@@ -1,11 +1,11 @@
 import { ExperimentOutlined } from "@ant-design/icons";
+import mitoInferralExample from "@images/mito-inferral-example.jpg";
+import neuronInferralExample from "@images/neuron-inferral-example.jpg";
 import { Avatar, Card, List, Space, Tag, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
 import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
-import mitoInferralExample from "@images/mito-inferral-example.jpg";
-import neuronInferralExample from "@images/neuron-inferral-example.jpg";
 import { useAiTrainingJobContext } from "./ai_training_job_context";
 
 const { Text } = Typography;

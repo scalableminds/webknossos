@@ -14,6 +14,7 @@ import Icon, {
   ShrinkOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
+import IconHideSkeletonEdgesLight from "@images/icons/icon-hide-skeleton-edges-light.svg?react";
 import { Avatar, Button, List } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
@@ -76,7 +77,6 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import IconHideSkeletonEdgesLight from "@images/icons/icon-hide-skeleton-edges-light.svg?react";
 
 type Description = {
   description: string;

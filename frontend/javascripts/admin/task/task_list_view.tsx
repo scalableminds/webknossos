@@ -10,6 +10,7 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
+import vxManualAnnotationsHorizontal from "@images/vx/manual-annotations-horizontal.png";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
   assignTaskToUser as assignTaskToUserAPI,
@@ -48,7 +49,6 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
-import vxManualAnnotationsHorizontal from "@images/vx/manual-annotations-horizontal.png";
 
 const { Search, TextArea } = Input;
 

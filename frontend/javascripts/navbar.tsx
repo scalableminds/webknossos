@@ -8,6 +8,7 @@ import Icon, {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import WkLogoIcon from "@images/wk-logo.svg?react";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -64,7 +65,6 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
-import WkLogoIcon from "@images/wk-logo.svg?react";
 
 const { Header } = Layout;
 

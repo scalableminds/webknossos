@@ -39,8 +39,8 @@ SHIFT_ONLY_ARRAYS = {
 }
 
 
-def copy_agglomerate_file(input_path: str, output_path: str) -> None:
-    """Copy an agglomerate file while shifting IDs by 2**32."""
+def increment_ids_in_agglomerate_file(input_path: str, output_path: str) -> None:
+    """Copy an agglomerate file while incrementing IDs by ID_OFFSET."""
 
     input_artifact = AgglomerateViewArtifact(True, Path(input_path), "input", MetadataSchema(
         available_mappings=AVAILABLE_MAPPINGS,
@@ -109,5 +109,5 @@ if __name__ == "__main__":
         print("Usage: python increment_ids_in_agglomerate_file.py dataset/segmentation/agglomerates dataset/segmentation/agglomerates-new")
         sys.exit(1)
     
-    copy_agglomerate_file(sys.argv[1], sys.argv[2])
+    increment_ids_in_agglomerate_file(sys.argv[1], sys.argv[2])
     print(f"Copied and mutated agglomerate file from {sys.argv[1]} to {sys.argv[2]}")

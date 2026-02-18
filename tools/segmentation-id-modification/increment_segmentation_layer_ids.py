@@ -14,8 +14,8 @@ import numpy as np
 import webknossos as wk
 
 ID_OFFSET = 4_300_000_000  # This is greater than 2**32 and produces nice IDs when the original ids are small
-DATASET_PATH = "path/to/dataset",
-LAYER_NAME ="segmentation",
+DATASET_PATH = "path/to/dataset"
+LAYER_NAME = "segmentation"
 
 def mutate_layer(dataset_path: str, layer_name: str, constant: int) -> None:
     # Open existing dataset
@@ -48,5 +48,5 @@ if __name__ == "__main__":
     mutate_layer(
         dataset_path=DATASET_PATH,
         layer_name=LAYER_NAME,
-        constant=OFFSET,
+        constant=ID_OFFSET,
     )

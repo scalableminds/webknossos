@@ -47,6 +47,7 @@ class AnnotationReservedIdsService @Inject()(annotationReservedIdsDAO: Annotatio
                  idsToRelease: Seq[Long])(implicit ec: ExecutionContext): Fox[Seq[Long]] =
     withMutex(annotationId) {
       for {
+        _ <- Fox.fromBool(numberOfIdsToReserve > 0) ?~> "Must reserve at least one new id."
         largestExistingIdFromDatabaseBox <- annotationReservedIdsDAO
           .findLargestReservedId(annotationId, tracingId, domain)
           .shiftBox

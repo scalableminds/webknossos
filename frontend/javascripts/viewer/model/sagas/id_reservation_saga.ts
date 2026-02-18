@@ -7,12 +7,11 @@ import type { GetNewIdAction } from "../actions/actions";
 import { setIdReservationsAction } from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { type Saga, select } from "./effect-generators";
+import without from "lodash-es/without";
 
 /*
  * todop:
  * - handle non collab case
- * - discard used ids
- * - try to automatically maintain ids as buffer
  */
 
 const IDEAL_ID_BUFFER_SIZE = 5; // todo: maybe 10?
@@ -28,7 +27,7 @@ export default function* idReservationSaga(): Saga<void> {
   }
 }
 
-function getFilteredReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
+function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
   /*
    * ID reservations are guaranteed to each user and don't expire as long as the id
    * is not used. However, the invalidation of used ids is done lazily and not in an
@@ -41,10 +40,9 @@ function getFilteredReservations(tracing: VolumeTracing, domain: "SegmentGroup")
    * clean up by that.
    */
   const unfilteredReservations = tracing.idReservations[domain];
-  const { segmentGroups } = tracing;
-  const maximumGroupId = getMaximumGroupId(segmentGroups);
+  const maximumGroupId = getMaximumGroupId(tracing.segmentGroups);
 
-  return unfilteredReservations.filter((id) => id > maximumGroupId);
+  return unfilteredReservations.filter(({ used, id }) => !used && id > maximumGroupId);
 }
 
 function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
@@ -58,29 +56,72 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     return;
   }
 
-  const reservations = getFilteredReservations(tracing, domain);
+  const usableReservations = getUsableReservations(tracing, domain);
 
-  if (reservations.length > 0) {
-    action.callback(reservations[0]);
-    yield* put(setIdReservationsAction(tracingId, domain, reservations.slice(1)));
+  if (usableReservations.length > 0) {
+    // Mark the first reservation as used...
+    yield* put(
+      setIdReservationsAction(
+        tracingId,
+        domain,
+        usableReservations.map((reservation, index) =>
+          index === 0 ? { ...reservation, used: true } : reservation,
+        ),
+      ),
+    );
+    // ...and pass it to the callback.
+    action.callback(usableReservations[0].id);
+
+    if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
+      yield* call(fetchNewReservations, action);
+    }
+
     return;
   }
 
-  const annotationId = yield* select((state) => state.annotation.annotationId);
-  const idsToRelease: number[] = [];
-
-  const newReservations = yield* call(
-    reserveIdsForAnnotation,
-    annotationId,
-    tracingId,
-    domain,
-    IDEAL_ID_BUFFER_SIZE,
-    idsToRelease,
-  );
-  yield* put(setIdReservationsAction(tracingId, domain, newReservations));
+  yield* call(fetchNewReservations, action);
 
   // Simply call the current saga recursively to re-access the new reservations.
   // This ensures that the filtering against the maximum known ID is done again
   // now that some time has passed after the back-end replied with reservations.
   yield* call(handleReservationRequest, action);
+}
+
+function* fetchNewReservations(action: GetNewIdAction) {
+  const { domain, tracingId } = action;
+
+  // todop: DRY
+  const tracing = yield* select((state) => getTracingById(state, tracingId));
+
+  if (tracing.type !== "volume" || domain !== "SegmentGroup") {
+    console.warn(
+      "Ignored getNewId action because it's not implemented for non-volume tracings and non-segment domains, yet.",
+    );
+    return;
+  }
+  // todop end
+
+  const unfilteredReservations = tracing.idReservations[domain];
+  const usableReservations = getUsableReservations(tracing, domain);
+
+  const annotationId = yield* select((state) => state.annotation.annotationId);
+  const idsToRelease: number[] = without(
+    unfilteredReservations.map(({ id }) => id),
+    ...usableReservations.map(({ id }) => id),
+  );
+
+  const newIds = yield* call(
+    reserveIdsForAnnotation,
+    annotationId,
+    tracingId,
+    domain,
+    IDEAL_ID_BUFFER_SIZE - usableReservations.length,
+    idsToRelease,
+  );
+  yield* put(
+    setIdReservationsAction(tracingId, domain, [
+      ...usableReservations,
+      ...newIds.map((id) => ({ id, used: false })),
+    ]),
+  );
 }

@@ -528,13 +528,13 @@ export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
 export const setIdReservationsAction = (
   tracingId: string,
   domain: "SegmentGroup" | "Segment",
-  ids: number[],
+  reservations: { id: number; used: boolean }[],
 ) =>
   ({
     type: "SET_ID_RESERVATIONS",
     tracingId,
     domain,
-    ids,
+    reservations,
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (

@@ -225,7 +225,7 @@ export type VolumeTracing = TracingBase & {
   readonly volumeBucketDataHasChanged?: boolean;
   readonly hideUnregisteredSegments: boolean;
   readonly segmentJournal: Array<SegmentJournalEntry>; // should always be stored with ascending entryIndex
-  readonly idReservations: Record<"SegmentGroup" | "Segment", number[]>;
+  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

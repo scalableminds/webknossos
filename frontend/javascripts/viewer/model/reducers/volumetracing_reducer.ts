@@ -461,7 +461,7 @@ function VolumeTracingReducer(
       return updateVolumeTracing(state, action.tracingId, {
         idReservations: {
           ...volumeTracing.idReservations,
-          [action.domain]: action.ids,
+          [action.domain]: action.reservations,
         },
       });
     }

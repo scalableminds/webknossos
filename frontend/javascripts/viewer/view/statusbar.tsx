@@ -40,12 +40,12 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "viewer/view/components/setting_input_views";
-import IconStatusbarDownsampling from "/frontend/assets/images/icons/icon-statusbar-downsampling.svg?react";
-import IconStatusbarMouseLeft from "/frontend/assets/images/icons/icon-statusbar-mouse-left.svg?react";
-import IconStatusbarMouseLeftDrag from "/frontend/assets/images/icons/icon-statusbar-mouse-left-drag.svg?react";
-import IconStatusbarMouseRight from "/frontend/assets/images/icons/icon-statusbar-mouse-right.svg?react";
-import IconStatusbarMouseRightDrag from "/frontend/assets/images/icons/icon-statusbar-mouse-right-drag.svg?react";
-import IconStatusbarMouseWheel from "/frontend/assets/images/icons/icon-statusbar-mouse-wheel.svg?react";
+import IconStatusbarDownsampling from "@images/icons/icon-statusbar-downsampling.svg?react";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";

@@ -4,8 +4,8 @@ import type React from "react";
 import { useCallback } from "react";
 import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
-import alignExample from "/images/align-example.png";
-import alignStitchingExample from "/images/align-stitching-example.jpg";
+import alignExample from "@images/align-example.png";
+import alignStitchingExample from "@images/align-stitching-example.jpg";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 
 const { Text } = Typography;

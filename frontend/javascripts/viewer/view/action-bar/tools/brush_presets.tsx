@@ -14,7 +14,7 @@ import { setMousePositionAction } from "viewer/model/actions/volumetracing_actio
 import Store, { type BrushPresets } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import { LogSliderSetting } from "viewer/view/components/setting_input_views";
-import BrushSizeIcon from "/frontend/assets/images/icons/icon-brush-size.svg?react";
+import BrushSizeIcon from "@images/icons/icon-brush-size.svg?react";
 
 function BrushPresetButton({
   name,

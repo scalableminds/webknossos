@@ -1,6 +1,6 @@
 import type { APIColorLayer, APIDataset, APISegmentationLayer } from "types/api_types";
 import { UnitLong } from "viewer/constants";
-import logoImage from "/images/logo.svg";
+import logoImage from "@images/logo.svg";
 
 const sampleColorLayer: APIColorLayer = {
   name: "color",

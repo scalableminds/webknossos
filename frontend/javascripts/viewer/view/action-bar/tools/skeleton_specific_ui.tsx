@@ -15,8 +15,8 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-import MergerModeIcon from "/frontend/assets/images/icons/icon-merger-mode.svg?react";
-import SomaClickingIcon from "/frontend/assets/images/icons/icon-soma-clicking.svg?react";
+import MergerModeIcon from "@images/icons/icon-merger-mode.svg?react";
+import SomaClickingIcon from "@images/icons/icon-soma-clicking.svg?react";
 import {
   ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,

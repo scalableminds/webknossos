@@ -10,8 +10,8 @@ import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_ac
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
 import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
-import IconSidebarHideLeftBright from "/frontend/assets/images/icons/icon-sidebar-hide-left-bright.svg?react";
-import IconSidebarHideRightBright from "/frontend/assets/images/icons/icon-sidebar-hide-right-bright.svg?react";
+import IconSidebarHideLeftBright from "@images/icons/icon-sidebar-hide-left-bright.svg?react";
+import IconSidebarHideRightBright from "@images/icons/icon-sidebar-hide-right-bright.svg?react";
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>

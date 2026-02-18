@@ -12,9 +12,9 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
-import BoundingBoxIcon from "/frontend/assets/images/icons/icon-bounding-box.svg?react";
-import LassoIcon from "/frontend/assets/images/icons/icon-lasso.svg?react";
-import QuickSelectToolIcon from "/frontend/assets/images/icons/icon-quick-select.svg?react";
+import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
+import LassoIcon from "@images/icons/icon-lasso.svg?react";
+import QuickSelectToolIcon from "@images/icons/icon-quick-select-tool.svg?react";
 import { IMG_STYLE_FOR_SPACEY_ICONS, ToolRadioButton } from "./tool_helpers";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };

@@ -1,7 +1,7 @@
 import { Button, Card, ConfigProvider, Result, Row, Typography } from "antd";
 import useInterval from "beautiful-react-hooks/useInterval";
 import { ColorWKBlue, getAntdTheme } from "theme";
-import backgroundMixedCellsDrawn from "/images/backgrounds/background-mixed-cells-drawn.svg";
+import backgroundMixedCellsDrawn from "@images/backgrounds/background-mixed-cells-drawn.svg";
 
 export function FailedToLoadView() {
   useInterval(() => {

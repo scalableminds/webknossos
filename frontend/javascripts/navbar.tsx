@@ -64,7 +64,7 @@ import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
-import WkLogoIcon from "/frontend/assets/images/wk-logo.svg?react";
+import WkLogoIcon from "@images/wk-logo.svg?react";
 
 const { Header } = Layout;
 

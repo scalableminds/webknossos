@@ -1,10 +1,10 @@
 import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import alignExample from "/images/align-example.png";
-import materializeVolumeAnnotationExample from "/images/materialize-volume-annotation-example.jpg";
-import mitoInferralExample from "/images/mito-inferral-example.jpg";
-import neuronInferralExample from "/images/neuron-inferral-example.jpg";
-import nucleiInferralExample from "/images/nuclei-inferral-example.jpg";
+import alignExample from "@images/align-example.png";
+import materializeVolumeAnnotationExample from "@images/materialize-volume-annotation-example.jpg";
+import mitoInferralExample from "@images/mito-inferral-example.jpg";
+import neuronInferralExample from "@images/neuron-inferral-example.jpg";
+import nucleiInferralExample from "@images/nuclei-inferral-example.jpg";
 
 export type StartAiJobDrawerState =
   | "open_ai_training"

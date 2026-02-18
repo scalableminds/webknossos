@@ -6,7 +6,7 @@ import messages from "messages";
 import type * as React from "react";
 import { Link } from "react-router-dom";
 import type { APIOrganization } from "types/api_types";
-import brainImage from "/images/brain.svg";
+import brainImage from "@images/brain.svg";
 
 type Props = {
   message?: React.ReactNode;

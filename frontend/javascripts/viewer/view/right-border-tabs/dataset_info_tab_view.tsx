@@ -44,12 +44,12 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
-import IconDownsampling from "/frontend/assets/images/icons/icon-downsampling.svg?react";
-import IconExtent from "/frontend/assets/images/icons/icon-extent.svg?react";
-import IconMousewheel from "/frontend/assets/images/icons/icon-mousewheel.svg?react";
-import IconSegments from "/frontend/assets/images/icons/icon-segments.svg?react";
-import IconSkeletons from "/frontend/assets/images/icons/icon-skeletons.svg?react";
-import IconVoxelsize from "/frontend/assets/images/icons/icon-voxelsize.svg?react";
+import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
+import IconExtent from "@images/icons/icon-extent.svg?react";
+import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
+import IconSegments from "@images/icons/icon-segments.svg?react";
+import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
+import IconVoxelsize from "@images/icons/icon-voxelsize.svg?react";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {

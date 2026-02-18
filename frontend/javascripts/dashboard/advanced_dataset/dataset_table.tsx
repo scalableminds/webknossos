@@ -55,10 +55,10 @@ import {
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
 } from "viewer/view/context_menu";
-import fileDarkIcon from "/images/file-dark.png";
-import fileLightIcon from "/images/file-light.png";
-import folderThumbnailIcon from "/images/folder-thumbnail.svg";
-import inactiveDatasetThumbnail from "/images/inactive-dataset-thumbnail.svg";
+import fileDarkIcon from "@images/file-dark.png";
+import fileLightIcon from "@images/file-light.png";
+import folderThumbnailIcon from "@images/folder-thumbnail.svg";
+import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;

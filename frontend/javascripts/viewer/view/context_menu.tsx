@@ -159,9 +159,9 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
-import IconStatusbarMouseLeft from "/frontend/assets/images/icons/icon-statusbar-mouse-left.svg?react";
-import IconStatusbarMouseRight from "/frontend/assets/images/icons/icon-statusbar-mouse-right.svg?react";
-import IconStatusbarMouseWheel from "/frontend/assets/images/icons/icon-statusbar-mouse-wheel.svg?react";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 

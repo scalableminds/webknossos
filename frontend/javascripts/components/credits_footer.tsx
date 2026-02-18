@@ -1,9 +1,9 @@
 import { ConfigProvider, Layout, Typography } from "antd";
 import { Link } from "react-router-dom";
 import { getAntdTheme } from "theme";
-import maxPlanckGesellschaftLogo from "/images/max-planck-gesellschaft.svg";
-import mpiBrainResearchLogo from "/images/mpi-brain-research.svg";
-import scalablemindsLogo from "/images/scalableminds-logo.svg";
+import maxPlanckGesellschaftLogo from "@images/max-planck-gesellschaft.svg";
+import mpiBrainResearchLogo from "@images/mpi-brain-research.svg";
+import scalablemindsLogo from "@images/scalableminds-logo.svg";
 
 const { Footer } = Layout;
 

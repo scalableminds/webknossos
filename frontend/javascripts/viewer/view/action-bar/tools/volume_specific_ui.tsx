@@ -49,10 +49,10 @@ import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
-import NewCellIcon from "/frontend/assets/images/icons/icon-new-cell.svg?react";
-import OverwriteAllIcon from "/frontend/assets/images/icons/icon-overwrite-all.svg?react";
-import OverwriteEmptyIcon from "/frontend/assets/images/icons/icon-overwrite-empty.svg?react";
-import IconRestrictFloodfillToBbox from "/frontend/assets/images/icons/icon-restrict-floodfill-to-bbox.svg?react";
+import NewCellIcon from "@images/icons/icon-new-cell.svg?react";
+import OverwriteAllIcon from "@images/icons/icon-overwrite-all.svg?react";
+import OverwriteEmptyIcon from "@images/icons/icon-overwrite-empty.svg?react";
+import IconRestrictFloodfillToBbox from "@images/icons/icon-restrict-floodfill-to-bbox.svg?react";
 import { QuickSelectControls } from "../quick_select_settings";
 import {
   ACTIONBAR_MARGIN_LEFT,

@@ -1,8 +1,8 @@
 import Icon from "@ant-design/icons";
 import { useWkSelector } from "libs/react_hooks";
 import type { CSSProperties } from "react";
-import IconHideSkeletonEdgesDark from "/frontend/assets/images/icons/icon-hide-skeleton-edges-dark.svg?react";
-import IconHideSkeletonEdgesLight from "/frontend/assets/images/icons/icon-hide-skeleton-edges-light.svg?react";
+import IconHideSkeletonEdgesDark from "@images/icons/icon-hide-skeleton-edges-dark.svg?react";
+import IconHideSkeletonEdgesLight from "@images/icons/icon-hide-skeleton-edges-light.svg?react";
 
 export function HideTreeEdgesIcon({
   style,

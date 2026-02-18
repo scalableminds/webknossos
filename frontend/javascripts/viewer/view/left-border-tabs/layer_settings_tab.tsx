@@ -149,9 +149,9 @@ import {
   SETTING_VALUE_SPAN,
   SwitchSetting,
 } from "viewer/view/components/setting_input_views";
-import IconAffineTransformation from "/frontend/assets/images/icons/icon-affine-transformation.svg?react";
-import IconNoTransformation from "/frontend/assets/images/icons/icon-no-transformation.svg?react";
-import IconTpsTransformation from "/frontend/assets/images/icons/icon-tps-transformation.svg?react";
+import IconAffineTransformation from "@images/icons/icon-affine-transformation.svg?react";
+import IconNoTransformation from "@images/icons/icon-no-transformation.svg?react";
+import IconTpsTransformation from "@images/icons/icon-tps-transformation.svg?react";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import { HideUnregisteredSegmentsSwitch } from "./hide_unregistered_segments_switch";
 import Histogram, { isHistogramSupported } from "./histogram_view";

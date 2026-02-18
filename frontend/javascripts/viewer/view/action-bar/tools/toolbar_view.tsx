@@ -19,9 +19,9 @@ import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_action
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-import AreaMeasurementIcon from "/frontend/assets/images/icons/icon-area-measurement.svg?react";
-import LineMeasurementIcon from "/frontend/assets/images/icons/icon-line-measurement.svg?react";
-import NewBoundingBoxIcon from "/frontend/assets/images/icons/icon-new-bounding-box.svg?react";
+import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
+import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
+import NewBoundingBoxIcon from "@images/icons/icon-new-bounding-box.svg?react";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";

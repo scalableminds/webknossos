@@ -48,7 +48,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { APITask, APITaskType, TaskStatus } from "types/api_types";
-import vxManualAnnotationsHorizontal from "/images/vx/manual-annotations-horizontal.png";
+import vxManualAnnotationsHorizontal from "@images/vx/manual-annotations-horizontal.png";
 
 const { Search, TextArea } = Input;
 

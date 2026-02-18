@@ -6,8 +6,8 @@ import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import defaultsDeep from "lodash-es/defaultsDeep";
 import { ColorWKBlueZircon, getAntdTheme } from "theme";
-import LogoIconOnly from "/frontend/assets/images/icons/logo-icon-only.svg?react";
-import drawingWavingPerson from "/images/drawings/waving-person.svg";
+import WKLogoIcon from "@images/wk-logo.svg?react";
+import drawingWavingPerson from "@images/backgrounds/waving-person.svg";
 
 const darkThemeWithCyanButton = defaultsDeep(
   { token: { colorPrimary: ColorWKBlueZircon } },
@@ -21,7 +21,7 @@ function showWelcomeToast(notification: NotificationInstance) {
     placement: "bottomRight",
     icon: (
       <Icon
-        component={LogoIconOnly}
+        component={WKLogoIcon}
         style={{
           filter: "brightness(4)",
           width: 45,

@@ -7,9 +7,9 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
 import { type AiModel, APIJobCommand } from "types/api_types";
-import mitoInferralExample from "/images/mito-inferral-example.jpg";
-import neuronInferralExample from "/images/neuron-inferral-example.jpg";
-import nucleiInferralExample from "/images/nuclei-inferral-example.jpg";
+import mitoInferralExample from "@images/mito-inferral-example.jpg";
+import neuronInferralExample from "@images/neuron-inferral-example.jpg";
+import nucleiInferralExample from "@images/nuclei-inferral-example.jpg";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;

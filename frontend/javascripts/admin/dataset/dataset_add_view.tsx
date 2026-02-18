@@ -10,9 +10,9 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
-import vxAlignmentSchema from "/images/vx/alignment-schema.png";
-import vxManualAnnotationsVertical from "/images/vx/manual-annotations-vertical.png";
-import vxSegmentationL4denseMottaEtAlDemoRotated from "/images/vx/segmentation-l4dense-motta-et-al-demo-rotated.jpg";
+import vxAlignmentSchema from "@images/vx/alignment-schema.png";
+import vxManualAnnotationsVertical from "@images/vx/manual-annotations-vertical.png";
+import vxSegmentationL4denseMottaEtAlDemoRotated from "@images/vx/segmentation-l4dense-motta-et-al-demo-rotated.jpg";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;

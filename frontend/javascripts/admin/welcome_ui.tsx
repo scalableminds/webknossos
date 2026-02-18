@@ -98,11 +98,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 description="Directly upload your data as a zip file."
                 to="/datasets/upload"
                 icon={
-                  <Icon
-                    component={IconImportOwnData}
-                    className="welcome-header-icon icon-import-own-data"
-                    aria-hidden
-                  />
+                  <Icon component={IconImportOwnData} className="welcome-header-icon" aria-hidden />
                 }
               />
             ) : null}

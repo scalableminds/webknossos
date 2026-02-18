@@ -1,28 +1,24 @@
+import Icon from "@ant-design/icons";
 import { useWkSelector } from "libs/react_hooks";
-import type { CSSProperties, StyleHTMLAttributes } from "react";
-import iconHideSkeletonEdgesDark from "/images/icon-hide-skeleton-edges-dark.svg";
-import iconHideSkeletonEdgesLight from "/images/icon-hide-skeleton-edges-light.svg";
+import type { CSSProperties } from "react";
+import IconHideSkeletonEdgesDark from "/frontend/assets/images/icons/icon-hide-skeleton-edges-dark.svg?react";
+import IconHideSkeletonEdgesLight from "/frontend/assets/images/icons/icon-hide-skeleton-edges-light.svg?react";
 
 export function HideTreeEdgesIcon({
   style,
   className,
 }: {
-  style?: StyleHTMLAttributes<HTMLSpanElement>;
+  style?: CSSProperties;
   className?: string;
 }) {
   const isDarkTheme = useWkSelector((state) => state.uiInformation.theme === "dark");
-
-  const imageUrl = isDarkTheme
-    ? `url(${iconHideSkeletonEdgesLight})`
-    : `url(${iconHideSkeletonEdgesDark})`;
+  const SvgIcon = isDarkTheme ? IconHideSkeletonEdgesLight : IconHideSkeletonEdgesDark;
   const iconStyle: CSSProperties = {
     width: "1em",
     height: "1em",
     display: "inline-block",
-    backgroundImage: imageUrl,
-    backgroundSize: "contain",
     ...style,
   };
 
-  return <i style={iconStyle} className={className} />;
+  return <Icon component={SvgIcon} style={iconStyle} className={className} />;
 }

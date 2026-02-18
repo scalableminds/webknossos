@@ -36,7 +36,7 @@ import {
   type Folder,
 } from "types/api_types";
 import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
-import metadataTeaserImage from "/images/metadata-teaser.svg";
+import metadataTeaserImage from "/images/backgrounds/metadata-teaser.svg";
 
 export type APIMetadataWithError = APIMetadataEntry & { error?: string | null };
 

@@ -1,4 +1,4 @@
-import {
+import Icon, {
   EditOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
@@ -44,12 +44,12 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
-import iconDownsampling from "/images/icon-downsampling.svg";
-import iconExtent from "/images/icon-extent.svg";
-import iconMousewheel from "/images/icon-mousewheel.svg";
-import iconSegments from "/images/icon-segments.svg";
-import iconSkeletons from "/images/icon-skeletons.svg";
-import iconVoxelsize from "/images/icon-voxelsize.svg";
+import IconDownsampling from "/frontend/assets/images/icons/icon-downsampling.svg?react";
+import IconExtent from "/frontend/assets/images/icons/icon-extent.svg?react";
+import IconMousewheel from "/frontend/assets/images/icons/icon-mousewheel.svg?react";
+import IconSegments from "/frontend/assets/images/icons/icon-segments.svg?react";
+import IconSkeletons from "/frontend/assets/images/icons/icon-skeletons.svg?react";
+import IconVoxelsize from "/frontend/assets/images/icons/icon-voxelsize.svg?react";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -86,11 +86,11 @@ const shortcuts = [
         ALT
       </span>,
       "+",
-      <img
+      <Icon
+        component={IconMousewheel}
         key="zoom-4"
         className="keyboard-mouse-icon"
-        src={iconMousewheel}
-        alt="Mouse Wheel"
+        aria-label="Mouse Wheel"
         title="Mouse Wheel"
       />,
     ],
@@ -99,11 +99,11 @@ const shortcuts = [
   {
     key: "2",
     keybinding: [
-      <img
+      <Icon
+        component={IconMousewheel}
         key="move-1"
         className="keyboard-mouse-icon"
-        src={iconMousewheel}
-        alt="Mouse Wheel"
+        aria-label="Mouse Wheel"
         title="Mouse Wheel"
       />,
       "or",
@@ -177,7 +177,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
           paddingTop: 10,
         }}
       >
-        <img className="info-tab-icon" src={iconExtent} alt="Dataset extent" />
+        <Icon component={IconExtent} className="info-tab-icon" aria-label="Dataset extent" />
       </td>
       <td
         style={{
@@ -199,7 +199,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
           paddingRight: 20,
         }}
       >
-        <img className="info-tab-icon" src={iconVoxelsize} alt="Voxel size" />
+        <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
       </td>
       <td>{formatScale(dataset.dataSource.scale)}</td>
     </FastTooltip>
@@ -259,7 +259,7 @@ export function AnnotationStats({
               wrapper="tr"
             >
               <td>
-                <img className="info-tab-icon" src={iconSkeletons} alt="Skeletons" />
+                <Icon component={IconSkeletons} className="info-tab-icon" aria-label="Skeletons" />
               </td>
               <td>
                 {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
@@ -277,7 +277,7 @@ export function AnnotationStats({
               wrapper="tr"
             >
               <td>
-                <img className="info-tab-icon" src={iconSegments} alt="Segments" />
+                <Icon component={IconSegments} className="info-tab-icon" aria-label="Segments" />
               </td>
               <td>
                 {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
@@ -609,7 +609,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             paddingTop: 8,
           }}
         >
-          <img className="info-tab-icon" src={iconDownsampling} alt="Magnification" />
+          <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
         </td>
         <td
           style={{

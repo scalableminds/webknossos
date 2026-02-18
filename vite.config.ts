@@ -1,6 +1,7 @@
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import svgr from "vite-plugin-svgr";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 import analyzer from "vite-bundle-analyzer";
@@ -28,6 +29,7 @@ export const viteConfig = {
   plugins: [
     // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
     react(),
+    svgr({ svgrOptions: { icon: true } }),
     tsconfigPaths(),
     wasm(),
     viteProtobufPlugin({

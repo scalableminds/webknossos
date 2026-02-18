@@ -1,4 +1,4 @@
-import { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import Icon, { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { V3 } from "libs/mjs";
@@ -40,12 +40,12 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "viewer/view/components/setting_input_views";
-import iconStatusbarDownsampling from "/images/icon-statusbar-downsampling.svg";
-import iconStatusbarMouseLeft from "/images/icon-statusbar-mouse-left.svg";
-import iconStatusbarMouseLeftDrag from "/images/icon-statusbar-mouse-left-drag.svg";
-import iconStatusbarMouseRight from "/images/icon-statusbar-mouse-right.svg";
-import iconStatusbarMouseRightDrag from "/images/icon-statusbar-mouse-right-drag.svg";
-import iconStatusbarMouseWheel from "/images/icon-statusbar-mouse-wheel.svg";
+import IconStatusbarDownsampling from "/frontend/assets/images/icons/icon-statusbar-downsampling.svg?react";
+import IconStatusbarMouseLeft from "/frontend/assets/images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseLeftDrag from "/frontend/assets/images/icons/icon-statusbar-mouse-left-drag.svg?react";
+import IconStatusbarMouseRight from "/frontend/assets/images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseRightDrag from "/frontend/assets/images/icons/icon-statusbar-mouse-right-drag.svg?react";
+import IconStatusbarMouseWheel from "/frontend/assets/images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
@@ -88,7 +88,11 @@ function ZoomShortcut() {
         </span>
       </span>{" "}
       +
-      <img className="keyboard-mouse-icon" src={iconStatusbarMouseWheel} alt="Mouse Wheel" />
+      <Icon
+        component={IconStatusbarMouseWheel}
+        className="keyboard-mouse-icon"
+        aria-label="Mouse Wheel"
+      />
       Zoom in/out
     </span>
   );
@@ -98,17 +102,21 @@ function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescr
   const leftClick =
     actionDescriptor.leftClick != null ? (
       <span className="shortcut-info-element">
-        <img className="keyboard-mouse-icon" src={iconStatusbarMouseLeft} alt="Mouse Left Click" />
+        <Icon
+          component={IconStatusbarMouseLeft}
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Left Click"
+        />
         {actionDescriptor.leftClick}
       </span>
     ) : null;
   const leftDrag =
     actionDescriptor.leftDrag != null ? (
       <span className="shortcut-info-element">
-        <img
+        <Icon
+          component={IconStatusbarMouseLeftDrag}
           className="keyboard-mouse-icon"
-          src={iconStatusbarMouseLeftDrag}
-          alt="Mouse Left Drag"
+          aria-label="Mouse Left Drag"
         />
         {actionDescriptor.leftDrag}
       </span>
@@ -125,10 +133,10 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
   const rightClick =
     actionDescriptor.rightClick != null ? (
       <span className="shortcut-info-element">
-        <img
+        <Icon
+          component={IconStatusbarMouseRight}
           className="keyboard-mouse-icon"
-          src={iconStatusbarMouseRight}
-          alt="Mouse Right Click"
+          aria-label="Mouse Right Click"
         />
         {actionDescriptor.rightClick}
       </span>
@@ -136,10 +144,10 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
   const rightDrag =
     actionDescriptor.rightDrag != null ? (
       <span className="shortcut-info-element">
-        <img
+        <Icon
+          component={IconStatusbarMouseRightDrag}
           className="keyboard-mouse-icon"
-          src={iconStatusbarMouseRightDrag}
-          alt="Mouse Right Drag"
+          aria-label="Mouse Right Drag"
         />
         {actionDescriptor.rightDrag}
       </span>
@@ -212,10 +220,10 @@ function ShortcutsInfo() {
               textTransform: "capitalize",
             }}
           >
-            <img
+            <Icon
+              component={IconStatusbarMouseLeftDrag}
               className="keyboard-mouse-icon"
-              src={iconStatusbarMouseLeftDrag}
-              alt="Mouse Left Drag"
+              aria-label="Mouse Left Drag"
             />
             Move
           </span>
@@ -346,11 +354,19 @@ function ShortcutsInfo() {
       <LeftClickShortcut actionDescriptor={actionDescriptor} />
       <RightClickShortcut actionDescriptor={actionDescriptor} />
       <span className="shortcut-info-element">
-        <img className="keyboard-mouse-icon" src={iconStatusbarMouseWheel} alt="Mouse Wheel" />
+        <Icon
+          component={IconStatusbarMouseWheel}
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Wheel"
+        />
         {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
       <span className="shortcut-info-element">
-        <img className="keyboard-mouse-icon" src={iconStatusbarMouseRightDrag} alt="Mouse Right" />
+        <Icon
+          component={IconStatusbarMouseRightDrag}
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Right"
+        />
         Rotate 3D View
       </span>
       <ZoomShortcut />
@@ -542,7 +558,11 @@ function MagnificationInfo() {
 
   return (
     <span className="info-element">
-      <img src={iconStatusbarDownsampling} className="mag-status-bar-icon" alt="Magnification" />{" "}
+      <Icon
+        component={IconStatusbarDownsampling}
+        className="mag-status-bar-icon"
+        aria-label="Magnification"
+      />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
         {representativeMag.join("-")}
         {isActiveMagGlobal ? "" : "*"}{" "}

@@ -1,4 +1,4 @@
-import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
+import Icon, { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
 import { Space, Tooltip } from "antd";
 import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import type * as React from "react";
@@ -10,8 +10,8 @@ import { getMoveOffset, getMoveOffset3d } from "viewer/model/accessors/flycam_ac
 import { moveFlycamAction } from "viewer/model/actions/flycam_actions";
 import { Store } from "viewer/singletons";
 import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
-import iconSidebarHideLeftBright from "/images/icon-sidebar-hide-left-bright.svg";
-import iconSidebarHideRightBright from "/images/icon-sidebar-hide-right-bright.svg";
+import IconSidebarHideLeftBright from "/frontend/assets/images/icons/icon-sidebar-hide-left-bright.svg?react";
+import IconSidebarHideRightBright from "/frontend/assets/images/icons/icon-sidebar-hide-right-bright.svg?react";
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
@@ -62,9 +62,9 @@ export function FloatingMobileControls() {
           style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "left")}
           icon={
-            <img
-              alt="Toggle left sidebar"
-              src={iconSidebarHideLeftBright}
+            <Icon
+              component={IconSidebarHideLeftBright}
+              aria-label="Toggle left sidebar"
               style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }
@@ -76,9 +76,9 @@ export function FloatingMobileControls() {
           style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "right")}
           icon={
-            <img
-              alt="Toggle right sidebar"
-              src={iconSidebarHideRightBright}
+            <Icon
+              component={IconSidebarHideRightBright}
+              aria-label="Toggle right sidebar"
               style={{ filter: "brightness(10)", transform: ICON_TRANSFORM_VALUE }}
             />
           }

@@ -1,4 +1,4 @@
-import {
+import Icon, {
   BarChartOutlined,
   CopyOutlined,
   PushpinOutlined,
@@ -159,9 +159,9 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
-import iconStatusbarMouseLeft from "/images/icon-statusbar-mouse-left.svg";
-import iconStatusbarMouseRight from "/images/icon-statusbar-mouse-right.svg";
-import iconStatusbarMouseWheel from "/images/icon-statusbar-mouse-wheel.svg";
+import IconStatusbarMouseLeft from "/frontend/assets/images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseRight from "/frontend/assets/images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseWheel from "/frontend/assets/images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
@@ -295,10 +295,10 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
     switch (name) {
       case "leftMouse": {
         return (
-          <img
+          <Icon
+            component={IconStatusbarMouseLeft}
             className="keyboard-mouse-icon"
-            src={iconStatusbarMouseLeft}
-            alt="Mouse Left Click"
+            aria-label="Mouse Left Click"
             style={mouseIconStyle}
           />
         );
@@ -306,10 +306,10 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "rightMouse": {
         return (
-          <img
+          <Icon
+            component={IconStatusbarMouseRight}
             className="keyboard-mouse-icon"
-            src={iconStatusbarMouseRight}
-            alt="Mouse Right Click"
+            aria-label="Mouse Right Click"
             style={mouseIconStyle}
           />
         );
@@ -317,10 +317,10 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "middleMouse": {
         return (
-          <img
+          <Icon
+            component={IconStatusbarMouseWheel}
             className="keyboard-mouse-icon"
-            src={iconStatusbarMouseWheel}
-            alt="Mouse Wheel"
+            aria-label="Mouse Wheel"
             style={mouseIconStyle}
           />
         );

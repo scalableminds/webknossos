@@ -1,4 +1,4 @@
-import { ExportOutlined } from "@ant-design/icons";
+import Icon, { ExportOutlined } from "@ant-design/icons";
 import { Badge, Space } from "antd";
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -15,8 +15,8 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-import mergerModeIcon from "/images/merger-mode-icon.svg";
-import somaClickingIcon from "/images/soma-clicking-icon.svg";
+import MergerModeIcon from "/frontend/assets/images/icons/icon-merger-mode.svg?react";
+import SomaClickingIcon from "/frontend/assets/images/icons/icon-soma-clicking.svg?react";
 import {
   ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,
@@ -81,10 +81,10 @@ export function SkeletonSpecificButtons() {
           active={isNewNodeNewTreeModeOn}
           title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
         >
-          <img
+          <Icon
+            component={SomaClickingIcon}
             style={IMG_STYLE_FOR_SPACEY_ICONS}
-            src={somaClickingIcon}
-            alt="Single Node Tree Mode"
+            aria-label="Single Node Tree Mode"
           />
         </ToggleButton>
       )}
@@ -99,7 +99,11 @@ export function SkeletonSpecificButtons() {
           disabled={isMergerModeDisabled}
           title={mergerModeTooltipText}
         >
-          <img style={IMG_STYLE_FOR_SPACEY_ICONS} src={mergerModeIcon} alt="Merger Mode" />
+          <Icon
+            component={MergerModeIcon}
+            style={IMG_STYLE_FOR_SPACEY_ICONS}
+            aria-label="Merger Mode"
+          />
         </ToggleButton>
       )}
       <ToggleButton

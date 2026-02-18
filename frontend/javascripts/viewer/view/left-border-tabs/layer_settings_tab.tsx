@@ -1,4 +1,4 @@
-import {
+import Icon, {
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -149,9 +149,9 @@ import {
   SETTING_VALUE_SPAN,
   SwitchSetting,
 } from "viewer/view/components/setting_input_views";
-import iconAffineTransformation from "/images/icon-affine-transformation.svg";
-import iconNoTransformation from "/images/icon-no-transformation.svg";
-import iconTpsTransformation from "/images/icon-tps-transformation.svg";
+import IconAffineTransformation from "/frontend/assets/images/icons/icon-affine-transformation.svg?react";
+import IconNoTransformation from "/frontend/assets/images/icons/icon-no-transformation.svg?react";
+import IconTpsTransformation from "/frontend/assets/images/icons/icon-tps-transformation.svg?react";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
 import { HideUnregisteredSegmentsSwitch } from "./hide_unregistered_segments_switch";
 import Histogram, { isHistogramSupported } from "./histogram_view";
@@ -234,10 +234,11 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   };
 
   const typeToImage = {
-    none: iconNoTransformation,
-    thin_plate_spline: iconTpsTransformation,
-    affine: iconAffineTransformation,
+    none: IconNoTransformation,
+    thin_plate_spline: IconTpsTransformation,
+    affine: IconAffineTransformation,
   };
+  const TransformationImage = typeToImage[isRenderedNatively ? "none" : transform.type];
 
   // Cannot toggle transforms for a layer that cannot have no transforms or turn them on in case the layer has no transforms.
   // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
@@ -286,9 +287,9 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
             } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
       }
       icon={
-        <img
-          src={typeToImage[isRenderedNatively ? "none" : transform.type]}
-          alt="Transformed Layer Icon"
+        <Icon
+          component={TransformationImage}
+          aria-label="Transformed Layer Icon"
           style={{ width: "0.9em", height: "0.9em", marginTop: "-3px" }}
         />
       }

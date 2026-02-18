@@ -1,3 +1,4 @@
+import Icon from "@ant-design/icons";
 import { Button, ConfigProvider, Flex, notification, Space, Typography } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
@@ -5,8 +6,8 @@ import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import defaultsDeep from "lodash-es/defaultsDeep";
 import { ColorWKBlueZircon, getAntdTheme } from "theme";
+import LogoIconOnly from "/frontend/assets/images/icons/logo-icon-only.svg?react";
 import drawingWavingPerson from "/images/drawings/waving-person.svg";
-import logoIconOnly from "/images/logo-icon-only.svg";
 
 const darkThemeWithCyanButton = defaultsDeep(
   { token: { colorPrimary: ColorWKBlueZircon } },
@@ -19,9 +20,8 @@ function showWelcomeToast(notification: NotificationInstance) {
     duration: 0,
     placement: "bottomRight",
     icon: (
-      <img
-        src={logoIconOnly}
-        alt="logo"
+      <Icon
+        component={LogoIconOnly}
         style={{
           filter: "brightness(4)",
           width: 45,

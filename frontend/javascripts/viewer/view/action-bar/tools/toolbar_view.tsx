@@ -1,4 +1,4 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
+import Icon, { InfoCircleOutlined } from "@ant-design/icons";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -19,9 +19,9 @@ import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_action
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-import areaMeasurementIcon from "/images/area-measurement.svg";
-import lineMeasurementIcon from "/images/line-measurement.svg";
-import newBoundingBoxIcon from "/images/new-bounding-box.svg";
+import AreaMeasurementIcon from "/frontend/assets/images/icons/icon-area-measurement.svg?react";
+import LineMeasurementIcon from "/frontend/assets/images/icons/icon-line-measurement.svg?react";
+import NewBoundingBoxIcon from "/frontend/assets/images/icons/icon-new-bounding-box.svg?react";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
@@ -56,9 +56,9 @@ function CreateNewBoundingBoxButton() {
       }}
       title="Create a new bounding box centered around the current position."
     >
-      <img
-        src={newBoundingBoxIcon}
-        alt="New Bounding Box Icon"
+      <Icon
+        component={NewBoundingBoxIcon}
+        aria-label="New Bounding Box Icon"
         style={IMG_STYLE_FOR_SPACEY_ICONS}
       />
     </ButtonComponent>
@@ -251,7 +251,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationTool.LINE_MEASUREMENT.id}
       >
-        <img src={lineMeasurementIcon} alt="Measurement Tool Icon" />
+        <Icon component={LineMeasurementIcon} aria-label="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         disabledTitle={explanation}
@@ -262,9 +262,9 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         value={AnnotationTool.AREA_MEASUREMENT.id}
         disabled={isDisabled}
       >
-        <img
-          src={areaMeasurementIcon}
-          alt="Measurement Tool Icon"
+        <Icon
+          component={AreaMeasurementIcon}
+          aria-label="Measurement Tool Icon"
           style={IMG_STYLE_FOR_SPACEY_ICONS}
         />
       </RadioButtonWithTooltip>

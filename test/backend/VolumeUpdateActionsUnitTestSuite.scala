@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.Color
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
-import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.{AdditionalCoordinateProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.MetadataEntry
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -88,10 +88,24 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     groupId = Some(2)
   )
 
-  // Note: The tests for MergeSegmentsVolumeAction have parity with those in the frontend.
+  private val segment1WithoutAdditionalPops =
+    Segment(segmentId = 1, anchorPosition = None, groupId = None, metadata = Seq())
+
+  private val segment2WithAdditionalPops = Segment(
+    segmentId = 2,
+    name = Some("Name 2"),
+    anchorPosition = Some(Vec3IntProto(1, 1, 1)),
+    anchorPositionAdditionalCoordinates = Seq(AdditionalCoordinateProto(name = "t", value = 3)),
+    groupId = None,
+    metadata = Seq(
+      MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2")),
+    )
+  )
+
+  // Note: The tests for MergeSegmentItemsVolumeAction have parity with those in the frontend.
   // If the action changes, tests should be adapted both in frontend and here.
-  "MergeSegmentsVolumeAction" should {
-    "merge two segments (simple)" in {
+  "MergeSegmentItemsVolumeAction" should {
+    "merge two segments (both segments exist; source should take precedence)" in {
       val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1, segmentWithMetadata2)))
 
@@ -108,6 +122,24 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
           ),
           anchorPosition = Some(Vec3IntProto(1, 1, 1)),
           groupId = Some(1),
+        )))
+    }
+
+    "should merge two segments (both segments exist, but source lacks some properties)" in {
+      val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
+      val result = action.applyOn(
+        Dummies.volumeTracing.withSegments(Seq(segment1WithoutAdditionalPops, segment2WithAdditionalPops)))
+
+      assert(
+        result.segments == Seq(Segment(
+          segmentId = 1,
+          name = Some("Segment 1 and Name 2"),
+          metadata = Seq(
+            MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2")),
+          ),
+          anchorPosition = segment2WithAdditionalPops.anchorPosition,
+          anchorPositionAdditionalCoordinates = segment2WithAdditionalPops.anchorPositionAdditionalCoordinates,
+          groupId = segment2WithAdditionalPops.groupId,
         )))
     }
 

@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64WithBool}
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
@@ -601,7 +602,12 @@ case class MergeSegmentItemsVolumeAction(agglomerateId1: Long, // merged into
       case (Some(sourceSegment), Some(targetSegment)) =>
         sourceSegment.copy(
           name = mergeSegmentNames(sourceSegment.name, targetSegment.name),
-          metadata = mergeSegmentMetadata(sourceSegment, targetSegment)
+          metadata = mergeSegmentMetadata(sourceSegment, targetSegment),
+          anchorPosition = sourceSegment.anchorPosition.orElse(targetSegment.anchorPosition),
+          anchorPositionAdditionalCoordinates =
+            if (sourceSegment.anchorPosition.isDefined) sourceSegment.anchorPositionAdditionalCoordinates
+            else targetSegment.anchorPositionAdditionalCoordinates,
+          groupId = sourceSegment.groupId.orElse(targetSegment.groupId)
         )
     }
 

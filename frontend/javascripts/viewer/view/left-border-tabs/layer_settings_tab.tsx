@@ -1,4 +1,5 @@
 import {
+  DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
@@ -550,7 +551,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return {
       key: "computeSegmentIndexFileButton",
-      icon: <i className="fas fa-database" />,
+      icon: <DatabaseOutlined />,
       label: "Compute a Segment Index file",
       onClick: triggerComputeSegmentIndexFileJob,
     };
@@ -715,6 +716,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             fontWeight: 700,
             paddingRight: 5,
             flexGrow: 1,
+            wordBreak: "break-all",
           }}
         >
           {volumeDescriptor != null ? (
@@ -727,7 +729,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             >
               <span style={{ display: "inline-block" }}>
                 <EditableTextLabel
-                  margin="0 10px 0 0"
                   width={150}
                   value={readableName}
                   isInvalid={!readableLayerNameValidationResult.isValid}
@@ -1173,6 +1174,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             style={{
               flexGrow: 1,
               marginRight: 8,
+              wordBreak: "break-all",
             }}
           >
             <FastTooltip

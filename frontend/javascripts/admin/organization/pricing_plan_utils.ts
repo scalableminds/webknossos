@@ -10,12 +10,23 @@ export enum PricingPlanEnum {
   Custom = "Custom",
 }
 
+export enum AiPlanEnum {
+  TeamAI = "Team_AI",
+  PowerAI = "Power_AI",
+}
+
+const AI_PLAN_LABELS: Record<AiPlanEnum, string> = {
+  [AiPlanEnum.TeamAI]: "Team AI",
+  [AiPlanEnum.PowerAI]: "Power AI",
+};
+
 export const teamPlanFeatures = [
   "Everything from Personal plan",
   "Collaborative Annotation",
   "Project Management",
   "Dataset Management and Access Control",
   "5 Users / 1TB Storage (upgradable)",
+  "Eligible for the AI Add-on and AI model training",
   "Priority Email Support",
 ];
 
@@ -25,6 +36,15 @@ export const powerPlanFeatures = [
   "Segmentation Proof-Reading Tool",
   "On-premise or dedicated hosting solutions available",
   "Integration with your HPC and storage servers",
+  "Eligible for the AI Add-on and AI model training",
+];
+
+export const aiAddonFeatures = [
+  "Train custom AI models on your data",
+  "Seamless access to WEBKNOSSOS GPU compute infrastructure",
+  "Includes WEBKNOSSOS credits (400 Team / 1,000 Power)",
+  "Enable AI model training for your team",
+  "Priority access to AI job queue",
 ];
 
 export const maxIncludedUsersInPersonalPlan = 1;
@@ -82,6 +102,29 @@ export function isFeatureAllowedByPricingPlan(
 
 export function hasSomePaidPlan(organization: APIOrganization | null) {
   return isFeatureAllowedByPricingPlan(organization, PricingPlanEnum.Team);
+}
+
+export function hasAiPlan(organization: APIOrganization | null) {
+  return organization?.aiPlan != null;
+}
+
+export function isAiAddonEligiblePlan(pricingPlan: PricingPlanEnum): boolean {
+  return (
+    pricingPlan === PricingPlanEnum.Team ||
+    pricingPlan === PricingPlanEnum.TeamTrial ||
+    pricingPlan === PricingPlanEnum.Power ||
+    pricingPlan === PricingPlanEnum.PowerTrial ||
+    pricingPlan === PricingPlanEnum.Custom
+  );
+}
+
+export function formatAiPlanLabel(organization: APIOrganization): string {
+  if (!isAiAddonEligiblePlan(organization.pricingPlan))
+    return "Upgrade to Team or Power plan for advanced AI features";
+
+  if (organization.aiPlan) return AI_PLAN_LABELS[organization.aiPlan] ?? organization.aiPlan;
+
+  return "No AI add-on";
 }
 
 export function getFeatureNotAvailableInPlanMessage(

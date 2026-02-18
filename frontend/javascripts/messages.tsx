@@ -199,7 +199,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.uint64_segmentation_warning":
     "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 53 bits. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
-    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered correctly in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",

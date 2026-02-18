@@ -51,6 +51,7 @@ public/docs
 public/docs/frontend-api
 public/test-bundle
 public/index.html
+frontend/stylesheets/fontawesome*
 src/main/scala/rebel.xml
 target/
 temp-webknossos-schema**

@@ -1,5 +1,5 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
-import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { AiPlanEnum, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import partition from "lodash-es/partition";
 import type { BoundingBoxProto } from "types/bounding_box";
 import type {
@@ -673,6 +673,7 @@ export type APIOrganizationCompact = {
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;
   readonly pricingPlan: PricingPlanEnum;
+  readonly aiPlan: AiPlanEnum | null;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
   readonly paidUntil: number;
@@ -712,6 +713,7 @@ export type APICreditTransaction = {
   readonly updatedAt: number;
 };
 export type APIOrganizationPricingPlanUpdate = {
+  readonly aiPlan?: AiPlanEnum | null;
   readonly organizationId: string;
   readonly description?: string | null;
   readonly pricingPlan?: PricingPlanEnum | null;

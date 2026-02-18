@@ -152,6 +152,19 @@ class DefaultMails @Inject()(conf: WkConf) {
       replyTo = List(userEmail, supportEmail)
     )
 
+  def upgradeAiAddonMail(user: User,
+                         userEmail: String,
+                         organizationName: String,
+                         aiPlan: String,
+                         pricingPlan: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"WEBKNOSSOS Upgrade: AI Add-on ($aiPlan)",
+      bodyHtml = html.mail.upgradeAiAddon(user.name, aiPlan, pricingPlan, additionalFooter, organizationName).body,
+      recipients = List(supportEmail, userEmail),
+      replyTo = List(userEmail, supportEmail)
+    )
+
   def orderCreditsMail(user: User, userEmail: String, requestedCredits: Int): Mail =
     Mail(
       from = defaultSender,

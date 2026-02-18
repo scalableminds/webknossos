@@ -23,6 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.DataSourceValidation
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
+  PathDeletionService,
   ReserveAttachmentUploadToPathRequest,
   ReserveDatasetUploadToPathsForPreliminaryRequest,
   ReserveDatasetUploadToPathsRequest,
@@ -42,6 +43,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                             datasetDAO: DatasetDAO,
                                             dataStoreDAO: DataStoreDAO,
                                             layerToLinkService: LayerToLinkService,
+                                            pathDeletionService: PathDeletionService,
                                             datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                             datasetMagsDAO: DatasetMagsDAO,
                                             conf: WkConf)
@@ -82,7 +84,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       )
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
-      _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser)
+      _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser)(GlobalAccessContext)
       _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
     } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
     yield dataSourceWithPaths
@@ -282,7 +284,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
           if (overwritePending) {
             for {
               client <- datasetService.clientFor(dataset)(GlobalAccessContext)
-              _ <- client.deletePaths(Seq(existingMagLocatorPath))
+              _ <- pathDeletionService.deletePaths(client, Seq(existingMagLocatorPath))
               _ <- datasetMagsDAO.deletePendingMagLocator(dataset._id, layerName, mag)
             } yield ()
           } else Fox.failure("dataset.reserveMagUploadToPath.exists")

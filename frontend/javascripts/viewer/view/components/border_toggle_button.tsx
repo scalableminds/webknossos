@@ -26,7 +26,7 @@ function BorderToggleButton({ onClick, side, inFooter }: Props) {
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;
   const imageClass = `center-item-using-flex icon-sidebar-toggle icon-sidebar-${iconKind}-${side}-${
-    inFooter ? "dark" : "bright"
+    inFooter ? "dark" : "light"
   }`;
 
   const onClickHandler = useCallback<MouseEventHandler<HTMLButtonElement>>(

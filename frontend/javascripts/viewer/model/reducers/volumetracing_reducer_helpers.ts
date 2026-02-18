@@ -546,12 +546,14 @@ export function getUpdatedSourcePropsAfterMerge(
     props.metadata = metadataEntriesWithUniqueKeys;
   }
 
-  // For some properties, the data in source segment should simply "win".
-  // However, only if the source item had these properties before.
+  // For some properties, the data in source segment should simply "win" if the data
+  // exists. If the source segment doesn't have the data, we can use the target segment's
+  // data.
   if (sourceSegment?.anchorPosition == null && targetSegment.anchorPosition != null) {
     props.anchorPosition = targetSegment.anchorPosition;
-  }
-  if (sourceSegment?.additionalCoordinates == null && targetSegment.additionalCoordinates != null) {
+    // Since additionalCoordinates always refers to the anchorPosition, we need to set
+    // both here. For that reason, the if-condition doesn't need to check the
+    // additionalCoordinates property itself.
     props.additionalCoordinates = targetSegment.additionalCoordinates;
   }
   if (sourceSegment?.groupId == null && targetSegment.groupId != null) {

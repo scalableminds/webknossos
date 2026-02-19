@@ -575,7 +575,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       );
       expect(injectedMergeAndTreeUpdateRequests[1][0].version).toEqual(9);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
-        getNestedUpdateActions(context).slice(-3);
+        getNestedUpdateActions(context).slice(-2);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
       );

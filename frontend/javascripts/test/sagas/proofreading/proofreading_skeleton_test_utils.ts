@@ -359,7 +359,11 @@ export const mockEdgesForAgglomerateMinCut = (
         );
       }
       const { agglomerateId, partition1, partition2 } = segmentsInfo;
-      if (agglomerateId === 1 && isEqual(partition1.concat(partition2), [2, 3])) {
+      if (
+        agglomerateId === 1 &&
+        (isEqual(partition1.concat(partition2), [2, 3]) ||
+          isEqual(partition1.concat(partition2), [3, 2]))
+      ) {
         return [
           {
             position1: [3, 3, 3],

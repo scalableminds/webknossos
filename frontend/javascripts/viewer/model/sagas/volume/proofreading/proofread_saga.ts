@@ -463,7 +463,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // received action.
   if (
     // TODOM!!!!: Change agglomerateInfo: tracingId
-    // to currently active editbaleMappingTracingId in case it is still the mapping name!
+    // to currently active editableMappingTracingId in case it is still the mapping name!
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
     action.type !== "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"
@@ -660,7 +660,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       targetAgglomerateId,
   );
 
-  if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE") {
+  const isSplittingAction =
+    action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE";
+  if (isSplittingAction) {
     if (sourceAgglomerateId !== targetAgglomerateId) {
       Toast.error(
         "The selected positions are not part of the same agglomerate and cannot be split.",
@@ -707,6 +709,16 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     call(getDataValue, sourceNodePosition, newMapping),
     call(getDataValue, targetNodePosition, newMapping),
   ]);
+
+  if (newSourceAgglomerateId === newTargetAgglomerateId && isSplittingAction) {
+    // The split was unsuccessful.
+    Toast.warning("The split operation was unsuccessful. Please retry.");
+    yield* call(syncWithBackend);
+    if (unsubscribeFromAnnotationMutex) {
+      yield* call(unsubscribeFromAnnotationMutex);
+    }
+    return;
+  }
 
   let updatedSkeletonTracing = yield* select((state) => state.annotation.skeleton);
   if (!updatedSkeletonTracing) {

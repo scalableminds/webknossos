@@ -6,6 +6,7 @@ import {
 } from "test/helpers/apiHelpers";
 import { call, put, take } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
@@ -36,7 +37,6 @@ import {
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading/proofreading_test_utils";
-import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 
 describe("Proofreading should generate correct update actions", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

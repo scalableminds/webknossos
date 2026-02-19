@@ -13,6 +13,10 @@ import {
   disableSavingAction,
   dispatchEnsureHasNewestVersionAsync,
 } from "viewer/model/actions/save_actions";
+import {
+  setActiveCellAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect-generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
@@ -23,16 +27,12 @@ import {
   expectedMappingAfterSplit,
   initialMapping,
 } from "./proofreading_fixtures";
+import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import {
-  updateSegmentAction,
-  setActiveCellAction,
-} from "viewer/model/actions/volumetracing_actions";
-import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 
 describe("Proofreading (Poll only)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

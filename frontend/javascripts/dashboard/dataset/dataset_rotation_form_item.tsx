@@ -34,8 +34,10 @@ type AxisRotationFormItemProps = {
   axis: "x" | "y" | "z";
 };
 
-export function getDatasetBoundingBoxFromLayers(layers: APIDataLayer[]): BoundingBox | undefined {
-  if (layers.length === 0) {
+export function getDatasetBoundingBoxFromLayers(
+  layers: APIDataLayer[] | undefined,
+): BoundingBox | undefined {
+  if (layers == null || layers.length === 0) {
     return undefined;
   }
   let datasetBoundingBox = BoundingBox.fromBoundBoxObject(layers[0].boundingBox);

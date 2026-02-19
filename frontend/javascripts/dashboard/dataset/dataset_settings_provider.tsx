@@ -46,6 +46,12 @@ type DatasetSettingsProviderProps = {
   form?: FormInstance<DatasetSettingsFormData>;
 };
 
+const NULLED_AXIS_ROTATION_SETTING = { rotationInDegrees: 0, isMirrored: false };
+const INITIAL_DS_ROTATION_SETTINGS = {
+  x: NULLED_AXIS_ROTATION_SETTING,
+  y: NULLED_AXIS_ROTATION_SETTING,
+  z: NULLED_AXIS_ROTATION_SETTING,
+};
 export function getRotationFromCoordinateTransformations(
   dataSource: APIDataSource,
 ): DatasetRotationAndMirroringSettings | undefined {
@@ -56,8 +62,7 @@ export function getRotationFromCoordinateTransformations(
       !firstLayerTransformations ||
       firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
     ) {
-      const nulledSetting = { rotationInDegrees: 0, isMirrored: false };
-      initialDatasetRotationSettings = { x: nulledSetting, y: nulledSetting, z: nulledSetting };
+      initialDatasetRotationSettings = INITIAL_DS_ROTATION_SETTINGS;
     } else {
       initialDatasetRotationSettings = {
         x: getRotationSettingsFromTransformationIn90DegreeSteps(firstLayerTransformations[1], "x"),
@@ -154,8 +159,11 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         coordinateTransformations: layersWithCoordTransformationsJSON,
       });
 
-      const initialTransformationsMode =
+      let initialTransformationsMode =
         initialRotationSettings == null ? TransformationsMode.ADVANCED : TransformationsMode.SIMPLE;
+      if (initialRotationSettings === INITIAL_DS_ROTATION_SETTINGS) {
+        initialTransformationsMode = TransformationsMode.NONE;
+      }
       form.setFieldValue("transformationsMode", initialTransformationsMode);
 
       const fetchedDatasetDefaultConfiguration = await getDatasetDefaultConfiguration(datasetId);

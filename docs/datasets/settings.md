@@ -19,7 +19,7 @@ The `Data Source` tab contains the core settings for your dataset.
 
 ### Transformations
 
-Transformations are a way of rotating, mirroring or projecting dataset layers, among others. There are three modes for dataset transformation: `None`, `Simple`, and `Advanced`.
+Transformations can be applied to individual layers or entire datasets to create effects such as rotation, mirroring, or aligning one layer with another. There are three modes for dataset transformation: `None`, `Simple`, and `Advanced`.
 
 - `None`: There are no transformations. If there were transformations before, they will be removed upon saving.  
 - `Simple`: You can rotate the dataset around the X, Y, and Z axes. You can also mirror the axes.  
@@ -86,7 +86,7 @@ All in all, the provided JSON for a dataset with the layers `color` and `segment
 ]
 ```
 
-Please note that transformations in `Advanced` mode can only be defined for a specific layer. For transformations that should be applied to the whole dataset, either use the `Simple` mode or define the wanted transformation for each layer individually. 
+Please note that transformations in `Advanced` mode need to be defined per layer. For transformations that should be applied to the whole dataset, either use the `Simple` mode or duplicate the desired transformation for each layer individually. 
 
 
 ### Layer Settings

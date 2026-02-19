@@ -108,7 +108,7 @@ function DatasetAddRemoteView(props: Props) {
     );
   };
 
-  const setEmptyTransformations = (mergedConfig: DatasourceConfiguration) => {
+  const setEmptyTransformations = (config: DatasourceConfiguration) => {
     const initialRotationSettingsPerAxis: RotationAndMirroringSettings = {
       rotationInDegrees: 0,
       isMirrored: false,
@@ -124,11 +124,12 @@ function DatasetAddRemoteView(props: Props) {
     });
     form.setFieldValue("isRotationOnly", true);
 
-    const dataLayersWithTransformations: DataLayerWithTransformations[] =
-      mergedConfig.dataLayers.map((layer: DataLayer) => ({
+    const dataLayersWithTransformations: DataLayerWithTransformations[] = config.dataLayers.map(
+      (layer: DataLayer) => ({
         name: layer.name,
         coordinateTransformations: [],
-      }));
+      }),
+    );
     const layersWithCoordTransformationsJSON = JSON.stringify(
       dataLayersWithTransformations,
       null,

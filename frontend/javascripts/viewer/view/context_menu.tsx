@@ -5,6 +5,7 @@ import Icon, {
   TagOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import IconCell from "@images/icons/icon-cell.svg?react";
 import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
 import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
 import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
@@ -27,7 +28,6 @@ import type {
   SubMenuType,
 } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
-import { ThemedIcon } from "components/themed_icon";
 import {
   formatLengthAsVx,
   formatNumberToArea,
@@ -1889,7 +1889,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "copy-cell",
         <Space size="small">
-          <ThemedIcon name="icon-cell-outline" />
+          <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
           {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
         </Space>,

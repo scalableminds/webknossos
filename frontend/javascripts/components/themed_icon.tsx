@@ -27,7 +27,7 @@ export function ThemedIcon({ name, ...props }: ThemedIconProps) {
   const mode = useThemeMode();
 
   const SvgComponent = useMemo(() => {
-    const iconSource = mode ? darkIcons : lightIcons;
+    const iconSource = mode === "dark" ? darkIcons : lightIcons;
     const key = Object.keys(iconSource).find((k) =>
       k.includes(`/frontend/assets/images/icons/${name}-${mode}.svg`),
     );
@@ -37,10 +37,7 @@ export function ThemedIcon({ name, ...props }: ThemedIconProps) {
     }
 
     const Svg = (iconSource[key] as any).default as React.FC<React.SVGProps<SVGSVGElement>>;
-
-    // Wrap in a plain function component so Ant Design's Icon is happy
-    const IconComponent: React.FC<React.SVGProps<SVGSVGElement>> = (props) => <Svg {...props} />;
-    return IconComponent;
+    return Svg;
   }, [name, mode]);
 
   if (!SvgComponent) return null;

@@ -23,6 +23,7 @@ export function KeyboardKeyIcon({ label, style, ...props }: KeyboardKeyIconProps
       <span
         style={{
           position: "absolute",
+          fontSize: "0.7em",
           fontWeight: "bold",
           userSelect: "none",
           pointerEvents: "none",

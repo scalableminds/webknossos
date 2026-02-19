@@ -425,11 +425,7 @@ function MagnificationInfo() {
 
   return (
     <span className="info-element">
-      <Icon
-        component={IconStatusbarDownsampling}
-        className="mag-status-bar-icon"
-        aria-label="Magnification"
-      />{" "}
+      <Icon component={IconStatusbarDownsampling} aria-label="Magnification" />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
         {representativeMag.join("-")}
         {isActiveMagGlobal ? "" : "*"}{" "}

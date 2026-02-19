@@ -2,6 +2,102 @@ import { SKELETON_TRACING_ID } from "test/fixtures/skeletontracing_server_object
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 
+export const loadAgglomerateTree1 = [
+  [
+    {
+      name: "createTree" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        id: 3,
+        updatedId: 3,
+        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+        name: "agglomerate 1 (volumeTracingId)",
+        timestamp: 1494695001688,
+        comments: [],
+        branchPoints: [],
+        groupId: undefined,
+        isVisible: true,
+        type: "AGGLOMERATE",
+        edgesAreVisible: true,
+        metadata: [],
+        agglomerateInfo: {
+          agglomerateId: 1,
+          tracingId: "volumeTracingId",
+        },
+      },
+    },
+    {
+      name: "createNode" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        id: 4,
+        additionalCoordinates: [],
+        rotation: [0, 0, 0],
+        bitDepth: 8,
+        viewport: 0,
+        radius: 1,
+        timestamp: 1494695001688,
+        interpolation: false,
+        position: [1, 1, 1],
+        treeId: 3,
+        resolution: 1,
+      },
+    },
+    {
+      name: "createNode" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        id: 5,
+        additionalCoordinates: [],
+        rotation: [0, 0, 0],
+        bitDepth: 8,
+        viewport: 0,
+        radius: 1,
+        timestamp: 1494695001688,
+        interpolation: false,
+        position: [2, 2, 2],
+        treeId: 3,
+        resolution: 1,
+      },
+    },
+    {
+      name: "createNode" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        id: 6,
+        additionalCoordinates: [],
+        rotation: [0, 0, 0],
+        bitDepth: 8,
+        viewport: 0,
+        radius: 1,
+        timestamp: 1494695001688,
+        interpolation: false,
+        position: [3, 3, 3],
+        treeId: 3,
+        resolution: 1,
+      },
+    },
+    {
+      name: "createEdge" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        treeId: 3,
+        source: 4,
+        target: 5,
+      },
+    },
+    {
+      name: "createEdge" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        treeId: 3,
+        source: 5,
+        target: 6,
+      },
+    },
+  ] as UpdateActionWithoutIsolationRequirement[],
+];
+
 export const mergeSegment4And6WithAgglomerateTree1And4 = [
   [
     {

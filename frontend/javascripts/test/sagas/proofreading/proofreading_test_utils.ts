@@ -285,11 +285,21 @@ class BackendMock {
      * forcing the client that is tested to pull in the newer version before
      * saving can finish.
      */
-    this.addOnSavedListener(() => {
-      if (this.updateActionLog.at(-1)?.version === targetVersion - 1) {
-        this.injectVersion(updateActions, targetVersion);
-      }
-    });
+    // The injected version has already been reached, directly inject!
+    const currentVersion = this.updateActionLog.at(-1)?.version || 1;
+    if (currentVersion === targetVersion - 1) {
+      this.injectVersion(updateActions, targetVersion);
+    } else if (currentVersion > targetVersion - 1) {
+      throw new Error(
+        `Requested to inject an update for version ${targetVersion} but current version is already at ${currentVersion}.`,
+      );
+    } else {
+      this.addOnSavedListener(() => {
+        if (this.updateActionLog.at(-1)?.version === targetVersion - 1) {
+          this.injectVersion(updateActions, targetVersion);
+        }
+      });
+    }
   }
 
   planMultipleVersionInjections(

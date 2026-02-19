@@ -935,8 +935,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
 
       for (const mesh of meshes) {
-        const { segmentId, seedPosition, seedAdditionalCoordinates, isProofreadingAuxiliaryMesh } =
-          mesh;
+        const { segmentId, seedPosition, seedAdditionalCoordinates } = mesh;
 
         if (mesh.isPrecomputed) {
           const { meshFileName } = mesh;
@@ -947,7 +946,6 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
               seedAdditionalCoordinates,
               meshFileName,
               undefined,
-              isProofreadingAuxiliaryMesh ?? false,
               effectiveLayerName,
             ),
           );
@@ -958,7 +956,6 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
               segmentId,
               seedPosition,
               seedAdditionalCoordinates,
-              isProofreadingAuxiliaryMesh ?? false,
               {
                 mappingName,
                 mappingType,

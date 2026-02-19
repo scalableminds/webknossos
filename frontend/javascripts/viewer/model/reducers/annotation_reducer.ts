@@ -374,7 +374,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         mappingName,
         mappingType,
         opacity,
-        isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -386,7 +385,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         mappingName,
         mappingType,
-        isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -422,7 +420,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         meshFileName,
         mappingName,
         opacity,
-        isProofreadingAuxiliaryMesh,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -434,7 +431,6 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         opacity,
         meshFileName,
         mappingName,
-        isProofreadingAuxiliaryMesh,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);

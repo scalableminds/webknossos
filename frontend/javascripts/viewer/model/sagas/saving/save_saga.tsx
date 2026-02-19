@@ -25,10 +25,10 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import {
-  getAllLoadedProofreadingAuxiliaryMeshes,
+  getAllLoadedMeshes,
   getSegmentsForLayer,
   getVolumeTracingById,
-  isProofreadingAuxiliaryMeshLoaded,
+  isMeshLoaded,
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
@@ -682,8 +682,8 @@ export function* tryToIncorporateActions(
           }
           const hasAnyOfBothAgglomerateMeshesLoaded = yield* select(
             (state) =>
-              isProofreadingAuxiliaryMeshLoaded(state, agglomerateId1, activeVolumeTracingId) ||
-              isProofreadingAuxiliaryMeshLoaded(state, agglomerateId2, activeVolumeTracingId),
+              isMeshLoaded(state, agglomerateId1, activeVolumeTracingId) ||
+              isMeshLoaded(state, agglomerateId2, activeVolumeTracingId),
           );
           if (!hasAnyOfBothAgglomerateMeshesLoaded || activeVolumeTracingId !== actionTracingId) {
             break;
@@ -835,7 +835,7 @@ export function* tryToIncorporateActions(
       );
       if (activeVolumeTracingId) {
         const loadedProofreadingAuxiliaryMeshes = yield select((state) =>
-          getAllLoadedProofreadingAuxiliaryMeshes(state, activeVolumeTracingId),
+          getAllLoadedMeshes(state, activeVolumeTracingId),
         );
         const loadedProofreadingAuxiliaryMeshesOfSplitAction =
           loadedProofreadingAuxiliaryMeshes.intersection(oldAgglomerateIds);

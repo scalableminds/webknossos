@@ -1081,7 +1081,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    const isProofreadingAuxiliaryMesh = false;
     Store.dispatch(
       loadPrecomputedMeshAction(
         segmentId,
@@ -1089,7 +1088,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
-        isProofreadingAuxiliaryMesh,
         undefined,
       ),
     );
@@ -1183,15 +1181,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    const isProofreadingAuxiliaryMesh = false;
-    Store.dispatch(
-      loadAdHocMeshAction(
-        segmentId,
-        positionInLayerSpace,
-        additionalCoordinates,
-        isProofreadingAuxiliaryMesh,
-      ),
-    );
+    Store.dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>

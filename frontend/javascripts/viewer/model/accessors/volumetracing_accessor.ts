@@ -727,7 +727,7 @@ function getMeshOpacity(
   return meshData[segmentId].opacity;
 }
 
-export function isProofreadingAuxiliaryMeshLoaded(
+export function isMeshLoaded(
   state: WebknossosState,
   segmentId: number,
   layerName: string,
@@ -738,13 +738,10 @@ export function isProofreadingAuxiliaryMeshLoaded(
   if (localSegmentationData?.meshes == null) return false;
   const meshData = localSegmentationData.meshes[additionalCoordinateKey];
   if (meshData == null || meshData[segmentId] == null) return false;
-  return meshData[segmentId].isProofreadingAuxiliaryMesh;
+  return meshData[segmentId] != null;
 }
 
-export function getAllLoadedProofreadingAuxiliaryMeshes(
-  state: WebknossosState,
-  layerName: string,
-): Set<number> {
+export function getAllLoadedMeshes(state: WebknossosState, layerName: string): Set<number> {
   const loadedMeshIds = new Set<number>();
   const additionalCoords = state.flycam.additionalCoordinates;
   const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
@@ -753,9 +750,7 @@ export function getAllLoadedProofreadingAuxiliaryMeshes(
   const meshData = localSegmentationData.meshes[additionalCoordinateKey];
   if (meshData == null) return loadedMeshIds;
   Object.values(meshData).forEach((meshInfo) => {
-    if (meshInfo.isProofreadingAuxiliaryMesh) {
-      loadedMeshIds.add(meshInfo.segmentId);
-    }
+    loadedMeshIds.add(meshInfo.segmentId);
   });
   return loadedMeshIds;
 }

@@ -573,7 +573,6 @@ type BaseMeshInformation = {
   readonly isVisible: boolean;
   readonly opacity: number;
   readonly mappingName: string | null | undefined;
-  readonly isProofreadingAuxiliaryMesh: boolean;
 };
 export type AdHocMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: false;

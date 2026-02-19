@@ -287,8 +287,6 @@ function* loadCoarseMesh(
     return;
   }
 
-  const isProofreadingAuxiliaryMesh = true;
-
   if (
     currentMeshFile != null &&
     currentMeshFile.formatVersion >= 3 &&
@@ -303,7 +301,6 @@ function* loadCoarseMesh(
         additionalCoordinates,
         currentMeshFile.name,
         undefined,
-        isProofreadingAuxiliaryMesh,
         undefined,
       ),
     );
@@ -316,7 +313,7 @@ function* loadCoarseMesh(
     // Load the whole agglomerate mesh in a coarse mag for performance reasons
     const preferredQuality = proofreadCoarseMagIndex();
     yield* put(
-      loadAdHocMeshAction(segmentId, position, additionalCoordinates, isProofreadingAuxiliaryMesh, {
+      loadAdHocMeshAction(segmentId, position, additionalCoordinates, {
         mappingName,
         mappingType,
         preferredQuality,
@@ -1145,14 +1142,9 @@ function* clearProofreadingByproducts() {
     (yield* select(
       (state) => state.localSegmentationData[layerName]?.meshes?.[additionalCoordinateKey],
     )) || {};
-  const meshRemoveActions = Object.values(meshInfos)
-    // TODO @MichaelBuessemeyer Double check this. This map does not return anything
-    .map((meshInfo) => {
-      return meshInfo.isProofreadingAuxiliaryMesh
-        ? removeMeshAction(layerName, meshInfo.segmentId)
-        : null;
-    })
-    .filter((action) => action != null);
+  const meshRemoveActions = Object.values(meshInfos).map((meshInfo) => {
+    return removeMeshAction(layerName, meshInfo.segmentId);
+  });
   for (const action of meshRemoveActions) {
     yield* put(action);
   }

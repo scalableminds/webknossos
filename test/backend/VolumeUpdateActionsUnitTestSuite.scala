@@ -88,10 +88,10 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     groupId = Some(2)
   )
 
-  private val segment1WithoutAdditionalPops =
+  private val segment1WithoutAdditionalProps =
     Segment(segmentId = 1, anchorPosition = None, groupId = None, metadata = Seq())
 
-  private val segment2WithAdditionalPops = Segment(
+  private val segment2WithAdditionalProps = Segment(
     segmentId = 2,
     name = Some("Name 2"),
     anchorPosition = Some(Vec3IntProto(1, 1, 1)),
@@ -128,7 +128,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     "should merge two segments (both segments exist, but source lacks some properties)" in {
       val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
       val result = action.applyOn(
-        Dummies.volumeTracing.withSegments(Seq(segment1WithoutAdditionalPops, segment2WithAdditionalPops)))
+        Dummies.volumeTracing.withSegments(Seq(segment1WithoutAdditionalProps, segment2WithAdditionalProps)))
 
       assert(
         result.segments == Seq(Segment(
@@ -137,9 +137,9 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
           metadata = Seq(
             MetadataEntryProto(key = "someKey1", stringValue = Some("someStringValue - segment 2")),
           ),
-          anchorPosition = segment2WithAdditionalPops.anchorPosition,
-          anchorPositionAdditionalCoordinates = segment2WithAdditionalPops.anchorPositionAdditionalCoordinates,
-          groupId = segment2WithAdditionalPops.groupId,
+          anchorPosition = segment2WithAdditionalProps.anchorPosition,
+          anchorPositionAdditionalCoordinates = segment2WithAdditionalProps.anchorPositionAdditionalCoordinates,
+          groupId = segment2WithAdditionalProps.groupId,
         )))
     }
 

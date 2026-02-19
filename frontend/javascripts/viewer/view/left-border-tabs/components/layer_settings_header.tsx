@@ -433,7 +433,7 @@ export default function LayerSettingsHeader({
       await startComputeSegmentIndexFileJob(dataset.id, layerName);
       Toast.info(
         <React.Fragment>
-          Started a job for computating a segment index file.
+          Started a job for computing a segment index file.
           <br />
           See{" "}
           <a target="_blank" href="/jobs" rel="noopener noreferrer">

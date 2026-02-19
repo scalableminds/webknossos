@@ -71,7 +71,7 @@ export const viteConfig = {
         target: "http://localhost:8080",
         changeOrigin: true,
       },
-      // Proxy to Tracingstore
+      // Proxy to Tracingstore / Datastore
       "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,

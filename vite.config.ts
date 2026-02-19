@@ -48,9 +48,6 @@ export const viteConfig = {
           if (id.includes("node_modules/html2canvas")) {
             return "html2canvas";
           }
-          // if (id.includes("node_modules")) {
-          //   return "vendor";
-          // }
         },
       },
     },
@@ -69,11 +66,12 @@ export const viteConfig = {
     //   cert: fs.readFileSync("./target/dev.cert.pem"),
     // },
     proxy: {
-      // You can add more routes here, e.g. "^/(api|binary|auth)"
+      // Proxy to SAM service
       "^/dist/": {
         target: "http://localhost:8080",
         changeOrigin: true,
       },
+      // Proxy to Tracingstore
       "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,

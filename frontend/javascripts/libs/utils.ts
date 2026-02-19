@@ -632,7 +632,17 @@ export function diffArrays<T>(
   };
 }
 
-export function diffNumberArrays(a: number[], b: number[]) {
+/*
+ * Diffs two number based arrays. The input is not manipulated.
+ * Returns three arrays in the from of { both, onlyA, onlyB }.
+ * both contains the numbers present in both arrays;
+ * onlyA the numbers present only in array a;
+ * onlyB the numbers present only in array b.
+ */
+export function diffNumberArrays(
+  a: number[],
+  b: number[],
+): { both: number[]; onlyA: number[]; onlyB: number[] } {
   // Create sorted copies to avoid mutating inputs
   const A = [...a].sort((x, y) => x - y);
   const B = [...b].sort((x, y) => x - y);

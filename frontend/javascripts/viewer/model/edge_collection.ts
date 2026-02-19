@@ -1,4 +1,5 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
+import ErrorHandling from "libs/error_handling";
 import { diffArrays, diffNumberArrays } from "libs/utils";
 import type { Edge } from "./types/tree_types";
 
@@ -188,7 +189,8 @@ export function diffEdgeCollections(
     onlyB: getEdgesForNodes(mapDiff.onlyB, edgeCollectionB.outMap),
   };
 
-  // TODOM: consider tracking time needed for the whole diffing. In case it takes too long, maybe log to airbrake or so?
+  const MAX_TOLERATED_DIFFING_TIME = 500;
+  const startTime = performance.now();
   for (const changedNodeIndex of mapDiff.changed) {
     // For each changedNodeIndex there is at least one outgoing edge which was added or removed.
     // So, check for each outgoing edge whether it only exists in A or B
@@ -211,6 +213,17 @@ export function diffEdgeCollections(
         edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
       );
     }
+    const endTime = performance.now();
+    const elapsedTime = endTime - startTime;
+    if (elapsedTime > MAX_TOLERATED_DIFFING_TIME) {
+      // If diffing takes too long, log it to airbrake so we notice that this is an actual problem in production.
+      ErrorHandling.notify(
+        new Error(
+          `Diffing edges took more than ${MAX_TOLERATED_DIFFING_TIME}. The total time was ${elapsedTime}.`,
+        ),
+      );
+    }
+
     edgeDiff.onlyA = edgeDiff.onlyA.concat(outgoingEdgesDiff.onlyA);
     edgeDiff.onlyB = edgeDiff.onlyB.concat(outgoingEdgesDiff.onlyB);
   }

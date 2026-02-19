@@ -875,11 +875,9 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
 
 function* removeOutdatedMeshes(meshIdsToRemove: Set<number>, activeVolumeTracingId: string) {
   // Remove all outdated meshes.
-  console.log("Start removing outdated meshes", ...Array.from(meshIdsToRemove));
   for (const aggloId of meshIdsToRemove) {
     yield* put(removeMeshAction(activeVolumeTracingId, Number(aggloId)));
   }
-  console.log("Finished removing outdated meshes", ...Array.from(meshIdsToRemove));
 }
 
 // Potentially waits until saving is done. Thus, !must be called with spawn!.
@@ -903,9 +901,7 @@ function* reloadMeshes(meshIdsToReload: Set<number>, activeVolumeTracingId: stri
       });
     }
   }
-  console.log("Start refreshing segments", refreshList);
   yield* call(refreshAffectedMeshes, activeVolumeTracingId, refreshList);
-  console.log("Finished refreshing segments", refreshList);
 }
 
 export default [setupSavingToServer, watchForNewerAnnotationVersion];

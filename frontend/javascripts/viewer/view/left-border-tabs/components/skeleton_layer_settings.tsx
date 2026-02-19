@@ -2,6 +2,7 @@ import { DeleteOutlined } from "@ant-design/icons";
 import { Flex, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
+import { location } from "libs/window";
 import { settings } from "messages";
 import React, { useCallback } from "react";
 import { useDispatch } from "react-redux";
@@ -280,7 +281,7 @@ export default function SkeletonLayerSettings() {
             label={settings.highlightCommentedNodes}
             value={userConfiguration.highlightCommentedNodes}
             onChange={onChangeHighlightCommentedNodes}
-          />{" "}
+          />
         </div>
       ) : null}
     </React.Fragment>

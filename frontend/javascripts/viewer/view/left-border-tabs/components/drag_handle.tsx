@@ -8,7 +8,7 @@ function DragHandleIcon({ isDisabled = false }: { isDisabled?: boolean }) {
       style={{
         display: "inline-flex",
         justifyContent: "center",
-        cursor: "grab",
+        cursor: isDisabled ? "default" : "grab",
         alignItems: "center",
         opacity: isDisabled ? 0.3 : 0.6,
       }}

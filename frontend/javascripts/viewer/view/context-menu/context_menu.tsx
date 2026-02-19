@@ -1,10 +1,4 @@
-import {
-  BarChartOutlined,
-  CopyOutlined,
-  PushpinOutlined,
-  TagOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { BarChartOutlined, PushpinOutlined, TagOutlined, WarningOutlined } from "@ant-design/icons";
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
@@ -161,6 +155,7 @@ import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "../right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { CopyIconWithTooltip } from "./copy_icon_with_tooltip";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -219,19 +214,6 @@ export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProp
     },
   ],
 });
-
-function copyIconWithTooltip(value: string | number, title: string) {
-  return (
-    <FastTooltip title={title}>
-      <CopyOutlined
-        onClick={async () => {
-          await navigator.clipboard.writeText(value.toString());
-          Toast.success(`"${value}" copied to clipboard`);
-        }}
-      />
-    </FastTooltip>
-  );
-}
 
 function measureAndShowLengthBetweenNodes(
   sourceNodeId: number,
@@ -1848,7 +1830,7 @@ function ContextMenuInner() {
         <Space size="small">
           <PushpinOutlined rotate={-45} />
           {`Position: ${nodePositionAsString}`}
-          {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
+          <CopyIconWithTooltip value={nodePositionAsString} title="Copy node position" />
         </Space>,
       ),
     );
@@ -1861,7 +1843,7 @@ function ContextMenuInner() {
         <Space size="small">
           <PushpinOutlined rotate={-45} />
           {`Position: ${positionAsString}`}
-          {copyIconWithTooltip(positionAsString, "Copy position")}
+          <CopyIconWithTooltip value={positionAsString} title="Copy position" />
         </Space>,
       ),
     );
@@ -1877,7 +1859,7 @@ function ContextMenuInner() {
             {`${distanceToSelection[0]} (${distanceToSelection[1]}) to this
             ${maybeClickedNodeId != null ? "Node" : "Position"}`}
           </FastTooltip>
-          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+          <CopyIconWithTooltip value={distanceToSelection[0]} title="Copy the distance" />
         </Space>,
       ),
     );
@@ -1890,7 +1872,7 @@ function ContextMenuInner() {
         <Space size="small">
           <div className="cell-context-icon" />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
-          {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
+          <CopyIconWithTooltip value={clickedSegmentOrMeshId} title="Copy Segment ID" />
         </Space>,
       ),
     );
@@ -1909,7 +1891,7 @@ function ContextMenuInner() {
           <Space size="small">
             <TagOutlined />
             {`Segment Name: ${segmentNameLabel}`}
-            {copyIconWithTooltip(segmentName, "Copy Segment Name")}
+            <CopyIconWithTooltip value={segmentName} title="Copy Segment Name" />
           </Space>,
         ),
       );
@@ -1923,7 +1905,7 @@ function ContextMenuInner() {
         <Space size="small">
           <i>m²</i>
           {`Surface Area: ${segmentSurfaceAreaLabel}`}
-          {copyIconWithTooltip(segmentSurfaceAreaLabel as string, "Copy surface area")}
+          <CopyIconWithTooltip value={segmentSurfaceAreaLabel} title="Copy surface area" />
         </Space>,
       ),
     );
@@ -1934,7 +1916,7 @@ function ContextMenuInner() {
         <Space size="small">
           <i>m³</i>
           {`Volume: ${segmentVolumeLabel}`}
-          {copyIconWithTooltip(segmentVolumeLabel as string, "Copy volume")}
+          <CopyIconWithTooltip value={segmentVolumeLabel} title="Copy volume" />
         </Space>,
       ),
     );
@@ -1945,7 +1927,10 @@ function ContextMenuInner() {
         <Space size="small">
           <i className="fas fa-dice-d6 " />
           {`Bounding Box: ${boundingBoxInfoLabel}`}
-          {copyIconWithTooltip(boundingBoxInfoLabel, "Copy BBox top left point and extent")}
+          <CopyIconWithTooltip
+            value={boundingBoxInfoLabel}
+            title="Copy BBox top left point and extent"
+          />
         </Space>,
       ),
     );

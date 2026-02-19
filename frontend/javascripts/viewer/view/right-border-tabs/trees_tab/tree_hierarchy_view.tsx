@@ -34,7 +34,7 @@ import {
   type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
-import { getContextMenuPositionFromEvent } from "../../context_menu";
+import { getContextMenuPositionFromEvent } from "../../context-menu/context_menu";
 import { MetadataEntryTableRows } from "../metadata_table";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";

@@ -5,7 +5,7 @@ import {
   ContextMenuContext,
   GenericContextMenuContainer,
   getNoActionsAvailableMenu,
-} from "../context_menu";
+} from "../context-menu/context_menu";
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);

@@ -54,7 +54,7 @@ import {
   ContextMenuContext,
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
-} from "viewer/view/context_menu";
+} from "viewer/view/context-menu/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;

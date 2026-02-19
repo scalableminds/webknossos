@@ -51,6 +51,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
+import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -75,17 +76,11 @@ const shortcuts = [
   {
     key: "1",
     keybinding: [
-      <span key="zoom-1" className="keyboard-key-icon">
-        I
-      </span>,
+      <KeyboardKeyIcon label="I" key="zoom-1" className="keyboard-key-icon" />,
       "/",
-      <span key="zoom-2" className="keyboard-key-icon">
-        O
-      </span>,
+      <KeyboardKeyIcon label="O" key="zoom-2" className="keyboard-key-icon" />,
       "or",
-      <span key="zoom-3" className="keyboard-key-icon">
-        ALT
-      </span>,
+      <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
       "+",
       <Icon
         component={IconMousewheel}
@@ -108,13 +103,9 @@ const shortcuts = [
         title="Mouse Wheel"
       />,
       "or",
-      <span key="move-2" className="keyboard-key-icon">
-        D
-      </span>,
+      <KeyboardKeyIcon label="D" key="move-2" className="keyboard-key-icon" />,
       "/",
-      <span key="move-3" className="keyboard-key-icon">
-        F
-      </span>,
+      <KeyboardKeyIcon label="F" key="move-3" className="keyboard-key-icon" />,
     ],
     action: "Move Along 3rd Axis",
   },

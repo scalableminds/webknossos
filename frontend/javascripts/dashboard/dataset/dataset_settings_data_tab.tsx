@@ -28,9 +28,14 @@ import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_typ
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject } from "viewer/store";
-import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
+import {
+  AxisRotationSettingForDataset,
+  getDatasetBoundingBoxFromLayers,
+  getRotationalTransformation,
+} from "./dataset_rotation_form_item";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 export default function DatasetSettingsDataTab() {
@@ -142,6 +147,29 @@ function SimpleDatasetForm({
     }
     if (form.getFieldError(["coordinateTransformations"]).length > 0) {
       return;
+    }
+    if (transformationsMode === TransformationsMode.SIMPLE) {
+      const rotationValues: {
+        x: RotationAndMirroringSettings;
+        y: RotationAndMirroringSettings;
+        z: RotationAndMirroringSettings;
+      } = form.getFieldValue(["datasetRotation"]);
+      const datasetBoundingBox = getDatasetBoundingBoxFromLayers(currentDataSource.dataLayers);
+      // This won't happen because we check that there are more than 0 layers,
+      // so this is just to satisfy the type checker.
+      if (datasetBoundingBox == null) {
+        throw new Error("Dataset bounding box is undefined. Cannot apply transformations.");
+      }
+      const transformations = getRotationalTransformation(datasetBoundingBox, rotationValues);
+      const dataLayersWithUpdatedTransforms = currentDataSource.dataLayers.map(
+        (layer: DataLayer) => {
+          return {
+            ...layer,
+            coordinateTransformations: transformations,
+          };
+        },
+      );
+      form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
     }
     if (transformationsMode === TransformationsMode.ADVANCED) {
       if (coordinateTransformationsJSON == null) return;

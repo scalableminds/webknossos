@@ -2,7 +2,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { hideContextMenuAction } from "viewer/model/actions/ui_actions";
-import ContextMenuInner from "./context_menu";
+import { ContextMenuInner } from "./context_menu_inner";
 import { GenericContextMenuContainer } from "./generic_context_menu_container";
 
 export default function WkContextMenu() {

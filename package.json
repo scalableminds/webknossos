@@ -105,7 +105,7 @@
     "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = true/voxelyticsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
     "insert-local-datastore": "./tools/postgres/dbtool.js insert-local-datastore",
     "apply-evolutions": "tools/postgres/dbtool.js apply-evolutions",
-    "postinstall": "cd ../postgres && yarn install",
+    "postinstall": "cd tools/postgres && yarn install",
     "typecheck": "yarn tsc",
     "ts": "yarn tsc",
     "ts-watch": "yarn tsc --watch",

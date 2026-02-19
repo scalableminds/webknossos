@@ -6,8 +6,6 @@ import Icon, {
 } from "@ant-design/icons";
 import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
 import IconExtent from "@images/icons/icon-extent.svg?react";
-import IconMouseLeftDrag from "@images/icons/icon-mouse-left-light.svg?react";
-import IconMouseRightDrag from "@images/icons/icon-mouse-right-light.svg?react";
 import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
 import IconSegments from "@images/icons/icon-segments.svg?react";
 import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
@@ -15,6 +13,7 @@ import IconVoxelsize from "@images/icons/icon-voxelsize.svg?react";
 import { getOrganization } from "admin/api/organization";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { ThemedIcon } from "components/themed_icon";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
@@ -122,9 +121,8 @@ const shortcuts = [
   {
     key: "3",
     keybinding: [
-      <Icon
-        component={IconMouseLeftDrag}
-        title="Mouse Wheel"
+      <ThemedIcon
+        name="icon-mouse-left"
         key="move"
         className="keyboard-mouse-icon"
         aria-label="Left Mouse Button Drag"
@@ -135,14 +133,12 @@ const shortcuts = [
   {
     key: "4",
     keybinding: [
-      <Icon
-        component={IconMouseRightDrag}
-        title="Mouse Wheel"
+      <ThemedIcon
+        name="icon-mouse-right"
         key="rotate"
         className="keyboard-mouse-icon"
         aria-label="Right Mouse Button Drag"
       />,
-
       "in 3D View",
     ],
     action: "Rotate 3D View",
@@ -348,7 +344,9 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                     width: 170,
                   }}
                 >
-                  <Space size="small">{shortcut.keybinding}</Space>
+                  <Space size={4} align="center">
+                    {shortcut.keybinding}
+                  </Space>
                 </td>
                 <td>{shortcut.action}</td>
               </tr>

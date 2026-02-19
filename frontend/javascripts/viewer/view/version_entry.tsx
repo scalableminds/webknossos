@@ -1,4 +1,4 @@
-import Icon, {
+import {
   ArrowsAltOutlined,
   BackwardOutlined,
   CodepenOutlined,
@@ -14,10 +14,10 @@ import Icon, {
   ShrinkOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
-import IconHideSkeletonEdgesLight from "@images/icons/icon-hide-skeleton-edges-light.svg?react";
 import { Avatar, Button, List } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
+import { ThemedIcon } from "components/themed_icon";
 import { useWkSelector } from "libs/react_hooks";
 import groupBy from "lodash-es/groupBy";
 import max from "lodash-es/max";
@@ -291,7 +291,7 @@ const descriptionFns: Record<
     action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
   ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
-    icon: <Icon component={IconHideSkeletonEdgesLight} aria-label="Hide Tree Edges Icon" />,
+    icon: <ThemedIcon name="icon-hide-skeleton-edges" aria-label="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (
     action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,

@@ -27,6 +27,7 @@ import type {
   SubMenuType,
 } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
+import { ThemedIcon } from "components/themed_icon";
 import {
   formatLengthAsVx,
   formatNumberToArea,
@@ -1888,7 +1889,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "copy-cell",
         <Space size="small">
-          <div className="cell-context-icon" />
+          <ThemedIcon name="icon-cell-outline" />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
           {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
         </Space>,

@@ -1,7 +1,6 @@
-import Icon, { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
-import IconSidebarHideLeftLight from "@images/icons/icon-sidebar-hide-left-light.svg?react";
-import IconSidebarHideRightLight from "@images/icons/icon-sidebar-hide-right-light.svg?react";
+import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
 import { Space, Tooltip } from "antd";
+import { ThemedIcon } from "components/themed_icon";
 import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import type * as React from "react";
 import { useCallback } from "react";
@@ -61,8 +60,8 @@ export function FloatingMobileControls() {
           style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "left")}
           icon={
-            <Icon
-              component={IconSidebarHideLeftLight}
+            <ThemedIcon
+              name="icon-sidebar-hide-left"
               aria-label="Toggle left sidebar"
               style={{ filter: "brightness(10)" }}
             />
@@ -75,8 +74,8 @@ export function FloatingMobileControls() {
           style={BUTTON_STYLE}
           onClick={() => layoutEmitter.emit(LayoutEvents.toggleBorder, "right")}
           icon={
-            <Icon
-              component={IconSidebarHideRightLight}
+            <ThemedIcon
+              name="icon-sidebar-hide-right"
               aria-label="Toggle right sidebar"
               style={{ filter: "brightness(10)" }}
             />

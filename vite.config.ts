@@ -54,7 +54,7 @@ export const viteConfig = {
   },
   worker: {
     format: "es",
-    plugins: () => [wasm()],
+    plugins: () => [wasm(), tsconfigPaths()],
   },
   server: {
     port: 9000,

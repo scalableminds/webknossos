@@ -5,6 +5,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { settings } from "messages";
 import React, { useCallback } from "react";
 import { useDispatch } from "react-redux";
+import type { AnnotationLayerType } from "types/api_types";
 import { AnnotationLayerEnum } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
@@ -13,12 +14,12 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
+import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { Model } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -28,9 +29,8 @@ import {
   SwitchSetting,
 } from "viewer/view/components/setting_input_views";
 import { confirmAsync } from "../../../../dashboard/dataset/helper_components";
-import LayerTransformationIcon from "./layer_transformation_icon";
 import { DummyDragHandle } from "./drag_handle";
-import type { AnnotationLayerType } from "types/api_types";
+import LayerTransformationIcon from "./layer_transformation_icon";
 
 export default function SkeletonLayerSettings() {
   const dispatch = useDispatch();

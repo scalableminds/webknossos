@@ -1,7 +1,7 @@
-import { useCallback } from "react";
-import { useDispatch } from "react-redux";
 import { useWkSelector } from "libs/react_hooks";
 import { settings } from "messages";
+import { useCallback } from "react";
+import { useDispatch } from "react-redux";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { updateDatasetSettingAction } from "viewer/model/actions/settings_actions";
 import { NumberSliderSetting } from "viewer/view/components/setting_input_views";

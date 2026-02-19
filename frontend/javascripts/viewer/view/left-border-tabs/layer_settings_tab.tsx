@@ -18,7 +18,7 @@ import type { Dispatch } from "redux";
 import { APIAnnotationTypeEnum, type APIDataLayer } from "types/api_types";
 import type { ValueOf } from "types/globals";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
-import Constants, { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
+import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import {
   getDefaultValueRangeOfLayer,
   getElementClass,
@@ -41,12 +41,12 @@ import type {
 import Store from "viewer/store";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action-bar/materialize_volume_annotation_modal";
 import { NumberSliderSetting } from "viewer/view/components/setting_input_views";
-import Histogram, { isHistogramSupported } from "./histogram_view";
-import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 import ColorLayerSettings from "./components/color_layer_settings";
 import LayerSettingsHeader from "./components/layer_settings_header";
 import SegmentationLayerSettings from "./components/segmentation_layer_settings";
 import SkeletonLayerSettings from "./components/skeleton_layer_settings";
+import Histogram, { isHistogramSupported } from "./histogram_view";
+import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
   ReturnType<typeof mapDispatchToProps>;

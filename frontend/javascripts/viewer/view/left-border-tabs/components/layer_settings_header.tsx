@@ -11,13 +11,19 @@ import {
   VerticalAlignMiddleOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import {
+  clearCache,
+  findDataPositionForLayer,
+  findDataPositionForVolumeTracing,
+  startComputeSegmentIndexFileJob,
+} from "admin/rest_api";
 import { Dropdown, Flex, type MenuProps, Switch } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import type { SwitchChangeEventHandler } from "antd/es/switch";
 import FastTooltip from "components/fast_tooltip";
 import { HoverIconButton } from "components/hover_icon_button";
-import { useWkSelector } from "libs/react_hooks";
 import { M4x4, V3 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isUserAdminOrManager } from "libs/utils";
 import differenceWith from "lodash-es/differenceWith";
@@ -33,17 +39,12 @@ import {
 } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
-  clearCache,
-  findDataPositionForLayer,
-  findDataPositionForVolumeTracing,
-  startComputeSegmentIndexFileJob,
-} from "admin/rest_api";
-import {
   getLayerBoundingBox,
   getLayerByName,
   getWidestMags,
 } from "viewer/model/accessors/dataset_accessor";
 import { getTransformsForLayerOrNull } from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -52,24 +53,23 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { editAnnotationLayerAction } from "viewer/model/actions/annotation_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import {
   dispatchClipHistogramAsync,
   reloadHistogramAction,
   updateLayerSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { api, Model } from "viewer/singletons";
 import type { DatasetLayerConfiguration, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { getMaxZoomValueForMag } from "viewer/model/accessors/flycam_accessor";
 import { confirmAsync } from "../../../../dashboard/dataset/helper_components";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
+import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
 import LayerTransformationIcon from "./layer_transformation_icon";
-import { DragHandle, DummyDragHandle } from "./drag_handle";
 
 function EnableDisableLayerSwitch({
   isDisabled,

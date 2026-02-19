@@ -1,9 +1,13 @@
-import classnames from "classnames";
 import { Col, Row } from "antd";
+import classnames from "classnames";
+import FastTooltip from "components/fast_tooltip";
+import { rgbToHex } from "libs/utils";
+import { layerViewConfigurations, layerViewConfigurationTooltips } from "messages";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { rgbToHex } from "libs/utils";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
+import type { DatasetLayerConfiguration } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import {
   ColorSetting,
@@ -12,10 +16,6 @@ import {
   SETTING_MIDDLE_SPAN,
   SETTING_VALUE_SPAN,
 } from "viewer/view/components/setting_input_views";
-import { layerViewConfigurations, layerViewConfigurationTooltips } from "messages";
-import FastTooltip from "components/fast_tooltip";
-import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
-import type { DatasetLayerConfiguration } from "viewer/store";
 
 export default function ColorLayerSettings({
   layerName,

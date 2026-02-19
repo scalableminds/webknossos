@@ -29,6 +29,7 @@ import controllers.{
   ReserveDatasetUploadToPathsRequest,
   ReserveMagUploadToPathRequest
 }
+import models.folder.FolderDAO
 import models.organization.OrganizationDAO
 import models.user.User
 import play.api.i18n.MessagesProvider
@@ -46,6 +47,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                             pathDeletionService: PathDeletionService,
                                             datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                             datasetMagsDAO: DatasetMagsDAO,
+                                            folderDAO: FolderDAO,
                                             conf: WkConf)
     extends FoxImplicits
     with DataSourceValidation {
@@ -73,6 +75,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       dataSourceWithLayersToLink <- layerToLinkService.addLayersToLinkToDataSource(dataSourceWithPaths,
                                                                                    parameters.layersToLink)
       _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
+      folderIdWithFallback = parameters.folderId.getOrElse(organization._rootFolder)
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> "folder.noWriteAccess"
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
         dataStore,
@@ -84,7 +88,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       )
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
-      _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser)(GlobalAccessContext)
+      _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser) // called with user access context. Should be fine now that the folder is set correctly
       _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
     } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
     yield dataSourceWithPaths

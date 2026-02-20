@@ -9,7 +9,7 @@ export const loadAgglomerateTree1 = [
       value: {
         actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
         id: 3,
-        updatedId: 3,
+        updatedId: undefined,
         color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
         name: "agglomerate 1 (volumeTracingId)",
         timestamp: 1494695001688,
@@ -449,7 +449,7 @@ export const splitSegment2And3WithAgglomerateTree1 = [
       value: {
         actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
         id: 4,
-        updatedId: 4,
+        updatedId: undefined,
         color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
         name: "agglomerate 1339 (volumeTracingId)",
         timestamp: 1494695001688,
@@ -505,7 +505,7 @@ export const splitSegment1And2WithAgglomerateTree1 = [
       value: {
         actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
         id: 4,
-        updatedId: 4,
+        updatedId: undefined,
         color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
         name: "agglomerate 1339 (volumeTracingId)",
         timestamp: 1494695001688,

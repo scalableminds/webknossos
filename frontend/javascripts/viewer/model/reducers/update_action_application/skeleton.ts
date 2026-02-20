@@ -74,7 +74,7 @@ function applySingleAction(
       const {
         id: treeId,
         // updatedId is part of the updateAction format but was never really used.
-        updatedId: _updatedId,
+        updatedId: undefined,
         ...treeRest
       } = withoutServerSpecificFields(ua).value;
       const skeleton = enforceSkeletonTracing(state.annotation);

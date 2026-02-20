@@ -29,6 +29,10 @@ import { getMutexLogicState } from "viewer/model/sagas/saving/save_mutex_saga";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  loadAgglomerateTree1,
+  splitSegment2And3WithAgglomerateTrees1And4And6,
+} from "./proofreading_interaction_update_action_fixtures";
 import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
 import {
   initializeMappingAndTool,
@@ -36,10 +40,6 @@ import {
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import {
-  loadAgglomerateTree1,
-  splitSegment2And3WithAgglomerateTrees1And4And6,
-} from "./proofreading_interaction_update_action_fixtures";
 
 describe("Proofreading agglomerate skeleton syncing", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

@@ -93,7 +93,7 @@ function* getAllAgglomerateTreesFromServerAndRemap(
 // the changes made to the skeleton minimal. Therefore, the active node id stays the same.
 // Resulting in not deactivating different nodes when syncing agglomerate skeletons with a non-skeleton based proofreading action.
 type PositionToIdMap = Record<string, number>;
-function createPositionToIdMap(trees: MapIterator<Tree>) {
+export function createPositionToIdMap(trees: MapIterator<Tree> | Tree[]) {
   const positionToIdMap: Record<string, number> = {};
   for (const tree of trees) {
     for (const node of tree.nodes.values()) {
@@ -103,8 +103,7 @@ function createPositionToIdMap(trees: MapIterator<Tree>) {
   return positionToIdMap;
 }
 
-// TODOM: write tests for this as this can be pretty complex.
-function remapNodeIdsWithPositionMap(
+export function remapNodeIdsWithPositionMap(
   trees: Tree[],
   positionToIdMap: PositionToIdMap,
   skeletonTracing: SkeletonTracing,
@@ -140,7 +139,7 @@ function remapNodeIdsWithPositionMap(
   });
 }
 
-function deepDiffTreesInSkeletonTracings(
+export function deepDiffTreesInSkeletonTracings(
   prevSkeleton: SkeletonTracing,
   newSkeletonWithUpdatedIds: SkeletonTracing,
 ): UpdateActionWithoutIsolationRequirement[] {

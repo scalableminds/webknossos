@@ -35,7 +35,10 @@ import {
   removeMeshAction,
   showManyBucketUpdatesWarningAction,
 } from "viewer/model/actions/annotation_actions";
-import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
+import {
+  ensureLayerMappingsAreLoadedAction,
+  type SetLayerMappingsAction,
+} from "viewer/model/actions/dataset_actions";
 import {
   dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   type EnsureHasNewestVersionAction,
@@ -472,7 +475,7 @@ const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
 function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkInitialized);
 
-  const channel = yield* actionChannel(
+  const channel = yield* actionChannel<EnsureHasNewestVersionAction>(
     ["ENSURE_HAS_NEWEST_VERSION"],
     // If multiple actions are sent to this buffer (without consumption in between),
     // we want to flush them all at once. This is achieved by using an expanding buffer
@@ -738,7 +741,8 @@ export function* tryToIncorporateActions(
               getSegmentationLayerByName(state.dataset, actionTracingId),
             );
             if (volumeDataLayer.mappings == null || volumeDataLayer.agglomerates == null) {
-              const setMappingsChannel = yield* actionChannel("SET_LAYER_MAPPINGS");
+              const setMappingsChannel =
+                yield* actionChannel<SetLayerMappingsAction>("SET_LAYER_MAPPINGS");
               yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
               yield* take(setMappingsChannel);
             }

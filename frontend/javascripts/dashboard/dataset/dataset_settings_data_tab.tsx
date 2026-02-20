@@ -63,7 +63,7 @@ const MARGIN_BOTTOM: React.CSSProperties = {
   marginBottom: 24,
 };
 
-function DatasetTransformationsModeCard() {
+function AdvancedDatasetTransformationsCard() {
   return (
     <SettingsCard
       title="Transformation Configuration"
@@ -91,6 +91,36 @@ function DatasetTransformationsModeCard() {
       style={MARGIN_BOTTOM}
     />
   );
+}
+
+function DatasetTransformationSettingsCard({
+  transformationsMode,
+  form,
+}: {
+  transformationsMode: TransformationsMode;
+  form: FormInstance;
+}) {
+  switch (transformationsMode) {
+    case TransformationsMode.SIMPLE:
+      return (
+        <SettingsCard
+          title="Axis Rotation"
+          style={MARGIN_BOTTOM}
+          content={
+            <Row gutter={[24, 24]}>
+              <Col span={24}>
+                <AxisRotationSettingForDataset form={form} />
+              </Col>
+            </Row>
+          }
+        />
+      );
+    case TransformationsMode.ADVANCED:
+      return <AdvancedDatasetTransformationsCard />;
+    case TransformationsMode.NONE:
+    default:
+      return null;
+  }
 }
 
 export enum TransformationsMode {
@@ -128,7 +158,10 @@ function SimpleDatasetForm({
   const dataSource: Record<string, any> = Form.useWatch("dataSource", { form, preserve: true });
   const transformationsMode: TransformationsMode = Form.useWatch(["transformationsMode"], form);
   const coordinateTransformationsJSON: string = Form.useWatch(["coordinateTransformations"], form);
+  const isRotationOnly = Form.useWatch(["isRotationOnly"], form);
 
+  // If the transformation mode changes, the currently visible transformation settings need to be set
+  // in the internal datalayer model of the form.
   useEffect(() => {
     // Prevent unnecessary re-renders by not having the dataSource, which
     // might be changed below, as a dependency
@@ -144,11 +177,15 @@ function SimpleDatasetForm({
         },
       );
       form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
+      return;
     }
     if (form.getFieldError(["coordinateTransformations"]).length > 0) {
       return;
     }
     if (transformationsMode === TransformationsMode.SIMPLE) {
+      if (!isRotationOnly) {
+        return;
+      }
       const rotationValues: {
         x: RotationAndMirroringSettings;
         y: RotationAndMirroringSettings;
@@ -189,31 +226,6 @@ function SimpleDatasetForm({
       form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);
     }
   }, [coordinateTransformationsJSON, form, transformationsMode]);
-
-  const getTransformationSettings = () => {
-    switch (transformationsMode) {
-      case TransformationsMode.NONE:
-        return null;
-      case TransformationsMode.SIMPLE:
-        return (
-          <SettingsCard
-            title="Axis Rotation"
-            style={MARGIN_BOTTOM}
-            content={
-              <Row gutter={[24, 24]}>
-                <Col span={24}>
-                  <AxisRotationSettingForDataset form={form} />
-                </Col>
-              </Row>
-            }
-          />
-        );
-      case TransformationsMode.ADVANCED:
-        return <DatasetTransformationsModeCard />;
-      default:
-        return null;
-    }
-  };
 
   return (
     <div>
@@ -338,7 +350,7 @@ function SimpleDatasetForm({
         }
       />
 
-      {getTransformationSettings()}
+      <DatasetTransformationSettingsCard transformationsMode={transformationsMode} form={form} />
 
       {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
         // the layer name may change in this view, the order does not, so idx is the right key choice here

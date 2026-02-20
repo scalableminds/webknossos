@@ -36,6 +36,10 @@ import {
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import {
+  loadAgglomerateTree1,
+  splitSegment2And3WithAgglomerateTrees1And4And6,
+} from "./proofreading_interaction_update_action_fixtures";
 
 describe("Proofreading agglomerate skeleton syncing", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -1041,7 +1045,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     await task.toPromise();
   });
 
-  it("should split agglomerate via partitioned min-cut, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+  it("should split agglomerate via partitioned min-cut, apply injected split update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     // Initial mapping should be
     // [[1, 1],
     //  [2, 1],
@@ -1071,100 +1075,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     // Contains two circles now but only one is split by the min-cut request.
     // Inject splitting agglomerate 1 between segments 1 <-> 2 <-> 3 including agglomerate skeleton update & create segment.
     // Update also contains skeleton & segment list updates.
-    backendMock.planVersionInjection(10, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 2,
-          segmentId2: 3,
-          agglomerateId: 1,
-        },
-      },
-
-      {
-        name: "createTree",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          id: 6,
-          updatedId: 6,
-          color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
-          name: "agglomerate 1339 (volumeTracingId)",
-          timestamp: 1494695001688,
-          comments: [],
-          branchPoints: [],
-          groupId: undefined,
-          isVisible: true,
-          type: "AGGLOMERATE",
-          edgesAreVisible: true,
-          metadata: [],
-          agglomerateInfo: { agglomerateId: 1339, tracingId: "volumeTracingId" },
-        },
-      },
-      {
-        name: "moveTreeComponent",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          sourceId: 3,
-          targetId: 6,
-          nodeIds: [4, 6, 7, 8],
-        },
-      },
-      {
-        name: "deleteEdge",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          treeId: 3,
-          source: 4,
-          target: 5,
-        },
-      },
-      {
-        name: "deleteEdge",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          treeId: 3,
-          source: 5,
-          target: 6,
-        },
-      },
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          id: 1339,
-          anchorPosition: [1, 1, 1],
-          name: null,
-          color: null,
-          groupId: null,
-          metadata: [],
-          creationTime: 1494695001688,
-        },
-      },
-      {
-        name: "updateSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          id: 1,
-          anchorPosition: [2, 2, 2],
-          additionalCoordinates: undefined,
-          name: null,
-          color: null,
-          groupId: null,
-          metadata: [],
-          creationTime: 1494695001688,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(10, splitSegment2And3WithAgglomerateTrees1And4And6);
 
     // Prepare the server's reply for the upcoming split between 1337 & 1338 edge.
     vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -1203,8 +1114,6 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield put(toggleSegmentInPartitionAction(1338, 2, 1339));
       yield put(toggleSegmentInPartitionAction(3, 2, 1339));
       // Execute the actual merge and wait for the finished mapping.
-      const version = yield select((state) => state.annotation.version);
-      console.log(version);
       yield put(minCutPartitionsAction());
       yield take(
         ((action: Action) =>
@@ -1234,6 +1143,109 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
       yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_split_and_partitioned_min_cut.json",
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should merge agglomerates and incorporate injected agglomerate tree loading and then update the tree accordingly", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planMultipleVersionInjections(7, loadAgglomerateTree1);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      vi.mocked(context.mocks.parseProtoTracing).mockRestore();
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+      yield makeMappingEditableHelper();
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(proofreadMergeAction([4, 4, 4], 4));
+      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+
+      const updatedAgglomerateTrees = yield* select((state) =>
+        getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+      );
+      expect(updatedAgglomerateTrees.size()).toBe(1);
+      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(5);
+      const allNodes = Array.from(updatedAgglomerateTrees.getOrThrow(3).nodes.values());
+      const allPositionsSorted = allNodes
+        .map((n) => n.untransformedPosition)
+        .sort((a, b) => a[0] - b[0]);
+      expect(allPositionsSorted).toStrictEqual([
+        [1, 1, 1],
+        [2, 2, 2],
+        [3, 3, 3],
+        [4, 4, 4],
+        [5, 5, 5],
+      ]);
+
+      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-2)!;
+      yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/merge_should_correctly_update_newly_loaded_agglomerate_skeleton_due_to_rebasing.json",
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should split an agglomerate and incorporate injected agglomerate tree loading and then update the tree accordingly", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    backendMock.planMultipleVersionInjections(7, loadAgglomerateTree1);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      vi.mocked(context.mocks.parseProtoTracing).mockRestore();
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Set up the split-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+      yield makeMappingEditableHelper();
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Prepare the server's reply for the upcoming split.
+      vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
+        Promise.resolve([
+          {
+            position1: [1, 1, 1],
+            position2: [2, 2, 2],
+            segmentId1: 1,
+            segmentId2: 2,
+          },
+        ]),
+      );
+
+      // Execute the split and wait for the finished mapping.
+      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
+      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+
+      const updatedAgglomerateTrees = yield* select((state) =>
+        getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
+      );
+      expect(updatedAgglomerateTrees.size()).toBe(2);
+      expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1);
+      expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
+      const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-2);
+      yield expect(splittingAndAgglomerateReloadingUpdates).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/split_should_correctly_update_newly_loaded_agglomerate_skeleton_due_to_rebasing.json",
       );
     });
 

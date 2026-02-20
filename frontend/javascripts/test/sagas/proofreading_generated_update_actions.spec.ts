@@ -30,6 +30,7 @@ import {
   mergeSegment5And6WithAgglomerateTree1And4,
   splitSegment1And2WithAgglomerateTree1,
   splitSegment2And3WithAgglomerateTree1,
+  splitSegment2And3WithAgglomerateTrees1And4And6,
 } from "./proofreading/proofreading_interaction_update_action_fixtures";
 import { loadAgglomerateSkeletons } from "./proofreading/proofreading_skeleton_test_utils";
 import {
@@ -316,4 +317,34 @@ describe("Proofreading should generate correct update actions", () => {
 
     await task.toPromise();
   }, 8000);
+
+  it("when loading agglomerate trees 1, 2 and 4 and then splitting segments 2 and 3 with additional initial edges", async (context: WebknossosTestContext) => {
+    // There should be the following circle of edges: 1-2-3-1337-1338-1.
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [
+      [1, 1338],
+      [3, 1337],
+    ]);
+    const task = startSaga(function* task() {
+      const minCutEdges = [
+        {
+          position1: [1, 1, 1],
+          position2: [2, 2, 2],
+          segmentId1: 1,
+          segmentId2: 2,
+        } as MinCutTargetEdge,
+        {
+          position1: [2, 2, 2],
+          position2: [3, 3, 3],
+          segmentId1: 2,
+          segmentId2: 3,
+        } as MinCutTargetEdge,
+      ];
+
+      yield call(makeProofreadSplit, context, [1, 4, 6], 2, 3, 1, minCutEdges, false);
+      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      expect(splitAndTreeUpdates).toStrictEqual(splitSegment2And3WithAgglomerateTrees1And4And6);
+    });
+
+    await task.toPromise();
+  });
 });

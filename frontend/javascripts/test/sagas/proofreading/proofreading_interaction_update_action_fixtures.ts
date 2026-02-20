@@ -7,7 +7,7 @@ export const loadAgglomerateTree1 = [
     {
       name: "createTree" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         id: 3,
         updatedId: undefined,
         color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
@@ -22,14 +22,14 @@ export const loadAgglomerateTree1 = [
         metadata: [],
         agglomerateInfo: {
           agglomerateId: 1,
-          tracingId: "volumeTracingId",
+          tracingId: VOLUME_TRACING_ID,
         },
       },
     },
     {
       name: "createNode" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         id: 4,
         additionalCoordinates: [],
         rotation: [0, 0, 0],
@@ -46,7 +46,7 @@ export const loadAgglomerateTree1 = [
     {
       name: "createNode" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         id: 5,
         additionalCoordinates: [],
         rotation: [0, 0, 0],
@@ -63,7 +63,7 @@ export const loadAgglomerateTree1 = [
     {
       name: "createNode" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         id: 6,
         additionalCoordinates: [],
         rotation: [0, 0, 0],
@@ -80,7 +80,7 @@ export const loadAgglomerateTree1 = [
     {
       name: "createEdge" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         treeId: 3,
         source: 4,
         target: 5,
@@ -89,7 +89,7 @@ export const loadAgglomerateTree1 = [
     {
       name: "createEdge" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         treeId: 3,
         source: 5,
         target: 6,
@@ -103,7 +103,7 @@ export const mergeSegment4And6WithAgglomerateTree1And4 = [
     {
       name: "mergeAgglomerate" as const,
       value: {
-        actionTracingId: "volumeTracingId",
+        actionTracingId: VOLUME_TRACING_ID,
         segmentId1: 5,
         segmentId2: 6,
         agglomerateId1: 4,
@@ -436,7 +436,7 @@ export const splitSegment2And3WithAgglomerateTree1 = [
     {
       name: "splitAgglomerate" as const,
       value: {
-        actionTracingId: "volumeTracingId",
+        actionTracingId: VOLUME_TRACING_ID,
         segmentId1: 3,
         segmentId2: 2,
         agglomerateId: 1,
@@ -447,7 +447,7 @@ export const splitSegment2And3WithAgglomerateTree1 = [
     {
       name: "createTree" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         id: 4,
         updatedId: undefined,
         color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
@@ -462,14 +462,14 @@ export const splitSegment2And3WithAgglomerateTree1 = [
         metadata: [],
         agglomerateInfo: {
           agglomerateId: 1339,
-          tracingId: "volumeTracingId",
+          tracingId: VOLUME_TRACING_ID,
         },
       },
     },
     {
       name: "moveTreeComponent" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         sourceId: 3,
         targetId: 4,
         nodeIds: [4, 5],
@@ -478,7 +478,7 @@ export const splitSegment2And3WithAgglomerateTree1 = [
     {
       name: "deleteEdge" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         treeId: 3,
         source: 5,
         target: 6,
@@ -492,7 +492,7 @@ export const splitSegment1And2WithAgglomerateTree1 = [
     {
       name: "splitAgglomerate" as const,
       value: {
-        actionTracingId: "volumeTracingId",
+        actionTracingId: VOLUME_TRACING_ID,
         segmentId1: 1,
         segmentId2: 2,
         agglomerateId: 1,
@@ -503,7 +503,7 @@ export const splitSegment1And2WithAgglomerateTree1 = [
     {
       name: "createTree" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         id: 4,
         updatedId: undefined,
         color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
@@ -518,14 +518,14 @@ export const splitSegment1And2WithAgglomerateTree1 = [
         metadata: [],
         agglomerateInfo: {
           agglomerateId: 1339,
-          tracingId: "volumeTracingId",
+          tracingId: VOLUME_TRACING_ID,
         },
       },
     },
     {
       name: "moveTreeComponent" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         sourceId: 3,
         targetId: 4,
         nodeIds: [5, 6],
@@ -534,10 +534,84 @@ export const splitSegment1And2WithAgglomerateTree1 = [
     {
       name: "deleteEdge" as const,
       value: {
-        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        actionTracingId: SKELETON_TRACING_ID,
         treeId: 3,
         source: 4,
         target: 5,
+      },
+    },
+  ] as UpdateActionWithoutIsolationRequirement[],
+];
+
+export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
+  [
+    {
+      name: "splitAgglomerate" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        segmentId1: 1,
+        segmentId2: 2,
+        agglomerateId: 1,
+      },
+    },
+    {
+      name: "splitAgglomerate" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        segmentId1: 2,
+        segmentId2: 3,
+        agglomerateId: 1,
+      },
+    },
+  ] as UpdateActionWithoutIsolationRequirement[],
+  [
+    {
+      name: "createTree" as const,
+      value: {
+        actionTracingId: SKELETON_TRACING_ID,
+        id: 6,
+        updatedId: undefined,
+        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+        name: "agglomerate 1339 (volumeTracingId)",
+        timestamp: 1494695001688,
+        comments: [],
+        branchPoints: [],
+        groupId: undefined,
+        isVisible: true,
+        type: "AGGLOMERATE",
+        edgesAreVisible: true,
+        metadata: [],
+        agglomerateInfo: {
+          agglomerateId: 1339,
+          tracingId: VOLUME_TRACING_ID,
+        },
+      },
+    },
+    {
+      name: "moveTreeComponent" as const,
+      value: {
+        actionTracingId: SKELETON_TRACING_ID,
+        sourceId: 3,
+        targetId: 6,
+        nodeIds: [4, 6, 7, 8],
+      },
+    },
+    {
+      name: "deleteEdge" as const,
+      value: {
+        actionTracingId: SKELETON_TRACING_ID,
+        treeId: 3,
+        source: 4,
+        target: 5,
+      },
+    },
+    {
+      name: "deleteEdge" as const,
+      value: {
+        actionTracingId: SKELETON_TRACING_ID,
+        treeId: 3,
+        source: 5,
+        target: 6,
       },
     },
   ] as UpdateActionWithoutIsolationRequirement[],

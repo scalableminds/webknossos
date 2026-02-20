@@ -1,11 +1,9 @@
 import { Dropdown, type MenuProps } from "antd";
 import Shortcut from "libs/shortcut_component";
 import React from "react";
-import {
-  ContextMenuContext,
-  GenericContextMenuContainer,
-  getNoActionsAvailableMenu,
-} from "../context-menu/context_menu";
+import { ContextMenuContext } from "../context-menu/context_menu";
+import { GenericContextMenuContainer } from "../context-menu/generic_context_menu_container";
+import { getNoActionsAvailableMenu } from "../context-menu/helpers";
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);

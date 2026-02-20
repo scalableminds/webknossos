@@ -50,11 +50,9 @@ import { Unicode } from "viewer/constants";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
-import {
-  ContextMenuContext,
-  GenericContextMenuContainer,
-  getContextMenuPositionFromEvent,
-} from "viewer/view/context-menu/context_menu";
+import { ContextMenuContext } from "viewer/view/context-menu/context_menu";
+import { GenericContextMenuContainer } from "viewer/view/context-menu/generic_context_menu_container";
+import { getContextMenuPositionFromEvent } from "viewer/view/context-menu/helpers";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;

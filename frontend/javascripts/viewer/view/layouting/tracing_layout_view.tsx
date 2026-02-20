@@ -29,7 +29,7 @@ import { Model, Store } from "viewer/singletons";
 import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
-import WkContextMenu from "viewer/view/context-menu/context_menu";
+import WkContextMenu from "viewer/view/context-menu/wk_context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
 import {
   initializeInputCatcherSizes,

@@ -25,7 +25,7 @@ import type { UserBoundingBox } from "viewer/store";
 import UserBoundingBoxInput from "viewer/view/components/setting_input_views";
 import DownloadModalView from "../action-bar/download_modal_view";
 import ButtonComponent from "../components/button_component";
-import { getContextMenuPositionFromEvent } from "../context-menu/context_menu";
+import { getContextMenuPositionFromEvent } from "../context-menu/helpers";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;

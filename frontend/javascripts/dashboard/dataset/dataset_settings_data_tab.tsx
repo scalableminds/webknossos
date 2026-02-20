@@ -693,7 +693,7 @@ function SimpleLayerForm({
                         </Button>
                       </Tooltip>
                     ) : (
-                      <></>
+                      <span></span>
                     )}
                   </DelegatePropsToFirstChild>
                 </FormItemWithInfo>

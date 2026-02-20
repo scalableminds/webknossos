@@ -42,7 +42,7 @@ import {
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
 
-export function* setupSavingToServer(): Saga<void> {
+function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
   yield* fork(pushSaveQueueAsync);
   // The following sagas are responsible for filling the save queue with the update actions.
@@ -312,14 +312,14 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     return { successful: false, shouldTerminate: true };
   }
 }
-export const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
+const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
 
 function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkInitialized);
 
   const channel = yield* actionChannel(
     ["ENSURE_HAS_NEWEST_VERSION"],
-    // If multiple actions are sent to this buffer (without consumption inbetween),
+    // If multiple actions are sent to this buffer (without consumption in between),
     // we want to flush them all at once. This is achieved by using an expanding buffer
     // and flushing all events and calling their callbacks every time an ensureHasNewestVersion
     // action is resolved.

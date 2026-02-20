@@ -45,7 +45,7 @@ export function showToastWarningForLargestSegmentIdMissing(volumeTracing: Volume
   );
 }
 
-export default function EnterLargestSegmentIdModal({
+function EnterLargestSegmentIdModal({
   segmentationLayer,
   destroy,
 }: {

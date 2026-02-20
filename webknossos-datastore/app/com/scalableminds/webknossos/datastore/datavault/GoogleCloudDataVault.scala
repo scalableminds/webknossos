@@ -1,10 +1,11 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.google.auth.oauth2.ServiceAccountCredentials
+import com.google.cloud.storage.Storage.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, CredentializedUPath}
+import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -64,7 +65,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
             bb.position(0)
             bb.get(arr)
             Fox.successful(arr)
-          case CompleteByteRange() => Fox.successful(storage.readAllBytes(bucket, objName))
+          case CompleteByteRange() =>
+            Fox.successful(storage.readAllBytes(bucket, objName, BlobSourceOption.shouldReturnRawInputStream(true)))
         }
       } catch {
         case s: StorageException =>

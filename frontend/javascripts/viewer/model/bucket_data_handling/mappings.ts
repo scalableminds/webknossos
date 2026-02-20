@@ -33,7 +33,7 @@ function diffMappings(
   return diffMaps<NumberLike, NumberLike>(mappingA, mappingB);
 }
 
-export const cachedDiffMappings = memoizeOne(
+const cachedDiffMappings = memoizeOne(
   diffMappings,
   (newInputs, lastInputs) =>
     // If cacheResult was passed, the inputs must be considered as not equal

@@ -27,7 +27,7 @@ export function handleOverViewport(planeId: OrthoView): void {
   Store.dispatch(setViewportAction(planeId));
 }
 
-export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
+const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
   Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
 };
@@ -122,7 +122,7 @@ export function zoomPlanes(value: number, zoomToMouse: boolean): void {
   }
 }
 
-export function zoomTDView(value: number): void {
+function zoomTDView(value: number): void {
   const zoomToPosition = null;
   const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
   Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));

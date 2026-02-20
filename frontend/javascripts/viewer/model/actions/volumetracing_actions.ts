@@ -148,8 +148,6 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_HIDE_UNREGISTERED_SEGMENTS",
 ];
 
-export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
-
 export const initializeVolumeTracingAction = (tracing: ServerVolumeTracing) =>
   ({
     type: "INITIALIZE_VOLUMETRACING",

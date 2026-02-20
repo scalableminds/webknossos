@@ -21,15 +21,13 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
       width={600}
       centered
       footer={
-        <>
-          {!isCloseable ? (
-            <Tooltip title="At the moment, the existing trees are used to merge segments. This dialog can be closed after the initial processing has been completed.">
-              {closeButton}
-            </Tooltip>
-          ) : (
-            closeButton
-          )}
-        </>
+        !isCloseable ? (
+          <Tooltip title="At the moment, the existing trees are used to merge segments. This dialog can be closed after the initial processing has been completed.">
+            {closeButton}
+          </Tooltip>
+        ) : (
+          closeButton
+        )
       }
     >
       <Typography.Paragraph>

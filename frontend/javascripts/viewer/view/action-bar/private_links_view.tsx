@@ -407,7 +407,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
   );
 }
 
-export function _PrivateLinksModal({
+function _PrivateLinksModal({
   isOpen,
   onOk,
   annotationId,

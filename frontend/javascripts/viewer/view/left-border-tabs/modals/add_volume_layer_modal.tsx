@@ -32,7 +32,7 @@ import Store, { type StoreAnnotation } from "viewer/store";
 import InputComponent from "viewer/view/components/input_component";
 
 export type ValidationResult = { isValid: boolean; message: string };
-export function checkForLayerNameDuplication(
+function checkForLayerNameDuplication(
   readableLayerName: string,
   allReadableLayerNames: string[],
 ): ValidationResult {
@@ -43,7 +43,7 @@ export function checkForLayerNameDuplication(
   };
 }
 
-export function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
+function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
   // A layer name is not allowed to start with a dot.
   if (readableLayerName.startsWith(".")) {
     return {

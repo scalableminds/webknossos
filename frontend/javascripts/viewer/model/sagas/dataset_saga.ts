@@ -27,7 +27,7 @@ import {
 } from "../actions/dataset_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 
-export function* watchMaximumRenderableLayers(): Saga<void> {
+function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
     const maximumLayerCountToRender = yield* select(
       (state) => state.temporaryConfiguration.gpuSetup.maximumLayerCountToRender,
@@ -55,7 +55,7 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
 }
 
 let userClosedWarning = false;
-export function* watchZ1Downsampling(): Saga<void> {
+function* watchZ1Downsampling(): Saga<void> {
   function* maybeShowWarning(): Saga<void> {
     if (userClosedWarning) {
       return;
@@ -171,7 +171,7 @@ export function* watchZ1Downsampling(): Saga<void> {
   );
 }
 
-export function* ensureSegmentIndexIsLoaded(): Saga<void> {
+function* ensureSegmentIndexIsLoaded(): Saga<void> {
   function* maybeFetchHasSegmentIndex(action: EnsureSegmentIndexIsLoadedAction): Saga<void> {
     const { layerName } = action;
     const dataset = yield* select((state) => state.dataset);

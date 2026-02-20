@@ -807,7 +807,7 @@ class PlaneController extends PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: WebknossosState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     annotation: state.annotation,
     activeTool: state.uiInformation.activeTool,

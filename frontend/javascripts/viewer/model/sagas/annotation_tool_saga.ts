@@ -108,7 +108,7 @@ export function* watchToolDeselection(): Saga<never> {
   }
 }
 
-export function* watchToolReset(): Saga<never> {
+function* watchToolReset(): Saga<never> {
   while (true) {
     yield* take("ESCAPE");
     const activeTool = yield* select((state) => state.uiInformation.activeTool);

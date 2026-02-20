@@ -47,10 +47,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
     }
 
   private def buildResponseHeaders(encoding: Encoding, rangeHeader: Option[String]): Seq[(String, String)] = {
-    val contentEncoding = encoding match {
-      case Encoding.`identity` => None
-      case _                   => Some((CONTENT_ENCODING, encoding.toString))
-    }
+    val contentEncoding = Encoding.toRfc7231String(encoding).map(value => (CONTENT_ENCODING, value))
     val contentRange = rangeHeader.map(value => (CONTENT_RANGE, value))
     val acceptRanges = Some(ACCEPT_RANGES, "bytes")
     Seq(contentEncoding, contentRange, acceptRanges).flatten

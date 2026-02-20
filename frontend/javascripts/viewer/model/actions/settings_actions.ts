@@ -82,7 +82,7 @@ export const updateTemporarySettingAction = <Key extends keyof TemporaryConfigur
     value,
   }) as const;
 
-export const toggleTemporarySettingAction = (propertyName: keyof TemporaryConfiguration) =>
+const toggleTemporarySettingAction = (propertyName: keyof TemporaryConfiguration) =>
   ({
     type: "TOGGLE_TEMPORARY_SETTING",
     propertyName,

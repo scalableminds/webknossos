@@ -12,6 +12,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -156,9 +157,15 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = ${prefix}_owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
        """
 
-  def findAllCompact(implicit ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
+  def findAllCompact(commandOpt: Option[JobCommand], skipForDeletedDatasets: Boolean)(
+      implicit ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
     for {
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"j.")
+      commandQuery = commandOpt.map(command => q"j.command = $command").getOrElse(q"TRUE")
+      skipForDeletedQuery = if (skipForDeletedDatasets)
+        q"(j.commandargs->>'dataset_id')::text IN (SELECT _id FROM webknossos.datasets WHERE status NOT IN ${SqlToken
+          .tupleFromList(DataSourceStatus.unreportedStatusList)})"
+      else q"TRUE"
       rows <- run(
         q"""
           SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
@@ -167,7 +174,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
           LEFT JOIN webknossos.credit_transactions_ ct ON j._id = ct._paid_job
-          WHERE $accessQuery
+          WHERE $commandQuery AND $accessQuery AND $skipForDeletedQuery
           ORDER BY j.created DESC -- list newest first
          """.as[(ObjectId,
                  String,

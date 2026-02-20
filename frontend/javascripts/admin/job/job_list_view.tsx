@@ -140,7 +140,7 @@ export function JobState({ job }: { job: APIJob }) {
 }
 
 // Helper function to get a friendly name for job types
-function getJobTypeName(command: APIJobCommand): string {
+export function getJobTypeName(command: APIJobCommand): string {
   const jobTypeNames: Record<string, string> = {
     [APIJobCommand.CONVERT_TO_WKW]: "Convert to WKW",
     [APIJobCommand.EXPORT_TIFF]: "Export TIFF",
@@ -167,7 +167,7 @@ function JobListView() {
   const { modal } = App.useApp();
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["jobs"],
-    queryFn: getJobs,
+    queryFn: () => getJobs(),
     refetchInterval: refreshInterval,
   });
   const [searchQuery, setSearchQuery] = useState("");

@@ -70,7 +70,7 @@ export class AbstractPrefetchStrategy {
     return buckets;
   }
 }
-export class PrefetchStrategy extends AbstractPrefetchStrategy {
+class PrefetchStrategy extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;

@@ -44,6 +44,7 @@ import {
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
   getVolumeTracingByLayerName,
   isMappingActivationAllowed,
+  isZoomThresholdExceededForAgglomerateMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   type EnsureLayerMappingsAreLoadedAction,
@@ -169,7 +170,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   yield* takeEvery("SET_MAPPING", keepMappingInfoInUpdated);
 }
 
-export function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
+function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
   const newMapping = new Map();
 
   yield* put(
@@ -499,7 +500,7 @@ function* handleSetHdf5Mapping(
   }
 }
 
-export function* updateLocalHdf5Mapping(
+function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
@@ -515,6 +516,17 @@ export function* updateLocalHdf5Mapping(
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, layerName),
   );
+
+  const isZoomThresholdExceeded = yield* select((state) =>
+    isZoomThresholdExceededForAgglomerateMapping(state, layerName),
+  );
+
+  if (isZoomThresholdExceeded) {
+    // We do not try to look up all segment ids because these are usually too many
+    // in coarse magnifications.
+    // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
+    return;
+  }
 
   const cube = Model.getCubeByLayerName(layerName);
   const segmentIds = cube.getValueSetForAllBuckets();

@@ -202,5 +202,3 @@ export function* takeEveryWithBatchActionSupport(
     }
   });
 }
-
-export default {};

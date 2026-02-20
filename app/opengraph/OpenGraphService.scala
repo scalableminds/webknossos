@@ -180,7 +180,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                            token: Option[String]): Option[String] =
     layerOpt.map { layer =>
       val tokenParam = token.map(t => s"&sharingToken=$t").getOrElse("")
-      s"${conf.Http.uri}/api/datasets/${organization._id}/${dataset.name}/layers/${layer.name}/thumbnail?w=$thumbnailWidth&h=$thumbnailHeight$tokenParam"
+      s"${conf.Http.uri}/api/datasets/${dataset._id}/layers/${layer.name}/thumbnail?w=$thumbnailWidth&h=$thumbnailHeight$tokenParam"
     }
 
   private def defaultTags(pageType: OpenGraphPageType.Value = OpenGraphPageType.unknown): OpenGraphTags = {

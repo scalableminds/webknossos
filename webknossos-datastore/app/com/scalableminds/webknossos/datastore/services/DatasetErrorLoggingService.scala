@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.name.Named
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -44,23 +45,27 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
 
   override protected def tick(): Fox[Unit] = Fox.successful(recentErrors.clear())
 
-  def withErrorLoggingMultiple(dataSourceId: DataSourceId,
+  def withErrorLoggingMultiple(datasetId: Option[ObjectId],
+                               dataSourceId: DataSourceId,
                                label: String,
                                resultFox: Fox[Seq[Box[Array[Byte]]]]): Fox[Seq[Box[Array[Byte]]]] =
     resultFox.shiftBox.flatMap {
       case Full(boxes) =>
-        boxes.foreach(box => withErrorLogging(dataSourceId, label, box.toFox))
+        boxes.foreach(box => withErrorLogging(datasetId, dataSourceId, label, box.toFox))
         Fox.successful(boxes)
       case other =>
-        withErrorLogging(dataSourceId, label, resultFox.map(_ => Array[Byte]()))
+        withErrorLogging(datasetId, dataSourceId, label, resultFox.map(_ => Array[Byte]()))
         other.toFox
     }
 
-  def withErrorLogging(dataSourceId: DataSourceId, label: String, resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
+  def withErrorLogging(datasetId: Option[ObjectId],
+                       dataSourceId: DataSourceId,
+                       label: String,
+                       resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
     resultFox.shiftBox.flatMap {
       case Full(data) =>
         if (data.length == 0) {
-          val msg = s"Zero-length array returned while $label for $dataSourceId"
+          val msg = s"Zero-length array returned while $label for $datasetId ($dataSourceId)"
           if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
             logger.warn(msg)
             registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
@@ -70,12 +75,13 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
           Fox.successful(data)
         }
       case Failure(msg, Full(e: InternalError), _) =>
-        logger.error(s"Caught internal error ($msg) while $label for $dataSourceId:", e)
+        logger.error(s"Caught internal error ($msg) while $label for $datasetId ($dataSourceId):", e)
         applicationHealthService.foreach(_.pushError(e))
         Fox.failure(msg, Full(e))
       case f: Failure =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-          logger.error(s"Error while $label for $dataSourceId: ${formatFailureChain(f, includeStackTraces = true)}")
+          logger.error(
+            s"Error while $label for $datasetId ($dataSourceId): ${formatFailureChain(f, includeStackTraces = true)}")
           registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
         }
         f.toFox

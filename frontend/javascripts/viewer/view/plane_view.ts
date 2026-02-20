@@ -4,7 +4,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,
@@ -15,8 +15,8 @@ import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, {
   OrthoViewColors,
-  OrthoViewValues,
   OrthoViews,
+  OrthoViewValues,
   PerformanceMarkEnum,
 } from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
@@ -50,7 +50,6 @@ const createDirLight = (
   intensity: number,
   camera: OrthographicCamera,
 ) => {
-  // @ts-ignore
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);
@@ -155,7 +154,7 @@ class PlaneView {
     }
   }
 
-  performMeshHitTest = _.throttle((mousePosition: [number, number]): RaycasterHit => {
+  performMeshHitTest = throttle((mousePosition: [number, number]): RaycasterHit => {
     const storeState = Store.getState();
     const sceneController = getSceneController();
     const { segmentMeshController } = sceneController;
@@ -274,7 +273,7 @@ class PlaneView {
     app.vent.emit("rerender");
   }
 
-  resizeThrottled = _.throttle((): void => {
+  resizeThrottled = throttle((): void => {
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);
@@ -410,7 +409,7 @@ class PlaneView {
     // much earlier. It is not reloaded when opening a dataset or annotation from the dashboard and also might
     // not be reloaded when navigating from the tracing view back to the dashboard.
     // Therefore, we use performance.mark in the router to mark the start time ourselves. The downside of that
-    // is that the time for the intitial resource loading is not included, then.
+    // is that the time for the initial resource loading is not included, then.
     let timeToFirstRenderInMs, timeToCompileShaderInMs;
     if (performance.getEntriesByName(PerformanceMarkEnum.TRACING_VIEW_LOAD, "mark").length > 0) {
       timeToFirstRenderInMs = Math.round(

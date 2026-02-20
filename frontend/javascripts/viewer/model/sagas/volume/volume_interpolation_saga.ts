@@ -33,11 +33,11 @@ import {
 import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
-import type { VoxelBuffer2D } from "viewer/model/volumetracing/volumelayer";
-import { Model, api } from "viewer/singletons";
+import type { VoxelBuffer2D } from "viewer/model/volumetracing/section_labeling";
+import { api, Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
-import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import { createSectionLabeler, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -53,7 +53,7 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
  * - for extrusion, no distance transform is necessary (since a simple copy operation is done)
  */
 
-export const MAXIMUM_INTERPOLATION_DEPTH = 100;
+const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
 function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string) {
   const isAllowed = state.annotation.restrictions.volumeInterpolationAllowed;
@@ -164,7 +164,6 @@ const isEqualFromBigUint64: (
   b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
   body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
@@ -207,7 +206,6 @@ const absMax = cwise({
 
 const assign = cwise({
   args: ["array", "array"],
-  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
   body: function body(a: number, b: number) {
     a = b;
   },
@@ -262,7 +260,7 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -367,16 +365,16 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     targetOffsetW < adaptedInterpolationRange[1];
     targetOffsetW++
   ) {
-    const interpolationLayer = yield* call(
-      createVolumeLayer,
+    const sectionLabeler = yield* call(
+      createSectionLabeler,
       volumeTracing,
       activeViewport,
       labeledMag,
-      relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
+      (thirdDim) => relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
     );
-    interpolationVoxelBuffers[targetOffsetW] = interpolationLayer.createVoxelBuffer2D(
+    interpolationVoxelBuffers[targetOffsetW] = sectionLabeler.createVoxelBuffer2D(
       V2.floor(
-        interpolationLayer.globalCoordToMag2DFloat(
+        sectionLabeler.globalCoordToMag2DFloat(
           V3.add(relevantBoxMag1.min, transpose([0, 0, targetOffsetW])),
         ),
       ),

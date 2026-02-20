@@ -22,6 +22,7 @@ import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
+import models.team.TeamMembership
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
@@ -188,6 +189,12 @@ object WebAuthnKeyDescriptor {
   implicit val jsonFormat: OFormat[WebAuthnKeyDescriptor] = Json.format[WebAuthnKeyDescriptor]
 }
 
+case class CreateOrganizationWithExistingUserParams(userId: ObjectId, newOrganizationName: String)
+object CreateOrganizationWithExistingUserParams {
+  implicit val jsonFormat: OFormat[CreateOrganizationWithExistingUserParams] =
+    Json.format[CreateOrganizationWithExistingUserParams]
+}
+
 class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
@@ -290,15 +297,21 @@ class AuthenticationController @Inject()(
                          isEmailVerified: Boolean = false): Fox[User] = {
     val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
     for {
-      user <- userService.insert(organization._id,
-                                 email,
-                                 firstName,
-                                 lastName,
-                                 autoActivate,
-                                 passwordInfo,
-                                 isAdmin = false,
-                                 isOrganizationOwner = false,
-                                 isEmailVerified = isEmailVerified) ?~> "user.creation.failed"
+      teamMemberships <- userService.initialTeamMemberships(organization._id,
+                                                            inviteIdOpt = inviteBox.map(_._id).toOption)
+      user <- userService.insert(
+        organization._id,
+        email,
+        firstName,
+        lastName,
+        autoActivate,
+        passwordInfo,
+        isAdmin = inviteBox.map(_.isAdmin).getOrElse(false),
+        isDatasetManager = inviteBox.map(_.isDatasetManager).getOrElse(false),
+        isOrganizationOwner = false,
+        isEmailVerified = isEmailVerified,
+        teamMemberships = teamMemberships
+      ) ?~> "user.creation.failed"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
@@ -414,10 +427,15 @@ class AuthenticationController @Inject()(
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser && alreadyPayingOrgaForMultiUser.isEmpty)(organizationService
         .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
-      _ <- userService.joinOrganization(request.identity,
-                                        organization._id,
-                                        autoActivate = invite.autoActivate,
-                                        isAdmin = false)
+      teamMemberships <- userService.initialTeamMemberships(organization._id, Some(invite._id))
+      _ <- userService.joinOrganization(
+        request.identity,
+        organization._id,
+        autoActivate = invite.autoActivate,
+        isAdmin = invite.isAdmin,
+        isDatasetManager = invite.isDatasetManager,
+        teamMemberships = teamMemberships
+      )
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
       newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
@@ -434,12 +452,27 @@ class AuthenticationController @Inject()(
   def sendInvites: Action[InviteParameters] = sil.SecuredAction.async(validateJson[InviteParameters]) {
     implicit request =>
       for {
-        _ <- Fox.serialCombined(request.body.recipients)(recipient =>
-          inviteService.inviteOneRecipient(recipient, request.identity, request.body.autoActivate))
+        _ <- validateInvitePermissions(request.identity, request.body)
+        _ <- Fox.serialCombined(request.body.recipients)(
+          recipient =>
+            inviteService.inviteOneRecipient(recipient,
+                                             request.identity,
+                                             request.body.autoActivate,
+                                             request.body.isAdmin,
+                                             request.body.isDatasetManager,
+                                             request.body.teamMemberships))
         _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
       } yield Ok
   }
+
+  private def validateInvitePermissions(requestingUser: User, inviteParameters: InviteParameters): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(inviteParameters.teamMemberships)(teamMembership =>
+        Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, teamMembership.teamId))) ?~> "Can only send invites with team roles for teams you manage."
+      _ <- Fox.runIf(inviteParameters.isDatasetManager || inviteParameters.isAdmin)(Fox.fromBool(
+        requestingUser.isAdmin)) ?~> "Only admins can send invites that promote new users to admin or dataset manager."
+    } yield ()
 
   // If a user has forgotten their password
   def handleStartResetPassword: Action[AnyContent] = Action.async { implicit request =>
@@ -831,6 +864,29 @@ class AuthenticationController @Inject()(
   private def shaHex(key: String, valueToDigest: String): String =
     new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)
 
+  def createOrganizationWithExistingUser: Action[CreateOrganizationWithExistingUserParams] =
+    sil.SecuredAction.async(validateJson[CreateOrganizationWithExistingUserParams]) { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        user <- userDAO.findOne(request.body.userId)(GlobalAccessContext)
+        newOrganizationId = RandomIDGenerator.generateBlocking(8, useHex = true)
+        organization <- organizationService.createOrganization(Some(newOrganizationId),
+                                                               request.body.newOrganizationName)
+        _ <- organizationService.createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
+        teamMemberships <- userService.initialTeamMemberships(organization._id, None)
+        _ <- userService.joinOrganization(
+          user,
+          organization._id,
+          autoActivate = true,
+          isAdmin = true,
+          isDatasetManager = false,
+          isOrganizationOwner = true,
+          teamMemberships = teamMemberships
+        )
+        _ = analyticsService.track(JoinOrganizationEvent(user, organization))
+      } yield Ok(Json.toJson(organization._id))
+    }
+
   def createOrganizationWithAdmin: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     signUpForm
       .bindFromRequest()
@@ -852,6 +908,7 @@ class AuthenticationController @Inject()(
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationName) ?~> "organization.create.failed"
+                    teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
                     user <- userService.insert(
                       organization._id,
                       email,
@@ -860,24 +917,23 @@ class AuthenticationController @Inject()(
                       isActive = true,
                       passwordHasher.hash(signUpData.password),
                       isAdmin = true,
+                      isDatasetManager = false,
                       isOrganizationOwner = true,
-                      isEmailVerified = false
+                      isEmailVerified = false,
+                      teamMemberships = teamMemberships
                     ) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)
-                    dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
-                      .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
+                      .createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
                     _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
                       acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService))
-                  } yield {
-                    Mailer ! Send(defaultMails
+                    _ = Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse("")))
-                    if (conf.Features.isWkorgInstance) {
+                    _ = if (conf.Features.isWkorgInstance) {
                       mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }
-                    Ok
-                  }
+                  } yield Ok
                 }
               } yield result
             case _ => Fox.failure(Messages("organization.create.forbidden"))
@@ -972,12 +1028,15 @@ class AuthenticationController @Inject()(
 }
 
 case class InviteParameters(
-    recipients: List[String],
-    autoActivate: Boolean
+    recipients: Seq[String],
+    autoActivate: Boolean,
+    isAdmin: Boolean,
+    isDatasetManager: Boolean,
+    teamMemberships: Seq[TeamMembership]
 )
 
 object InviteParameters {
-  implicit val jsonFormat: Format[InviteParameters] = Json.format[InviteParameters]
+  implicit val jsonReads: Reads[InviteParameters] = Json.reads[InviteParameters]
 }
 
 trait AuthForms {

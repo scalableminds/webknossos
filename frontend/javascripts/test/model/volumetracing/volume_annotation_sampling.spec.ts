@@ -1,17 +1,17 @@
+import datasetServerObject from "test/fixtures/dataset_server_object";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
 import type { LabeledVoxelsMap, Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
-import { describe, it, beforeEach, vi, expect } from "vitest";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import { MagInfo } from "viewer/model/helpers/mag_info";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type DataCubeType from "viewer/model/bucket_data_handling/data_cube";
 import { assertNonNullBucket } from "viewer/model/bucket_data_handling/bucket";
+import type DataCubeType from "viewer/model/bucket_data_handling/data_cube";
 import DataCube from "viewer/model/bucket_data_handling/data_cube";
+import { MagInfo } from "viewer/model/helpers/mag_info";
 import sampleVoxelMapToMag, {
   applyVoxelMap,
 } from "viewer/model/volumetracing/volume_annotation_sampling";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock modules
 vi.mock("viewer/store", () => {
@@ -87,7 +87,7 @@ describe("Volume Annotation Sampling", () => {
       insert: vi.fn(),
       push: vi.fn(),
     };
-    // @ts-ignore
+    // @ts-expect-error
     cube.initializeWithQueues(pullQueue, pushQueue);
     context = {
       cube,
@@ -102,7 +102,9 @@ describe("Volume Annotation Sampling", () => {
       [5, 6],
       [6, 5],
       [6, 6],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap);
+    });
     const goalVoxelMap = getEmptyVoxelMap();
     [
       [10, 10],
@@ -113,7 +115,9 @@ describe("Volume Annotation Sampling", () => {
       [11, 11],
       [11, 12],
       [11, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     [
       [12, 10],
       [12, 11],
@@ -123,7 +127,9 @@ describe("Volume Annotation Sampling", () => {
       [13, 11],
       [13, 12],
       [13, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
     assertNonNullBucket(bucket);
     const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
@@ -161,7 +167,9 @@ describe("Volume Annotation Sampling", () => {
       [21, 6],
       [22, 5],
       [22, 6],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap);
+    });
     const goalVoxelMap = getEmptyVoxelMap();
     [
       [10, 10],
@@ -172,7 +180,9 @@ describe("Volume Annotation Sampling", () => {
       [11, 11],
       [11, 12],
       [11, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     [
       [12, 10],
       [12, 11],
@@ -182,7 +192,9 @@ describe("Volume Annotation Sampling", () => {
       [13, 11],
       [13, 12],
       [13, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
     assertNonNullBucket(bucket);
     const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
@@ -220,7 +232,9 @@ describe("Volume Annotation Sampling", () => {
       [6, 21],
       [5, 22],
       [6, 22],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap);
+    });
     const goalVoxelMap = getEmptyVoxelMap();
     [
       [10, 10],
@@ -231,7 +245,9 @@ describe("Volume Annotation Sampling", () => {
       [11, 11],
       [11, 12],
       [11, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     [
       [12, 10],
       [12, 11],
@@ -241,7 +257,9 @@ describe("Volume Annotation Sampling", () => {
       [13, 11],
       [13, 12],
       [13, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
     assertNonNullBucket(bucket);
     const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
@@ -279,7 +297,9 @@ describe("Volume Annotation Sampling", () => {
       [22, 21],
       [21, 22],
       [22, 22],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap);
+    });
     const goalVoxelMap = getEmptyVoxelMap();
     [
       [10, 10],
@@ -290,7 +310,9 @@ describe("Volume Annotation Sampling", () => {
       [11, 11],
       [11, 12],
       [11, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     [
       [12, 10],
       [12, 11],
@@ -300,7 +322,9 @@ describe("Volume Annotation Sampling", () => {
       [13, 11],
       [13, 12],
       [13, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
     assertNonNullBucket(bucket);
     const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
@@ -338,7 +362,9 @@ describe("Volume Annotation Sampling", () => {
       [5, 6],
       [6, 5],
       [6, 6],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap);
+    });
     const goalVoxelMap = getEmptyVoxelMap();
     [
       [10, 10],
@@ -349,7 +375,9 @@ describe("Volume Annotation Sampling", () => {
       [11, 11],
       [11, 12],
       [11, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     [
       [12, 10],
       [12, 11],
@@ -359,7 +387,9 @@ describe("Volume Annotation Sampling", () => {
       [13, 11],
       [13, 12],
       [13, 13],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
+    });
     const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
     assertNonNullBucket(bucket);
     const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
@@ -397,7 +427,9 @@ describe("Volume Annotation Sampling", () => {
       [10, 11],
       [11, 10],
       [11, 11],
-    ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap));
+    ].forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap);
+    });
     const goalVoxelMap = getEmptyVoxelMap();
 
     // scaling [10,10],[11,11] up: 10 ->  20 -> 40 (mod Constants.BUCKET_WIDTH) -> 8; 11 -> 23 -> 47 (mod Constants.BUCKET_WIDTH) -> 15;
@@ -457,7 +489,9 @@ describe("Volume Annotation Sampling", () => {
         [11, 11],
         [11, 12],
         [11, 13],
-      ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
+      ].forEach(([firstDim, secondDim]) => {
+        labelVoxelInVoxelMap(firstDim, secondDim, voxelMap);
+      });
       [
         [12, 10],
         [12, 11],
@@ -467,7 +501,9 @@ describe("Volume Annotation Sampling", () => {
         [13, 11],
         [13, 12],
         [13, 13],
-      ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
+      ].forEach(([firstDim, secondDim]) => {
+        labelVoxelInVoxelMap(firstDim, secondDim, voxelMap);
+      });
       const bucket = cube.getOrCreateBucket([...zoomedAddress, 0]);
       assertNonNullBucket(bucket);
       labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
@@ -535,7 +571,9 @@ describe("Volume Annotation Sampling", () => {
         [11, 11],
         [11, 12],
         [11, 13],
-      ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
+      ].forEach(([firstDim, secondDim]) => {
+        labelVoxelInVoxelMap(firstDim, secondDim, voxelMap);
+      });
       [
         [12, 10],
         [12, 11],
@@ -545,7 +583,9 @@ describe("Volume Annotation Sampling", () => {
         [13, 11],
         [13, 12],
         [13, 13],
-      ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
+      ].forEach(([firstDim, secondDim]) => {
+        labelVoxelInVoxelMap(firstDim, secondDim, voxelMap);
+      });
       const bucket = cube.getOrCreateBucket([...zoomedAddress, 0]);
       assertNonNullBucket(bucket);
       labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
@@ -609,9 +649,9 @@ describe("Volume Annotation Sampling", () => {
       [11, 13],
     ];
     const Z = 5;
-    voxelsToLabel.forEach(([firstDim, secondDim]) =>
-      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
-    );
+    voxelsToLabel.forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap);
+    });
     labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
 
     const get3DAddress = (x: number, y: number, out: Vector3 | Float32Array) => {
@@ -653,9 +693,9 @@ describe("Volume Annotation Sampling", () => {
       [3, 0],
     ];
     const Z = 5;
-    voxelsToLabel.forEach(([firstDim, secondDim]) =>
-      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
-    );
+    voxelsToLabel.forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap);
+    });
     labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
 
     const get3DAddress = (x: number, y: number, out: Vector3 | Float32Array) => {
@@ -705,9 +745,9 @@ describe("Volume Annotation Sampling", () => {
       [3, 0],
     ];
     const Z = 0;
-    voxelsToLabel.forEach(([firstDim, secondDim]) =>
-      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
-    );
+    voxelsToLabel.forEach(([firstDim, secondDim]) => {
+      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap);
+    });
     labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
 
     const get3DAddress = (x: number, y: number, out: Vector3 | Float32Array) => {

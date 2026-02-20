@@ -1,5 +1,4 @@
-import _ from "lodash";
-import type { WebknossosState } from "viewer/store";
+import without from "lodash-es/without";
 
 abstract class AbstractAnnotationTool {
   static id: keyof typeof _AnnotationToolHelper;
@@ -143,7 +142,7 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   ] as AnnotationTool[],
 };
 
-export const VolumeTools = _.without(
+export const VolumeTools = without(
   Toolkits.VOLUME_TOOLS,
   AnnotationTool.MOVE,
   AnnotationTool.VOXEL_PIPETTE,
@@ -156,8 +155,6 @@ export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.LINE_MEASUREMENT,
   AnnotationTool.AREA_MEASUREMENT,
 ];
-
-export function getAvailableTools(_state: WebknossosState) {}
 
 export function isVolumeDrawingTool(activeTool: AnnotationTool): boolean {
   return (

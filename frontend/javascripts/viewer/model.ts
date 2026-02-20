@@ -1,6 +1,9 @@
-import { isDatasetAccessibleBySwitching } from "admin/rest_api";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { isDatasetAccessibleBySwitching } from "admin/api/organization";
+import { sleep } from "libs/utils";
+import filter from "lodash-es/filter";
+import max from "lodash-es/max";
+import reduce from "lodash-es/reduce";
+import sum from "lodash-es/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -11,7 +14,7 @@ import {
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { getActiveSegmentationTracingLayer } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  ensureTracingsWereDiffedToSaveQueueAction,
+  dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   saveNowAction,
 } from "viewer/model/actions/save_actions";
 import type DataCube from "viewer/model/bucket_data_handling/data_cube";
@@ -21,8 +24,6 @@ import type DataLayer from "viewer/model/data_layer";
 import { getTotalSaveQueueLength } from "viewer/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
-
-import Deferred from "libs/async/deferred";
 import { initialize } from "./model_initialization";
 
 const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
@@ -52,7 +53,9 @@ export class WebKnossosModel {
         const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
-          _.values(this.dataLayers).forEach((layer) => layer.destroy());
+          Object.values(this.dataLayers).forEach((layer) => {
+            layer.destroy();
+          });
         }
 
         this.dataLayers = dataLayers;
@@ -64,7 +67,7 @@ export class WebKnossosModel {
           await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
-          // @ts-ignore
+          // @ts-expect-error
           error.organizationToSwitchTo = maybeOrganizationToSwitchTo;
         }
       } catch (accessibleBySwitchingError) {
@@ -79,25 +82,25 @@ export class WebKnossosModel {
   }
 
   getAllLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers);
+    return Object.values(this.dataLayers);
   }
 
   getColorLayers(): Array<DataLayer> {
-    return _.filter(
+    return filter(
       this.dataLayers,
       (dataLayer) => getLayerByName(Store.getState().dataset, dataLayer.name).category === "color",
     );
   }
 
   getSegmentationLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers).filter(
+    return Object.values(this.dataLayers).filter(
       (dataLayer) =>
         getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
     );
   }
 
   getSegmentationTracingLayers(): Array<DataLayer> {
-    return Utils.values(this.dataLayers).filter((dataLayer) => {
+    return Object.values(this.dataLayers).filter((dataLayer) => {
       const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
       return layer.category === "segmentation" && layer.tracingId != null;
     });
@@ -244,7 +247,7 @@ export class WebKnossosModel {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
 
-    const pushQueuesSaved = _.reduce(
+    const pushQueuesSaved = reduce(
       this.dataLayers,
       (saved, dataLayer) => saved && dataLayer.pushQueue.stateSaved(),
       true,
@@ -255,25 +258,27 @@ export class WebKnossosModel {
 
   getLongestPushQueueWaitTime() {
     return (
-      _.max(
-        Utils.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
+      max(
+        Object.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
       ) || 0
     );
   }
 
   getPushQueueStats = () => {
-    const compressingBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) =>
+    const compressingBucketCount = sum(
+      Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.pushQueue.getCompressingBucketCount(),
       ),
     );
 
-    const waitingForCompressionBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingBucketCount()),
+    const waitingForCompressionBucketCount = sum(
+      Object.values(this.dataLayers).map((dataLayer) =>
+        dataLayer.pushQueue.getPendingBucketCount(),
+      ),
     );
 
-    const outstandingBucketDownloadCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) =>
+    const outstandingBucketDownloadCount = sum(
+      Object.values(this.dataLayers).map((dataLayer) =>
         dataLayer.cube.temporalBucketManager.getCount(),
       ),
     );
@@ -305,36 +310,27 @@ export class WebKnossosModel {
     // That way, we can be sure that the diffing sagas have processed all user actions
     // up until the time of where waitForDifferResponses was invoked.
     async function waitForDifferResponses() {
+      console.log("waitForDifferResponses");
       const { annotation } = Store.getState();
-      // All skeleton and volume tracings should respond to the dispatched action.
-      const tracingIds = new Set(
-        _.compact([annotation.skeleton?.tracingId, ...annotation.volumes.map((t) => t.tracingId)]),
-      );
-      const reportedTracingIds = new Set();
-      const deferred = new Deferred();
-      function callback(tracingId: string) {
-        reportedTracingIds.add(tracingId);
-        if (Utils.areSetsEqual(tracingIds, reportedTracingIds)) {
-          deferred.resolve(null);
-        }
-      }
-
-      if (tracingIds.size > 0) {
-        Store.dispatch(ensureTracingsWereDiffedToSaveQueueAction(callback));
-        await deferred.promise();
-      }
+      await dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
       return true;
     }
 
-    while ((await waitForDifferResponses()) && !this.stateSaved()) {
+    while (
+      // Wait while rebasing is in progress.
+      Store.getState().save.rebaseRelevantServerAnnotationState.isRebasing ||
+      // If no rebasing is in progress enforce diffed state to save queue.
+      ((await waitForDifferResponses()) && !this.stateSaved())
+    ) {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
+      console.log("stuck in ensureSavedState loop");
       if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction());
       }
 
-      await Utils.sleep(WAIT_AFTER_SAVE_TRIGGER);
+      await sleep(WAIT_AFTER_SAVE_TRIGGER);
     }
   };
 
@@ -344,7 +340,9 @@ export class WebKnossosModel {
      */
 
     if (this.dataLayers != null) {
-      _.values(this.dataLayers).forEach((layer) => layer.destroy());
+      Object.values(this.dataLayers).forEach((layer) => {
+        layer.destroy();
+      });
       this.dataLayers = {};
     }
   }

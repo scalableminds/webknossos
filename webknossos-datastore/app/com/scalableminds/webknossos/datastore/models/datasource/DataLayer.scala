@@ -41,12 +41,14 @@ trait DataLayer {
 
   def attachments: Option[DataLayerAttachments]
 
+  def allAttachments: Seq[LayerAttachment] = attachments.map(_.allAttachments).getOrElse(Seq.empty)
+
   def allExplicitPaths: Seq[UPath] = {
     val magPaths = this match {
       case s: StaticLayer => s.mags.flatMap(_.path)
       case _              => Seq.empty
     }
-    val attachmentPaths = attachments.map(_.allAttachments.map(_.path)).getOrElse(Seq.empty)
+    val attachmentPaths = allAttachments.map(_.path)
     magPaths ++ attachmentPaths
   }
 
@@ -85,20 +87,12 @@ trait StaticLayer extends DataLayer {
 
   def attachments: Option[DataLayerAttachments]
 
-  def withMergedAndResolvedAttachments(dataSourcePath: UPath, attachments: DataLayerAttachments): StaticLayer =
+  def withMergedAttachments(attachments: DataLayerAttachments): StaticLayer =
     this match {
       case l: StaticSegmentationLayer =>
-        l.copy(
-          attachments = l.attachments
-            .map(_.mergeWithPrecedence(attachments))
-            .orElse(Some(attachments))
-            .map(_.resolvedIn(dataSourcePath)))
+        l.copy(attachments = l.attachments.map(_.mergeWithPrecedence(attachments)).orElse(Some(attachments)))
       case l: StaticColorLayer =>
-        l.copy(
-          attachments = l.attachments
-            .map(_.mergeWithPrecedence(attachments))
-            .orElse(Some(attachments))
-            .map(_.resolvedIn(dataSourcePath)))
+        l.copy(attachments = l.attachments.map(_.mergeWithPrecedence(attachments)).orElse(Some(attachments)))
     }
 
   def mapped(

@@ -3,23 +3,27 @@ import { Button, Col, Popover, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useCallback } from "react";
+import { useDispatch } from "react-redux";
 import type { EmptyObject } from "types/globals";
 import type { Vector3 } from "viewer/constants";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
-import Store from "viewer/store";
 import { NumberSliderSetting } from "../components/setting_input_views";
 
-export const warningColors: React.CSSProperties = {
+const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",
   borderColor: "rgb(241, 122, 39)",
 };
 
 const PopoverContent: React.FC<EmptyObject> = () => {
+  const dispatch = useDispatch();
   const rotation = useWkSelector((state) => state.flycam.rotation);
-  const handleChangeRotation = useCallback((rotation: Vector3) => {
-    Store.dispatch(setRotationAction(rotation));
-  }, []);
+  const handleChangeRotation = useCallback(
+    (rotation: Vector3) => {
+      dispatch(setRotationAction(rotation));
+    },
+    [dispatch],
+  );
 
   return (
     <div>
@@ -83,7 +87,7 @@ const PopoverContent: React.FC<EmptyObject> = () => {
             <Button
               type="text"
               icon={<RollbackOutlined />}
-              iconPosition="end"
+              iconPlacement="end"
               onClick={() => handleChangeRotation([0, 0, 0])}
             >
               Reset all

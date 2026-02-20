@@ -1,44 +1,32 @@
 const dpdm = require("dpdm");
 const { parseDependencyTree, parseCircular } = dpdm;
 
-const KNOWN_CYCLES = [
-  [
-    "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
-    "frontend/javascripts/viewer/model/accessors/view_mode_accessor.ts",
-  ],
-  [
-    "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
-    "frontend/javascripts/viewer/model/reducers/flycam_reducer.ts",
-  ],
-  [
-    "frontend/javascripts/viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers.ts",
-    "frontend/javascripts/viewer/model/accessors/skeletontracing_accessor.ts",
-  ],
-  [
-    "frontend/javascripts/admin/organization/upgrade_plan_modal.tsx",
-    "frontend/javascripts/admin/organization/organization_cards.tsx",
-  ],
-  [
-    "frontend/javascripts/admin/task/task_create_form_view.tsx",
-    "frontend/javascripts/admin/task/task_create_bulk_view.tsx",
-  ],
-  [
-    "frontend/javascripts/admin/team/team_list_view.tsx",
-    "frontend/javascripts/admin/team/edit_team_modal_view.tsx",
-  ],
-  [
-    "frontend/javascripts/dashboard/advanced_dataset/dataset_table.tsx",
-    "frontend/javascripts/dashboard/folders/folder_tree.tsx",
-  ],
-  [
-    "frontend/javascripts/viewer/controller/url_manager.ts",
-    "frontend/javascripts/viewer/model_initialization.ts",
-  ],
-  [
-    "frontend/javascripts/viewer/geometries/plane.ts",
-    "frontend/javascripts/viewer/geometries/materials/plane_material_factory.ts",
-    "frontend/javascripts/viewer/shaders/main_data_shaders.glsl.ts",
-  ],
+const KNOWN_CYCLES =[
+ [
+  "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
+  "frontend/javascripts/viewer/model/accessors/view_mode_accessor.ts"
+ ],
+ [
+  "frontend/javascripts/viewer/controller/url_manager.ts",
+  "frontend/javascripts/viewer/model_initialization.ts"
+ ],
+ [
+  "frontend/javascripts/admin/organization/upgrade_plan_modal.tsx",
+  "frontend/javascripts/admin/organization/organization_cards.tsx"
+ ],
+ [
+  "frontend/javascripts/admin/team/team_list_view.tsx",
+  "frontend/javascripts/admin/team/edit_team_modal_view.tsx"
+ ],
+ [
+  "frontend/javascripts/dashboard/advanced_dataset/dataset_table.tsx",
+  "frontend/javascripts/dashboard/folders/folder_tree.tsx"
+ ],
+ [
+  "frontend/javascripts/viewer/geometries/plane.ts",
+  "frontend/javascripts/viewer/geometries/materials/plane_material_factory.ts",
+  "frontend/javascripts/viewer/shaders/main_data_shaders.glsl.ts"
+ ]
 ];
 
 parseDependencyTree("frontend/javascripts/main.tsx", {

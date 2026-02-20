@@ -2,10 +2,10 @@ import { AnnotationLayerEnum } from "types/api_types";
 import { removeSubsequentUpdateBBoxActions } from "viewer/model/helpers/compaction/compact_save_queue";
 import { diffBoundingBoxes } from "viewer/model/helpers/diff_helpers";
 import {
-  updateUserBoundingBoxInSkeletonTracing,
   type UpdateUserBoundingBoxInSkeletonTracingAction,
-  updateUserBoundingBoxInVolumeTracing,
   type UpdateUserBoundingBoxInVolumeTracingAction,
+  updateUserBoundingBoxInSkeletonTracing,
+  updateUserBoundingBoxInVolumeTracing,
 } from "viewer/model/sagas/volume/update_actions";
 import type { SaveQueueEntry, UserBoundingBox } from "viewer/store";
 import { describe, expect, it } from "vitest";

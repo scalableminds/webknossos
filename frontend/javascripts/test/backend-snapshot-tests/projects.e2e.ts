@@ -1,15 +1,28 @@
-import _ from "lodash";
+// biome-ignore assist/source/organizeImports: test setup and mocking needs to be loaded first
 import {
-  tokenUserA,
-  tokenUserD,
-  setUserAuthToken,
   replaceVolatileValues,
   resetDatabase,
+  setUserAuthToken,
+  tokenUserA,
+  tokenUserD,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
+import {
+  createProject,
+  deleteProject,
+  getActiveUser,
+  getProject,
+  getProjects,
+  getProjectsWithStatus,
+  getTeams,
+  increaseProjectTaskInstances,
+  pauseProject,
+  resumeProject,
+  updateProject,
+} from "admin/rest_api";
+import sortBy from "lodash-es/sortBy";
 import type { APIProject, APIProjectUpdater } from "types/api_types";
-import * as api from "admin/rest_api";
-import { describe, it, beforeAll, beforeEach } from "vitest";
+import { beforeAll, beforeEach, describe, it } from "vitest";
 
 describe("Project API (E2E)", () => {
   beforeAll(() => {
@@ -21,7 +34,7 @@ describe("Project API (E2E)", () => {
   });
 
   it("getProjects()", async ({ expect }) => {
-    const projects = _.sortBy(await api.getProjects(), (p) => p.name);
+    const projects = sortBy(await getProjects(), (p) => p.name);
 
     writeTypeCheckingFile(projects, "project", "APIProject", {
       isArray: true,
@@ -31,22 +44,22 @@ describe("Project API (E2E)", () => {
   });
 
   it("getProjectsWithStatus()", async ({ expect }) => {
-    const projects = _.sortBy(await api.getProjectsWithStatus(), (p) => p.name);
+    const projects = sortBy(await getProjectsWithStatus(), (p) => p.name);
 
     expect(replaceVolatileValues(projects)).toMatchSnapshot();
   });
 
   it("getProject(projectId: string)", async ({ expect }) => {
-    const projectId = _.sortBy(await api.getProjects(), (p) => p.name)[0].id;
+    const projectId = sortBy(await getProjects(), (p) => p.name)[0].id;
 
-    const project = await api.getProject(projectId);
+    const project = await getProject(projectId);
     expect(replaceVolatileValues(project)).toMatchSnapshot();
   });
 
   it("createProject and deleteProject", async ({ expect }) => {
-    const team = _.sortBy(await api.getTeams(), (aTeam) => aTeam.name)[0];
+    const team = sortBy(await getTeams(), (aTeam) => aTeam.name)[0];
 
-    const activeUser = await api.getActiveUser();
+    const activeUser = await getActiveUser();
     const projectName = "test-new-project";
     const newProject = {
       name: projectName,
@@ -59,14 +72,14 @@ describe("Project API (E2E)", () => {
       pendingInstances: 1,
       isBlacklistedFromReport: true,
     };
-    const createdProject = await api.createProject(newProject);
+    const createdProject = await createProject(newProject);
 
     // Since the id will change after re-runs, we fix it here for easy
     // snapshotting
     const createdProjectWithFixedId = Object.assign({}, createdProject);
     expect(replaceVolatileValues(createdProjectWithFixedId)).toMatchSnapshot();
 
-    const response = await api.deleteProject(createdProject.id);
+    const response = await deleteProject(createdProject.id);
     expect(response).toMatchSnapshot();
   });
 
@@ -77,35 +90,35 @@ describe("Project API (E2E)", () => {
   }
 
   it("updateProject(projectId: string, project: APIProjectType)", async ({ expect }) => {
-    const project = (await api.getProjects())[0];
+    const project = (await getProjects())[0];
     const projectId = project.id;
     const projectWithOwnerId = convertProjectToProjectUpdater(project);
     const projectWithNewPriority: APIProjectUpdater = Object.assign({}, projectWithOwnerId, {
       priority: 1337,
     });
 
-    const updatedProject = await api.updateProject(projectId, projectWithNewPriority);
+    const updatedProject = await updateProject(projectId, projectWithNewPriority);
     expect(replaceVolatileValues(updatedProject)).toMatchSnapshot();
 
-    const revertedProject = await api.updateProject(projectId, projectWithOwnerId);
+    const revertedProject = await updateProject(projectId, projectWithOwnerId);
     expect(replaceVolatileValues(revertedProject)).toMatchSnapshot();
   });
 
   it("increaseProjectTaskInstances", async ({ expect }) => {
     await setUserAuthToken(tokenUserD);
-    const projectId = (await api.getProjects())[0].id;
-    const updatedProject = await api.increaseProjectTaskInstances(projectId, 10);
+    const projectId = (await getProjects())[0].id;
+    const updatedProject = await increaseProjectTaskInstances(projectId, 10);
 
     expect(replaceVolatileValues(updatedProject)).toMatchSnapshot();
   });
 
   it("pauseProject and resumeProject", async ({ expect }) => {
-    const projectId = (await api.getProjects())[0].id;
+    const projectId = (await getProjects())[0].id;
 
-    const pausedProject = await api.pauseProject(projectId);
+    const pausedProject = await pauseProject(projectId);
     expect(replaceVolatileValues(pausedProject)).toMatchSnapshot();
 
-    const resumedProject = await api.resumeProject(projectId);
+    const resumedProject = await resumeProject(projectId);
     expect(replaceVolatileValues(resumedProject)).toMatchSnapshot();
   });
 });

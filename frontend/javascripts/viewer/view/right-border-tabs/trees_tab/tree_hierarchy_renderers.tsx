@@ -7,10 +7,15 @@ import {
   ShrinkOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
-import { type MenuProps, notification } from "antd";
-import _ from "lodash";
+import { type MenuProps, notification, Space } from "antd";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import FastTooltip from "components/fast_tooltip";
+import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
+import cloneDeep from "lodash-es/cloneDeep";
+import difference from "lodash-es/difference";
+import messages from "messages";
 import type React from "react";
-import { batchActions } from "redux-batched-actions";
+import { type BatchActionType, batchActions } from "redux-batched-actions";
 import {
   LongUnitToShortUnitMap,
   type TreeType,
@@ -18,11 +23,6 @@ import {
   type Vector3,
 } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
-
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import FastTooltip from "components/fast_tooltip";
-import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
-import messages from "messages";
 import {
   addTreesAndGroupsAction,
   deleteTreeAction,
@@ -41,21 +41,30 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
-import { Store, api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
-  GroupTypeEnum,
-  MISSING_GROUP_ID,
-  type TreeNode,
   anySatisfyDeep,
   callDeep,
   createGroupToTreesMap,
+  GroupTypeEnum,
   getGroupByIdWithSubgroups,
   getNodeKey,
+  MISSING_GROUP_ID,
   makeBasicGroupObject,
+  type TreeNode,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
+
+type BatchActionsType = {
+  type: BatchActionType;
+  payload: Action[];
+  [extraProps: string]: unknown;
+  meta: {
+    batch: true;
+  };
+};
 
 export type Props = {
   activeTreeId: number | null | undefined;
@@ -91,14 +100,16 @@ export function renderTreeNode(
     ) : null;
 
   return (
-    <div
+    <Space
+      size={4}
+      align="center"
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ wordBreak: "break-word", display: "inline-flex", width: "100%" }}
+      style={{ wordBreak: "break-word" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
-      <span style={{ marginRight: 4, whiteSpace: "nowrap" }}>
+      <span style={{ whiteSpace: "nowrap" }}>
         {`(${tree.nodes.size()}) `} {maybeProofreadingIcon}
       </span>
       <EditableTextLabel
@@ -108,17 +119,13 @@ export function renderTreeNode(
         onRenameEnd={decreaseEditCounter}
         onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
         hideEditIcon
-        margin={0}
       />
       {(tree.metadata || []).length > 0 ? (
-        <FastTooltip
-          className="deemphasized icon-margin-left"
-          title="This tree has assigned metadata properties."
-        >
+        <FastTooltip className="deemphasized" title="This tree has assigned metadata properties.">
           <TagsOutlined />
         </FastTooltip>
       ) : null}
-    </div>
+    </Space>
   );
 }
 
@@ -155,7 +162,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       {
         key: "duplicateTree",
         onClick: () => {
-          const copyOfTree = { ..._.cloneDeep(tree), name: `${tree.name} (copy)` };
+          const copyOfTree = { ...cloneDeep(tree), name: `${tree.name} (copy)` };
           const treeMap = new TreeMap([[tree.treeId, copyOfTree]]);
           Store.dispatch(addTreesAndGroupsAction(treeMap, null, undefined, false));
           hideContextMenu();
@@ -240,7 +247,8 @@ export function renderGroupNode(
   // Make sure the displayed name is not empty
   const displayableName = name.trim() || "<Unnamed Group>";
   return (
-    <div
+    <Space
+      size={4}
       onContextMenu={(evt) =>
         onOpenContextMenu(
           createMenuForTreeGroup(props, hideContextMenu, node, expandedNodeKeys),
@@ -249,18 +257,16 @@ export function renderGroupNode(
       }
       style={{ wordBreak: "break-word" }}
     >
-      <FolderOutlined className="icon-margin-right" />
+      <FolderOutlined />
       <EditableTextLabel
         value={displayableName}
         label="Group Name"
         onChange={(newValue) => api.tracing.renameSkeletonGroup(id, newValue)}
         hideEditIcon
-        margin={0}
         onRenameStart={increaseEditCounter}
         onRenameEnd={decreaseEditCounter}
       />
-      {}
-    </div>
+    </Space>
   );
 }
 
@@ -277,7 +283,7 @@ const createMenuForTreeGroup = (
   const labelForActiveItems = getLabelForActiveItems();
 
   function createGroup(groupId: number) {
-    const newTreeGroups = _.cloneDeep(props.treeGroups);
+    const newTreeGroups = cloneDeep(props.treeGroups);
 
     const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
     const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
@@ -361,7 +367,7 @@ const createMenuForTreeGroup = (
         const parentGroupNode = getNodeKey(GroupTypeEnum.GROUP, parentGroup.id);
         // If the subgroups should be collapsed, do not collapse the group itself, if it was expanded before.
         const subGroupsWithoutParent = subGroups.filter((groupKey) => groupKey !== parentGroupNode);
-        const newExpandedKeys = _.difference(expandedNodeKeys, subGroupsWithoutParent);
+        const newExpandedKeys = difference(expandedNodeKeys, subGroupsWithoutParent);
         setExpandedGroups(new Set(newExpandedKeys));
       }
     }
@@ -510,7 +516,7 @@ function setTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
 }
 
 export function onBatchActions(actions: Action[], actionName: string) {
-  Store.dispatch(batchActions(actions, actionName));
+  Store.dispatch(batchActions(actions, actionName) as unknown as BatchActionsType);
 }
 
 export function setUpdateTreeGroups(treeGroups: TreeGroup[]) {
@@ -535,7 +541,7 @@ function handleMeasureSkeletonLength(treeId: number, treeName: string) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
 
   notification.open({
-    message: messages["tracing.tree_length_notification"](
+    title: messages["tracing.tree_length_notification"](
       treeName,
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
       formatLengthAsVx(lengthInVx),

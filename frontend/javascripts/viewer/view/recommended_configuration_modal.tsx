@@ -1,6 +1,5 @@
 import { settingComments } from "admin/tasktype/recommended_configuration_view";
 import { Modal, Table } from "antd";
-import { map } from "lodash";
 import messages, { settings } from "messages";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
@@ -42,7 +41,7 @@ const RecommendedConfigurationModal: React.FC<Props> = ({ config, onOk, destroy 
 
   const configurationEntries = useMemo(
     () =>
-      map(config, (value, key) => {
+      Object.entries(config).map(([key, value]) => {
         const settingsKey = key as keyof RecommendedConfiguration;
         return {
           name: key in settings ? settings[settingsKey] : null,

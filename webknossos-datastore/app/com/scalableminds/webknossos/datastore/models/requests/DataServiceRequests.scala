@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, SegmentationLayer}
 
@@ -16,6 +17,7 @@ object DataServiceRequestSettings {
 }
 
 case class DataServiceDataRequest(
+    datasetId: Option[ObjectId], // None in case of volume tracings
     dataSourceId: Option[DataSourceId], // None in case of volume tracings
     dataLayer: DataLayer,
     cuboid: Cuboid,

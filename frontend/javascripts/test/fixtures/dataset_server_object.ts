@@ -1,5 +1,5 @@
-import { UnitLong } from "viewer/constants";
 import type { APIColorLayer, APIDataset, APISegmentationLayer } from "types/api_types";
+import { UnitLong } from "viewer/constants";
 
 const sampleColorLayer: APIColorLayer = {
   name: "color",

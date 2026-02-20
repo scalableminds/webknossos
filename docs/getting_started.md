@@ -81,9 +81,9 @@ Editing skeleton and volume annotations in the Annotation UI
 ## Tutorials
 We have tutorials on a wide range of topics to get you started. Also check out our [YouTube channel](https://www.youtube.com/@webknossos) for video guides. 
 
-- [Tutorial: Volume Annotation](./tutorial_volume_annotation.md)
-- [Tutorial: Data Sharing with WEBKNOSSOS](./tutorial_data_sharing.md)
-- [Tutorial: Automation and Interoperability](./tutorial_automation.md)
+- [Tutorial: Volume Annotation](./tutorials/volume_annotation.md)
+- [Tutorial: Data Sharing with WEBKNOSSOS](./tutorials/data_sharing.md)
+- [Tutorial: Automation and Interoperability](./tutorials/automation.md)
 
 ## Learn More
 

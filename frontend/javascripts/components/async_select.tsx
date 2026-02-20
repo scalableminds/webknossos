@@ -1,15 +1,16 @@
 import { Select, Spin } from "antd";
 import type { SelectProps } from "antd/es/select";
-import debounce from "lodash/debounce";
+import debounce from "lodash-es/debounce";
 import type React from "react";
 import { useMemo, useRef, useState } from "react";
 
 // This module is inspired by the "Search and Select Users" example
-// in the antd documentation (for version 4).
+// in the antd documentation (for version 6).
+// https://ant.design/components/select#select-demo-select-users
 // Quote:
 // A complete multiple select sample with remote search, debounce fetch, ajax callback order flow, and loading state.
 
-export interface AsyncSelectProps<ValueType = any>
+interface AsyncSelectProps<ValueType = any>
   extends Omit<SelectProps<ValueType | ValueType[]>, "options" | "children"> {
   fetchOptions: (search: string) => Promise<ValueType[]>;
   debounceTimeout?: number;
@@ -17,7 +18,7 @@ export interface AsyncSelectProps<ValueType = any>
 
 export default function AsyncSelect<
   ValueType extends { key?: string; label: React.ReactNode; value: string | number } = any,
->({ fetchOptions, debounceTimeout = 400, ...props }: AsyncSelectProps<ValueType>) {
+>({ fetchOptions, debounceTimeout = 300, ...props }: AsyncSelectProps<ValueType>) {
   const [fetching, setFetching] = useState(false);
   const [options, setOptions] = useState<ValueType[]>([]);
   const fetchRef = useRef(0);
@@ -46,9 +47,8 @@ export default function AsyncSelect<
   return (
     <Select
       labelInValue
-      filterOption={false}
-      onSearch={debounceFetcher}
-      notFoundContent={fetching ? <Spin size="small" /> : null}
+      showSearch={{ filterOption: false, onSearch: debounceFetcher }}
+      notFoundContent={fetching ? <Spin size="small" /> : "No results found"}
       {...props}
       options={options}
       // Clear suggestions after the user selected one to avoid confusion.

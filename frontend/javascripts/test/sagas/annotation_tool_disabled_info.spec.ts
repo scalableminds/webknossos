@@ -1,9 +1,9 @@
 import update from "immutability-helper";
-import { describe, it, expect } from "vitest";
-import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { initialState } from "test/fixtures/hybridtracing_object";
-import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
 import type { CoordinateTransformation } from "types/api_types";
+import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
+import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
+import { describe, expect, it } from "vitest";
 
 const zoomSensitiveVolumeTools = VolumeTools.filter(
   (name) => name !== AnnotationTool.VOXEL_PIPETTE,

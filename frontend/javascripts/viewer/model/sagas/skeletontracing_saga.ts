@@ -7,7 +7,7 @@ import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
-import _ from "lodash";
+import isEqual from "lodash-es/isEqual";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { MathUtils, Matrix4 } from "three";
@@ -72,6 +72,7 @@ import {
   deleteNode,
   deleteTree,
   updateActiveNode,
+  updateActiveTree,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -244,7 +245,7 @@ function* watchTracingConsistency(): Saga<void> {
   }
 }
 
-export function* watchTreeNames(): Saga<void> {
+function* watchTreeNames(): Saga<void> {
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
@@ -256,14 +257,14 @@ export function* watchTreeNames(): Saga<void> {
   }
 }
 
-export function* watchAgglomerateLoading(): Saga<void> {
+function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
 }
-export function* watchConnectomeAgglomerateLoading(): Saga<void> {
+function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
   // The order of these two actions is not guaranteed, but they both need to be dispatched
@@ -307,6 +308,7 @@ function* getAgglomerateSkeletonTracing(
         annotation.tracingStore.url,
         editableMapping.tracingId,
         agglomerateId,
+        annotation.version,
       );
     }
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
@@ -328,10 +330,10 @@ function* getAgglomerateSkeletonTracing(
 
     return parsedTracing;
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
-      // @ts-ignore
+      // @ts-expect-error
       const agglomerateTooLargeMessages = e.messages
         .filter(
           (message: Message) =>
@@ -343,7 +345,7 @@ function* getAgglomerateSkeletonTracing(
 
       if (agglomerateTooLargeMessages.length > 0) {
         throw {
-          // @ts-ignore
+          // @ts-expect-error
           ...e,
           messages: [
             {
@@ -376,10 +378,10 @@ function handleAgglomerateLoadingError(
   ErrorHandling.notify(e);
 }
 
-export function* loadAgglomerateSkeletonWithId(
+function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
-  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
@@ -428,7 +430,7 @@ export function* loadAgglomerateSkeletonWithId(
         },
       ),
     );
-    // @ts-ignore TS infers usedTreeIds to be never, but it should be number[] if its not null
+    // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
     if (usedTreeIds == null || usedTreeIds.length !== 1) {
       throw new Error(
         "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
@@ -437,7 +439,7 @@ export function* loadAgglomerateSkeletonWithId(
   } catch (e) {
     // Hide the progress notification and handle the error
     hideFn();
-    // @ts-ignore
+    // @ts-expect-error
     handleAgglomerateLoadingError(e);
     return null;
   }
@@ -467,7 +469,7 @@ function* loadConnectomeAgglomerateSkeletonWithId(
       addConnectomeTreesAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
     );
   } catch (e) {
-    // @ts-ignore
+    // @ts-expect-error
     handleAgglomerateLoadingError(e);
   }
 }
@@ -488,7 +490,7 @@ function* removeConnectomeAgglomerateSkeletonWithId(
   }
 }
 
-export function* watchSkeletonTracingAsync(): Saga<void> {
+function* watchSkeletonTracingAsync(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* takeEvery("WK_INITIALIZED", watchTreeNames);
   yield* takeEvery(
@@ -544,7 +546,7 @@ function* diffNodes(
 }
 
 function updateNodePredicate(prevNode: Node, node: Node): boolean {
-  return !_.isEqual(prevNode, node);
+  return !isEqual(prevNode, node);
 }
 
 function* diffEdges(
@@ -571,8 +573,8 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     // equality. This avoids unnecessary updates in certain cases (e.g.,
     // when two trees are merged, the comments are concatenated, even
     // if one of them is empty; thus, resulting in new instances).
-    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
-    !_.isEqual(prevTree.comments, tree.comments) ||
+    !isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    !isEqual(prevTree.comments, tree.comments) ||
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
     prevTree.timestamp !== tree.timestamp ||
@@ -669,6 +671,10 @@ export function* diffSkeletonTracing(
     );
   }
 
+  if (prevSkeletonTracing.activeTreeId !== skeletonTracing.activeTreeId) {
+    yield updateActiveTree(skeletonTracing);
+  }
+  // Active node id should always have precedence over the tree id, thus set it last.
   if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
     yield updateActiveNode(skeletonTracing);
   }

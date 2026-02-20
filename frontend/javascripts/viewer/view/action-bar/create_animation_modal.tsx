@@ -1,26 +1,25 @@
-import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
-import React, { useState } from "react";
-
-import { startRenderAnimationJob } from "admin/rest_api";
-import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
-import Store, { type MeshInformation, type UserBoundingBox } from "viewer/store";
-
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
-  PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
+
+import { startRenderAnimationJob } from "admin/rest_api";
+import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
 import { LayerSelection } from "components/layer_selection";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import {
   computeBoundingBoxFromBoundingBoxObject,
   computeBoundingBoxObjectFromBoundingBox,
 } from "libs/utils";
+import type React from "react";
+import { useState } from "react";
 import type { Mesh } from "three";
 import {
   type APIDataLayer,
-  APIJobType,
+  APIJobCommand,
   type APISegmentationLayer,
   CAMERA_POSITIONS,
   MOVIE_RESOLUTIONS,
@@ -39,7 +38,8 @@ import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { BoundingBoxSelection } from "./ai_job_modals/components/bounding_box_selection";
+import Store, { type MeshInformation, type UserBoundingBox } from "viewer/store";
+import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
 
 type Props = {
   isOpen: boolean;
@@ -330,7 +330,7 @@ function CreateAnimationModal(props: Props) {
 
   const isFeatureDisabled = !(
     dataset.dataStore.jobsEnabled &&
-    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.RENDER_ANIMATION)
+    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.RENDER_ANIMATION)
   );
 
   return (
@@ -360,150 +360,148 @@ function CreateAnimationModal(props: Props) {
         ),
       ]}
     >
-      <React.Fragment>
-        <Row gutter={8}>
-          <Col span={12} style={{ textAlign: "center" }}>
-            <video
-              src="https://static.webknossos.org/assets/docs/webknossos_animation_example.mp4"
-              style={{ width: "100%", display: "inline-block", objectFit: "cover" }}
-              controls={true}
-              autoPlay
-              muted={true}
-            />
-          </Col>
-          <Col span={12}>
-            <p style={{ paddingLeft: 10 }}>
-              Create a short, engaging animation of your data. Watch as the block of volumetric
-              image data shrinks to reveal segmented objects. Choose from three perspective options
-              and select the color layer and meshes you want to render. The resulting video file can
-              be used for presentations, publications, or your website.
-            </p>
-          </Col>
-        </Row>
-        <Divider
-          style={{
-            margin: "18px 0",
-          }}
-        >
-          Animation Setup
-        </Divider>
-        <Row gutter={[8, 30]}>
-          <Col span={8}>Camera Position</Col>
-          <Col span={16}>
-            <Radio.Group
-              value={selectedCameraPosition}
-              onChange={(ev) => setCameraPosition(ev.target.value)}
-              optionType="default"
-            >
-              <Space direction="vertical">
-                <Radio.Button value={CAMERA_POSITIONS.MOVING}>
-                  Camera circling around the dataset
-                </Radio.Button>
-                <Radio.Button value={CAMERA_POSITIONS.STATIC_XY}>
-                  Static camera looking at XY-viewport{" "}
-                </Radio.Button>
-                <Radio.Button value={CAMERA_POSITIONS.STATIC_XZ}>
-                  Static camera looking at XZ-viewport{" "}
-                </Radio.Button>
-                <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ}>
-                  Static camera looking at YZ-viewport{" "}
-                </Radio.Button>
-                <Radio.Button value={CAMERA_POSITIONS.STATIC_ISOMETRIC}>
-                  Static camera with an isometric perspective looking at all 3 viewports{" "}
-                </Radio.Button>
-              </Space>
-            </Radio.Group>
-          </Col>
-
-          <Col span={8}>Movie Resolution</Col>
-          <Col span={16}>
-            <Radio.Group
-              value={selectedMovieResolution}
-              onChange={(ev) => setMovieResolution(ev.target.value)}
-              optionType="default"
-            >
-              <Space direction="vertical">
-                <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
-                  Standard Definition (640 × 360)
-                </Radio.Button>
-                <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled={!arePaidFeaturesAllowed}>
-                  <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-                    High Definition (1920 × 1080)
-                  </PricingEnforcedSpan>
-                </Radio.Button>
-              </Space>
-            </Radio.Group>
-          </Col>
-
-          <Col span={8}>Options</Col>
-          <Col span={16}>
-            <Space direction="vertical">
-              <Checkbox
-                checked={areMeshesEnabled}
-                onChange={(ev) => setMeshesEnabled(ev.target.checked)}
-              >
-                Include the currently selected 3D meshes
-                <Tooltip
-                  title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
-                  placement="right"
-                >
-                  <InfoCircleOutlined style={{ marginLeft: 10 }} />
-                </Tooltip>
-              </Checkbox>
-              <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-                <Checkbox
-                  disabled={!arePaidFeaturesAllowed}
-                  checked={isWatermarkEnabled}
-                  onChange={(ev) => setWatermarkEnabled(ev.target.checked)}
-                >
-                  Include WEBKNOSSOS Watermark
-                </Checkbox>
-              </PricingEnforcedSpan>
+      <Row gutter={8}>
+        <Col span={12} style={{ textAlign: "center" }}>
+          <video
+            src="https://static.webknossos.org/assets/docs/webknossos_animation_example.mp4"
+            style={{ width: "100%", display: "inline-block", objectFit: "cover" }}
+            controls={true}
+            autoPlay
+            muted={true}
+          />
+        </Col>
+        <Col span={12}>
+          <p style={{ paddingLeft: 10 }}>
+            Create a short, engaging animation of your data. Watch as the block of volumetric image
+            data shrinks to reveal segmented objects. Choose from three perspective options and
+            select the color layer and meshes you want to render. The resulting video file can be
+            used for presentations, publications, or your website.
+          </p>
+        </Col>
+      </Row>
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      >
+        Animation Setup
+      </Divider>
+      <Row gutter={[8, 30]}>
+        <Col span={8}>Camera Position</Col>
+        <Col span={16}>
+          <Radio.Group
+            value={selectedCameraPosition}
+            onChange={(ev) => setCameraPosition(ev.target.value)}
+            optionType="default"
+          >
+            <Space orientation="vertical">
+              <Radio.Button value={CAMERA_POSITIONS.MOVING}>
+                Camera circling around the dataset
+              </Radio.Button>
+              <Radio.Button value={CAMERA_POSITIONS.STATIC_XY}>
+                Static camera looking at XY-viewport{" "}
+              </Radio.Button>
+              <Radio.Button value={CAMERA_POSITIONS.STATIC_XZ}>
+                Static camera looking at XZ-viewport{" "}
+              </Radio.Button>
+              <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ}>
+                Static camera looking at YZ-viewport{" "}
+              </Radio.Button>
+              <Radio.Button value={CAMERA_POSITIONS.STATIC_ISOMETRIC}>
+                Static camera with an isometric perspective looking at all 3 viewports{" "}
+              </Radio.Button>
             </Space>
-          </Col>
-        </Row>
-        <Divider style={{ margin: "18px 0" }}>Layer & Bounding Box</Divider>
-        <Row gutter={[8, 20]}>
-          <Col span={8}>Layer</Col>
-          <Col span={16}>
-            <LayerSelection
-              layers={colorLayers}
-              value={selectedColorLayerName}
-              onChange={setSelectedColorLayerName}
-              getReadableNameForLayer={(layer) => layer.name}
-              style={{ width: "100%" }}
-            />
-          </Col>
-          <Col span={8}>Bounding Box</Col>
-          <Col span={16}>
-            <BoundingBoxSelection
-              value={selectedBoundingBoxId}
-              userBoundingBoxes={userBoundingBoxes}
-              setSelectedBoundingBoxId={(boxId: number | null) => {
-                if (boxId != null) {
-                  setSelectedBoundingBoxId(boxId);
-                }
-              }}
-              style={{ width: "100%" }}
-            />
-          </Col>
-        </Row>
-        {!isValid ? (
-          <Row gutter={[8, 20]}>
-            <Alert
-              type="error"
-              style={{ marginTop: 18, width: "100%" }}
-              message={
-                <ul>
-                  {validationErrors.map((errorMessage) => (
-                    <li key={errorMessage.slice(5)}>{errorMessage}</li>
-                  ))}
-                </ul>
+          </Radio.Group>
+        </Col>
+
+        <Col span={8}>Movie Resolution</Col>
+        <Col span={16}>
+          <Radio.Group
+            value={selectedMovieResolution}
+            onChange={(ev) => setMovieResolution(ev.target.value)}
+            optionType="default"
+          >
+            <Space orientation="vertical">
+              <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
+                Standard Definition (640 × 360)
+              </Radio.Button>
+              <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled={!arePaidFeaturesAllowed}>
+                <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+                  High Definition (1920 × 1080)
+                </PricingEnforcedSpan>
+              </Radio.Button>
+            </Space>
+          </Radio.Group>
+        </Col>
+
+        <Col span={8}>Options</Col>
+        <Col span={16}>
+          <Space orientation="vertical">
+            <Checkbox
+              checked={areMeshesEnabled}
+              onChange={(ev) => setMeshesEnabled(ev.target.checked)}
+            >
+              Include the currently selected 3D meshes
+              <Tooltip
+                title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
+                placement="right"
+              >
+                <InfoCircleOutlined style={{ marginLeft: 10 }} />
+              </Tooltip>
+            </Checkbox>
+            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+              <Checkbox
+                disabled={!arePaidFeaturesAllowed}
+                checked={isWatermarkEnabled}
+                onChange={(ev) => setWatermarkEnabled(ev.target.checked)}
+              >
+                Include WEBKNOSSOS Watermark
+              </Checkbox>
+            </PricingEnforcedSpan>
+          </Space>
+        </Col>
+      </Row>
+      <Divider style={{ margin: "18px 0" }}>Layer & Bounding Box</Divider>
+      <Row gutter={[8, 20]}>
+        <Col span={8}>Layer</Col>
+        <Col span={16}>
+          <LayerSelection
+            layers={colorLayers}
+            value={selectedColorLayerName}
+            onChange={setSelectedColorLayerName}
+            getReadableNameForLayer={(layer) => layer.name}
+            style={{ width: "100%" }}
+          />
+        </Col>
+        <Col span={8}>Bounding Box</Col>
+        <Col span={16}>
+          <BoundingBoxSelection
+            value={selectedBoundingBoxId}
+            userBoundingBoxes={userBoundingBoxes}
+            setSelectedBoundingBoxId={(boxId: number | null) => {
+              if (boxId != null) {
+                setSelectedBoundingBoxId(boxId);
               }
-            />
-          </Row>
-        ) : null}
-      </React.Fragment>
+            }}
+            style={{ width: "100%" }}
+          />
+        </Col>
+      </Row>
+      {!isValid ? (
+        <Row gutter={[8, 20]}>
+          <Alert
+            type="error"
+            style={{ marginTop: 18, width: "100%" }}
+            title={
+              <ul>
+                {validationErrors.map((errorMessage) => (
+                  <li key={errorMessage.slice(5)}>{errorMessage}</li>
+                ))}
+              </ul>
+            }
+          />
+        </Row>
+      ) : null}
     </Modal>
   );
 }

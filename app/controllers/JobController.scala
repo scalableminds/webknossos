@@ -5,8 +5,14 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
-import models.job.{JobCommand, _}
-import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, OrganizationService}
+import models.job._
+import models.organization.{
+  CreditTransactionDAO,
+  CreditTransactionService,
+  OrganizationDAO,
+  OrganizationService,
+  PricingPlan
+}
 import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -24,7 +30,6 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import models.team.PricingPlan
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
@@ -84,13 +89,14 @@ class JobController @Inject()(jobDAO: JobDAO,
     } yield Ok(jsStatus)
   }
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      jobs <- jobDAO.findAll
-      jobsJsonList <- Fox.serialCombined(jobs.sortBy(_.created).reverse)(jobService.publicWrites)
-    } yield Ok(Json.toJson(jobsJsonList))
-  }
+  def list(command: Option[String], skipForDeletedDatasets: Option[Boolean]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+        commandValidatedOpt <- Fox.runOptional(command)(JobCommand.fromString(_).toFox)
+        jobsCompact <- jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
+      } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
+    }
 
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -111,6 +117,10 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       job <- jobDAO.findOne(id)
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
+      _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
+        creditTransactionService
+          .refundTransactionForJob(job._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+      }
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -217,6 +227,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          _ <- userService.assertIsSuperUser(request.identity) ?~> "job.inferNuclei.notAllowed.onlySuperUsers"
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
@@ -254,11 +265,9 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
@@ -276,12 +285,13 @@ class JobController @Inject()(jobDAO: JobDAO,
             "invert_color_layer" -> invertColorLayer
           )
           creditTransactionComment = s"AI neuron segmentation for dataset ${dataset.name}"
-          jobAsJs <- jobService.submitPaidJob(command,
-                                              commandArgs,
-                                              parsedBoundingBox,
-                                              creditTransactionComment,
-                                              request.identity,
-                                              dataset._dataStore)
+          job <- jobService.submitPaidJob(command,
+                                          commandArgs,
+                                          parsedBoundingBox,
+                                          creditTransactionComment,
+                                          request.identity,
+                                          dataset._dataStore)
+          jobAsJs <- jobService.publicWrites(job)
         } yield Ok(jobAsJs)
       }
     }
@@ -300,11 +310,8 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           command = JobCommand.infer_mitochondria
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
@@ -315,12 +322,13 @@ class JobController @Inject()(jobDAO: JobDAO,
             "bbox" -> bbox,
           )
           creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
-          jobAsJs <- jobService.submitPaidJob(command,
-                                              commandArgs,
-                                              parsedBoundingBox,
-                                              creditTransactionComment,
-                                              request.identity,
-                                              dataset._dataStore)
+          job <- jobService.submitPaidJob(command,
+                                          commandArgs,
+                                          parsedBoundingBox,
+                                          creditTransactionComment,
+                                          request.identity,
+                                          dataset._dataStore)
+          jobAsJs <- jobService.publicWrites(job)
         } yield Ok(jobAsJs)
       }
     }
@@ -353,12 +361,13 @@ class JobController @Inject()(jobDAO: JobDAO,
             "annotation_id" -> annotationId
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
-          jobAsJs <- jobService.submitPaidJob(command,
-                                              commandArgs,
-                                              datasetBoundingBox,
-                                              creditTransactionComment,
-                                              request.identity,
-                                              dataset._dataStore)
+          job <- jobService.submitPaidJob(command,
+                                          commandArgs,
+                                          datasetBoundingBox,
+                                          creditTransactionComment,
+                                          request.identity,
+                                          dataset._dataStore)
+          jobAsJs <- jobService.publicWrites(job)
         } yield Ok(jobAsJs)
       }
     }
@@ -546,13 +555,13 @@ class JobController @Inject()(jobDAO: JobDAO,
       for {
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox
-        jobCostsInCredits <- jobService.calculateJobCostInCredits(boundingBox, jobCommand)
-        organizationCreditBalance <- creditTransactionDAO.getCreditBalance(request.identity._organization)
-        hasEnoughCredits = jobCostsInCredits <= organizationCreditBalance
+        jobCostInMilliCredits <- jobService.calculateJobCostInMilliCredits(boundingBox, jobCommand)
+        organizationCreditBalance <- creditTransactionDAO.getMilliCreditBalance(request.identity._organization)
+        hasEnoughCredits = jobCostInMilliCredits <= organizationCreditBalance
         js = Json.obj(
-          "costInCredits" -> jobCostsInCredits.toString(),
+          "costInMilliCredits" -> jobCostInMilliCredits,
           "hasEnoughCredits" -> hasEnoughCredits,
-          "organizationCredits" -> organizationCreditBalance.toString(),
+          "organizationMilliCredits" -> organizationCreditBalance,
         )
       } yield Ok(js)
     }

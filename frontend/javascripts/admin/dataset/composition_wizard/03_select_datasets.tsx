@@ -5,7 +5,7 @@ import DatasetSelectionComponent, {
 } from "dashboard/dataset/dataset_selection_component";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useState } from "react";
-import { type WizardComponentProps, tryToFetchDatasetsByNameOrId } from "./common";
+import { tryToFetchDatasetsByNameOrId, type WizardComponentProps } from "./common";
 
 export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
   const [datasetValues, setDatasetValues] = useState<DatasetSelectionValue[]>([]);

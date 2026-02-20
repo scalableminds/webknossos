@@ -1,9 +1,22 @@
+import uniq from "lodash-es/uniq";
+import type { Action } from "viewer/model/actions/actions";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import {
+  updateLayerSettingAction,
+  updateTemporarySettingAction,
+} from "viewer/model/actions/settings_actions";
+import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  getDtypeConfigForElementClass,
+  getSupportedValueRangeForElementClass,
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "viewer/store";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, test } from "vitest";
 import {
   createAnnotationForDatasetScreenshot,
   getNewPage,
-  screenshotDataset,
   type ScreenshotTestContext,
+  screenshotDataset,
   screenshotTracingView,
   setupAfterEach,
   setupBeforeEach,
@@ -16,19 +29,6 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
-import _ from "lodash";
-import {
-  getDtypeConfigForElementClass,
-  getSupportedValueRangeForElementClass,
-} from "viewer/model/bucket_data_handling/data_rendering_logic";
-import {
-  updateLayerSettingAction,
-  updateTemporarySettingAction,
-} from "viewer/model/actions/settings_actions";
-import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
-import type { Action } from "viewer/model/actions/actions";
-import { describe, it, beforeAll, beforeEach, afterEach, expect, test } from "vitest";
-import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
 
 const testColor = true;
 const testSegmentation = true;
@@ -116,71 +116,69 @@ type Spec = {
   alsoTestSelectiveSegmentId?: boolean;
 };
 
-const specs: Array<Spec> = _.flatten(
-  dtypes.map((dtype): Spec[] => {
-    const elementClass = dtype === "float32" ? "float" : dtype;
+const specs: Array<Spec> = dtypes.flatMap((dtype): Spec[] => {
+  const elementClass = dtype === "float32" ? "float" : dtype;
 
-    // No color support for 64 bit
-    const colorSpecs = ["uint64", "int64"].includes(elementClass)
+  // No color support for 64 bit
+  const colorSpecs = ["uint64", "int64"].includes(elementClass)
+    ? []
+    : [
+        {
+          name: `dtype_${dtype}_color_${zoomedIn.postfix}`,
+          dtype,
+          datasetName: `dtype_test_${dtype}_color`,
+          viewOverride: zoomedIn.viewOverride,
+          datasetConfig: datasetConfigHelper(`${dtype}_color`, [
+            getDtypeConfigForElementClass(elementClass).isSigned ? -10 : 0,
+            10,
+          ]),
+        },
+        {
+          name: `dtype_${dtype}_color_${zoomedOut.postfix}`,
+          dtype,
+          datasetName: `dtype_test_${dtype}_color`,
+          viewOverride: zoomedOut.viewOverride,
+          datasetConfig: datasetConfigHelper(
+            `${dtype}_color`,
+            getSupportedValueRangeForElementClass(elementClass),
+          ),
+        },
+      ];
+
+  const segmentationSpecs =
+    // No segmentation support for float
+    elementClass === "float"
       ? []
       : [
           {
-            name: `dtype_${dtype}_color_${zoomedIn.postfix}`,
+            name: `dtype_${dtype}_segmentation_${zoomedIn.postfix}`,
             dtype,
-            datasetName: `dtype_test_${dtype}_color`,
+            datasetName: `dtype_test_${dtype}_segmentation`,
             viewOverride: zoomedIn.viewOverride,
-            datasetConfig: datasetConfigHelper(`${dtype}_color`, [
-              getDtypeConfigForElementClass(elementClass).isSigned ? -10 : 0,
-              10,
-            ]),
+            datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
+            alsoTestSelectiveSegmentId: true,
           },
           {
-            name: `dtype_${dtype}_color_${zoomedOut.postfix}`,
+            name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
             dtype,
-            datasetName: `dtype_test_${dtype}_color`,
+            datasetName: `dtype_test_${dtype}_segmentation`,
             viewOverride: zoomedOut.viewOverride,
-            datasetConfig: datasetConfigHelper(
-              `${dtype}_color`,
-              getSupportedValueRangeForElementClass(elementClass),
-            ),
+            datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
           },
         ];
 
-    const segmentationSpecs =
-      // No segmentation support for float
-      elementClass === "float"
-        ? []
-        : [
-            {
-              name: `dtype_${dtype}_segmentation_${zoomedIn.postfix}`,
-              dtype,
-              datasetName: `dtype_test_${dtype}_segmentation`,
-              viewOverride: zoomedIn.viewOverride,
-              datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
-              alsoTestSelectiveSegmentId: true,
-            },
-            {
-              name: `dtype_${dtype}_segmentation_${zoomedOut.postfix}`,
-              dtype,
-              datasetName: `dtype_test_${dtype}_segmentation`,
-              viewOverride: zoomedOut.viewOverride,
-              datasetConfig: datasetConfigHelper(`${dtype}_segmentation`, undefined),
-            },
-          ];
+  if (testSegmentation && testColor) {
+    return [...colorSpecs, ...segmentationSpecs];
+  } else if (testSegmentation) {
+    return segmentationSpecs;
+  } else if (testColor) {
+    return colorSpecs;
+  } else {
+    throw new Error("Both testColor and testSegmentation are set to false.");
+  }
+});
 
-    if (testSegmentation && testColor) {
-      return [...colorSpecs, ...segmentationSpecs];
-    } else if (testSegmentation) {
-      return segmentationSpecs;
-    } else if (testColor) {
-      return colorSpecs;
-    } else {
-      throw new Error("Both testColor and testSegmentation are set to false.");
-    }
-  }),
-);
-
-const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
+const datasetNames = uniq(specs.map((spec) => spec.datasetName));
 
 const datasetNameToId: Record<string, string> = {};
 

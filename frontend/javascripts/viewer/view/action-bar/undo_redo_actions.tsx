@@ -1,9 +1,8 @@
+import { Space } from "antd";
 import { AsyncButton } from "components/async_clickables";
+import { useCallback } from "react";
+import { useDispatch } from "react-redux";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
-import Store from "viewer/store";
-
-const handleUndo = () => dispatchUndoAsync(Store.dispatch);
-const handleRedo = () => dispatchRedoAsync(Store.dispatch);
 
 type Props = {
   hasTracing: boolean;
@@ -11,12 +10,17 @@ type Props = {
 };
 
 function UndoRedoActions({ hasTracing, isBusy }: Props) {
+  const dispatch = useDispatch();
+
+  const handleUndo = useCallback(() => dispatchUndoAsync(dispatch), [dispatch]);
+  const handleRedo = useCallback(() => dispatchRedoAsync(dispatch), [dispatch]);
+
   if (!hasTracing) {
     return null;
   }
 
   return (
-    <>
+    <Space.Compact>
       <AsyncButton
         className="narrow undo-redo-button"
         key="undo-button"
@@ -24,9 +28,8 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleUndo}
         disabled={isBusy}
         hideContentWhenLoading
-      >
-        <i className="fas fa-undo" aria-hidden="true" />
-      </AsyncButton>
+        icon={<i className="fas fa-undo" aria-hidden="true" />}
+      />
       <AsyncButton
         className="narrow undo-redo-button hide-on-small-screen"
         key="redo-button"
@@ -34,10 +37,9 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleRedo}
         disabled={isBusy}
         hideContentWhenLoading
-      >
-        <i className="fas fa-redo" aria-hidden="true" />
-      </AsyncButton>
-    </>
+        icon={<i className="fas fa-redo" aria-hidden="true" />}
+      />
+    </Space.Compact>
   );
 }
 

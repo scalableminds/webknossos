@@ -1,4 +1,5 @@
-import _ from "lodash";
+import clamp from "lodash-es/clamp";
+import range from "lodash-es/range";
 import type { ElementClass } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import type { ShaderModule } from "./shader_module_system";
@@ -35,18 +36,6 @@ export const hsvToRgb: ShaderModule = {
 export function jsHsv2rgb(h: number, s: number, v: number): Vector3 {
   const f = (n: number, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
   return [f(5), f(3), f(1)];
-}
-
-// From: https://stackoverflow.com/a/54070620/896760
-// Input: r,g,b in [0,1], out: h in [0,360) and s,v in [0,1]
-export function jsRgb2hsv(rgb: Vector3): Vector3 {
-  const [r, g, b] = rgb;
-  const v = Math.max(r, g, b);
-  const n = v - Math.min(r, g, b);
-
-  const h = n !== 0 && (v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n);
-  // @ts-expect-error ts-migrate(2365) FIXME: Operator '+' cannot be applied to types 'number | ... Remove this comment to see the full error message
-  return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
 }
 
 /**
@@ -107,11 +96,11 @@ export const colormapJet: ShaderModule = {
 // Input in [0,1]
 // Output in [0,1] for r, g and b
 export function jsColormapJet(x: number): Vector3 {
-  const r = _.clamp(x < 0.89 ? (x - 0.35) / 0.31 : 1.0 - ((x - 0.89) / 0.11) * 0.5, 0, 1);
+  const r = clamp(x < 0.89 ? (x - 0.35) / 0.31 : 1.0 - ((x - 0.89) / 0.11) * 0.5, 0, 1);
 
-  const g = _.clamp(x < 0.64 ? (x - 0.125) * 4.0 : 1.0 - (x - 0.64) / 0.27, 0, 1);
+  const g = clamp(x < 0.64 ? (x - 0.125) * 4.0 : 1.0 - (x - 0.64) / 0.27, 0, 1);
 
-  const b = _.clamp(x < 0.34 ? 0.5 + (x * 0.5) / 0.11 : 1.0 - (x - 0.34) / 0.31, 0, 1);
+  const b = clamp(x < 0.34 ? 0.5 + (x * 0.5) / 0.11 : 1.0 - (x - 0.34) / 0.31, 0, 1);
 
   return [r, g, b];
 }
@@ -193,7 +182,7 @@ export const getElementOfPermutation: ShaderModule = {
 };
 
 export function getPermutation(sequenceLength: number, primitiveRoot: number) {
-  return _.range(sequenceLength).map((idx) =>
+  return range(sequenceLength).map((idx) =>
     jsGetElementOfPermutation(idx, sequenceLength, primitiveRoot),
   );
 }

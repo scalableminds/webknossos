@@ -1,12 +1,15 @@
+/** Styles for action links within the dataset table rows (e.g. view, download). */
 .dataset-table-actions {
-  & > a {
+  &>a {
     display: block;
+
     img {
       width: 14px;
     }
   }
 }
 
+/** Container for the description of a task type, allowing for long text wrapping and optional height capping. */
 .task-type-description {
   max-width: 700px;
   word-break: break-word;
@@ -27,6 +30,7 @@
   }
 }
 
+/** Wrapper for the 'What's Next' dashboard welcome banner. */
 .welcome-header-wrapper {
   background: var(--background-blue-neurons);
 
@@ -34,6 +38,8 @@
     color: white;
   }
 }
+
+/** Layout for the inner content of the welcome header, including centered text and action buttons. */
 .welcome-header-content {
   padding: 40px 0px 40px;
 
@@ -69,7 +75,8 @@
 
       a {
         color: var(--color-black);
-        flex: 0 1 400px; /*  No stretching: */
+        flex: 0 1 400px;
+        /*  No stretching: */
         margin: 20px;
         margin-left: 0;
         margin-right: 40px;
@@ -125,13 +132,16 @@
       .icon-open-demo {
         background-image: url(/assets/images/icon-open-demo.svg);
       }
+
       .icon-import-own-data {
         background-image: url(/assets/images/icon-import-own-data.svg);
         background-size: 94px;
       }
+
       .icon-annotate {
         background-image: url(/assets/images/icon-annotate.svg);
       }
+
       .icon-invite-colleagues {
         background-image: url(/assets/images/icon-invite-colleagues.svg);
       }
@@ -147,6 +157,7 @@
   }
 }
 
+/** Styling for the folder structure preview in the dataset import view. */
 pre.dataset-import-folder-structure-hint {
   text-align: left;
   display: inline-block;
@@ -158,10 +169,12 @@ pre.dataset-import-folder-structure-hint {
   padding: 4px;
 }
 
+/** Link style for elements that should look like normal text but remain clickable (e.g. dataset name in the table). */
 .incognito-link {
   color: var(--ant-color-text);
 }
 
+/** Propagates full height through a flex container hierarchy to enable nested scrollable areas (e.g., in the dashboard). */
 .propagate-flex-height {
   // Make the entire DOM hierarchy use flexbox so that the actual dataset
   // list can have its own scroll bar. This requires that all parent elements
@@ -193,14 +206,7 @@ pre.dataset-import-folder-structure-hint {
   }
 }
 
-.tags-container {
-  display: inline-block;
-  line-height: 26px;
-  .ant-tag {
-    margin-right: 4px;
-  }
-}
-
+/** Fixed-size square thumbnail for datasets in the dashboard table. */
 .dataset-table-thumbnail {
   width: 80px;
   height: 80px;
@@ -208,6 +214,7 @@ pre.dataset-import-folder-structure-hint {
   margin-right: 20px;
 }
 
+/** Styling for the dataset name within the dashboard table. */
 .dataset-table-name {
   font-size: 16px;
   font-weight: 500;
@@ -215,20 +222,21 @@ pre.dataset-import-folder-structure-hint {
   min-height: 30px;
 }
 
+/** Container for the dataset name to handle vertical alignment and max-width. */
 .dataset-table-name-container {
   display: inline-block;
   vertical-align: middle;
   max-width: 520px;
 }
 
-.top-aligned-column {
-  vertical-align: top;
-}
 
+/** Wrapper for the dataset metadata table in the dashboard, ensuring bold headers. */
 .dashboard-metadata-table-wrapper {
   th {
     font-weight: bold !important;
   }
+
+  /** Placeholder text shown when a metadata table is empty. */
   .empty-metadata-placeholder {
     padding: 16px;
     text-align: center;

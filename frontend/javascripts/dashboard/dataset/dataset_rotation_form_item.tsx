@@ -3,16 +3,16 @@ import { Col, Form, type FormInstance, InputNumber, Row, Slider, Tooltip, Typogr
 import FormItem from "antd/es/form/FormItem";
 import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import { useCallback, useEffect, useMemo } from "react";
-import type { APIDataLayer } from "types/api_types";
+import type { AffineTransformation, APIDataLayer } from "types/api_types";
 import {
   AXIS_TO_TRANSFORM_INDEX,
-  EXPECTED_TRANSFORMATION_LENGTH,
-  IDENTITY_TRANSFORM,
-  type RotationAndMirroringSettings,
   doAllLayersHaveTheSameRotation,
+  EXPECTED_TRANSFORMATION_LENGTH,
   fromCenterToOrigin,
   fromOriginToCenter,
   getRotationMatrixAroundAxis,
+  IDENTITY_TRANSFORM,
+  type RotationAndMirroringSettings,
   transformationEqualsAffineIdentityTransform,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -38,7 +38,7 @@ function getDatasetBoundingBoxFromLayers(layers: APIDataLayer[]): BoundingBox | 
   return datasetBoundingBox;
 }
 
-export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
+const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   form,
   axis,
 }: AxisRotationFormItemProps) => {
@@ -64,13 +64,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       y: RotationAndMirroringSettings;
       z: RotationAndMirroringSettings;
     } = form.getFieldValue(["datasetRotation"]);
-    const transformations = [
-      fromCenterToOrigin(datasetBoundingBox),
-      getRotationMatrixAroundAxis("x", rotationValues["x"]),
-      getRotationMatrixAroundAxis("y", rotationValues["y"]),
-      getRotationMatrixAroundAxis("z", rotationValues["z"]),
-      fromOriginToCenter(datasetBoundingBox),
-    ];
+    const transformations = getRotationalTransformation(datasetBoundingBox, rotationValues);
     const dataLayersWithUpdatedTransforms = dataLayers.map((layer) => {
       return {
         ...layer,
@@ -227,3 +221,20 @@ export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatas
     </div>
   );
 };
+
+export function getRotationalTransformation(
+  datasetBoundingBox: BoundingBox,
+  rotationValues: {
+    x: RotationAndMirroringSettings;
+    y: RotationAndMirroringSettings;
+    z: RotationAndMirroringSettings;
+  },
+): AffineTransformation[] {
+  return [
+    fromCenterToOrigin(datasetBoundingBox),
+    getRotationMatrixAroundAxis("x", rotationValues["x"]),
+    getRotationMatrixAroundAxis("y", rotationValues["y"]),
+    getRotationMatrixAroundAxis("z", rotationValues["z"]),
+    fromOriginToCenter(datasetBoundingBox),
+  ];
+}

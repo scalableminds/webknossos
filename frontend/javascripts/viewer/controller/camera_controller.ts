@@ -1,7 +1,6 @@
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
-import * as React from "react";
+import { waitForElementWithId } from "libs/utils";
+import { PureComponent } from "react";
 import {
   Euler,
   Matrix4,
@@ -13,8 +12,8 @@ import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
 import {
   OrthoCamerasBaseRotations,
-  OrthoViewValuesWithoutTDView,
   OrthoViews,
+  OrthoViewValuesWithoutTDView,
 } from "viewer/constants";
 import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
@@ -84,7 +83,7 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
   };
 }
 
-class CameraController extends React.PureComponent<Props> {
+class CameraController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
   // Properties are only created here to avoid creating new objects for each update call.
@@ -103,14 +102,14 @@ class CameraController extends React.PureComponent<Props> {
     );
     const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
-    for (const cam of _.values(this.props.cameras)) {
+    for (const cam of Object.values(this.props.cameras)) {
       cam.near = 0;
       cam.far = far;
     }
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
-    Utils.waitForElementWithId(tdId).then(() => {
+    waitForElementWithId(tdId).then(() => {
       this.props.setTargetAndFixPosition();
       Store.dispatch(
         setTDCameraWithoutTimeTrackingAction({
@@ -125,7 +124,9 @@ class CameraController extends React.PureComponent<Props> {
   }
 
   componentWillUnmount() {
-    this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers.forEach((fn) => {
+      fn();
+    });
   }
 
   // Non-TD-View methods

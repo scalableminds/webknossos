@@ -36,10 +36,10 @@ import messages from "messages";
 import type React from "react";
 import { useState } from "react";
 import {
+  type AdditionalAxis,
   type APIDataLayer,
   type APIDataset,
-  APIJobType,
-  type AdditionalAxis,
+  APIJobCommand,
   type VoxelSize,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -59,8 +59,9 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { Model } from "viewer/singletons";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
-import { BoundingBoxSelection } from "viewer/view/action-bar/ai_job_modals/components/bounding_box_selection";
-import { MagSlider } from "viewer/view/action-bar/ai_job_modals/components/mag_slider";
+import { MagSlider } from "viewer/view/action-bar/mag_slider";
+import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
+
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -139,7 +140,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
       {volumeExceeded && (
         <Alert
           type="error"
-          message={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
+          title={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
             features().exportTiffMaxVolumeMVx
           } Megavoxels.`}
         />
@@ -147,7 +148,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
       {edgeLengthExceeded && (
         <Alert
           type="error"
-          message={`An edge length of the selected bounding box (${shape.join(
+          title={`An edge length of the selected bounding box (${shape.join(
             ", ",
           )}) is too large. Tiff export is only supported for boxes with edges smaller than ${
             features().exportTiffMaxEdgeLengthVx
@@ -205,7 +206,7 @@ async function copyToClipboard(code: string) {
   Toast.success("Snippet copied to clipboard.");
 }
 
-export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
+function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
       <Button
@@ -591,7 +592,7 @@ function _DownloadModalView({
         </Text>
       </Row>
       {activeTabKey === "export" &&
-      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF) ? (
+      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.EXPORT_TIFF) ? (
         workerInfo
       ) : (
         <div>
@@ -715,7 +716,7 @@ function _DownloadModalView({
       />
       {moreInfoHint}
       <Checkbox
-        style={{ position: "absolute", bottom: -62 }}
+        style={{ position: "absolute", bottom: -38 }}
         checked={keepWindowOpen}
         onChange={handleKeepWindowOpenChecked}
         disabled={activeTabKey === "export" && !features().jobsEnabled}

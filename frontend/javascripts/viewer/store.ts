@@ -1,17 +1,15 @@
 import type DiffableMap from "libs/diffable_map";
-import { type Middleware, applyMiddleware, createStore } from "redux";
+import type { Matrix4x4 } from "libs/mjs";
+import { applyMiddleware, createStore, type Middleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
-
-// Type imports
-import type { Matrix4x4 } from "libs/mjs";
 import type {
-  APIAllowedMode,
+  AdditionalAxis,
+  AnnotationLayerDescriptor,
   APIAnnotationType,
   APIAnnotationVisibility,
   APIConnectomeFile,
   APIDataLayer,
-  APIDataSourceId,
   APIDataStore,
   APIDataset,
   APIHistogramData,
@@ -25,16 +23,17 @@ import type {
   APIUser,
   APIUserBase,
   APIUserCompact,
-  AdditionalAxis,
-  AdditionalCoordinate,
-  AnnotationLayerDescriptor,
   MetadataEntryProto,
   ServerEditableMapping,
   TracingType,
 } from "types/api_types";
+import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
 import type {
+  AdditionalCoordinate,
+  BLEND_MODES,
   ContourMode,
   ControlMode,
+  ControlModeEnum,
   FillMode,
   InterpolationMode,
   MappingStatus,
@@ -42,27 +41,16 @@ import type {
   OrthoViewWithoutTD,
   OverwriteMode,
   Rect,
+  SagaIdentifier,
   TDViewDisplayMode,
   Vector2,
   Vector3,
   ViewMode,
 } from "viewer/constants";
-import type { BLEND_MODES, ControlModeEnum } from "viewer/constants";
+import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { Toolkit } from "./model/accessors/tool_accessor";
-import type {
-  MutableTreeGroup,
-  TreeGroup,
-  TreeGroupTypeFlat,
-  TreeMap,
-} from "./model/types/tree_types";
-
-import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
-// Value imports
-import defaultState from "viewer/default_state";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
 import reduceReducers from "viewer/model/helpers/reduce_reducers";
@@ -78,11 +66,14 @@ import UiReducer from "viewer/model/reducers/ui_reducer";
 import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
+import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
+import type { Toolkit } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
-import type { StartAIJobModalState } from "./view/action-bar/ai_job_modals/constants";
+import type { TreeGroup, TreeMap } from "./model/types/tree_types";
+import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
 
 export type { BoundingBoxObject } from "types/bounding_box";
 
@@ -112,13 +103,10 @@ export type UserBoundingBoxWithOptIsVisible = Omit<UserBoundingBox, "isVisible">
   isVisible?: boolean;
 };
 
-export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
 export type SegmentGroup = TreeGroup;
-export type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
-export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
-export type AllowedMode = APIAllowedMode;
+export type Restrictions = APIRestrictions;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
 export type AnnotationVisibility = APIAnnotationVisibility;
@@ -146,8 +134,8 @@ export type Annotation = {
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
-  readonly blockedByUser: APIUserCompact | null | undefined;
   readonly isLockedByOwner: boolean;
+  readonly isUpdatingCurrentlyAllowed: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;
@@ -174,7 +162,7 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly somePosition: Vector3 | undefined;
+  readonly somePosition: Vector3 | undefined; // in layer space
   readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
@@ -197,11 +185,16 @@ export type VolumeTracing = TracingBase & {
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
+  // The position of the "proofreading marker" (a cross) is stored separately.
+  // In earlier versions, the anchor position of the current segment was simply used.
+  // However, the anchor position can be updated by another user (in collab mode) which
+  // leads to unexpected jumping of the marker.
+  readonly proofreadingMarkerPosition: Vector3 | undefined;
   readonly activeUnmappedSegmentId?: number | null; // not persisted
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
-  // Stores points of the currently drawn region in global coordinates
+  // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
@@ -222,9 +215,6 @@ export type StoreAnnotation = Annotation & {
   readonly volumes: Array<VolumeTracing>;
   readonly readOnly: ReadOnlyTracing | null | undefined;
   readonly mappings: Array<EditableMapping>;
-};
-export type LegacyViewCommand = APIDataSourceId & {
-  readonly type: typeof ControlModeEnum.VIEW;
 };
 export type TraceOrViewCommand =
   | {
@@ -415,11 +405,47 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
+
+export type AnnotationMutexInformation = {
+  readonly hasAnnotationMutex: boolean;
+  readonly blockedByUser: APIUserCompact | null | undefined;
+};
+
+// RebaseRelevantAnnotationState holds the data required to rebase the
+// current user's local annotation changes onto the latest version from the server.
+//
+// This state should always reflect the most recent annotation version stored,
+// on the server that is known to the user.
+// After successfully pulling and applying the latest updates from the server,
+// it must be updated to match that version.
+// Moreover, after successfully saving, it should also be updated.
+//
+// Mini example of a shared annotation with liveCollab enabled:
+// - user A adds a new node to tree 1 and saves.
+//   Meanwhile user B already added a node to another tree and already stored this on the server.
+// - user A rebases by resetting the store state to the info stored in RebaseRelevantAnnotationState.
+//   Then missing backend updates are pulled and applied on top of that.
+//   - Update RebaseRelevantAnnotationState as the current state is a newest version stored on the server.
+//   Re-apply local changes of adding a node to tree 1 via reapplying the actions stored in the save queue.
+//   Now save the changes and as this is now in sync with the backend, update RebaseRelevantAnnotationState again.
+// - Synchronizing local update with those from the backend is done.
+//
+// Note: Unsaved local changes should never be included in the RebaseRelevantAnnotationState!
+
+export type RebaseRelevantAnnotationState = {
+  readonly annotationVersion: number;
+  readonly annotationDescription: string;
+  readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
+  readonly skeleton: SkeletonTracing | null | undefined;
+  readonly isRebasing: boolean;
+};
 export type SaveState = {
   readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
+  readonly mutexState: AnnotationMutexInformation;
+  readonly rebaseRelevantServerAnnotationState: RebaseRelevantAnnotationState;
 };
 export type Flycam = {
   readonly zoomStep: number;
@@ -455,7 +481,7 @@ export type PlaneRects = {
   readonly PLANE_XZ: Rect;
   readonly TDView: Rect;
 };
-export type PlaneModeData = {
+type PlaneModeData = {
   readonly activeViewport: OrthoView;
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: PlaneRects;
@@ -475,6 +501,7 @@ export type Theme = "light" | "dark";
 export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
+  allowedSagas: SagaIdentifier[];
 };
 export type ContextMenuInfo = {
   readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
@@ -497,7 +524,7 @@ type UiInformation = {
   readonly showZarrPrivateLinksModal: boolean;
   readonly showAddScriptModal: boolean;
   readonly showKeyboardShortcutConfigModal: boolean;
-  readonly aIJobModalState: StartAIJobModalState;
+  readonly aIJobDrawerState: StartAiJobDrawerState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly activeUserBoundingBoxId: number | null | undefined;
@@ -538,7 +565,7 @@ export type PrecomputedMeshInformation = BaseMeshInformation & {
   readonly meshFileName: string;
 };
 export type MeshInformation = AdHocMeshInformation | PrecomputedMeshInformation;
-export type ConnectomeData = {
+type ConnectomeData = {
   readonly availableConnectomeFiles: Array<APIConnectomeFile> | null | undefined;
   readonly currentConnectomeFile: APIConnectomeFile | null | undefined;
   readonly pendingConnectomeFileName: string | null | undefined;
@@ -616,7 +643,7 @@ export const combinedReducer = reduceReducers(
   OrganizationReducer,
 ) as Reducer;
 
-const store = createStore<WebknossosState, Action, unknown, unknown>(
+const store = createStore<WebknossosState, Action>(
   enableBatching(combinedReducer as any),
   defaultState,
   applyMiddleware(

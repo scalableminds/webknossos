@@ -4,7 +4,8 @@ import { Button, Tooltip } from "antd";
 import { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
-import * as React from "react";
+import type React from "react";
+import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import type { APIUser } from "types/api_types";
 
@@ -19,13 +20,13 @@ type WhatsNextActionProps = {
 
 const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsNextActionProps) => {
   const content = (
-    <React.Fragment>
+    <Fragment>
       {icon}
       <div className="label">
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 
   if (to != null) {

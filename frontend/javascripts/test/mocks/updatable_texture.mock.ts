@@ -1,10 +1,10 @@
 import {
   RedFormat,
   RedIntegerFormat,
-  RGFormat,
-  RGIntegerFormat,
   RGBAFormat,
   RGBAIntegerFormat,
+  RGFormat,
+  RGIntegerFormat,
 } from "three";
 import { vi } from "vitest";
 

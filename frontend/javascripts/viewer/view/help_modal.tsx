@@ -42,9 +42,11 @@ function HelpButton() {
           padding: 8,
         }}
         type="info"
-        message="Help"
-        closable
-        onClose={discardButton}
+        title="Help"
+        closable={{
+          closeIcon: true,
+          onClose: discardButton,
+        }}
         onClick={() => setModalOpen(true)}
       />
       <HelpModal

@@ -1,7 +1,7 @@
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
-import { sum } from "lodash";
+import sum from "lodash-es/sum";
 import messages from "messages";
 import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { Identity4x4 } from "viewer/constants";
@@ -27,7 +27,7 @@ import {
 } from "../actions/dataset_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 
-export function* watchMaximumRenderableLayers(): Saga<void> {
+function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
     const maximumLayerCountToRender = yield* select(
       (state) => state.temporaryConfiguration.gpuSetup.maximumLayerCountToRender,
@@ -55,7 +55,7 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
 }
 
 let userClosedWarning = false;
-export function* watchZ1Downsampling(): Saga<void> {
+function* watchZ1Downsampling(): Saga<void> {
   function* maybeShowWarning(): Saga<void> {
     if (userClosedWarning) {
       return;
@@ -171,7 +171,7 @@ export function* watchZ1Downsampling(): Saga<void> {
   );
 }
 
-export function* ensureSegmentIndexIsLoaded(): Saga<void> {
+function* ensureSegmentIndexIsLoaded(): Saga<void> {
   function* maybeFetchHasSegmentIndex(action: EnsureSegmentIndexIsLoadedAction): Saga<void> {
     const { layerName } = action;
     const dataset = yield* select((state) => state.dataset);

@@ -1,19 +1,22 @@
 import update from "immutability-helper";
-import { describe, it, expect } from "vitest";
-import type { WebknossosState } from "viewer/store";
-import * as accessors from "viewer/model/accessors/view_mode_accessor";
+import { M4x4, V3 } from "libs/mjs";
+import { map3 } from "libs/utils";
+import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
+import testRotations from "test/fixtures/test_rotations";
+import { almostEqual } from "test/libs/transform_spec_helpers";
+import { Euler, MathUtils, Vector3 as ThreeVector3 } from "three";
 import { OrthoViews, OrthoViewValuesWithoutTDView, UnitLong, type Vector3 } from "viewer/constants";
 import defaultState from "viewer/default_state";
-import { FlycamMatrixWithDefaultRotation } from "test/fixtures/flycam_object";
-import { M4x4, V3 } from "libs/mjs";
-import Dimensions from "viewer/model/dimensions";
+import {
+  calculateGlobalPos,
+  calculateInViewportPos,
+} from "viewer/model/accessors/view_mode_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
+import Dimensions from "viewer/model/dimensions";
 import FlycamReducer from "viewer/model/reducers/flycam_reducer";
-import { MathUtils, Vector3 as ThreeVector3, Euler } from "three";
-import { map3 } from "libs/utils";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
-import { almostEqual } from "test/libs/transform_spec_helpers";
-import testRotations from "test/fixtures/test_rotations";
+import type { WebknossosState } from "viewer/store";
+import { describe, expect, it } from "vitest";
 
 const viewportOffsets = {
   left: 200,
@@ -111,7 +114,7 @@ describe("View mode accessors", () => {
         viewModeData: { plane: { activeViewport: { $set: planeId } } },
       });
       const clickPositionAtViewportCenter = { x: viewportSize / 2, y: viewportSize / 2 };
-      const globalPosition = accessors.calculateGlobalPos(
+      const globalPosition = calculateGlobalPos(
         stateWithCorrectPlaneActive,
         clickPositionAtViewportCenter,
       );
@@ -128,7 +131,7 @@ describe("View mode accessors", () => {
           x: viewportSize / 2 + offset[0],
           y: viewportSize / 2 + offset[1],
         };
-        const globalPosition = accessors.calculateGlobalPos(
+        const globalPosition = calculateGlobalPos(
           stateWithCorrectPlaneActive,
           clickPositionAtViewportCenter,
         );
@@ -153,10 +156,7 @@ describe("View mode accessors", () => {
           x: viewportSize / 2 + offset[0],
           y: viewportSize / 2 + offset[1],
         };
-        const globalPosition = accessors.calculateGlobalPos(
-          rotatedState,
-          clickPositionAtViewportCenter,
-        );
+        const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
         const viewportAdjustedOffset = Dimensions.transDim([offset[0], offset[1], 0], planeId);
         // Rotation of 90° around the x axis swaps y and z value and inverts the y value.
         const rotatedAdjustedOffset = [
@@ -188,10 +188,7 @@ describe("View mode accessors", () => {
           x: viewportSize / 2 + offset[0],
           y: viewportSize / 2 + offset[1],
         };
-        const globalPosition = accessors.calculateGlobalPos(
-          rotatedState,
-          clickPositionAtViewportCenter,
-        );
+        const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
         // Applying the rotation of 83° around the x axis to the offset.
         const rotatedOffset = new ThreeVector3(offset[0], offset[1], 0)
           .applyEuler(new Euler(...rotationInRadian, "ZYX"))
@@ -224,10 +221,7 @@ describe("View mode accessors", () => {
           x: viewportSize / 2 + offset[0],
           y: viewportSize / 2 + offset[1],
         };
-        const globalPosition = accessors.calculateGlobalPos(
-          rotatedState,
-          clickPositionAtViewportCenter,
-        );
+        const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
         // Applying the rotation of 83° around the x axis to the offset and the apply the dataset scale.
         const scaleFactor = getBaseVoxelFactorsInUnit(rotatedState.dataset.dataSource.scale);
         const rotatedAndScaledOffset = new ThreeVector3(offset[0], offset[1], 0)
@@ -272,13 +266,10 @@ describe("View mode accessors", () => {
             x: viewportSize / 2 + offset[0],
             y: viewportSize / 2 + offset[1],
           };
-          const globalPosition = accessors.calculateGlobalPos(
-            rotatedState,
-            clickPositionAtViewportCenter,
-          );
+          const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
           // Applying the rotation of 83° around the x axis to the offset and the apply the dataset scale.
           const scaleFactor = getBaseVoxelFactorsInUnit(rotatedState.dataset.dataSource.scale);
-          const posInViewportVector = accessors.calculateInViewportPos(
+          const posInViewportVector = calculateInViewportPos(
             globalPosition.floating,
             initialFlycamPosition,
             rotationInRadian,
@@ -320,13 +311,10 @@ describe("View mode accessors", () => {
             x: viewportSize / 2 + offset[0],
             y: viewportSize / 2 + offset[1],
           };
-          const globalPosition = accessors.calculateGlobalPos(
-            rotatedState,
-            clickPositionAtViewportCenter,
-          );
+          const globalPosition = calculateGlobalPos(rotatedState, clickPositionAtViewportCenter);
           // Applying the rotation of 83° around the x axis to the offset and the apply the dataset scale.
           const scaleFactor = getBaseVoxelFactorsInUnit(rotatedState.dataset.dataSource.scale);
-          const posInViewportVector = accessors.calculateInViewportPos(
+          const posInViewportVector = calculateInViewportPos(
             globalPosition.floating,
             initialFlycamPosition,
             rotationInRadian,

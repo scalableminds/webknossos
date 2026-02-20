@@ -1,4 +1,3 @@
-import _ from "lodash";
 import {
   DoubleSide,
   Matrix4,
@@ -16,6 +15,7 @@ import PlaneMaterialFactory, {
 import { getZoomedMatrix } from "viewer/model/accessors/flycam_accessor";
 import shaderEditor from "viewer/model/helpers/shader_editor";
 import Store from "viewer/store";
+
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images
 // are drawn.
@@ -58,7 +58,7 @@ class ArbitraryPlane {
   }
 
   addToScene(scene: Scene) {
-    _.values(this.meshes).forEach((mesh) => {
+    Object.values(this.meshes).forEach((mesh) => {
       if (mesh) {
         scene.add(mesh);
       }
@@ -99,7 +99,7 @@ class ArbitraryPlane {
         mesh.matrixWorldNeedsUpdate = true;
       };
 
-      _.values(this.meshes).forEach(updateMesh);
+      Object.values(this.meshes).forEach(updateMesh);
 
       this.isDirty = false;
       getSceneController().update(this);

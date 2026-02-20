@@ -1,7 +1,9 @@
 import update from "immutability-helper";
 import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import _ from "lodash";
+import { getRandomColor } from "libs/utils";
+import isEqual from "lodash-es/isEqual";
+import reduce from "lodash-es/reduce";
+import uniqWith from "lodash-es/uniqWith";
 import type { AdditionalCoordinate } from "types/api_types";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "viewer/model/accessors/view_mode_accessor";
@@ -11,6 +13,7 @@ import type { MeshInformation, UserBoundingBox, WebknossosState } from "viewer/s
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
+import type { ChangeUserBoundingBoxAction } from "../actions/annotation_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateAnnotation = (
@@ -56,6 +59,27 @@ const updateUserBoundingBoxes = (
   });
 };
 
+export const updateUserBoundingBox = (
+  state: WebknossosState,
+  action: ChangeUserBoundingBoxAction,
+) => {
+  const tracing = maybeGetSomeTracing(state.annotation);
+
+  if (tracing == null) {
+    return state;
+  }
+
+  const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
+    bbox.id === action.id
+      ? {
+          ...bbox,
+          ...action.newProps,
+        }
+      : bbox,
+  );
+  return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+};
+
 const maybeAddAdditionalCoordinatesToMeshState = (
   state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
@@ -79,7 +103,26 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      return updateAnnotation(state, {
+      // rebaseRelevantServerAnnotationState stores rebasing relevant information of the annotation.
+      // It always is in sync with the latest known version on the server. After initializing it is the current version.
+      // activeMappingByLayer are initialized automatically when they are being loaded by the saga.
+      const stateWithAnnotationRebaseInformation = update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            annotationVersion: {
+              $set: action.annotation.version,
+            },
+            annotationDescription: {
+              $set: action.annotation.description,
+            },
+            activeMappingByLayer: {
+              $set: {},
+            },
+          },
+        },
+      });
+
+      return updateAnnotation(stateWithAnnotationRebaseInformation, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],
@@ -124,16 +167,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "SET_ANNOTATION_ALLOW_UPDATE": {
-      const { allowUpdate } = action;
-      return updateKey2(state, "annotation", "restrictions", {
-        allowUpdate,
-      });
-    }
-
-    case "SET_BLOCKED_BY_USER": {
-      const { blockedByUser } = action;
+      const { currentlyAllowUpdate } = action;
       return updateKey(state, "annotation", {
-        blockedByUser,
+        isUpdatingCurrentlyAllowed: currentlyAllowUpdate,
       });
     }
 
@@ -142,21 +178,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
     }
 
     case "CHANGE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.annotation);
-
-      if (tracing == null) {
-        return state;
-      }
-
-      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
-        bbox.id === action.id
-          ? {
-              ...bbox,
-              ...action.newProps,
-            }
-          : bbox,
-      );
-      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBox(state, action);
       return updateKey(updatedState, "uiInformation", {
         activeUserBoundingBoxId: action.id,
       });
@@ -181,7 +203,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         },
         id: boundingBoxId,
         name: `Bounding box ${boundingBoxId}`,
-        color: Utils.getRandomColor(),
+        color: getRandomColor(),
         isVisible: true,
       };
 
@@ -230,12 +252,12 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         ...bb,
         id: highestBoundingBoxId + index + 1,
       }));
-      const mergedUserBoundingBoxes = _.uniqWith(
+      const mergedUserBoundingBoxes = uniqWith(
         [...tracing.userBoundingBoxes, ...additionalUserBoundingBoxes],
         (bboxWithId1, bboxWithId2) => {
           const { id: _id1, ...bbox1 } = bboxWithId1;
           const { id: _id2, ...bbox2 } = bboxWithId2;
-          return _.isEqual(bbox1, bbox2);
+          return isEqual(bbox1, bbox2);
         },
       );
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
@@ -285,7 +307,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       const meshDict = state.localSegmentationData[layerName].meshes;
       if (meshDict == null) return state;
       const currentAdditionalCoordinates = Object.keys(meshDict || {});
-      const updatedMeshes = _.reduce(
+      const updatedMeshes = reduce(
         currentAdditionalCoordinates,
         (updatedMeshesDict, additionalCoordKey) => {
           const meshes = updatedMeshesDict[additionalCoordKey];

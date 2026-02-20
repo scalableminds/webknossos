@@ -18,7 +18,6 @@ image.create.failed=Failed to create image
 
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
-auth.token.noUser=Could not determine user for access token
 auth.passkeys.disabled=Passkeys disabled.
 auth.passkeys.requiresHttps=Passkeys are only supported with HTTPS.
 auth.passkeys.unauthorized=Passkey Authentication Failed.
@@ -48,10 +47,13 @@ organization.users.userLimitReached=Cannot add new user to this organization bec
 organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization WEBKNOSSOS plan. Please ask the organization owner for permission.
 organization.creditOrder.notAuthorized=You are not authorized to order WEBKNOSSOS credits for your organization. Please ask the organization owner to do this instead.
 organization.creditOrder.notPositive=You cannot order a negative number of WEBKNOSSOS credits.
+organization.listCreditTransactions.onlyAdmin=Only organization admins can list credit transactions.
+organization.listPlanUpdates.onlyAdmin=Only organization admins can list plan updates.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 
 user.notFound=User not found
+user.superUserOnly=This feature is currently only available for superusers.
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account has not been activated by an admin yet. Please contact your organization’s admin for help.
 user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.
@@ -130,6 +132,8 @@ dataset.explore.autoAdd.failed=Failed to automatically import the explored datas
 dataset.additionalCoordinates.different=Additional coordinates differ in merged units.
 dataset.metadata.duplicateKeys=Metadata keys must be unique.
 dataset.boundingBox.unset=This dataset has no bounding box. Please make sure this dataset is imported correctly.
+dataset.reserveMagUploadToPath.notVirtual=Adding mags to existing datasets is only allowed for virtual datasets.
+dataset.reserveMagUploadToPath.exists=This mag is already pending.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system
@@ -157,6 +161,7 @@ dataLayer.notFound=DataLayer “{0}” not found
 dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
 dataLayer.wrongMag=DataLayer “{0}” does not have mag “{1}”
+dataLayer.wrongAttachment=DataLayer “{0}” does not have attachment “{1}”
 dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use “x-y-z”
 
 zarr.invalidChunkCoordinates=Invalid chunk coordinates. Expected dot separated coordinates like c.<additional_axes.>x.y.z
@@ -269,7 +274,9 @@ annotation.getNewestVersion.failed=Could not get the newest version information 
 annotation.idForTracing.failed=Could not find the annotation id for this tracing id.
 annotation.editableMapping.getAgglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
 annotation.editableMapping.getAgglomerateIdsForSegments.failed=Could not look up agglomerate ids for requested segments.
-annotation.duplicate.failed=Failed to duplicate annotation
+annotation.duplicate.failed=Failed to duplicate annotation.
+annotation.mutex.failed=Failed to acquire annotation editing mutex.
+annotation.mutex.release.failed=Failed to release annotation editing mutex.
 annotation.upload.editableMappingIncompleteInformation=Could not store editable mapping, either file or baseMappingName is missing.
 
 mesh.file.listChunks.failed=Failed to load chunk list for segment {0} from mesh file “{1}”
@@ -328,6 +335,7 @@ serialization.failed=Failed to serialize data.
 initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
 organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
 
+job.paid.noAdminOrManager = Starting paid jobs is only allowed for Administrators, Dataset Managers or Team Managers.
 job.couldNotRunCubing = Failed to start WKW conversion job.
 job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
@@ -339,6 +347,7 @@ job.couldNotRunApplyMergerMode = Failed to start job to apply merger mode annota
 job.couldNotRunInferMitochondria = Failed to start job to infer mitochondria.
 job.couldNotRunAlignSections = Failed to start job to align sections.
 job.disabled = Long-running jobs are not enabled for this WEBKNOSSOS instance.
+job.submission.failed = Failed to submit the job. Please contact us if this keeps re-occurring.
 job.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
 job.invalidBoundingBox = The selected bounding box could not be parsed, must be x,y,z,width,height,depth
@@ -350,7 +359,7 @@ job.convertToWkw.notAllowed.organization = Converting to WKW is only allowed for
 job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allowed for datasets of your own organization.
 job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.inferNeurons.annotationIdEvalParamsMissing=A evaluation of the neuron inferral jobs was requested but no annotation was supplied.
-job.inferMitochondria.notAllowed.onlySuperUsers=Currently mitochondria inferral is only allowed for super users.
+job.inferNuclei.notAllowed.onlySuperUsers=Currently nuclei inferral is only allowed for super users.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.segmentIndexFile.notAllowed.organization = Calculating segment index files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
@@ -366,6 +375,8 @@ job.notEnoughCredits = Your organization does not have enough WEBKNOSSOS credits
 job.updateStatus.failed = Failed to update long-running job’s status
 job.creditTransaction.failed = Failed to perform credit transaction
 job.creditTransaction.refund.failed = Failed to perform credit transaction refund
+job.creditTransaction.notPaidPlan = Only organizations with a paid plan are allowed to start this job.
+job.creditTransaction.noAiPlan = Only organizations with an AI plan are allowed to start this job.
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

@@ -1,13 +1,25 @@
-import { Button, Checkbox, Col, Collapse, type CollapseProps, Form, Input, Row, Table } from "antd";
+import {
+  Button,
+  Checkbox,
+  Col,
+  Collapse,
+  type CollapseProps,
+  Form,
+  Input,
+  Row,
+  Space,
+  Table,
+} from "antd";
 import type { FormInstance } from "antd/lib/form";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import features from "features";
 import { jsonStringify } from "libs/utils";
-import _ from "lodash";
+import omit from "lodash-es/omit";
 import { type RecommendedConfiguration, settings } from "messages";
-import * as React from "react";
+import { Fragment } from "react";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "viewer/constants";
+
 const FormItem = Form.Item;
 
 function getRecommendedConfigByCategory() {
@@ -102,7 +114,7 @@ const removeSettings = (
   try {
     const settingsObject = JSON.parse(settingsString);
 
-    const newSettings = _.omit(
+    const newSettings = omit(
       settingsObject,
       Object.keys(getRecommendedConfigByCategory()[settingsKey]),
     );
@@ -125,8 +137,8 @@ export default function RecommendedConfigurationView({
   onChangeEnabled: (arg0: boolean) => void;
 }) {
   const recommendedConfiguration = getDefaultRecommendedConfiguration();
-  const configurationEntries = _.map(recommendedConfiguration, (_value: any, key: string) => {
-    // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
+  const configurationEntries = Object.entries(recommendedConfiguration).map(([key]) => {
+    // @ts-expect-error Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
     const settingsKey: keyof RecommendedConfiguration = key;
     return {
       name: settings[settingsKey],
@@ -164,15 +176,17 @@ export default function RecommendedConfigurationView({
             />
           </FormItem>
         </div>
-        <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
-          Remove Orthogonal-only Settings
-        </Button>
-        <Button className="button-margin" onClick={() => removeSettings(form, "flight")}>
-          Remove Flight/Oblique-only Settings
-        </Button>
-        <Button className="button-margin" onClick={() => removeSettings(form, "volume")}>
-          Remove Volume-only Settings
-        </Button>
+        <Space wrap>
+          <Button onClick={() => removeSettings(form, "orthogonal")}>
+            Remove Orthogonal-only Settings
+          </Button>
+          <Button onClick={() => removeSettings(form, "flight")}>
+            Remove Flight/Oblique-only Settings
+          </Button>
+          <Button onClick={() => removeSettings(form, "volume")}>
+            Remove Volume-only Settings
+          </Button>
+        </Space>
       </Col>
       <Col span={12}>
         Valid settings and their default values: <br />
@@ -195,7 +209,7 @@ export default function RecommendedConfigurationView({
     {
       key: "config",
       label: (
-        <React.Fragment>
+        <Fragment>
           <Checkbox
             checked={enabled}
             style={{
@@ -203,7 +217,7 @@ export default function RecommendedConfigurationView({
             }}
           />{" "}
           Add Recommended User Settings
-        </React.Fragment>
+        </Fragment>
       ),
       showArrow: false,
       children: recommendedSettingsView,

@@ -1,9 +1,17 @@
-import getMainFragmentShader from "viewer/shaders/main_data_shaders.glsl";
-import mags from "test/fixtures/mags";
-import { describe, it, beforeEach, expect } from "vitest";
 import { parser } from "@shaderfrog/glsl-parser";
+import mags from "test/fixtures/mags";
+import getMainFragmentShader, {
+  getMainVertexShader,
+  type Params,
+} from "viewer/shaders/main_data_shaders.glsl";
+import { beforeEach, describe, expect, it } from "vitest";
 
-describe("Shader syntax", () => {
+type ShaderFunction = (params: Params) => string;
+
+describe.for<ShaderFunction>([
+  getMainFragmentShader,
+  getMainVertexShader,
+])("Shader Syntax %o", (getShader) => {
   const originalWarn = console.warn;
 
   interface TestContext {
@@ -19,7 +27,7 @@ describe("Shader syntax", () => {
   });
 
   it<TestContext>("Ortho Mode", ({ warningEmittedCount }) => {
-    const code = getMainFragmentShader({
+    const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],
       textureLayerInfos: {
@@ -38,7 +46,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 1,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "color_layer_2",
           elementClass: "uint8",
         },
       },
@@ -50,6 +58,7 @@ describe("Shader syntax", () => {
       voxelSizeFactorInverted: [1, 1, 1],
       useInterpolation: false,
       tpsTransformPerLayer: {},
+      isWindows: false,
     });
 
     /*
@@ -63,7 +72,7 @@ describe("Shader syntax", () => {
   });
 
   it<TestContext>("Ortho Mode + Segmentation - Mapping", ({ warningEmittedCount }) => {
-    const code = getMainFragmentShader({
+    const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],
       textureLayerInfos: {
@@ -82,7 +91,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 1,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "color_layer_2",
           elementClass: "uint8",
         },
         ["segmentationLayer"]: {
@@ -91,7 +100,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 4,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "segmentationLayer",
           elementClass: "uint8",
         },
       },
@@ -103,13 +112,14 @@ describe("Shader syntax", () => {
       useInterpolation: false,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
+      isWindows: true,
     });
     parser.parse(code);
     expect(warningEmittedCount).toBe(0);
   });
 
   it<TestContext>("Ortho Mode + Segmentation + Mapping", ({ warningEmittedCount }) => {
-    const code = getMainFragmentShader({
+    const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],
       textureLayerInfos: {
@@ -128,7 +138,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 1,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "color_layer_2",
           elementClass: "uint8",
         },
         ["segmentationLayer"]: {
@@ -137,7 +147,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 4,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "segmentationLayer",
           elementClass: "uint8",
         },
       },
@@ -149,6 +159,7 @@ describe("Shader syntax", () => {
       useInterpolation: true,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
+      isWindows: true,
     });
 
     parser.parse(code);
@@ -156,7 +167,7 @@ describe("Shader syntax", () => {
   });
 
   it<TestContext>("Arbitrary Mode (no segmentation available)", ({ warningEmittedCount }) => {
-    const code = getMainFragmentShader({
+    const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],
       textureLayerInfos: {
@@ -175,7 +186,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 1,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "color_layer_2",
           elementClass: "uint8",
         },
       },
@@ -187,13 +198,14 @@ describe("Shader syntax", () => {
       useInterpolation: false,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
+      isWindows: true,
     });
     parser.parse(code);
     expect(warningEmittedCount).toBe(0);
   });
 
   it<TestContext>("Arbitrary Mode (segmentation available)", ({ warningEmittedCount }) => {
-    const code = getMainFragmentShader({
+    const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],
       textureLayerInfos: {
@@ -212,7 +224,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 1,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "color_layer_2",
           elementClass: "uint8",
         },
         ["segmentationLayer"]: {
@@ -221,7 +233,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 4,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "segmentationLayer",
           elementClass: "uint8",
         },
       },
@@ -233,13 +245,14 @@ describe("Shader syntax", () => {
       useInterpolation: true,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
+      isWindows: false,
     });
     parser.parse(code);
     expect(warningEmittedCount).toBe(0);
   });
 
   it<TestContext>("Ortho Mode (rgb and float layer)", ({ warningEmittedCount }) => {
-    const code = getMainFragmentShader({
+    const code = getShader({
       globalLayerCount: 2,
       colorLayerNames: ["color_layer_1", "color_layer_2"],
       textureLayerInfos: {
@@ -258,7 +271,7 @@ describe("Shader syntax", () => {
           dataTextureCount: 2,
           isSigned: false,
           glslPrefix: "",
-          unsanitizedName: "color_layer_1",
+          unsanitizedName: "color_layer_2",
           elementClass: "float",
         },
       },
@@ -270,6 +283,7 @@ describe("Shader syntax", () => {
       useInterpolation: false,
       voxelSizeFactorInverted: [1, 1, 1],
       tpsTransformPerLayer: {},
+      isWindows: true,
     });
     parser.parse(code);
     expect(warningEmittedCount).toBe(0);

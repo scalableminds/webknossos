@@ -45,10 +45,13 @@ project/boot/
 project/plugins/project/
 public-test/test-bundle
 public/bundle
+public/assets
 public/commit.txt
 public/docs
 public/docs/frontend-api
 public/test-bundle
+public/index.html
+frontend/stylesheets/fontawesome*
 src/main/scala/rebel.xml
 target/
 temp-webknossos-schema**

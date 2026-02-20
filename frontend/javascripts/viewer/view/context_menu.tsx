@@ -2,6 +2,7 @@ import {
   BarChartOutlined,
   CopyOutlined,
   PushpinOutlined,
+  TagOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
@@ -12,8 +13,9 @@ import {
   Input,
   type MenuProps,
   Modal,
-  Popover,
   notification,
+  Popover,
+  Space,
 } from "antd";
 import type {
   ItemType,
@@ -35,17 +37,16 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
-import type { MenuInfo } from "rc-menu/lib/interface";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
+  AdditionalCoordinate,
   APIConnectomeFile,
   APIDataLayer,
   APIDataset,
   APIMeshFileInfo,
   VoxelSize,
 } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
 import {
   AltOrOptionKey,
   CtrlOrCmdKey,
@@ -71,6 +72,7 @@ import {
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -129,6 +131,7 @@ import {
   setActiveNodeAction,
   setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { hideContextMenuAction, setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import { getUpdateSegmentActionToToggleVisibility } from "viewer/model/actions/volumetracing_action_helpers";
 import {
@@ -143,6 +146,7 @@ import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_redu
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/volume/min_cut_saga";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
+import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
@@ -153,10 +157,6 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "viewer/store";
-
-import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
-import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
@@ -198,7 +198,7 @@ type NoNodeContextMenuProps = Props & {
   infoRows: ItemType[];
 };
 
-const hideContextMenu = (info?: MenuInfo | undefined) => {
+const hideContextMenu = (info?: Parameters<NonNullable<MenuProps["onClick"]>>[0] | undefined) => {
   if (info?.key === "load-stats") {
     return;
   }
@@ -215,7 +215,7 @@ export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProp
     {
       key: "view",
       disabled: true,
-      label: "No actions available.",
+      title: "No actions available.",
     },
   ],
 });
@@ -224,9 +224,6 @@ function copyIconWithTooltip(value: string | number, title: string) {
   return (
     <FastTooltip title={title}>
       <CopyOutlined
-        style={{
-          margin: "0 0 0 5px",
-        }}
         onClick={async () => {
           await navigator.clipboard.writeText(value.toString());
           Toast.success(`"${value}" copied to clipboard`);
@@ -246,7 +243,7 @@ function measureAndShowLengthBetweenNodes(
     targetNodeId,
   );
   notification.open({
-    message: `The shortest path length between the nodes is ${formatNumberToLength(
+    title: `The shortest path length between the nodes is ${formatNumberToLength(
       lengthInUnit,
       LongUnitToShortUnitMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
@@ -270,7 +267,7 @@ function extractShortestPathAsNewTree(
 function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSizeUnit: UnitLong) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
-    message: messages["tracing.tree_length_notification"](
+    title: messages["tracing.tree_length_notification"](
       treeName,
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
@@ -1457,7 +1454,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           allowUpdate && !disabledVolumeInfo.FILL_CELL.isDisabled
             ? {
                 key: "fill-cell",
-                onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
+                onClick: () =>
+                  handleFloodFillFromGlobalPosition(Store.getState(), globalPosition, viewport),
                 label: "Fill Segment (flood-fill region)",
               }
             : null,
@@ -1565,7 +1563,7 @@ export function GenericContextMenuContainer(props: {
           }}
           className="node-context-menu"
           tabIndex={-1}
-          // @ts-ignore
+          // @ts-expect-error
           ref={inputRef}
         />
         {/* Disable animations for the context menu (for performance reasons). */}
@@ -1621,7 +1619,7 @@ function ContextMenuInner() {
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const dataset = useWkSelector((state) => state.dataset);
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const currentMeshFile = useWkSelector((state) =>
@@ -1847,11 +1845,11 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "positionInfo",
-        <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
-          {nodePositionAsString}
+        <Space size="small">
+          <PushpinOutlined rotate={-45} />
+          {`Position: ${nodePositionAsString}`}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-        </>,
+        </Space>,
       ),
     );
   } else if (globalPosition != null) {
@@ -1860,11 +1858,11 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "positionInfo",
-        <>
-          <PushpinOutlined style={{ transform: "rotate(-45deg)", marginInlineEnd: 5 }} /> Position:{" "}
-          {positionAsString}
+        <Space size="small">
+          <PushpinOutlined rotate={-45} />
+          {`Position: ${positionAsString}`}
           {copyIconWithTooltip(positionAsString, "Copy position")}
-        </>,
+        </Space>,
       ),
     );
   }
@@ -1873,13 +1871,14 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "distanceInfo",
-        <FastTooltip title="Distance to the active Node of the active Tree">
-          <>
-            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
-            this {maybeClickedNodeId != null ? "Node" : "Position"}
-            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-          </>
-        </FastTooltip>,
+        <Space size="small">
+          <i className="fas fa-ruler" />
+          <FastTooltip title="Distance to the active Node of the active Tree">
+            {`${distanceToSelection[0]} (${distanceToSelection[1]}) to this
+            ${maybeClickedNodeId != null ? "Node" : "Position"}`}
+          </FastTooltip>
+          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+        </Space>,
       ),
     );
   }
@@ -1888,11 +1887,11 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "copy-cell",
-        <>
+        <Space size="small">
           <div className="cell-context-icon" />
-          Segment ID: {`${clickedSegmentOrMeshId}`}{" "}
+          {`Segment ID: ${clickedSegmentOrMeshId}`}
           {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
-        </>,
+        </Space>,
       ),
     );
   }
@@ -1900,17 +1899,18 @@ function ContextMenuInner() {
     const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
     if (segmentName != null) {
       const maxNameLength = 20;
+      const segmentNameLabel =
+        segmentName.length > maxNameLength
+          ? truncateStringToLength(segmentName, maxNameLength)
+          : segmentName;
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",
-          <>
-            <i className="fas fa-tag segment-context-icon" />
-            Segment Name:{" "}
-            {segmentName.length > maxNameLength
-              ? truncateStringToLength(segmentName, maxNameLength)
-              : segmentName}
+          <Space size="small">
+            <TagOutlined />
+            {`Segment Name: ${segmentNameLabel}`}
             {copyIconWithTooltip(segmentName, "Copy Segment Name")}
-          </>,
+          </Space>,
         ),
       );
     }
@@ -1920,39 +1920,33 @@ function ContextMenuInner() {
     infoRows.push(
       getInfoMenuItem(
         "surfaceInfo",
-        <>
-          <i className="segment-context-icon">m²</i>
-          Surface Area: {segmentSurfaceAreaLabel}
+        <Space size="small">
+          <i>m²</i>
+          {`Surface Area: ${segmentSurfaceAreaLabel}`}
           {copyIconWithTooltip(segmentSurfaceAreaLabel as string, "Copy surface area")}
-        </>,
+        </Space>,
       ),
     );
 
     infoRows.push(
       getInfoMenuItem(
         "volumeInfo",
-        <>
-          <i className="segment-context-icon">m³</i>
-          Volume: {segmentVolumeLabel}
+        <Space size="small">
+          <i>m³</i>
+          {`Volume: ${segmentVolumeLabel}`}
           {copyIconWithTooltip(segmentVolumeLabel as string, "Copy volume")}
-        </>,
+        </Space>,
       ),
     );
 
     infoRows.push(
       getInfoMenuItem(
         "boundingBoxPositionInfo",
-        <>
-          <i className="fas fa-dice-d6 segment-context-icon" />
-          <>Bounding Box: </>
-          <div style={{ marginLeft: 22, marginTop: -5 }}>
-            {boundingBoxInfoLabel}
-            {copyIconWithTooltip(
-              boundingBoxInfoLabel as string,
-              "Copy BBox top left point and extent",
-            )}
-          </div>
-        </>,
+        <Space size="small">
+          <i className="fas fa-dice-d6 " />
+          {`Bounding Box: ${boundingBoxInfoLabel}`}
+          {copyIconWithTooltip(boundingBoxInfoLabel, "Copy BBox top left point and extent")}
+        </Space>,
       ),
     );
   }
@@ -2001,10 +1995,10 @@ function ContextMenuInner() {
 
       <Dropdown
         menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
+        classNames={{ root: "dropdown-overlay-container-for-context-menu" }}
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        destroyPopupOnHide
+        destroyOnHidden
       >
         <div />
       </Dropdown>

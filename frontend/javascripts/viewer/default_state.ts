@@ -1,17 +1,17 @@
 import { getSystemColorTheme } from "theme";
 import type { APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import constants from "viewer/constants";
 import Constants, {
   ControlModeEnum,
+  FillModeEnum,
+  InterpolationModeEnum,
   OrthoViews,
   OverwriteModeEnum,
-  FillModeEnum,
   TDViewDisplayModeEnum,
-  InterpolationModeEnum,
   UnitLong,
   ViewModeValues,
 } from "viewer/constants";
-import constants from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
 
@@ -26,7 +26,6 @@ const initialAnnotationInfo = {
   restrictions: {
     branchPointsAllowed: false,
     allowUpdate: false,
-    initialAllowUpdate: false,
     allowSave: false,
     allowFinish: false,
     allowAccess: true,
@@ -179,12 +178,12 @@ const defaultState: WebknossosState = {
     isLockedByOwner: false,
     contributors: [],
     othersMayEdit: false,
-    blockedByUser: null,
     annotationLayers: [],
     version: 0,
     earliestAccessibleVersion: 0,
     stats: {},
     organization: "",
+    isUpdatingCurrentlyAllowed: initialAnnotationInfo.restrictions.allowUpdate,
   },
   save: {
     queue: [],
@@ -193,6 +192,14 @@ const defaultState: WebknossosState = {
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,
+    },
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null },
+    rebaseRelevantServerAnnotationState: {
+      annotationDescription: "",
+      annotationVersion: 1,
+      skeleton: undefined,
+      activeMappingByLayer: {},
+      isRebasing: false,
     },
   },
   flycam: {
@@ -247,7 +254,7 @@ const defaultState: WebknossosState = {
     showZarrPrivateLinksModal: false,
     showKeyboardShortcutConfigModal: true,
     showPythonClientModal: false,
-    aIJobModalState: "invisible",
+    aIJobDrawerState: "invisible",
     showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
@@ -261,6 +268,7 @@ const defaultState: WebknossosState = {
     theme: getSystemColorTheme(),
     busyBlockingInfo: {
       isBusy: false,
+      allowedSagas: [],
     },
     isWkInitialized: false,
     isUiReady: false,

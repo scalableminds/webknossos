@@ -1,18 +1,31 @@
-import { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  InfoCircleOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
+import { getOrganization } from "admin/api/organization";
 import { Tag, Typography } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
+import { useWkSelector } from "libs/react_hooks";
+import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
+import messages from "messages";
 import React, { type CSSProperties } from "react";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
+import type { EmptyObject } from "types/globals";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
-  type TracingStats,
   getSkeletonStats,
   getStats,
   getVolumeStats,
+  mayEditAnnotationProperties,
+  type TracingStats,
 } from "viewer/model/accessors/annotation_accessor";
 import {
   getDatasetExtentAsString,
@@ -20,25 +33,17 @@ import {
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
+  getViewDatasetURL,
 } from "viewer/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "viewer/model/accessors/flycam_accessor";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import {
   setAnnotationDescriptionAction,
   setAnnotationNameAction,
 } from "viewer/model/actions/annotation_actions";
-
+import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
-
-import { getOrganization } from "admin/rest_api";
-import FastTooltip from "components/fast_tooltip";
-import { useWkSelector } from "libs/react_hooks";
-import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
-import messages from "messages";
-import type { EmptyObject } from "types/globals";
-import { WkDevFlags } from "viewer/api/wk_dev";
-import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
-import { formatUserName } from "viewer/model/accessors/user_accessor";
-import { getReadableNameForLayerName } from "viewer/model/accessors/volumetracing_accessor";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -201,7 +206,9 @@ export function OwningOrganizationRow({ organizationId }: { organizationId: stri
       <div className="info-tab-block">
         <p className="sidebar-label">Organization</p>
         <p>
-          <Tag color="blue">{organizationId === null ? <i>loading...</i> : organizationId}</Tag>
+          <Tag color="blue" variant="outlined">
+            {organizationId === null ? <i>loading...</i> : organizationId}
+          </Tag>
         </p>
       </div>
     </FastTooltip>
@@ -285,7 +292,7 @@ export function AnnotationStats({
   );
 }
 
-export class DatasetInfoTabView extends React.PureComponent<Props, State> {
+class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
     owningOrganizationName: null,
@@ -395,7 +402,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={`/datasets/${getReadableURLPart(this.props.dataset)}/view`}
+          to={getViewDatasetURL(this.props.dataset)}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",
@@ -468,9 +475,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <Typography.Text>
               {description}
               <FastTooltip title="Edit">
-                {/* biome-ignore lint/a11y/useFocusableInteractive: <explanation> */}
+                {/* biome-ignore lint/a11y/useFocusableInteractive: don't use <button> to not mess with its default styles */}
+                {/* biome-ignore lint/a11y/useSemanticElements: don't use <button> to not mess with its default styles */}
                 <div
-                  // biome-ignore lint/a11y/useSemanticElements: <explanation>
                   role="button"
                   className="ant-typography-edit"
                   style={{
@@ -526,12 +533,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const contributorTags =
       contributors.length > 0
         ? contributors.map((user) => (
-            <Tag key={user.id} color="blue">
+            <Tag key={user.id} color="blue" variant="outlined">
               {formatUserName(activeUser, user)}
             </Tag>
           ))
         : [
-            <Tag key="None" color="blue">
+            <Tag key="None" color="blue" variant="outlined">
               None
             </Tag>,
           ];
@@ -541,7 +548,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <div className="info-tab-block">
           <p className="sidebar-label">Owner</p>
           <p>
-            <Tag color="blue">{formatUserName(activeUser, owner)}</Tag>
+            <Tag color="blue" variant="outlined">
+              {formatUserName(activeUser, owner)}
+            </Tag>
           </p>
         </div>
         <div className="info-tab-block">
@@ -657,10 +666,16 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 }
 
 function DebugInfo() {
+  const dispatch = useDispatch();
   const versionOnClient = useWkSelector((state) => {
     return state.annotation.version;
   });
-  return <>Version: {versionOnClient}</>;
+  return (
+    <>
+      Version: {versionOnClient}
+      <ReloadOutlined onClick={() => dispatch(ensureHasNewestVersionAction(() => {}))} />{" "}
+    </>
+  );
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({

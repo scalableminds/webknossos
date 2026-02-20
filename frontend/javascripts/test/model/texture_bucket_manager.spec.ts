@@ -1,9 +1,9 @@
 import "test/mocks/updatable_texture.mock";
-import { describe, it, expect, beforeEach } from "vitest";
-import type { Vector4 } from "viewer/constants";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
-import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
+import type { Vector4 } from "viewer/constants";
 import { DataBucket, NULL_BUCKET } from "viewer/model/bucket_data_handling/bucket";
+import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
+import { beforeEach, describe, expect, it } from "vitest";
 
 // Mock storage for texture data
 const textureMockDataStore = {
@@ -49,7 +49,9 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
 const setActiveBucketsAndWait = (tbm: TextureBucketManager, activeBuckets: DataBucket[]) => {
   tbm.setActiveBuckets(activeBuckets);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case
-  activeBuckets.forEach(() => tbm.processWriterQueue());
+  activeBuckets.forEach(() => {
+    tbm.processWriterQueue();
+  });
 };
 
 const expectBucket = (tbm: TextureBucketManager, bucket: DataBucket, expectedFirstByte: number) => {

@@ -1,76 +1,22 @@
 import { InboxOutlined } from "@ant-design/icons";
 import { createTasks } from "admin/api/tasks";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
-import { App, Button, Card, Divider, Form, Input, Progress, Spin, Upload } from "antd";
+import { App, Button, Card, Divider, Form, Input, Progress, Spin, Typography, Upload } from "antd";
 import Toast from "libs/toast";
-import _ from "lodash";
+import isString from "lodash-es/isString";
+import uniq from "lodash-es/uniq";
 import Messages from "messages";
 import { useState } from "react";
-import type { APITask } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import type { BoundingBoxObject } from "viewer/store";
+import {
+  type NewTask,
+  NUM_TASKS_PER_BATCH,
+  normalizeFileEvent,
+  type TaskCreationResponse,
+} from "./task_create_utils";
 
 const FormItem = Form.Item;
 const { TextArea } = Input;
-
-export const NUM_TASKS_PER_BATCH = 100;
-export type NewTask = {
-  readonly boundingBox: BoundingBoxObject | null | undefined;
-  readonly datasetId: string;
-  readonly editPosition: Vector3;
-  readonly editRotation: Vector3;
-  readonly neededExperience: {
-    readonly domain: string;
-    readonly value: number;
-  };
-  readonly projectName: string;
-  readonly scriptId: string | null | undefined;
-  readonly pendingInstances: number;
-  readonly taskTypeId: string;
-  readonly csvFile?: File;
-  readonly nmlFiles?: File[];
-  readonly baseAnnotation?:
-    | {
-        baseId: string;
-      }
-    | null
-    | undefined;
-};
-
-export type NewNmlTask = Pick<
-  NewTask,
-  | "taskTypeId"
-  | "neededExperience"
-  | "pendingInstances"
-  | "projectName"
-  | "scriptId"
-  | "boundingBox"
->;
-
-export type TaskCreationResponse = {
-  status: number;
-  success?: APITask;
-  error?: string;
-};
-
-export type TaskCreationResponseContainer = {
-  tasks: TaskCreationResponse[];
-  warnings: string[];
-};
-
-export function normalizeFileEvent(
-  event:
-    | File[]
-    | {
-        fileList: File[];
-      },
-) {
-  if (Array.isArray(event)) {
-    return event;
-  }
-
-  return event?.fileList;
-}
 
 function TaskCreateBulkView() {
   const { modal } = App.useApp();
@@ -84,9 +30,9 @@ function TaskCreateBulkView() {
     const { boundingBox } = task;
 
     if (
-      !_.isString(task.neededExperience.domain) ||
-      !_.isString(task.taskTypeId) ||
-      !_.isString(task.projectName) ||
+      !isString(task.neededExperience.domain) ||
+      !isString(task.taskTypeId) ||
+      !isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
       Number.isNaN(task.pendingInstances) ||
@@ -129,20 +75,20 @@ function TaskCreateBulkView() {
     const datasetId = words[0];
     const taskTypeId = words[1];
     const experienceDomain = words[2];
-    const minExperience = Number.parseInt(words[3]);
-    const x = Number.parseInt(words[4]);
-    const y = Number.parseInt(words[5]);
-    const z = Number.parseInt(words[6]);
-    const rotX = Number.parseInt(words[7]);
-    const rotY = Number.parseInt(words[8]);
-    const rotZ = Number.parseInt(words[9]);
-    const pendingInstances = Number.parseInt(words[10]);
-    const boundingBoxX = Number.parseInt(words[11]);
-    const boundingBoxY = Number.parseInt(words[12]);
-    const boundingBoxZ = Number.parseInt(words[13]);
-    const width = Number.parseInt(words[14]);
-    const height = Number.parseInt(words[15]);
-    const depth = Number.parseInt(words[16]);
+    const minExperience = Number.parseInt(words[3], 10);
+    const x = Number.parseInt(words[4], 10);
+    const y = Number.parseInt(words[5], 10);
+    const z = Number.parseInt(words[6], 10);
+    const rotX = Number.parseInt(words[7], 10);
+    const rotY = Number.parseInt(words[8], 10);
+    const rotZ = Number.parseInt(words[9], 10);
+    const pendingInstances = Number.parseInt(words[10], 10);
+    const boundingBoxX = Number.parseInt(words[11], 10);
+    const boundingBoxY = Number.parseInt(words[12], 10);
+    const boundingBoxZ = Number.parseInt(words[13], 10);
+    const width = Number.parseInt(words[14], 10);
+    const height = Number.parseInt(words[15], 10);
+    const depth = Number.parseInt(words[16], 10);
     const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null
@@ -185,7 +131,7 @@ function TaskCreateBulkView() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
-      // @ts-ignore reader.result is wrongfully typed as ArrayBuffer
+      // @ts-expect-error reader.result is wrongfully typed as ArrayBuffer
       reader.onload = () => resolve(parseText(reader.result));
 
       reader.onerror = reject;
@@ -253,7 +199,7 @@ function TaskCreateBulkView() {
 
       handleTaskCreationResponse(modal, {
         tasks: taskResponses,
-        warnings: _.uniq(warnings),
+        warnings: uniq(warnings),
       });
     } finally {
       setIsUploading(false);
@@ -269,20 +215,20 @@ function TaskCreateBulkView() {
     >
       <Spin spinning={isUploading}>
         <Card title={<h3>Bulk Create Tasks</h3>}>
-          <p>
-            Specify each new task on a separate line as comma separated values (CSV) in the
-            following format:
-            <br />
-            <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
-            experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ,
-            width, height, depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a>{" "}
-            (optional), baseAnnotationId (optional)
-            <br />
-            If you want to define some (but not all) of the optional values, please list all
-            optional values and use an empty value for the ones you do not want to set (e.g.,
-            someValue,,someOtherValue if you want to omit the second value). If you do not want to
-            define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
-          </p>
+          <Typography.Paragraph>
+            Specify each task on a separate line as comma-separated values (CSV) in the below
+            format. To define a subset of optional values, list all optional columns but leave the
+            fields you want to skip empty (e.g., val1,,val3). To omit the bounding box, use 0, 0, 0,
+            0, 0, 0 for its values.
+          </Typography.Paragraph>
+          <Typography.Paragraph>
+            <Typography.Text code>
+              <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
+              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,
+              minZ, width, height, depth, <a href="/projects">project</a>,{" "}
+              <a href="/scripts">scriptId</a> (optional), baseAnnotationId (optional)
+            </Typography.Text>
+          </Typography.Paragraph>
           <Form onFinish={handleSubmit} layout="vertical" form={form}>
             <FormItem
               name="bulkText"
@@ -300,7 +246,7 @@ function TaskCreateBulkView() {
 
                     const tasks = parseText(value);
                     const invalidTaskIndices = getInvalidTaskIndices(tasks);
-                    return _.isString(value) && invalidTaskIndices.length === 0
+                    return isString(value) && invalidTaskIndices.length === 0
                       ? Promise.resolve()
                       : Promise.reject(
                           new Error(
@@ -314,17 +260,19 @@ function TaskCreateBulkView() {
               ]}
             >
               <TextArea
-                className="input-monospace"
                 placeholder="dataset, datasetId, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                 autoSize={{
                   minRows: 6,
                 }}
-                style={{
-                  fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                styles={{
+                  textarea: {
+                    fontFamily:
+                      'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
+                  },
                 }}
               />
             </FormItem>
-            <Divider>Alternatively Upload a CSV File</Divider>
+            <Divider>Alternatively upload a CSV file</Divider>
             <FormItem
               hasFeedback
               name="csvFile"
@@ -335,6 +283,17 @@ function TaskCreateBulkView() {
                 accept=".csv,.txt"
                 name="csvFile"
                 beforeUpload={(file) => {
+                  const isValidType =
+                    file.type === "text/csv" ||
+                    file.type === "text/plain" ||
+                    /\.(csv|txt)$/i.test(file.name);
+
+                  if (!isValidType) {
+                    Toast.error("Only CSV and TXT files are accepted");
+                    // @ts-expect-error
+                    file.status = "error";
+                  }
+
                   form.setFieldsValue({
                     csvFile: [file],
                   });
@@ -344,7 +303,7 @@ function TaskCreateBulkView() {
                 <p className="ant-upload-drag-icon">
                   <InboxOutlined />
                 </p>
-                <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                <p className="ant-upload-text">Click or drag file to this area to upload</p>
                 <p>
                   Upload a CSV file with your task specification in the same format as mentioned
                   above.
@@ -357,7 +316,7 @@ function TaskCreateBulkView() {
               ) : null}
 
               <Button type="primary" htmlType="submit">
-                Create Task
+                Create Tasks
               </Button>
             </FormItem>
           </Form>

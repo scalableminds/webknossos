@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { generateDiffMessage } from "dashboard/dataset/queries";
+import { describe, expect, it } from "vitest";
 
 describe("generateDiffMessage", () => {
   it("should produce a nice human-readable message (1)", () => {

@@ -1,12 +1,13 @@
 import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { getRandomColor } from "libs/utils";
 import window from "libs/window";
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
+import range from "lodash-es/range";
+import zip from "lodash-es/zip";
 import { call, put } from "typed-redux-saga";
-import type { APISegmentationLayer } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APISegmentationLayer } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { TypedArray, Vector3 } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -98,7 +99,9 @@ const NEIGHBOR_LOOKUP: Vector3[] = [
   [1, 0, 0],
 ];
 // neighborToIndex is a mapping from neighbor to neighbor index (e.g., neighbor [0, -1, 0] ==> idx=1)
-const neighborToIndex = new Map(_.zip(NEIGHBOR_LOOKUP, _.range(NEIGHBOR_LOOKUP.length)));
+const neighborToIndex = new Map(
+  zip(NEIGHBOR_LOOKUP, range(NEIGHBOR_LOOKUP.length)) as Array<[Vector3, number]>,
+);
 
 function getNeighborIdx(neighbor: Vector3): number {
   const neighborIdx = neighborToIndex.get(neighbor);
@@ -152,7 +155,7 @@ function _getNeighborsFromBitMask(bitMask: number): { ingoing: Vector3[]; outgoi
   return neighbors;
 }
 
-const getNeighborsFromBitMask = _.memoize(_getNeighborsFromBitMask);
+const getNeighborsFromBitMask = memoize(_getNeighborsFromBitMask);
 
 // Functions to add/remove edges which mutate the bitmask.
 function addOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: number) {
@@ -257,10 +260,8 @@ function* performMinCut(action: Action): Saga<void> {
         boundingBox: newBBox,
         name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
           ",",
-        )}), seedB=(${nodes[1].untransformedPosition.join(
-          ",",
-        )}), timestamp=${new Date().getTime()})`,
-        color: Utils.getRandomColor(),
+        )}), seedB=(${nodes[1].untransformedPosition.join(",")}), timestamp=${Date.now()})`,
+        color: getRandomColor(),
         isVisible: true,
       }),
     );
@@ -824,9 +825,9 @@ function labelDeletedEdges(
                 }
               }
 
-              // @ts-ignore
+              // @ts-expect-error
               if (window.visualizeRemovedVoxelsOnMinCut) {
-                // @ts-ignore
+                // @ts-expect-error
                 window.addVoxelMesh(position, targetMag);
               }
             }

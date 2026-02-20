@@ -3,10 +3,10 @@ import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { map3, sleep } from "libs/utils";
-import _ from "lodash";
+import range from "lodash-es/range";
 import ndarray, { type NdArray } from "ndarray";
 import { call, cancel, fork, put } from "typed-redux-saga";
-import type { APIDataset, AdditionalCoordinate } from "types/api_types";
+import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { OrthoView, TypedArrayWithoutBigInt, Vector3 } from "viewer/constants";
 import type {
@@ -124,7 +124,7 @@ function* getMask(
   // a.lo(x,y) => a[x:, y:]
   return [
     maskBoxInMag,
-    _.range(0, depth).map(
+    range(0, depth).map(
       (zOffset) =>
         ndarr.hi(ndarr.shape[0], ndarr.shape[1], zOffset + 1).lo(0, 0, zOffset) as NdArray<
           Uint8Array<ArrayBuffer>

@@ -1,6 +1,6 @@
+import { getDefaultOrganization } from "admin/api/organization";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
-import { getDefaultOrganization } from "admin/rest_api";
 import { Card, Col, Row, Spin } from "antd";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";

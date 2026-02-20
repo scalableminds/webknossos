@@ -9,26 +9,30 @@ import { Button, List, Spin } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { chunkIntoTimeWindows } from "libs/utils";
-import _ from "lodash";
+import flattenDepth from "lodash-es/flattenDepth";
+import groupBy from "lodash-es/groupBy";
+import isEqual from "lodash-es/isEqual";
+import isString from "lodash-es/isString";
+import mapValues from "lodash-es/mapValues";
+import max from "lodash-es/max";
+import memoize from "lodash-es/memoize";
 import { useEffect, useState } from "react";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { getCreationTimestamp } from "viewer/model/accessors/annotation_accessor";
-import { setAnnotationAllowUpdateAction } from "viewer/model/actions/annotation_actions";
+import { setIsUpdatingAnnotationCurrentlyAllowedAction } from "viewer/model/actions/annotation_actions";
 import {
   pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
 import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
 import {
-  type ServerUpdateAction,
   revertToVersion,
+  type ServerUpdateAction,
   serverCreateTracing,
 } from "viewer/model/sagas/volume/update_actions";
-import { Model } from "viewer/singletons";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { StoreAnnotation } from "viewer/store";
 import Store from "viewer/store";
 import VersionEntryGroup from "viewer/view/version_entry_group";
@@ -51,7 +55,8 @@ type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch
 const VERSION_LIST_PLACEHOLDER = {
   emptyText: "No versions created yet.",
 };
-export async function previewVersion(version?: number) {
+
+async function previewVersion(version?: number) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
   const { annotationId, tracingStore, annotationLayers } = state.annotation;
@@ -59,7 +64,7 @@ export async function previewVersion(version?: number) {
   const annotationProto = await getAnnotationProto(tracingStore.url, annotationId, version);
 
   if (
-    !_.isEqual(
+    !isEqual(
       annotationProto.annotationLayers.map((l) => l.tracingId),
       annotationLayers.map((l) => l.tracingId),
     )
@@ -74,7 +79,7 @@ export async function previewVersion(version?: number) {
   }
 
   await api.tracing.restart(null, annotationId, controlMode, version, false, false);
-  Store.dispatch(setAnnotationAllowUpdateAction(false));
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   const segmentationLayersToReload = [];
 
   segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
@@ -91,12 +96,13 @@ async function handleRestoreVersion(
   version: number,
 ) {
   if (props.initialAllowUpdate) {
-    const newestVersion = _.max(versions.map((batch) => batch.version)) || 0;
+    const newestVersion = max(versions.map((batch) => batch.version)) || 0;
     Store.dispatch(setVersionNumberAction(newestVersion));
     Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
     await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(true));
+    const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
   } else {
     const { annotationType, annotationId, volumes } = Store.getState().annotation;
     const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
@@ -108,23 +114,23 @@ export const handleCloseRestoreView = async () => {
   // This will load the newest version of both skeleton and volume tracings
   await previewVersion();
   Store.dispatch(setVersionRestoreVisibilityAction(false));
-  const { initialAllowUpdate } = Store.getState().annotation.restrictions;
-  Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
+  const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
+  Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));
 };
 
-const getGroupedAndChunkedVersions = _.memoize(
+const getGroupedAndChunkedVersions = memoize(
   (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
     // This function first groups the versions by day, where the key is the output of the moment calendar function.
     // Then, the versions for each day are chunked into x-minute intervals,
     // so that the actions of one chunk are all from within one x-minute interval.
-    const groupedVersions = _.groupBy(versions, (batch) =>
-      dayjs.utc(_.max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
+    const groupedVersions = groupBy(versions, (batch) =>
+      dayjs.utc(max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
     );
 
     const getBatchTime = (batch: APIUpdateActionBatch): number =>
-      _.max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
+      max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
 
-    return _.mapValues(groupedVersions, (versionsOfOneDay) =>
+    return mapValues(groupedVersions, (versionsOfOneDay) =>
       chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
     );
   },
@@ -194,9 +200,7 @@ async function getUpdateActionLogPage(
 function VersionList() {
   const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const initialAllowUpdate = useWkSelector(
-    (state) => state.annotation.restrictions.initialAllowUpdate,
-  );
+  const initialAllowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
   const newestVersion = useFetch(
     async () => {
       if (annotationId === "") {
@@ -259,7 +263,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
       queryKey: queryKey,
     });
     // Will be set back by handleRestoreVersion or handleCloseRestoreView
-    Store.dispatch(setAnnotationAllowUpdateAction(false));
+    Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   });
 
   const {
@@ -281,9 +285,9 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     getNextPageParam: (lastPage) => lastPage.nextPage,
     getPreviousPageParam: (lastPage) => lastPage.previousPage,
   });
-  const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
+  const flattenedVersions = versions?.pages.flatMap((page) => page.data) || [];
   const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
-  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = _.flattenDepth(
+  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = flattenDepth(
     Object.entries(groupedAndChunkedVersions) as any,
     2,
   );
@@ -343,7 +347,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
           loading={isFetching || isChangingVersion}
           locale={VERSION_LIST_PLACEHOLDER}
           renderItem={(batchesOrDateString) =>
-            _.isString(batchesOrDateString) ? (
+            isString(batchesOrDateString) ? (
               <List.Item className="version-section">
                 <div
                   style={{

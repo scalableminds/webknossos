@@ -1,6 +1,6 @@
 import { Card, Col, Row } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
+import { getUrlParamValue, hasUrlParam } from "libs/utils";
 import window from "libs/window";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "./login_form";
@@ -19,7 +19,7 @@ function LoginView({ redirect }: Props) {
   }
 
   const onLoggedIn = () => {
-    if (!Utils.hasUrlParam("redirectPage")) {
+    if (!hasUrlParam("redirectPage")) {
       if (redirect) {
         // Use "redirect" prop for internal redirects, e.g. for SecuredRoutes
         navigate(redirect);
@@ -29,7 +29,7 @@ function LoginView({ redirect }: Props) {
     } else {
       // Use "redirectPage" URL parameter to cause a full page reload and redirecting to external sites
       // e.g. Discuss
-      window.location.replace(Utils.getUrlParamValue("redirectPage"));
+      window.location.replace(getUrlParamValue("redirectPage"));
     }
   };
 

@@ -1,8 +1,8 @@
 import {
   ArrowsAltOutlined,
   BackwardOutlined,
-  CodeSandboxOutlined,
   CodepenOutlined,
+  CodeSandboxOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -15,12 +15,13 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, List } from "antd";
-import _ from "lodash";
-import * as React from "react";
-
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
 import { useWkSelector } from "libs/react_hooks";
+import groupBy from "lodash-es/groupBy";
+import max from "lodash-es/max";
+import type React from "react";
+import { Fragment } from "react";
 import { formatUserName, getContributorById } from "viewer/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import type {
@@ -50,6 +51,7 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateActiveNodeUpdateAction,
   UpdateActiveSegmentIdUpdateAction,
+  UpdateActiveTreeUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -57,14 +59,14 @@ import type {
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
   UpdateNodeUpdateAction,
-  UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
   UpdateSegmentGroupsUpdateAction,
+  UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
-  UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeGroupsExpandedStateAction,
+  UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
   UpdateUserBoundingBoxInSkeletonTracingAction,
@@ -74,6 +76,7 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+
 type Description = {
   description: string;
   icon: React.ReactNode;
@@ -433,6 +436,13 @@ const descriptionFns: Record<
       icon: <EditOutlined />,
     };
   },
+  // Should never be sent to the backend as the backend does not understand this action. Is filtered out before sending to backend.
+  updateActiveTree: (_action: AsServerAction<UpdateActiveTreeUpdateAction>): Description => {
+    return {
+      description: "",
+      icon: <div />,
+    };
+  },
   updateCamera: (_action: AsServerAction<UpdateCameraAnnotationAction>): Description => {
     return {
       description: "Adjusted the camera",
@@ -513,7 +523,7 @@ function getDescriptionForBatch(
   actions: Array<ServerUpdateAction>,
   annotation: StoreAnnotation,
 ): Description {
-  const groupedUpdateActions = _.groupBy(actions, "name");
+  const groupedUpdateActions = groupBy(actions, "name");
 
   const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
 
@@ -590,7 +600,7 @@ export default function VersionEntry({
   onRestoreVersion,
   onPreviewVersion,
 }: Props) {
-  const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
+  const lastTimestamp = max(actions.map((action) => action.value.actionTimestamp));
   const contributors = useWkSelector((state) => state.annotation.contributors);
   const activeUser = useWkSelector((state) => state.activeUser);
   const owner = useWkSelector((state) => state.annotation.owner);
@@ -627,16 +637,16 @@ export default function VersionEntry({
     >
       <List.Item.Meta
         title={
-          <React.Fragment>
+          <Fragment>
             Version {version} (
             {lastTimestamp != null && <FormattedDate timestamp={lastTimestamp} format="HH:mm" />})
-          </React.Fragment>
+          </Fragment>
         }
         /* @ts-expect-error ts-migrate(2322) FIXME: Type '{ title: Element; onClick: () => Promise<voi... Remove this comment to see the full error message */
         onClick={() => onPreviewVersion(version)}
         avatar={<Avatar size="small" icon={icon} />}
         description={
-          <React.Fragment>
+          <Fragment>
             {isNewest ? (
               <>
                 <i>Newest version</i> <br />
@@ -644,7 +654,7 @@ export default function VersionEntry({
             ) : null}
             {description}
             <div>Authored by {authorName}</div>
-          </React.Fragment>
+          </Fragment>
         }
       />
     </List.Item>

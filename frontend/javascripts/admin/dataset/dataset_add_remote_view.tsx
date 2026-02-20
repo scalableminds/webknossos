@@ -1,6 +1,6 @@
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
-import { Button, Col, Divider, Form, type FormInstance, List, Modal, Row } from "antd";
+import { Button, Col, Divider, Flex, Form, type FormInstance, List, Modal, Row } from "antd";
 import BrainSpinner from "components/brain_spinner";
 import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings_context";
 import DatasetSettingsDataTab from "dashboard/dataset/dataset_settings_data_tab";
@@ -11,7 +11,7 @@ import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components"
 import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { computeHash } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -89,7 +89,7 @@ function DatasetAddRemoteView(props: Props) {
     if (url === "") return "";
     let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
     const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
-    const urlHash = Utils.computeHash(url);
+    const urlHash = computeHash(url);
     return defaultName + "-" + urlHash;
   };
 
@@ -262,11 +262,11 @@ function DatasetAddRemoteView(props: Props) {
           {!hideDatasetUI && (
             <>
               <Divider />
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <Flex justify="center" style={{ marginBottom: 24 }}>
                 <Button type="link" onClick={() => setShowAddLayerModal(true)}>
                   Add Layer
                 </Button>
-              </div>
+              </Flex>
               <Row gutter={8}>
                 <Col span={12} />
                 <Col span={6}>

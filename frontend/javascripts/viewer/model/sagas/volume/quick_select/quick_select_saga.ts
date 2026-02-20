@@ -1,15 +1,13 @@
-import ErrorHandling from "libs/error_handling";
-
 import features from "features";
+import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { call, put, takeEvery } from "typed-redux-saga";
+import getSceneController from "viewer/controller/scene_controller_provider";
 import type {
   ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect-generators";
-
-import getSceneController from "viewer/controller/scene_controller_provider";
 import type { VolumeTracing } from "viewer/store";
 import { getActiveSegmentationTracing } from "../../../accessors/volumetracing_accessor";
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../../../actions/ui_actions";

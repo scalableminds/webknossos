@@ -8,7 +8,6 @@ import {
   hsvToRgb,
   jsColormapJet,
   jsGetElementOfPermutation,
-  jsRgb2hsv,
 } from "viewer/shaders/utils.glsl";
 import { getUnrotatedWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -310,16 +309,6 @@ export const jsConvertCellIdToRGBA = (
 
   return [...rgb, alpha];
 };
-// Output is in [0,1] for H, S, L, and A
-export const jsConvertCellIdToHSLA = (
-  id: number,
-  customColors?: Array<Vector3> | null | undefined,
-  alpha: number = 1,
-): Vector4 => {
-  const [r, g, b] = jsConvertCellIdToRGBA(id, customColors, alpha);
-  const hue = (1 / 360) * jsRgb2hsv([r, g, b])[0];
-  return [hue, 1, 0.5, alpha];
-};
 
 export const getBrushOverlay: ShaderModule = {
   code: `
@@ -348,16 +337,16 @@ export const getBrushOverlay: ShaderModule = {
   `,
 };
 
-export const getCrossHairOverlay: ShaderModule = {
+export const getProofreadingCrossHairOverlay: ShaderModule = {
   code: `
-    vec4 getCrossHairOverlay(vec3 worldCoordUVW) {
+    vec4 getProofreadingCrossHairOverlay(vec3 worldCoordUVW) {
       // An active segment position of -1, -1, -1 indicates that the position is not available
-      if (activeSegmentPosition == vec3(-1.0)) {
+      if (proofreadingMarkerPosition == vec3(-1.0)) {
         return vec4(0.0);
       }
 
       vec3 flooredGlobalPosUVW = transDim(floor(worldCoordUVW));
-      vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
+      vec3 activeSegmentPosUVW = transDim(proofreadingMarkerPosition);
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in
       // each viewport
@@ -393,7 +382,7 @@ export const getSegmentId: ShaderModule = {
   requirements: [convertCellIdToRGB, attemptMappingLookUp, getMaybeFilteredColorOrFallback],
   code: `
 
-  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+  <% each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
       vec3 layerCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(layerCoordUVW, <%= segmentationName %>_bboxMin, <%= segmentationName %>_bboxMax)) {

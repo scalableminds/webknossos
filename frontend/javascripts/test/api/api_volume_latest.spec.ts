@@ -1,15 +1,15 @@
+import window from "libs/window";
 import {
   createBucketResponseFunction,
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import window from "libs/window";
-import {
-  tracing as TRACING,
-  annotation as ANNOTATION,
-} from "../fixtures/volumetracing_server_objects";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  annotation as ANNOTATION,
+  tracing as TRACING,
+} from "../fixtures/volumetracing_server_objects";
 
 describe("API Volume", () => {
   beforeEach<WebknossosTestContext>(async (context) => {

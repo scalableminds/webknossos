@@ -1,7 +1,7 @@
 import LoginView from "admin/auth/login_view";
 import {
-  type PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
+  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { getUnversionedAnnotationInformation } from "admin/rest_api";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
@@ -12,7 +12,7 @@ import { memo, useCallback, useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
-export type SecuredRouteProps = {
+type SecuredRouteProps = {
   children: React.ReactNode;
   requiredPricingPlan?: PricingPlanEnum;
   requiresAdminOrManagerRole?: boolean;

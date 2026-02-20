@@ -1,12 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { map3 } from "libs/utils";
+import testRotations from "test/fixtures/test_rotations";
+import { Euler, MathUtils, Quaternion } from "three";
+import type { Vector3 } from "viewer/constants";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
 } from "viewer/model/helpers/rotation_helpers";
-import type { Vector3 } from "viewer/constants";
-import { MathUtils, Quaternion, Euler } from "three";
-import { map3 } from "libs/utils";
-import testRotations from "test/fixtures/test_rotations";
+import { describe, expect, it } from "vitest";
 
 describe("Rotation Helper Functions", () => {
   it("should result in an equal rotation after transforming into flycam reducer rotation space and back.", () => {

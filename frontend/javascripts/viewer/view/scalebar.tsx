@@ -3,7 +3,7 @@ import { formatNumberToLength } from "libs/format_utils";
 import { connect } from "react-redux";
 import type { APIDataset } from "types/api_types";
 import type { OrthoView } from "viewer/constants";
-import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "viewer/constants";
+import constants, { LongUnitToShortUnitMap, OrthoViews, Unicode } from "viewer/constants";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { getTDViewZoom, getViewportExtents } from "viewer/model/accessors/view_mode_accessor";
 import { getBaseVoxelInUnit } from "viewer/model/scaleinfo";

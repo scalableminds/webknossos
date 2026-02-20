@@ -52,7 +52,7 @@ class UpdatableTexture extends Texture {
     const imageData = { width, height, data: new Uint32Array(0) };
 
     super(
-      // @ts-ignore
+      // @ts-expect-error
       imageData,
       mapping,
       wrapS,
@@ -86,13 +86,13 @@ class UpdatableTexture extends Texture {
     if (originalTexSubImage2D == null) {
       // See explanation at declaration of originalTexSubImage2D.
       originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
-      // @ts-ignore
+      // @ts-expect-error
       this.gl.texSubImage2D = (...args) => {
-        // @ts-ignore
+        // @ts-expect-error
         if (args.length >= 7 && args[6]?.data?.length === 0) {
           return;
         }
-        // @ts-ignore
+        // @ts-expect-error
         return originalTexSubImage2D(...args);
       };
     }

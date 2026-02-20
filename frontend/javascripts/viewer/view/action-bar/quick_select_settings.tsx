@@ -16,9 +16,9 @@ import {
 import ButtonComponent from "../components/button_component";
 import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 
-// The maximum depth of 16 also needs to be adapted in the back-end
+// The maximum depth of 50 also needs to be adapted in the back-end
 // (at the time of writing, in segmentAnythingMask in DatasetController.scala).
-const MAX_DEPTH_FOR_SAM = 16;
+const MAX_DEPTH_FOR_SAM = 50;
 
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
@@ -33,7 +33,7 @@ export function QuickSelectControls() {
   return isQuickSelectHeuristic ? <HeuristicQuickSelectControls /> : <AiQuickSelectControls />;
 }
 
-export function AiQuickSelectControls() {
+function AiQuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
 
   const dispatch = useDispatch();
@@ -82,7 +82,7 @@ export function AiQuickSelectControls() {
     </div>
   );
 }
-export function HeuristicQuickSelectControls() {
+function HeuristicQuickSelectControls() {
   const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
   const isQuickSelectActive = useWkSelector(
     (state) => state.uiInformation.quickSelectState === "active",

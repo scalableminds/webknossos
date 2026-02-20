@@ -6,18 +6,30 @@ import {
   InfoCircleOutlined,
   SearchOutlined,
   ShrinkOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
 } from "@ant-design/icons";
-import { Tree as AntdTree, Dropdown, type GetRef, Space, Tooltip, type TreeProps } from "antd";
+import {
+  Tree as AntdTree,
+  Divider,
+  Dropdown,
+  type GetRef,
+  type MenuProps,
+  Space,
+  Tooltip,
+  type TreeProps,
+} from "antd";
 import type { EventDataNode } from "antd/es/tree";
 import useLifecycle from "beautiful-react-hooks/useLifecycle";
 import { InputKeyboard } from "libs/input";
-import { useEffectOnlyOnce } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
-import _ from "lodash";
+import flatMap from "lodash-es/flatMap";
+import isEmpty from "lodash-es/isEmpty";
+import uniq from "lodash-es/uniq";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import type { MenuProps } from "rc-menu";
+
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -36,7 +48,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import { Comment, commentListId } from "viewer/view/right-border-tabs/comment_tab/comment";
+import Comment, { commentListId } from "viewer/view/right-border-tabs/comment_tab/comment";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 
@@ -111,18 +123,18 @@ function CommentTabView(props: Props) {
   const [isVisibleInDom, setIsVisibleInDom] = useState(true);
 
   const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
-  const nextCommentRef = useRef<(arg0?: boolean) => void>();
-  const previousCommentRef = useRef<() => void>();
+  const nextCommentRef = useRef<(arg0?: boolean) => void>(null);
+  const previousCommentRef = useRef<() => void>(null);
 
   const dispatch = useDispatch();
 
-  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const keyboardDelay = useWkSelector((state) => state.userConfiguration.keyboardDelay);
 
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
-  const activeComment = useWkSelector((_state) => getActiveComment());
+  const activeComment = getActiveComment();
 
   useEffectOnlyOnce(() => {
     // expand all trees by default
@@ -261,7 +273,7 @@ function CommentTabView(props: Props) {
 
   function toggleExpandAllTrees() {
     setExpandedTreeIds((prevState) => {
-      const shouldBeCollapsed = !_.isEmpty(prevState);
+      const shouldBeCollapsed = !isEmpty(prevState);
       return shouldBeCollapsed ? [] : getData().map((tree) => tree.treeId.toString());
     });
   }
@@ -322,13 +334,6 @@ function CommentTabView(props: Props) {
         label="Comment"
       />
     );
-  }
-
-  function renderSortIcon() {
-    const sortAsc = isSortedAscending;
-    const sortNumeric = sortBy === SortByEnum.ID;
-    const iconClass = `fas fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "down" : "up"}`;
-    return <i className={iconClass} />;
   }
 
   function getSortDropdown(): MenuProps {
@@ -402,7 +407,7 @@ function CommentTabView(props: Props) {
               expandedKeys={expandedTreeIds}
               selectedKeys={highlightedNodeIds}
               onExpand={onExpand}
-              // @ts-ignore
+              // @ts-expect-error
               onSelect={onSelect}
               switcherIcon={<DownOutlined />}
               height={height}
@@ -450,28 +455,36 @@ function CommentTabView(props: Props) {
           return (
             <React.Fragment>
               {renderMarkdownModal()}
-              <Space.Compact className="compact-items compact-icons">
+              <Space>
                 <AdvancedSearchPopover
                   onSelect={(comment) => {
                     setActiveNode(comment.nodeId);
 
                     const tree = getData().find((tree) => tree.nodes.has(comment.nodeId));
                     if (tree) {
-                      setExpandedTreeIds(_.uniq([...expandedTreeIds, tree.treeId.toString()]));
+                      setExpandedTreeIds(uniq([...expandedTreeIds, tree.treeId.toString()]));
                     }
                   }}
-                  data={_.flatMap(getData(), (tree) =>
+                  data={flatMap(getData(), (tree) =>
                     tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
                   )}
                   searchKey="content"
+                  provideShortcut
                   targetId={commentListId}
                 >
-                  <ButtonComponent icon={<SearchOutlined />} title="Search through comments" />
+                  <ButtonComponent
+                    icon={<SearchOutlined />}
+                    title="Open search via CTRL + Shift + F"
+                    variant="text"
+                    color="default"
+                  />
                 </AdvancedSearchPopover>
                 <ButtonComponent
                   title="Jump to previous comment"
                   onClick={previousComment}
                   icon={<ArrowLeftOutlined />}
+                  variant="text"
+                  color="default"
                 />
                 <InputComponent
                   value={activeCommentContent}
@@ -495,27 +508,39 @@ function CommentTabView(props: Props) {
                   }
                   type={isMultilineComment ? "primary" : "default"}
                   icon={<EditOutlined />}
+                  variant="text"
+                  color="default"
                 />
                 <ButtonComponent
                   title="Jump to next comment"
                   onClick={() => nextComment()}
                   icon={<ArrowRightOutlined />}
+                  variant="text"
+                  color="default"
                 />
                 <Dropdown menu={getSortDropdown()} trigger={["click"]}>
-                  <ButtonComponent title="Sort" onClick={toggleSortingDirection}>
-                    {renderSortIcon()}
-                  </ButtonComponent>
+                  <ButtonComponent
+                    title="Sort"
+                    onClick={toggleSortingDirection}
+                    icon={
+                      isSortedAscending ? <SortAscendingOutlined /> : <SortDescendingOutlined />
+                    }
+                    variant="text"
+                    color="default"
+                  />
                 </Dropdown>
                 <ButtonComponent
                   onClick={toggleExpandAllTrees}
                   icon={<ShrinkOutlined />}
                   title="Collapse or expand groups"
+                  variant="text"
+                  color="default"
                 />
-              </Space.Compact>
+              </Space>
+              <Divider size="small" />
               <div
                 style={{
                   flex: "1 1 auto",
-                  marginTop: 20,
                   listStyle: "none",
                 }}
               >

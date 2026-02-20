@@ -1,11 +1,12 @@
+import { CloseCircleOutlined } from "@ant-design/icons";
 import {
   getSynapseDestinations,
   getSynapsePositions,
   getSynapseSources,
-  getSynapseTypes,
   getSynapsesOfAgglomerates,
+  getSynapseTypes,
 } from "admin/rest_api";
-import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
+import { Alert, Divider, Empty, Space, Tooltip, type TreeProps } from "antd";
 import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
@@ -13,8 +14,7 @@ import { diffArrays, map3, safeZipObject, unique } from "libs/utils";
 import React from "react";
 import { connect } from "react-redux";
 import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_types";
-import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import Constants, { MappingStatusEnum } from "viewer/constants";
+import Constants, { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import {
   getMappingInfo,
@@ -49,6 +49,7 @@ import SynapseTree, {
   convertConnectomeToTreeData,
 } from "viewer/view/right-border-tabs/connectome_tab/synapse_tree";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+
 const connectomeTabId = "connectome-view";
 type StateProps = {
   dataset: APIDataset;
@@ -650,13 +651,13 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   handleChangeActiveSegment = (evt: React.SyntheticEvent) => {
-    // @ts-ignore
+    // @ts-expect-error
     const agglomerateIds = evt.target.value
       .split(",")
       .map((part: string) => Number.parseInt(part, 10))
       .filter((id: number) => !Number.isNaN(id));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
-    // @ts-ignore
+    // @ts-expect-error
     evt.target.blur();
   };
 
@@ -669,7 +670,7 @@ class ConnectomeView extends React.Component<Props, State> {
   handleCheck: TreeProps<TreeNode>["onCheck"] = (checked, { node, checked: isChecked }) => {
     // The trailing ; is important to avoid matching 1234 if the id is 12
     const checkedNodeKeyPrefix = `segment;${node.data.id};`;
-    // @ts-ignore antd's <Tree> component uses objects instead of simple string if "checkable" prop is present
+    // @ts-expect-error antd's <Tree> component uses objects instead of simple string if "checkable" prop is present
     const checkedKeys = checked.checked as string[];
 
     if (isChecked) {
@@ -717,7 +718,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const { segmentationLayer, currentConnectomeFile } = this.props;
     if (segmentationLayer == null || currentConnectomeFile == null) return;
     Store.dispatch(
-      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
+      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", false, {
         showLoadingIndicator: true,
       }),
     );
@@ -727,7 +728,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const isConnectomeMappingActive = this.isConnectomeMappingActive();
     return isConnectomeMappingActive ? null : (
       <Alert
-        message={
+        title={
           <>
             The mapping this connectome was computed for is not active.{" "}
             <a href="#" onClick={() => this.activateConnectomeMapping()}>
@@ -753,12 +754,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const disabled = currentConnectomeFile == null;
     return (
       <>
-        <Space.Compact
-          className="compact-icons"
-          style={{
-            marginBottom: 10,
-          }}
-        >
+        <Space>
           <Tooltip title="Show Synaptic Connections for Segment ID(s)">
             <InputComponent
               value={activeAgglomerateIdString}
@@ -770,9 +766,14 @@ class ConnectomeView extends React.Component<Props, State> {
               disabled={disabled}
             />
           </Tooltip>
-          <ButtonComponent onClick={() => this.reset()} disabled={disabled}>
-            Reset
-          </ButtonComponent>
+          <ButtonComponent
+            onClick={() => this.reset()}
+            disabled={disabled}
+            icon={<CloseCircleOutlined />}
+            title="Reset"
+            variant="text"
+            color="default"
+          />
           <ConnectomeFilters
             availableSynapseTypes={availableSynapseTypes}
             connectomeData={connectomeData}
@@ -780,7 +781,8 @@ class ConnectomeView extends React.Component<Props, State> {
             disabled={disabled}
           />
           <ConnectomeSettings segmentationLayer={segmentationLayer} />
-        </Space.Compact>
+        </Space>
+        <Divider size="small" />
         {this.getConnectomeMappingActivationAlert()}
       </>
     );

@@ -1,18 +1,18 @@
-import _ from "lodash";
+import range from "lodash-es/range";
 import { createBucketResponseFunction, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import Store from "viewer/store";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import type { Vector3 } from "viewer/constants";
 import { OrthoViews } from "viewer/constants";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
-import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import {
-  setActiveCellAction,
-  addToLayerAction,
-  startEditingAction,
+  addToContourListAction,
   finishEditingAction,
+  setActiveCellAction,
+  startEditingAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Vector3 } from "viewer/constants";
+import Store from "viewer/store";
 import { vi } from "vitest";
 
 export async function testLabelingManyBuckets(
@@ -44,12 +44,12 @@ export async function testLabelingManyBuckets(
   await api.data.reloadAllBuckets();
 
   // Prepare to paint into the center of 50 buckets.
-  const paintPositions1 = _.range(0, 50).map(
+  const paintPositions1 = range(0, 50).map(
     (idx) => [32 * idx + 16, 32 * idx + 16, 32 * idx + 16] as Vector3,
   );
 
   // Prepare to paint into the center of 50 other buckets.
-  const paintPositions2 = _.range(50, 100).map(
+  const paintPositions2 = range(50, 100).map(
     (idx) => [32 * idx + 16, 32 * idx + 16, 32 * idx + 16] as Vector3,
   );
 
@@ -60,7 +60,7 @@ export async function testLabelingManyBuckets(
   for (const paintPosition of paintPositions1) {
     Store.dispatch(setPositionAction(paintPosition));
     Store.dispatch(startEditingAction(paintPosition, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintPosition));
+    Store.dispatch(addToContourListAction(paintPosition));
     Store.dispatch(finishEditingAction());
   }
 
@@ -73,7 +73,7 @@ export async function testLabelingManyBuckets(
   for (const paintPosition of paintPositions2) {
     Store.dispatch(setPositionAction(paintPosition));
     Store.dispatch(startEditingAction(paintPosition, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintPosition));
+    Store.dispatch(addToContourListAction(paintPosition));
     Store.dispatch(finishEditingAction());
   }
 

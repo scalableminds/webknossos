@@ -1,44 +1,54 @@
 import {
   DatabaseOutlined,
   FieldTimeOutlined,
+  RobotOutlined,
   RocketOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
 import {
   sendExtendPricingPlanEmail,
   sendOrderCreditsEmail,
+  sendUpgradeAiAddonEmail,
   sendUpgradePricingPlanEmail,
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
-} from "admin/rest_api";
-import { Button, Col, Divider, InputNumber, Modal, Row } from "antd";
+} from "admin/api/organization";
+import { Button, Col, Divider, InputNumber, Modal, Row, Typography } from "antd";
+import type { GetRef } from "antd/lib";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
-import features from "features";
-import { formatCurrency } from "libs/format_utils";
-
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { APIOrganization } from "types/api_types";
 import { PowerPlanUpgradeCard, TeamPlanUpgradeCard } from "./organization_cards";
-import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
-import { PricingPlanEnum } from "./pricing_plan_utils";
+import {
+  aiAddonFeatures,
+  PricingPlanEnum,
+  powerPlanFeatures,
+  teamPlanFeatures,
+} from "./pricing_plan_utils";
 
 const ModalInformationFooter = (
   <>
     <Divider style={{ marginTop: 40 }} />
-    <p style={{ color: "#aaa", fontSize: 12 }}>
-      Requesting an upgrade to your organization&apos;s WEBKNOSSOS plan will send an email to the
-      WEBKNOSSOS sales team. We typically respond within one business day. See our{" "}
-      <a href="https://webknossos.org/faq">FAQ</a> for more information.
+    <p>
+      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        Requesting an upgrade to your organization&apos;s WEBKNOSSOS plan will send an email to the
+        WEBKNOSSOS sales team. We typically respond within one business day. See our{" "}
+        <a href="https://webknossos.org/faq">FAQ</a> for more information. Compare all plans at{" "}
+        <a href="https://webknossos.org/pricing" target="_blank" rel="noreferrer">
+          webknossos.org/pricing
+        </a>
+        .
+      </Typography.Text>
     </p>
   </>
 );
 
-export function extendPricingPlan(organization: APIOrganization) {
+function extendPricingPlan(organization: APIOrganization) {
   const extendedDate = dayjs(organization.paidUntil).add(1, "year");
 
   Modal.confirm({
@@ -71,16 +81,16 @@ export function extendPricingPlan(organization: APIOrganization) {
   });
 }
 
-export function upgradeUserQuota() {
+function upgradeUserQuota() {
   renderIndependently((destroyCallback) => <UpgradeUserQuotaModal destroy={destroyCallback} />);
 }
 
 function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
-  const userInputRef = useRef<HTMLInputElement | null>(null);
+  const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
 
   const handleUserUpgrade = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       await sendUpgradePricingPlanUserEmail(requestedUsers);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -116,15 +126,15 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
   );
 }
 
-export function upgradeStorageQuota() {
+function upgradeStorageQuota() {
   renderIndependently((destroyCallback) => <UpgradeStorageQuotaModal destroy={destroyCallback} />);
 }
 function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
-  const storageInputRef = useRef<HTMLInputElement | null>(null);
+  const storageInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
 
   const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
-      const requestedStorage = Number.parseInt(storageInputRef.current.value);
+      const requestedStorage = Number.parseInt(storageInputRef.current.value, 10);
       await sendUpgradePricingPlanStorageEmail(requestedStorage);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -155,6 +165,53 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
         <div>
           <InputNumber min={1} defaultValue={1} ref={storageInputRef} />
         </div>
+        {ModalInformationFooter}
+      </div>
+    </Modal>
+  );
+}
+
+export function requestAiPlanUpgrade() {
+  renderIndependently((destroyCallback) => <UpgradeAiPlanModal destroy={destroyCallback} />);
+}
+
+function UpgradeAiPlanModal({ destroy }: { destroy: () => void }) {
+  const handleSubmit = async () => {
+    try {
+      await sendUpgradeAiAddonEmail();
+      Toast.success(messages["organization.plan.upgrage_request_sent"]);
+    } catch (error) {
+      Toast.error("Could not request the AI add-on.");
+      console.error(error);
+      return;
+    }
+
+    destroy();
+  };
+
+  return (
+    <Modal
+      title={
+        <>
+          <RobotOutlined style={{ color: "var(--ant-color-primary)" }} /> AI Add-on
+        </>
+      }
+      okText="Buy AI Add-on"
+      onOk={handleSubmit}
+      onCancel={destroy}
+      width={800}
+      open
+    >
+      <div className="drawing-upgrade-ai-addon">
+        <Typography.Paragraph>
+          Unlock AI model training for your organization with the AI Add-on.
+        </Typography.Paragraph>
+        <Typography.Text>Upgrade Highlights include:</Typography.Text>
+        <ul>
+          {aiAddonFeatures.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
         {ModalInformationFooter}
       </div>
     </Modal>
@@ -257,7 +314,7 @@ function upgradePricingPlan(
   });
 }
 
-export function UpgradePricingPlanModal({
+function UpgradePricingPlanModal({
   title,
   modalBody,
   destroy,
@@ -308,32 +365,19 @@ export function UpgradePricingPlanModal({
   );
 }
 
-export function orderWebknossosCredits() {
+function orderWebknossosCredits() {
   renderIndependently((destroyCallback) => (
     <OrderWebknossosCreditsModal destroy={destroyCallback} />
   ));
 }
 
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
-  const userInputRef = useRef<HTMLInputElement | null>(null);
-  const defaultCostPerCreditInEuro = formatCurrency(features().costPerCreditInEuro, "€");
-  const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "$");
-  const [creditCostAsString, setCreditCostsAsString] = useState<string>(
-    `${defaultCostPerCreditInEuro}€/${defaultCostPerCreditInDollar}$`,
-  );
+  const userInputRef = useRef<GetRef<typeof InputNumber> | null>(null);
   const [creditAmount, setCreditAmount] = useState<number | null>(1);
-  useEffect(() => {
-    if (creditAmount == null) {
-      return;
-    }
-    const totalCostInEuro = creditAmount * features().costPerCreditInEuro;
-    const totalCostInDollar = creditAmount * features().costPerCreditInDollar;
-    setCreditCostsAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
-  }, [creditAmount]);
 
   const handleOrderCredits = async () => {
     if (userInputRef.current) {
-      const requestedUsers = Number.parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value, 10);
       try {
         await sendOrderCreditsEmail(requestedUsers);
         Toast.success(messages["organization.credit_request_sent"]);
@@ -348,8 +392,8 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title="Buy more WEBKNOSSOS Credits"
-      okText={`Buy more WEBKNOSSOS Credits for ${creditCostAsString}`}
+      title="Order more WEBKNOSSOS Credits"
+      okText="Request an Email Quote"
       onOk={handleOrderCredits}
       onCancel={destroy}
       width={800}
@@ -357,8 +401,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
     >
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "5%" }}>
-          You can buy new WEBKNOSSOS credits to pay for premium jobs and services. Each credit costs{" "}
-          {defaultCostPerCreditInEuro} or {defaultCostPerCreditInDollar}.
+          You can order new WEBKNOSSOS credits for premium AI jobs and services.
         </p>
         <div>Amount of credits to order:</div>
         <div>
@@ -372,19 +415,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             value={creditAmount}
           />
         </div>
-        Total resulting cost: {creditCostAsString}
-        <>
-          <Divider style={{ marginTop: 40 }} />
-          <p style={{ color: "#aaa", fontSize: 12 }}>
-            Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
-            sales team. We typically respond within one business day to discuss payment options and
-            purchasing requirements. See our{" "}
-            <a href="https://webknossos.org/faq" target="_blank" rel="noreferrer">
-              FAQ
-            </a>{" "}
-            for more information.
-          </p>
-        </>
+        {ModalInformationFooter}
       </div>
     </Modal>
   );
@@ -395,5 +426,6 @@ export default {
   extendPricingPlan,
   upgradeUserQuota,
   upgradeStorageQuota,
+  requestAiPlanUpgrade,
   orderWebknossosCredits,
 };

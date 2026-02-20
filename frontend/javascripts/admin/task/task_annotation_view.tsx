@@ -2,8 +2,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
-  DownOutlined,
   DownloadOutlined,
+  DownOutlined,
   EyeOutlined,
   FolderOpenOutlined,
   PlayCircleOutlined,
@@ -124,7 +124,6 @@ function TaskAnnotationView({ task }: Props) {
           icon: <DownloadOutlined />,
           label: (
             <AsyncLink
-              href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotationAPI(annotation.id, "Task", isVolumeIncluded);

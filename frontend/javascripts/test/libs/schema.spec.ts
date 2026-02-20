@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
 import { getDefaultRecommendedConfiguration } from "admin/tasktype/recommended_configuration_view";
-import { validateUserSettingsJSON } from "types/validation";
 import { __setFeatures } from "features";
+import { validateUserSettingsJSON } from "types/validation";
+import { describe, expect, it } from "vitest";
 
 describe("Schema", () => {
   it("The default recommended task type settings should be valid according to the schema", async () => {

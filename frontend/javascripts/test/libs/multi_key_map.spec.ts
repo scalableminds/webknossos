@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import MultiKeyMap from "libs/multi_key_map";
+import { describe, expect, it } from "vitest";
 
 describe("MultiKeyMap", () => {
   it("basic set/get", () => {

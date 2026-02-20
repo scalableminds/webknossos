@@ -54,11 +54,11 @@ async function getClippingValues(
     ]);
     dataForAllViewPorts = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
     // If getViewportData returned a BigUint array, dataForAllViewPorts will be an BigUint array, too.
-    // @ts-ignore
+    // @ts-expect-error
     dataForAllViewPorts.set(cuboidXY);
-    // @ts-ignore
+    // @ts-expect-error
     dataForAllViewPorts.set(cuboidXZ, cuboidXY.length);
-    // @ts-ignore
+    // @ts-expect-error
     dataForAllViewPorts.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
   } catch (exception) {
     console.error("Could not clip histogram due to", exception);

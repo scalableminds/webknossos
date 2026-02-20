@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -7,13 +8,16 @@ import models.organization.{
   CreditState,
   CreditTransaction,
   CreditTransactionDAO,
+  CreditTransactionPublicWritesService,
   CreditTransactionService,
   CreditTransactionState,
   FreeCreditTransactionService,
-  OrganizationService
+  OrganizationDAO
 }
 import models.user.UserService
 import com.scalableminds.util.tools.Box.tryo
+import play.api.i18n.Messages
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import play.silhouette.api.Silhouette
 import security.WkEnv
@@ -21,10 +25,11 @@ import security.WkEnv
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CreditTransactionController @Inject()(organizationService: OrganizationService,
+class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
                                             creditTransactionService: CreditTransactionService,
                                             freeCreditTransactionService: FreeCreditTransactionService,
                                             creditTransactionDAO: CreditTransactionDAO,
+                                            creditTransactionPublicWritesService: CreditTransactionPublicWritesService,
                                             userService: UserService,
                                             sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
@@ -38,26 +43,28 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
                  expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
+      _ <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages("organization.notFound",
+                                                                                     organizationId)
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)).toFox ?~> s"moneySpent $moneySpent is not a valid decimal"
       _ <- Fox.fromBool(moneySpentInDecimal >= 0) ?~> "moneySpent must be a positive number"
       _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"
       commentNoOptional = comment.getOrElse(s"Adding $creditAmount credits for $moneySpentInDecimal $currency.")
-      _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString(_).toFox)
       _ <- Fox
         .runOptional(expirationDateOpt)(expirationDate => Fox.fromBool(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
+      milliCreditsAmount = creditAmount * 1000
       addCreditsTransaction = CreditTransaction(
         ObjectId.generate,
         organizationId,
         None,
         None,
-        BigDecimal(creditAmount),
+        milliCreditsAmount,
         commentNoOptional,
         CreditTransactionState.Complete,
         CreditState.AddCredits,
         expirationDateOpt
       )
-      _ <- creditTransactionService.insertCreditTransaction(addCreditsTransaction)
+      _ <- creditTransactionDAO.insertTransaction(addCreditsTransaction)
     } yield Ok
   }
 
@@ -67,7 +74,6 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
         _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually refund credits"
         transaction <- creditTransactionDAO.findOne(transactionId)
         _ <- Fox.fromBool(transaction._organization == organizationId) ?~> "Transaction is not for this organization"
-        _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
         _ <- creditTransactionDAO.refundTransaction(transaction._id)
       } yield Ok
     }
@@ -77,6 +83,15 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually revoke expired credits"
       _ <- freeCreditTransactionService.revokeExpiredCredits()
     } yield Ok
+  }
+
+  def list(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      isSuperUser <- userService.isSuperUser(request.identity._multiUser)
+      _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listCreditTransactions.onlyAdmin"
+      transactions <- creditTransactionDAO.findAll
+      transactionsJs <- Fox.serialCombined(transactions)(creditTransactionPublicWritesService.publicWrites)
+    } yield Ok(Json.toJson(transactionsJs))
   }
 
 }

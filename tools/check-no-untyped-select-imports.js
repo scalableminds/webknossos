@@ -10,6 +10,7 @@ const importSelectFromTypedReduxSaga =
 const WHITELIST = [
   // Our typed wrapper is allowed to import the not well typed variation of the select saga effect.
   "frontend/javascripts/viewer/model/sagas/effect-generators.ts",
+  "frontend/javascripts/test/sagas/proofreading/__snapshots__/",
 ];
 
 const files = glob.sync("frontend/javascripts/**/*.{ts,tsx}", { absolute: true });
@@ -17,7 +18,7 @@ const violations = [];
 
 for (const file of files) {
   const relPath = path.relative(ROOT, file);
-  if (WHITELIST.includes(relPath)) continue;
+  if (WHITELIST.includes(relPath) || WHITELIST.some((path) => relPath.startsWith(path))) continue;
 
   const content = fs.readFileSync(file, "utf8");
   if (importSelectFromTypedReduxSaga.test(content)) {

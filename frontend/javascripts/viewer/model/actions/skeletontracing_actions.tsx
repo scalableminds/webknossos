@@ -1,7 +1,10 @@
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import type { MetadataEntryProto, ServerSkeletonTracing } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  MetadataEntryProto,
+  ServerSkeletonTracing,
+} from "types/api_types";
 import type { TreeType, Vector3 } from "viewer/constants";
 import {
   type AddNewUserBoundingBox,
@@ -9,7 +12,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
-import type { ApplicableSkeletonUpdateAction } from "../sagas/volume/update_actions";
+import type { ApplicableSkeletonServerUpdateAction } from "../sagas/volume/update_actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -71,7 +74,7 @@ export type BatchableUpdateTreeAction =
   | DeleteTreeAction
   | DeleteTreesAction
   | SetTreeGroupsAction;
-export type BatchUpdateGroupsAndTreesAction = {
+type BatchUpdateGroupsAndTreesAction = {
   type: "BATCH_UPDATE_GROUPS_AND_TREES";
   payload: BatchableUpdateTreeAction[];
   meta: {
@@ -581,7 +584,7 @@ export const updateNavigationListAction = (list: Array<number>, activeIndex: num
   }) as const;
 
 export const applySkeletonUpdateActionsFromServerAction = (
-  actions: Array<ApplicableSkeletonUpdateAction>,
+  actions: Array<ApplicableSkeletonServerUpdateAction>,
 ) =>
   ({
     type: "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER",

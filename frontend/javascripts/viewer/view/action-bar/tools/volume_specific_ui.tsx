@@ -5,8 +5,10 @@ import {
   ScissorOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import {
   Badge,
+  Button,
   Dropdown,
   type MenuProps,
   Popconfirm,
@@ -15,11 +17,11 @@ import {
   type RadioChangeEvent,
   Space,
 } from "antd";
-import React, { useCallback, useEffect } from "react";
+import FastTooltip from "components/fast_tooltip";
+import { usePrevious, useWkSelector } from "libs/react_hooks";
+import type React from "react";
+import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-
-import { usePrevious } from "libs/react_hooks";
-import { useWkSelector } from "libs/react_hooks";
 import {
   FillModeEnum,
   type InterpolationMode,
@@ -33,26 +35,23 @@ import {
   getMappingInfoForVolumeTracing,
   getSegmentColorAsRGBA,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { clearProofreadingByProducts } from "viewer/model/actions/proofread_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { showQuickSelectSettingsAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
+import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
-
-import { updateNovelUserExperienceInfos } from "admin/rest_api";
-import FastTooltip from "components/fast_tooltip";
-import type { MenuInfo } from "rc-menu/lib/interface";
-import { clearProofreadingByProducts } from "viewer/model/actions/proofread_actions";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
-import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import { QuickSelectControls } from "../quick_select_settings";
 import {
+  ACTIONBAR_MARGIN_LEFT,
   IMG_STYLE_FOR_SPACEY_ICONS,
   NARROW_BUTTON_STYLE,
   RadioButtonWithTooltip,
@@ -112,8 +111,8 @@ export function OverwriteModeSwitch({
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
   const overwriteMode = useWkSelector((state) => state.userConfiguration.overwriteMode);
-  const previousIsControlOrMetaPressed = usePrevious(isControlOrMetaPressed);
-  const previousIsShiftPressed = usePrevious(isShiftPressed);
+  const [previousIsControlOrMetaPressed] = usePrevious(isControlOrMetaPressed);
+  const [previousIsShiftPressed] = usePrevious(isShiftPressed);
   // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
   useEffect(() => {
     // There are four possible states:
@@ -158,7 +157,7 @@ export function OverwriteModeSwitch({
       // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: {    target: {        value: Overwri... Remove this comment to see the full error message
       onChange={handleSetOverwriteMode}
       style={{
-        marginLeft: 10,
+        marginLeft: ACTIONBAR_MARGIN_LEFT,
       }}
     >
       <RadioButtonWithTooltip
@@ -204,7 +203,7 @@ export function VolumeInterpolationButton() {
   );
 
   const menu: MenuProps = {
-    onClick: (e: MenuInfo) => {
+    onClick: (e) => {
       dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
       onInterpolateClick(null);
     },
@@ -222,31 +221,23 @@ export function VolumeInterpolationButton() {
     ],
   };
 
-  const buttonsRender = useCallback(
-    ([leftButton, rightButton]: React.ReactNode[]) => [
-      <FastTooltip title={tooltipTitle} key="leftButton">
-        {React.cloneElement(leftButton as React.ReactElement<any, string>, {
-          disabled: isDisabled,
-        })}
-      </FastTooltip>,
-      rightButton,
-    ],
-    [tooltipTitle, isDisabled],
-  );
-
   return (
     // Without the outer div, the Dropdown can eat up all the remaining horizontal space,
     // moving sibling elements to the far right.
     <div>
-      <Dropdown.Button
-        icon={<DownOutlined />}
-        menu={menu}
-        onClick={onInterpolateClick}
-        style={{ padding: "0 5px 0 6px" }}
-        buttonsRender={buttonsRender}
-      >
-        {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
-      </Dropdown.Button>
+      <Space.Compact>
+        <FastTooltip title={tooltipTitle}>
+          <Button
+            icon={INTERPOLATION_ICON[interpolationMode]}
+            onClick={onInterpolateClick}
+            disabled={isDisabled}
+            style={{ padding: "0 5px 0 6px" }}
+          />
+        </FastTooltip>
+        <Dropdown menu={menu}>
+          <Button icon={<DownOutlined />} disabled={isDisabled} />
+        </Dropdown>
+      </Space.Compact>
     </div>
   );
 }
@@ -298,7 +289,6 @@ export function CreateSegmentButton() {
         onClick={handleCreateCell}
         style={{
           width: 36,
-          paddingLeft: 10,
         }}
         title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
@@ -330,7 +320,7 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
         dispatch(setActiveUserAction(newUserSync));
       }}
       description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
-      overlayStyle={{ maxWidth: 400 }}
+      styles={{ root: { maxWidth: 400 } }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
     >
       {children}
@@ -351,29 +341,27 @@ export function QuickSelectSettingsPopover() {
   const Wrapper = showNux ? NuxPopConfirm : IdentityComponent;
 
   return (
-    <>
-      <Wrapper>
-        <Popover
-          trigger="click"
-          placement="bottom"
-          open={areQuickSelectSettingsOpen}
-          content={<QuickSelectControls />}
-          onOpenChange={(open: boolean) => {
-            dispatch(showQuickSelectSettingsAction(open));
-          }}
+    <Wrapper>
+      <Popover
+        trigger="click"
+        placement="bottom"
+        open={areQuickSelectSettingsOpen}
+        content={<QuickSelectControls />}
+        onOpenChange={(open: boolean) => {
+          dispatch(showQuickSelectSettingsAction(open));
+        }}
+      >
+        <ToggleButton
+          title="Configure Quick Select"
+          tooltipPlacement="right"
+          className="narrow"
+          active={isQuickSelectActive || showNux}
+          style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
         >
-          <ToggleButton
-            title="Configure Quick Select"
-            tooltipPlacement="right"
-            className="narrow"
-            active={isQuickSelectActive || showNux}
-            style={{ marginLeft: 12, marginRight: 12 }}
-          >
-            <SettingOutlined />
-          </ToggleButton>
-        </Popover>
-      </Wrapper>
-    </>
+          <SettingOutlined />
+        </ToggleButton>
+      </Popover>
+    </Wrapper>
   );
 }
 
@@ -397,22 +385,21 @@ export function FloodFillSettings() {
 
       <ButtonComponent
         style={{
-          opacity: isRestrictedToBoundingBox ? 1 : 0.5,
-          marginLeft: 12,
-          display: "inline-block",
+          marginLeft: ACTIONBAR_MARGIN_LEFT,
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
         onClick={toggleRestrictFloodfillToBoundingBox}
         title={
           "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
         }
-      >
-        <img
-          src="/assets/images/icon-restrict-floodfill-to-bbox.svg"
-          alt="Restrict floodfill"
-          style={IMG_STYLE_FOR_SPACEY_ICONS}
-        />
-      </ButtonComponent>
+        icon={
+          <img
+            src="/assets/images/icon-restrict-floodfill-to-bbox.svg"
+            alt="Restrict floodfill"
+            style={IMG_STYLE_FOR_SPACEY_ICONS}
+          />
+        }
+      />
     </div>
   );
 }
@@ -420,13 +407,7 @@ export function FloodFillSettings() {
 function FillModeSwitch() {
   const fillMode = useWkSelector((state) => state.userConfiguration.fillMode);
   return (
-    <Radio.Group
-      value={fillMode}
-      onChange={handleSetFillMode}
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <Radio.Group value={fillMode} onChange={handleSetFillMode}>
       <RadioButtonWithTooltip
         title="Only perform the Fill operation in the current plane."
         style={NARROW_BUTTON_STYLE}
@@ -458,16 +439,11 @@ export function ProofreadingComponents() {
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
 
   return (
-    <Space.Compact
-      style={{
-        marginLeft: 10,
-      }}
-    >
+    <Space.Compact>
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
         className="narrow"
-        style={{ marginLeft: 12 }}
       >
         <ClearOutlined />
       </ButtonComponent>

@@ -1,10 +1,9 @@
+import { Keyboard } from "keyboardjs";
+import { map3 } from "libs/utils";
+import testRotations from "test/fixtures/test_rotations";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { setMappingEnabledAction } from "viewer/model/actions/settings_actions";
-import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_actions";
+import { Euler, MathUtils, Matrix4, Quaternion } from "three";
 import { userSettings } from "types/schemas/user_settings.schema";
-import Store from "viewer/store";
-import { vi, describe, it, expect, beforeEach } from "vitest";
 import {
   OrthoBaseRotations,
   OrthoViewToNumber,
@@ -12,15 +11,17 @@ import {
   type Vector3,
 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
-import { MathUtils, Matrix4, Euler, Quaternion } from "three";
+import { setMappingEnabledAction } from "viewer/model/actions/settings_actions";
+import { setTreeGroupsAction } from "viewer/model/actions/skeletontracing_actions";
+import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
 } from "viewer/model/helpers/rotation_helpers";
-import testRotations from "test/fixtures/test_rotations";
-import { map3 } from "libs/utils";
+import Store from "viewer/store";
+import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const toRadian = (arr: Vector3): Vector3 => [
   MathUtils.degToRad(arr[0]),
@@ -44,7 +45,9 @@ function applyRotationInFlycamReducerSpace(
 
 describe("API Skeleton", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTesting(context, "skeleton", { dontDispatchWkInitialized: true });
+    await setupWebknossosForTesting(context, "skeleton", undefined, {
+      dontDispatchWkInitialized: true,
+    });
   });
 
   it<WebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {
@@ -215,18 +218,14 @@ describe("API Skeleton", () => {
   it<WebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
     api,
   }) => {
-    // @ts-ignore libs/keyboard.ts is not a proper module
-    const { default: KeyboardJS } = await import("libs/keyboard");
-
-    // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
-    const bindSpy = vi.spyOn(KeyboardJS, "bind");
-    const unbindSpy = vi.spyOn(KeyboardJS, "unbind");
+    const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockReturnThis();
+    const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockReturnThis();
 
     const binding = api.utils.registerKeyHandler("g", () => {});
-    expect(bindSpy).toHaveBeenCalledTimes(1);
+    expect(bindSpy).toHaveBeenCalled();
 
     binding.unregister();
-    expect(unbindSpy).toHaveBeenCalledTimes(1);
+    expect(unbindSpy).toHaveBeenCalled();
   });
 
   it<WebknossosTestContext>("Utils Api: registerOverwrite should overwrite an existing function", ({
@@ -253,7 +252,7 @@ describe("API Skeleton", () => {
 
   it<WebknossosTestContext>("getTreeName should get the name of a tree", ({ api }) => {
     const name = api.tracing.getTreeName(2);
-    expect(name).toBe("explorative_2017-08-09_SCM_Boy_002");
+    expect(name).toBe("explorative_2017-08-09_sample_user_002");
   });
 
   it<WebknossosTestContext>("getTreeName should get the name of the active tree if no treeId is specified", ({
@@ -261,7 +260,7 @@ describe("API Skeleton", () => {
   }) => {
     api.tracing.setActiveNode(1);
     const name = api.tracing.getTreeName();
-    expect(name).toBe("explorative_2017-08-09_SCM_Boy_001");
+    expect(name).toBe("explorative_2017-08-09_sample_user_001");
   });
 
   it<WebknossosTestContext>("getTreeName should throw an error if the supplied treeId doesn't exist", ({
@@ -297,10 +296,12 @@ describe("API Skeleton", () => {
       {
         name: "group 3",
         groupId: 3,
+        isExpanded: false,
       },
       {
         name: "group 7",
         groupId: 7,
+        isExpanded: false,
       },
     ]);
 

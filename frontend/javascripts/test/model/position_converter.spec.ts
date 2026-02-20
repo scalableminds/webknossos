@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { getBaseBucketsForFallbackBucket } from "viewer/model/helpers/position_converter";
+import { describe, expect, it } from "vitest";
 
 describe("position_converter", () => {
   it("should calculate base buckets for a given fallback bucket (isotropic)", () => {

@@ -1,16 +1,23 @@
 import app from "app";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { isNoElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
-import _ from "lodash";
-import * as React from "react";
+import intersection from "lodash-es/intersection";
+import union from "lodash-es/union";
+import type React from "react";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { OrthoView, OrthoViewMap } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
-import * as MoveHandlers from "viewer/controller/combinations/move_handlers";
-import * as SkeletonHandlers from "viewer/controller/combinations/skeleton_handlers";
+import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
+import { moveU, moveV, moveW, zoom } from "viewer/controller/combinations/move_handlers";
+import {
+  moveAlongDirection,
+  moveNode,
+  toPrecedingNode,
+  toSubsequentNode,
+} from "viewer/controller/combinations/skeleton_handlers";
 import {
   AreaMeasurementToolController,
   BoundingBoxToolController,
@@ -24,7 +31,7 @@ import {
   SkeletonToolController,
   VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
-import * as VolumeHandlers from "viewer/controller/combinations/volume_handlers";
+import { changeBrushSizeIfBrushIsActiveBy } from "viewer/controller/combinations/volume_handlers";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
@@ -66,10 +73,10 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
-import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import Dimensions from "viewer/model/dimensions";
+import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { Model, api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action-bar/tools/brush_presets";
@@ -98,7 +105,7 @@ function ensureNonConflictingHandlers(
   volumeControls: Record<string, any>,
   proofreadControls?: Record<string, any>,
 ): void {
-  const conflictingHandlers = _.intersection(
+  const conflictingHandlers = intersection(
     Object.keys(skeletonControls),
     Object.keys(volumeControls),
     proofreadControls ? Object.keys(proofreadControls) : [],
@@ -145,10 +152,9 @@ class SkeletonKeybindings {
         Store.dispatch(deleteNodeAsUserAction(Store.getState())),
       [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: () =>
         Store.dispatch(createTreeAction()),
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]: () =>
-        SkeletonHandlers.moveAlongDirection(),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]: () => moveAlongDirection(),
       [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]: () =>
-        SkeletonHandlers.moveAlongDirection(true),
+        moveAlongDirection(true),
       // Branches
       [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: () =>
         Store.dispatch(createBranchPointAction()),
@@ -159,19 +165,17 @@ class SkeletonKeybindings {
         api.tracing.centerTDView();
       },
       // navigate nodes
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: () =>
-        SkeletonHandlers.toPrecedingNode(),
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: () =>
-        SkeletonHandlers.toSubsequentNode(),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: () => toPrecedingNode(),
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: () => toSubsequentNode(),
     };
   }
 
   static getLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<PlaneSkeletonLoopedKeyboardShortcuts> {
     return {
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: () => SkeletonHandlers.moveNode(-1, 0),
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: () => SkeletonHandlers.moveNode(1, 0),
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: () => SkeletonHandlers.moveNode(0, -1),
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: () => SkeletonHandlers.moveNode(0, 1),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: () => moveNode(-1, 0),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: () => moveNode(1, 0),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: () => moveNode(0, -1),
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: () => moveNode(0, 1),
     };
   }
 
@@ -270,7 +274,7 @@ function createDelayAwareMoveHandler(
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
   const fn = (timeFactor: number, first: boolean) =>
-    MoveHandlers.moveW(
+    moveW(
       getMoveOffset(Store.getState(), timeFactor) * multiplier,
       first,
       useDynamicSpaceDirection,
@@ -317,7 +321,7 @@ function createDelayAwareMoveHandler(
   return fn;
 }
 
-class PlaneController extends React.PureComponent<Props> {
+class PlaneController extends PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Plane Controller: Responsible for Plane Modes
@@ -359,7 +363,7 @@ class PlaneController extends React.PureComponent<Props> {
     // See: https://github.com/scalableminds/webknossos/issues/3475
     OrthoViewValuesWithoutTDView.forEach((id) => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
-      Utils.waitForElementWithId(inputcatcherId).then((el) => {
+      waitForElementWithId(inputcatcherId).then((el) => {
         if (!document.body.contains(el)) {
           console.error("el is not attached anymore");
         }
@@ -396,7 +400,7 @@ class PlaneController extends React.PureComponent<Props> {
     const lineMeasurementControls = LineMeasurementToolController.getPlaneMouseControls();
     const areaMeasurementControls = AreaMeasurementToolController.getPlaneMouseControls();
 
-    const allControlKeys = _.union(
+    const allControlKeys = union(
       Object.keys(moveControls),
       Object.keys(skeletonControls),
       Object.keys(drawControls),
@@ -459,13 +463,13 @@ class PlaneController extends React.PureComponent<Props> {
     };
     return {
       [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_LEFT]: (timeFactor: number) =>
-        MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
+        moveU(-getMoveOffset(Store.getState(), timeFactor)),
       [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_RIGHT]: (timeFactor: number) =>
-        MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
+        moveU(getMoveOffset(Store.getState(), timeFactor)),
       [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_UP]: (timeFactor: number) =>
-        MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
+        moveV(-getMoveOffset(Store.getState(), timeFactor)),
       [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_DOWN]: (timeFactor: number) =>
-        MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
+        moveV(getMoveOffset(Store.getState(), timeFactor)),
       [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_LEFT]: (timeFactor: number) =>
         rotateViewportAware(timeFactor, 1, false),
       [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_RIGHT]: (timeFactor: number) =>
@@ -485,9 +489,9 @@ class PlaneController extends React.PureComponent<Props> {
     const loopedFromSkeleton = this.getLoopedKeyboardControls(); // re-use existing skeleton looped map if needed
     return {
       [PlaneControllerLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: () =>
-        VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
+        changeBrushSizeIfBrushIsActiveBy(-1),
       [PlaneControllerLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: () =>
-        VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
+        changeBrushSizeIfBrushIsActiveBy(1),
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_FORWARD]:
         createDelayAwareMoveHandler(5, true),
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_BACKWARD]:
@@ -500,10 +504,8 @@ class PlaneController extends React.PureComponent<Props> {
         createDelayAwareMoveHandler(1, true),
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD_DIRECTION_AWARE]:
         createDelayAwareMoveHandler(-1, true),
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_IN_PLANE]: () =>
-        MoveHandlers.zoom(1, false),
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_OUT_PLANE]: () =>
-        MoveHandlers.zoom(-1, false),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_IN_PLANE]: () => zoom(1, false),
+      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_OUT_PLANE]: () => zoom(-1, false),
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.INCREASE_MOVE_VALUE_PLANE]: () =>
         this.changeMoveValue(25),
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.DECREASE_MOVE_VALUE_PLANE]: () =>
@@ -547,7 +549,7 @@ class PlaneController extends React.PureComponent<Props> {
             y,
           }).rounded;
           const { cube } = segmentationLayer;
-          const mapping = event && event.altKey ? cube.getMapping() : null;
+          const mapping = event?.altKey ? cube.getMapping() : null;
           const hoveredId = cube.getDataValue(
             globalMousePositionRounded,
             additionalCoordinates,
@@ -581,10 +583,9 @@ class PlaneController extends React.PureComponent<Props> {
         Store.dispatch(deleteNodeAsUserAction(Store.getState())),
       [PlaneControllerNoLoopKeyboardShortcuts.CREATE_TREE_PLANE]: () =>
         Store.dispatch(createTreeAction()),
-      [PlaneControllerNoLoopKeyboardShortcuts.MOVE_ALONG_DIRECTION]: () =>
-        SkeletonHandlers.moveAlongDirection(),
+      [PlaneControllerNoLoopKeyboardShortcuts.MOVE_ALONG_DIRECTION]: () => moveAlongDirection(),
       [PlaneControllerNoLoopKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]: () =>
-        SkeletonHandlers.moveAlongDirection(true),
+        moveAlongDirection(true),
       [PlaneControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: () =>
         Store.dispatch(createBranchPointAction()),
       [PlaneControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: () =>
@@ -593,10 +594,8 @@ class PlaneController extends React.PureComponent<Props> {
         api.tracing.centerNode();
         api.tracing.centerTDView();
       },
-      [PlaneControllerNoLoopKeyboardShortcuts.NAV_PREV_NODE]: () =>
-        SkeletonHandlers.toPrecedingNode(),
-      [PlaneControllerNoLoopKeyboardShortcuts.NAV_NEXT_NODE]: () =>
-        SkeletonHandlers.toSubsequentNode(),
+      [PlaneControllerNoLoopKeyboardShortcuts.NAV_PREV_NODE]: () => toPrecedingNode(),
+      [PlaneControllerNoLoopKeyboardShortcuts.NAV_NEXT_NODE]: () => toSubsequentNode(),
       // Tool-dependent handlers (recreate the same composite handlers as before)
       [PlaneControllerNoLoopKeyboardShortcuts.TOOL_DEPENDENT_C]:
         this.createToolDependentKeyboardHandler(
@@ -634,7 +633,7 @@ class PlaneController extends React.PureComponent<Props> {
     const withAdditionalActions = {
       ...delayedBindings,
       // Enter & Escape need to be separate due to being constant and not configurable.
-      enter: () => Store.dispatch(enterAction()),
+      enter: (_, _isOriginalEvent, event) => Store.dispatch(enterAction(event)),
       esc: () => Store.dispatch(escapeAction()),
     };
     this.input.keyboardLoopDelayed = new InputKeyboard(withAdditionalActions, {
@@ -664,7 +663,7 @@ class PlaneController extends React.PureComponent<Props> {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        Utils.isNoElementFocussed()
+        isNoElementFocused()
       ) {
         event.preventDefault();
       }
@@ -877,12 +876,14 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   unsubscribeStoreListeners() {
-    this.storePropertyUnsubscribers.forEach((unsubscribe) => unsubscribe());
+    this.storePropertyUnsubscribers.forEach((unsubscribe) => {
+      unsubscribe();
+    });
     this.storePropertyUnsubscribers = [];
   }
 
   destroyInput() {
-    for (const mouse of _.values(this.input.mouseControllers)) {
+    for (const mouse of Object.values(this.input.mouseControllers)) {
       mouse.destroy();
     }
 
@@ -978,7 +979,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: WebknossosState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     annotation: state.annotation,
     activeTool: state.uiInformation.activeTool,

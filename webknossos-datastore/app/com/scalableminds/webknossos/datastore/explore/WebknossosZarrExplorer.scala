@@ -25,7 +25,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
         for {
           headerFilename <- headerFilename(layer).toFox
           mags <- adaptMags(layer.mags, remotePath, layer.name, headerFilename, credentialId)
-        } yield layer.mapped(newMags = Some(mags))
+        } yield layer.mapped(newMags = Some(mags), attachmentMapping = a => a.resolvedIn(remotePath.toUPath))
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))
     } yield zarrLayersWithScale

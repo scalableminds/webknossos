@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -23,8 +24,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     with FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
-  private def getDataFor(dataSourceId: DataSourceId, dataLayer: DataLayer, position: Vec3Int, mag: Vec3Int)(
-      implicit tc: TokenContext): Fox[Array[Byte]] = {
+  private def getDataFor(datasetId: ObjectId,
+                         dataSourceId: DataSourceId,
+                         dataLayer: DataLayer,
+                         position: Vec3Int,
+                         mag: Vec3Int)(implicit tc: TokenContext): Fox[Array[Byte]] = {
     val request = DataRequest(
       VoxelPosition(position.x, position.y, position.z, mag),
       DataLayer.bucketLength,
@@ -32,7 +36,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       DataLayer.bucketLength
     )
     binaryDataService.handleDataRequest(
-      DataServiceDataRequest(Some(dataSourceId), dataLayer, request.cuboid(dataLayer), request.settings))
+      DataServiceDataRequest(Some(datasetId),
+                             Some(dataSourceId),
+                             dataLayer,
+                             request.cuboid(dataLayer),
+                             request.settings))
   }
 
   private def concatenateBuckets(buckets: Seq[Array[Byte]]): Array[Byte] =
@@ -42,13 +50,14 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
     }
 
-  private def getConcatenatedDataFor(dataSourceId: DataSourceId,
+  private def getConcatenatedDataFor(datasetId: ObjectId,
+                                     dataSourceId: DataSourceId,
                                      dataLayer: DataLayer,
                                      positions: List[Vec3Int],
                                      mag: Vec3Int)(implicit tc: TokenContext) =
     for {
       dataBucketWise: Seq[Array[Byte]] <- Fox.fromFuture(
-        Fox.sequenceOfFulls(positions.map(getDataFor(dataSourceId, dataLayer, _, mag))))
+        Fox.sequenceOfFulls(positions.map(getDataFor(datasetId, dataSourceId, dataLayer, _, mag))))
       _ <- Fox.fromBool(dataBucketWise.nonEmpty) ?~> "dataset.noData"
       dataConcatenated = concatenateBuckets(dataBucketWise)
     } yield dataConcatenated
@@ -95,7 +104,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     positions.map(_.alignWithGridFloor(Vec3Int.full(DataLayer.bucketLength))).distinct
   }
 
-  private def checkAllPositionsForData(dataSourceId: DataSourceId, dataLayer: DataLayer)(
+  private def checkAllPositionsForData(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] = {
 
     def searchPositionIter(positions: List[Vec3Int], mag: Vec3Int): Fox[Option[Vec3Int]] =
@@ -110,7 +119,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def checkIfPositionHasData(position: Vec3Int, mag: Vec3Int) =
       for {
-        data <- getDataFor(dataSourceId, dataLayer, position, mag)
+        data <- getDataFor(datasetId, dataSourceId, dataLayer, position, mag)
         position <- getPositionOfNonZeroData(data, position, dataLayer.bytesPerElement).toFox
       } yield position
 
@@ -130,13 +139,13 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     magIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
-  def findPositionWithData(dataSourceId: DataSourceId, dataLayer: DataLayer)(
+  def findPositionWithData(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] =
     for {
-      positionAndMagOpt <- checkAllPositionsForData(dataSourceId, dataLayer)
+      positionAndMagOpt <- checkAllPositionsForData(datasetId, dataSourceId, dataLayer)
     } yield positionAndMagOpt
 
-  def createHistogram(dataSourceId: DataSourceId, dataLayer: DataLayer)(
+  def createHistogram(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit tc: TokenContext): Fox[List[Histogram]] = {
 
     def calculateHistogramValues(
@@ -199,7 +208,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def histogramForPositions(positions: List[Vec3Int], mag: Vec3Int) =
       for {
-        dataConcatenated <- getConcatenatedDataFor(dataSourceId, dataLayer, positions, mag) ?~> "dataset.noData"
+        dataConcatenated <- getConcatenatedDataFor(datasetId, dataSourceId, dataLayer, positions, mag) ?~> "dataset.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
         convertedData = toUnsignedIfNeeded(
           filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24),

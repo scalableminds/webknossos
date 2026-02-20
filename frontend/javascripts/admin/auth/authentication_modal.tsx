@@ -8,6 +8,7 @@ import type { ComponentType } from "react";
 import React, { useState } from "react";
 import LoginForm from "./login_form";
 import RegistrationFormGeneric from "./registration_form_generic";
+
 type Props = {
   onLoggedIn: (userJustRegistered: boolean) => unknown;
   onCancel: () => void;
@@ -49,7 +50,7 @@ export default function AuthenticationModal({
   return (
     <Modal title={step} onCancel={onCancel} open={isOpen} footer={null} maskClosable={false}>
       <Alert
-        message={alertMessage}
+        title={alertMessage}
         type="info"
         showIcon
         style={{

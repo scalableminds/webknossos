@@ -2,18 +2,10 @@
 // All modules mocked here are globally mocked for all tests.
 // These mocks have to work with the unit, E2E and screenshot tests alike.
 
-import { vi } from "vitest";
 import protobuf from "protobufjs";
+import { vi } from "vitest";
 
 // Mock common utility functions
-vi.mock("libs/keyboard", () => ({
-  default: {
-    bind: vi.fn(),
-    unbind: vi.fn(),
-    withContext: (_arg0: string, arg1: () => void) => arg1(),
-  },
-}));
-
 vi.mock("libs/toast", () => ({
   default: {
     error: vi.fn((msg) => console.error(msg)),
@@ -139,6 +131,9 @@ vi.mock("antd", () => {
     },
     Form: {
       Item: {},
+    },
+    Typography: {
+      Text: {},
     },
   };
 });

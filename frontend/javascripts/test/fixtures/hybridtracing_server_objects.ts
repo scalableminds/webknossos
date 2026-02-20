@@ -1,11 +1,11 @@
 import {
-  type APIAnnotation,
   AnnotationLayerEnum,
+  type APIAnnotation,
   type APITracingStoreAnnotation,
 } from "types/api_types";
+import { ViewModeValues } from "viewer/constants";
 import { tracing as skeletonTracing } from "./skeletontracing_server_objects";
 import { tracing as volumeTracing } from "./volumetracing_server_objects";
-import { ViewModeValues } from "viewer/constants";
 
 export const tracings = [skeletonTracing, volumeTracing];
 

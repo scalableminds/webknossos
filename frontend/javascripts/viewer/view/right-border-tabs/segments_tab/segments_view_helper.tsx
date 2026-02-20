@@ -1,10 +1,9 @@
 import { hasSegmentIndexInDataStore } from "admin/rest_api";
-import { Modal } from "antd";
+import { type MenuProps, Modal } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { waitForCondition } from "libs/utils";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { APIDataLayer, APIDataset } from "types/api_types";
-import { MappingStatusEnum } from "viewer/constants";
+import { MappingStatusEnum, type Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   getEditableMappingForVolumeTracingId,
@@ -40,6 +39,15 @@ export type SegmentHierarchyLeaf = BasicDataNode &
 
 export type SegmentHierarchyNode = SegmentHierarchyLeaf | SegmentHierarchyGroup;
 
+export const formatMagWithLabel = (mag: Vector3, index: number) => {
+  // index refers to the array of available mags. Thus, we can directly
+  // use that index to pick an adequate label.
+  const labels = ["Highest", "High", "Medium", "Low", "Very Low"];
+  // Use "Very Low" for all low Mags which don't have extra labels
+  const clampedIndex = Math.min(labels.length - 1, index);
+  return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
+};
+
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   return (
     ("fallbackLayer" in segmentationLayer ? segmentationLayer.fallbackLayer : null) ||
@@ -73,7 +81,7 @@ export async function hasSegmentIndex(
 }
 
 export function withMappingActivationConfirmation(
-  originalOnClick: MenuClickEventHandler,
+  originalOnClick: MenuProps["onClick"],
   mappingName: string | null | undefined,
   descriptor: string,
   layerName: string | null | undefined,
@@ -100,7 +108,7 @@ export function withMappingActivationConfirmation(
       ? ""
       : "This is because the current mapping was locked while editing it with the proofreading tool. Consider changing the active mesh file instead.";
 
-  const confirmMappingActivation: MenuClickEventHandler = (menuClickEvent) => {
+  const confirmMappingActivation: MenuProps["onClick"] = (menuClickEvent) => {
     confirm({
       title: `The currently active ${descriptor} was computed ${mappingString} when clicking OK. ${recommendationStr}`,
       async onOk() {
@@ -108,7 +116,7 @@ export function withMappingActivationConfirmation(
           return;
         }
         if (mappingName != null) {
-          Store.dispatch(setMappingAction(layerName, mappingName, "HDF5"));
+          Store.dispatch(setMappingAction(layerName, mappingName, "HDF5", false));
           await waitForCondition(
             () =>
               getMappingInfo(
@@ -129,7 +137,9 @@ export function withMappingActivationConfirmation(
           );
         }
 
-        originalOnClick(menuClickEvent);
+        if (originalOnClick) {
+          originalOnClick(menuClickEvent);
+        }
       },
     });
   };

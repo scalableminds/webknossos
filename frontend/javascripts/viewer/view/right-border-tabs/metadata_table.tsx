@@ -3,10 +3,10 @@ import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import {
   type APIMetadataWithError,
-  InnerMetadataTable,
-  MetadataValueInput,
   getTypeSelectDropdownMenu,
   getUsedTagsWithinMetadata,
+  InnerMetadataTable,
+  MetadataValueInput,
 } from "dashboard/folders/metadata_table";
 import { memo } from "react";
 import { type APIMetadataEntry, APIMetadataEnum, type MetadataEntryProto } from "types/api_types";
@@ -154,17 +154,15 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
   const addNewEntryMenuItems = getTypeSelectDropdownMenu(addNewEntryWithType);
 
   return (
-    <>
-      <InnerMetadataTable
-        onlyReturnRows
-        metadata={itemMetadata}
-        getKeyInput={getKeyInput}
-        getValueInput={getValueInput}
-        getDeleteEntryButton={getDeleteEntryButton}
-        addNewEntryMenuItems={addNewEntryMenuItems}
-        readOnly={readOnly}
-      />
-    </>
+    <InnerMetadataTable
+      onlyReturnRows
+      metadata={itemMetadata}
+      getKeyInput={getKeyInput}
+      getValueInput={getValueInput}
+      getDeleteEntryButton={getDeleteEntryButton}
+      addNewEntryMenuItems={addNewEntryMenuItems}
+      readOnly={readOnly}
+    />
   );
 }
 

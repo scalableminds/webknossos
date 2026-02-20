@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
-import type { Vector3 } from "viewer/constants";
-import Matrix from "ml-matrix";
 import estimateAffine, { estimateAffineMatrix4x4 } from "libs/estimate_affine";
-import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 import { M4x4 } from "libs/mjs";
+import Matrix from "ml-matrix";
+import type { Vector3 } from "viewer/constants";
+import { describe, expect, it } from "vitest";
+import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 
 describe("Estimate Affine", () => {
   it("Estimate affine projection", () => {

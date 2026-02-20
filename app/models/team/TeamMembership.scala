@@ -9,20 +9,21 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean)
+object TeamMembership {
+  implicit val jsonReads: Reads[TeamMembership] = {
+    ((__ \ "id").read[ObjectId] and
+      (__ \ "isTeamManager").read[Boolean])((id, isTeamManager) => TeamMembership(id, isTeamManager))
+  }
+}
 
 class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
   def publicWrites(teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(teamMembership.teamId)
-    } yield {
+    } yield
       Json.obj(
         "id" -> teamMembership.teamId,
         "name" -> team.name,
         "isTeamManager" -> teamMembership.isTeamManager
       )
-    }
-
-  def publicReads(): Reads[TeamMembership] =
-    ((__ \ "id").read[ObjectId] and
-      (__ \ "isTeamManager").read[Boolean])((id, isTeamManager) => TeamMembership(id, isTeamManager))
 }

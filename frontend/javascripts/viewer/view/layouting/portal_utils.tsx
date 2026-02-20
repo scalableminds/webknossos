@@ -1,5 +1,6 @@
 import { document } from "libs/window";
-import * as React from "react";
+import type React from "react";
+import { Component } from "react";
 import ReactDOM from "react-dom";
 
 // The actual content of a layout pane is a portal target,
@@ -22,7 +23,7 @@ function getOrCreatePortalTargetNode(id: string) {
 
 // This is the placeholder component to which can be rendered from somewhere else
 // via RenderToPortal.
-export class PortalTarget extends React.Component<any, any> {
+export class PortalTarget extends Component<any, any> {
   componentWillUnmount() {
     const child = getOrCreatePortalTargetNode(this.props.portalId);
     if (child.parentNode != null) {

@@ -1,5 +1,5 @@
 import { chainReduce } from "test/helpers/chainReducer";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 function IncrementReducer(state: number): number {
   return state + 1;

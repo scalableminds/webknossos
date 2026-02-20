@@ -24,6 +24,7 @@ import { TDViewDisplayModeEnum } from "viewer/constants";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
+
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;

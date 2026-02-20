@@ -1,74 +1,48 @@
 import Request from "libs/request";
 import { location } from "libs/window";
+import camelCase from "lodash-es/camelCase";
+import mapKeys from "lodash-es/mapKeys";
 import type {
-  APIAnnotationType,
-  APIEffectiveJobState,
-  APIJob,
-  APIJobManualState,
-  APIJobState,
   AdditionalCoordinate,
   AiModel,
+  APIAnnotationType,
+  APIJob,
   RenderAnimationOptions,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
-import type { SplitMergerEvaluationSettings } from "viewer/view/action-bar/ai_job_modals/components/collapsible_split_merger_evaluation_settings";
+import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
+import { Store } from "viewer/singletons";
+import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
+import { getOrganization } from "./organization";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
   return {
-    id: job.id,
-    datasetId: job.commandArgs.datasetId,
-    owner: job.owner,
-    type: job.command,
-    datasetName: job.commandArgs.dataset_name,
-    datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-    annotationLayerName: job.commandArgs.annotation_layer_name,
-    boundingBox: job.commandArgs.bbox,
-    ndBoundingBox: job.commandArgs.nd_bbox,
-    exportFileName: job.commandArgs.export_file_name,
-    tracingId: job.commandArgs.volume_tracing_id,
-    annotationId: job.commandArgs.annotation_id,
-    annotationType: job.commandArgs.annotation_type,
-    mergeSegments: job.commandArgs.merge_segments,
-    trainingAnnotations: job.commandArgs.training_annotations,
-    state: adaptJobState(job.state, job.manualState),
-    manualState: job.manualState,
-    result: job.returnValue,
-    resultLink: job.resultLink,
-    createdAt: job.created,
-    voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
-    creditCost: job.creditCost,
-    modelId: job.commandArgs.model_id,
+    ...job,
+    args: mapKeys(job.args, (_value, key) => camelCase(key)),
   };
 }
 
-export async function getJobs(): Promise<APIJob[]> {
-  const jobs = await Request.receiveJSON("/api/jobs");
+export async function getJobs(
+  command?: string,
+  skipForDeletedDatasets?: boolean,
+): Promise<APIJob[]> {
+  const params = new URLSearchParams();
+  if (command) {
+    params.set("command", command);
+  }
+  if (skipForDeletedDatasets != null) {
+    params.set("skipForDeletedDatasets", skipForDeletedDatasets ? "true" : "false");
+  }
+
+  const jobs = await Request.receiveJSON(`/api/jobs?${params}`);
   assertResponseLimit(jobs);
-  return (
-    jobs
-      .map(transformBackendJobToAPIJob)
-      // Newest jobs should be first
-      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
-  );
+  return jobs.map(transformBackendJobToAPIJob);
 }
 
 export async function getJob(jobId: string): Promise<APIJob> {
   const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
   return transformBackendJobToAPIJob(job);
-}
-
-function adaptJobState(
-  celeryState: APIJobState,
-  manualState: APIJobManualState,
-): APIEffectiveJobState {
-  if (manualState) {
-    return manualState;
-  }
-
-  return celeryState || "UNKNOWN";
 }
 
 export async function cancelJob(jobId: string): Promise<APIJob> {
@@ -78,14 +52,13 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
 }
 
 export type JobCreditCostInfo = {
-  // The cost is encoded as a string decimal for precision reasons. The front-end should not do any arithmetic with this
-  costInCredits: string;
+  costInMilliCredits: number;
   hasEnoughCredits: boolean;
   // The organizations credits used during calculation whether the organization has enough credits for the job.
-  organizationCredits: string;
+  organizationMilliCredits: number;
 };
 
-export async function getJobCreditCost(
+async function getJobCreditCost(
   command: string,
   boundingBoxInMag: Vector6,
 ): Promise<JobCreditCostInfo> {
@@ -95,6 +68,26 @@ export async function getJobCreditCost(
   });
   return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
 }
+
+export async function getJobCreditCostAndUpdateOrgaCredits(
+  command: string,
+  boundingBoxInMag: Vector6,
+): Promise<JobCreditCostInfo> {
+  const jobCreditCostInfo = await getJobCreditCost(command, boundingBoxInMag);
+  Store.dispatch(setActiveOrganizationsCreditBalance(jobCreditCostInfo.organizationMilliCredits));
+  return jobCreditCostInfo;
+}
+
+export async function refreshOrganizationCredits() {
+  const organizationId = Store.getState().activeOrganization?.id;
+  if (organizationId) {
+    const orga = await getOrganization(organizationId);
+    if (orga.milliCreditBalance != null) {
+      Store.dispatch(setActiveOrganizationsCreditBalance(orga.milliCreditBalance));
+    }
+  }
+}
+
 export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
@@ -188,7 +181,7 @@ export function startComputeSegmentIndexFileJob(
   });
 }
 
-export function startNucleiInferralJob(
+export function runPretrainedNucleiInferenceJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
@@ -204,7 +197,7 @@ export function startNucleiInferralJob(
   });
 }
 
-export function startNeuronInferralJob(
+export function runPretrainedNeuronInferenceJob(
   datasetId: string,
   layerName: string,
   bbox: Vector6,
@@ -322,7 +315,7 @@ export function startMaterializingVolumeAnnotationJob(
   );
 }
 
-export function startMitochondriaInferralJob(
+export function runPretrainedMitochondriaInferenceJob(
   datasetId: string,
   layerName: string,
   bbox: Vector6,
@@ -368,7 +361,7 @@ export enum APIAiModelCategory {
   EM_NUCLEI = "em_nuclei",
 }
 
-type AiModelTrainingAnnotationSpecification = {
+export type AiModelTrainingAnnotationSpecification = {
   annotationId: string;
   colorLayerName: string;
   segmentationLayerName: string;
@@ -394,7 +387,7 @@ type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
   aiModelCategory: APIAiModelCategory.EM_NUCLEI;
-  maxDistanceNm: number;
+  instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
 };
@@ -406,7 +399,7 @@ export function runInstanceModelTraining(params: RunInstanceModelTrainingParamet
   });
 }
 
-export type BaseModelInferenceParameters = {
+export type BaseCustomModelInferenceParameters = {
   annotationId?: string;
   aiModelId: string;
   datasetDirectoryName: string;
@@ -418,21 +411,21 @@ export type BaseModelInferenceParameters = {
   invertColorLayer: boolean;
   // maskAnnotationLayerName?: string | null
 };
-type RunNeuronModelInferenceParameters = BaseModelInferenceParameters;
+type RunCustomNeuronModelInferenceParameters = BaseCustomModelInferenceParameters;
 
-type RunInstanceModelInferenceParameters = BaseModelInferenceParameters & {
-  seedGeneratorDistanceThreshold: number;
+type RunCustomInstanceModelInferenceParameters = BaseCustomModelInferenceParameters & {
+  seedGeneratorDistanceThreshold: number | null;
 };
 
-export function runNeuronModelInferenceWithAiModelJob(params: RunNeuronModelInferenceParameters) {
+export function runCustomNeuronModelInferenceJob(params: RunCustomNeuronModelInferenceParameters) {
   return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronModelInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });
 }
 
-export function runInstanceModelInferenceWithAiModelJob(
-  params: RunInstanceModelInferenceParameters,
+export function runCustomInstanceModelInferenceJob(
+  params: RunCustomInstanceModelInferenceParameters,
 ) {
   return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomInstanceModelInference", {
     method: "POST",

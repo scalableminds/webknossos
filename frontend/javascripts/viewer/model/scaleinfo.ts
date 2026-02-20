@@ -3,7 +3,7 @@ import type { VoxelSize } from "types/api_types";
 import { LongUnitToShortUnitMap, type UnitShort, type Vector3 } from "viewer/constants";
 
 export function getBaseVoxelInUnit(voxelSizeFactor: Vector3): number {
-  // base voxel should be a cube with highest mag
+  // base voxel should be a cube with highest resolution
   return Math.min(...voxelSizeFactor);
 }
 
@@ -30,15 +30,6 @@ export function getBaseVoxelFactorsInUnit(voxelSize: VoxelSize): Vector3 {
   // scale factor to calculate the voxels in a certain
   // dimension from baseVoxels
   return [baseVoxel / scaleFactor[0], baseVoxel / scaleFactor[1], baseVoxel / scaleFactor[2]];
-}
-
-export function getVoxelPerUnit(voxelSize: VoxelSize): Vector3 {
-  const voxelPerUnit = [0, 0, 0] as Vector3;
-
-  for (let i = 0; i < 3; i++) {
-    voxelPerUnit[i] = 1 / voxelSize.factor[i];
-  }
-  return voxelPerUnit;
 }
 
 export function voxelToUnit(voxelSize: VoxelSize, posArray: Vector3): Vector3 {

@@ -52,12 +52,12 @@ export function createWorker<T extends (...args: any) => any>(
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
     // we can simply return the input function here.
-    // @ts-ignore
+    // @ts-expect-error
     return WorkerClass;
   }
 
   return wrap(
-    // @ts-ignore
+    // @ts-expect-error
     new WorkerClass(),
   );
 }
@@ -70,7 +70,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   // Therefore, we simply return the passed function with the only change that
   // we are wrapping the return value in a promise. That way, the worker and non-worker
   // versions both return promises.
-  // @ts-ignore
+  // @ts-expect-error
   return fn;
 }
 

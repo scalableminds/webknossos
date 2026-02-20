@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import "test/mocks/updatable_texture.mock";
-import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
+import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 
 type Key = [number, number];
 type Value = [number, number];

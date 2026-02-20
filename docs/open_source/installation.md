@@ -48,8 +48,6 @@ docker compose down
 **This setup does not support regular backups or monitoring.
     Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.**
 
-For installations on localhost, please refer to the [Readme](https://github.com/scalableminds/webknossos#docker).
-
 ## Onboarding
 When starting with WEBKNOSSOS you first need to create an organization.
 An organization represents your lab in WEBKNOSSOS and handles permissions for users and datasets.

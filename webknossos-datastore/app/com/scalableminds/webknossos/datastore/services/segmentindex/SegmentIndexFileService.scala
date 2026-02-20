@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -43,6 +44,14 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
   private val segmentIndexFileKeyCache
     : AlfuCache[(DataSourceId, String), SegmentIndexFileKey] = AlfuCache() // dataSourceId, layerName → SegmentIndexFileKey
 
+  private lazy val segmentVolumeCache
+    : AlfuCache[(DataSourceId, String, SegmentIndexFileKey, Option[AgglomerateFileKey], Long, Vec3Int), Long] =
+    AlfuCache(maxCapacity = 10000)
+
+  private lazy val segmentBoundingBoxCache
+    : AlfuCache[(DataSourceId, String, SegmentIndexFileKey, Option[AgglomerateFileKey], Long, Vec3Int), BoundingBox] =
+    AlfuCache(maxCapacity = 10000)
+
   def lookUpSegmentIndexFileKey(dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit ec: ExecutionContext): Fox[SegmentIndexFileKey] =
     segmentIndexFileKeyCache.getOrLoad((dataSourceId, dataLayer.name),
@@ -64,6 +73,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
     * Read the segment index file and return the bucket positions for the given segment id.
     * The bucket positions are the top left corners of the buckets that contain the segment in the file mag.
     * The bucket positions are in mag1 coordinates though!
+    * If a segment is not present in the file, an empty array is returned, not a failure!
     */
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
                        segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
@@ -82,35 +92,46 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
       .map(_ / Vec3Int.full(DataLayer.bucketLength)) // map positions to cube indices
       .distinct
 
-  def getSegmentVolume(dataSourceId: DataSourceId,
+  def getSegmentVolume(datasetId: ObjectId,
+                       dataSourceId: DataSourceId,
                        dataLayer: DataLayer,
                        segmentIndexFileKey: SegmentIndexFileKey,
                        agglomerateFileKeyOpt: Option[AgglomerateFileKey],
                        segmentId: Long,
                        mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
-    calculateSegmentVolume(
-      segmentId,
-      mag,
-      None, // see #7556
-      getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
-      getDataForBucketPositions(dataSourceId, dataLayer, agglomerateFileKeyOpt)
+    segmentVolumeCache.getOrLoad(
+      (dataSourceId, dataLayer.name, segmentIndexFileKey, agglomerateFileKeyOpt, segmentId, mag),
+      _ =>
+        calculateSegmentVolume(
+          segmentId,
+          mag,
+          None, // see #7556
+          getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
+          getDataForBucketPositions(datasetId, dataSourceId, dataLayer, agglomerateFileKeyOpt)
+      )
     )
 
-  def getSegmentBoundingBox(dataSourceId: DataSourceId,
+  def getSegmentBoundingBox(datasetId: ObjectId,
+                            dataSourceId: DataSourceId,
                             dataLayer: DataLayer,
                             segmentIndexFileKey: SegmentIndexFileKey,
                             agglomerateFileKeyOpt: Option[AgglomerateFileKey],
                             segmentId: Long,
                             mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
-    calculateSegmentBoundingBox(
-      segmentId,
-      mag,
-      None, // see #7556
-      getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
-      getDataForBucketPositions(dataSourceId, dataLayer, agglomerateFileKeyOpt)
+    segmentBoundingBoxCache.getOrLoad(
+      (dataSourceId, dataLayer.name, segmentIndexFileKey, agglomerateFileKeyOpt, segmentId, mag),
+      _ =>
+        calculateSegmentBoundingBox(
+          segmentId,
+          mag,
+          None, // see #7556
+          getBucketPositions(segmentIndexFileKey, agglomerateFileKeyOpt),
+          getDataForBucketPositions(datasetId, dataSourceId, dataLayer, agglomerateFileKeyOpt)
+      )
     )
 
-  private def getDataForBucketPositions(dataSourceId: DataSourceId,
+  private def getDataForBucketPositions(datasetId: ObjectId,
+                                        dataSourceId: DataSourceId,
                                         dataLayer: DataLayer,
                                         agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
       bucketPositionsInRequestedMag: Seq[Vec3Int],
@@ -125,6 +146,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
     val bucketRequests = mag1BucketPositions.map(
       mag1BucketPosition =>
         DataServiceDataRequest(
+          datasetId = Some(datasetId),
           dataSourceId = Some(dataSourceId),
           dataLayer = dataLayer,
           cuboid = Cuboid(
@@ -187,6 +209,15 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
     }
 
   def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
+    segmentVolumeCache.clear {
+      case (keyDataSourceId, keyLayerName, _, _, _, _) =>
+        keyDataSourceId == dataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    }
+    segmentBoundingBoxCache.clear {
+      case (keyDataSourceId, keyLayerName, _, _, _, _) =>
+        keyDataSourceId == dataSourceId && layerNameOpt.forall(_ == keyLayerName)
+    }
+
     segmentIndexFileKeyCache.clear {
       case (keyDataSourceId, keyLayerName) =>
         dataSourceId == keyDataSourceId && layerNameOpt.forall(_ == keyLayerName)

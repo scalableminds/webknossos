@@ -1,15 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
-import Model from "viewer/model";
-import constants from "viewer/constants";
-import DATASET from "../fixtures/dataset_server_object";
-import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
-import { setModel } from "viewer/singletons";
 import { call } from "redux-saga/effects";
+import constants from "viewer/constants";
+import Model from "viewer/model";
 import {
-  triggerDataPrefetching,
   prefetchForArbitraryMode,
   prefetchForPlaneMode,
+  triggerDataPrefetching,
 } from "viewer/model/sagas/prefetch_saga";
+import { setModel } from "viewer/singletons";
+import { describe, expect, it, vi } from "vitest";
+import DATASET from "../fixtures/dataset_server_object";
+import { execCall, expectValueDeepEqual } from "../helpers/sagaHelpers";
 
 setModel(Model);
 

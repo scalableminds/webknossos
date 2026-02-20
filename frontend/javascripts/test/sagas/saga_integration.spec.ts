@@ -1,26 +1,24 @@
-import { describe, it, beforeEach, afterEach, expect } from "vitest";
+import omit from "lodash-es/omit";
+import { TIMESTAMP } from "test/global_mocks";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
-import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getStats } from "viewer/model/accessors/annotation_accessor";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_saga_constants";
-import Store from "viewer/store";
-import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { omit } from "lodash";
-
-import {
-  createTreeMapFromTreeArray,
-  generateTreeName,
-} from "viewer/model/reducers/skeletontracing_reducer_helpers";
-
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { discardSaveQueueAction } from "viewer/model/actions/save_actions";
 import {
   addTreesAndGroupsAction,
   deleteNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
-import * as UpdateActions from "viewer/model/sagas/volume/update_actions";
-import { TIMESTAMP } from "test/global_mocks";
+import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
+import {
+  createTreeMapFromTreeArray,
+  generateTreeName,
+} from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/saving/save_saga_constants";
+import { updateTree } from "viewer/model/sagas/volume/update_actions";
+import Store from "viewer/store";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 describe("Saga Integration Tests", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -44,7 +42,7 @@ describe("Saga Integration Tests", () => {
       name: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
     };
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
-      [[UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
+      [[updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
       TIMESTAMP,
       getStats(state.annotation) || undefined,
     );
@@ -58,7 +56,7 @@ describe("Saga Integration Tests", () => {
   });
 
   it("Save actions should not be chunked below the chunk limit (1/3)", () => {
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(discardSaveQueueAction());
     expect(Store.getState().save.queue).toEqual([]);
 
     // This will create 250 trees with one node each. Thus, 500 update actions will
@@ -73,7 +71,7 @@ describe("Saga Integration Tests", () => {
   });
 
   it("Save actions should be chunked above the chunk limit (2/3)", () => {
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(discardSaveQueueAction());
     expect(Store.getState().save.queue).toEqual([]);
 
     const trees = generateDummyTrees(5000, 2);
@@ -90,7 +88,7 @@ describe("Saga Integration Tests", () => {
     const trees = generateDummyTrees(1, nodeCount);
 
     Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(discardSaveQueueAction());
     expect(Store.getState().save.queue).toEqual([]);
     // Delete some node, NOTE that this is not the node in the middle of the tree!
     // The addTreesAndGroupsAction gives new ids to nodes and edges in a non-deterministic way.

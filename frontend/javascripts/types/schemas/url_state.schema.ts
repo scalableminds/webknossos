@@ -1,4 +1,4 @@
-import _ from "lodash";
+import pick from "lodash-es/pick";
 import { layerViewConfiguration } from "./dataset_view_configuration.schema";
 
 export default {
@@ -161,7 +161,7 @@ export default {
             additionalProperties: false,
             required: ["connectomeName"],
           },
-          ..._.pick(layerViewConfiguration, [
+          ...pick(layerViewConfiguration, [
             "isDisabled",
             "intensityRange",
             "color",

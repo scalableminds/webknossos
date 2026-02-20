@@ -1,6 +1,6 @@
 import type { APIAiModelCategory } from "admin/api/jobs";
-import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import _ from "lodash";
+import type { AiPlanEnum, PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import partition from "lodash-es/partition";
 import type { BoundingBoxProto } from "types/bounding_box";
 import type {
   AdditionalCoordinate,
@@ -32,7 +32,6 @@ import type { EmptyObject } from "./globals";
 export type { BoundingBoxProto } from "types/bounding_box";
 export type { AdditionalCoordinate } from "viewer/constants";
 
-export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
   | "uint8"
   | "uint16"
@@ -140,7 +139,7 @@ type MutableAPIDataSourceBase = {
   status?: string;
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
-export type APIUnimportedDatasource = APIDataSourceBase;
+type APIUnimportedDatasource = APIDataSourceBase;
 export type VoxelSize = {
   factor: Vector3;
   unit: UnitLong;
@@ -155,7 +154,7 @@ export type APIDataStore = {
   readonly url: string;
   readonly allowsUpload: boolean;
   readonly jobsEnabled: boolean;
-  readonly jobsSupportedByAvailableWorkers: APIJobType[];
+  readonly jobsSupportedByAvailableWorkers: APIJobCommand[];
 };
 export type APITracingStore = {
   readonly name: string;
@@ -276,7 +275,7 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
-  const [segmentationLayerNames, colorLayerNames] = _.partition(
+  const [segmentationLayerNames, colorLayerNames] = partition(
     dataset.dataSource.dataLayers,
     (layer) => layer.category === "segmentation",
   ).map((layers) => layers.map((layer) => layer.name).sort());
@@ -328,7 +327,6 @@ export type APIUserBase = APIUserCompact & {
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   hasSeenSegmentAnythingWithDepth?: boolean;
-  shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
@@ -369,10 +367,12 @@ export type APIActiveUser = {
 };
 export type APIRestrictions = {
   readonly allowAccess: boolean;
+  // To decide whether updating an annotation is allowed, the annotation.isUpdatingCurrentlyAllowed should be used.
+  // This value will never be changed and stay according to what the server returned.
   readonly allowUpdate: boolean;
   readonly allowFinish: boolean;
   readonly allowDownload: boolean;
-  // allowSave might be false even though allowUpdate is true (e.g., see sandbox annotations)
+  // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
@@ -673,6 +673,7 @@ export type APIOrganizationCompact = {
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;
   readonly pricingPlan: PricingPlanEnum;
+  readonly aiPlan: AiPlanEnum | null;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
   readonly paidUntil: number;
@@ -680,12 +681,46 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
-  readonly creditBalance: string | null | undefined;
+  readonly milliCreditBalance: number | null | undefined;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
   readonly isExceeded: boolean;
   readonly isAlmostExceeded: boolean; // stays true when isExceeded is true)
+};
+
+export type APICreditTransactionState = "Pending" | "Complete";
+export type APICreditState =
+  | "Pending"
+  | "Spent"
+  | "Refunded"
+  | "Revoked"
+  | "PartiallyRevoked"
+  | "Refunding"
+  | "Revoking"
+  | "AddCredits";
+export type APICreditTransaction = {
+  readonly id: string;
+  readonly organization_id: string;
+  readonly relatedTransaction?: string | null;
+  readonly paidJob?: APIJob | null;
+  readonly creditChange: number;
+  readonly comment: string;
+  readonly transactionState: APICreditTransactionState;
+  readonly creditState: APICreditState;
+  readonly expirationDate?: number | null;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+};
+export type APIOrganizationPricingPlanUpdate = {
+  readonly aiPlan?: AiPlanEnum | null;
+  readonly organizationId: string;
+  readonly description?: string | null;
+  readonly pricingPlan?: PricingPlanEnum | null;
+  readonly paidUntil?: number | null;
+  readonly includedUsers?: number | null;
+  readonly includedStorageBytes?: number | null;
+  readonly created: number;
 };
 
 export type APIBuildInfoWk = {
@@ -743,8 +778,6 @@ export type APIBuildInfoTracingstore = {
   };
 };
 
-export type APIBuildInfo = APIBuildInfoWk | APIBuildInfoDatastore | APIBuildInfoTracingstore;
-
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;
   readonly discussionBoardRequiresAdmin: boolean;
@@ -755,11 +788,11 @@ export type APIFeatureToggles = {
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
   readonly voxelyticsEnabled: boolean;
-  readonly neuronInferralCostPerGVx: number;
-  readonly mitochondriaInferralCostPerGVx: number;
-  readonly alignmentCostPerGVx: number;
-  readonly costPerCreditInEuro: number;
-  readonly costPerCreditInDollar: number;
+  readonly neuronInferralCostInMilliCreditsPerGVx: number;
+  readonly nucleiInferralCostInMilliCreditsPerGVx: number;
+  readonly mitochondriaInferralCostInMilliCreditsPerGVx: number;
+  readonly instancesInferralCostInMilliCreditsPerGVx: number;
+  readonly alignmentCostInMilliCreditsPerGVx: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
@@ -772,16 +805,10 @@ export type APIFeatureToggles = {
   readonly passkeysEnabled: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
 };
-export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
-export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIEffectiveJobState =
-  | "UNKNOWN"
-  | "SUCCESS"
-  | "PENDING"
-  | "STARTED"
-  | "FAILURE"
-  | "CANCELLED";
-export enum APIJobType {
+
+export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";
+
+export enum APIJobCommand {
   ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
   EXPORT_TIFF = "export_tiff",
@@ -791,11 +818,11 @@ export enum APIJobType {
   FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
   INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
+  INFER_MITOCHONDRIA = "infer_mitochondria",
+  INFER_INSTANCES = "infer_instances",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",
-  INFER_MITOCHONDRIA = "infer_mitochondria",
-  INFER_INSTANCES = "infer_instances",
   // Only used for backwards compatibility, e.g. to display results.
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
   DEPRECATED_TRAIN_MODEL = "train_model",
@@ -806,32 +833,37 @@ export type WkLibsNdBoundingBox = BoundingBoxObject & {
   additionalAxes: Array<AdditionalAxis>;
 };
 
-export type APIJob = {
-  readonly id: string;
+// Different job types have different argument sets.
+// To simplify the frontend code, this is just the union,
+// listing all possible frontend-relevant arguments.
+export type ApiJobArgs = {
   readonly datasetId: string | null | undefined;
-  readonly owner: APIUserBase;
   readonly datasetName: string | null | undefined;
+  readonly mergeSegments: boolean | null | undefined;
+  readonly trainingAnnotations: Array<{ annotationId: string }>;
   readonly datasetDirectoryName: string | null | undefined;
-  readonly exportFileName: string | null | undefined;
-  readonly layerName: string | null | undefined;
-  readonly annotationLayerName: string | null | undefined;
-  readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
-  readonly annotationType: string | null | undefined;
-  readonly organizationId: string | null | undefined;
+  readonly annotationLayerName: string | null | undefined;
+  readonly layerName: string | null | undefined;
+  readonly modelId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
   readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
-  readonly mergeSegments: boolean | null | undefined;
-  readonly type: APIJobType;
-  readonly state: APIEffectiveJobState;
-  readonly manualState: APIJobManualState;
-  readonly result: string | null | undefined;
+};
+
+export type APIJob = {
+  readonly id: string;
+  readonly command: APIJobCommand;
+  readonly organizationId: string;
+  readonly ownerFirstName: string;
+  readonly ownerLastName: string;
+  readonly ownerEmail: string;
+  readonly args: ApiJobArgs;
+  readonly state: APIJobState;
   readonly resultLink: string | null | undefined;
-  readonly createdAt: number;
-  readonly voxelyticsWorkflowHash: string | null;
-  readonly trainingAnnotations: Array<{ annotationId: string }>;
-  readonly creditCost: string | null | undefined;
-  readonly modelId: string | null | undefined;
+  readonly returnValue: string | null | undefined;
+  readonly voxelyticsWorkflowHash: string | null | undefined;
+  readonly created: number;
+  readonly costInMilliCredits: number | null | undefined;
 };
 
 export type AiModel = {
@@ -955,8 +987,7 @@ export type SkeletonUserState = {
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
-  // This is done to simplify the selection for the type.
-  typ: "Skeleton";
+  typ: "Skeleton"; // This is done to simplify the selection for the type.
   activeNodeId?: number; // only use as a fallback if userStates is empty
   boundingBox?: BoundingBoxProto;
   trees: Array<ServerSkeletonTracingTree>;

@@ -1,6 +1,6 @@
 import { type Intersection, type Object3D, Raycaster } from "three";
 
-export type RaycastIntersection<TIntersected extends Object3D> = Intersection<TIntersected>;
+type RaycastIntersection<TIntersected extends Object3D> = Intersection<TIntersected>;
 
 function ascSort(a: RaycastIntersection<Object3D>, b: RaycastIntersection<Object3D>) {
   return a.distance - b.distance;

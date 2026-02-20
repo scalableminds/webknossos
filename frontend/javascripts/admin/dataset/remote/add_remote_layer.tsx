@@ -5,7 +5,7 @@ import { AsyncButton } from "components/async_clickables";
 import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
-import { isEqual } from "lodash";
+import isEqual from "lodash-es/isEqual";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APIDataStore, VoxelSize } from "types/api_types";
@@ -306,44 +306,41 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
         </RadioGroup>
       </FormItem>
 
-      {showCredentialsFields && (
-        <>
-          {selectedProtocol === "gs" ? (
-            <GoogleAuthFormItem fileList={fileList} handleChange={handleFileChange} />
-          ) : (
-            <Row gutter={8}>
-              <Col span={12}>
-                <FormItem
-                  label={authLabel.username}
-                  hasFeedback
-                  rules={[{ required: true, message: `${authLabel.username} is required` }]}
-                  validateFirst
-                >
-                  <Input
-                    value={usernameOrAccessKey}
-                    onChange={(e) => setUsernameOrAccessKey(e.target.value)}
-                    placeholder={`Enter ${authLabel.username.toLowerCase()}`}
-                  />
-                </FormItem>
-              </Col>
-              <Col span={12}>
-                <FormItem
-                  label={authLabel.password}
-                  hasFeedback
-                  rules={[{ required: true, message: `${authLabel.password} is required` }]}
-                  validateFirst
-                >
-                  <Password
-                    value={passwordOrSecretKey}
-                    onChange={(e) => setPasswordOrSecretKey(e.target.value)}
-                    placeholder={`Enter ${authLabel.password.toLowerCase()}`}
-                  />
-                </FormItem>
-              </Col>
-            </Row>
-          )}
-        </>
-      )}
+      {showCredentialsFields &&
+        (selectedProtocol === "gs" ? (
+          <GoogleAuthFormItem fileList={fileList} handleChange={handleFileChange} />
+        ) : (
+          <Row gutter={8}>
+            <Col span={12}>
+              <FormItem
+                label={authLabel.username}
+                hasFeedback
+                rules={[{ required: true, message: `${authLabel.username} is required` }]}
+                validateFirst
+              >
+                <Input
+                  value={usernameOrAccessKey}
+                  onChange={(e) => setUsernameOrAccessKey(e.target.value)}
+                  placeholder={`Enter ${authLabel.username.toLowerCase()}`}
+                />
+              </FormItem>
+            </Col>
+            <Col span={12}>
+              <FormItem
+                label={authLabel.password}
+                hasFeedback
+                rules={[{ required: true, message: `${authLabel.password} is required` }]}
+                validateFirst
+              >
+                <Password
+                  value={passwordOrSecretKey}
+                  onChange={(e) => setPasswordOrSecretKey(e.target.value)}
+                  placeholder={`Enter ${authLabel.password.toLowerCase()}`}
+                />
+              </FormItem>
+            </Col>
+          </Row>
+        ))}
 
       {exploreLog && (
         <Row gutter={8} style={{ marginTop: 16 }}>

@@ -41,5 +41,3 @@ export function createUpdatableTexture(
 
   return newTexture;
 }
-
-export default {};

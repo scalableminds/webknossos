@@ -1,4 +1,5 @@
 import {
+  EllipsisOutlined,
   HourglassOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
@@ -17,13 +18,16 @@ import {
   Button,
   Col,
   Dropdown,
+  Flex,
   Input,
+  type MenuProps,
   Radio,
   Row,
   Select,
   Space,
   Spin,
   Tooltip,
+  Typography,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
@@ -34,12 +38,17 @@ import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
-import * as Utils from "libs/utils";
-import type { MenuProps } from "rc-menu";
+import { isUserAdminOrDatasetManager, isUserTeamManager } from "libs/utils";
 import type React from "react";
 import { Fragment, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_types";
+import {
+  type APIDatasetCompact,
+  type APIJob,
+  APIJobCommand,
+  type APIUser,
+  type FolderItem,
+} from "types/api_types";
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
@@ -122,22 +131,27 @@ function DatasetView({
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-
-    if (features().jobsEnabled) {
-      getJobs().then((newJobs) => setJobs(newJobs));
-    }
   }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
     if (features().jobsEnabled) {
-      interval = setInterval(() => {
-        getJobs().then((newJobs) => setJobs(newJobs));
-      }, CONVERSION_JOBS_REFRESH_INTERVAL);
+      const poll = () =>
+        getJobs(APIJobCommand.CONVERT_TO_WKW, true).then((newJobs) => {
+          if (!cancelled) {
+            setJobs(newJobs);
+          }
+        });
+      poll();
+      interval = setInterval(poll, CONVERSION_JOBS_REFRESH_INTERVAL);
     }
 
-    return () => (interval != null ? clearInterval(interval) : undefined);
+    return () => {
+      cancelled = true;
+      return interval != null ? clearInterval(interval) : undefined;
+    };
   }, []);
 
   useEffect(() => {
@@ -170,7 +184,7 @@ function DatasetView({
         searchQuery={searchQuery || ""}
         searchTags={searchTags}
         onSelectFolder={onSelectFolder}
-        isUserAdminOrDatasetManager={Utils.isUserAdminOrDatasetManager(user)}
+        isUserAdminOrDatasetManager={isUserAdminOrDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
@@ -218,11 +232,11 @@ function DatasetView({
     />
   );
 
-  const isUserAdminOrDatasetManager = Utils.isUserAdminOrDatasetManager(user);
+  const isUserAnAdminOrDatasetManager = isUserAdminOrDatasetManager(user);
   const isUserAdminOrDatasetManagerOrTeamManager =
-    isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
-  const search = isUserAdminOrDatasetManager ? (
-    <Space.Compact style={{ display: "flex" }}>
+    isUserAnAdminOrDatasetManager || isUserTeamManager(user);
+  const search = isUserAnAdminOrDatasetManager ? (
+    <Space.Compact>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
@@ -237,12 +251,7 @@ function DatasetView({
   );
 
   const adminHeader = (
-    <div
-      className="pull-right"
-      style={{
-        display: "flex",
-      }}
-    >
+    <Space>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <Fragment>
           <DatasetRefreshButton context={context} />
@@ -250,7 +259,6 @@ function DatasetView({
           {context.activeFolderId != null && (
             <PricingEnforcedButton
               disabled={folder != null && !folder.isEditable}
-              style={{ marginRight: 5 }}
               icon={<PlusOutlined />}
               onClick={() =>
                 context.activeFolderId != null &&
@@ -266,7 +274,7 @@ function DatasetView({
       ) : (
         search
       )}
-    </div>
+    </Space>
   );
 
   const datasets = context.datasets;
@@ -315,18 +323,22 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
   const organizationId = useWkSelector((state) => state.activeOrganization?.id);
 
   return (
-    <FastTooltip
-      title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
-    >
-      <Dropdown.Button
-        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
-        style={{ marginRight: 5 }}
-        onClick={() => context.fetchDatasets()}
-        disabled={context.isChecking}
+    <Space.Compact>
+      <FastTooltip
+        title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
       >
-        {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
-      </Dropdown.Button>
-    </FastTooltip>
+        <Button onClick={() => context.fetchDatasets()} disabled={context.isChecking}>
+          {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+        </Button>
+      </FastTooltip>
+      <Dropdown
+        menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
+      >
+        <Button disabled={context.isChecking}>
+          <EllipsisOutlined />
+        </Button>
+      </Dropdown>
+    </Space.Compact>
   );
 }
 
@@ -340,7 +352,6 @@ export function DatasetAddButton({ context }: { context: DatasetCollectionContex
           ? `/datasets/upload?to=${context.activeFolderId}`
           : "/datasets/upload"
       }
-      style={{ marginRight: 5 }}
     >
       <Button type="primary" icon={<PlusOutlined />}>
         Add Dataset
@@ -385,8 +396,21 @@ function GlobalSearchHeader({
   }
 
   return (
-    <>
-      <div style={{ float: "right" }}>
+    <Flex justify="space-between">
+      <Space>
+        <Typography.Title level={3}>
+          <Space>
+            <SearchOutlined />
+            <span>Search Results for &quot;{searchQuery}&quot;</span>
+          </Space>
+        </Typography.Title>
+        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
+          <Typography.Text type="secondary">
+            (only showing the first {SEARCH_RESULTS_LIMIT} results)
+          </Typography.Text>
+        ) : null}
+      </Space>
+      <div>
         <Select
           options={SEARCH_OPTIONS}
           popupMatchSelectWidth={false}
@@ -412,16 +436,7 @@ function GlobalSearchHeader({
           }
         />
       </div>
-      <h3>
-        <SearchOutlined />
-        Search Results for &quot;{searchQuery}&quot;
-        {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-          <span style={{ color: "var( --ant-color-text-secondary)", fontSize: 14, marginLeft: 8 }}>
-            (only showing the first {SEARCH_RESULTS_LIMIT} results)
-          </span>
-        ) : null}
-      </h3>
-    </>
+    </Flex>
   );
 }
 
@@ -430,10 +445,10 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   const newJobs = jobs
     .filter(
       (job) =>
-        job.type === "convert_to_wkw" &&
-        dayjs.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
+        job.command === "convert_to_wkw" &&
+        dayjs.duration(now.diff(job.created)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
     )
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .sort((a, b) => b.created - a.created);
 
   if (newJobs.length === 0) {
     return null;
@@ -463,12 +478,12 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
             <Col>
               <Tooltip title={tooltip}>{icon}</Tooltip>{" "}
               {job.state === "SUCCESS" && job.resultLink ? (
-                <Link to={job.resultLink}>{job.datasetName}</Link>
+                <Link to={job.resultLink}>{job.args.datasetName}</Link>
               ) : (
-                job.datasetName || "UNKNOWN"
+                job.args.datasetName || "UNKNOWN"
               )}
               {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
-              <FormattedDate timestamp={job.createdAt} />
+              <FormattedDate timestamp={job.created} />
               <span>)</span>
             </Col>
           </Row>
@@ -490,7 +505,7 @@ function NewJobsAlert({ jobs }: { jobs: APIJob[] }) {
   );
   return (
     <Alert
-      message={newJobsHeader}
+      title={newJobsHeader}
       description={newJobsList}
       type="info"
       style={{
@@ -521,7 +536,7 @@ function renderPlaceholder(
       : null;
   }
 
-  const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+  const emptyListHintText = isUserAdminOrDatasetManager(user)
     ? "There are no datasets in this folder. Import one or move a dataset from another folder."
     : "There are no datasets in this folder. Please ask an admin or dataset manager to import a dataset or to grant you permissions to add datasets to this folder.";
 

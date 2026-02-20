@@ -6,6 +6,29 @@ import {
   InfoCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
+import { BlobReader, ZipReader } from "@zip.js/zip.js";
+import {
+  AllowedTeamsFormItem,
+  CardContainer,
+  DatasetNameFormItem,
+  DatastoreFormItem,
+} from "admin/dataset/dataset_components";
+import {
+  getLeftOverStorageBytes,
+  hasPricingPlanExceededStorage,
+} from "admin/organization/pricing_plan_utils";
+import {
+  cancelDatasetUpload,
+  createResumableUpload,
+  finishDatasetUpload,
+  getUnfinishedUploads,
+  refreshToken,
+  reserveDatasetUpload,
+  sendAnalyticsEvent,
+  sendFailedRequestAnalyticsEvent,
+  startConvertToWkwJob,
+  type UnfinishedUpload,
+} from "admin/rest_api";
 import {
   Alert,
   Avatar,
@@ -22,49 +45,30 @@ import {
   Spin,
   Tooltip,
 } from "antd";
-import dayjs from "dayjs";
-import React from "react";
-import { connect } from "react-redux";
-
-import {
-  AllowedTeamsFormItem,
-  CardContainer,
-  DatasetNameFormItem,
-  DatastoreFormItem,
-} from "admin/dataset/dataset_components";
-import {
-  getLeftOverStorageBytes,
-  hasPricingPlanExceededStorage,
-} from "admin/organization/pricing_plan_utils";
-import {
-  type UnfinishedUpload,
-  cancelDatasetUpload,
-  createResumableUpload,
-  finishDatasetUpload,
-  getUnfinishedUploads,
-  reserveDatasetUpload,
-  sendAnalyticsEvent,
-  sendFailedRequestAnalyticsEvent,
-  startConvertToWkwJob,
-} from "admin/rest_api";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
+import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import Zip from "libs/zipjs_wrapper";
-import _ from "lodash";
+import countBy from "lodash-es/countBy";
+import difference from "lodash-es/difference";
+import throttle from "lodash-es/throttle";
+import uniqBy from "lodash-es/uniqBy";
+import without from "lodash-es/without";
 import messages from "messages";
+import React from "react";
 import { type FileWithPath, useDropzone } from "react-dropzone";
+import { connect } from "react-redux";
 import { type BlockerFunction, Link } from "react-router-dom";
 import {
   type APIDataStore,
-  APIJobType,
+  APIJobCommand,
   type APIOrganization,
   type APITeam,
   type APIUser,
@@ -73,12 +77,12 @@ import { syncValidator } from "types/validation";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import type { WebknossosState } from "viewer/store";
-import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
+import { confirmAsync, FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
-const logRetryToAnalytics = _.throttle((datasetName: string) => {
+const logRetryToAnalytics = throttle((datasetName: string) => {
   ErrorHandling.notify(new Error(`Warning: Upload of dataset ${datasetName} was retried.`));
 }, REPORT_THROTTLE_THRESHOLD);
 
@@ -189,7 +193,7 @@ type UploadFormFieldTypes = {
 };
 
 export const dataPrivacyInfo = (
-  <Space direction="horizontal" size={4}>
+  <Space orientation="horizontal" size={4}>
     Per default, imported data is private and only visible within your organization.
     <a
       style={{ color: "var(--ant-color-primary)" }}
@@ -219,7 +223,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   blockTimeoutId: number | null = null;
-  formRef: React.RefObject<FormInstance<UploadFormFieldTypes>> = React.createRef<FormInstance>();
+  formRef = React.createRef<FormInstance<UploadFormFieldTypes>>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -319,7 +323,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     window.onbeforeunload = beforeUnload;
     this.props.setBlocking({
-      // @ts-ignore beforeUnload signature is overloaded
+      // @ts-expect-error beforeUnload signature is overloaded
       shouldBlock: beforeUnload,
     });
 
@@ -349,6 +353,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       needsConversion: this.state.needsConversion,
     };
     const datastoreUrl = formValues.datastoreUrl;
+    await refreshToken();
     await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
     const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
     this.setState({
@@ -431,7 +436,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     resumableUpload.on("filesAdded", () => {
       resumableUpload.upload();
     });
-    resumableUpload.on("fileError", (_file: FileWithPath, message: string) => {
+    // terminalFileError is triggered by the RestApi when a normal fileError could not be
+    // recovered by refreshing the user token.
+    resumableUpload.on("terminalFileError", (_file: FileWithPath, message: string) => {
       Toast.error(message);
       this.setState({
         isUploading: false,
@@ -549,7 +556,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     for (const file of files) {
       fileNames.push(file.name);
-      const fileExtension = Utils.getFileExtension(file.name);
+      const fileExtension = getFileExtension(file.name);
       fileExtensions.push(fileExtension);
       sendAnalyticsEvent("add_files_to_upload", {
         fileExtension,
@@ -557,12 +564,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       if (fileExtension === "zip") {
         try {
-          const reader = new Zip.ZipReader(new Zip.BlobReader(file));
+          const reader = new ZipReader(new BlobReader(file));
           const entries = await reader.getEntries();
           await reader.close();
           for (const entry of entries) {
             fileNames.push(entry.filename);
-            fileExtensions.push(Utils.getFileExtension(entry.filename));
+            fileExtensions.push(getFileExtension(entry.filename));
           }
         } catch (e) {
           console.error(e);
@@ -585,7 +592,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       }
     }
 
-    const countedFileExtensions = _.countBy(fileExtensions, (str) => str);
+    const countedFileExtensions = countBy(fileExtensions, (str) => str);
     const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
     if (containsExtension("nml")) {
@@ -685,12 +692,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : this.getDatastoreForUrl(this.state.datastoreUrl);
 
     return (
-      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobCommand.CONVERT_TO_WKW) ||
       false
     );
   };
 
-  onFormValueChange = (changedValues: UploadFormFieldTypes) => {
+  onFormValueChange = (changedValues: Partial<UploadFormFieldTypes>) => {
     if (changedValues.datastoreUrl) {
       this.setState({ datastoreUrl: changedValues.datastoreUrl });
       this.updateUnfinishedUploads();
@@ -699,7 +706,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   render() {
     const { activeUser, withoutCard, datastores } = this.props;
-    const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
+    const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(this.props.activeUser);
 
     const { needsConversion, unfinishedUploadToContinue } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
@@ -722,7 +729,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"
-              message={
+              title={
                 <>
                   Your organization has exceeded the available storage. Uploading new datasets is
                   disabled. Visit the{" "}
@@ -736,7 +743,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
           {unfinishedAndNotSelectedUploads.length > 0 && (
             <Alert
-              message={
+              title={
                 <>
                   Unfinished Dataset Uploads{" "}
                   <Tooltip
@@ -810,7 +817,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           >
             {features().isWkorgInstance && (
               <Alert
-                message={
+                title={
                   <>
                     We are happy to help!
                     <br />
@@ -876,7 +883,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     name="voxelSizeFactor"
                     label="Voxel Size"
                     info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                    // @ts-ignore
+                    // @ts-expect-error
                     disabled={this.state.needsConversion}
                     help="Your dataset is not yet in a WEBKNOSSOS format. Therefore, you need to define the voxel size."
                     rules={[
@@ -943,7 +950,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path || "", "zip"))
+                      files.filter((file) => isFileExtensionEqualTo(file.path || "", "zip"))
                         .length <= 1,
                     "You cannot upload more than one archive.",
                   ),
@@ -952,7 +959,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
                       files.filter((file) =>
-                        Utils.isFileExtensionEqualTo(file.path, ["tar", "rar", "gz"]),
+                        isFileExtensionEqualTo(file.path, ["tar", "rar", "gz"]),
                       ).length === 0,
                     "Tar, tar.gz and rar archives are not supported currently. Please use zip archives.",
                   ),
@@ -961,7 +968,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
                       files.filter((file) =>
-                        Utils.isFileExtensionEqualTo(file.path, ["ply", "stl", "obj"]),
+                        isFileExtensionEqualTo(file.path, ["ply", "stl", "obj"]),
                       ).length === 0,
                     "PLY, STL and OBJ files are not supported. Please upload image files instead of 3D geometries.",
                   ),
@@ -969,23 +976,23 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["nml"]))
-                        .length === 0,
+                      files.filter((file) => isFileExtensionEqualTo(file.path, ["nml"])).length ===
+                      0,
                     "An NML file is an annotation of a dataset and not an independent dataset. Please upload the NML file into the Annotations page in the dashboard or into an open dataset.",
                   ),
                 },
                 {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["mrc"]))
-                        .length === 0,
+                      files.filter((file) => isFileExtensionEqualTo(file.path, ["mrc"])).length ===
+                      0,
                     "MRC files are not supported currently.",
                   ),
                 },
                 {
                   validator: syncValidator((files: FileWithPath[]) => {
                     const archives = files.filter((file) =>
-                      Utils.isFileExtensionEqualTo(file.path, "zip"),
+                      isFileExtensionEqualTo(file.path, "zip"),
                     );
                     // Either there are no archives, or all files are archives
                     return archives.length === 0 || archives.length === files.length;
@@ -1007,10 +1014,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator((files: FileWithPath[]) => {
                     const wkwFiles = files.filter((file) =>
-                      Utils.isFileExtensionEqualTo(file.path, "wkw"),
+                      isFileExtensionEqualTo(file.path, "wkw"),
                     );
                     const imageFiles = files.filter((file) =>
-                      Utils.isFileExtensionEqualTo(file.path, [
+                      isFileExtensionEqualTo(file.path, [
                         "tif",
                         "tiff",
                         "jpg",
@@ -1039,7 +1046,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                       const filePaths = files.map((file) => file.path || "");
                       return (
                         unfinishedUploadToContinue.filePaths.length === filePaths.length &&
-                        _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
+                        difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
                       );
                     },
                     "The selected files do not match the files of the unfinished upload. Please select the same files as before." +
@@ -1099,11 +1106,11 @@ function FileUploadArea({
 }) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
-    onChange(_.uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
+    onChange(uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
   };
 
   const removeFile = (file: FileWithPath) => {
-    onChange(_.without(fileList, file));
+    onChange(without(fileList, file));
   };
 
   const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
@@ -1211,126 +1218,124 @@ function FileUploadArea({
             </div>
           )}
           {isDatasetConversionEnabled ? (
-            <>
-              <div
-                style={{
-                  textAlign: "left",
-                  display: "inline-block",
-                  marginTop: 10,
-                }}
+            <div
+              style={{
+                textAlign: "left",
+                display: "inline-block",
+                marginTop: 10,
+              }}
+            >
+              The following file formats are supported:
+              <ul>
+                <li>
+                  <Popover content={<Zarr3Example />} trigger="hover">
+                    Zarr or WKW dataset
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+
+                <li>
+                  <Popover content={<SingleLayerImageStackExample />} trigger="hover">
+                    Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+
+                <li>
+                  <Popover content={<MultiLayerImageStackExample />} trigger="hover">
+                    Multi-Layer Image File Sequence
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>
+                  <Popover
+                    content={
+                      <a
+                        href="https://docs.webknossos.org/webknossos/data/zarr.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Read more in docs
+                      </a>
+                    }
+                    trigger="hover"
+                  >
+                    OME-Zarr 0.4+ (NGFF) datasets{" "}
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>
+                  <Popover
+                    content={
+                      <a
+                        href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Read more in docs
+                      </a>
+                    }
+                    trigger="hover"
+                  >
+                    Neuroglancer Precomputed datasets{" "}
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>
+                  <Popover
+                    content={
+                      <a
+                        href="https://docs.webknossos.org/webknossos/data/n5.html"
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Read more in docs
+                      </a>
+                    }
+                    trigger="hover"
+                  >
+                    N5 datasets{" "}
+                    <InfoCircleOutlined
+                      style={{
+                        marginLeft: 4,
+                      }}
+                    />
+                  </Popover>
+                </li>
+                <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
+              </ul>
+              Have a look at{" "}
+              <a
+                href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
+                onClick={(e) => e.stopPropagation()}
               >
-                The following file formats are supported:
-                <ul>
-                  <li>
-                    <Popover content={<Zarr3Example />} trigger="hover">
-                      Zarr or WKW dataset
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-
-                  <li>
-                    <Popover content={<SingleLayerImageStackExample />} trigger="hover">
-                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-
-                  <li>
-                    <Popover content={<MultiLayerImageStackExample />} trigger="hover">
-                      Multi-Layer Image File Sequence
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>
-                    <Popover
-                      content={
-                        <a
-                          href="https://docs.webknossos.org/webknossos/data/zarr.html"
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Read more in docs
-                        </a>
-                      }
-                      trigger="hover"
-                    >
-                      OME-Zarr 0.4+ (NGFF) datasets{" "}
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>
-                    <Popover
-                      content={
-                        <a
-                          href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Read more in docs
-                        </a>
-                      }
-                      trigger="hover"
-                    >
-                      Neuroglancer Precomputed datasets{" "}
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>
-                    <Popover
-                      content={
-                        <a
-                          href="https://docs.webknossos.org/webknossos/data/n5.html"
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Read more in docs
-                        </a>
-                      }
-                      trigger="hover"
-                    >
-                      N5 datasets{" "}
-                      <InfoCircleOutlined
-                        style={{
-                          marginLeft: 4,
-                        }}
-                      />
-                    </Popover>
-                  </li>
-                  <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
-                </ul>
-                Have a look at{" "}
-                <a
-                  href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  our documentation
-                </a>{" "}
-                to learn more.
-              </div>
-            </>
+                our documentation
+              </a>{" "}
+              to learn more.
+            </div>
           ) : null}
         </div>
       </div>

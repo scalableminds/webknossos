@@ -36,13 +36,13 @@ export default class ThreeDMap<T> {
 
     // TS doesn't understand that the access to X
     // is guaranteed to be not null due to the above code.
-    // @ts-ignore
+    // @ts-expect-error
     if (this.map.get(x).get(y) == null) {
-      // @ts-ignore
+      // @ts-expect-error
       this.map.get(x).set(y, new Map());
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     this.map.get(x).get(y).set(z, value);
   }
 

@@ -1,6 +1,6 @@
 import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
-import { deleteOrganization } from "admin/rest_api";
+import { deleteOrganization } from "admin/api/organization";
 import { Button, Typography } from "antd";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { useWkSelector } from "libs/react_hooks";

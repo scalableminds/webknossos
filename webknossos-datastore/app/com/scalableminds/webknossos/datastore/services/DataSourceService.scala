@@ -25,7 +25,6 @@ import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
-    managedS3Service: ManagedS3Service,
     dataVaultService: DataVaultService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
@@ -222,7 +221,7 @@ class DataSourceService @Inject()(
 
     PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
-        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organization, resolveMagPaths = true))
+        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organization, resolvePaths = true))
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")
@@ -230,7 +229,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def dataSourceFromDir(path: Path, organizationId: String, resolveMagPaths: Boolean): DataSource = {
+  def dataSourceFromDir(path: Path, organizationId: String, resolvePaths: Boolean): DataSource = {
     val id = DataSourceId(path.getFileName.toString, organizationId)
     val propertiesFile = path.resolve(propertiesFileName)
 
@@ -240,15 +239,15 @@ class DataSourceService @Inject()(
           val validationErrors = validateDataSourceGetErrors(dataSource)
           if (validationErrors.isEmpty) {
             val dataSourceWithAttachments = dataSource.copy(
-              dataLayers = resolveAttachmentsAndAddScanned(path, dataSource)
+              dataLayers = addScannedAttachments(path, dataSource)
             )
-            val dataSourceWithMagPaths =
-              if (resolveMagPaths)
+            val dataSourceWithResolvedPaths =
+              if (resolvePaths)
                 dataSourceWithAttachments.copy(
-                  dataLayers = addMagPaths(path, dataSourceWithAttachments)
+                  dataLayers = resolveDataSourcePaths(path, dataSourceWithAttachments)
                 )
               else dataSourceWithAttachments
-            dataSourceWithMagPaths.copy(id)
+            dataSourceWithResolvedPaths.copy(id)
           } else
             UnusableDataSource(id,
                                None,
@@ -266,14 +265,16 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def addMagPaths(dataSourcePath: Path, dataSource: UsableDataSource): List[StaticLayer] =
+  private def resolveDataSourcePaths(dataSourcePath: Path, dataSource: UsableDataSource): List[StaticLayer] =
     dataSource.dataLayers.map { dataLayer =>
       dataLayer.mapped(
         newMags = Some(dataLayer.mags.map { magLocator =>
           magLocator.copy(
             path =
               Some(dataVaultService.resolveMagPath(magLocator, dataSourcePath, dataSourcePath.resolve(dataLayer.name))))
-        })
+        }),
+        attachmentMapping =
+          (attachments: DataLayerAttachments) => attachments.resolvedIn(UPath.fromLocalPath(dataSourcePath))
       )
     }
 
@@ -295,18 +296,17 @@ class DataSourceService @Inject()(
     dataSource.copy(dataLayers = updatedDataLayers)
   }
 
-  private def resolveAttachmentsAndAddScanned(dataSourcePath: Path, dataSource: UsableDataSource) =
+  private def addScannedAttachments(dataSourcePath: Path, dataSource: UsableDataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
-      dataLayer.withMergedAndResolvedAttachments(
-        UPath.fromLocalPath(dataSourcePath),
+      dataLayer.withMergedAttachments(
         DataLayerAttachments(
           MeshFileInfo.scanForMeshFiles(dataLayerPath),
           AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath),
           SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),
           ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath),
           CumsumFileInfo.scanForCumsumFile(dataLayerPath)
-        )
+        ).relativizedIn(UPath.fromLocalPath(dataSourcePath))
       )
     })
 
@@ -326,12 +326,10 @@ class DataSourceService @Inject()(
       } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 
-  def deletePathsFromDiskOrManagedS3(paths: Seq[UPath]): Fox[Unit] = {
-    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath)
-    val managedS3Paths = paths.filter(managedS3Service.pathIsInManagedS3)
+  def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {
+    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(_.toAbsolutePath.startsWith(dataBaseDir))
     for {
-      _ <- Fox.serialCombined(localPaths)(PathUtils.deleteDirectoryRecursively(_).toFox)
-      _ <- managedS3Service.deletePaths(managedS3Paths)
+      _ <- localPaths.map(PathUtils.deleteDirectoryRecursively).toList.toSingleBox("Failed to delete local paths")
     } yield ()
   }
 

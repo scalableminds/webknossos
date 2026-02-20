@@ -1,4 +1,5 @@
 import type { SceneControllerType } from "./scene_controller";
+
 let sceneController: SceneControllerType | null | undefined = null;
 
 export default function getSceneController(): SceneControllerType {

@@ -56,7 +56,7 @@ Volume annotations can be downloaded and imported using ZIP files that contain [
 The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
 Additionally, there is another embedded ZIP file that contains the volume annotations in WKW file format.
 
-!!!info
+!!! info 
     In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
     Therefore, also the addressing of the WKW files (e.g. `z48/y5444/x5748.wkw`) is in steps of 32 instead of 1024.
 

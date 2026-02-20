@@ -1,6 +1,6 @@
 import Deferred from "libs/async/deferred";
-import { describe, it, expect } from "vitest";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
+import { describe, expect, it } from "vitest";
 
 describe("LatestTaskExecutor", () => {
   it("One task", async () => {

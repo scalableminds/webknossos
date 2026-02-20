@@ -6,11 +6,12 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
+import controllers.RpcTokenHolder
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
-import models.team.{PricingPlan, Team, TeamDAO}
+import models.team.{Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
@@ -51,8 +52,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
-      creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
-        creditTransactionDAO.getCreditBalance(organization._id))
+      milliCreditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+        creditTransactionDAO.getMilliCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -62,12 +63,13 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "enableAutoVerify" -> organization.enableAutoVerify,
         "name" -> organization.name,
         "pricingPlan" -> organization.pricingPlan,
+        "aiPlan" -> organization.aiPlan,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
         "ownerName" -> ownerNameOpt,
-        "creditBalance" -> creditBalanceOpt.map(_.toString)
+        "milliCreditBalance" -> milliCreditBalanceOpt
       ) ++ adminOnlyInfo
   }
 
@@ -124,6 +126,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationName,
         initialPricingParameters._1,
         None,
+        None,
         initialPricingParameters._2,
         initialPricingParameters._3,
         organizationRootFolder._id
@@ -134,10 +137,10 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization
 
-  def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
+  def createOrganizationDirectory(organizationId: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/createOrganizationDirectory")
-        .addQueryParam("token", dataStoreToken)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .addQueryParam("organizationId", organizationId)
         .postEmpty()
         .futureBox
@@ -182,8 +185,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  // Currently disabled as in the credit system trail phase all organizations should be able to start paid jobs.
-  // See tracking issue: https://github.com/scalableminds/webknossos/issues/8458
-  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] = Fox.successful(())
+  def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      isSuperUser <- userService.isSuperUser(user._multiUser)
+      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> "job.creditTransaction.noAiPlan"
+    } yield ()
 
 }

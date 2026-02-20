@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import * as Utils from "libs/utils";
+import { computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import type {
   AddUserBoundingBoxInSkeletonTracingAction,
   AddUserBoundingBoxInVolumeTracingAction,
@@ -38,7 +38,7 @@ export function applyAddUserBoundingBox(
 ) {
   const { boundingBox, ...valueWithoutBoundingBox } = ua.value.boundingBox;
   const boundingBoxValue = {
-    boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBox),
+    boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBox),
   };
   const newUserBBox: UserBoundingBox = {
     // The visibility is stored per user. Therefore, we default to true here.

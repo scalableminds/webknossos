@@ -9,7 +9,7 @@ import FastTooltip from "components/fast_tooltip";
 import ErrorHandling from "libs/error_handling";
 import { useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
-import _ from "lodash";
+import throttle from "lodash-es/throttle";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -24,7 +24,7 @@ const UNSAVED_WARNING_THRESHOLD = 2 * 60 * 1000; // 2 min
 
 const REPORT_THROTTLE_THRESHOLD = 10 * 60 * 1000; // 10 min
 
-const reportUnsavedDurationThresholdExceeded = _.throttle(() => {
+const reportUnsavedDurationThresholdExceeded = throttle(() => {
   ErrorHandling.notify(
     new Error(
       `Warning: Saving lag detected. Some changes are unsaved and older than ${Math.ceil(

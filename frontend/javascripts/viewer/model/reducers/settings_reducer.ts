@@ -95,13 +95,13 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;
       let { value } = action;
-      // @ts-ignore The in-check should guard against any problems while accessing userSettings
+      // @ts-expect-error The in-check should guard against any problems while accessing userSettings
       const settingSpec = propertyName in userSettings ? userSettings[propertyName] : null;
 
       if (settingSpec != null && settingSpec.type === "number") {
         const min = "minimum" in settingSpec ? settingSpec.minimum : Number.NEGATIVE_INFINITY;
         const max = "maximum" in settingSpec ? settingSpec.maximum : Number.POSITIVE_INFINITY;
-        // @ts-ignore Since settingSpec.type === "number", value will be a number
+        // @ts-expect-error Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 
         if ("dynamicMaximumFn" in settingSpec) {

@@ -1,6 +1,6 @@
 import { Select } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import * as Utils from "libs/utils";
+import { localeCompareBy } from "libs/utils";
 import messages from "messages";
 import React from "react";
 import { connect } from "react-redux";
@@ -100,10 +100,10 @@ class MappingSettingsView extends React.Component<Props, State> {
       throw new Error("Invalid mapping type");
     }
 
-    this.props.setMapping(this.props.layerName, mappingName, mappingType, {
+    this.props.setMapping(this.props.layerName, mappingName, mappingType, false, {
       showLoadingIndicator: true,
     });
-    // @ts-ignore
+    // @ts-expect-error
     if (document.activeElement) document.activeElement.blur();
   };
 
@@ -165,7 +165,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
       const elements = optionStrings
         .slice()
-        .sort(Utils.localeCompareBy((optionString) => optionString))
+        .sort(localeCompareBy((optionString) => optionString))
         .map((optionString) => (
           <Option
             key={packMappingNameAndCategory(optionString, category)}
@@ -280,7 +280,7 @@ function mapStateToProps(state: WebknossosState, ownProps: OwnProps) {
     mappingType: activeMappingInfo.mappingType,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
-    allowUpdate: state.annotation.restrictions.allowUpdate,
+    allowUpdate: state.annotation.isUpdatingCurrentlyAllowed,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),

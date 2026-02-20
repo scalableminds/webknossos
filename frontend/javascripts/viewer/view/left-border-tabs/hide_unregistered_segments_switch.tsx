@@ -1,12 +1,13 @@
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
+import { useDispatch } from "react-redux";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getHideUnregisteredSegmentsForLayer } from "viewer/model/accessors/volumetracing_accessor";
 import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
-import Store from "viewer/store";
 import { SwitchSetting } from "viewer/view/components/setting_input_views";
 
 export function HideUnregisteredSegmentsSwitch({ layerName }: { layerName: string }) {
+  const dispatch = useDispatch();
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
 
   const isProofreadingMode = activeTool === AnnotationTool.PROOFREAD;
@@ -34,7 +35,7 @@ export function HideUnregisteredSegmentsSwitch({ layerName }: { layerName: strin
       >
         <SwitchSetting
           onChange={() => {
-            Store.dispatch(setHideUnregisteredSegmentsAction(!hideUnregisteredSegments, layerName));
+            dispatch(setHideUnregisteredSegmentsAction(!hideUnregisteredSegments, layerName));
           }}
           value={hideUnregisteredSegments}
           label={"Hide unlisted segments"}

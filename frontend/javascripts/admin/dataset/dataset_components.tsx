@@ -28,7 +28,7 @@ export function CardContainer({
           marginLeft: "auto",
           marginRight: "auto",
         }}
-        bordered={false}
+        variant="borderless"
         title={
           <>
             <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
@@ -133,9 +133,8 @@ export function DatastoreFormItem({
       initialValue={datastores.length ? datastores[0].url : null}
     >
       <Select
-        showSearch
+        showSearch={{ optionFilterProp: "label" }}
         placeholder="Select a Datastore"
-        optionFilterProp="label"
         disabled={disabled}
         style={{
           width: "100%",
@@ -161,7 +160,7 @@ export function AllowedTeamsFormItem({
   selectedTeams: APITeam | Array<APITeam>;
   setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
   afterFetchedTeams?: (arg0: Array<APITeam>) => void;
-  formRef: React.RefObject<FormInstance<any>>;
+  formRef: React.RefObject<FormInstance<any> | null>;
   disabled?: boolean;
 }) {
   return (

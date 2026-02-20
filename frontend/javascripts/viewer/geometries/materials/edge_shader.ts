@@ -1,6 +1,8 @@
 import { M4x4 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
-import _ from "lodash";
+import each from "lodash-es/each";
+import range from "lodash-es/range";
+import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "viewer/geometries/materials/node_shader";
 import type { Uniforms } from "viewer/geometries/materials/plane_material_factory";
@@ -53,7 +55,7 @@ class EdgeShader {
 
     const { additionalCoordinates } = Store.getState().flycam;
 
-    _.each(additionalCoordinates, (_val, idx) => {
+    each(additionalCoordinates, (_val, idx) => {
       this.uniforms[`currentAdditionalCoord_${idx}`] = {
         value: 0,
       };
@@ -63,7 +65,7 @@ class EdgeShader {
       listenToStoreProperty(
         (storeState) => storeState.flycam.additionalCoordinates,
         (additionalCoordinates) => {
-          _.each(additionalCoordinates, (coord, idx) => {
+          each(additionalCoordinates, (coord, idx) => {
             this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
           });
         },
@@ -117,7 +119,7 @@ class EdgeShader {
   getVertexShader(): string {
     const { additionalCoordinates } = Store.getState().flycam;
 
-    return _.template(`
+    return template(`
 precision highp float;
 precision highp int;
 
@@ -135,14 +137,14 @@ uniform mat4 transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% _.range(additionalCoordinateLength).map((idx) => { %>
+<% range(additionalCoordinateLength).map((idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
 <% }) %>
 
 in vec3 position;
 in float treeId;
 
-<% _.range(additionalCoordinateLength).map((idx) => { %>
+<% range(additionalCoordinateLength).map((idx) => { %>
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
@@ -150,7 +152,7 @@ out float alpha;
 
 void main() {
     alpha = 1.0;
-    <% _.range(additionalCoordinateLength).map((idx) => { %>
+    <% range(additionalCoordinateLength).map((idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
         alpha = 0.;
       }
@@ -187,6 +189,7 @@ void main() {
       tpsTransform: this.scaledTps,
       generateTpsInitialization,
       generateCalculateTpsOffsetFunction,
+      range,
     });
   }
 

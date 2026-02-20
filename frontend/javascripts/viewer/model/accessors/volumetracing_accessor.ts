@@ -1,20 +1,21 @@
 import { V3 } from "libs/mjs";
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import type {
+  AdditionalCoordinate,
+  AnnotationLayerDescriptor,
   APIAnnotation,
   APIAnnotationInfo,
   APIDataLayer,
   APIDataset,
   APISegmentationLayer,
-  AdditionalCoordinate,
-  AnnotationLayerDescriptor,
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
 import Constants, {
   type ContourMode,
+  MAX_MAG_FOR_AGGLOMERATE_MAPPING,
   MappingStatusEnum,
   type Vector3,
   type Vector4,
@@ -35,11 +36,7 @@ import {
   getAdditionalCoordinatesAsString,
   getFlooredPosition,
 } from "viewer/model/accessors/flycam_accessor";
-import {
-  AnnotationTool,
-  type AnnotationToolId,
-  VolumeTools,
-} from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { jsConvertCellIdToRGBA } from "viewer/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "viewer/shaders/utils.glsl";
@@ -56,8 +53,8 @@ import type {
 } from "viewer/store";
 import type { SegmentHierarchyNode } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
-  MISSING_GROUP_ID,
   getGroupByIdWithSubgroups,
+  MISSING_GROUP_ID,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
@@ -235,9 +232,6 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
   [AnnotationTool.ERASE_BRUSH.id]: 3,
   [AnnotationTool.FILL_CELL.id]: 1,
 };
-export function isVolumeTool(tool: AnnotationTool): boolean {
-  return VolumeTools.indexOf(tool) > -1;
-}
 
 export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: WebknossosState) {
   if (state.annotation.volumes.length === 0) {
@@ -499,18 +493,14 @@ function _getSelectedIds(state: WebknossosState): [
 
 export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
-export function getActiveSegmentPosition(state: WebknossosState): Vector3 | null | undefined {
+export function getProofreadingMarkerPosition(state: WebknossosState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
   if (layer == null) return null;
 
   const volumeTracing = getVolumeTracingByLayerName(state.annotation, layer.name);
   if (volumeTracing == null) return null;
 
-  const activeCellId = getActiveCellId(volumeTracing);
-  if (activeCellId == null) return null;
-
-  const segments = getSegmentsForLayer(state, layer.name);
-  return segments.getNullable(activeCellId)?.somePosition;
+  return volumeTracing.proofreadingMarkerPosition;
 }
 
 /*
@@ -859,6 +849,16 @@ export function hasAgglomerateMapping(state: WebknossosState) {
   return AGGLOMERATE_STATES.YES;
 }
 
+export function isZoomThresholdExceededForAgglomerateMapping(
+  state: WebknossosState,
+  segmentationLayerName: string,
+) {
+  return (
+    getActiveMagIndexForLayer(state, segmentationLayerName) >
+    Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING)
+  );
+}
+
 export function getMeshesForAdditionalCoordinates(
   state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
@@ -918,7 +918,7 @@ export const getBucketRetrievalSourceFn =
   // per layerName. This is important since the function uses reuseInstanceOnEquality
   // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
   // consecutive calls.
-  _.memoize((layerName: string) =>
+  memoize((layerName: string) =>
     reuseInstanceOnEquality((state: WebknossosState): BucketRetrievalSource => {
       const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
 

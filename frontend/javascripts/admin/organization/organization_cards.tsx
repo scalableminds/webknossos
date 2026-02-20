@@ -1,14 +1,20 @@
-import { FieldTimeOutlined, PlusCircleOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Row } from "antd";
+import {
+  CrownOutlined,
+  FieldTimeOutlined,
+  PlusCircleOutlined,
+  RobotOutlined,
+} from "@ant-design/icons";
+import { Alert, Button, Card, Col, Row, Space } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
 import type { APIOrganization } from "types/api_types";
 import Constants from "viewer/constants";
 import {
-  PricingPlanEnum,
+  aiAddonFeatures,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
+  PricingPlanEnum,
   powerPlanFeatures,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
@@ -17,11 +23,21 @@ import UpgradePricingPlanModal from "./upgrade_plan_modal";
 export function TeamPlanUpgradeCard({ teamUpgradeCallback }: { teamUpgradeCallback: () => void }) {
   return (
     <Card
-      title={`${PricingPlanEnum.Team} Plan`}
+      title={
+        <Space size="small">
+          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
+          {PricingPlanEnum.Team} Plan
+        </Space>
+      }
       styles={{ body: { minHeight: 220 } }}
       actions={[
-        <Button type="primary" onClick={teamUpgradeCallback} key="buy-teamupgrade-button">
-          <PlusCircleOutlined /> Buy Upgrade
+        <Button
+          type="primary"
+          onClick={teamUpgradeCallback}
+          key="buy-teamupgrade-button"
+          icon={<PlusCircleOutlined />}
+        >
+          Buy Upgrade
         </Button>,
       ]}
     >
@@ -43,20 +59,65 @@ export function PowerPlanUpgradeCard({
 }) {
   return (
     <Card
-      title={`${PricingPlanEnum.Power} Plan`}
+      title={
+        <Space size="small">
+          <CrownOutlined style={{ color: "var(--ant-color-primary)" }} />
+          {PricingPlanEnum.Power} Plan
+        </Space>
+      }
       styles={{ body: { minHeight: 220 } }}
       actions={[
-        <Button type="primary" onClick={powerUpgradeCallback} key="buy-power-upgrade-button">
-          <PlusCircleOutlined /> Buy Upgrade
+        <Button
+          type="primary"
+          onClick={powerUpgradeCallback}
+          key="buy-power-upgrade-button"
+          icon={<PlusCircleOutlined />}
+        >
+          Buy Upgrade
         </Button>,
       ]}
     >
-      {description ? <p>{description}</p> : null}
-      <ul>
-        {powerPlanFeatures.map((feature) => (
-          <li key={feature.slice(0, 10)}>{feature}</li>
-        ))}
-      </ul>
+      <div>
+        {description ? <p>{description}</p> : null}
+        <ul>
+          {powerPlanFeatures.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
+      </div>
+    </Card>
+  );
+}
+
+export function AiAddonUpgradeCard() {
+  return (
+    <Card
+      title={
+        <Space size="small">
+          <RobotOutlined style={{ color: "var(--ant-color-primary)" }} />
+          AI Add-on
+        </Space>
+      }
+      styles={{ body: { minHeight: 220 } }}
+      actions={[
+        <Button
+          type="primary"
+          onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
+          key="buy-ai-addon-button"
+          icon={<PlusCircleOutlined />}
+        >
+          Buy AI Add-on
+        </Button>,
+      ]}
+    >
+      <div>
+        Unlock AI add-on for advanced capabilities like model training for your organization.
+        <ul>
+          {aiAddonFeatures.map((feature) => (
+            <li key={feature.slice(0, 10)}>{feature}</li>
+          ))}
+        </ul>
+      </div>
     </Card>
   );
 }
@@ -153,7 +214,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
     <Alert
       showIcon
       type="error"
-      message={message}
+      title={message}
       action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
       style={{ marginBottom: 20 }}
     />
@@ -181,7 +242,7 @@ export function PlanAboutToExceedAlert({ organization }: { organization: APIOrga
       <Alert
         showIcon
         type="warning"
-        message="Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
+        title="Your WEBKNOSSOS plan is about to expire soon. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
         action={activeUser && isUserAllowedToRequestUpgrades(activeUser) ? actionButton : null}
         style={{ marginBottom: 20 }}
       />

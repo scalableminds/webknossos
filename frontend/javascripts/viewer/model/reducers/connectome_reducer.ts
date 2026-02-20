@@ -48,7 +48,7 @@ function setConnectomeTreesVisibilityReducer(
   });
 }
 
-export function deleteConnectomeTrees(
+function deleteConnectomeTrees(
   skeletonTracing: SkeletonTracing,
   treeIds: number[],
 ): [TreeMap, number] | null {

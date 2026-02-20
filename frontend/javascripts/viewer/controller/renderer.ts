@@ -82,8 +82,6 @@ if (typeof window !== "undefined") {
     ext.loseContext();
     setTimeout(() => ext.restoreContext(), 2500);
   }
-  // @ts-ignore
+  // @ts-expect-error
   window.testContextLoss = testContextLoss;
 }
-
-export default {};

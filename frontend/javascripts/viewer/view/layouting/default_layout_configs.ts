@@ -1,12 +1,11 @@
-import { getIsInIframe } from "libs/utils";
-import * as Utils from "libs/utils";
+import { entries, getIsInIframe, keys } from "libs/utils";
 /*
  * This file defines:
  *  - the main tabs which can be arranged in WK Core
  *  - the different layout types which specify which tabs exist in which layout and what their default arrangement is
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
-import _ from "lodash";
+import memoize from "lodash-es/memoize";
 import type { BorderTabType, ControlMode, ViewMode } from "viewer/constants";
 import Constants, {
   ArbitraryViews,
@@ -26,6 +25,7 @@ import type {
   TabNode,
   TabsetNode,
 } from "./flex_layout_types";
+
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 15;
 const layoutHeaderHeight = 20;
@@ -56,9 +56,9 @@ export const getGroundTruthLayoutRect = () => {
       width = dummyExtent;
     }
   } else {
-    // @ts-ignore
+    // @ts-expect-error
     height = mainContainer.offsetHeight;
-    // @ts-ignore
+    // @ts-expect-error
     width = mainContainer.offsetWidth;
   }
 
@@ -110,16 +110,16 @@ export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode 
 }
 const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 
-Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
+entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
 const OrthoViewports = {} as Record<keyof typeof OrthoViews, TabNode>;
-Utils.keys(OrthoViews).forEach((viewportId) => {
+keys(OrthoViews).forEach((viewportId) => {
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const ArbitraryViewports = {} as Record<keyof typeof ArbitraryViews, TabNode>;
-Utils.keys(ArbitraryViews).forEach((viewportId) => {
+keys(ArbitraryViews).forEach((viewportId) => {
   const name = ArbitraryViewsToName[viewportId];
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
@@ -157,6 +157,7 @@ function buildBorder(
     id: `${side}-border`,
     barSize: borderBarSize,
     size: width,
+    enableAutoHide: true,
     children: [
       {
         type: "tab",
@@ -299,7 +300,7 @@ const _getDefaultLayouts = () => {
   };
 };
 
-const getDefaultLayouts = _.memoize(_getDefaultLayouts);
+const getDefaultLayouts = memoize(_getDefaultLayouts);
 
 export const resetDefaultLayouts = () => {
   // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message

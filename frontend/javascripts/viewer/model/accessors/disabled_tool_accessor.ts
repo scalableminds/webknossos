@@ -1,18 +1,13 @@
 import {
-  PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
+  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { IdentityTransform } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
-import type { WebknossosState } from "viewer/store";
-import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
-import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
-
 import {
   type AgglomerateState,
   getActiveSegmentationTracing,
@@ -20,6 +15,10 @@ import {
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "viewer/model/accessors/volumetracing_accessor";
+import type { WebknossosState } from "viewer/store";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
+import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "./tool_accessor";
 
 export type DisabledInfo = {

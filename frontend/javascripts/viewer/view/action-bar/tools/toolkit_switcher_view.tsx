@@ -1,8 +1,9 @@
 import { Badge, Button, Dropdown, type MenuProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
+import { useCallback } from "react";
+import { useDispatch } from "react-redux";
 import { Toolkit } from "viewer/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { Store } from "viewer/singletons";
 import { NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 const toolkitOptions: Array<{ label: string; key: Toolkit }> = [
@@ -25,7 +26,9 @@ const toolkitOptions: Array<{ label: string; key: Toolkit }> = [
 ];
 
 export default function ToolkitView() {
+  const dispatch = useDispatch();
   const activeToolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
+
   const toolkitItems: MenuProps["items"] = [
     {
       key: "1",
@@ -35,14 +38,17 @@ export default function ToolkitView() {
     },
   ];
 
-  const handleMenuClick: MenuProps["onClick"] = (args) => {
-    const toolkit = args.key;
-    Store.dispatch(updateUserSettingAction("activeToolkit", toolkit as Toolkit));
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
-    args.domEvent.target.blur();
-  };
+  const handleMenuClick = useCallback<NonNullable<MenuProps["onClick"]>>(
+    (args) => {
+      const toolkit = args.key;
+      dispatch(updateUserSettingAction("activeToolkit", toolkit as Toolkit));
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
+      args.domEvent.target.blur();
+    },
+    [dispatch],
+  );
 
-  const toolkitMenuProps = {
+  const toolkitMenuProps: MenuProps = {
     items: toolkitItems,
     onClick: handleMenuClick,
     selectable: true,

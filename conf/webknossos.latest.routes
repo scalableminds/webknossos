@@ -48,6 +48,7 @@ DELETE        /auth/webauthn/keys/:id                                           
 # /auth/oidc/callback route is used literally in code
 GET           /auth/oidc/callback                                                               controllers.AuthenticationController.openIdCallback()
 POST          /auth/createOrganizationWithAdmin                                                 controllers.AuthenticationController.createOrganizationWithAdmin()
+POST          /auth/createOrganizationWithExistingUser                                          controllers.AuthenticationController.createOrganizationWithExistingUser()
 POST          /auth/createUserInOrganization/:organizationId                                    controllers.AuthenticationController.createUserInOrganization(organizationId: String)
 
 # Configurations
@@ -92,6 +93,8 @@ POST          /datasets/exploreAndAddRemote                                     
 POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
 GET           /datasets/disambiguate/:datasetName/toNew                                         controllers.DatasetController.getOrganizationForDataset(datasetName: String, sharingToken: Option[String])
 GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
+GET           /datasets/pathsToDelete                                                           controllers.PathDeletionController.listPathsToDelete(key: String)
+POST          /datasets/pathsToDelete/markAsDeleted                                             controllers.PathDeletionController.markAsDeleted(key: String)
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
 PATCH         /datasets/:datasetId                                                              controllers.DatasetController.update(datasetId: ObjectId)
 PATCH         /datasets/:datasetId/updatePartial                                                controllers.DatasetController.updatePartial(datasetId: ObjectId)
@@ -106,9 +109,13 @@ GET           /datasets/:datasetName/isValidNewName                             
 DELETE        /datasets/:datasetId                                                              controllers.DatasetController.delete(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveAttachmentUploadToPath                                controllers.DatasetController.reserveAttachmentUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishAttachmentUploadToPath                                 controllers.DatasetController.finishAttachmentUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/reserveMagUploadToPath                                       controllers.DatasetController.reserveMagUploadToPath(datasetId: ObjectId)
+POST          /datasets/:datasetId/finishMagUploadToPath                                        controllers.DatasetController.finishMagUploadToPath(datasetId: ObjectId)
 POST          /datasets/:datasetId/reserveUploadToPathsForPreliminary                           controllers.DatasetController.reserveUploadToPathsForPreliminary(datasetId: ObjectId)
 POST          /datasets/:datasetId/finishUploadToPaths                                          controllers.DatasetController.finishUploadToPaths(datasetId: ObjectId)
 GET           /datasets/:datasetId                                                              controllers.DatasetController.read(datasetId: ObjectId, sharingToken: Option[String])
+GET           /datasets/:datasetId/dataSourceForSuperUser                                       controllers.DatasetController.dataSourceForSuperUser(datasetId: ObjectId)
+POST          /datasets/:datasetId/duplicateToOrga                                              controllers.DatasetController.duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 
@@ -173,6 +180,7 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId)
+DELETE        /annotations/:id/mutex                                                            controllers.AnnotationController.releaseMutex(id: ObjectId)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)
@@ -253,7 +261,10 @@ POST          /pricing/requestUpgrade                                           
 POST          /pricing/requestUsers                                                             controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
 POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
 POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
+POST          /pricing/requestAiAddon                                                           controllers.OrganizationController.sendUpgradeAiAddonEmail()
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
+POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan
+GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService()
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()
@@ -266,7 +277,7 @@ GET           /time/overview                                                    
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
-GET           /jobs                                                                             controllers.JobController.list()
+GET           /jobs                                                                             controllers.JobController.list(command: Option[String], skipForDeletedDatasets: Option[Boolean])
 GET           /jobs/status                                                                      controllers.JobController.status()
 GET           /jobs/getCreditCost                                                               controllers.JobController.getJobCreditCost(command: String, boundingBoxInMag: String)
 POST          /jobs/run/convertToWkw/:datasetId                                                 controllers.JobController.runConvertToWkwJob(datasetId: ObjectId, scale: String, unit: Option[String])
@@ -304,6 +315,7 @@ DELETE        /aiModels/:id                                                     
 # CreditTransactions
 POST          /creditTransactions/addCredits                                                    controllers.CreditTransactionController.addCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
 PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: String)
+GET           /creditTransactions                                                               controllers.CreditTransactionController.list
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

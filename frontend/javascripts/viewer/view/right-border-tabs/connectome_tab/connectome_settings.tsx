@@ -18,6 +18,7 @@ import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import { NumberSliderSetting } from "viewer/view/components/setting_input_views";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+
 const { Option } = Select;
 type OwnProps = {
   segmentationLayer: APISegmentationLayer | null | undefined;
@@ -143,7 +144,7 @@ class ConnectomeFilters extends React.Component<Props> {
                     </Option>
                   ))
                 ) : (
-                  <Option value={null} disabled>
+                  <Option value="" disabled>
                     No files available
                   </Option>
                 )}
@@ -176,9 +177,12 @@ class ConnectomeFilters extends React.Component<Props> {
     return (
       <Tooltip title="Configure Connectome Settings">
         <Popover content={this.getConnectomeFileSettings} trigger="click" placement="bottomRight">
-          <ButtonComponent>
-            <SettingOutlined />
-          </ButtonComponent>
+          <ButtonComponent
+            icon={<SettingOutlined />}
+            title="Configure Connectome Settings"
+            variant="text"
+            color="default"
+          />
         </Popover>
       </Tooltip>
     );

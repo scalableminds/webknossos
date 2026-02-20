@@ -1,7 +1,7 @@
-import { PNG } from "pngjs";
 import fs from "node:fs";
-import pixelmatch from "pixelmatch";
 import path from "node:path";
+import pixelmatch from "pixelmatch";
+import { PNG } from "pngjs";
 
 export const SCREENSHOTS_BASE_PATH = path.join(
   __dirname,

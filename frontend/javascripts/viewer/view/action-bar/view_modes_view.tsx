@@ -1,11 +1,10 @@
+import { AppstoreFilled, GlobalOutlined } from "@ant-design/icons";
 import { Button, Dropdown, type MenuProps, Space } from "antd";
-import * as Utils from "libs/utils";
-import { useCallback } from "react";
-
 import { useWkSelector } from "libs/react_hooks";
+import capitalize from "lodash-es/capitalize";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { type ViewMode, ViewModeValues } from "viewer/constants";
-import constants from "viewer/constants";
+import constants, { type ViewMode, ViewModeValues } from "viewer/constants";
 import {
   setFlightmodeRecordingAction,
   setViewModeAction,
@@ -13,8 +12,8 @@ import {
 import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 const VIEW_MODE_TO_ICON = {
-  [constants.MODE_PLANE_TRACING]: <i className="fas fa-th-large" />,
-  [constants.MODE_ARBITRARY]: <i className="fas fa-globe" />,
+  [constants.MODE_PLANE_TRACING]: <AppstoreFilled />,
+  [constants.MODE_ARBITRARY]: <GlobalOutlined />,
   [constants.MODE_ARBITRARY_PLANE]: (
     <i className="fas fa-square-full" style={{ transform: "scale(0.8, 1) rotate(-45deg)" }} />
   ),
@@ -59,7 +58,7 @@ function ViewModesView() {
       type: "group",
       label: "Select View Mode",
       children: ViewModeValues.map((mode) => ({
-        label: Utils.capitalize(mode),
+        label: capitalize(mode),
         key: mode,
         disabled: isDisabled(mode),
         icon: <span style={{ marginRight: 8 }}>{VIEW_MODE_TO_ICON[mode]}</span>,

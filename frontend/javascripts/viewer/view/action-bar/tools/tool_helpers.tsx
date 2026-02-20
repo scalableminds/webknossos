@@ -1,10 +1,10 @@
 import { Radio } from "antd";
-import type React from "react";
-
-import { document } from "libs/window";
-
 import FastTooltip from "components/fast_tooltip";
 
+import { document } from "libs/window";
+import type React from "react";
+
+export const ACTIONBAR_MARGIN_LEFT = "var(--ant-margin-xs)"; // keep in sync with stylesheets/trace_view/_action_bar.less
 export const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
   paddingRight: 8,

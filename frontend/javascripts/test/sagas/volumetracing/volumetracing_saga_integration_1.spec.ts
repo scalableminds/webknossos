@@ -3,34 +3,34 @@
  * The tests are split into two modules to allow for isolated parallelization and thus
  * increased performance.
  */
-import _ from "lodash";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
+import max from "lodash-es/max";
 import {
-  setupWebknossosForTesting,
   createBucketResponseFunction,
+  setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import Store from "viewer/store";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
+  addToContourListAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
-  removeSegmentAction,
-  setSegmentGroupsAction,
-  updateSegmentAction,
-  setActiveCellAction,
-  addToLayerAction,
-  startEditingAction,
   finishEditingAction,
+  removeSegmentAction,
+  setActiveCellAction,
   setContourTracingModeAction,
+  setSegmentGroupsAction,
+  startEditingAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import Store from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dispatchUndoAsync, dispatchRedoAsync } from "viewer/model/actions/save_actions";
-import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -69,12 +69,12 @@ describe("Volume Tracing", () => {
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     // Brush with ${newCellId + 1}
     Store.dispatch(setActiveCellAction(newCellId + 1));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     expect(
@@ -129,7 +129,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
     await api.tracing.save();
 
@@ -183,7 +183,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setPositionAction([0, 0, 0]));
     Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     await api.tracing.save();
@@ -197,8 +197,8 @@ describe("Volume Tracing", () => {
       expect(readValue, `Voxel should be erased at zoomstep=${zoomStep}`).toBe(0);
     }
 
-    // @ts-ignore
-    expect(_.max(data), "All the data should be 0 (== erased).").toBe(0);
+    // @ts-expect-error
+    expect(max(data), "All the data should be 0 (== erased).").toBe(0);
   }
 
   it<WebknossosTestContext>("Undo erasing in mag 4 (load before undo)", async (context) => {
@@ -233,7 +233,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setPositionAction([0, 0, 0]));
     Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     if (loadBeforeUndo) {
@@ -279,7 +279,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(setPositionAction([0, 0, 0]));
     Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(addToContourListAction(paintCenter));
     Store.dispatch(finishEditingAction());
 
     for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {

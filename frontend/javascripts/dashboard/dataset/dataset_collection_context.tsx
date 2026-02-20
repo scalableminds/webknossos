@@ -1,8 +1,8 @@
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import _ from "lodash";
+import last from "lodash-es/last";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
@@ -58,7 +58,7 @@ export type DatasetCollectionContextValue = {
   usedStorageInOrga: number | undefined;
 };
 
-export const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
+const DatasetCollectionContext = createContext<DatasetCollectionContextValue | undefined>(
   undefined,
 );
 
@@ -81,7 +81,10 @@ export default function DatasetCollectionContextProvider({
   const [activeFolderId, setActiveFolderId] = useState<string | null>(
     UserLocalStorage.getItem(ACTIVE_FOLDER_ID_STORAGE_KEY) || null,
   );
-  const mostRecentlyUsedActiveFolderId = usePrevious(activeFolderId, true);
+  const [mostRecentlyUsedActiveFolderId, clearMostRecentlyUsedActiveFolderId] = usePrevious(
+    activeFolderId,
+    true,
+  );
   const [isChecking, setIsChecking] = useState(false);
   const isMutating = useIsMutating() > 0;
   const { data: folder, isError: didFolderLoadingError } = useFolderQuery(activeFolderId);
@@ -95,6 +98,7 @@ export default function DatasetCollectionContextProvider({
     setGlobalSearchQueryInner(value ? value : null);
   }, []);
   const [searchRecursively, setSearchRecursively] = useState<boolean>(true);
+  const queryClient = useQueryClient();
 
   // Keep url GET parameters in sync with search and active folder
   useManagedUrlParams(
@@ -117,8 +121,18 @@ export default function DatasetCollectionContextProvider({
 
     if (didFolderLoadingError) {
       setActiveFolderId(null);
+      clearMostRecentlyUsedActiveFolderId();
+      if (!folderHierarchyQuery.isFetching) {
+        queryClient.invalidateQueries({ queryKey: ["folders"] });
+      }
     }
-  }, [folder, activeFolderId, didFolderLoadingError]);
+  }, [
+    folder,
+    activeFolderId,
+    didFolderLoadingError,
+    clearMostRecentlyUsedActiveFolderId,
+    queryClient,
+  ]);
 
   const folderHierarchyQuery = useFolderHierarchyQuery();
   const datasetsInFolderQuery = useDatasetsInFolderQuery(
@@ -198,9 +212,9 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): <explanation>
-  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): omitted to maintain stability as underlying data dependencies are already tracked
+  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): omitted to maintain stability as underlying data dependencies are already tracked
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
       supportsFolders: true as const,
@@ -276,9 +290,9 @@ export default function DatasetCollectionContextProvider({
       updateDatasetMutation,
       selectedDatasets,
       globalSearchQuery,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getActiveSubfolders,
-      // biome-ignore lint/correctness/useExhaustiveDependencies:
+      // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
       getBreadcrumbs,
       selectedFolder,
       setGlobalSearchQuery,
@@ -315,11 +329,11 @@ function useManagedUrlParams(
     const recursive = params.get("recursive");
     if (recursive != null) setSearchRecursively(recursive === "true");
 
-    const folderSpecifier = _.last(location.pathname.split("/"));
+    const folderSpecifier = last(location.pathname.split("/"));
 
     if (folderSpecifier?.includes("-")) {
       const nameChunksAndFolderId = folderSpecifier.split("-");
-      const folderId = _.last(nameChunksAndFolderId);
+      const folderId = last(nameChunksAndFolderId);
       if (folderId) {
         setActiveFolderId(folderId);
       }

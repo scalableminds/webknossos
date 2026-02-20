@@ -23,10 +23,12 @@ import {
 } from "dashboard/dataset/dataset_collection_context";
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
-import _ from "lodash";
+import debounce from "lodash-es/debounce";
+import isEqual from "lodash-es/isEqual";
+import noop from "lodash-es/noop";
+import uniq from "lodash-es/uniq";
 import type React from "react";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type APIDataset,
   type APIMetadataEntry,
@@ -81,7 +83,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   addNewEntryMenuItems,
 }) => {
   return (
-    <Tag>
+    <Tag variant="outlined">
       <div className="flex-center-child empty-metadata-placeholder">
         <img
           src="/assets/images/metadata-teaser.svg"
@@ -101,7 +103,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
 };
 
 export function getUsedTagsWithinMetadata(metadata: APIMetadataWithError[]) {
-  return _.uniq(
+  return uniq(
     metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
   ).map((tag) => ({ value: tag, label: tag })) as {
     value: string;
@@ -216,7 +218,7 @@ const saveCurrentMetadata = async (
         metadata: metadataWithoutIndexAndError,
       });
     }
-    if (!_.isEqual(serverResponse.metadata, metadataWithoutIndexAndError)) {
+    if (!isEqual(serverResponse.metadata, metadataWithoutIndexAndError)) {
       Toast.error(
         `Failed to save metadata changes for ${datasetOrFolderString} ${datasetOrFolderToUpdate.name}.`,
       );
@@ -233,7 +235,7 @@ const saveCurrentMetadata = async (
   }
 };
 
-const saveMetadataDebounced = _.debounce(
+const saveMetadataDebounced = debounce(
   (
     datasetOrFolder,
     metadata,
@@ -266,7 +268,9 @@ const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is API
 // to ensure the metadata is displayed and saved correctly.
 export default function MetadataTable({
   datasetOrFolder,
-}: { datasetOrFolder: APIDataset | Folder }) {
+}: {
+  datasetOrFolder: APIDataset | Folder;
+}) {
   const context = useDatasetCollectionContext();
   const [metadata, metadataRef, setMetadata] = useStateWithRef<APIMetadataWithError[]>(
     datasetOrFolder?.metadata?.map((entry) => ({ ...entry, error: null })) || [],
@@ -288,8 +292,8 @@ export default function MetadataTable({
           datasetOrFolder,
           metadataRef.current,
           context,
-          _.noop, // No state updates on unmounted component.
-          _.noop, // No state updates on unmounted component.
+          noop, // No state updates on unmounted component.
+          noop, // No state updates on unmounted component.
         );
       }
     },
@@ -394,25 +398,23 @@ export default function MetadataTable({
   const getKeyInput = (entry: APIMetadataWithError, index: number) => {
     const isFocused = index === focusedRow;
     return (
-      <>
-        <FastTooltip title={entry.error} placement="left" variant="warning">
-          <Input
-            className={isFocused ? undefined : "transparent-input"}
-            onFocus={() => setFocusedRow(index)}
-            onBlur={() => setFocusedRow(null)}
-            value={entry.key}
-            onChange={(evt) => updateMetadataKey(index, evt.target.value)}
-            placeholder="Property"
-            size="small"
-            disabled={isSaving}
-            id={getKeyInputIdForIndex(index)}
-            status={entry.error != null ? "warning" : undefined}
-            // Use a span as an empty prefix, because null would lose the focus
-            // when the prefix changes.
-            prefix={entry.error != null ? <InfoCircleOutlined /> : <span />}
-          />
-        </FastTooltip>
-      </>
+      <FastTooltip title={entry.error} placement="left" variant="warning">
+        <Input
+          className={isFocused ? undefined : "transparent-input"}
+          onFocus={() => setFocusedRow(index)}
+          onBlur={() => setFocusedRow(null)}
+          value={entry.key}
+          onChange={(evt) => updateMetadataKey(index, evt.target.value)}
+          placeholder="Property"
+          size="small"
+          disabled={isSaving}
+          id={getKeyInputIdForIndex(index)}
+          status={entry.error != null ? "warning" : undefined}
+          // Use a span as an empty prefix, because null would lose the focus
+          // when the prefix changes.
+          prefix={entry.error != null ? <InfoCircleOutlined /> : <span />}
+        />
+      </FastTooltip>
     );
   };
 
@@ -547,7 +549,11 @@ export function SimpleRow({
   label, // must not be called "key" as this is reserved in react
   value,
   isTableHead,
-}: { label: React.ReactNode; value: React.ReactNode; isTableHead?: boolean }) {
+}: {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  isTableHead?: boolean;
+}) {
   if (isTableHead) {
     return (
       <tr>

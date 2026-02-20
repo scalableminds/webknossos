@@ -52,8 +52,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                                       dataSource,
                                                       Some(composeRequest.targetFolderId),
                                                       user,
-                                                      isVirtual = true)
-
+                                                      isVirtual = true,
+                                                      creationType = DatasetCreationType.Compose)
     } yield (dataSource, dataset._id)
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
@@ -91,7 +91,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       layersAndVoxelSizes <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer)
-      (layers, voxelSize) <- if (composeRequest.layers.forall(_.transformations.isEmpty)) {
+      voxelSizesDiffer = layersAndVoxelSizes.map(_._2).distinct.length > 1
+      (layers, voxelSize) <- if (composeRequest.layers.forall(_.transformations.isEmpty) && voxelSizesDiffer) {
         adaptLayersAndVoxelSize(layersAndVoxelSizes, None)
       } else {
         Fox.successful(layersAndVoxelSizes.map(_._1), composeRequest.voxelSize)

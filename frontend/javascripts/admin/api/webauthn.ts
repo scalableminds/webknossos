@@ -1,7 +1,8 @@
-import * as webauthn from "@github/webauthn-json";
-import { getActiveUser, getOrganization } from "admin/rest_api";
+import { create, get } from "@github/webauthn-json";
+import { getActiveUser } from "admin/rest_api";
 import Request from "libs/request";
 import type { APIOrganization, APIUser } from "types/api_types";
+import { getOrganization } from "./organization";
 
 export type WebAuthnKeyDescriptor = {
   id: string;
@@ -12,7 +13,7 @@ export async function doWebAuthnLogin(): Promise<[APIUser, APIOrganization]> {
   const webAuthnAuthAssertion = await Request.receiveJSON("/api/auth/webauthn/auth/start", {
     method: "POST",
   });
-  const response = await webauthn.get({
+  const response = await get({
     publicKey: webAuthnAuthAssertion,
   });
   await Request.sendJSONReceiveJSON("/api/auth/webauthn/auth/finalize", {
@@ -33,7 +34,7 @@ export async function doWebAuthnRegistration(name: string): Promise<any> {
     },
   );
 
-  const credential = await webauthn.create({
+  const credential = await create({
     publicKey: webAuthnRegistrationAssertion,
   });
 

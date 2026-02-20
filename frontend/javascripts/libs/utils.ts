@@ -2,13 +2,24 @@ import { Chalk } from "chalk";
 import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
-import _ from "lodash";
+import capitalize from "lodash-es/capitalize";
+import differenceWith from "lodash-es/differenceWith";
+import flattenDeep from "lodash-es/flattenDeep";
+import fromPairs from "lodash-es/fromPairs";
+import isEqual from "lodash-es/isEqual";
+import last from "lodash-es/last";
+import max from "lodash-es/max";
+import min from "lodash-es/min";
+import once from "lodash-es/once";
+import toPairs from "lodash-es/toPairs";
+import uniq from "lodash-es/uniq";
+import zipObject from "lodash-es/zipObject";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { ArbitraryObject, Comparator } from "types/globals";
 import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
-import type { BoundingBoxObject, NumberLike, SegmentGroup } from "viewer/store";
+import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 
@@ -28,11 +39,6 @@ export function values<T>(o: { [s: string]: T } | ArrayLike<T>): T[] {
 
 export function entries<T>(o: { [s: string]: T } | ArrayLike<T>): [string, T][] {
   return Object.entries(o);
-}
-
-export function map2<A, B>(fn: (arg0: A, arg1: 0 | 1) => B, tuple: [A, A]): [B, B] {
-  const [x, y] = tuple;
-  return [fn(x, 0), fn(y, 1)];
 }
 
 export function map3<A, B>(fn: (arg0: A, arg1: 0 | 1 | 2) => B, tuple: [A, A, A]): [B, B, B] {
@@ -61,41 +67,16 @@ export function floor3(tuple: Vector3): Vector3 {
   return [Math.floor(x), Math.floor(y), Math.floor(z)];
 }
 
-export function iterateThroughBounds(
-  minVoxel: Vector3,
-  maxVoxel: Vector3,
-  fn: (arg0: number, arg1: number, arg2: number) => void,
-): void {
-  for (let x = minVoxel[0]; x < maxVoxel[0]; x++) {
-    for (let y = minVoxel[1]; y < maxVoxel[1]; y++) {
-      for (let z = minVoxel[2]; z < maxVoxel[2]; z++) {
-        fn(x, y, z);
-      }
-    }
-  }
-}
-
-function swap<T>(arr: Array<T>, a: number, b: number) {
-  let tmp: T;
-
-  if (arr[a] > arr[b]) {
-    tmp = arr[b];
-    arr[b] = arr[a];
-    arr[a] = tmp;
-  }
-}
-
 naturalSort.insensitive = true;
 
 function getRecursiveValues(obj: ArbitraryObject | Array<any> | string): Array<any> {
-  return _.flattenDeep(getRecursiveValuesUnflat(obj));
+  return flattenDeep(getRecursiveValuesUnflat(obj));
 }
 
 function getRecursiveValuesUnflat(obj: ArbitraryObject | Array<any> | string): Array<any> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
-    // @ts-ignore
     return Object.keys(obj).map((key) => getRecursiveValuesUnflat(obj[key]));
   } else {
     return [obj];
@@ -122,16 +103,6 @@ export function union<T>(iterables: Array<Iterable<T>>): Set<T> {
   }
 
   return set;
-}
-
-export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
-  return (nullableA: A | null | undefined) => {
-    if (nullableA == null) {
-      throw new Error("Could not enforce while unwrapping maybe");
-    }
-
-    return fn(nullableA);
-  };
 }
 
 export function parseMaybe(str: string | null | undefined): unknown | null {
@@ -200,12 +171,8 @@ export function roundTo(value: number, digits: number): number {
   return Math.round(value * digitMultiplier) / digitMultiplier;
 }
 
-export function capitalize(str: string): string {
-  return str[0].toUpperCase() + str.slice(1);
-}
-
 function intToHex(int: number, digits: number = 6): string {
-  return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
+  return ("0".repeat(digits) + int.toString(16)).slice(-digits);
 }
 
 export function rgbToInt(color: Vector3): number {
@@ -232,7 +199,7 @@ export function hexToRgb(hex: string): Vector3 {
  * Taken from:
  * https://stackoverflow.com/a/9493060
  */
-export function hslaToRgba(hsla: Vector4): Vector4 {
+function _hslaToRgba(hsla: Vector4): Vector4 {
   const [h, s, l, a] = hsla;
   let r: number;
   let g: number;
@@ -309,6 +276,11 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxMinMaxType): Vector6 
 
 export function computeShapeFromBoundingBox(bb: BoundingBoxMinMaxType): Vector3 {
   return [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]];
+}
+
+export function computeVolumeFromBoundingBox(bb: BoundingBoxMinMaxType): number {
+  const shape = computeShapeFromBoundingBox(bb);
+  return shape[0] * shape[1] * shape[2];
 }
 
 export function aggregateBoundingBox(
@@ -449,7 +421,7 @@ export function point3ToVector3({ x, y, z }: Point3): Vector3 {
   return [x, y, z];
 }
 
-export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
+function _vector3ToPoint3([x, y, z]: Vector3): Point3 {
   return {
     x,
     y,
@@ -458,7 +430,7 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
 }
 
 export function isUserTeamManager(user: APIUser): boolean {
-  return _.findIndex(user.teams, (team) => team.isTeamManager) >= 0;
+  return user.teams.findIndex((team) => team.isTeamManager) >= 0;
 }
 
 export function isUserAdmin(user: APIUser): boolean {
@@ -469,7 +441,7 @@ export function isUserAdminOrTeamManager(user: APIUser): boolean {
   return isUserAdmin(user) || isUserTeamManager(user);
 }
 
-export function isUserDatasetManager(user: APIUser): boolean {
+function isUserDatasetManager(user: APIUser): boolean {
   return user.isDatasetManager;
 }
 
@@ -522,7 +494,7 @@ export function getUrlParamValue(paramName: string): string {
 
 export function hasUrlParam(paramName: string): boolean {
   const params = getUrlParamsObject();
-  return Object.prototype.hasOwnProperty.call(params, paramName);
+  return Object.hasOwn(params, paramName);
 }
 
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {
@@ -551,7 +523,7 @@ export function isFileExtensionEqualTo(
   if (fileName == null) {
     return false;
   }
-  const passedExtension = (_.last(fileName.split(".")) || "").toLowerCase();
+  const passedExtension = (last(fileName.split(".")) || "").toLowerCase();
 
   if (Array.isArray(extensionOrExtensions)) {
     return extensionOrExtensions.includes(passedExtension);
@@ -572,7 +544,7 @@ export function parseCTimeDefaultDate(dateString: string) {
 // Only use this function if you really need a busy wait (useful
 // for testing performance-related edge cases). Prefer `sleep`
 // otherwise.
-export function busyWaitDevHelper(time: number) {
+function _busyWaitDevHelper(time: number) {
   const start = new Date();
   let now: Date;
 
@@ -654,7 +626,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
 }
 
 export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
-  // @ts-ignore
   return arr.filter((el) => el != null);
 }
 
@@ -672,21 +643,21 @@ export function filterWithSearchQueryAND<
   if (searchQuery === "") {
     return collection;
   } else {
-    const words = _.map(searchQuery.split(" "), (element) =>
-      element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
-    );
+    const words = searchQuery
+      .split(" ")
+      .map((element) => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
 
-    const uniques = _.filter(_.uniq(words), (element) => element !== "");
+    const uniques = uniq(words).filter((element) => element !== "");
 
     const patterns = uniques.map((pattern) => new RegExp(pattern, "igm"));
     return collection.filter((model) =>
-      _.every(patterns, (pattern) =>
-        _.some(properties, (fieldName) => {
+      patterns.every((pattern) =>
+        properties.some((fieldName) => {
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
 
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
             const recursiveValues = getRecursiveValues(value);
-            return _.some(recursiveValues, (v) => v?.toString().match(pattern));
+            return recursiveValues.some((v) => v?.toString().match(pattern));
           } else {
             return false;
           }
@@ -709,14 +680,26 @@ export function millisecondsToHours(ms: number) {
   return ms / oneHourInMilliseconds;
 }
 
-export function isNoElementFocussed(): boolean {
+export function isNoElementFocused(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
   return document.activeElement === document.body;
 }
 
+export function isEditableEventTarget(target: EventTarget | null): boolean {
+  if (target == null || !(target instanceof Element)) {
+    return false; // not an element (could be Window, Document, Text, ...), ignore
+  }
+  const element = target as HTMLElement;
+  const tag = element.tagName?.toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || element.isContentEditable) {
+    return true; // ignore Enter inside these fields
+  }
+  return false;
+}
+
 // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Safely_detecting_option_support
-const areEventListenerOptionsSupported = _.once(() => {
+const areEventListenerOptionsSupported = once(() => {
   let passiveSupported = false;
 
   try {
@@ -770,12 +753,12 @@ export function addEventListenerWithDelegation(
   };
 }
 
-export function median8(dataArray: Array<number>): number {
+function _median8(dataArray: Array<number>): number {
   // Returns the median of an already *sorted* array of size 8 (e.g., with sortArray8)
   return Math.round((dataArray[3] + dataArray[4]) / 2);
 }
 
-export function mode8(arr: Array<number>): number {
+function _mode8(arr: Array<number>): number {
   // Returns the mode of an already *sorted* array of size 8 (e.g., with sortArray8)
   let currentConsecCount = 0;
   let currentModeCount = 0;
@@ -800,31 +783,6 @@ export function mode8(arr: Array<number>): number {
   }
 
   return currentMode;
-}
-
-export function sortArray8(arr: Array<number>): void {
-  // This function sorts an array of size 8.
-  // Swap instructions were generated here:
-  // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
-  swap(arr, 0, 1);
-  swap(arr, 2, 3);
-  swap(arr, 0, 2);
-  swap(arr, 1, 3);
-  swap(arr, 1, 2);
-  swap(arr, 4, 5);
-  swap(arr, 6, 7);
-  swap(arr, 4, 6);
-  swap(arr, 5, 7);
-  swap(arr, 5, 6);
-  swap(arr, 0, 4);
-  swap(arr, 1, 5);
-  swap(arr, 1, 4);
-  swap(arr, 2, 6);
-  swap(arr, 3, 7);
-  swap(arr, 3, 6);
-  swap(arr, 2, 4);
-  swap(arr, 3, 5);
-  swap(arr, 3, 4);
 }
 
 // When an interval greater than RAF_INTERVAL_THRESHOLD is used,
@@ -858,7 +816,7 @@ export function waitForElementWithId(elementId: string): Promise<any> {
   return new Promise(tryToResolve);
 }
 
-export function convertDecToBase256(num: number): Vector4 {
+function convertDecToBase256(num: number): Vector4 {
   const sign = Math.sign(num);
 
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
@@ -884,7 +842,7 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
     : uncastNumber;
 }
 
-export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
+function _convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
   const [bigNumHigh, bigNumLow] = convertNumberTo64BitTuple(num);
 
   const low = convertDecToBase256(bigNumLow);
@@ -952,23 +910,19 @@ export function chunkIntoTimeWindows<T>(
 ): Array<Array<T>> {
   let chunkIndex = 0;
   let chunkTime = 0;
-  return _.reduce(
-    elements,
-    (chunks: Array<Array<T>>, element: T, index: number) => {
-      const elementTime = mapToTimeFn(element);
-      if (index === 0) chunkTime = elementTime;
+  return elements.reduce((chunks: Array<Array<T>>, element: T, index: number) => {
+    const elementTime = mapToTimeFn(element);
+    if (index === 0) chunkTime = elementTime;
 
-      if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
-        chunkIndex++;
-        chunkTime = elementTime;
-      }
+    if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
+      chunkIndex++;
+      chunkTime = elementTime;
+    }
 
-      if (chunks[chunkIndex] == null) chunks.push([]);
-      chunks[chunkIndex].push(element);
-      return chunks;
-    },
-    [],
-  );
+    if (chunks[chunkIndex] == null) chunks.push([]);
+    chunks[chunkIndex].push(element);
+    return chunks;
+  }, []);
 }
 
 // chunkDynamically takes an array of input elements and splits these
@@ -1048,7 +1002,7 @@ export function getIsInIframe() {
   }
 }
 
-export function getWindowBounds(): [number, number] {
+function _getWindowBounds(): [number, number] {
   // Function taken from https://stackoverflow.com/questions/3333329/javascript-get-browser-height.
   let width = 0;
   let height = 0;
@@ -1093,10 +1047,10 @@ export function diffObjects<K extends string | number | symbol, V, Dict extends 
    * const b = { x: 1, y: 3, q: 4 }; // y is different, z is missing, q was added
    * diffObjects(a, b); // returns { y: 3, q: 4 }
    */
-  return _.fromPairs(_.differenceWith(_.toPairs(b), _.toPairs(a), _.isEqual)) as Partial<Dict>;
+  return fromPairs(differenceWith(toPairs(b), toPairs(a), isEqual)) as Partial<Dict>;
 }
 
-export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
+function _diffSets<T>(setA: Set<T>, setB: Set<T>) {
   const aWithoutB = new Set<T>();
   const bWithoutA = new Set<T>();
   const intersection = new Set<T>();
@@ -1160,8 +1114,8 @@ export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
   };
 }
 
-export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
-  return _.every(a.map((v, i) => Math.abs(v - b[i]) < epsilon));
+function _areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
+  return a.every((v, i) => Math.abs(v - b[i]) < epsilon);
 }
 
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
@@ -1197,7 +1151,7 @@ export function truncateStringToLength(str: string, length: number): string {
 }
 
 export function maxValue(array: Array<number>): number {
-  const value = _.max(array);
+  const value = max(array);
   if (value == null) {
     throw Error(`Max of empty array: ${array}`);
   }
@@ -1205,7 +1159,7 @@ export function maxValue(array: Array<number>): number {
 }
 
 export function minValue(array: Array<number>): number {
-  const value = _.min(array);
+  const value = min(array);
   if (value == null) {
     throw Error(`Min of empty array: ${array}`);
   }
@@ -1227,7 +1181,7 @@ export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) =>
     if (typeof item === "object") {
       // We know that item is an object or array which matches deepIterate's signature.
       // However, TS doesn't infer this.
-      // @ts-ignore
+      // @ts-expect-error
       deepIterate(item, callback);
     }
   });
@@ -1257,11 +1211,21 @@ export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, nu
   return Boolean(typeof value[0] === "number");
 }
 
+export function getAdaptToTypeFunction(mapping: Mapping | null | undefined) {
+  return mapping && isNumberMap(mapping) ? (el: number) => el : (el: number) => BigInt(el);
+}
+
+export function getAdaptToTypeFunctionFromList<T extends number | bigint>(list: Array<T>) {
+  return list[0] == null || Boolean(typeof list[0] === "number")
+    ? (el: NumberLike) => el
+    : (el: NumberLike) => BigInt(el);
+}
+
 export function isBigInt(x: NumberLike): x is bigint {
   return typeof x === "bigint";
 }
 
-export function assertNever(value: never): never {
+function _assertNever(value: never): never {
   throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
 }
 
@@ -1340,7 +1304,7 @@ export function safeZipObject<K extends string | number | symbol, V>(
   if (keys.length !== values.length) {
     throw new Error("Cannot construct objects because keys and values don't match in length.");
   }
-  return _.zipObject(keys, values) as Record<K, V>;
+  return zipObject(keys, values) as Record<K, V>;
 }
 
 export function mapEntriesToMap<K extends string | number | symbol, V>(
@@ -1409,8 +1373,12 @@ export async function retryAsyncFunction<T>(
  * Converts a string to a boolean value.
  * Returns false for invalid inputs.
  */
-export function stringToBoolean(value: string): boolean {
+function _stringToBoolean(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   if (normalized === "true") return true;
   return false;
+}
+
+export function isWindows(): boolean {
+  return navigator.platform.includes("Win");
 }

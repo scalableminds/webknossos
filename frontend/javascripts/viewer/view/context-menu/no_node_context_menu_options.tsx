@@ -2,7 +2,10 @@ import { WarningOutlined } from "@ant-design/icons";
 import { Empty, Modal } from "antd";
 import type { ItemType, MenuItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import React from "react";
+import { useDispatch } from "react-redux";
 import { CtrlOrCmdKey } from "viewer/constants";
 import {
   loadAgglomerateSkeletonAtPosition,
@@ -12,13 +15,20 @@ import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinatio
 import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
+  getUnmappedSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
+import {
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
 import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { areGeometriesTransformed } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
 import {
+  getActiveCellId,
+  getActiveSegmentationTracing,
   hasAgglomerateMapping,
   hasConnectomeFile,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -42,38 +52,80 @@ import {
   toggleAllSegmentsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import type { ContextMenuInfo } from "viewer/store";
 import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "../right-border-tabs/segments_tab/load_mesh_menu_item_label";
-import { getBoundingBoxMenuOptions } from "./bounding_box_menu_options";
+import { useBoundingBoxMenuOptions } from "./bounding_box_menu_options";
 import { shortcutBuilder } from "./helpers";
-import { getMeshItems } from "./mesh_items";
-import { getMultiCutToolOptions } from "./min_cut_item";
-import type { NoNodeContextMenuProps } from "./types";
+import { useMeshItems } from "./mesh_items";
+import { useMultiCutToolOptions } from "./min_cut_item";
 
-export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
-  const {
-    contextInfo,
-    skeletonTracing,
-    volumeTracing,
-    activeTool,
-    additionalCoordinates,
-    viewport,
-    visibleSegmentationLayer,
-    segmentIdAtPosition,
-    dataset,
-    voxelSize,
-    currentMeshFile,
-    currentConnectomeFile,
-    mappingInfo,
-    infoRows,
-    allowUpdate,
-    isRotated,
-    maybeUnmappedSegmentId,
-  } = props;
+export function useNoNodeContextMenuOptions(
+  contextInfo: ContextMenuInfo,
+  segmentIdAtPosition: number,
+  infoRows: ItemType[],
+): ItemType[] {
   const { globalPosition } = contextInfo;
 
+  const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
+  const volumeTracing = useWkSelector(getActiveSegmentationTracing);
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const additionalCoordinates = useWkSelector(
+    (state) => state.flycam.additionalCoordinates || undefined,
+  );
+  const viewport = contextInfo.viewport;
+  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const dataset = useWkSelector((state) => state.dataset);
+
+  const currentMeshFile = useWkSelector((state) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      : null,
+  );
+  const currentConnectomeFile = useWkSelector((state) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+          .currentConnectomeFile
+      : null,
+  );
+
+  const activeMappingByLayer = useWkSelector(
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const mappingInfo = getMappingInfo(
+    activeMappingByLayer,
+    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+  );
+
+  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+
+  const maybeUnmappedSegmentId =
+    globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null;
+
+  const boundingBoxActions = useBoundingBoxMenuOptions(contextInfo);
+  const meshRelatedItems = useMeshItems(contextInfo);
+
+  const isProofreadingActive = useWkSelector(
+    (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
+  );
+
+  const segmentIdLabel =
+    isProofreadingActive && maybeUnmappedSegmentId != null
+      ? `within Segment ${maybeUnmappedSegmentId}`
+      : segmentIdAtPosition;
+  const segmentOrSuperVoxel =
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
+
+  const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
+    maybeUnmappedSegmentId ?? 0,
+    segmentIdAtPosition,
+    segmentOrSuperVoxel,
+    segmentIdLabel,
+  );
+
+  // Remaining hook logic needs full state inspection for dispatch
   const state = Store.getState();
   const disabledVolumeInfo = getDisabledInfoForTools(state);
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
@@ -82,14 +134,13 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
   const maybeMinCutPartitions = volumeTracing
     ? state.localSegmentationData[volumeTracing.tracingId]?.minCutPartitions
     : null;
-  const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-  const segmentIdLabel =
-    isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${maybeUnmappedSegmentId}`
-      : segmentIdAtPosition;
-  const segmentOrSuperVoxel =
-    isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
-  Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
+
+  const dispatch = useDispatch();
+
+  React.useEffect(() => {
+    dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
+  }, [dispatch, visibleSegmentationLayer, dataset]);
+
   const positionInLayerSpace =
     globalPosition != null && visibleSegmentationLayer != null
       ? globalToLayerTransformedPosition(
@@ -108,8 +159,6 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
       positionInLayerSpace == null
     )
       return;
-    // Ensure that the segment ID is loaded, since a mapping might have been activated
-    // shortly before
     const segmentId = await getSegmentIdForPositionAsync(globalPosition);
 
     if (segmentId === 0) {
@@ -117,7 +166,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
       return;
     }
 
-    Store.dispatch(
+    dispatch(
       loadPrecomputedMeshAction(
         segmentId,
         positionInLayerSpace,
@@ -139,9 +188,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
       Toast.info("No segment found at the clicked position");
       return;
     }
-    // This action is dispatched because the behaviour is identical to a click on a segment.
-    // Note that the updated position is where the segment was clicked to open the context menu.
-    Store.dispatch(
+    dispatch(
       clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
     );
     layoutEmitter.emit(LayoutEvents.showSegmentsTab);
@@ -157,9 +204,9 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
       return;
     }
 
-    Store.dispatch(setHideUnregisteredSegmentsAction(true, visibleSegmentationLayer.name));
-    Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, false));
-    Store.dispatch(
+    dispatch(setHideUnregisteredSegmentsAction(true, visibleSegmentationLayer.name));
+    dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, false));
+    dispatch(
       updateSegmentAction(
         clickedSegmentId,
         {
@@ -179,8 +226,8 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
       return;
     }
 
-    Store.dispatch(setHideUnregisteredSegmentsAction(false, visibleSegmentationLayer.name));
-    Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, true));
+    dispatch(setHideUnregisteredSegmentsAction(false, visibleSegmentationLayer.name));
+    dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, true));
   };
 
   const toggleSegmentVisibility = () => {
@@ -200,7 +247,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
       additionalCoordinates,
     );
     if (action != null) {
-      Store.dispatch(action);
+      dispatch(action);
     }
   };
 
@@ -216,7 +263,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
       return;
     }
 
-    Store.dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
+    dispatch(loadAdHocMeshAction(segmentId, positionInLayerSpace, additionalCoordinates));
   };
 
   const showAutomatedSegmentationServicesModal = (errorMessage: string, entity: string) =>
@@ -242,6 +289,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
   const globalPositionForNode = globalPosition
     ? { rounded: globalPosition, floating: globalPosition }
     : undefined;
+
   const skeletonActions: ItemType[] =
     skeletonTracing != null &&
     globalPosition != null &&
@@ -251,15 +299,15 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
           {
             key: "create-node",
             onClick: () =>
-              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false),
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport!, false),
             label: "Create Node here",
             disabled: areGeometriesTransformed(state),
           },
           {
             key: "create-node-with-tree",
             onClick: () => {
-              Store.dispatch(createTreeAction());
-              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false);
+              dispatch(createTreeAction());
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport!, false);
             },
             label: (
               <>
@@ -273,7 +321,6 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
           },
           {
             key: "load-agglomerate-skeleton",
-            // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
             onClick: () =>
               isAgglomerateMappingEnabled.value
                 ? loadAgglomerateSkeletonAtPosition(globalPosition)
@@ -287,7 +334,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
                   isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
                 }
                 onMouseEnter={() => {
-                  Store.dispatch(ensureLayerMappingsAreLoadedAction());
+                  dispatch(ensureLayerMappingsAreLoadedAction());
                 }}
               >
                 <span>
@@ -305,19 +352,13 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
           isMultiSplitActive &&
           maybeMinCutPartitions &&
           maybeUnmappedSegmentId
-            ? getMultiCutToolOptions(
-                maybeUnmappedSegmentId,
-                segmentIdAtPosition,
-                maybeMinCutPartitions,
-                segmentOrSuperVoxel,
-                segmentIdLabel,
-              )
+            ? proofreadingMultiSplitToolActions
             : []),
           isAgglomerateMappingEnabled.value
             ? {
                 key: "merge-agglomerate-skeleton",
                 disabled: !isProofreadingActive,
-                onClick: () => Store.dispatch(proofreadMergeAction(globalPosition)),
+                onClick: () => dispatch(proofreadMergeAction(globalPosition)),
                 label: (
                   <FastTooltip
                     title={
@@ -338,7 +379,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
             ? {
                 key: "min-cut-agglomerate-at-position",
                 disabled: !isProofreadingActive,
-                onClick: () => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
+                onClick: () => dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
                 label: (
                   <FastTooltip
                     title={
@@ -359,7 +400,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
             ? {
                 key: "cut-agglomerate-from-neighbors",
                 disabled: !isProofreadingActive,
-                onClick: () => Store.dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
+                onClick: () => dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
                 label: (
                   <FastTooltip
                     title={
@@ -384,7 +425,6 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
     const loadSynapsesItem: MenuItemType = {
       className: "node-context-menu-item",
       key: "load-synapses",
-      // Do not disable menu entry, but show modal advertising automated segmentation services if no connectome file is activated
       onClick: isConnectomeMappingEnabled.value
         ? withMappingActivationConfirmation(
             () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
@@ -409,7 +449,6 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
         </FastTooltip>
       ),
     };
-    // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
     skeletonActions.push(loadSynapsesItem);
   }
 
@@ -456,13 +495,11 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
   const nonSkeletonActions: ItemType[] =
     globalPosition != null && visibleSegmentationLayer != null
       ? [
-          // Segment 0 cannot/shouldn't be made active (as this
-          // would be an eraser effectively).
           segmentIdAtPosition !== 0 && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
-                  Store.dispatch(
+                  dispatch(
                     setActiveCellAction(
                       segmentIdAtPosition,
                       positionInLayerSpace || globalPosition,
@@ -471,8 +508,7 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
                   );
                 },
                 disabled:
-                  volumeTracing == null || // satisfy TS
-                  segmentIdAtPosition === getActiveCellId(volumeTracing),
+                  volumeTracing == null || segmentIdAtPosition === getActiveCellId(volumeTracing),
                 label: (
                   <>
                     Activate Segment ({segmentIdAtPosition}){" "}
@@ -491,25 +527,15 @@ export function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): Item
             ? {
                 key: "fill-cell",
                 onClick: () =>
-                  handleFloodFillFromGlobalPosition(Store.getState(), globalPosition, viewport),
+                  handleFloodFillFromGlobalPosition(Store.getState(), globalPosition, viewport!),
                 label: "Fill Segment (flood-fill region)",
               }
             : null,
         ]
       : [];
-  const boundingBoxActions = getBoundingBoxMenuOptions(props);
 
   const isSkeletonToolActive = activeTool === AnnotationTool.SKELETON;
   let allActions: ItemType[] = [];
-
-  const meshRelatedItems = getMeshItems(
-    volumeTracing,
-    contextInfo,
-    visibleSegmentationLayer,
-    voxelSize.factor,
-    currentMeshFile?.mappingName,
-    isRotated,
-  );
 
   if (isSkeletonToolActive) {
     allActions = [...skeletonActions, ...nonSkeletonActions, ...boundingBoxActions];

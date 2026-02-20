@@ -1,11 +1,14 @@
 import type { MenuItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 import { V3 } from "libs/mjs";
-import type { APIDataLayer } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import { useWkSelector } from "libs/react_hooks";
+import { useDispatch } from "react-redux";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveCellId,
+  getActiveSegmentationTracing,
   getSegmentsForLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -13,49 +16,76 @@ import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
-import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
-import Store, { type ContextMenuInfo, type VolumeTracing } from "viewer/store";
-import { Actions } from "./context_menu_actions";
-import { getMultiCutToolOptions } from "./min_cut_item";
+import type { ContextMenuInfo } from "viewer/store";
+import { useMultiCutToolOptions } from "./min_cut_item";
+import { useContextMenuActions } from "./use_context_menu_actions";
 
-export function getMeshItems(
-  volumeTracing: VolumeTracing | null | undefined,
-  contextInfo: ContextMenuInfo,
-  visibleSegmentationLayer: APIDataLayer | null | undefined,
-  voxelSizeFactor: Vector3,
-  meshFileMappingName: string | null | undefined,
-  isRotated: boolean,
-): MenuItemType[] {
+export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const {
     meshId: clickedMeshId,
     meshIntersectionPosition,
     unmappedSegmentId: maybeUnmappedSegmentId,
   } = contextInfo;
+
+  const volumeTracing = useWkSelector(getActiveSegmentationTracing);
+  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const voxelSizeFactor = useWkSelector((state) => state.dataset.dataSource.scale.factor);
+  const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
+
+  const currentMeshFile = useWkSelector((state) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      : null,
+  );
+  const meshFileMappingName = currentMeshFile?.mappingName;
+
+  const actions = useContextMenuActions();
+  const dispatch = useDispatch();
+
+  const isProofreadingActive = useWkSelector(
+    (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
+  );
+  const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
+
+  const activeUnmappedSegmentId = volumeTracing?.activeUnmappedSegmentId;
+  const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0;
+
+  const segments = useWkSelector((state) =>
+    volumeTracing != null ? getSegmentsForLayer(state, volumeTracing.tracingId) : null,
+  );
+  const minCutPartitions = useWkSelector((state) => {
+    if (volumeTracing == null) return undefined;
+    const layerId = volumeTracing.tracingId;
+    return layerId in state.localSegmentationData
+      ? state.localSegmentationData[layerId].minCutPartitions
+      : undefined;
+  });
+
+  const segmentIdLabel =
+    isProofreadingActive && maybeUnmappedSegmentId != null
+      ? `within Segment ${clickedMeshId ?? 0}`
+      : (clickedMeshId ?? 0);
+  const segmentOrSuperVoxel =
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
+
+  const proofreadingMultiSplitToolActions = useMultiCutToolOptions(
+    maybeUnmappedSegmentId ?? 0,
+    clickedMeshId ?? 0,
+    segmentOrSuperVoxel,
+    segmentIdLabel,
+  );
+
   if (
     clickedMeshId == null ||
     meshIntersectionPosition == null ||
     visibleSegmentationLayer == null ||
     volumeTracing == null ||
-    isRotated
+    isFlycamRotated
   ) {
     return [];
   }
-  const state = Store.getState();
-  const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-  const activeCellId = getActiveCellId(volumeTracing);
-  const { activeUnmappedSegmentId } = volumeTracing;
-  const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
-  const { isMultiSplitActive } = state.userConfiguration;
-  const layerId = volumeTracing.tracingId;
-  const minCutPartitions =
-    layerId in state.localSegmentationData
-      ? state.localSegmentationData[layerId].minCutPartitions
-      : undefined;
-  // The cut and merge operations depend on the active segment. The volume tracing *always* has an activeCellId.
-  // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
-  // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
-  // by looking the segment id up the segments list and checking against null.
-  const activeSegmentMissing = segments.getNullable(activeCellId) == null;
+
+  const activeSegmentMissing = segments && segments.getNullable(activeCellId) == null;
 
   const getTooltip = (
     actionVerb: "add" | "remove" | "merge" | "split",
@@ -77,37 +107,20 @@ export function getMeshItems(
     activeSegmentMissing ||
     maybeUnmappedSegmentId == null ||
     meshFileMappingName != null;
-  const segmentIdLabel =
-    isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `within Segment ${clickedMeshId}`
-      : clickedMeshId;
-  const segmentOrSuperVoxel =
-    isProofreadingActive && maybeUnmappedSegmentId != null ? "Supervoxel" : "Segment";
 
-  const proofreadingMultiSplitToolActions =
-    isProofreadingActive && isMultiSplitActive && minCutPartitions && maybeUnmappedSegmentId != null
-      ? getMultiCutToolOptions(
-          maybeUnmappedSegmentId,
-          clickedMeshId,
-          minCutPartitions,
-          segmentOrSuperVoxel,
-          segmentIdLabel,
-        )
-      : [];
   const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
     ? [
-        ...proofreadingMultiSplitToolActions,
+        ...(isMultiSplitActive && minCutPartitions && maybeUnmappedSegmentId != null
+          ? proofreadingMultiSplitToolActions
+          : []),
         {
           key: "merge-agglomerate-skeleton",
           disabled: shouldAgglomerateSkeletonActionsBeDisabled || clickedMeshId === activeCellId,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
-              // Should not happen due to the disabled property.
               return;
             }
-            return Store.dispatch(
-              proofreadMergeAction(null, maybeUnmappedSegmentId, clickedMeshId),
-            );
+            return dispatch(proofreadMergeAction(null, maybeUnmappedSegmentId, clickedMeshId));
           },
           label: (
             <FastTooltip title={getTooltip("merge", true)}>Merge with active segment</FastTooltip>
@@ -122,10 +135,9 @@ export function getMeshItems(
             maybeUnmappedSegmentId === activeUnmappedSegmentId,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
-              // Should not happen due to the disabled property.
               return;
             }
-            Store.dispatch(
+            dispatch(
               minCutAgglomerateWithPositionAction(null, maybeUnmappedSegmentId, clickedMeshId),
             );
           },
@@ -138,10 +150,9 @@ export function getMeshItems(
           disabled: maybeUnmappedSegmentId == null || meshFileMappingName != null,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
-              // Should not happen due to the disabled property.
               return;
             }
-            Store.dispatch(
+            dispatch(
               cutAgglomerateFromNeighborsAction(null, null, maybeUnmappedSegmentId, clickedMeshId),
             );
           },
@@ -159,44 +170,43 @@ export function getMeshItems(
   return [
     isProofreadingActive && activeUnmappedSegmentId != null && isAlreadySelected
       ? {
-          // If a supervoxel is selected (and thus highlighted), allow to select it.
           key: "deactivate-segment",
-          onClick: () =>
-            Store.dispatch(setActiveCellAction(clickedMeshId, undefined, undefined, undefined)),
+          onClick: () => actions.setActiveCell(clickedMeshId, undefined, undefined, undefined),
           label: `Deselect ${segmentOrSuperVoxel} (${segmentIdLabel})`,
         }
       : {
           key: "activate-segment",
           onClick: () =>
-            Store.dispatch(
-              setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
+            actions.setActiveCell(
+              clickedMeshId,
+              undefined,
+              undefined,
+              maybeUnmappedSegmentId ?? undefined,
             ),
           disabled: isAlreadySelected,
           label: `Select ${segmentOrSuperVoxel} (${segmentIdLabel})`,
         },
     {
       key: "hide-mesh",
-      onClick: () => Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
+      onClick: () => actions.hideMesh(visibleSegmentationLayer.name, clickedMeshId),
       label: "Hide Mesh",
     },
     {
       key: "reload-mesh",
-      onClick: () =>
-        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
+      onClick: () => actions.refreshMesh(visibleSegmentationLayer.name, clickedMeshId),
       label: "Reload Mesh",
     },
     {
       key: "jump-to-mesh",
       onClick: () => {
         const unscaledPosition = V3.divide3(meshIntersectionPosition, voxelSizeFactor);
-        Actions.setPosition(Store.dispatch, unscaledPosition);
+        actions.setPosition(unscaledPosition);
       },
       label: "Jump to Position",
     },
     {
       key: "remove-mesh",
-      onClick: () =>
-        Actions.removeMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
+      onClick: () => actions.removeMesh(visibleSegmentationLayer.name, clickedMeshId),
       label: "Remove Mesh",
     },
     ...maybeProofreadingItems,

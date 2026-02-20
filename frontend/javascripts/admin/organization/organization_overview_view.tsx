@@ -1,24 +1,32 @@
 import { PlusOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getPricingPlanStatus, updateOrganization } from "admin/api/organization";
 import { getUsers } from "admin/rest_api";
-import { Button, Col, Row, Spin, Typography } from "antd";
+import { Button, Col, Row, Space, Spin, Typography } from "antd";
 import { formatCountToDataAmountUnit, formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type Key, useEffect, useState } from "react";
+import { type Key, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import type { APIPricingPlanStatus } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { SettingsCard, type SettingsCardProps } from "../account/helpers/settings_card";
 import {
+  AiAddonUpgradeCard,
   PlanAboutToExceedAlert,
   PlanExceededAlert,
   PlanExpirationCard,
   PlanUpgradeCard,
+  PowerPlanUpgradeCard,
 } from "./organization_cards";
-import { getActiveUserCount, PricingPlanEnum } from "./pricing_plan_utils";
+import {
+  formatAiPlanLabel,
+  getActiveUserCount,
+  isAiAddonEligiblePlan,
+  isUserAllowedToRequestUpgrades,
+  PricingPlanEnum,
+} from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
 
 const ORGA_NAME_REGEX_PATTERN = /^[A-Za-z0-9\-_. ß]+$/;
@@ -28,22 +36,42 @@ export function OrganizationOverviewView() {
   const organization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
-  const [isFetchingData, setIsFetchingData] = useState(true);
-  const [activeUsersCount, setActiveUsersCount] = useState(1);
-  const [pricingPlanStatus, setPricingPlanStatus] = useState<APIPricingPlanStatus | null>(null);
+  const activeUser = useWkSelector((state) => state.activeUser);
+
+  const {
+    data: users = [],
+    isFetching: isFetchingUsers,
+    error: usersError,
+  } = useQuery({
+    queryKey: ["users"],
+    queryFn: getUsers,
+  });
+
+  const {
+    data: pricingPlanStatus,
+    isFetching: isFetchingPlanStatus,
+    error: pricingPlanError,
+  } = useQuery({
+    queryKey: ["pricingPlanStatus"],
+    queryFn: getPricingPlanStatus,
+  });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (usersError) {
+      Toast.error("Could not load users.");
+      console.error(usersError);
+    }
+  }, [usersError]);
 
-  async function fetchData() {
-    setIsFetchingData(true);
-    const [users, pricingPlanStatus] = await Promise.all([getUsers(), getPricingPlanStatus()]);
+  useEffect(() => {
+    if (pricingPlanError) {
+      Toast.error("Could not load pricing plan status.");
+      console.error(pricingPlanError);
+    }
+  }, [pricingPlanError]);
 
-    setPricingPlanStatus(pricingPlanStatus);
-    setActiveUsersCount(getActiveUserCount(users));
-    setIsFetchingData(false);
-  }
+  const isFetchingData = isFetchingUsers || isFetchingPlanStatus;
+  const activeUsersCount = getActiveUserCount(users);
 
   async function setOrganizationName(newOrgaName: string) {
     if (!ORGA_NAME_REGEX_PATTERN.test(newOrgaName)) {
@@ -70,9 +98,14 @@ export function OrganizationOverviewView() {
       : formatCountToDataAmountUnit(organization.includedStorageBytes, true);
 
   const usedStorageLabel = formatCountToDataAmountUnit(organization.usedStorageBytes, true);
+  const aiPlanLabel = formatAiPlanLabel(organization);
+  const canRequestAiPlan = activeUser ? isUserAllowedToRequestUpgrades(activeUser) : false;
+  const isEligibleForAiAddon = isAiAddonEligiblePlan(organization.pricingPlan);
+  const showAiAddonCard = organization.aiPlan == null && isEligibleForAiAddon;
 
   let upgradeUsersAction: React.ReactNode = null;
   let upgradeStorageAction: React.ReactNode = null;
+  let upgradeAiPlanAction: React.ReactNode = null;
 
   if (
     organization.pricingPlan === PricingPlanEnum.Personal ||
@@ -82,6 +115,7 @@ export function OrganizationOverviewView() {
     upgradeUsersAction = (
       <Button
         shape="circle"
+        type="primary"
         size="small"
         key="upgradeUsersAction"
         icon={<PlusOutlined />}
@@ -96,6 +130,7 @@ export function OrganizationOverviewView() {
     upgradeStorageAction = (
       <Button
         shape="circle"
+        type="primary"
         size="small"
         key="upgradeStorageAction"
         icon={<PlusOutlined />}
@@ -109,7 +144,7 @@ export function OrganizationOverviewView() {
   }
   const buyMoreCreditsAction = (
     <Button
-      type="default"
+      type="primary"
       shape="circle"
       icon={<PlusOutlined />}
       size="small"
@@ -118,7 +153,20 @@ export function OrganizationOverviewView() {
     />
   );
 
-  const orgaStats: (SettingsCardProps & { key: Key })[] = [
+  if (canRequestAiPlan && showAiAddonCard) {
+    upgradeAiPlanAction = (
+      <Button
+        shape="circle"
+        type="primary"
+        size="small"
+        key="upgradeAiPlanAction"
+        icon={<PlusOutlined />}
+        onClick={() => UpgradePricingPlanModal.requestAiPlanUpgrade()}
+      />
+    );
+  }
+
+  const rowOneStats: (SettingsCardProps & { key: Key })[] = [
     {
       key: "name",
       title: "Name",
@@ -137,6 +185,8 @@ export function OrganizationOverviewView() {
       title: "Owner",
       content: organization.ownerName,
     },
+  ];
+  const rowTwoStats: (SettingsCardProps & { key: Key })[] = [
     {
       key: "plan",
       title: "Current Plan",
@@ -159,10 +209,15 @@ export function OrganizationOverviewView() {
       content: `${usedStorageLabel} / ${includedStorageLabel}`,
       action: upgradeStorageAction,
     },
-
+    {
+      key: "ai-plan",
+      title: "AI Add-on",
+      content: aiPlanLabel,
+      action: upgradeAiPlanAction,
+    },
     {
       key: "credits",
-      title: "WEBKNOSSOS Credits",
+      title: "AI Credits",
       content:
         organization.milliCreditBalance != null
           ? formatMilliCreditsString(organization.milliCreditBalance)
@@ -171,6 +226,59 @@ export function OrganizationOverviewView() {
     },
   ];
 
+  function renderUpgradeCards() {
+    const isPersonal = organization.pricingPlan === PricingPlanEnum.Personal;
+    const isTeamOrTeamTrial =
+      organization.pricingPlan === PricingPlanEnum.Team ||
+      organization.pricingPlan === PricingPlanEnum.TeamTrial;
+
+    if (!isPersonal && !isTeamOrTeamTrial && !showAiAddonCard) {
+      return null;
+    }
+
+    let upgradeContent: React.ReactNode = null;
+
+    if (isPersonal) {
+      upgradeContent = <PlanUpgradeCard organization={organization} />;
+    } else if (isTeamOrTeamTrial) {
+      upgradeContent = (
+        <Row gutter={24} style={{ marginTop: 24 }}>
+          <Col span={showAiAddonCard ? 12 : 24}>
+            <PowerPlanUpgradeCard
+              description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
+              powerUpgradeCallback={() =>
+                UpgradePricingPlanModal.upgradePricingPlan(organization, PricingPlanEnum.Power)
+              }
+            />
+          </Col>
+          {showAiAddonCard && (
+            <Col span={12}>
+              <AiAddonUpgradeCard />
+            </Col>
+          )}
+        </Row>
+      );
+    } else if (showAiAddonCard) {
+      upgradeContent = (
+        <Row gutter={24} style={{ marginTop: 24 }}>
+          <Col span={24}>
+            <AiAddonUpgradeCard />
+          </Col>
+        </Row>
+      );
+    }
+
+    return (
+      <div>
+        <SettingsTitle
+          title="Unlock more features"
+          description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
+        />
+        {upgradeContent}
+      </div>
+    );
+  }
+
   return (
     <>
       <SettingsTitle title={organization.name} description="Manage your organization." />
@@ -178,32 +286,38 @@ export function OrganizationOverviewView() {
       {pricingPlanStatus?.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
         <PlanAboutToExceedAlert organization={organization} />
       ) : null}
-      <Spin spinning={isFetchingData}>
-        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-          {orgaStats.map((stat) => (
-            <Col span={8} key={stat.key}>
-              <SettingsCard
-                title={stat.title}
-                content={stat.content}
-                action={stat.action}
-                tooltip={stat.tooltip}
-              />
-            </Col>
-          ))}
-        </Row>
-      </Spin>
-      <PlanExpirationCard organization={organization} />
-      {organization.pricingPlan === PricingPlanEnum.Personal ||
-      organization.pricingPlan === PricingPlanEnum.Team ||
-      organization.pricingPlan === PricingPlanEnum.TeamTrial ? (
-        <>
-          <SettingsTitle
-            title="Unlock more features"
-            description="Upgrade your organization to unlock more collaboration and proofreading features for your team."
-          />
-          <PlanUpgradeCard organization={organization} />
-        </>
-      ) : null}
+      <Space orientation="vertical" size="large">
+        <Spin spinning={isFetchingData}>
+          <Space orientation="vertical" size={24}>
+            <Row gutter={[24, 24]}>
+              {rowOneStats.map((stat) => (
+                <Col span={12} key={stat.key}>
+                  <SettingsCard
+                    title={stat.title}
+                    content={stat.content}
+                    action={stat.action}
+                    tooltip={stat.tooltip}
+                  />
+                </Col>
+              ))}
+            </Row>
+            <Row gutter={[24, 24]}>
+              {rowTwoStats.map((stat) => (
+                <Col span={8} key={stat.key}>
+                  <SettingsCard
+                    title={stat.title}
+                    content={stat.content}
+                    action={stat.action}
+                    tooltip={stat.tooltip}
+                  />
+                </Col>
+              ))}
+            </Row>
+            <PlanExpirationCard organization={organization} />
+          </Space>
+        </Spin>
+        {renderUpgradeCards()}
+      </Space>
     </>
   );
 }

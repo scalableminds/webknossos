@@ -23,11 +23,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.DataSourceValidation
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import controllers.{
+  PathDeletionService,
   ReserveAttachmentUploadToPathRequest,
   ReserveDatasetUploadToPathsForPreliminaryRequest,
   ReserveDatasetUploadToPathsRequest,
   ReserveMagUploadToPathRequest
 }
+import models.folder.FolderDAO
 import models.organization.OrganizationDAO
 import models.user.User
 import play.api.i18n.MessagesProvider
@@ -42,8 +44,10 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
                                             datasetDAO: DatasetDAO,
                                             dataStoreDAO: DataStoreDAO,
                                             layerToLinkService: LayerToLinkService,
+                                            pathDeletionService: PathDeletionService,
                                             datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                             datasetMagsDAO: DatasetMagsDAO,
+                                            folderDAO: FolderDAO,
                                             conf: WkConf)
     extends FoxImplicits
     with DataSourceValidation {
@@ -71,6 +75,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       dataSourceWithLayersToLink <- layerToLinkService.addLayersToLinkToDataSource(dataSourceWithPaths,
                                                                                    parameters.layersToLink)
       _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
+      folderIdWithFallback = parameters.folderId.getOrElse(organization._rootFolder)
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> "folder.noWriteAccess"
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
         dataStore,
@@ -82,7 +88,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       )
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
-      _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser)
+      _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser) // called with user access context. Should be fine now that the folder is set correctly
       _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
     } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
     yield dataSourceWithPaths
@@ -282,7 +288,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
           if (overwritePending) {
             for {
               client <- datasetService.clientFor(dataset)(GlobalAccessContext)
-              _ <- client.deletePaths(Seq(existingMagLocatorPath))
+              _ <- pathDeletionService.deletePaths(client, Seq(existingMagLocatorPath))
               _ <- datasetMagsDAO.deletePendingMagLocator(dataset._id, layerName, mag)
             } yield ()
           } else Fox.failure("dataset.reserveMagUploadToPath.exists")

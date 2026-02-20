@@ -1,22 +1,16 @@
-import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import { location } from "libs/window";
 import memoize from "lodash-es/memoize";
 import type {
+  APICreditTransaction,
   APIOrganization,
   APIOrganizationCompact,
+  APIOrganizationPricingPlanUpdate,
   APIPricingPlanStatus,
   APITeamMembership,
 } from "types/api_types";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import type { TraceOrViewCommand } from "viewer/store";
-
-export function getOrganizationPayingForActiveUser(
-  activeUserId: string,
-  options?: RequestOptions,
-): Promise<string> {
-  return Request.receiveJSON(`/api/user/${activeUserId}/payingOrganization`, options);
-}
 
 // ### Organizations
 export async function getDefaultOrganization(): Promise<APIOrganization | null> {
@@ -53,7 +47,13 @@ export async function getUsersOrganizations(): Promise<Array<APIOrganizationComp
 export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
   return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`, {
     showErrorToast: false,
-  });
+  }).then((organization) => ({
+    ...organization,
+    aiPlan: organization.aiPlan ?? null,
+    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+  }));
 }
 
 export function sendInvitesForOrganization(
@@ -79,10 +79,15 @@ export async function getOrganization(organizationId: string): Promise<APIOrgani
   const organization = await Request.receiveJSON(`/api/organizations/${organizationId}`);
   return {
     ...organization,
+    aiPlan: organization.aiPlan ?? null,
     paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
     includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
     includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
   };
+}
+
+export async function getCreditTransactions(): Promise<APICreditTransaction[]> {
+  return Request.receiveJSON("/api/creditTransactions");
 }
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {
@@ -113,6 +118,7 @@ export async function updateOrganization(
 
   return {
     ...updatedOrganization,
+    aiPlan: updatedOrganization.aiPlan ?? null,
     paidUntil: updatedOrganization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
     includedStorageBytes: updatedOrganization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
     includedUsers: updatedOrganization.includedUsers ?? Number.POSITIVE_INFINITY,
@@ -123,26 +129,58 @@ export async function isDatasetAccessibleBySwitching(
   commandType: TraceOrViewCommand,
 ): Promise<APIOrganization | null | undefined> {
   if (commandType.type === ControlModeEnum.TRACE) {
-    return Request.receiveJSON(
+    const organization = await Request.receiveJSON(
       `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
       {
         showErrorToast: false,
       },
     );
+    if (!organization) {
+      return organization;
+    }
+    return {
+      ...organization,
+      aiPlan: organization.aiPlan ?? null,
+      paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+      includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+      includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+    };
   } else {
-    return Request.receiveJSON(
+    const organization = await Request.receiveJSON(
       `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
       {
         showErrorToast: false,
       },
     );
+    if (!organization) {
+      return organization;
+    }
+    return {
+      ...organization,
+      aiPlan: organization.aiPlan ?? null,
+      paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+      includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+      includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+    };
   }
 }
 
 export async function isWorkflowAccessibleBySwitching(
   workflowHash: string,
 ): Promise<APIOrganization | null> {
-  return Request.receiveJSON(`/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`);
+  const organization = await Request.receiveJSON(
+    `/api/auth/accessibleBySwitching?workflowHash=${workflowHash}`,
+  );
+  if (!organization) {
+    return organization;
+  }
+  return {
+    ...organization,
+    aiPlan: organization.aiPlan ?? null,
+    paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
+    includedStorageBytes: organization.includedStorageBytes ?? Number.POSITIVE_INFINITY,
+    includedUsers: organization.includedUsers ?? Number.POSITIVE_INFINITY,
+  };
 }
 
 export async function sendUpgradePricingPlanEmail(requestedPlan: string): Promise<void> {
@@ -175,8 +213,18 @@ export async function sendOrderCreditsEmail(requestedCredits: number): Promise<v
   });
 }
 
+export async function sendUpgradeAiAddonEmail(): Promise<void> {
+  return Request.receiveJSON("/api/pricing/requestAiAddon", {
+    method: "POST",
+  });
+}
+
 export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
   return Request.receiveJSON("/api/pricing/status");
 }
 
 export const cachedGetPricingPlanStatus = memoize(getPricingPlanStatus);
+
+export async function getPricingPlanUpdates(): Promise<APIOrganizationPricingPlanUpdate[]> {
+  return Request.receiveJSON("/api/pricing/planUpdates");
+}

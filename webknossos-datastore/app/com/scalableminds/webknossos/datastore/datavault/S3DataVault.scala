@@ -36,7 +36,6 @@ import software.amazon.awssdk.services.s3.model.{
 
 import java.net.URI
 import java.util.concurrent.CompletionException
-import scala.collection.immutable.NumericRange
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
@@ -58,17 +57,17 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   private lazy val clientFox: Fox[S3AsyncClient] =
     S3DataVault.getAmazonS3Client(s3AccessKeyCredential, uri, ws)
 
-  private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
-    GetObjectRequest.builder().bucket(bucketName).key(key).range(s"bytes=${range.start}-${range.end - 1}").build()
+  private def getRangeRequest(bucketName: String, key: String, range: StartEndExclusiveByteRange): GetObjectRequest =
+    GetObjectRequest.builder().bucket(bucketName).key(key).range(range.toRangeHeader).build()
 
-  private def getSuffixRangeRequest(bucketName: String, key: String, length: Long): GetObjectRequest =
-    GetObjectRequest.builder.bucket(bucketName).key(key).range(s"bytes=-$length").build()
+  private def getSuffixRangeRequest(bucketName: String, key: String, range: SuffixLengthByteRange): GetObjectRequest =
+    GetObjectRequest.builder.bucket(bucketName).key(key).range(range.toRangeHeader).build()
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest =
     GetObjectRequest.builder.bucket(bucketName).key(key).build()
 
   private def performGetObjectRequest(request: GetObjectRequest)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
+      implicit ec: ExecutionContext): Fox[(Array[Byte], String, Option[String])] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
     for {
@@ -76,9 +75,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
         client.getObject(request, responseTransformer).asScala)
       encoding = responseBytesObject.response().contentEncoding()
+      contentRangeHeader = Option(responseBytesObject.response().contentRange())
       // "aws-chunked" encoding is an artifact of the upload, does not make sense for retrieval, can be ignored.
       encodingNormalized = if (encoding == null || encoding == "aws-chunked") "" else encoding
-    } yield (responseBytesObject.asByteArray(), encodingNormalized)
+    } yield (responseBytesObject.asByteArray(), encodingNormalized, contentRangeHeader)
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
@@ -106,19 +106,19 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
     })
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       objectKey <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
       request = range match {
-        case StartEnd(r)     => getRangeRequest(bucketName, objectKey, r)
-        case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
-        case Complete()      => getRequest(bucketName, objectKey)
+        case r: StartEndExclusiveByteRange => getRangeRequest(bucketName, objectKey, r)
+        case r: SuffixLengthByteRange      => getSuffixRangeRequest(bucketName, objectKey, r)
+        case CompleteByteRange()           => getRequest(bucketName, objectKey)
       }
-      (bytes, encodingString) <- performGetObjectRequest(request)
+      (bytes, encodingString, rangeHeader) <- performGetObjectRequest(request)
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
-    } yield (bytes, encoding)
+    } yield (bytes, encoding, rangeHeader)
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {

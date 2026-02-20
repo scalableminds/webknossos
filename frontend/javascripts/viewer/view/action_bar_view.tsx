@@ -135,13 +135,16 @@ function AdditionalCoordinatesInputView() {
       }
       placement="bottom"
     >
-      <ArbitraryVectorInput
-        vectorLength={additionalCoordinates.length}
-        value={additionalCoordinates.map((el) => el.value)}
-        onChange={changeAdditionalCoordinatesFromVector}
-        style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
-        vectorLabel={additionalCoordinates.map((coord) => coord.name).join("")}
-      />
+      {/* this div is needed to prevent the popover from being offset to the top-left screen */}
+      <div>
+        <ArbitraryVectorInput
+          vectorLength={additionalCoordinates.length}
+          value={additionalCoordinates.map((el) => el.value)}
+          onChange={changeAdditionalCoordinatesFromVector}
+          style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
+          vectorLabel={additionalCoordinates.map((coord) => coord.name).join("")}
+        />
+      </div>
     </Popover>
   );
 }

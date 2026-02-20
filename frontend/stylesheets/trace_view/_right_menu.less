@@ -34,22 +34,17 @@
   padding-left: 5px;
   padding-right: 5px;
   border-radius: 2px;
+  min-height: var(--ant-control-height-sm); // make the list items the same height as <Button size="small">
 
-  .anticon-edit,
-  .anticon-ellipsis {
-    // Hide edit and ellipsis icon (unless hovered)
+  .ant-btn:has(.anticon-ellipsis) {
+    // Hide ellipsis icon buttons (unless hovered)
     display: none;
-  }
-
-  &.is-selected-segment {
-    background-color: var(--ant-blue-3);
   }
 
   &:hover {
     background-color: var(--ant-blue-1);
 
-    .anticon-edit,
-    .anticon-ellipsis {
+    .ant-btn:has(.anticon-ellipsis) {
       display: inline-block;
     }
   }
@@ -86,6 +81,14 @@
 
 .padded-tab-content {
   padding: 10px;
+  padding-top: 2px;
+
+  // Adjust the first Antd divider to be closer to the action buttons above it, matching the small outer top padding.
+  // Target only the first divider in the container regardless of other element types (like headers).
+  // This "funny" selector matches an .ant-divider that is NOT preceded by another .ant-divider.
+  .ant-divider:not(.ant-divider ~ .ant-divider) {
+    margin-top: 2px;
+  }
 }
 
 .markdown-small {

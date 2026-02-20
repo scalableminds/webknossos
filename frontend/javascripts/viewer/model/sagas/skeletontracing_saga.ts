@@ -251,7 +251,7 @@ function* watchTracingConsistency(): Saga<void> {
   }
 }
 
-export function* watchTreeNames(): Saga<void> {
+function* watchTreeNames(): Saga<void> {
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
@@ -263,14 +263,14 @@ export function* watchTreeNames(): Saga<void> {
   }
 }
 
-export function* watchAgglomerateLoading(): Saga<void> {
+function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
 }
-export function* watchConnectomeAgglomerateLoading(): Saga<void> {
+function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
   // The order of these two actions is not guaranteed, but they both need to be dispatched
@@ -384,7 +384,7 @@ function handleAgglomerateLoadingError(
   ErrorHandling.notify(e);
 }
 
-export function* loadAgglomerateSkeletonWithId(
+function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
   const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
@@ -536,7 +536,7 @@ function* removeConnectomeAgglomerateSkeletonWithId(
   }
 }
 
-export function* watchSkeletonTracingAsync(): Saga<void> {
+function* watchSkeletonTracingAsync(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* takeEvery("WK_INITIALIZED", watchTreeNames);
   yield* takeEvery(

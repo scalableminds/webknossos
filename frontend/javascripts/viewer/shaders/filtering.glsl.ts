@@ -1,6 +1,7 @@
 import type { ShaderModule } from "./shader_module_system";
 import { getColorForCoords } from "./texture_access.glsl";
-export const getBilinearColorFor: ShaderModule = {
+
+const getBilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
 
@@ -54,7 +55,7 @@ export const getBilinearColorFor: ShaderModule = {
     }
   `,
 };
-export const getTrilinearColorFor: ShaderModule = {
+const getTrilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
     vec4 getTrilinearColorFor(

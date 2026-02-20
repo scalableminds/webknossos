@@ -16,7 +16,6 @@ import play.api.libs.ws.{WSAuthScheme, WSClient, WSRequest, WSResponse}
 
 import java.net.URI
 import scala.concurrent.duration.DurationInt
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
@@ -31,19 +30,20 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+  override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = {
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = {
     val uri = path.toRemoteUriUnsafe
     for {
       response <- range match {
-        case StartEnd(r)          => getWithRange(uri, r)
-        case SuffixLength(length) => getWithSuffixRange(uri, length)
-        case Complete()           => getComplete(uri)
+        case r: StartEndExclusiveByteRange => getWithRange(uri, r)
+        case r: SuffixLengthByteRange      => getWithSuffixRange(uri, r)
+        case CompleteByteRange()           => getComplete(uri)
       }
       encoding <- Encoding.fromRfc7231String(response.header("Content-Encoding").getOrElse("")).toFox
+      rangeHeader = response.header("Content-Range")
       result <- if (Status.isSuccessful(response.status)) {
-        Fox.successful((response.bodyAsBytes.toArray, encoding))
+        Fox.successful((response.bodyAsBytes.toArray, encoding, rangeHeader))
       } else if (response.status == 404) Fox.empty
       else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
@@ -71,20 +71,19 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       }
     )
 
-  private def getWithRange(uri: URI, range: NumericRange[Long])(implicit ec: ExecutionContext,
-                                                                tc: TokenContext): Fox[WSResponse] =
+  private def getWithRange(uri: URI, range: StartEndExclusiveByteRange)(implicit ec: ExecutionContext,
+                                                                        tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(
-        buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getWithSuffixRange(uri: URI, length: Long)(implicit ec: ExecutionContext,
-                                                         tc: TokenContext): Fox[WSResponse] =
+  private def getWithSuffixRange(uri: URI, range: SuffixLengthByteRange)(implicit ec: ExecutionContext,
+                                                                         tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> range.toRangeHeader).get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 

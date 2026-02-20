@@ -13,7 +13,7 @@ export function useInterval(
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef<ArbitraryFunction>();
+  const savedCallback = useRef<ArbitraryFunction>(null);
   // Remember the latest callback.
   useEffect(() => {
     savedCallback.current = callback;
@@ -83,7 +83,7 @@ export function useGuardedFetch<T>(
 
   useEffect(() => {
     loadData();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: dynamic dependencies can not be infered by biome
+    // biome-ignore lint/correctness/useExhaustiveDependencies: dynamic dependencies can not be inferred by biome
   }, dependencies);
 
   return [value, isLoading];
@@ -134,5 +134,3 @@ export function useIsActiveUserAdminOrManager() {
   const user = useWkSelector((state) => state.activeUser);
   return user != null && isUserAdminOrManager(user);
 }
-
-export default {};

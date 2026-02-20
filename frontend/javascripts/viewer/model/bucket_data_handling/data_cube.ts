@@ -231,7 +231,7 @@ class DataCube {
         : // TODO: Proper 64 bit support (#6921)
           Number(mapping.get(BigInt(unmappedId)));
     }
-    if (mappedId == null || isNaN(mappedId)) {
+    if (mappedId == null || Number.isNaN(mappedId)) {
       // The id couldn't be mapped.
       return this.shouldHideUnmappedIds() ? 0 : unmappedId;
     }

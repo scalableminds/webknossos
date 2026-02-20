@@ -114,4 +114,3 @@ const extractUrls = (str: string): Array<string> => {
 export const pingMentionedDataStores = (str: string): void => {
   extractUrls(str).map(pingDataStoreIfAppropriate);
 };
-export default {};

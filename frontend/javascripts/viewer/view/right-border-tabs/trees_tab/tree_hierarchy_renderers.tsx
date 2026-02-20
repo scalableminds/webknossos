@@ -7,7 +7,7 @@ import {
   ShrinkOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
-import { type MenuProps, notification } from "antd";
+import { type MenuProps, notification, Space } from "antd";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
@@ -15,7 +15,7 @@ import cloneDeep from "lodash-es/cloneDeep";
 import difference from "lodash-es/difference";
 import messages from "messages";
 import type React from "react";
-import { batchActions } from "redux-batched-actions";
+import { type BatchActionType, batchActions } from "redux-batched-actions";
 import {
   LongUnitToShortUnitMap,
   type TreeType,
@@ -57,6 +57,15 @@ import {
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
 
+type BatchActionsType = {
+  type: BatchActionType;
+  payload: Action[];
+  [extraProps: string]: unknown;
+  meta: {
+    batch: true;
+  };
+};
+
 export type Props = {
   activeTreeId: number | null | undefined;
   activeGroupId: number | null | undefined;
@@ -91,14 +100,16 @@ export function renderTreeNode(
     ) : null;
 
   return (
-    <div
+    <Space
+      size={4}
+      align="center"
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ wordBreak: "break-word", display: "inline-flex", width: "100%" }}
+      style={{ wordBreak: "break-word" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
-      <span style={{ marginRight: 4, whiteSpace: "nowrap" }}>
+      <span style={{ whiteSpace: "nowrap" }}>
         {`(${tree.nodes.size()}) `} {maybeProofreadingIcon}
       </span>
       <EditableTextLabel
@@ -108,17 +119,13 @@ export function renderTreeNode(
         onRenameEnd={decreaseEditCounter}
         onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
         hideEditIcon
-        margin={0}
       />
       {(tree.metadata || []).length > 0 ? (
-        <FastTooltip
-          className="deemphasized icon-margin-left"
-          title="This tree has assigned metadata properties."
-        >
+        <FastTooltip className="deemphasized" title="This tree has assigned metadata properties.">
           <TagsOutlined />
         </FastTooltip>
       ) : null}
-    </div>
+    </Space>
   );
 }
 
@@ -240,7 +247,8 @@ export function renderGroupNode(
   // Make sure the displayed name is not empty
   const displayableName = name.trim() || "<Unnamed Group>";
   return (
-    <div
+    <Space
+      size={4}
       onContextMenu={(evt) =>
         onOpenContextMenu(
           createMenuForTreeGroup(props, hideContextMenu, node, expandedNodeKeys),
@@ -249,18 +257,16 @@ export function renderGroupNode(
       }
       style={{ wordBreak: "break-word" }}
     >
-      <FolderOutlined className="icon-margin-right" />
+      <FolderOutlined />
       <EditableTextLabel
         value={displayableName}
         label="Group Name"
         onChange={(newValue) => api.tracing.renameSkeletonGroup(id, newValue)}
         hideEditIcon
-        margin={0}
         onRenameStart={increaseEditCounter}
         onRenameEnd={decreaseEditCounter}
       />
-      {}
-    </div>
+    </Space>
   );
 }
 
@@ -510,7 +516,7 @@ function setTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
 }
 
 export function onBatchActions(actions: Action[], actionName: string) {
-  Store.dispatch(batchActions(actions, actionName));
+  Store.dispatch(batchActions(actions, actionName) as unknown as BatchActionsType);
 }
 
 export function setUpdateTreeGroups(treeGroups: TreeGroup[]) {

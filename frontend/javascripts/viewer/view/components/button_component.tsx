@@ -1,9 +1,10 @@
 import { Button, type ButtonProps } from "antd";
 import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
 import noop from "lodash-es/noop";
-import React from "react";
+import type React from "react";
 
 type ButtonComponentProps = ButtonProps & {
+  ref?: React.Ref<HTMLButtonElement>;
   tooltipPlacement?: FastTooltipPlacement | undefined;
 };
 /*
@@ -15,11 +16,16 @@ type ButtonComponentProps = ButtonProps & {
  * to correctly calculate the position of the popup relative to this trigger.
  */
 
-const ButtonComponent = React.forwardRef<
-  HTMLButtonElement | HTMLAnchorElement,
-  ButtonComponentProps
->((props, ref) => {
-  const { children, title, tooltipPlacement, onClick = noop, onTouchEnd, ...restProps } = props;
+const ButtonComponent: React.FC<ButtonComponentProps> = (props) => {
+  const {
+    children,
+    title,
+    tooltipPlacement,
+    onClick = noop,
+    onTouchEnd,
+    ref,
+    ...restProps
+  } = props;
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.blur();
@@ -46,14 +52,13 @@ const ButtonComponent = React.forwardRef<
   ) : (
     button
   );
-});
+};
 
-export const ToggleButton = React.forwardRef<
-  HTMLButtonElement | HTMLAnchorElement,
-  { active: boolean } & ButtonComponentProps
->((props, ref) => {
-  const { active, ...restProps } = props;
+export const ToggleButton: React.FC<
+  { ref?: React.Ref<HTMLButtonElement | HTMLAnchorElement>; active: boolean } & ButtonComponentProps
+> = (props) => {
+  const { active, ref, ...restProps } = props;
   return <ButtonComponent type={active ? "primary" : "default"} {...restProps} ref={ref} />;
-});
+};
 
 export default ButtonComponent;

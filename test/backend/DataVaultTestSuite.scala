@@ -6,22 +6,24 @@ import org.scalatestplus.play.PlaySpec
 
 import java.net.URI
 import com.scalableminds.webknossos.datastore.datavault.{
+  ByteRange,
   DataVault,
   Encoding,
   GoogleCloudDataVault,
   HttpsDataVault,
-  RangeSpecifier,
   S3DataVault,
+  StartEndExclusiveByteRange,
+  SuffixLengthByteRange,
   VaultPath
 }
-import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, CredentializedUPath}
+import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
 import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json.JsString
 import play.api.test.WsTestClient
 
+import java.nio.charset.StandardCharsets
 import java.util.UUID
-import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
@@ -33,7 +35,8 @@ class DataVaultTestSuite extends PlaySpec {
 
   "Data vault" when {
     "using Range requests" when {
-      val range: NumericRange[Long] = Range.Long(0, 100, 1)
+      val range: StartEndExclusiveByteRange = ByteRange.startEndExclusive(0, 100)
+      val suffixRange: SuffixLengthByteRange = ByteRange.suffix(100)
       val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584" // when accessed via range request, the response body is 1024 bytes long, otherwise 124.8 KB
 
       "using HTTP Vault" should {
@@ -44,7 +47,7 @@ class DataVaultTestSuite extends PlaySpec {
               new VaultPath(upath, HttpsDataVault.create(CredentializedUPath(upath, None), ws, dummyDataStoreHost))
             val bytes =
               (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
-                .readBytes(Some(range))(globalExecutionContext, emptyTokenContext)
+                .readBytes(range)(globalExecutionContext, emptyTokenContext)
                 .get(handleFoxJustification)
 
             assert(bytes.length == range.length)
@@ -56,14 +59,27 @@ class DataVaultTestSuite extends PlaySpec {
       "using Google Cloud Storage Vault" should {
         val upath = UPath.fromStringUnsafe("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
         val vaultPath = new VaultPath(upath, GoogleCloudDataVault.create(CredentializedUPath(upath, None)))
-        "return correct response" in {
+        "return correct response (start-end range)" in {
 
-          val bytes = (vaultPath / dataKey)
-            .readBytes(Some(range))(globalExecutionContext, emptyTokenContext)
+          val (bytes, encoding, rangeHeader) = (vaultPath / dataKey)
+            .readBytesEncodingAndRangeHeader(range)(globalExecutionContext, emptyTokenContext)
             .get(handleFoxJustification)
 
           assert(bytes.length == range.length)
+          assert(encoding == Encoding.identity)
+          assert(rangeHeader.contains("bytes 0-99/127808"))
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+        }
+
+        "return correct response (suffix-length range)" in {
+          val (bytes, encoding, rangeHeader) = (vaultPath / dataKey)
+            .readBytesEncodingAndRangeHeader(suffixRange)(globalExecutionContext, emptyTokenContext)
+            .get(handleFoxJustification)
+
+          assert(bytes.length == suffixRange.length)
+          assert(encoding == Encoding.identity)
+          assert(rangeHeader.contains("bytes 127708-127807/127808"))
+          assert(bytes.takeRight(10).sameElements(Array(-61, 45, -114, -64, -109, -64, 25, -81, -1, -39)))
         }
 
         "return empty box" when {
@@ -78,7 +94,7 @@ class DataVaultTestSuite extends PlaySpec {
         "return failure" when {
           "requesting invalid range" in {
             val result = (vaultPath / dataKey)
-              .readBytes(Some(Range.Long(-5, -10, 1)))(globalExecutionContext, emptyTokenContext)
+              .readBytes(ByteRange.startEndExclusive(-5, -10))(globalExecutionContext, emptyTokenContext)
               .await(handleFoxJustification)
             assertBoxFailure(result)
           }
@@ -92,13 +108,37 @@ class DataVaultTestSuite extends PlaySpec {
                     Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org")))))
               )
             val result = (vaultPath / dataKey)
-              .readBytes(Some(Range.Long(-10, 10, 1)))(globalExecutionContext, emptyTokenContext)
+              .readBytes(ByteRange.startEndExclusive(-10, 10))(globalExecutionContext, emptyTokenContext)
               .await(handleFoxJustification)
             assertBoxFailure(result)
           }
         }
-      }
+        "decode gzip correctly" in {
+          val upathGzip =
+            UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
+          val vaultPathGzip =
+            new VaultPath(upathGzip, GoogleCloudDataVault.create(CredentializedUPath(upathGzip, None)))
+          val bytes = vaultPathGzip.readBytes()(globalExecutionContext, emptyTokenContext).get(handleFoxJustification)
+          val (_, encoding, _) = vaultPathGzip
+            .readBytesEncodingAndRangeHeader()(globalExecutionContext, emptyTokenContext)
+            .get(handleFoxJustification)
+          val decoded = new String(bytes, StandardCharsets.UTF_8)
+          assert(encoding == Encoding.gzip)
+          assert(decoded.length == 1313)
+          assert(decoded(0) == '{')
+        }
+        "fail when attempting range request on gzipped data" in {
+          val upathGzip =
+            UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
+          val vaultPathGzip =
+            new VaultPath(upathGzip, GoogleCloudDataVault.create(CredentializedUPath(upathGzip, None)))
+          val result = vaultPathGzip
+            .readBytes(ByteRange.startEndExclusive(0, 100))(globalExecutionContext, emptyTokenContext)
+            .await(handleFoxJustification)
+          assertBoxFailure(result)
+        }
 
+      }
       "using S3 data vault" should {
         "return correct response" in {
           val upath = UPath.fromStringUnsafe("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
@@ -107,7 +147,7 @@ class DataVaultTestSuite extends PlaySpec {
               new VaultPath(upath, S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext))
             val bytes =
               (vaultPath / "s0/5/5/5")
-                .readBytes(Some(range))(globalExecutionContext, emptyTokenContext)
+                .readBytes(range)(globalExecutionContext, emptyTokenContext)
                 .get(handleFoxJustification)
             assert(bytes.length == range.length)
             assert(bytes.take(10).sameElements(Array(0, 0, 0, 3, 0, 0, 0, 64, 0, 0)))
@@ -221,9 +261,9 @@ class DataVaultTestSuite extends PlaySpec {
 
     "using vault path" when {
       class MockDataVault extends DataVault {
-        override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+        override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
             implicit ec: ExecutionContext,
-            tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] = ???
+            tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = ???
 
         override def listDirectory(path: VaultPath,
                                    maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = ???

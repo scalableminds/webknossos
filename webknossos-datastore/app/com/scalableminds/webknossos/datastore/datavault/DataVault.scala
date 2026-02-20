@@ -6,8 +6,9 @@ import com.scalableminds.util.tools.Fox
 import scala.concurrent.ExecutionContext
 
 trait DataVault {
-  def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(implicit ec: ExecutionContext,
-                                                                   tc: TokenContext): Fox[(Array[Byte], Encoding.Value)]
+  def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])]
 
   def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]]
 

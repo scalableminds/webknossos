@@ -10,7 +10,7 @@ import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import { NumberSliderSetting } from "../components/setting_input_views";
 
-export const warningColors: React.CSSProperties = {
+const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",
   borderColor: "rgb(241, 122, 39)",
 };

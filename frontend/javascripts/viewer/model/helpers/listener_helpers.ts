@@ -54,5 +54,3 @@ export function useReduxActionListener(actionType: string, callback: () => void)
     };
   }, [actionType]);
 }
-
-export default {};

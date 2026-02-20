@@ -73,6 +73,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
     * Read the segment index file and return the bucket positions for the given segment id.
     * The bucket positions are the top left corners of the buckets that contain the segment in the file mag.
     * The bucket positions are in mag1 coordinates though!
+    * If a segment is not present in the file, an empty array is returned, not a failure!
     */
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
                        segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =

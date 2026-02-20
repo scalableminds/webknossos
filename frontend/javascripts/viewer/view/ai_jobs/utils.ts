@@ -1,21 +1,18 @@
 import type { Rule } from "antd/es/form";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
-import groupBy from "lodash-es/groupBy";
-import toPairs from "lodash-es/toPairs";
+import { computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import type { APIAnnotation, APIDataLayer, APIDataset, VoxelSize } from "types/api_types";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3, Vector6 } from "viewer/constants";
 import { UnitShort } from "viewer/constants";
 import { getColorLayers, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
-import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "viewer/store";
+import type { UserBoundingBox, VolumeTracing } from "viewer/store";
 import { MEAN_VX_SIZE, MIN_BBOX_EXTENT } from "./constants";
 
-export const getMinimumDSSize = (jobType: APIJobCommand) => {
+const getMinimumDSSize = (jobType: APIJobCommand) => {
   switch (jobType) {
     case APIJobCommand.INFER_NEURONS:
     case APIJobCommand.INFER_NUCLEI:
@@ -87,7 +84,7 @@ export const getBestFittingMagComparedToTrainingDS = (
   return closestMagOfCurrentDS;
 };
 
-export const isBBoxTooSmall = (
+const isBBoxTooSmall = (
   bbox: Vector3,
   segmentationType:
     | APIJobCommand.INFER_INSTANCES
@@ -146,164 +143,6 @@ export type AnnotationInfoForAITrainingJob<GenericAnnotation> = {
   userBoundingBoxes: UserBoundingBox[];
   volumeTracingMags: Record<string, { mag: Vector3 }[]>;
 };
-
-export function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(
-  annotationsWithDatasets: Array<AnnotationInfoForAITrainingJob<T>>,
-): {
-  hasAnnotationErrors: boolean;
-  errors: string[];
-} {
-  if (annotationsWithDatasets.length === 0) {
-    return {
-      hasAnnotationErrors: true,
-      errors: ["At least one annotation must be defined."],
-    };
-  }
-  const annotationsWithoutBoundingBoxes = annotationsWithDatasets.filter(
-    ({ userBoundingBoxes }) => {
-      return userBoundingBoxes.length === 0;
-    },
-  );
-  if (annotationsWithoutBoundingBoxes.length > 0) {
-    const annotationIds = annotationsWithoutBoundingBoxes.map(({ annotation }) =>
-      "id" in annotation ? annotation.id : annotation.annotationId,
-    );
-    return {
-      hasAnnotationErrors: true,
-      errors: [
-        `All annotations must have at least one bounding box. Annotations without bounding boxes are:\n${annotationIds.join(", ")}`,
-      ],
-    };
-  }
-  return { hasAnnotationErrors: false, errors: [] };
-}
-
-const MIN_BBOX_EXTENT_IN_EACH_DIM = 32;
-export function checkBoundingBoxesForErrorsAndWarnings(
-  userBoundingBoxes: (UserBoundingBox & {
-    annotationId: string;
-    trainingMag: Vector3 | undefined;
-  })[],
-): {
-  hasBBoxErrors: boolean;
-  hasBBoxWarnings: boolean;
-  errors: string[];
-  warnings: string[];
-} {
-  let hasBBoxErrors = false;
-  let hasBBoxWarnings = false;
-  const errors = [];
-  const warnings = [];
-  if (userBoundingBoxes.length === 0) {
-    hasBBoxErrors = true;
-    errors.push("At least one bounding box must be defined.");
-  }
-  // Find smallest bounding box dimensions
-  const minDimensions = userBoundingBoxes.reduce(
-    (min, { boundingBox: box, trainingMag }) => {
-      let bbox = new BoundingBox(box);
-      if (trainingMag) {
-        bbox = bbox.alignFromMag1ToMag(trainingMag, "shrink");
-      }
-      const size = bbox.getSize();
-      return {
-        x: Math.min(min.x, size[0]),
-        y: Math.min(min.y, size[1]),
-        z: Math.min(min.z, size[2]),
-      };
-    },
-    {
-      x: Number.POSITIVE_INFINITY,
-      y: Number.POSITIVE_INFINITY,
-      z: Number.POSITIVE_INFINITY,
-    },
-  );
-
-  // Validate minimum size and multiple requirements
-  type BoundingBoxWithAnnotationId = {
-    boundingBox: Vector6;
-    name: string;
-    annotationId: string;
-  };
-  const tooSmallBoxes: BoundingBoxWithAnnotationId[] = [];
-  const nonMultipleBoxes: BoundingBoxWithAnnotationId[] = [];
-  const notMagAlignedBoundingBoxes: (BoundingBoxWithAnnotationId & {
-    alignedBoundingBox: Vector6;
-    trainingMag: Vector3;
-  })[] = [];
-  userBoundingBoxes.forEach(({ boundingBox: box, name, annotationId, trainingMag }) => {
-    const boundingBox = new BoundingBox(box);
-    let arrayBox = computeArrayFromBoundingBox(box);
-    if (trainingMag) {
-      const alignedBoundingBox = boundingBox.alignFromMag1ToMag(trainingMag, "shrink");
-      if (!alignedBoundingBox.equals(boundingBox)) {
-        const alignedArrayBox = computeArrayFromBoundingBox(alignedBoundingBox);
-        notMagAlignedBoundingBoxes.push({
-          boundingBox: arrayBox,
-          name,
-          annotationId,
-          trainingMag,
-          alignedBoundingBox: alignedArrayBox,
-        });
-        // Update the arrayBox as the aligned version of the bounding box will be used for training.
-        arrayBox = alignedArrayBox;
-      }
-    }
-    const [_x, _y, _z, width, height, depth] = arrayBox;
-    if (
-      width < MIN_BBOX_EXTENT_IN_EACH_DIM ||
-      height < MIN_BBOX_EXTENT_IN_EACH_DIM ||
-      depth < MIN_BBOX_EXTENT_IN_EACH_DIM
-    ) {
-      tooSmallBoxes.push({ boundingBox: arrayBox, name, annotationId });
-    }
-
-    if (
-      width % minDimensions.x !== 0 ||
-      height % minDimensions.y !== 0 ||
-      depth % minDimensions.z !== 0
-    ) {
-      nonMultipleBoxes.push({ boundingBox: arrayBox, name, annotationId });
-    }
-  });
-
-  if (notMagAlignedBoundingBoxes.length > 0) {
-    hasBBoxWarnings = true;
-    const warningsPerAnnotation = toPairs(groupBy(notMagAlignedBoundingBoxes, "annotationId"))
-      .map(([annotationId, boxes]) => {
-        let warning = `- Annotation ${annotationId}\n`;
-        boxes.forEach(({ name, boundingBox, alignedBoundingBox, trainingMag }) => {
-          warning += `  - ${name}: ${boundingBox.join(", ")} will be ${alignedBoundingBox.join(", ")} in mag ${trainingMag.join(", ")}\n`;
-        });
-        return warning;
-      })
-      .join("\n");
-    warnings.push(
-      `The following bounding boxes are not aligned with the selected magnification. They will be automatically shrunk to be aligned with the magnification:\n${warningsPerAnnotation}`,
-    );
-  }
-
-  const boxWithIdToString = ({ boundingBox, name, annotationId }: BoundingBoxWithAnnotationId) =>
-    `'${name}' of annotation ${annotationId}: ${boundingBox.join(", ")}`;
-
-  if (tooSmallBoxes.length > 0) {
-    hasBBoxWarnings = true;
-    const tooSmallBoxesStrings = tooSmallBoxes.map(boxWithIdToString);
-    warnings.push(
-      `The following bounding boxes are not at least ${MIN_BBOX_EXTENT_IN_EACH_DIM} Vx in each dimension which is suboptimal for the training:\n${tooSmallBoxesStrings.join("\n")}`,
-    );
-  }
-
-  if (nonMultipleBoxes.length > 0) {
-    hasBBoxWarnings = true;
-    const nonMultipleBoxesStrings = nonMultipleBoxes.map(boxWithIdToString);
-    warnings.push(
-      `The minimum bounding box dimensions are ${minDimensions.x} x ${minDimensions.y} x ${minDimensions.z}. The following bounding boxes have dimensions which are not a multiple of the minimum dimensions which is suboptimal for the training:\n${nonMultipleBoxesStrings.join("\n")}`,
-    );
-  }
-
-  return { hasBBoxErrors, hasBBoxWarnings, errors, warnings };
-}
 
 export const colorLayerMustNotBeUint24Rule = {
   validator: (_: Rule, value: APIDataLayer) => {

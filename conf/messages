@@ -47,6 +47,8 @@ organization.users.userLimitReached=Cannot add new user to this organization bec
 organization.pricingUpgrades.notAuthorized=You are not authorized to request any changes to your organization WEBKNOSSOS plan. Please ask the organization owner for permission.
 organization.creditOrder.notAuthorized=You are not authorized to order WEBKNOSSOS credits for your organization. Please ask the organization owner to do this instead.
 organization.creditOrder.notPositive=You cannot order a negative number of WEBKNOSSOS credits.
+organization.listCreditTransactions.onlyAdmin=Only organization admins can list credit transactions.
+organization.listPlanUpdates.onlyAdmin=Only organization admins can list plan updates.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 
@@ -159,6 +161,7 @@ dataLayer.notFound=DataLayer “{0}” not found
 dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
 dataLayer.wrongMag=DataLayer “{0}” does not have mag “{1}”
+dataLayer.wrongAttachment=DataLayer “{0}” does not have attachment “{1}”
 dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use “x-y-z”
 
 zarr.invalidChunkCoordinates=Invalid chunk coordinates. Expected dot separated coordinates like c.<additional_axes.>x.y.z
@@ -373,6 +376,7 @@ job.updateStatus.failed = Failed to update long-running job’s status
 job.creditTransaction.failed = Failed to perform credit transaction
 job.creditTransaction.refund.failed = Failed to perform credit transaction refund
 job.creditTransaction.notPaidPlan = Only organizations with a paid plan are allowed to start this job.
+job.creditTransaction.noAiPlan = Only organizations with an AI plan are allowed to start this job.
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

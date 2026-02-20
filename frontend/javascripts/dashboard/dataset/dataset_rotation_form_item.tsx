@@ -38,7 +38,7 @@ function getDatasetBoundingBoxFromLayers(layers: APIDataLayer[]): BoundingBox | 
   return datasetBoundingBox;
 }
 
-export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
+const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   form,
   axis,
 }: AxisRotationFormItemProps) => {

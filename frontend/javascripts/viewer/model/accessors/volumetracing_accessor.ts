@@ -15,6 +15,7 @@ import type {
 } from "types/api_types";
 import Constants, {
   type ContourMode,
+  MAX_MAG_FOR_AGGLOMERATE_MAPPING,
   MappingStatusEnum,
   type Vector3,
   type Vector4,
@@ -35,11 +36,7 @@ import {
   getAdditionalCoordinatesAsString,
   getFlooredPosition,
 } from "viewer/model/accessors/flycam_accessor";
-import {
-  AnnotationTool,
-  type AnnotationToolId,
-  VolumeTools,
-} from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { jsConvertCellIdToRGBA } from "viewer/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "viewer/shaders/utils.glsl";
@@ -235,9 +232,6 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
   [AnnotationTool.ERASE_BRUSH.id]: 3,
   [AnnotationTool.FILL_CELL.id]: 1,
 };
-export function isVolumeTool(tool: AnnotationTool): boolean {
-  return VolumeTools.indexOf(tool) > -1;
-}
 
 export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: WebknossosState) {
   if (state.annotation.volumes.length === 0) {
@@ -881,6 +875,16 @@ export function hasAgglomerateMapping(state: WebknossosState) {
   }
 
   return AGGLOMERATE_STATES.YES;
+}
+
+export function isZoomThresholdExceededForAgglomerateMapping(
+  state: WebknossosState,
+  segmentationLayerName: string,
+) {
+  return (
+    getActiveMagIndexForLayer(state, segmentationLayerName) >
+    Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING)
+  );
 }
 
 export function getMeshesForAdditionalCoordinates(

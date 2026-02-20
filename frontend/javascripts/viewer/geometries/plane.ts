@@ -186,13 +186,19 @@ class Plane {
     originalPosition: Vector3,
     positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
   ): void => {
+    // The position should be in the center of a voxel
+    const centeredPosition = V3.add(positionOffset, [
+      0.5 * this.datasetScaleFactor[0],
+      0.5 * this.datasetScaleFactor[1],
+      0.5 * this.datasetScaleFactor[2],
+    ]);
     // The world scaling by the dataset scale factor is inverted by the scene group
 
     // containing all planes to avoid sheering in anisotropic scaled datasets.
     // Thus, this scale needs to be applied manually to the position here.
     const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
     // The offset is in world space already so no scaling is necessary.
-    const offsetPosition = V3.add(scaledPosition, positionOffset);
+    const offsetPosition = V3.add(scaledPosition, centeredPosition);
     this.TDViewBorders.position.set(...offsetPosition);
     this.crosshair[0].position.set(...offsetPosition);
     this.crosshair[1].position.set(...offsetPosition);

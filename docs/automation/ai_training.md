@@ -1,26 +1,19 @@
 # AI Model Training
 
-WEBKNOSSOS allows you to train your own AI models for image segmentation. This feature is currently in early access.
-
-<!-- Keep info in sync with docs/automation/ai_segmentation.md -->
-!!! info 
-    AI Model Training is only available on [webknossos.org](https://webknossos.org) at the moment. 
-    If you want to set up on-premise automated analysis at your institute/workplace, then [please contact sales](mailto:sales@webknossos.org). 
-
-
+WEBKNOSSOS allows you to train your own AI models for image segmentation.
 
 ## Preparing Your Annotations
 
-Before you can start training, prepare your ground truth annotation(s). The training process requires at least one volume annotation with at least one bounding box.
-
-Here is a short, step-by-step guide to prepare your data. For a detailed tutorial and general annotations guidelines, please see [here](../tutorials/trainingdata_annotation.md):
+Before you can start training, prepare your ground truth annotation. Here is a short, step-by-step guide to prepare your data:
 
 1.  **Create an annotation:** Start by creating a new annotation or opening an existing one.
-2.  **Define bounding boxes:** Create one or more bounding boxes that define the areas you want to use for training. 
-    - It is important that the bounding boxes are not too small. WEBKNOSSOS checks that each bounding box has a minimum extent of **32 voxels in each dimension**.
+2.  **Define bounding boxes:** Create one or more bounding boxes that define the areas you want to use for training. Learn more on how to define bounding boxes and choosing the right magnification for your training in [this guide](choosing_mags_and_bboxes.md).
+    - It is important that the bounding boxes are not too small. WEBKNOSSOS checks that each bounding box has a minimum extent of **32 voxels in each dimension**. We recommend that each box has dimensions of at least **`85 × 85 × 30 voxels`** for neuron finetuning and **`64 × 64 × 64`** or **`96 x 96 x 32 voxels`** for instance training. 
     - Bounding boxes that are not aligned with the selected magnification will be automatically shrunk to fit.
     - For optimal training, all bounding boxes should have dimensions that are multiples of the smallest box dimensions.
-3.  **Label segments:** Within your bounding boxes, label the segmentation of your structures of interest. Use the volume annotation tool to manually annotate structures. This will be your ground truth data. For neurons, we recommend to densely label each structure with a unique ID. For instances segmentations you only need to label the structures you want to train on, e.g. nuclei, mitochondria, soma, vesicles, etc. 
+3.  **Label segments:** Within your bounding boxes, label the segmentation of your structures of interest. Use the volume annotation tool to manually annotate structures. This will be your ground truth data. For neurons, we recommend to densely label each structure with a unique ID. For instances segmentations you only need to label the structures you want to train on, e.g. nuclei, mitochondria, soma, vesicles, etc., making sure they have unique segment IDs as well.
+
+For a detailed tutorial and general annotations guidelines, please see [here](../tutorials/trainingdata_annotation.md) or watch this tutorial. ![youtube-video](https://www.youtube.com/embed/MlT4MgU6ayw?si=kGP_cAO72sjpNY6g)
 
 ## Configuring the Training
 To start a training, click on the `AI Analysis` button in the toolbar and select `Train AI model` from the dropdown menu.
@@ -56,3 +49,9 @@ This section provides an overview of your available credits in your organization
 After configuring everything, you can start the training by clicking the `Start Training` button. You can monitor the progress of your training job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification. Training might take a few hours depending on the size of your dataset.
 
 Once the training is finished, you can find an overview of all your trained models on the `Admin` > `AI Models` page in the navbar. Please refer to the [AI Segmentation](./ai_segmentation.md) guide for more information on how to apply your trained models to your dataset.
+
+
+<!-- Keep info in sync with docs/automation/ai_segmentation.md -->
+!!! info 
+    AI Model Training is only available on [webknossos.org](https://webknossos.org) at the moment. 
+    If you want to set up on-premise automated analysis at your institute/workplace, then [please contact sales](mailto:sales@webknossos.org). 

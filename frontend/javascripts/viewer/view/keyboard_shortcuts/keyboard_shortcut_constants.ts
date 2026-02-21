@@ -41,6 +41,10 @@ export enum KeyboardShortcutDomain {
   ARBITRARY_EDITING = "Editing in Arbitrary Mode",
   PLANE_NAVIGATION = "Navigation in Plane Mode",
   PLANE_CONFIGURATIONS = "Change Configurations in Plane Mode",
+  PLANE_SKELETON_TOOL = "Skeleton Tool Shortcuts in Plane Mode",
+  PLANE_VOLUME_TOOL = "Volume Tools Shortcuts in Plane Mode",
+  PLANE_BOUNDING_BOX_TOOL = "Bounding Box Tool Shortcuts in Plane Mode",
+  PLANE_PROOFREADING_TOOL = "Proofreading Tool Shortcuts in Plane Mode",
 }
 
 // Default is general -> colliding with all other shortcuts.
@@ -49,6 +53,10 @@ enum KeyboardShortcutCollisionDomain {
   GENERAL = "general",
   ARBITRARY_MODE = "arbitrary_mode",
   PLANE_MODE = "plane_mode",
+  PLANE_SKELETON_TOOL = "skeleton_tool_plane",
+  PLANE_VOLUME_TOOL = "volume_tool_plane",
+  PLANE_BOUNDING_BOX_TOOL = "bounding_box_tool_plane",
+  PLANE_PROOFREADING_TOOL = "proofreading_tool_plane",
 }
 
 // ----------------------------------------------------- Shortcuts used by controller.ts -----------------------------------------------------------------
@@ -455,6 +463,8 @@ export const DEFAULT_PLANE_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS: KeyboardShort
     [PlaneControllerLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: [[["shift", "o"]]],
   };
 
+// TODO: This should be a volume tool config :thinking:
+
 export const PlaneLoopDelayedConfigKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneControllerLoopDelayedConfigKeyboardShortcuts> =
   {
     [PlaneControllerLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
@@ -472,6 +482,7 @@ export const PlaneLoopDelayedConfigKeyboardShortcutMetaInfo: KeyboardShortcutHan
   };
 // --------------------------- no-loop handler ids & defaults ---------------------------------------------
 
+// --------------------------- plane skeleton tool shortcuts  ---------------------------------------------
 export enum PlaneSkeletonNoLoopedKeyboardShortcuts {
   TOGGLE_ALL_TREES_PLANE = "TOGGLE_ALL_TREES_PLANE",
   TOGGLE_INACTIVE_TREES_PLANE = "TOGGLE_INACTIVE_TREES_PLANE",
@@ -507,7 +518,42 @@ export const DEFAULT_PLANE_NO_LOOPED_SKELETON_KEYBOARD_SHORTCUTS: KeyboardShortc
     [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: [[["ctrl", "."]]],
   };
 
-// TODOM: add meta info
+const PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonNoLoopedKeyboardShortcuts> =
+  (() => {
+    const withDescription = {
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]:
+        "Toggle visibility of all trees",
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]:
+        "Toggle visibility of hidden trees", // TODOM check if this is correct.
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: "Delete Active Node",
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: "Create new Tree",
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]:
+        "Move along annotation direction",
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]:
+        "Move backward annotation direction",
+      // Branches
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: "Create branch point",
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: "Delete branch point",
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: "Recenter active node",
+      // navigate nodes
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: "Activate Previous Node",
+      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: "Activate Next Node",
+    };
+    return Object.fromEntries(
+      Object.entries(withDescription).map(([handlerId, description]) => [
+        handlerId,
+        {
+          description,
+          domain: KeyboardShortcutDomain.PLANE_SKELETON_TOOL,
+          looped: false,
+          collisionDomains: [
+            KeyboardShortcutCollisionDomain.PLANE_MODE,
+            KeyboardShortcutCollisionDomain.PLANE_SKELETON_TOOL,
+          ],
+        },
+      ]),
+    ) as KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonNoLoopedKeyboardShortcuts>;
+  })();
 
 export enum PlaneSkeletonLoopedKeyboardShortcuts {
   MOVE_NODE_LEFT = "MOVE_NODE_LEFT",
@@ -518,13 +564,139 @@ export enum PlaneSkeletonLoopedKeyboardShortcuts {
 
 export const DEFAULT_PLANE_LOOPED_SKELETON_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneSkeletonLoopedKeyboardShortcuts> =
   {
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["shirt" + "left"]]],
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["shirt" + "right"]]],
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["shirt" + "up"]]],
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["shirt" + "down"]]],
+    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["ctrl" + "left"]]],
+    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["ctrl" + "right"]]],
+    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["ctrl" + "up"]]],
+    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["ctrl" + "down"]]],
   };
-// TODOM: add meta info
 
+const PlaneSkeletonLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonLoopedKeyboardShortcuts> =
+  (() => {
+    const withDescription = {
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: "Move active node left",
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: "Move active node right",
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: "Move active node up",
+      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: "Move active node down",
+    };
+    return Object.fromEntries(
+      Object.entries(withDescription).map(([handlerId, description]) => [
+        handlerId,
+        {
+          description,
+          domain: KeyboardShortcutDomain.PLANE_SKELETON_TOOL,
+          looped: true,
+          collisionDomains: [
+            KeyboardShortcutCollisionDomain.PLANE_MODE,
+            KeyboardShortcutCollisionDomain.PLANE_SKELETON_TOOL,
+          ],
+        },
+      ]),
+    ) as KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonLoopedKeyboardShortcuts>;
+  })();
+
+// -------------------------------- plane volume tool shortcuts --------------------
+export enum PlaneVolumeNoLoopedKeyboardShortcuts {
+  CREATE_NEW_CELL = "CREATE_NEW_CELL",
+  INTERPOLATE_SEGMENTATION = "INTERPOLATE_SEGMENTATION",
+}
+
+export const DEFAULT_PLANE_NO_LOOPED_VOLUME_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneVolumeNoLoopedKeyboardShortcuts> =
+  {
+    [PlaneVolumeNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: [[["c"]]],
+    [PlaneVolumeNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]: [[["v"]]],
+  };
+
+const PlaneVolumeNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneVolumeNoLoopedKeyboardShortcuts> =
+  (() => {
+    const withDescription = {
+      [PlaneVolumeNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: "Create new cell",
+      [PlaneVolumeNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]:
+        "Interpolate annotation between latest drawn sections",
+    };
+    return Object.fromEntries(
+      Object.entries(withDescription).map(([handlerId, description]) => [
+        handlerId,
+        {
+          description,
+          domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
+          looped: false,
+          collisionDomains: [
+            KeyboardShortcutCollisionDomain.PLANE_MODE,
+            KeyboardShortcutCollisionDomain.PLANE_VOLUME_TOOL,
+          ],
+        },
+      ]),
+    ) as KeyboardShortcutHandlerMetaInfoMap<PlaneVolumeNoLoopedKeyboardShortcuts>;
+  })();
+// -------------------------------- plane bounding box tool shortcuts --------------------
+
+export enum PlaneBoundingBoxNoLoopedKeyboardShortcuts {
+  CREATE_BOUNDING_BOX = "CREATE_BOUNDING_BOX",
+  TOGGLE_CURSOR_STATE_FOR_MOVING = "TOGGLE_CURSOR_STATE_FOR_MOVING",
+  TOGGLE_CURSOR_STATE_FOR_RESIZING = "TOGGLE_CURSOR_STATE_FOR_RESIZING",
+}
+
+export const DEFAULT_PLANE_NO_LOOPED_BOUNDING_BOX_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneBoundingBoxNoLoopedKeyboardShortcuts> =
+  {
+    [PlaneBoundingBoxNoLoopedKeyboardShortcuts.CREATE_BOUNDING_BOX]: [[["c"]]],
+    [PlaneBoundingBoxNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_MOVING]: [[["ctrl"]]],
+    // TODOM: check whether this is correct
+    [PlaneBoundingBoxNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_RESIZING]: [[["meta"]]],
+  };
+
+const PlaneBoundingBoxNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneBoundingBoxNoLoopedKeyboardShortcuts> =
+  (() => {
+    const withDescription = {
+      [PlaneBoundingBoxNoLoopedKeyboardShortcuts.CREATE_BOUNDING_BOX]: "Create new cell",
+      [PlaneBoundingBoxNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_MOVING]:
+        "Enable moving the hovered bounding box",
+      [PlaneBoundingBoxNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_RESIZING]:
+        "Enable resizing the hovered bounding box",
+    };
+    return Object.fromEntries(
+      Object.entries(withDescription).map(([handlerId, description]) => [
+        handlerId,
+        {
+          description,
+          domain: KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL,
+          looped: false,
+          collisionDomains: [
+            KeyboardShortcutCollisionDomain.PLANE_MODE,
+            KeyboardShortcutCollisionDomain.PLANE_BOUNDING_BOX_TOOL,
+          ],
+        },
+      ]),
+    ) as KeyboardShortcutHandlerMetaInfoMap<PlaneBoundingBoxNoLoopedKeyboardShortcuts>;
+  })();
+
+// -------------------------------- plane proofreading tool shortcuts --------------------
+
+export enum PlaneProofreadingNoLoopedKeyboardShortcuts {
+  TOGGLE_MULTICUT_MODE = "TOGGLE_MULTICUT_MODE",
+}
+
+export const DEFAULT_PLANE_NO_LOOPED_PROOFREADING_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneProofreadingNoLoopedKeyboardShortcuts> =
+  {
+    [PlaneProofreadingNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: [[["m"]]],
+  };
+
+const PlaneProofreadingNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneProofreadingNoLoopedKeyboardShortcuts> =
+  {
+    [PlaneProofreadingNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: {
+      description: "Toggle multi cut mode",
+      domain: KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL,
+      looped: false,
+      collisionDomains: [
+        KeyboardShortcutCollisionDomain.PLANE_MODE,
+        KeyboardShortcutCollisionDomain.PLANE_PROOFREADING_TOOL,
+      ],
+    },
+  };
+
+// TODOM: add enum for annotation tool cycling
+
+// TODOM: check which of the entries below should be removed /
+// moved to the the tool specific shortcuts above
 export enum PlaneControllerNoLoopKeyboardShortcuts {
   COPY_SEGMENT_ID = "COPY_SEGMENT_ID",
   DOWNLOAD_SCREENSHOT = "DOWNLOAD_SCREENSHOT",
@@ -636,6 +808,11 @@ export const ALL_KEYBOARD_HANDLER_IDS = [
   ...Object.values(PlaneControllerLoopDelayedNavigationKeyboardShortcuts),
   ...Object.values(PlaneControllerLoopDelayedConfigKeyboardShortcuts),
   ...Object.values(PlaneControllerNoLoopKeyboardShortcuts),
+  ...Object.values(PlaneSkeletonLoopedKeyboardShortcuts),
+  ...Object.values(PlaneSkeletonNoLoopedKeyboardShortcuts),
+  ...Object.values(PlaneVolumeNoLoopedKeyboardShortcuts),
+  ...Object.values(PlaneBoundingBoxNoLoopedKeyboardShortcuts),
+  ...Object.values(PlaneProofreadingNoLoopedKeyboardShortcuts),
 ] as const;
 
 export const ALL_KEYBOARD_SHORTCUT_META_INFOS = {
@@ -646,8 +823,13 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS = {
   ...ArbitraryNoLoopKeyboardShortcutMetaInfo,
   ...PlaneNavigationKeyboardShortcutMetaInfo,
   ...PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo,
+  ...PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo,
   ...PlaneNoLoopKeyboardShortcutMetaInfo,
   ...PlaneLoopDelayedConfigKeyboardShortcutMetaInfo,
+  ...PlaneSkeletonLoopedKeyboardShortcutMetaInfo,
+  ...PlaneVolumeNoLoopedKeyboardShortcutMetaInfo,
+  ...PlaneBoundingBoxNoLoopedKeyboardShortcutMetaInfo,
+  ...PlaneProofreadingNoLoopedKeyboardShortcutMetaInfo,
 };
 
 const ALL_KEYBOARD_SHORTCUT_DEFAULTS = {
@@ -660,6 +842,11 @@ const ALL_KEYBOARD_SHORTCUT_DEFAULTS = {
   ...DEFAULT_PLANE_LOOP_DELAYED_NAVIGATION_KEYBOARD_SHORTCUTS,
   ...DEFAULT_PLANE_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
   ...DEFAULT_PLANE_NO_LOOP_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_PLANE_NO_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_PLANE_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_PLANE_NO_LOOPED_VOLUME_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_PLANE_NO_LOOPED_BOUNDING_BOX_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_PLANE_NO_LOOPED_PROOFREADING_KEYBOARD_SHORTCUTS,
 } as const;
 
 export function getAllDefaultKeyboardShortcuts(): Mutable<typeof ALL_KEYBOARD_SHORTCUT_DEFAULTS> {

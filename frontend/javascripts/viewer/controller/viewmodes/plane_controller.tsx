@@ -337,6 +337,7 @@ class PlaneController extends PureComponent<Props> {
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
   isStarted: boolean = false;
+  // TODOM: improve typing
   unsubscribeKeyboardListener: any = () => {};
 
   componentDidMount() {

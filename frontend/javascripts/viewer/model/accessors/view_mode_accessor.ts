@@ -128,6 +128,7 @@ function _calculateMaybeGlobalPos(
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
   floatingPosition = globalFloatingPosition.toArray() as Vector3;
+  const discretize = useRound ? Math.round : Math.floor;
 
   // Regarding round and floor in the following code:
   // The objective is to obtain integer positional values here that correspond "the most" to clicked input
@@ -138,8 +139,8 @@ function _calculateMaybeGlobalPos(
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [
-        useRound ? Math.round(globalFloatingPosition.x) : Math.floor(globalFloatingPosition.x),
-        useRound ? Math.round(globalFloatingPosition.y) : Math.floor(globalFloatingPosition.y),
+        discretize(globalFloatingPosition.x),
+        discretize(globalFloatingPosition.y),
         Math.floor(globalFloatingPosition.z),
       ];
       break;
@@ -148,17 +149,17 @@ function _calculateMaybeGlobalPos(
     case OrthoViews.PLANE_YZ: {
       roundedPosition = [
         Math.floor(globalFloatingPosition.x),
-        useRound ? Math.round(globalFloatingPosition.y) : Math.floor(globalFloatingPosition.y),
-        useRound ? Math.round(globalFloatingPosition.z) : Math.floor(globalFloatingPosition.z),
+        discretize(globalFloatingPosition.y),
+        discretize(globalFloatingPosition.z),
       ];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
       roundedPosition = [
-        useRound ? Math.round(globalFloatingPosition.x) : Math.floor(globalFloatingPosition.x),
+        discretize(globalFloatingPosition.x),
         Math.floor(globalFloatingPosition.y),
-        useRound ? Math.round(globalFloatingPosition.z) : Math.floor(globalFloatingPosition.z),
+        discretize(globalFloatingPosition.z),
       ];
       break;
     }

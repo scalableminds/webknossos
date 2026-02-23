@@ -1,0 +1,44 @@
+@(name: String, datasetName: String, jobLink: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  Your segmentation has successfully finished and is ready for exploration. 
+  Click the button below to open the segmented dataset, or find it amongst your other datasets in the WEBKNOSSOS dashboard.
+</p>
+
+<div style="text-align: center;">
+  <a href="@{jobLink}" style="
+      color: #fff;
+      padding: 4px 15px;
+      height: 32px;
+      background: #5660ff;
+      border: 1px solid #808cff;
+      text-align: center;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 2.1;
+      text-decoration: none;
+      border-radius: 4px;
+      display: inline-block;
+    ">
+    Open segmentation in WEBKNOSSOS
+  </a>
+</div>
+
+<p>
+  If you are happy with the results, you can now apply the model to the full dataset. If you have already segmented the full volume, continue with the proofreading tools to review and finalize the segmentation.
+</p>
+<p>
+  If the results are not quite what you expected, <a href="https://youtu.be/MlT4MgU6ayw?si=daGZoX5Y-Y3FXSC5">custom training or fine-tuning</a> of models can help improve performance on your specific data. For especially large or complex neuron segmentation projects, we also offer dedicated <a href="https://home.webknossos.org/services/automated-segmentation">automated segmentation</a> and <a href="https://home.webknossos.org/services/connectome-reconstruction">connectome reconstruction services</a>.
+</p>
+<div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
+  <img src="https://static.webknossos.org/mails/email-full-segmentation-preview.gif"
+    alt="A preview of a full, automated segmentation of a WEBKNOSSOS dataset"
+    style="width: 600px; height: 300px;"/>
+</div>
+
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

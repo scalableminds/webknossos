@@ -113,12 +113,11 @@ class JobService @Inject()(wkConf: WkConf,
               "Your dataset has been exported as Tiff and is ready for download."
             ))
         case JobCommand.infer_nuclei =>
-          Some(
-            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Nuclei Segmentation"))
+          Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
         case JobCommand.infer_neurons =>
-          Some(
-            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Neuron Segmentation",
-            ))
+          Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.align_sections =>
+          Some(defaultMails.jobSuccessfulAlignmentMail(user, userEmail, datasetName, resultLink))
         case JobCommand.materialize_volume_annotation =>
           Some(
             genericEmailTemplate(
@@ -129,13 +128,13 @@ class JobService @Inject()(wkConf: WkConf,
           Some(
             genericEmailTemplate(
               "Mesh Generation",
-              "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
+              "Your 3D meshes for the whole segmentation layer of your dataset are ready. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
             ))
         case JobCommand.render_animation =>
           Some(
             genericEmailTemplate(
               "Dataset Animation",
-              "Your animation of a WEBKNOSSOS dataset has been successfully created and is ready for download."
+              "Your animation of a WEBKNOSSOS dataset is ready for download."
             ))
         case _ => None
       }).toFox ?~> "job.emailNotifactionsDisabled"

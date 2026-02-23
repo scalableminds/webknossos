@@ -205,15 +205,27 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def jobSuccessfulSegmentationMail(user: User,
-                                    userEmail: String,
-                                    datasetName: String,
-                                    jobLink: String,
-                                    jobTitle: String): Mail =
+  def jobSuccessfulNeuronSegmentationMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your $jobTitle is ready",
-      bodyHtml = html.mail.jobSuccessfulSegmentation(user.name, datasetName, jobLink, jobTitle, additionalFooter).body,
+      subject = s"Your segmentation is ready",
+      bodyHtml = html.mail.jobSuccessfulNeuronSegmentation(user.name, datasetName, jobLink, additionalFooter).body,
+      recipients = List(userEmail)
+    )
+
+  def jobSuccessfulMitoSegmentationMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"Your mitochondria segmentation is ready",
+      bodyHtml = html.mail.jobSuccessfulMitoSegmentation(user.name, datasetName, jobLink, additionalFooter).body,
+      recipients = List(userEmail)
+    )
+
+  def jobSuccessfulAlignmentMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"Your alignment is ready",
+      bodyHtml = html.mail.jobSuccessfulAlignment(user.name, datasetName, jobLink, additionalFooter).body,
       recipients = List(userEmail)
     )
 

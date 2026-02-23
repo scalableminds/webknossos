@@ -142,7 +142,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       case Some(fromConfigStrs) =>
         (for {
           fromConfig <- fromConfigStrs.map(UPath.fromString)
-        } yield fromConfig.map(_.toAbsolute)).toList.toSingleBox("Could not parse config uploadToPathsPrefixes")
+        } yield fromConfig.map(_.toAbsolute)).toList.toSingleBox("Could not parse config uploadToPaths.prefixes")
     }
   }
 

@@ -45,9 +45,6 @@ export const viteConfig = {
           if (id.includes("node_modules/html2canvas")) {
             return "html2canvas";
           }
-          // if (id.includes("node_modules")) {
-          //   return "vendor";
-          // }
         },
       },
     },
@@ -61,16 +58,17 @@ export const viteConfig = {
     cors: true,
     // https: {
     //   // Enable HTTPS with self-signed certificates for testing passkeys etc
-    //   // Make sure you've generated SSL certificates using the ./tools/proxy/gen-ssl-dev-certs.sh script
+    //   // Make sure you've generated SSL certificates using the ./tools/gen-ssl-dev-certs.sh script
     //   key: fs.readFileSync("./target/dev.key.pem"),
     //   cert: fs.readFileSync("./target/dev.cert.pem"),
     // },
     proxy: {
-      // You can add more routes here, e.g. "^/(api|binary|auth)"
+      // Proxy to SAM service
       "^/dist/": {
         target: "http://localhost:8080",
         changeOrigin: true,
       },
+      // Proxy to Tracingstore / Datastore
       "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,

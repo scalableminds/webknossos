@@ -66,7 +66,10 @@ def poll_for_work(args: argparse.Namespace) -> None:
         try:
             delete_path(path)
             deleted_paths.append(path)
-        except Exception:
+        except FileNotFoundError:
+            logger.info(f"Got FileNotFoundError while trying to delete {path} – assuming already deleted.")
+            deleted_paths.append(path)
+        except Exception as e:
             logger.exception(f"Could not delete {path}")
 
     if deleted_paths:

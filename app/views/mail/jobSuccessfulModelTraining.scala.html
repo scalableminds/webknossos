@@ -7,24 +7,7 @@
   Your custom machine learning model has been successfully trained and is now available in WEBKNOSSOS. You can access it under AI Analysis → AI Models, or via the button below.
 </p>
 
-<div style="text-align: center;">
-  <a href="@{jobLink}" style="
-      color: #fff;
-      padding: 4px 15px;
-      height: 32px;
-      background: #5660ff;
-      border: 1px solid #808cff;
-      text-align: center;
-      font-weight: 400;
-      font-size: 14px;
-      line-height: 2.1;
-      text-decoration: none;
-      border-radius: 4px;
-      display: inline-block;
-    ">
-    Open WEBKNOSSOS
-  </a>
-</div>
+@emailButton("Open WEBKNOSSOS", jobLink)
 
 
 <p>
@@ -32,11 +15,12 @@ To run your model, open the dataset you would like to segment, define a bounding
 </p>
 
 
-<div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
-  <img src="https://static.webknossos.org/mails/email-manual-annotation-service.gif"
-    alt="A preview of manual annotation of a WEBKNOSSOS dataset"
-    style="width: 600px; height: 300px;"/>
-</div>
+@emailImage(
+  src = "https://static.webknossos.org/mails/email-manual-annotation-service.gif",
+  alt = "A preview of manual annotation of a WEBKNOSSOS dataset",
+  width = 300,
+  height = 300
+)
 
 <p>
 If you require additional ground truth annotations to further improve model performance, our <a href="https://home.webknossos.org/services/annotations">manual annotation services</a> are available to support your project.

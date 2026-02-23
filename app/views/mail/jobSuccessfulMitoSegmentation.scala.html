@@ -8,34 +8,18 @@
   Click the button below to open the new, segmented dataset, or find it amongst your other datasets in the WEBKNOSSOS dashboard.
 </p>
 
-<div style="text-align: center;">
-  <a href="@{jobLink}" style="
-      color: #fff;
-      padding: 4px 15px;
-      height: 32px;
-      background: #5660ff;
-      border: 1px solid #808cff;
-      text-align: center;
-      font-weight: 400;
-      font-size: 14px;
-      line-height: 2.1;
-      text-decoration: none;
-      border-radius: 4px;
-      display: inline-block;
-    ">
-    Open segmentation in WEBKNOSSOS
-  </a>
-</div>
+@emailButton("Open segmentation in WEBKNOSSOS", jobLink)
 
 <p>
   If you would like to improve detection accuracy for your specific data, consider <a href="https://youtu.be/MlT4MgU6ayw?si=uekAKL6kOC0c_Dhj">training a custom model</a> or contact us about our <a href="https://home.webknossos.org/services/automated-segmentation">automated segmentation services</a>.
 </p>
 
-<div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
-  <img src="https://static.webknossos.org/mails/email-mito-segmentation-preview.gif"
-    alt="A preview of a full, automated mitochondria segmentation of a WEBKNOSSOS dataset"
-    style="width: 600px; height: 300px;"/>
-</div>
+@emailImage(
+  src = "https://static.webknossos.org/mails/email-mito-segmentation-preview.gif",
+  alt = "A preview of a full, automated mitochondria segmentation of a WEBKNOSSOS dataset",
+  width = 300,
+  height = 300
+)
 
 
 <p>With best regards,<br />the WEBKNOSSOS team</p>

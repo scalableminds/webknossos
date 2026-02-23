@@ -1,7 +1,7 @@
 @(additionalFooter: String)(content:Html)
 <html>
 
-<body>
+<body style="background-color: #f0f2f5; margin: 0; padding: 0;">
   <style type="text/css">
     body,
     p,
@@ -11,44 +11,47 @@
         "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
         sans-serif;
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.6;
     }
   </style>
-  <div style="margin-left: auto; margin-right: auto; max-width: 600px;">
-    <p>
-      <a href="https://webknossos.org"><img src="https://static.webknossos.org/mails/email-header.600.png"
-          alt="WEBKNOSSOS" style="width: 100%; max-width: 600px;" /></a>
-    </p>
 
-    @content
+  <div style="background-color: #f0f2f5; padding: 32px 16px;">
+    <div style="margin-left: auto; margin-right: auto; max-width: 600px;">
 
-    <p style="text-align: center; padding-top: 30px;">
-      <a href="https://webknossos.org"><img src="https://static.webknossos.org/mails/icon-webknossos.png"
-          alt="WEBKNOSSOS" style="width: 50px; height: 50px;" /></a>
-      &nbsp;
-      <a href="https://docs.webknossos.org"><img src="https://static.webknossos.org/mails/icon-docs.png"
-          alt="Documentation" style="width: 50px; height: 50px;" /></a>
-      &nbsp;
-      <a href="https://www.youtube.com/channel/UCVQqjQ50lJORCZuLxnEE-tA"><img
-          src="https://static.webknossos.org/mails/icon-video.png" alt="YouTube Channel"
-          style="width: 50px; height: 50px;" /></a>
-      &nbsp;
-      <a href="https://twitter.com/webknossos"><img src="https://static.webknossos.org/mails/icon-twitter.png"
-          alt="Twitter Channel" style="width: 50px; height: 50px;" /></a>
-      &nbsp;
-      <a href="https://bsky.app/profile/webknossos.org"><img src="https://static.webknossos.org/mails/icon-bluesky.png"
-          alt="Bluesky Channel" style="width: 50px; height: 50px;" /></a>
-    </p>
+      <a href="https://webknossos.org">
+        <img src="https://static.webknossos.org/mails/email-header.600.png"
+          alt="WEBKNOSSOS" style="width: 100%; max-width: 600px; display: block; border-radius: 8px 8px 0 0;" />
+      </a>
+      <div style="background-color: #ffffff; border-radius: 0 0 8px 8px; padding: 36px 40px 40px 40px; color: #333333;">
+        @content
+      </div>
 
-    <div style="height: 60px;">&nbsp;</div>
-    <p style="color: #888; font-size: 0.6rem;">
-      You are receiving this email because you signed up for an account on WEBKNOSSOS. You may
-      cancel your account at any time.
-    </p>
-    <p style="color: #888; font-size: 0.6rem;">
-      @Html(additionalFooter)
-    </p>
-    <div style="height: 60px;">&nbsp;</div>
+      <p style="text-align: center; padding-top: 28px; padding-bottom: 4px;">
+        <a href="https://webknossos.org"><img src="https://static.webknossos.org/mails/icon-webknossos.png"
+            alt="WEBKNOSSOS" style="width: 40px; height: 40px; margin: 0 6px;" /></a>
+        <a href="https://docs.webknossos.org"><img src="https://static.webknossos.org/mails/icon-docs.png"
+            alt="Documentation" style="width: 40px; height: 40px; margin: 0 6px;" /></a>
+        <a href="https://www.youtube.com/@webknossos"><img
+            src="https://static.webknossos.org/mails/icon-video.png" alt="YouTube Channel"
+            style="width: 40px; height: 40px; margin: 0 6px;" /></a>
+        <a href="https://twitter.com/webknossos"><img src="https://static.webknossos.org/mails/icon-twitter.png"
+            alt="Twitter Channel" style="width: 40px; height: 40px; margin: 0 6px;" /></a>
+        <a href="https://bsky.app/profile/webknossos.org"><img src="https://static.webknossos.org/mails/icon-bluesky.png"
+            alt="Bluesky Channel" style="width: 40px; height: 40px; margin: 0 6px;" /></a>
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
+
+      <p style="color: #aaaaaa; font-size: 0.65rem; line-height: 1.6; text-align: center; margin: 0 0 8px 0;">
+        You are receiving this email because you signed up for an account on WEBKNOSSOS. You may
+        cancel your account at any time.
+      </p>
+      <p style="color: #aaaaaa; font-size: 0.65rem; text-align: center; margin: 0;">
+        @Html(additionalFooter)
+      </p>
+
+      <div style="height: 40px;">&nbsp;</div>
+    </div>
   </div>
 </body>
 

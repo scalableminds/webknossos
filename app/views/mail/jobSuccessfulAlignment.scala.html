@@ -8,24 +8,7 @@
   Click the button below to open the new, aligned dataset, or find it amongst your other datasets in the WEBKNOSSOS dashboard.
 </p>
 
-<div style="text-align: center;">
-  <a href="@{jobLink}" style="
-      color: #fff;
-      padding: 4px 15px;
-      height: 32px;
-      background: #5660ff;
-      border: 1px solid #808cff;
-      text-align: center;
-      font-weight: 400;
-      font-size: 14px;
-      line-height: 2.1;
-      text-decoration: none;
-      border-radius: 4px;
-      display: inline-block;
-    ">
-    Open dataset in WEBKNOSSOS
-  </a>
-</div>
+@emailButton("Open dataset in WEBKNOSSOS", jobLink)
 
 <p>
   Next, you can run our pre-trained models for neuron segmentation and mitochondria detection, or train a custom model tailored to your data. <a href="https://www.youtube.com/playlist?list=PLpizOgyiA4kH-MbmYUpLcYf9RV8zuhDJ9">Step-by-step tutorials</a> are available to guide you through these workflows.
@@ -34,11 +17,12 @@
 <p>
   If the alignment quality is not sufficient due to challenging raw data, our <a href="https://home.webknossos.org/services/alignment">custom alignment and preprocessing services</a> can provide additional support.
 </p>
-<div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
-  <img src="https://static.webknossos.org/mails/email-alignment-preview"
-    alt="A preview of an aligned WEBKNOSSOS dataset"
-    style="width: 600px; height: 300px;"/>
-</div>
+@emailImage(
+  src = "https://static.webknossos.org/mails/email-alignment-preview.gif",
+  alt = "A preview of an aligned WEBKNOSSOS dataset",
+  width = 300,
+  height = 300
+)
 
 
 <p>With best regards,<br />the WEBKNOSSOS team</p>

@@ -114,9 +114,14 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val operatorData: String = get[String]("webKnossos.operatorData")
 
     object Datasets {
-      val uploadToPathsPrefixes: Option[Seq[String]] =
-        getOptional[Seq[String]]("webKnossos.datasets.uploadToPathsPrefixes")
-      val uploadToPathsInfix: Option[String] = getOptional[String]("webKnossos.datasets.uploadToPathsInfix")
+      object UploadToPaths {
+        val prefixes: Option[Seq[String]] =
+          getOptional[Seq[String]]("webKnossos.datasets.uploadToPaths.prefixes")
+        val insertOrganizationDirectory: Boolean =
+          get[Boolean]("webKnossos.datasets.uploadToPaths.insertOrganizationDirectory")
+        val infix: Option[String] = getOptional[String]("webKnossos.datasets.uploadToPaths.infix")
+      }
+      val children = List(UploadToPaths)
     }
     val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService, Datasets)
   }

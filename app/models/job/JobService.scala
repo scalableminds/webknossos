@@ -116,6 +116,8 @@ class JobService @Inject()(wkConf: WkConf,
           Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
         case JobCommand.infer_neurons =>
           Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.infer_mitochondria =>
+          Some(defaultMails.jobSuccessfulMitoSegmentationMail(user, userEmail, datasetName, resultLink))
         case JobCommand.align_sections =>
           Some(defaultMails.jobSuccessfulAlignmentMail(user, userEmail, datasetName, resultLink))
         case JobCommand.materialize_volume_annotation =>

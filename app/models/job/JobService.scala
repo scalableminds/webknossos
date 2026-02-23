@@ -91,7 +91,7 @@ class JobService @Inject()(wkConf: WkConf,
         s"Successful job$superUserLabel",
         msg
       )
-      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
+      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(wkConf.Http.uri))
       _ = if (jobAfterChange.command == JobCommand.convert_to_wkw)
         mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
     } yield ()

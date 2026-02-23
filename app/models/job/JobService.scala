@@ -116,10 +116,20 @@ class JobService @Inject()(wkConf: WkConf,
           Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
         case JobCommand.infer_neurons =>
           Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.infer_instances =>
+          Some(
+            genericEmailTemplate(
+              "Instance Segmentation",
+              "Your WEBKNOSSOS instance segmentation is ready."
+            ))
         case JobCommand.infer_mitochondria =>
           Some(defaultMails.jobSuccessfulMitoSegmentationMail(user, userEmail, datasetName, resultLink))
         case JobCommand.align_sections =>
           Some(defaultMails.jobSuccessfulAlignmentMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.train_neuron_model =>
+          Some(defaultMails.jobSuccessfulModelTrainingMail(user, userEmail, resultLink))
+        case JobCommand.train_instance_model =>
+          Some(defaultMails.jobSuccessfulModelTrainingMail(user, userEmail, resultLink))
         case JobCommand.materialize_volume_annotation =>
           Some(
             genericEmailTemplate(
@@ -136,7 +146,7 @@ class JobService @Inject()(wkConf: WkConf,
           Some(
             genericEmailTemplate(
               "Dataset Animation",
-              "Your animation of a WEBKNOSSOS dataset is ready for download."
+              "Your WEBKNOSSOS dataset animation is ready."
             ))
         case _ => None
       }).toFox ?~> "job.emailNotifactionsDisabled"

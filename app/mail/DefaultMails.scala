@@ -229,6 +229,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
+  def jobSuccessfulModelTrainingMail(user: User, userEmail: String, jobLink: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = s"Your model training is ready",
+      bodyHtml = html.mail.jobSuccessfulModelTraining(user.name, jobLink, additionalFooter).body,
+      recipients = List(userEmail)
+    )
+
   def jobFailedGenericMail(user: User, userEmail: String, datasetName: String, jobTitle: String): Mail =
     Mail(
       from = defaultSender,

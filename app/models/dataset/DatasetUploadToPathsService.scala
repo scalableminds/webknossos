@@ -135,7 +135,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
       fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
     } yield Seq(fromDatastoreBaseFolder.toAbsolute)
-    conf.WebKnossos.Datasets.uploadToPathsPrefixes match {
+    conf.WebKnossos.Datasets.UploadToPaths.prefixes match {
       case None => fallbackFromBaseFolder
       case Some(fromConfigStrs) if fromConfigStrs.isEmpty =>
         fallbackFromBaseFolder
@@ -157,19 +157,27 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       }
     } yield selectedPrefix
 
-  private lazy val uploadToPathsInfixOpt: Option[String] = conf.WebKnossos.Datasets.uploadToPathsInfix match {
+  private lazy val uploadToPathsInfixOpt: Option[String] = conf.WebKnossos.Datasets.UploadToPaths.infix match {
     case Some(infix) if infix == "" => None
     case other                      => other
   }
+
+  private def selectPathPrefixDatasetParent(requestedPrefix: Option[UPath], organizationId: String)(
+      implicit ec: ExecutionContext): Fox[UPath] =
+    for {
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      withOrgaDirOrSame = if (conf.WebKnossos.Datasets.UploadToPaths.insertOrganizationDirectory)
+        uploadToPathsPrefix / organizationId
+      else uploadToPathsPrefix
+      withInfixOrSame = uploadToPathsInfixOpt.map(infix => withOrgaDirOrSame / infix).getOrElse(withOrgaDirOrSame)
+    } yield withInfixOrSame
 
   private def addPathsToDatasource(
       dataSource: UsableDataSource,
       organizationId: String,
       requestedPrefix: Option[UPath])(implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      orgaDir = uploadToPathsPrefix / organizationId
-      datasetParent = uploadToPathsInfixOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
+      datasetParent <- selectPathPrefixDatasetParent(requestedPrefix, organizationId)
       datasetPath = datasetParent / dataSource.id.directoryName
       layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = layersWithPaths)
@@ -244,9 +252,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         parameters.attachmentType)
       existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
-      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
+      datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
+      datasetPath = datasetParent / dataset.directoryName
       attachmentPath = generateAttachmentPath(parameters.attachmentName,
                                               parameters.attachmentDataformat,
                                               parameters.attachmentType,
@@ -265,9 +272,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
-      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
+      datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
+      datasetPath = datasetParent / dataset.directoryName
       magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)
       _ <- datasetMagsDAO.insertPending(dataset._id,
                                         parameters.layerName,

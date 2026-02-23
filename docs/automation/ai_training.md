@@ -1,10 +1,10 @@
 # AI Model Training
 
-WEBKNOSSOS allows you to train your own AI models for image segmentation.
+WEBKNOSSOS allows you to train your own AI models for image segmentation. Watch this step-by-step tutorial to get started with custom training: ![youtube-video](https://www.youtube.com/embed/MlT4MgU6ayw?si=kGP_cAO72sjpNY6g)
 
 ## Preparing Your Annotations
 
-Before you can start training, prepare your ground truth annotation. Here is a short, step-by-step guide to prepare your data:
+Before you can start training, prepare your ground truth annotation. Here is a short guide to prepare your data:
 
 1.  **Create an annotation:** Start by creating a new annotation or opening an existing one.
 2.  **Define bounding boxes:** Create one or more bounding boxes that define the areas you want to use for training. Learn more on how to define bounding boxes and choosing the right magnification for your training in [this guide](choosing_mags_and_bboxes.md).
@@ -13,7 +13,7 @@ Before you can start training, prepare your ground truth annotation. Here is a s
     - For optimal training, all bounding boxes should have dimensions that are multiples of the smallest box dimensions.
 3.  **Label segments:** Within your bounding boxes, label the segmentation of your structures of interest. Use the volume annotation tool to manually annotate structures. This will be your ground truth data. For neurons, we recommend to densely label each structure with a unique ID. For instance segmentations you only need to label the structures you want to train on, e.g. nuclei, mitochondria, soma, vesicles, etc., making sure they have unique segment IDs as well.
 
-For a detailed tutorial and general annotations guidelines, please see [here](../tutorials/trainingdata_annotation.md) or watch this tutorial. ![youtube-video](https://www.youtube.com/embed/MlT4MgU6ayw?si=kGP_cAO72sjpNY6g)
+For a detailed tutorial and general annotations guidelines, please see [here](../tutorials/trainingdata_annotation.md).
 
 ## Configuring the Training
 To start a training, click on the `AI Analysis` button in the toolbar and select `Train AI model` from the dropdown menu.

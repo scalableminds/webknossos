@@ -52,9 +52,8 @@ object RunInstanceModelTrainingParameters {
   implicit val jsonFormat: OFormat[RunInstanceModelTrainingParameters] = Json.format[RunInstanceModelTrainingParameters]
 }
 
-case class RunInferenceParameters(datasetId: ObjectId, //NEW, replaces datasetDirectoryName: String,
-                                  aiModelId: Option[ObjectId], // now optional
-                                  // LOESCH organizationId: String,
+case class RunInferenceParameters(datasetId: ObjectId,
+                                  aiModelId: Option[ObjectId],
                                   colorLayerName: String,
                                   boundingBox: String, // Always in mag1
                                   annotationId: Option[ObjectId],
@@ -63,11 +62,11 @@ case class RunInferenceParameters(datasetId: ObjectId, //NEW, replaces datasetDi
                                   workflowYaml: Option[String],
                                   invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double],
-                                  doSplitMergerEvaluation: Boolean, // NEW
-                                  evalUseSparseTracing: Option[Boolean], // NEW
-                                  evalMaxEdgeLength: Option[Double], // NEW
-                                  evalSparseTubeThresholdNm: Option[Double], // NEW
-                                  evalMinMergerPathLengthNm: Option[Double]) // NEW
+                                  doSplitMergerEvaluation: Boolean,
+                                  evalUseSparseTracing: Option[Boolean],
+                                  evalMaxEdgeLength: Option[Double],
+                                  evalSparseTubeThresholdNm: Option[Double],
+                                  evalMinMergerPathLengthNm: Option[Double])
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]

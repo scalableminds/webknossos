@@ -364,7 +364,7 @@ export class ResumableChunk {
       if (response.ok && response.status !== 204) {
         this._message = await response.text();
         this.callback("success", this._message);
-        this.markComplete = true; // Tom added this.
+        this.markComplete = true;
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();
@@ -487,6 +487,7 @@ export class ResumableChunk {
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
       });
+      if (timeoutId != null) clearTimeout(timeoutId);
 
       if (response.ok) {
         this._status = "success";
@@ -505,12 +506,12 @@ export class ResumableChunk {
         throw new Error(`Server responded with ${response.status}`);
       }
     } catch (error: any) {
-      if (error.name === "AbortError" && !hasTimedOut) {
-        this._status = "pending";
-        return;
+      if (error.name === "AbortError") {
+        if (timeoutId != null) clearTimeout(timeoutId);
+        if (!hasTimedOut) return;
       }
 
-      this.callback("retry", hasTimedOut ? "Timeout" : error.message);
+      this.callback("retry", this.abortController?.signal.aborted ? "Timeout" : error.message);
       this.abort();
       this.retries++;
 
@@ -1255,6 +1256,10 @@ export class ResumableUpload implements EventTarget {
     // Make sure we don't start too many uploads at once
     if (this.isUploading()) return;
 
+    for (const file of this.files) {
+      file.pause(false);
+    }
+
     // Kick off the queue
     this._completeDispatched = false;
     this.dispatch("uploadStart");
@@ -1267,7 +1272,10 @@ export class ResumableUpload implements EventTarget {
    * Pause uploading.
    */
   pause(): void {
-    for (const file of this.files) file.abort();
+    for (const file of this.files) {
+      file.abort();
+      file.pause(true);
+    }
     this.dispatch("pause");
   }
 

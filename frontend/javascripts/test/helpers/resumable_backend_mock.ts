@@ -177,7 +177,7 @@ export class ResumableBackendMock {
     for (const chunk of state.receivedChunks.values()) {
       total += chunk.byteLength;
     }
-    return Math.min(1, total / state.totalSize);
+    return total / state.totalSize;
   }
 
   getFinalUploadData(identifier: string): Uint8Array {
@@ -218,33 +218,7 @@ export class ResumableBackendMock {
     const token = params.get(this.tokenParamName);
 
     if (request.method === "GET") {
-      this.testRequestCount++;
-      const meta = this.extractChunkMeta(params);
-      if (!meta) {
-        return HttpResponse.text("Missing parameters", { status: 400 });
-      }
-
-      if (this.testResponseOverride) {
-        const overrideResponse = this.testResponseOverride(meta, request);
-        if (overrideResponse) return overrideResponse;
-      }
-
-      if (this.testResponseDelayMs > 0) {
-        await sleep(this.testResponseDelayMs);
-        if (request.signal.aborted) {
-          return HttpResponse.text("Aborted", { status: 499 });
-        }
-      }
-
-      const state = this.files.get(meta.identifier);
-      const existsFromState = state?.receivedChunks.has(meta.chunkNumber) ?? false;
-      const exists = this.testChunkExistsPredicate
-        ? this.testChunkExistsPredicate(meta)
-        : existsFromState;
-      if (exists) {
-        return HttpResponse.text("Found", { status: 200 });
-      }
-      return HttpResponse.text("", { status: 204 });
+      return this.handleGet(request, params);
     }
 
     if (request.method !== "POST" && request.method !== "PUT" && request.method !== "PATCH") {
@@ -268,69 +242,40 @@ export class ResumableBackendMock {
     this.maxInflightUploads = Math.max(this.maxInflightUploads, this.inflightUploads);
 
     try {
-      const meta = this.extractChunkMeta(params);
-      if (!meta) {
-        return HttpResponse.text("Missing parameters", { status: 400 });
-      }
-
-      const failure = this.failUploadOnRequest.get(this.uploadRequestCount);
-      if (failure) {
-        return HttpResponse.text(failure.body ?? "Error", { status: failure.status });
-      }
-
-      if (
-        this.failUploadsAfterCount &&
-        this.successfulUploadCount >= this.failUploadsAfterCount.count
-      ) {
-        return HttpResponse.text(this.failUploadsAfterCount.body ?? "Upload rejected", {
-          status: this.failUploadsAfterCount.status,
-        });
-      }
-
-      const bytes = await this.extractChunkBytes(request);
-      if (!bytes) {
-        return HttpResponse.text("Missing chunk data", { status: 400 });
-      }
-      if (request.signal.aborted) {
-        return HttpResponse.text("Aborted", { status: 499 });
-      }
-
-      const validationError = this.validateChunk(meta, bytes);
-      if (validationError) {
-        this.invariantViolations.push(validationError);
-        return HttpResponse.text(validationError, { status: 400 });
-      }
-
-      const fileState = this.ensureFileState(meta);
-      if (fileState.receivedChunks.has(meta.chunkNumber)) {
-        const message = `Duplicate chunk ${meta.chunkNumber} for ${meta.identifier}`;
-        this.invariantViolations.push(message);
-        return HttpResponse.text(message, { status: 409 });
-      }
-
-      if (this.responseDelayMs > 0) {
-        await sleep(this.responseDelayMs);
-        if (request.signal.aborted) {
-          return HttpResponse.text("Aborted", { status: 499 });
-        }
-      }
-
-      fileState.receivedChunks.set(meta.chunkNumber, bytes);
-
-      this.successfulUploadCount++;
-      this.uploadLog.push({
-        method: request.method,
-        url: request.url,
-        token,
-        chunkNumber: meta.chunkNumber,
-        identifier: meta.identifier,
-        bytes: bytes.byteLength,
-      });
-
-      return HttpResponse.text("OK", { status: 200 });
+      return await this.handleUploadChunk(request, params, token);
     } finally {
       this.inflightUploads = Math.max(0, this.inflightUploads - 1);
     }
+  }
+
+  private async handleGet(request: Request, params: URLSearchParams): Promise<Response> {
+    this.testRequestCount++;
+    const meta = this.extractChunkMeta(params);
+    if (!meta) {
+      return HttpResponse.text("Missing parameters", { status: 400 });
+    }
+
+    if (this.testResponseOverride) {
+      const overrideResponse = this.testResponseOverride(meta, request);
+      if (overrideResponse) return overrideResponse;
+    }
+
+    if (this.testResponseDelayMs > 0) {
+      await sleep(this.testResponseDelayMs);
+      if (request.signal.aborted) {
+        return HttpResponse.text("Aborted", { status: 499 });
+      }
+    }
+
+    const state = this.files.get(meta.identifier);
+    const existsFromState = state?.receivedChunks.has(meta.chunkNumber) ?? false;
+    const exists = this.testChunkExistsPredicate
+      ? this.testChunkExistsPredicate(meta)
+      : existsFromState;
+    if (exists) {
+      return HttpResponse.text("Found", { status: 200 });
+    }
+    return HttpResponse.text("", { status: 204 });
   }
 
   private ensureFileState(meta: ChunkMeta): FileState {
@@ -428,5 +373,72 @@ export class ResumableBackendMock {
       }
       await sleep(5);
     }
+  }
+
+  private async handleUploadChunk(
+    request: Request,
+    params: URLSearchParams,
+    token: string | null,
+  ): Promise<Response> {
+    const meta = this.extractChunkMeta(params);
+    if (!meta) {
+      return HttpResponse.text("Missing parameters", { status: 400 });
+    }
+
+    const failure = this.failUploadOnRequest.get(this.uploadRequestCount);
+    if (failure) {
+      return HttpResponse.text(failure.body ?? "Error", { status: failure.status });
+    }
+
+    if (
+      this.failUploadsAfterCount &&
+      this.successfulUploadCount >= this.failUploadsAfterCount.count
+    ) {
+      return HttpResponse.text(this.failUploadsAfterCount.body ?? "Upload rejected", {
+        status: this.failUploadsAfterCount.status,
+      });
+    }
+
+    const bytes = await this.extractChunkBytes(request);
+    if (!bytes) {
+      return HttpResponse.text("Missing chunk data", { status: 400 });
+    }
+    if (request.signal.aborted) {
+      return HttpResponse.text("Aborted", { status: 499 });
+    }
+
+    const validationError = this.validateChunk(meta, bytes);
+    if (validationError) {
+      this.invariantViolations.push(validationError);
+      return HttpResponse.text(validationError, { status: 400 });
+    }
+
+    const fileState = this.ensureFileState(meta);
+    if (fileState.receivedChunks.has(meta.chunkNumber)) {
+      const message = `Duplicate chunk ${meta.chunkNumber} for ${meta.identifier}`;
+      this.invariantViolations.push(message);
+      return HttpResponse.text(message, { status: 409 });
+    }
+
+    if (this.responseDelayMs > 0) {
+      await sleep(this.responseDelayMs);
+      if (request.signal.aborted) {
+        return HttpResponse.text("Aborted", { status: 499 });
+      }
+    }
+
+    fileState.receivedChunks.set(meta.chunkNumber, bytes);
+
+    this.successfulUploadCount++;
+    this.uploadLog.push({
+      method: request.method,
+      url: request.url,
+      token,
+      chunkNumber: meta.chunkNumber,
+      identifier: meta.identifier,
+      bytes: bytes.byteLength,
+    });
+
+    return HttpResponse.text("OK", { status: 200 });
   }
 }

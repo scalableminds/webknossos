@@ -537,8 +537,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       resumable.upload();
       await complete;
 
-      expect(backendMock.getMaxInflightUploads()).toBeGreaterThan(1);
-      expect(backendMock.getMaxInflightUploads()).toBeLessThanOrEqual(2);
+      expect(backendMock.getMaxInflightUploads()).toEqual(2);
     });
 
     it("should report progress values that are monotonic and end at 1", async () => {

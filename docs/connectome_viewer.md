@@ -39,4 +39,4 @@ my_dataset                          # Dataset root
 
 
 ## Connectome File Format
-The connectome file format is under active development and experiences frequent changes. [Please reach out to us for the latest file format spec and configuration help](mailto://hello@webknossos.org).
+The connectome file format is under active development and experiences frequent changes. [Please reach out to us for the latest file format spec and configuration help](mailto:hello@webknossos.org).

@@ -119,7 +119,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
       fallbackPath = baseDirUPath / aiModel._organization / ".aiModels" / aiModel._id.toString
     } yield fallbackPath
 
-  private def findModelVoxelSize(aiModelOpt: Option[AiModel], usePretrainedNeuronModel: Boolean, dataStore: DataStore)(
+  def findModelVoxelSize(aiModelOpt: Option[AiModel], usePretrainedNeuronModel: Boolean, dataStore: DataStore)(
       implicit ec: ExecutionContext): Fox[VoxelSize] =
     aiModelOpt match {
       case None =>

@@ -307,6 +307,7 @@ GET           /aiModels/inferences                                              
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels
 POST          /aiModels/register                                                                controllers.AiModelController.registerAiModel
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: ObjectId)
+GET           /aiModels/:id/voxelSize                                                           controllers.AiModelController.aiModelVoxelSize(id: ObjectId)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: ObjectId)
 DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: ObjectId)
 

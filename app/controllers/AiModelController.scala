@@ -107,13 +107,19 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
     with FoxImplicits {
 
   def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    {
-      for {
-        _ <- userService.assertIsSuperUser(request.identity)
-        aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-        jsResult <- aiModelService.publicWrites(aiModel, request.identity)
-      } yield Ok(jsResult)
-    }
+    for {
+      _ <- userService.assertIsSuperUser(request.identity)
+      aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+      jsResult <- aiModelService.publicWrites(aiModel, request.identity)
+    } yield Ok(jsResult)
+  }
+
+  def aiModelVoxelSize(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+      dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
+      voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), usePretrainedNeuronModel = false, dataStore)
+    } yield Ok(Json.toJson(voxelSize))
   }
 
   def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -278,7 +284,8 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold
+          "invert_color_layer" -> request.body.invertColorLayer,
+          "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
         )
         creditTransactionComment = s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
@@ -337,7 +344,12 @@ class AiModelController @Inject()(aiModelDAO: AiModelDAO,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "invert_color_layer" -> request.body.invertColorLayer
+          "invert_color_layer" -> request.body.invertColorLayer,
+          "do_split_merger_evaluation" -> request.body.doSplitMergerEvaluation,
+          "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,
+          "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
+          "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,
+          "eval_min_merger_path_length_nm" -> request.body.evalMinMergerPathLengthNm,
         )
         creditTransactionComment = s"AI custom neuron segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         newInferenceJob <- jobService.submitPaidJob(jobCommand,

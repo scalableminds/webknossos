@@ -227,8 +227,11 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          (_, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, layerName)
           command = JobCommand.infer_mitochondria
           mag1BoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          targetMag <- dataLayer.finestMag.toFox
+          targetMagBoundingBox = mag1BoundingBox / targetMag
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
@@ -241,7 +244,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
           job <- jobService.submitPaidJob(command,
                                           commandArgs,
-                                          mag1BoundingBox, // TODO should be target mag
+                                          targetMagBoundingBox,
                                           creditTransactionComment,
                                           request.identity,
                                           dataset._dataStore)

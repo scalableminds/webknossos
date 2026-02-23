@@ -1,4 +1,4 @@
-import { Select } from "antd";
+import { Select, type SelectProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { localeCompareBy } from "libs/utils";
 import messages from "messages";
@@ -24,8 +24,6 @@ import {
 import type { MappingType, WebknossosState } from "viewer/store";
 import { SwitchSetting } from "viewer/view/components/setting_input_views";
 
-const { Option, OptGroup } = Select;
-
 type Props = {
   layerName: string;
 };
@@ -44,6 +42,11 @@ const unpackMappingNameAndCategory = (packedString: string) => {
 
 function MappingSettingsView({ layerName }: Props) {
   const dispatch = useDispatch();
+  // shouldMappingBeEnabled is the UI state which is directly connected to the
+  // toggle button. The actual mapping in the store is only activated when
+  // the user selects a mapping from the dropdown (which is only possible after
+  // using the toggle). This is why, there is this.state.shouldMappingBeEnabled and
+  // isMappingEnabled derived from the store.
   const [shouldMappingBeEnabled, setShouldMappingBeEnabled] = useState(false);
 
   const activeMappingInfo = useSelector((state: WebknossosState) =>
@@ -96,16 +99,16 @@ function MappingSettingsView({ layerName }: Props) {
 
   const handleChangeMapping = useCallback(
     (packedMappingNameWithCategory: string): void => {
-      const [mappingName, mappingTypeValue] = unpackMappingNameAndCategory(
+      const [mappingName, mappingType] = unpackMappingNameAndCategory(
         packedMappingNameWithCategory,
       );
 
-      if (mappingTypeValue !== "JSON" && mappingTypeValue !== "HDF5") {
+      if (mappingType !== "JSON" && mappingType !== "HDF5") {
         throw new Error("Invalid mapping type");
       }
 
       dispatch(
-        setMappingAction(layerName, mappingName, mappingTypeValue, false, {
+        setMappingAction(layerName, mappingName, mappingType, false, {
           showLoadingIndicator: true,
         }),
       );
@@ -138,6 +141,8 @@ function MappingSettingsView({ layerName }: Props) {
     [segmentationLayer?.agglomerates],
   );
 
+  // Show mapping-select even when the mapping is disabled but the UI was used before
+  // (i.e., mappingName != null)
   const isMappingActive = shouldMappingBeEnabled || isMappingEnabled;
 
   const selectValueProp = useMemo(
@@ -171,25 +176,35 @@ function MappingSettingsView({ layerName }: Props) {
     return "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
   }, [allowUpdate, isAnnotationLockedByOwner, isOwner, isEditableMappingActive, isMappingEnabled]);
 
-  const renderCategoryOptions = useCallback(
-    (optionStrings: string[], category: MappingType) => {
-      const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
-      const elements = optionStrings
-        .slice()
-        .sort(localeCompareBy((optionString) => optionString))
-        .map((optionString) => (
-          <Option
-            key={packMappingNameAndCategory(optionString, category)}
-            value={packMappingNameAndCategory(optionString, category)}
-            title={optionString}
-          >
-            {optionString}
-          </Option>
-        ));
-      return useGroups ? <OptGroup label={category}>{elements}</OptGroup> : elements;
-    },
-    [availableMappings, availableAgglomerates],
-  );
+  const selectOptions: SelectProps["options"] = useMemo(() => {
+    const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
+
+    const toOption = (optionString: string, category: MappingType) => ({
+      key: packMappingNameAndCategory(optionString, category),
+      value: packMappingNameAndCategory(optionString, category),
+      title: optionString,
+      label: optionString,
+    });
+
+    const mappingOptions = availableMappings
+      .slice()
+      .sort(localeCompareBy((s) => s))
+      .map((s) => toOption(s, "JSON"));
+
+    const agglomerateOptions = availableAgglomerates
+      .slice()
+      .sort(localeCompareBy((s) => s))
+      .map((s) => toOption(s, "HDF5"));
+
+    if (useGroups) {
+      return [
+        { label: "JSON", options: mappingOptions },
+        { label: "HDF5", options: agglomerateOptions },
+      ];
+    }
+
+    return [...mappingOptions, ...agglomerateOptions];
+  }, [availableMappings, availableAgglomerates]);
 
   const renderHideUnmappedSegmentsSwitch =
     (isMappingActive || isMergerModeEnabled) &&
@@ -223,10 +238,8 @@ function MappingSettingsView({ layerName }: Props) {
               notFoundContent="No mappings found."
               disabled={isDisabled}
               popupMatchSelectWidth={false}
-            >
-              {renderCategoryOptions(availableMappings, "JSON")}
-              {renderCategoryOptions(availableAgglomerates, "HDF5")}
-            </Select>
+              options={selectOptions}
+            />
           ) : null}
         </React.Fragment>
       ) : null}

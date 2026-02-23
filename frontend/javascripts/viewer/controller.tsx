@@ -33,10 +33,10 @@ import type DataLayer from "./model/data_layer";
 import {
   GeneralEditingKeyboardShortcuts,
   GeneralKeyboardShortcuts,
-  type KeyboardShortcutHandlerMap,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "./view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
+import type { KeyboardShortcutHandlerMap } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {

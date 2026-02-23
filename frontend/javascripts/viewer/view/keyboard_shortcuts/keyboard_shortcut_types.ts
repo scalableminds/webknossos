@@ -1,4 +1,4 @@
-import { KeyboardHandler, KeyboardLoopHandler } from "libs/input";
+import type { KeyboardHandler, KeyboardLoopHandler } from "libs/input";
 
 export enum KeyboardShortcutDomain {
   GENERAL = "General",

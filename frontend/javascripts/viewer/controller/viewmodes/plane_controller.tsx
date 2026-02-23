@@ -80,25 +80,25 @@ import { api, Model } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action-bar/tools/brush_presets";
-import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
-import PlaneView from "viewer/view/plane_view";
-import { downloadScreenshot } from "viewer/view/rendering_utils";
-import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
 import {
-  PlaneControllerLoopedNavigationKeyboardShortcuts,
-  PlaneControllerLoopDelayedConfigKeyboardShortcuts,
-  PlaneControllerNoLoopKeyboardShortcuts,
   type KeyboardShortcutHandlerMap,
   type KeyboardShortcutLoopedHandlerMap,
+  PlaneControllerLoopDelayedConfigKeyboardShortcuts,
   PlaneControllerLoopDelayedNavigationKeyboardShortcuts,
-  PlaneSkeletonNoLoopedKeyboardShortcuts,
+  PlaneControllerLoopedNavigationKeyboardShortcuts,
+  PlaneControllerNoLoopKeyboardShortcuts,
   PlaneSkeletonLoopedKeyboardShortcuts,
+  PlaneSkeletonNoLoopedKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import {
   buildKeyBindingsFromConfigAndLoopedMapping,
   buildKeyBindingsFromConfigAndMapping,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
+import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
+import PlaneView from "viewer/view/plane_view";
+import { downloadScreenshot } from "viewer/view/rendering_utils";
+import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,

@@ -1,9 +1,9 @@
 import { Validator } from "jsonschema";
 import {
   ALL_KEYBOARD_HANDLER_IDS,
-  type KeyboardShortcutsMap,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import type { KeyboardShortcutsMap } from "./keyboard_shortcut_types";
 
 export const KeyboardShortcutsSchema = {
   $schema: "http://json-schema.org/draft-07/schema#",

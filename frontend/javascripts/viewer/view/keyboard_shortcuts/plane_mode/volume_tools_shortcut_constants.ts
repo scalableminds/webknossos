@@ -1,8 +1,8 @@
 import {
   KeyboardShortcutCollisionDomain,
   KeyboardShortcutDomain,
-  type KeyboardShortcutsMap,
   type KeyboardShortcutHandlerMetaInfoMap,
+  type KeyboardShortcutsMap,
 } from "../keyboard_shortcut_types";
 
 export enum PlaneVolumeNoLoopedKeyboardShortcuts {

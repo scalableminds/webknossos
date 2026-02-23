@@ -1,11 +1,11 @@
 import type { KeyBindingLoopMap, KeyBindingMap } from "libs/input";
-import _ from "lodash";
+import { flatten } from "lodash-es";
 import type {
   KeyboardComboChain,
   KeyboardShortcutHandlerMap,
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutsMap,
-} from "./keyboard_shortcut_constants";
+} from "./keyboard_shortcut_types";
 
 export const MODIFIER_KEYS = new Set(["ctrl", "super", "alt", "shift"]);
 
@@ -87,7 +87,7 @@ export const buildKeyBindingsFromConfigAndMapping = (
   config: KeyboardShortcutsMap<string>,
   handlerIdMapping: KeyboardShortcutHandlerMap<string>,
 ): KeyBindingMap => {
-  const mappedShortcuts = _.flatten(
+  const mappedShortcuts = flatten(
     Object.entries(config).map(([handlerId, keyChainCombos]) => {
       const isInHandlerMapping = handlerId in handlerIdMapping;
       if (isInHandlerMapping) {
@@ -107,7 +107,7 @@ export const buildKeyBindingsFromConfigAndLoopedMapping = (
   config: KeyboardShortcutsMap<string>,
   handlerIdMapping: KeyboardShortcutLoopedHandlerMap<string>,
 ): KeyBindingLoopMap => {
-  const mappedShortcuts = _.flatten(
+  const mappedShortcuts = flatten(
     Object.entries(config).map(([handlerId, keyChainCombos]) => {
       const isInHandlerMapping = handlerId in handlerIdMapping;
       if (isInHandlerMapping) {

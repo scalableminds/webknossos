@@ -1,59 +1,59 @@
-import {
-  type KeyboardShortcutsMap,
-  KeyboardShortcutDomain,
-  type KeyboardShortcutHandlerMetaInfoMap,
-  type KeyboardShortcutMetaInfo,
-  KeyboardShortcutCollisionDomain,
-} from "./keyboard_shortcut_types";
 import { cloneDeep } from "lodash-es";
 import type { Mutable } from "types/globals";
 import {
-  ArbitraryControllerNavigationKeyboardShortcuts,
   ArbitraryControllerNavigationConfigKeyboardShortcuts,
+  ArbitraryControllerNavigationKeyboardShortcuts,
   ArbitraryControllerNoLoopKeyboardShortcuts,
-  ArbitraryNavigationKeyboardShortcutMetaInfo,
   ArbitraryNavigationConfigKeyboardShortcutMetaInfo,
+  ArbitraryNavigationKeyboardShortcutMetaInfo,
   ArbitraryNoLoopKeyboardShortcutMetaInfo,
   DEFAULT_ARBITRARY_NAVIGATION_CONFIG_KEYBOARD_SHORTCUTS,
-  DEFAULT_ARBITRARY_NO_LOOP_KEYBOARD_SHORTCUTS,
   DEFAULT_ARBITRARY_NAVIGATION_KEYBOARD_SHORTCUTS,
+  DEFAULT_ARBITRARY_NO_LOOP_KEYBOARD_SHORTCUTS,
 } from "./arbitrary_mode_keyboard_shortcut_constants";
 import {
-  PlaneBoundingBoxNoLoopedKeyboardShortcuts,
-  PlaneBoundingBoxNoLoopedKeyboardShortcutMetaInfo,
+  KeyboardShortcutCollisionDomain,
+  KeyboardShortcutDomain,
+  type KeyboardShortcutHandlerMetaInfoMap,
+  type KeyboardShortcutMetaInfo,
+  type KeyboardShortcutsMap,
+} from "./keyboard_shortcut_types";
+import {
   DEFAULT_PLANE_NO_LOOPED_BOUNDING_BOX_KEYBOARD_SHORTCUTS,
+  PlaneBoundingBoxNoLoopedKeyboardShortcutMetaInfo,
+  PlaneBoundingBoxNoLoopedKeyboardShortcuts,
 } from "./plane_mode/bounding_box_tool_shortcut_constants";
 import {
-  PlaneControllerLoopedNavigationKeyboardShortcuts,
-  PlaneControllerLoopDelayedNavigationKeyboardShortcuts,
-  PlaneNavigationKeyboardShortcutMetaInfo,
-  PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo,
-  DEFAULT_PLANE_LOOPED_NAVIGATION_KEYBOARD_SHORTCUTS,
   DEFAULT_PLANE_LOOP_DELAYED_NAVIGATION_KEYBOARD_SHORTCUTS,
-  PlaneControllerNoLoopGeneralKeyboardShortcuts,
+  DEFAULT_PLANE_LOOPED_NAVIGATION_KEYBOARD_SHORTCUTS,
   DEFAULT_PLANE_NO_LOOPED_GENERAL_KEYBOARD_SHORTCUTS,
+  PlaneControllerLoopDelayedNavigationKeyboardShortcuts,
+  PlaneControllerLoopedNavigationKeyboardShortcuts,
+  PlaneControllerNoLoopGeneralKeyboardShortcuts,
   PlaneGeneralKeyboardShortcutMetaInfo,
+  PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo,
+  PlaneNavigationKeyboardShortcutMetaInfo,
 } from "./plane_mode/general_keyboard_shortcuts_constants";
 import {
-  PlaneProofreadingNoLoopedKeyboardShortcuts,
-  PlaneProofreadingNoLoopedKeyboardShortcutMetaInfo,
   DEFAULT_PLANE_NO_LOOPED_PROOFREADING_KEYBOARD_SHORTCUTS,
+  PlaneProofreadingNoLoopedKeyboardShortcutMetaInfo,
+  PlaneProofreadingNoLoopedKeyboardShortcuts,
 } from "./plane_mode/proofreading_tool_shortcut_constants";
 import {
-  PlaneSkeletonLoopedKeyboardShortcuts,
-  PlaneSkeletonNoLoopedKeyboardShortcuts,
-  PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo,
-  PlaneSkeletonLoopedKeyboardShortcutMetaInfo,
-  DEFAULT_PLANE_NO_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
   DEFAULT_PLANE_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
+  DEFAULT_PLANE_NO_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
+  PlaneSkeletonLoopedKeyboardShortcutMetaInfo,
+  PlaneSkeletonLoopedKeyboardShortcuts,
+  PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo,
+  PlaneSkeletonNoLoopedKeyboardShortcuts,
 } from "./plane_mode/skeleton_tool_shortcut_constants";
 import {
-  PlaneControllerLoopDelayedConfigKeyboardShortcuts,
-  PlaneVolumeNoLoopedKeyboardShortcuts,
-  PlaneLoopDelayedConfigKeyboardShortcutMetaInfo,
-  PlaneVolumeNoLoopedKeyboardShortcutMetaInfo,
   DEFAULT_PLANE_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
   DEFAULT_PLANE_NO_LOOPED_VOLUME_KEYBOARD_SHORTCUTS,
+  PlaneControllerLoopDelayedConfigKeyboardShortcuts,
+  PlaneLoopDelayedConfigKeyboardShortcutMetaInfo,
+  PlaneVolumeNoLoopedKeyboardShortcutMetaInfo,
+  PlaneVolumeNoLoopedKeyboardShortcuts,
 } from "./plane_mode/volume_tools_shortcut_constants";
 
 // ----------------------------------------------------- Shortcuts used by controller.ts -----------------------------------------------------------------

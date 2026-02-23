@@ -2,12 +2,9 @@ import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@an
 import { Button, Flex, Input, Modal, Space, Switch, Table, Typography } from "antd";
 import app from "app";
 import Toast from "libs/toast";
-import _ from "lodash";
 import { useMemo, useState } from "react";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
-  type KeyboardComboChain,
-  KeyboardShortcutDomain,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
@@ -17,6 +14,8 @@ import {
 } from "./keyboard_shortcut_persistence";
 import { formatKeyComboChain } from "./keyboard_shortcut_utils";
 import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
+import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
+import { isEqual } from "lodash-es";
 
 const { Text, Title } = Typography;
 
@@ -44,7 +43,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       if (updatedCombos.length > 0) {
         return { ...prevConfig, [handlerId]: updatedCombos };
       }
-      // @ts-ignore TODOM
+      // @ts-expect-error TODOM
       const defaultCombo = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
       Toast.info("Default shortcut restored to keep the shortcut reachable.");
       return { ...prevConfig, [handlerId]: defaultCombo };
@@ -209,22 +208,19 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       </Flex>
 
       {/* TABLE VIEW */}
-      {!isJsonView && (
-        <>
-          {Object.values(KeyboardShortcutDomain).map((domainName) => (
-            <div key={domainName}>
-              <Title level={5}>{domainName} Shortcuts</Title>
-              <Table
-                dataSource={tableData.filter((r) => r.domain === domainName)}
-                columns={columns}
-                pagination={false}
-                size="small"
-                style={{ marginBottom: 24 }}
-              />
-            </div>
-          ))}
-        </>
-      )}
+      {!isJsonView &&
+        Object.values(KeyboardShortcutDomain).map((domainName) => (
+          <div key={domainName}>
+            <Title level={5}>{domainName} Shortcuts</Title>
+            <Table
+              dataSource={tableData.filter((r) => r.domain === domainName)}
+              columns={columns}
+              pagination={false}
+              size="small"
+              style={{ marginBottom: 24 }}
+            />
+          </div>
+        ))}
 
       {/* JSON VIEW */}
       {isJsonView && (
@@ -261,7 +257,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           const updated: Record<string, KeyboardComboChain[]> = {};
           const updatedKeyComboChains = recorderEditingKeyCombo
             ? localConfig[recorderTargetHandlerId].map((keyComboChain) =>
-                _.isEqual(keyComboChain, recorderEditingKeyCombo) ? newComboChain : keyComboChain,
+                isEqual(keyComboChain, recorderEditingKeyCombo) ? newComboChain : keyComboChain,
               )
             : [...localConfig[recorderTargetHandlerId], newComboChain];
           for (const [handlerId, keyComboChains] of Object.entries(localConfig)) {

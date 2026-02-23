@@ -1,9 +1,9 @@
 import {
-  type KeyboardShortcutsMap,
-  KeyboardShortcutDomain,
   KeyboardShortcutCollisionDomain,
-  type KeyboardShortcutMetaInfo,
+  KeyboardShortcutDomain,
   type KeyboardShortcutHandlerMetaInfoMap,
+  type KeyboardShortcutMetaInfo,
+  type KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
 
 export enum ArbitraryControllerNavigationKeyboardShortcuts {

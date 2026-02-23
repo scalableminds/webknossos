@@ -129,4 +129,5 @@ POST          /triggers/reload/:organizationId/:datasetId                       
 # Exports
 GET           /exports/:jobId/download                                                                                                                @com.scalableminds.webknossos.datastore.controllers.ExportsController.download(jobId: ObjectId)
 
+# AI Models
 POST          /aiModels/effectiveVoxelSize                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSAiModelController.effectiveVoxelSize

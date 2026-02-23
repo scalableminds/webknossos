@@ -70,7 +70,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed layout of publication detail page. [#9299](https://github.com/scalableminds/webknossos/pull/9299)
 
 ### Removed
--  Removed <PresentModernControls> component [#9251](https://github.com/scalableminds/webknossos/pull/9251)
+- Removed <PresentModernControls> component [#9251](https://github.com/scalableminds/webknossos/pull/9251)
 
 ## [26.01.0](https://github.com/scalableminds/webknossos/releases/tag/26.01.0) - 2026-01-07
 [Commits](https://github.com/scalableminds/webknossos/compare/25.12.0...26.01.0)

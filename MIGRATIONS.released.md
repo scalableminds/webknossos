@@ -16,7 +16,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - [149-credits-as-ints.sql](schema/evolutions/149-credits-as-ints.sql)
 - [150-dataset-creation-type.sql](schema/evolutions/150-dataset-creation-type.sql)
 - [151-mag-upload-to-path.sql](schema/evolutions/151-mag-upload-to-path.sql)
-- [152-remove-shouldSeeModernControls.sql](/schema/evolutions/152-remove-shouldSeeModernControls.sql)
+- [152-remove-shouldSeeModernControls.sql](schema/evolutions/152-remove-shouldSeeModernControls.sql)
 - [153-ai-plans.sql](schema/evolutions/153-ai-plans.sql)
 - [154-update-monthly-credits-description.sql](schema/evolutions/154-update-monthly-credits-description.sql)
 - [155-paths-to-delete.sql](schema/evolutions/155-paths-to-delete.sql)

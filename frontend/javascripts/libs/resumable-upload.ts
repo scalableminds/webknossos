@@ -511,7 +511,7 @@ export class ResumableChunk {
         if (!hasTimedOut) return;
       }
 
-      this.callback("retry", this.abortController?.signal.aborted ? "Timeout" : error.message);
+      this.callback("retry", hasTimedOut ? "Timeout" : error.message);
       this.abort();
       this.retries++;
 

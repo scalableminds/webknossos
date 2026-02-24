@@ -19,9 +19,9 @@ import {
   type KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
 import {
-  DEFAULT_PLANE_NO_LOOPED_BOUNDING_BOX_KEYBOARD_SHORTCUTS,
-  PlaneBoundingBoxNoLoopedKeyboardShortcutMetaInfo,
-  PlaneBoundingBoxNoLoopedKeyboardShortcuts,
+  DEFAULT_ORTHO_BOUNDING_BOX_NO_LOOPED_KEYBOARD_SHORTCUTS,
+  OrthoBoundingBoxNoLoopedKeyboardShortcutMetaInfo,
+  OrthoBoundingBoxNoLoopedKeyboardShortcuts,
 } from "./plane_mode/bounding_box_tool_shortcut_constants";
 import {
   DEFAULT_PLANE_LOOP_DELAYED_NAVIGATION_KEYBOARD_SHORTCUTS,
@@ -35,25 +35,25 @@ import {
   PlaneNavigationKeyboardShortcutMetaInfo,
 } from "./plane_mode/general_keyboard_shortcuts_constants";
 import {
-  DEFAULT_PLANE_NO_LOOPED_PROOFREADING_KEYBOARD_SHORTCUTS,
-  PlaneProofreadingNoLoopedKeyboardShortcutMetaInfo,
-  PlaneProofreadingNoLoopedKeyboardShortcuts,
+  DEFAULT_ORTHO_PROOFREADING_NO_LOOPED_KEYBOARD_SHORTCUTS,
+  OrthoProofreadingNoLoopedKeyboardShortcutMetaInfo,
+  OrthoProofreadingNoLoopedKeyboardShortcuts,
 } from "./plane_mode/proofreading_tool_shortcut_constants";
 import {
-  DEFAULT_PLANE_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
-  DEFAULT_PLANE_NO_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
-  PlaneSkeletonLoopedKeyboardShortcutMetaInfo,
-  PlaneSkeletonLoopedKeyboardShortcuts,
-  PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo,
-  PlaneSkeletonNoLoopedKeyboardShortcuts,
+  DEFAULT_ORTHO_SKELETON_LOOPED_KEYBOARD_SHORTCUTS,
+  DEFAULT_ORTHO_SKELETON_NO_LOOPED_KEYBOARD_SHORTCUTS,
+  OrthoSkeletonLoopedKeyboardShortcutMetaInfo,
+  OrthoSkeletonLoopedKeyboardShortcuts,
+  OrthoSkeletonNoLoopedKeyboardShortcutMetaInfo,
+  OrthoSkeletonNoLoopedKeyboardShortcuts,
 } from "./plane_mode/skeleton_tool_shortcut_constants";
 import {
-  DEFAULT_PLANE_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
-  DEFAULT_PLANE_NO_LOOPED_VOLUME_KEYBOARD_SHORTCUTS,
-  PlaneControllerLoopDelayedConfigKeyboardShortcuts,
-  PlaneLoopDelayedConfigKeyboardShortcutMetaInfo,
-  PlaneVolumeNoLoopedKeyboardShortcutMetaInfo,
-  PlaneVolumeNoLoopedKeyboardShortcuts,
+  DEFAULT_ORTHO_VOLUME_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
+  DEFAULT_ORTHO_VOLUME_NO_LOOPED_KEYBOARD_SHORTCUTS,
+  OrthoVolumeLoopDelayedConfigKeyboardShortcuts,
+  OrthoVolumeLoopDelayedConfigKeyboardShortcutMetaInfo,
+  OrthoVolumeNoLoopedKeyboardShortcutMetaInfo,
+  OrthoVolumeNoLoopedKeyboardShortcuts,
 } from "./plane_mode/volume_tools_shortcut_constants";
 
 // ----------------------------------------------------- Shortcuts used by controller.ts -----------------------------------------------------------------
@@ -139,13 +139,13 @@ export const ALL_KEYBOARD_HANDLER_IDS = [
   ...Object.values(ArbitraryControllerNoLoopKeyboardShortcuts),
   ...Object.values(PlaneControllerLoopedNavigationKeyboardShortcuts),
   ...Object.values(PlaneControllerLoopDelayedNavigationKeyboardShortcuts),
-  ...Object.values(PlaneControllerLoopDelayedConfigKeyboardShortcuts),
+  ...Object.values(OrthoVolumeLoopDelayedConfigKeyboardShortcuts),
   ...Object.values(PlaneControllerNoLoopGeneralKeyboardShortcuts),
-  ...Object.values(PlaneSkeletonLoopedKeyboardShortcuts),
-  ...Object.values(PlaneSkeletonNoLoopedKeyboardShortcuts),
-  ...Object.values(PlaneVolumeNoLoopedKeyboardShortcuts),
-  ...Object.values(PlaneBoundingBoxNoLoopedKeyboardShortcuts),
-  ...Object.values(PlaneProofreadingNoLoopedKeyboardShortcuts),
+  ...Object.values(OrthoSkeletonLoopedKeyboardShortcuts),
+  ...Object.values(OrthoSkeletonNoLoopedKeyboardShortcuts),
+  ...Object.values(OrthoVolumeNoLoopedKeyboardShortcuts),
+  ...Object.values(OrthoBoundingBoxNoLoopedKeyboardShortcuts),
+  ...Object.values(OrthoProofreadingNoLoopedKeyboardShortcuts),
 ] as const;
 
 export const ALL_KEYBOARD_SHORTCUT_META_INFOS = {
@@ -156,13 +156,13 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS = {
   ...ArbitraryNoLoopKeyboardShortcutMetaInfo,
   ...PlaneNavigationKeyboardShortcutMetaInfo,
   ...PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo,
-  ...PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo,
+  ...OrthoSkeletonNoLoopedKeyboardShortcutMetaInfo,
   ...PlaneGeneralKeyboardShortcutMetaInfo,
-  ...PlaneLoopDelayedConfigKeyboardShortcutMetaInfo,
-  ...PlaneSkeletonLoopedKeyboardShortcutMetaInfo,
-  ...PlaneVolumeNoLoopedKeyboardShortcutMetaInfo,
-  ...PlaneBoundingBoxNoLoopedKeyboardShortcutMetaInfo,
-  ...PlaneProofreadingNoLoopedKeyboardShortcutMetaInfo,
+  ...OrthoVolumeLoopDelayedConfigKeyboardShortcutMetaInfo,
+  ...OrthoSkeletonLoopedKeyboardShortcutMetaInfo,
+  ...OrthoVolumeNoLoopedKeyboardShortcutMetaInfo,
+  ...OrthoBoundingBoxNoLoopedKeyboardShortcutMetaInfo,
+  ...OrthoProofreadingNoLoopedKeyboardShortcutMetaInfo,
 };
 
 const ALL_KEYBOARD_SHORTCUT_DEFAULTS = {
@@ -173,13 +173,13 @@ const ALL_KEYBOARD_SHORTCUT_DEFAULTS = {
   ...DEFAULT_ARBITRARY_NAVIGATION_KEYBOARD_SHORTCUTS,
   ...DEFAULT_PLANE_LOOPED_NAVIGATION_KEYBOARD_SHORTCUTS,
   ...DEFAULT_PLANE_LOOP_DELAYED_NAVIGATION_KEYBOARD_SHORTCUTS,
-  ...DEFAULT_PLANE_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ORTHO_VOLUME_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
   ...DEFAULT_PLANE_NO_LOOPED_GENERAL_KEYBOARD_SHORTCUTS,
-  ...DEFAULT_PLANE_NO_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
-  ...DEFAULT_PLANE_LOOPED_SKELETON_KEYBOARD_SHORTCUTS,
-  ...DEFAULT_PLANE_NO_LOOPED_VOLUME_KEYBOARD_SHORTCUTS,
-  ...DEFAULT_PLANE_NO_LOOPED_BOUNDING_BOX_KEYBOARD_SHORTCUTS,
-  ...DEFAULT_PLANE_NO_LOOPED_PROOFREADING_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ORTHO_SKELETON_NO_LOOPED_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ORTHO_SKELETON_LOOPED_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ORTHO_VOLUME_NO_LOOPED_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ORTHO_BOUNDING_BOX_NO_LOOPED_KEYBOARD_SHORTCUTS,
+  ...DEFAULT_ORTHO_PROOFREADING_NO_LOOPED_KEYBOARD_SHORTCUTS,
 } as const;
 
 export function getAllDefaultKeyboardShortcuts(): Mutable<typeof ALL_KEYBOARD_SHORTCUT_DEFAULTS> {

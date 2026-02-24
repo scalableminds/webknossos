@@ -5,7 +5,7 @@ import {
   type KeyboardShortcutsMap,
 } from "../keyboard_shortcut_types";
 
-export enum PlaneSkeletonNoLoopedKeyboardShortcuts {
+export enum OrthoSkeletonNoLoopedKeyboardShortcuts {
   TOGGLE_ALL_TREES_PLANE = "TOGGLE_ALL_TREES_PLANE",
   TOGGLE_INACTIVE_TREES_PLANE = "TOGGLE_INACTIVE_TREES_PLANE",
   DELETE_ACTIVE_NODE_PLANE = "DELETE_ACTIVE_NODE_PLANE",
@@ -19,47 +19,47 @@ export enum PlaneSkeletonNoLoopedKeyboardShortcuts {
   NEXT_NODE_BACKWARD_PLANE = "NEXT_NODE_BACKWARD_PLANE",
 }
 
-export const DEFAULT_PLANE_NO_LOOPED_SKELETON_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneSkeletonNoLoopedKeyboardShortcuts> =
+export const DEFAULT_ORTHO_SKELETON_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoSkeletonNoLoopedKeyboardShortcuts> =
   {
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]: [[["1"]]],
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]: [[["2"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]: [[["1"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]: [[["2"]]],
     // Delete active node
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: [
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: [
       [["delete"]],
       [["backspace"]],
     ],
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: [[["c"]]],
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]: [[["e"]]],
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]: [[["r"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: [[["c"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]: [[["e"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]: [[["r"]]],
     // Branches
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: [[["b"]]],
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: [[["j"]]],
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: [[["s"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: [[["b"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: [[["j"]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: [[["s"]]],
     // navigate nodes
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: [[["ctrl", ","]]],
-    [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: [[["ctrl", "."]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: [[["ctrl", ","]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: [[["ctrl", "."]]],
   };
 
-export const PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonNoLoopedKeyboardShortcuts> =
+export const OrthoSkeletonNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoSkeletonNoLoopedKeyboardShortcuts> =
   (() => {
-    const withDescription: Record<PlaneSkeletonNoLoopedKeyboardShortcuts, string> = {
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]:
+    const withDescription: Record<OrthoSkeletonNoLoopedKeyboardShortcuts, string> = {
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]:
         "Toggle visibility of all trees",
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]:
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]:
         "Toggle visibility of hidden trees", // TODOM check if this is correct.
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: "Delete Active Node",
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: "Create new Tree",
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]:
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: "Delete Active Node",
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: "Create new Tree",
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]:
         "Move along annotation direction",
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]:
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]:
         "Move backward annotation direction",
       // Branches
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: "Create branch point",
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: "Delete branch point",
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: "Recenter active node",
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: "Create branch point",
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: "Delete branch point",
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: "Recenter active node",
       // navigate nodes
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: "Activate Previous Node",
-      [PlaneSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: "Activate Next Node",
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: "Activate Previous Node",
+      [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: "Activate Next Node",
     };
     return Object.fromEntries(
       Object.entries(withDescription).map(([handlerId, description]) => [
@@ -74,31 +74,31 @@ export const PlaneSkeletonNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHand
           ],
         },
       ]),
-    ) as KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonNoLoopedKeyboardShortcuts>;
+    ) as KeyboardShortcutHandlerMetaInfoMap<OrthoSkeletonNoLoopedKeyboardShortcuts>;
   })();
 
-export enum PlaneSkeletonLoopedKeyboardShortcuts {
+export enum OrthoSkeletonLoopedKeyboardShortcuts {
   MOVE_NODE_LEFT = "MOVE_NODE_LEFT",
   MOVE_NODE_RIGHT = "MOVE_NODE_RIGHT",
   MOVE_NODE_UP = "MOVE_NODE_UP",
   MOVE_NODE_DOWN = "MOVE_NODE_DOWN",
 }
 
-export const DEFAULT_PLANE_LOOPED_SKELETON_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneSkeletonLoopedKeyboardShortcuts> =
+export const DEFAULT_ORTHO_SKELETON_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoSkeletonLoopedKeyboardShortcuts> =
   {
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["ctrl" + "left"]]],
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["ctrl" + "right"]]],
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["ctrl" + "up"]]],
-    [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["ctrl" + "down"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["ctrl" + "left"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["ctrl" + "right"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["ctrl" + "up"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["ctrl" + "down"]]],
   };
 
-export const PlaneSkeletonLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonLoopedKeyboardShortcuts> =
+export const OrthoSkeletonLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoSkeletonLoopedKeyboardShortcuts> =
   (() => {
-    const withDescription: Record<PlaneSkeletonLoopedKeyboardShortcuts, string> = {
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: "Move active node left",
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: "Move active node right",
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: "Move active node up",
-      [PlaneSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: "Move active node down",
+    const withDescription: Record<OrthoSkeletonLoopedKeyboardShortcuts, string> = {
+      [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: "Move active node left",
+      [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: "Move active node right",
+      [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: "Move active node up",
+      [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: "Move active node down",
     };
     return Object.fromEntries(
       Object.entries(withDescription).map(([handlerId, description]) => [
@@ -113,5 +113,5 @@ export const PlaneSkeletonLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandle
           ],
         },
       ]),
-    ) as KeyboardShortcutHandlerMetaInfoMap<PlaneSkeletonLoopedKeyboardShortcuts>;
+    ) as KeyboardShortcutHandlerMetaInfoMap<OrthoSkeletonLoopedKeyboardShortcuts>;
   })();

@@ -160,7 +160,7 @@ export const PlaneGeneralKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaIn
         {
           description,
           domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-          looped: true,
+          looped: false,
           collisionDomains: [KeyboardShortcutCollisionDomain.PLANE_MODE],
         },
       ]),

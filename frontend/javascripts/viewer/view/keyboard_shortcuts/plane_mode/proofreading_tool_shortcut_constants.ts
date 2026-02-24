@@ -5,18 +5,18 @@ import {
   type KeyboardShortcutsMap,
 } from "../keyboard_shortcut_types";
 
-export enum PlaneProofreadingNoLoopedKeyboardShortcuts {
+export enum OrthoProofreadingNoLoopedKeyboardShortcuts {
   TOGGLE_MULTICUT_MODE = "TOGGLE_MULTICUT_MODE",
 }
 
-export const DEFAULT_PLANE_NO_LOOPED_PROOFREADING_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneProofreadingNoLoopedKeyboardShortcuts> =
+export const DEFAULT_ORTHO_PROOFREADING_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoProofreadingNoLoopedKeyboardShortcuts> =
   {
-    [PlaneProofreadingNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: [[["m"]]],
+    [OrthoProofreadingNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: [[["m"]]],
   };
 
-export const PlaneProofreadingNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneProofreadingNoLoopedKeyboardShortcuts> =
+export const OrthoProofreadingNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoProofreadingNoLoopedKeyboardShortcuts> =
   {
-    [PlaneProofreadingNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: {
+    [OrthoProofreadingNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: {
       description: "Toggle multi cut mode",
       domain: KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL,
       looped: false,

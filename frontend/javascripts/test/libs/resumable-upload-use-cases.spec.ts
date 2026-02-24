@@ -12,10 +12,6 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
   const server = setupServer(
     http.all("http://localhost/upload", ({ request }) => backendMock.handle(request)),
   );
-  const waitForComplete = (resumableUpload: ResumableUpload): Promise<void> =>
-    new Promise<void>((resolve) =>
-      resumableUpload.addEventListener("complete", () => resolve(), { once: true }),
-    );
 
   beforeAll(() => {
     server.listen({ onUnhandledRequest: "error" });
@@ -59,7 +55,6 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
       const file = new File(["1234567890123456789012345"], "test.txt", { type: "text/plain" });
       resumable.addFile(file);
-      const complete = waitForComplete(resumable);
 
       // trigger upload
       resumable.upload();
@@ -74,7 +69,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       await backendMock.waitForSuccessfulUploads(2);
       expect(queryFn.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(backendMock.getUploadTokens()[1]).toBe("new-token");
-      await complete;
+      await resumable.waitForComplete();
     });
   });
 
@@ -179,12 +174,10 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
         simultaneousUploads: 1,
       });
 
-      const complete = waitForComplete(resumable);
-
       const file = new File(["1234567890"], "test.txt");
       resumable.addFile(file);
       resumable.upload();
-      await complete;
+      await resumable.waitForComplete();
 
       expect(backendMock.getTestRequestCount()).toBeGreaterThan(0);
       const hasPost = backendMock.requestLog.some((entry) => entry.method === "POST");
@@ -311,11 +304,10 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       expect(resumableFile.chunks.length).toBe(0);
 
       const bootstrapSpy = vi.spyOn(resumableFile, "bootstrap");
-      const complete = waitForComplete(resumable);
 
       backendMock.reset();
       resumableFile.retry();
-      await complete;
+      await resumable.waitForComplete();
 
       expect(bootstrapSpy).toHaveBeenCalled();
       const identifier = resumable.files[0].uniqueIdentifier;
@@ -352,10 +344,8 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       const file = new File([payload], "payload.txt", { type: "text/plain" });
       resumable.addFile(file);
 
-      const complete = waitForComplete(resumable);
-
       resumable.upload();
-      await complete;
+      await resumable.waitForComplete();
 
       const identifier = resumable.files[0].uniqueIdentifier;
       const uploadedChunkNumbers = backendMock.getUploadedChunkNumbers(identifier);
@@ -384,10 +374,8 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
       backendMock.failUploadOnNthRequest(2, 503, "Try again");
 
-      const complete = waitForComplete(resumable);
-
       resumable.upload();
-      await complete;
+      await resumable.waitForComplete();
 
       expect(backendMock.getUploadRequestCount()).toBeGreaterThan(
         backendMock.getSuccessfulUploadCount(),
@@ -425,9 +413,8 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       });
       resumable2.addFile(file);
 
-      const complete = waitForComplete(resumable2);
       resumable2.upload();
-      await complete;
+      await resumable2.waitForComplete();
 
       const identifier = resumable2.files[0].uniqueIdentifier;
       const uploadedBytes = backendMock.getFinalUploadData(identifier);
@@ -459,10 +446,9 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       await backendMock.waitForIdle();
 
       backendMock.setResponseDelay(0);
-      const complete = waitForComplete(resumable);
 
       resumable.upload();
-      await complete;
+      await resumable.waitForComplete();
 
       const identifier = resumable.files[0].uniqueIdentifier;
       const uploadedBytes = backendMock.getFinalUploadData(identifier);
@@ -493,10 +479,9 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       expect(backendMock.getUploadRequestCount()).toBe(pausedCount);
 
       backendMock.setResponseDelay(0);
-      const complete = waitForComplete(resumable);
 
       resumable.upload();
-      await complete;
+      await resumable.waitForComplete();
 
       const identifier = resumable.files[0].uniqueIdentifier;
       const uploadedBytes = backendMock.getFinalUploadData(identifier);
@@ -518,10 +503,8 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
       backendMock.setResponseDelay(30);
 
-      const complete = waitForComplete(resumable);
-
       resumable.upload();
-      await complete;
+      await resumable.waitForComplete();
 
       expect(backendMock.getMaxInflightUploads()).toEqual(2);
     });
@@ -541,7 +524,6 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
       const progressValues: number[] = [];
       const totalChunks = resumable.files[0].chunks.length;
-      const complete = waitForComplete(resumable);
 
       resumable.upload();
 
@@ -553,7 +535,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
         expect(frontendProgress).toBeGreaterThanOrEqual(Math.max(0, backendProgress - 0.05));
         expect(frontendProgress).toBeLessThanOrEqual(1);
       }
-      await complete;
+      await resumable.waitForComplete();
 
       expect(progressValues.every((value) => value >= 0 && value <= 1)).toBe(true);
       for (let i = 1; i < progressValues.length; i++) {

@@ -1268,6 +1268,12 @@ export class ResumableUpload implements EventTarget {
     }
   }
 
+  waitForComplete() {
+    return new Promise<void>((resolve) =>
+      this.addEventListener("complete", () => resolve(), { once: true }),
+    );
+  }
+
   /**
    * Pause uploading.
    */

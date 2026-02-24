@@ -24,7 +24,7 @@ import models.team._
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import controllers.LayerRenaming
+import controllers.{LayerRenaming, PathDeletionService}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
@@ -59,6 +59,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                thumbnailCachingService: ThumbnailCachingService,
                                userService: UserService,
+                               pathDeletionService: PathDeletionService,
                                jobDAO: JobDAO,
                                annotationDAO: AnnotationDAO,
                                usedStorageService: UsedStorageService,
@@ -299,7 +300,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            updatedDataSource.hashCode(),
                                            updatedDataSource,
                                            isUsable = true)(GlobalAccessContext)
-          _ <- datastoreClient.deletePaths(pathsToDelete)
+          _ <- pathDeletionService.deletePaths(datastoreClient, pathsToDelete)
         } yield ()
       } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
     } yield ()
@@ -575,8 +576,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- if (dataset.isVirtual) {
         for {
           pathsUsedOnlyByThisDataset <- findPathsUsedOnlyByThisDataset(dataset._id)
-          // Note that the datastore only deletes local paths and paths on our managed S3 cloud storage
-          _ <- datastoreClient.deletePaths(pathsUsedOnlyByThisDataset)
+          // Note that the datastore only deletes local paths and the external deletion service only paths on our managed S3 cloud storage
+          _ <- pathDeletionService.deletePaths(datastoreClient, pathsUsedOnlyByThisDataset)
         } yield ()
       } else {
         for {

@@ -162,7 +162,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       nodeCount <- tryo(positionsRange.getLong(1) - positionsRange.getLong(0)).toFox
       edgesOffset <- tryo(edgesRange.getLong(0)).toFox
       edgeCount <- tryo(edgesRange.getLong(1) - edgesOffset).toFox
-      edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
       _ <- Fox.fromBool(nodeCount <= edgeLimit) ?~> s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)"
       _ <- Fox.fromBool(edgeCount <= edgeLimit) ?~> s"Agglomerate has too many edges ($edgeCount > $edgeLimit)"
       agglomerateToPositions <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToPositions)

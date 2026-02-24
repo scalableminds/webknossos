@@ -36,7 +36,7 @@
  * and additional header fields in the output
  * and various functions have been somewhat
  * tuned for speed. It also has a modified
- * indeterminate locations algorithm to accomodate
+ * indeterminate locations algorithm to accommodate
  * any possible input.
  *
  * You can find the Compresso paper here:

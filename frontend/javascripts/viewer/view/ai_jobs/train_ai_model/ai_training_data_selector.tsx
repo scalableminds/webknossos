@@ -225,10 +225,10 @@ const AiTrainingDataSelector = ({
         </Col>
       </Row>
       {bboxErrors.map((error) => (
-        <Alert key={error} message={error} type="error" showIcon style={{ marginTop: 12 }} />
+        <Alert key={error} title={error} type="error" showIcon style={{ marginTop: 12 }} />
       ))}
       {bboxWarnings.map((warning) => (
-        <Alert key={warning} message={warning} type="warning" showIcon style={{ marginTop: 12 }} />
+        <Alert key={warning} title={warning} type="warning" showIcon style={{ marginTop: 12 }} />
       ))}
     </Card>
   );

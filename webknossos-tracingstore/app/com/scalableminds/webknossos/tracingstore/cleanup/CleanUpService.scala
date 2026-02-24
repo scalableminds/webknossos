@@ -9,7 +9,10 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContext) extends LazyLogging {
+trait CleanUpService extends LazyLogging {
+
+  implicit val ec: ExecutionContext
+  val system: ActorSystem
 
   @volatile private var pekkoIsShuttingDown = false
 
@@ -35,4 +38,9 @@ class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContex
           logger.error(s"Exception during execution of cleanup job: $description. ${e.getMessage}", e)
       }
     }
+
 }
+
+class TSCleanUpService @Inject()(val system: ActorSystem)(implicit val ec: ExecutionContext) extends CleanUpService
+
+class WkCleanUpService @Inject()(val system: ActorSystem)(implicit val ec: ExecutionContext) extends CleanUpService

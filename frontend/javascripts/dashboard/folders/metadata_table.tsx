@@ -398,25 +398,23 @@ export default function MetadataTable({
   const getKeyInput = (entry: APIMetadataWithError, index: number) => {
     const isFocused = index === focusedRow;
     return (
-      <>
-        <FastTooltip title={entry.error} placement="left" variant="warning">
-          <Input
-            className={isFocused ? undefined : "transparent-input"}
-            onFocus={() => setFocusedRow(index)}
-            onBlur={() => setFocusedRow(null)}
-            value={entry.key}
-            onChange={(evt) => updateMetadataKey(index, evt.target.value)}
-            placeholder="Property"
-            size="small"
-            disabled={isSaving}
-            id={getKeyInputIdForIndex(index)}
-            status={entry.error != null ? "warning" : undefined}
-            // Use a span as an empty prefix, because null would lose the focus
-            // when the prefix changes.
-            prefix={entry.error != null ? <InfoCircleOutlined /> : <span />}
-          />
-        </FastTooltip>
-      </>
+      <FastTooltip title={entry.error} placement="left" variant="warning">
+        <Input
+          className={isFocused ? undefined : "transparent-input"}
+          onFocus={() => setFocusedRow(index)}
+          onBlur={() => setFocusedRow(null)}
+          value={entry.key}
+          onChange={(evt) => updateMetadataKey(index, evt.target.value)}
+          placeholder="Property"
+          size="small"
+          disabled={isSaving}
+          id={getKeyInputIdForIndex(index)}
+          status={entry.error != null ? "warning" : undefined}
+          // Use a span as an empty prefix, because null would lose the focus
+          // when the prefix changes.
+          prefix={entry.error != null ? <InfoCircleOutlined /> : <span />}
+        />
+      </FastTooltip>
     );
   };
 

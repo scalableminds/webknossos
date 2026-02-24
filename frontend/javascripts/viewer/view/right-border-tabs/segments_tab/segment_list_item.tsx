@@ -6,7 +6,7 @@ import {
   TagsOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
-import { App, Checkbox, List, type MenuProps } from "antd";
+import { App, Checkbox, List, type MenuProps, Space } from "antd";
 import type { MenuItemType } from "antd/es/menu/interface";
 import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import classnames from "classnames";
@@ -42,6 +42,7 @@ import {
 import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import type { ActiveMappingInfo, MeshInformation, Segment, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
+import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
@@ -57,10 +58,7 @@ export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
       className="circle"
       style={{
         backgroundColor: rgbaCss,
-        alignSelf: "flex-start",
-        marginTop: 5,
-        marginLeft: 2,
-        flex: "0 0 10px",
+        marginLeft: 4,
       }}
     />
   );
@@ -272,38 +270,42 @@ function _MeshInfoItem(props: {
   const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } = mesh;
   const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
-    <FastTooltip title="Download Mesh">
-      <VerticalAlignBottomOutlined
-        key="download-button"
-        onClick={() => {
-          if (!props.visibleSegmentationLayer) {
-            return;
-          }
-          dispatch(
-            triggerMeshDownloadAction(
-              segment.name ? segment.name : "mesh",
-              segment.id,
-              props.visibleSegmentationLayer.name,
-            ),
-          );
-        }}
-      />
-    </FastTooltip>
+    <ButtonComponent
+      color="default"
+      type="text"
+      size="small"
+      title="Download Mesh"
+      icon={<VerticalAlignBottomOutlined />}
+      onClick={() => {
+        if (!props.visibleSegmentationLayer) {
+          return;
+        }
+        dispatch(
+          triggerMeshDownloadAction(
+            segment.name ? segment.name : "mesh",
+            segment.id,
+            props.visibleSegmentationLayer.name,
+          ),
+        );
+      }}
+    />
   );
 
   const deleteButton = (
-    <FastTooltip title="Remove Mesh">
-      <DeleteOutlined
-        key="delete-button"
-        onClick={() => {
-          if (!props.visibleSegmentationLayer) {
-            return;
-          }
+    <ButtonComponent
+      color="default"
+      type="text"
+      size="small"
+      title="Remove Mesh"
+      icon={<DeleteOutlined />}
+      onClick={() => {
+        if (!props.visibleSegmentationLayer) {
+          return;
+        }
 
-          dispatch(removeMeshAction(props.visibleSegmentationLayer.name, segment.id));
-        }}
-      />
-    </FastTooltip>
+        dispatch(removeMeshAction(props.visibleSegmentationLayer.name, segment.id));
+      }}
+    />
   );
 
   const toggleVisibilityCheckbox = (
@@ -608,8 +610,8 @@ function _SegmentListItem({
       }}
       onContextMenu={onOpenContextMenu}
     >
-      <div>
-        <div style={{ display: "inline-flex", alignItems: "center", width: "100%" }}>
+      <Space size={0} orientation="vertical">
+        <Space size={2}>
           <ColoredDotIcon colorRGBA={segmentColorRGBA} />
           <EditableTextLabel
             value={getSegmentName(segment)}
@@ -629,7 +631,6 @@ function _SegmentListItem({
                 );
               }
             }}
-            margin={0}
             iconClassName="deemphasized"
             disableEditing={!allowUpdate}
           />
@@ -641,33 +642,27 @@ function _SegmentListItem({
               <TagsOutlined />
             </FastTooltip>
           ) : null}
-          <FastTooltip title="Open context menu (also available via right-click)">
-            <EllipsisOutlined onClick={onOpenContextMenu} />
-          </FastTooltip>
+          <ButtonComponent
+            color="default"
+            type="text"
+            size="small"
+            title="Open context menu (also available via right-click)"
+            icon={<EllipsisOutlined />}
+            onClick={onOpenContextMenu}
+          />
           {/* Show Segment ID if the segment has a name. Otherwise, the id will already be rendered. */}
           {segment.name != null ? <SegmentIdAddendum id={segment.id} /> : null}
           {isCentered ? (
             <FastTooltip title="This segment is currently centered in the data viewports.">
-              <i
-                className="fas fa-crosshairs deemphasized"
-                style={{
-                  marginLeft: 4,
-                }}
-              />
+              <i className="fas fa-crosshairs deemphasized" />
             </FastTooltip>
           ) : null}
           {segment.id === activeCellId ? (
             <FastTooltip title="The currently active segment id belongs to this segment.">
-              <i
-                className="fas fa-paint-brush deemphasized"
-                style={{
-                  marginLeft: 4,
-                }}
-              />
+              <i className="fas fa-paint-brush deemphasized" />
             </FastTooltip>
           ) : null}
-        </div>
-
+        </Space>
         <div
           style={{
             marginLeft: 16,
@@ -685,7 +680,7 @@ function _SegmentListItem({
             setAdditionalCoordinates={setAdditionalCoordinates}
           />
         </div>
-      </div>
+      </Space>
     </List.Item>
   );
 }
@@ -702,34 +697,22 @@ const RefreshButton = ({
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
 }) => {
   const dispatch = useDispatch();
-  if (isLoading) {
-    return (
-      <LoadingOutlined
-        key="refresh-button"
-        onClick={() => {
-          if (!visibleSegmentationLayer) {
-            return;
-          }
-
-          dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
-        }}
-      />
-    );
-  }
-
   return (
-    <FastTooltip title="Refresh Mesh">
-      <ReloadOutlined
-        key="refresh-button"
-        onClick={() => {
-          if (!visibleSegmentationLayer) {
-            return;
-          }
+    <ButtonComponent
+      color="default"
+      type="text"
+      size="small"
+      title="Refresh Mesh"
+      disabled={isLoading}
+      icon={isLoading ? <LoadingOutlined /> : <ReloadOutlined />}
+      onClick={() => {
+        if (!visibleSegmentationLayer) {
+          return;
+        }
 
-          dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
-        }}
-      />
-    </FastTooltip>
+        dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
+      }}
+    />
   );
 };
 

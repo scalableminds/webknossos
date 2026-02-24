@@ -1,8 +1,7 @@
-@(src: String, alt: String, srcset: Option[String] = None, width: Int = 300, height: Int = 250)
+@(src: String, alt: String, width: Int = 300, height: Int = 250)
 
 <div style="text-align: center;">
   <img src="@{src}"
-    @if(srcset.isDefined) { srcset="@{srcset.get}" }
     alt="@{alt}"
     style="width: @{width}px; height: @{height}px; margin-top: 10px;" />
 </div>

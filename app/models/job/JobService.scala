@@ -112,15 +112,13 @@ class JobService @Inject()(wkConf: WkConf,
               "Tiff Export",
               "Your dataset has been exported as Tiff and is ready for download."
             ))
-        case JobCommand.infer_nuclei =>
-          Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
         case JobCommand.infer_neurons =>
           Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
         case JobCommand.infer_instances =>
           Some(
             genericEmailTemplate(
               "Instance Segmentation",
-              "Your WEBKNOSSOS instance segmentation is ready."
+              "Your instance segmentation is ready."
             ))
         case JobCommand.infer_mitochondria =>
           Some(defaultMails.jobSuccessfulMitoSegmentationMail(user, userEmail, datasetName, resultLink))

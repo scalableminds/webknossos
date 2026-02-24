@@ -508,7 +508,7 @@ export default function LayerSettingsHeader({
     dataset.isEditable ? getReloadDataItem() : null,
     getFindDataItem(),
     isAnnotationLayer && !isOnlyAnnotationLayer ? getDeleteAnnotationLayerItem() : null,
-    !isDisabled ? getEditMinMaxItem() : null,
+    isHistogramAvailable && !isDisabled ? getEditMinMaxItem() : null,
     hasHistogram && !isDisabled ? getClipItem() : null,
     dataset.dataStore.jobsEnabled &&
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(

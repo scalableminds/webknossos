@@ -1,4 +1,11 @@
-import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
+import {
+  CompressOutlined,
+  CopyOutlined,
+  GlobalOutlined,
+  LockOutlined,
+  ShareAltOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -343,9 +350,9 @@ function _ShareModalView(props: Props) {
     lineHeight: "30px",
   };
   const iconMap = {
-    Public: "globe",
-    Internal: "users",
-    Private: "lock",
+    Public: <GlobalOutlined />,
+    Internal: <TeamOutlined />,
+    Private: <LockOutlined />,
   };
   const includeToken = !dataset.isPublic && visibility === "Public";
   const longUrl = getUrl(sharingToken, includeToken);
@@ -380,8 +387,10 @@ function _ShareModalView(props: Props) {
         </Col>
       </Row>
       <DividerWithSubtitle>
-        <i className={`fas fa-${iconMap[visibility]} icon-margin-right`} />
-        Visibility
+        <Space>
+          {iconMap[visibility]}
+          Visibility
+        </Space>
       </DividerWithSubtitle>
       {maybeShowWarning()}
       <Row>
@@ -447,8 +456,10 @@ function _ShareModalView(props: Props) {
         </Col>
       </Row>
       <DividerWithSubtitle>
-        <ShareAltOutlined className="icon-margin-right" />
-        Team Sharing
+        <Space>
+          <ShareAltOutlined />
+          Team Sharing
+        </Space>
       </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
         <Row>

@@ -147,6 +147,7 @@ class DSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
+      .silent
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
   private lazy val tracingstoreUriCache: AlfuCache[String, String] = AlfuCache()

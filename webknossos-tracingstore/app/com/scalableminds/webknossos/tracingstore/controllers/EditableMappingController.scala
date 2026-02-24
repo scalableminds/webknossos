@@ -80,6 +80,7 @@ class EditableMappingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
+            before <- Instant.nowFox
             annotation <- annotationService.get(annotationId, version)
             tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
@@ -92,6 +93,7 @@ class EditableMappingController @Inject()(
               tracingId,
               remoteFallbackLayer) ?~> "annotation.editableMapping.getAgglomerateIdsForSegments.failed"
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
+            _ = Instant.logSince(before, "total request")
           } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }
       }

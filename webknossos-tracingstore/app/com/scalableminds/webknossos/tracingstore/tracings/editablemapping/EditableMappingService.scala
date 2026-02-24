@@ -287,14 +287,19 @@ class EditableMappingService @Inject()(
       tracingId: String,
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Map[Long, Long]] =
     for {
+      before <- Instant.nowFox
       editableMappingForSegmentIds <- getSegmentToAgglomerateForSegmentIds(segmentIds,
                                                                            tracingId,
                                                                            editableMappingVersion)
+      _ = Instant.logSince(before, "getSegmentToAgglomerateForSegmentIds")
       segmentIdsInEditableMapping: Set[Long] = editableMappingForSegmentIds.keySet
       segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
+      beforeGetBase = Instant.now
       baseMappingSubset <- getBaseSegmentToAgglomerate(editableMapping.baseMappingName,
                                                        segmentIdsInBaseMapping,
                                                        remoteFallbackLayer)
+      _ = Instant.logSince(beforeGetBase, "getBase")
+      _ = Instant.logSince(before, "total")
     } yield editableMappingForSegmentIds ++ baseMappingSubset
 
   def getAgglomerateSkeletonWithFallback(tracingId: String,

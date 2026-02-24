@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mapping
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
@@ -232,9 +233,11 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       tc: TokenContext): Fox[Seq[Long]] =
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
+      before = Instant.now
       agglomerateIds <- Fox.serialCombined(segmentIds) { segmentId =>
         mapSingleSegment(segmentToAgglomerate, segmentId)
       }
+      _ = Instant.logSince(before, s"mapSingleSegment x${segmentIds.length}")
     } yield agglomerateIds
 
   def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(implicit ec: ExecutionContext,

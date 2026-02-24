@@ -3,12 +3,14 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, StartEndExclusiveByteRange, VaultPath}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.util.tools.Box.tryo
+import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{Array => MultiArray}
 
 import java.nio.ByteOrder
@@ -25,7 +27,8 @@ class DatasetArray(vaultPath: VaultPath,
                    channelIndex: Option[Int],
                    additionalAxes: Option[Seq[AdditionalAxis]],
                    sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
     FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, axisOrder, additionalAxes)
@@ -248,7 +251,8 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[MultiArray] =
+      tc: TokenContext): Fox[MultiArray] = {
+    val before = Instant.now
     if (header.isSharded) {
       val chunkShape = chunkShapeAtIndex(chunkIndex)
       for {
@@ -259,12 +263,18 @@ class DatasetArray(vaultPath: VaultPath,
           case Empty      => chunkReader.createFromFillValue(chunkShape, useSkipTypingShortcut)
           case f: Failure => f.toFox
         }
+
+        _ = if (vaultPath.toString.startsWith(
+                  "s3://fsn1.your-objectstorage.com/webknossos-wkorg-0002/7c9243814eeed5e6/ZF_retina_opl_ipl_model_v5_segmentation_v1-6904132501000035025c5d64/segmentation/agglomerates/agglomerate_view_70")) {
+          Instant.logSince(before, s"chunk loading (cache miss) for chunk ${chunkIndex.mkString(",")}")
+        }
       } yield multiArray
     } else {
       val chunkPath = vaultPath / getChunkFilename(chunkIndex)
       val chunkShape = chunkShapeAtIndex(chunkIndex)
       chunkReader.read(chunkPath, chunkShape, ByteRange.complete, useSkipTypingShortcut)
     }
+  }
 
   protected def getChunkFilename(chunkIndex: Array[Int]): String =
     if (axisOrder.hasZAxis) {

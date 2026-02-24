@@ -148,6 +148,7 @@ class TSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")
       .addQueryParam("key", tracingStoreKey)
       .withTokenFromContext
+      .silent
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 

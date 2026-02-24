@@ -424,7 +424,7 @@ export type AnnotationMutexInformation = {
 // - user A adds a new node to tree 1 and saves.
 //   Meanwhile user B already added a node to another tree and already stored this on the server.
 // - user A rebases by resetting the store state to the info stored in RebaseRelevantAnnotationState.
-//   Then missing backend updates are pulled and applyied on top of that.
+//   Then missing backend updates are pulled and applied on top of that.
 //   - Update RebaseRelevantAnnotationState as the current state is a newest version stored on the server.
 //   Re-apply local changes of adding a node to tree 1 via reapplying the actions stored in the save queue.
 //   Now save the changes and as this is now in sync with the backend, update RebaseRelevantAnnotationState again.

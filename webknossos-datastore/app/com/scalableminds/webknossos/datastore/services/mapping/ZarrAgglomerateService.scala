@@ -177,29 +177,30 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                                                shape = Array(edgeCount.toInt, 2))
       agglomerateToAffinities <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToAffinities)
       affinities: MultiArray <- agglomerateToAffinities.readAsMultiArray(offset = edgesOffset, shape = edgeCount.toInt)
-
+      computedEdges <- tryo {
+        (0 until edges.getShape()(0)).map { edgeIdx: Int =>
+          AgglomerateEdge(
+            source = segmentIds(
+              // Note that getInt is fine (even for uint64) because “edges” stores
+              // per-agglomerate local indices, which should never exceed int range.
+              edges.getInt(edges.getIndex.set(Array(edgeIdx, 0)))
+            ),
+            target = segmentIds(
+              edges.getInt(edges.getIndex.set(Array(edgeIdx, 1)))
+            )
+          )
+        }
+      }
+      computedPositions <- tryo {
+        (0 until nodeCount.toInt).map { nodeIdx: Int =>
+          Vec3IntProto(
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 2)))
+          )
+        }
+      }
       agglomerateGraph <- tryo {
-        val computedEdges =
-          (0 until edges.getShape()(0)).map { edgeIdx: Int =>
-            AgglomerateEdge(
-              source = segmentIds(
-                edges.getInt(edges.getIndex.set(Array(edgeIdx, 0)))
-              ),
-              target = segmentIds(
-                edges.getInt(edges.getIndex.set(Array(edgeIdx, 1)))
-              )
-            )
-          }
-
-        val computedPositions =
-          (0 until nodeCount.toInt).map { nodeIdx: Int =>
-            Vec3IntProto(
-              positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
-              positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),
-              positions.getInt(positions.getIndex.set(Array(nodeIdx, 2)))
-            )
-          }
-
         AgglomerateGraph(
           // unsafeWrapArray is fine, because the underlying arrays are never mutated
           segments = ArraySeq.unsafeWrapArray(segmentIds),

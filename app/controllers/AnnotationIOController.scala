@@ -50,6 +50,7 @@ import security.WkEnv
 import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.net.URLEncoder
 import java.nio.file.Path
 import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
@@ -560,7 +561,8 @@ class AnnotationIOController @Inject()(
       restrictions <- provider.restrictionsFor(typ, annotationId) ?~> "annotation.restrictions.unavailable"
       name <- provider.nameFor(annotation) ?~> "annotation.name.impossible"
       fileExtension = exportExtensionForAnnotation(annotation)
-      fileName = name + fileExtension
+      fileName = URLEncoder.encode(name + fileExtension, "UTF-8").replace("+", "%20")
+      fileNameAscii <- TextUtils.normalizeStrong(name + fileExtension).toFox
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(requestingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
@@ -569,8 +571,7 @@ class AnnotationIOController @Inject()(
     } yield {
       Ok.sendPath(temporaryFile, inline = false)
         .as(mimeType)
-        .withHeaders(CONTENT_DISPOSITION ->
-          s"attachment;filename=${'"'}$fileName${'"'}")
+        .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="$fileNameAscii"; filename*=UTF-8''$fileName""")
     }
   }
 

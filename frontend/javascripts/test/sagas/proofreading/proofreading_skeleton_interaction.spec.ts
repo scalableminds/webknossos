@@ -13,7 +13,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
@@ -394,7 +394,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
       const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
-        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_interfered_no-op.json",
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_interfered_no_op.json",
       );
 
       const finalMapping = yield select(
@@ -553,7 +553,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // This includes the split action of the split agglomerate tree.
       const latestUpdateActionRequestPayload = context.receivedDataPerSaveRequest.at(-1)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
-        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_no-op.json",
+        "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_no_op.json",
       );
       const finalMapping = yield select(
         (state) =>

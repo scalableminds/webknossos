@@ -151,7 +151,7 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           request.identity._organization)
-        _ <- organizationService.assertOrganizationHasPaidPlan(organization)
+        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
         _ <- Fox.fromBool(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
@@ -208,7 +208,7 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           request.identity._organization)
-        _ <- organizationService.assertOrganizationHasPaidPlan(organization)
+        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
         _ <- Fox.fromBool(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
@@ -267,7 +267,6 @@ class AiModelController @Inject()(
           "organization.notFound",
           request.body.organizationId)
         _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        _ <- organizationService.assertOrganizationHasPaidPlan(organization)
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
@@ -317,7 +316,6 @@ class AiModelController @Inject()(
           "organization.notFound",
           request.body.organizationId)
         _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        _ <- organizationService.assertOrganizationHasPaidPlan(organization)
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"

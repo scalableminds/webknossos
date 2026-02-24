@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getCreditTransactions } from "admin/api/organization";
 import { getJobTypeName } from "admin/job/job_list_view";
-import { Button, DatePicker, Space, Spin, Table, Tag, Typography } from "antd";
+import { Button, DatePicker, Space, Spin, Table, Typography } from "antd";
 import type { RangePickerProps } from "antd/es/date-picker";
 import FastTooltip from "components/fast_tooltip";
 import FormattedId from "components/formatted_id";
@@ -11,7 +11,7 @@ import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import { useMemo } from "react";
-import type { APICreditState, APICreditTransaction, APIJob } from "types/api_types";
+import type { APICreditTransaction, APIJob } from "types/api_types";
 import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
 
 const { Column } = Table;
@@ -41,16 +41,6 @@ const datePresets: RangePickerProps["presets"] = [
     value: [dayjs().startOf("year"), dayjs()],
   },
 ] as const;
-
-const creditStateColors: Partial<Record<APICreditState, string>> = {
-  AddCredits: "green",
-  Spent: "red",
-  Refunded: "gold",
-  Revoked: "volcano",
-  PartiallyRevoked: "orange",
-  Refunding: "blue",
-  Revoking: "purple",
-};
 
 function formatCreditDelta(credits: number): string {
   const sign = credits > 0 ? "+" : credits < 0 ? "-" : "";
@@ -141,12 +131,6 @@ export function OrganizationCreditActivityView() {
       options.set(value, text);
     });
     return Array.from(options.entries()).map(([value, text]) => ({ value, text }));
-  }, [organizationTransactions]);
-
-  const stateFilters = useMemo(() => {
-    return Array.from(new Set(organizationTransactions.map(({ creditState }) => creditState)))
-      .sort()
-      .map((state) => ({ text: state, value: state }));
   }, [organizationTransactions]);
 
   return (
@@ -309,21 +293,6 @@ export function OrganizationCreditActivityView() {
             onFilter={(value, record: APICreditTransaction) =>
               getUserInfo(record.paidJob).value === value
             }
-          />
-          <Column
-            title="State"
-            key="state"
-            width={160}
-            render={(transaction: APICreditTransaction) => (
-              <Tag color={creditStateColors[transaction.creditState]}>
-                {transaction.creditState}
-              </Tag>
-            )}
-            sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
-              left.creditState.localeCompare(right.creditState)
-            }
-            filters={stateFilters}
-            onFilter={(value, record: APICreditTransaction) => record.creditState === value}
           />
         </Table>
       </Spin>

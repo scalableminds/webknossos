@@ -5,11 +5,11 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import models.team.PricingPlan
-import models.team.PricingPlan.PricingPlan
+import PricingPlan.PricingPlan
 import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
+import models.organization.AiPlan.AiPlan
 import slick.dbio.DBIO
 import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -24,6 +24,7 @@ case class Organization(
     logoUrl: String,
     name: String,
     pricingPlan: PricingPlan,
+    aiPlan: Option[AiPlan],
     paidUntil: Option[Instant],
     includedUsers: Option[Int], // None means unlimited
     includedStorageBytes: Option[Long], // None means unlimited
@@ -68,6 +69,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   protected def parse(r: OrganizationsRow): Fox[Organization] =
     for {
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
+      aiPlan <- Fox.runOptional(r.aiplan)(aiPlanLiteral => AiPlan.fromString(aiPlanLiteral).toFox)
     } yield {
       Organization(
         r._Id,
@@ -75,6 +77,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
         r.logourl,
         r.name,
         pricingPlan,
+        aiPlan,
         r.paiduntil.map(Instant.fromSql),
         r.includedusers,
         r.includedstorage,
@@ -128,11 +131,11 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       _ <- run(q"""INSERT INTO webknossos.organizations
                    (_id, additionalInformation, logoUrl, name, _rootFolder,
                    newUserMailingList, enableAutoVerify,
-                   pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
+                   pricingplan, aiPlan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
                    VALUES
                    (${o._id}, ${o.additionalInformation}, ${o.logoUrl}, ${o.name}, ${o._rootFolder},
                    ${o.newUserMailingList}, ${o.enableAutoVerify},
-                   ${o.pricingPlan}, ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
+                   ${o.pricingPlan}, ${o.aiPlan}, ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
                    ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
             """.asUpdate)
     } yield ()
@@ -321,12 +324,17 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
         run(
           q"""UPDATE webknossos.organizations SET includedStorage = ${planUpdate.includedStorageFlat} WHERE _id = $organizationId""".asUpdate)
       )
+      _ <- Fox.runIf(planUpdate.aiPlanChanged)(
+        run(
+          q"""UPDATE webknossos.organizations SET aiPlan = ${planUpdate.aiPlanFlat} WHERE _id = $organizationId""".asUpdate)
+      )
     } yield ()
 
   def insertPlanUpdate(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.organization_plan_updates(
                      _organization, description, pricingPlan,
+                     aiPlan, aiPlanChanged,
                      paidUntil, paidUntilChanged,
                      includedUsers, includedUsersChanged,
                      includedStorage, includedStorageChanged,
@@ -334,6 +342,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                    )
                    VALUES(
                      $organizationId, ${planUpdate.description}, ${planUpdate.pricingPlan},
+                     ${planUpdate.aiPlanFlat}, ${planUpdate.aiPlanChanged},
                      ${planUpdate.paidUntilFlat}, ${planUpdate.paidUntilChanged},
                      ${planUpdate.includedUsersFlat}, ${planUpdate.includedUsersChanged},
                      ${planUpdate.includedStorageFlat}, ${planUpdate.includedStorageChanged},
@@ -344,10 +353,10 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   private def parsePlanUpdate(row: OrganizationPlanUpdatesRow): Fox[OrganizationPlanUpdate] =
     for {
-      pricingPlan: Option[PricingPlan] <- row.pricingplan match {
-        case Some(pricingPlanStr) => PricingPlan.fromString(pricingPlanStr).toFox.map(Some(_))
-        case None                 => Fox.successful(None)
-      }
+      pricingPlan: Option[PricingPlan] <- Fox.runOptional(row.pricingplan)(pricingPlanStr =>
+        PricingPlan.fromString(pricingPlanStr).toFox)
+      aiPlanParsed: Option[AiPlan] <- Fox.runOptional(row.aiplan)(aiPlanStr => AiPlan.fromString(aiPlanStr).toFox)
+      aiPlan = if (row.aiplanchanged) Some(aiPlanParsed) else None
       paidUntil = if (row.paiduntilchanged) Some(row.paiduntil.map(Instant.fromSql)) else None
       includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage) else None
       includedUsers = if (row.includeduserschanged) Some(row.includedusers) else None
@@ -356,6 +365,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
         row._Organization,
         row.description,
         pricingPlan,
+        aiPlan,
         paidUntil,
         includedUsers,
         includedStorageBytes,
@@ -364,8 +374,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findPlanUpdates(organizationId: String): Fox[Seq[OrganizationPlanUpdate]] =
     for {
-      rows <- run(q"""SELECT _organization, description, pricingPlan, paidUntil, paidUntilChanged, includedUsers,
-                              includedUsersChanged, includedStorage, includedStorageChanged, created
+      rows <- run(
+        q"""SELECT _organization, description, pricingPlan, aiPlan, aiPlanChanged, paidUntil, paidUntilChanged,
+                              includedUsers, includedUsersChanged, includedStorage, includedStorageChanged, created
                       FROM webknossos.organization_plan_updates
                       WHERE _organization = $organizationId
                       ORDER BY created

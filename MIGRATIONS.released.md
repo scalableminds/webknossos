@@ -6,6 +6,21 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.03.0](https://github.com/scalableminds/webknossos/releases/tag/26.03.0) - 2026-02-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.01.0...26.03.0)
+
+- Renamed config keys: `webKnossos.datasets.uploadToPathsPrefixes` to `webKnossos.datasets.uploadToPaths.prefixes`, `webKnossos.datasets.uploadToPathsInfix` to `webKnossos.datasets.uploadToPaths.infix`.
+- The config key `datastore.agglomerateSkeleton.maxEdges` no longer applies for agglomerate graphs (used during proofreading). If you want to change the limit for agglomerate graphs, use `datastore.agglomerateGraph.maxEdges`.
+
+### Postgres Evolutions
+- [149-credits-as-ints.sql](schema/evolutions/149-credits-as-ints.sql)
+- [150-dataset-creation-type.sql](schema/evolutions/150-dataset-creation-type.sql)
+- [151-mag-upload-to-path.sql](schema/evolutions/151-mag-upload-to-path.sql)
+- [152-remove-shouldSeeModernControls.sql](schema/evolutions/152-remove-shouldSeeModernControls.sql)
+- [153-ai-plans.sql](schema/evolutions/153-ai-plans.sql)
+- [154-update-monthly-credits-description.sql](schema/evolutions/154-update-monthly-credits-description.sql)
+- [155-paths-to-delete.sql](schema/evolutions/155-paths-to-delete.sql)
+
 ## [26.01.0](https://github.com/scalableminds/webknossos/releases/tag/26.01.0) - 2026-01-07
 [Commits](https://github.com/scalableminds/webknossos/compare/25.12.0...26.01.0)
 

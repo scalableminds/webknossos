@@ -15,6 +15,7 @@
       "!**/*.jsonc",
       "!**/*.ts.snap",
       "!**/__snapshots__",
+      "!**/frontend/stylesheets/fontawesome*",
       "!**/frontend/javascripts/test/snapshots"
     ]
   },

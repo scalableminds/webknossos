@@ -15,10 +15,12 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { useDispatch } from "react-redux";
 import { type APIAnnotation, type APIDataset, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import { fetchAnnotationInfo } from "../hooks/fetch_annotation_infos";
+import { getIntersectingMagList } from "../utils";
 import type { AiTrainingTask } from "./ai_training_model_selector";
 
 export interface AiTrainingAnnotationSelection {
@@ -30,6 +32,44 @@ export interface AiTrainingAnnotationSelection {
   userBoundingBoxes: UserBoundingBox[];
   volumeTracingMags?: Record<string, { mag: Vector3 }[]>;
 }
+
+export const applyDefaultLayers = (
+  selection: AiTrainingAnnotationSelection,
+): AiTrainingAnnotationSelection => {
+  const { dataset, annotation, volumeTracingMags } = selection;
+  let { imageDataLayer, groundTruthLayer, magnification } = selection;
+
+  if (!imageDataLayer) {
+    const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
+    if (colorLayers.length === 1) {
+      imageDataLayer = colorLayers[0].name;
+    }
+  }
+
+  if (!groundTruthLayer) {
+    const annotationLayerNames = annotation.annotationLayers
+      .filter((layer) => layer.typ === "Volume")
+      .map((layer) => layer.name);
+    if (annotationLayerNames.length === 1) {
+      groundTruthLayer = annotationLayerNames[0];
+    }
+  }
+
+  if (imageDataLayer && groundTruthLayer && !magnification) {
+    const availableMagnifications = getIntersectingMagList(
+      annotation,
+      dataset,
+      groundTruthLayer,
+      imageDataLayer,
+      volumeTracingMags,
+    );
+    if (availableMagnifications && availableMagnifications.length === 1) {
+      magnification = availableMagnifications[0];
+    }
+  }
+
+  return { ...selection, imageDataLayer, groundTruthLayer, magnification };
+};
 
 interface AiTrainingJobContextType {
   handleStartAnalysis: () => Promise<void>;
@@ -92,12 +132,12 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       selectedAnnotations.length === 0
     ) {
       setSelectedAnnotations([
-        {
+        applyDefaultLayers({
           annotation: initialFullAnnotation.annotation,
           userBoundingBoxes: userBoundingBoxes,
           dataset: currentDataset,
           volumeTracingMags: initialFullAnnotation.volumeTracingMags,
-        },
+        }),
       ]);
     }
   }, [initialFullAnnotation, userBoundingBoxes, currentDataset, selectedAnnotations.length]);
@@ -119,11 +159,12 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
         const newSelections = [...prev];
         const index = newSelections.findIndex((s) => s.annotation.id === annotationId);
         if (index > -1) {
-          newSelections[index] = { ...newSelections[index], ...newValues };
+          const updatedSelection = { ...newSelections[index], ...newValues };
           // When a layer changes, reset magnification
           if (newValues.imageDataLayer || newValues.groundTruthLayer) {
-            delete newSelections[index].magnification;
+            delete updatedSelection.magnification;
           }
+          newSelections[index] = applyDefaultLayers(updatedSelection);
         }
         return newSelections;
       });

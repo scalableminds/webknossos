@@ -423,9 +423,13 @@ class AiModelController @Inject()(
         existingModel.copy(name = params.name, comment = params.comment, modified = Instant.now))
     } yield existingAiModelId
 
-  private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User): Fox[ObjectId] = {
+  private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User)(
+      implicit ctx: DBAccessContext): Fox[ObjectId] = {
     val newId = ObjectId.generate
     for {
+      _ <- aiModelDAO
+        .findOneByName(params.name)
+        .reverse ?~> s"An AI model with the name “${params.name}” already exists in this organization."
       path <- uploadToPathsService.generateAiModelPath(newId, user._organization, params.pathPrefix)
       newAiModel = AiModel(
         _id = newId,

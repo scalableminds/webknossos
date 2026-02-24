@@ -356,7 +356,7 @@ export class ResumableChunk {
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
       });
-
+      if (timeoutId != null) clearTimeout(timeoutId);
       this.tested = true;
 
       // Status 200: chunk already exists on server
@@ -370,12 +370,11 @@ export class ResumableChunk {
         this.send();
       }
     } catch (error: any) {
+      if (timeoutId != null) clearTimeout(timeoutId);
       if (error.name === "AbortError" && !hasTimedOut) return;
 
       this.tested = true;
       this.send();
-    } finally {
-      if (timeoutId != null) clearTimeout(timeoutId);
     }
   }
 
@@ -506,9 +505,9 @@ export class ResumableChunk {
         throw new Error(`Server responded with ${response.status}`);
       }
     } catch (error: any) {
-      if (error.name === "AbortError") {
-        if (timeoutId != null) clearTimeout(timeoutId);
-        if (!hasTimedOut) return;
+      if (timeoutId != null) clearTimeout(timeoutId);
+      if (error.name === "AbortError" && !hasTimedOut) {
+        return;
       }
 
       this.callback("retry", hasTimedOut ? "Timeout" : error.message);
@@ -522,8 +521,6 @@ export class ResumableChunk {
       } else {
         this.send();
       }
-    } finally {
-      if (timeoutId != null) clearTimeout(timeoutId);
     }
   }
 

@@ -22,6 +22,7 @@ CREATE TABLE webknossos.releaseInformation (
 );
 
 INSERT INTO webknossos.releaseInformation(schemaVersion) values(156);
+COMMIT TRANSACTION;
 
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');

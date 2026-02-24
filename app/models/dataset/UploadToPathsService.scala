@@ -39,7 +39,6 @@ import security.RandomIDGenerator
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-<<<<<<< HEAD:app/models/dataset/UploadToPathsService.scala
 class UploadToPathsService @Inject()(datasetService: DatasetService,
                                      organizationDAO: OrganizationDAO,
                                      datasetDAO: DatasetDAO,
@@ -47,28 +46,9 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                      layerToLinkService: LayerToLinkService,
                                      datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                      datasetMagsDAO: DatasetMagsDAO,
+                                     pathDeletionService: PathDeletionService,
+                                     folderDAO: FolderDAO,
                                      conf: WkConf)
-||||||| 4808486eae:app/models/dataset/DatasetUploadToPathsService.scala
-class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
-                                            organizationDAO: OrganizationDAO,
-                                            datasetDAO: DatasetDAO,
-                                            dataStoreDAO: DataStoreDAO,
-                                            layerToLinkService: LayerToLinkService,
-                                            datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                            datasetMagsDAO: DatasetMagsDAO,
-                                            conf: WkConf)
-=======
-class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
-                                            organizationDAO: OrganizationDAO,
-                                            datasetDAO: DatasetDAO,
-                                            dataStoreDAO: DataStoreDAO,
-                                            layerToLinkService: LayerToLinkService,
-                                            pathDeletionService: PathDeletionService,
-                                            datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                            datasetMagsDAO: DatasetMagsDAO,
-                                            folderDAO: FolderDAO,
-                                            conf: WkConf)
->>>>>>> master:app/models/dataset/DatasetUploadToPathsService.scala
     extends FoxImplicits
     with DataSourceValidation {
 
@@ -185,7 +165,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
   private def selectPathPrefixDatasetParent(requestedPrefix: Option[UPath], organizationId: String)(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       withOrgaDirOrSame = if (conf.WebKnossos.Datasets.UploadToPaths.insertOrganizationDirectory)
         uploadToPathsPrefix / organizationId
       else uploadToPathsPrefix
@@ -197,17 +177,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       organizationId: String,
       requestedPrefix: Option[UPath])(implicit ec: ExecutionContext): Fox[UsableDataSource] =
     for {
-<<<<<<< HEAD:app/models/dataset/UploadToPathsService.scala
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
-      orgaDir = uploadToPathsPrefix / organizationId
-      datasetParent = uploadToPathsInfixOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
-||||||| 4808486eae:app/models/dataset/DatasetUploadToPathsService.scala
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      orgaDir = uploadToPathsPrefix / organizationId
-      datasetParent = uploadToPathsInfixOpt.map(infix => orgaDir / infix).getOrElse(orgaDir)
-=======
       datasetParent <- selectPathPrefixDatasetParent(requestedPrefix, organizationId)
->>>>>>> master:app/models/dataset/DatasetUploadToPathsService.scala
       datasetPath = datasetParent / dataSource.id.directoryName
       layersWithPaths <- Fox.serialCombined(dataSource.dataLayers)(layer => addPathsToLayer(layer, datasetPath))
     } yield dataSource.copy(dataLayers = layersWithPaths)
@@ -288,18 +258,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
         parameters.attachmentType)
       existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
-<<<<<<< HEAD:app/models/dataset/UploadToPathsService.scala
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
-      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
-||||||| 4808486eae:app/models/dataset/DatasetUploadToPathsService.scala
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
-      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
-=======
       datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
       datasetPath = datasetParent / dataset.directoryName
->>>>>>> master:app/models/dataset/DatasetUploadToPathsService.scala
       attachmentPath = generateAttachmentPath(parameters.attachmentName,
                                               parameters.attachmentDataformat,
                                               parameters.attachmentType,
@@ -318,18 +278,8 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
-<<<<<<< HEAD:app/models/dataset/UploadToPathsService.scala
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
-      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
-||||||| 4808486eae:app/models/dataset/DatasetUploadToPathsService.scala
-      uploadToPathsPrefix <- selectPathPrefix(parameters.pathPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
-      newDirectoryName = datasetService.generateDirectoryName(dataset.name, dataset._id)
-      datasetPath = uploadToPathsPrefix / dataset._organization / newDirectoryName
-=======
       datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
       datasetPath = datasetParent / dataset.directoryName
->>>>>>> master:app/models/dataset/DatasetUploadToPathsService.scala
       magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)
       _ <- datasetMagsDAO.insertPending(dataset._id,
                                         parameters.layerName,

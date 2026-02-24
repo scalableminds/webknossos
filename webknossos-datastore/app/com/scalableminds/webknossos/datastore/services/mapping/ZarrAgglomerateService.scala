@@ -190,7 +190,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
             )
           )
         }
-      }
+      }.toFox
       computedPositions <- tryo {
         (0 until nodeCount.toInt).map { nodeIdx: Int =>
           Vec3IntProto(
@@ -199,7 +199,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
             positions.getInt(positions.getIndex.set(Array(nodeIdx, 2)))
           )
         }
-      }
+      }.toFox
       agglomerateGraph <- tryo {
         AgglomerateGraph(
           // unsafeWrapArray is fine, because the underlying arrays are never mutated

@@ -571,7 +571,7 @@ class AnnotationIOController @Inject()(
     } yield {
       Ok.sendPath(temporaryFile, inline = false)
         .as(mimeType)
-        .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename=$fileNameAscii; filename*=UTF-8''$fileName""")
+        .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="$fileNameAscii"; filename*=UTF-8''$fileName""")
     }
   }
 

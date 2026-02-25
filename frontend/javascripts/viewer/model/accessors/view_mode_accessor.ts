@@ -257,24 +257,23 @@ function _calculateMaybeGlobalDelta(
 
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
-      position = [Math.round(diffX * planeRatio[0]), Math.round(diffY * planeRatio[1]), 0];
+      position = [diffX * planeRatio[0], diffY * planeRatio[1], 0];
       break;
     }
 
     case OrthoViews.PLANE_YZ: {
-      position = [0, Math.round(diffY * planeRatio[1]), Math.round(diffX * planeRatio[2])];
+      position = [0, diffY * planeRatio[1], diffX * planeRatio[2]];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
-      position = [Math.round(diffX * planeRatio[0]), 0, Math.round(diffY * planeRatio[2])];
+      position = [diffX * planeRatio[0], 0, diffY * planeRatio[2]];
       break;
     }
 
     default:
       return null;
   }
-
   return position;
 }
 

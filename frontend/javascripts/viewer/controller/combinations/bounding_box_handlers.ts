@@ -390,23 +390,49 @@ export function handleMovingBoundingBox(
   delta: Point2,
   planeId: OrthoView,
   primaryEdge: SelectedEdge,
+  movementAccumulator: Vector3,
 ) {
   const state = Store.getState();
   const globalDelta = calculateGlobalDelta(state, delta, planeId);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize) {
-    return;
+    return movementAccumulator;
   }
 
-  const updatedBounds = {
-    min: V3.toArray(V3.add(bboxToResize.boundingBox.min, globalDelta)),
-    max: V3.toArray(V3.add(bboxToResize.boundingBox.max, globalDelta)),
-  };
+  const accumulatedDelta = V3.add(movementAccumulator, globalDelta);
 
-  Store.dispatch(
-    changeUserBoundingBoxAction(primaryEdge.boxId, {
-      boundingBox: updatedBounds,
-    }),
-  );
+  const roundedDeltaForIntegerMovement: Vector3 = [
+    Math.round(accumulatedDelta[0]),
+    Math.round(accumulatedDelta[1]),
+    Math.round(accumulatedDelta[2]),
+  ];
+
+  if (roundedDeltaForIntegerMovement.find((delta) => delta !== 0)) {
+    const minPosition = V3.toArray(
+      V3.add(bboxToResize.boundingBox.min, roundedDeltaForIntegerMovement),
+    );
+    const maxPosition = V3.toArray(
+      V3.add(bboxToResize.boundingBox.max, roundedDeltaForIntegerMovement),
+    );
+
+    const updatedBounds = {
+      min: minPosition as Vector3,
+      max: maxPosition as Vector3,
+    };
+
+    Store.dispatch(
+      changeUserBoundingBoxAction(primaryEdge.boxId, {
+        boundingBox: updatedBounds,
+      }),
+    );
+  }
+
+  // Store the fractional remainder for next time
+  movementAccumulator = [
+    accumulatedDelta[0] - roundedDeltaForIntegerMovement[0],
+    accumulatedDelta[1] - roundedDeltaForIntegerMovement[1],
+    accumulatedDelta[2] - roundedDeltaForIntegerMovement[2],
+  ];
+  return movementAccumulator;
 }

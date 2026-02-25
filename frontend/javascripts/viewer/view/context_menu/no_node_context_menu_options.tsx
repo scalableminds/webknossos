@@ -54,9 +54,9 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { ContextMenuInfo } from "viewer/store";
 import Store from "viewer/store";
-import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
-import { LoadMeshMenuItemLabel } from "../right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { LoadMeshMenuItemLabel } from "../right_border_tabs/segments_tab/load_mesh_menu_item_label";
 import { useBoundingBoxMenuOptions } from "./bounding_box_menu_options";
 import { shortcutBuilder } from "./helpers";
 import { useMeshItems } from "./mesh_items";

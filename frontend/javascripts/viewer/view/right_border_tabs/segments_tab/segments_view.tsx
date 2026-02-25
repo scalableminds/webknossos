@@ -107,7 +107,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
-import { getContextMenuPositionFromEvent } from "viewer/view/context-menu/helpers";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import SegmentListItem from "viewer/view/right_border_tabs/segments_tab/segment_list_item";
 import {
   formatMagWithLabel,

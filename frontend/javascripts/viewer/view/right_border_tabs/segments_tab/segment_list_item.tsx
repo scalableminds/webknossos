@@ -44,7 +44,7 @@ import type { ActiveMappingInfo, MeshInformation, Segment, VolumeTracing } from 
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { getContextMenuPositionFromEvent } from "viewer/view/context-menu/helpers";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 

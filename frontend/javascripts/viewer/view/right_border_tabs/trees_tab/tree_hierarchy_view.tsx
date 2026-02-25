@@ -18,7 +18,7 @@ import {
 import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import { getContextMenuPositionFromEvent } from "viewer/view/context-menu/helpers";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import {
   additionallyExpandGroup,
   createGroupToTreesMap,

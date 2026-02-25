@@ -1,4 +1,4 @@
-import runAsync from "test/helpers/run-async";
+import runAsync from "test/helpers/run_async";
 import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
 import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
 import { beforeEach, describe, expect, it, vi } from "vitest";

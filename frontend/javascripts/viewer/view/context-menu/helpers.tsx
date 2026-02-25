@@ -1,3 +1,7 @@
+import Icon from "@ant-design/icons";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { type MenuProps, notification } from "antd";
 import type { MenuItemGroupType, MenuItemType } from "antd/es/menu/interface";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
@@ -90,10 +94,9 @@ export function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
     switch (name) {
       case "leftMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left.svg"
-            alt="Mouse Left Click"
+          <Icon
+            component={IconStatusbarMouseLeft}
+            aria-label="Mouse Left Click"
             style={mouseIconStyle}
           />
         );
@@ -101,10 +104,9 @@ export function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "rightMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-right.svg"
-            alt="Mouse Right Click"
+          <Icon
+            component={IconStatusbarMouseRight}
+            aria-label="Mouse Right Click"
             style={mouseIconStyle}
           />
         );
@@ -112,10 +114,9 @@ export function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "middleMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-wheel.svg"
-            alt="Mouse Wheel"
+          <Icon
+            component={IconStatusbarMouseWheel}
+            aria-label="Mouse Wheel"
             style={mouseIconStyle}
           />
         );

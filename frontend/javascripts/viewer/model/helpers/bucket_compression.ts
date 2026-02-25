@@ -1,9 +1,11 @@
 import type { BucketDataArray, ElementClass } from "types/api_types";
-import compressLz4Block from "viewer/workers/byte_array_lz4_compression.worker";
 import { createWorker } from "viewer/workers/comlink_wrapper";
+import type ByteArrayLz4Compression from "../../workers/byte_array_lz4_compression.worker.ts";
 import { uint8ToTypedBuffer } from "./typed_buffer";
 
-const _byteArrayToLz4Array = createWorker(compressLz4Block);
+const _byteArrayToLz4Array = createWorker<typeof ByteArrayLz4Compression>(
+  "byte_array_lz4_compression.worker.ts",
+);
 
 export const decompressToTypedArray = async (
   compressedData: Uint8Array<ArrayBuffer>,

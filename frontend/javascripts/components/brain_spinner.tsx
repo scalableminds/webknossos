@@ -1,3 +1,4 @@
+import brainImage from "@images/brain.svg";
 import { switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { Button, Card, Col, Row } from "antd";
@@ -17,7 +18,7 @@ export default function BrainSpinner({ message, isLoading = true }: Props) {
       <div className="brain-loading-container">
         <div className="brain-loading-content">
           <img
-            src="/assets/images/brain.svg"
+            src={brainImage}
             alt=""
             style={{
               width: "100%",

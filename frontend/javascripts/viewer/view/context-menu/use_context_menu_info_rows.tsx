@@ -1,4 +1,5 @@
-import { BarChartOutlined, PushpinOutlined, TagOutlined } from "@ant-design/icons";
+import Icon, { BarChartOutlined, PushpinOutlined, TagOutlined } from "@ant-design/icons";
+import IconCell from "@images/icons/icon-cell.svg?react";
 import { Space } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
@@ -177,7 +178,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
       getInfoMenuItem(
         "copy-cell",
         <Space size="small">
-          <div className="cell-context-icon" />
+          <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
           <CopyIconWithTooltip value={clickedSegmentOrMeshId} title="Copy Segment ID" />
         </Space>,

@@ -161,6 +161,8 @@ export function useNoNodeContextMenuOptions(
       return;
     const segmentId = await getSegmentIdForPositionAsync(globalPosition);
 
+    // Ensure that the segment ID is loaded, since a mapping might have been activated
+    // shortly before
     if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
       return;
@@ -188,6 +190,8 @@ export function useNoNodeContextMenuOptions(
       Toast.info("No segment found at the clicked position");
       return;
     }
+    // This action is dispatched because the behaviour is identical to a click on a segment.
+    // Note that the updated position is where the segment was clicked to open the context menu.
     dispatch(
       clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
     );
@@ -321,6 +325,7 @@ export function useNoNodeContextMenuOptions(
           },
           {
             key: "load-agglomerate-skeleton",
+            // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
             onClick: () =>
               isAgglomerateMappingEnabled.value
                 ? loadAgglomerateSkeletonAtPosition(globalPosition)
@@ -425,6 +430,7 @@ export function useNoNodeContextMenuOptions(
     const loadSynapsesItem: MenuItemType = {
       className: "node-context-menu-item",
       key: "load-synapses",
+      // Do not disable menu entry, but show modal advertising automated segmentation services if no connectome file is activated
       onClick: isConnectomeMappingEnabled.value
         ? withMappingActivationConfirmation(
             () => loadSynapsesOfAgglomerateAtPosition(globalPosition),
@@ -449,6 +455,7 @@ export function useNoNodeContextMenuOptions(
         </FastTooltip>
       ),
     };
+    // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
     skeletonActions.push(loadSynapsesItem);
   }
 
@@ -495,6 +502,8 @@ export function useNoNodeContextMenuOptions(
   const nonSkeletonActions: ItemType[] =
     globalPosition != null && visibleSegmentationLayer != null
       ? [
+          // Segment 0 cannot/shouldn't be made active (as this
+          // would be an eraser effectively).
           segmentIdAtPosition !== 0 && !disabledVolumeInfo.VOXEL_PIPETTE.isDisabled
             ? {
                 key: "select-cell",

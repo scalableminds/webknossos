@@ -42,9 +42,11 @@ export function useSegmentStatistics(
   const [segmentVolumeLabel, boundingBoxInfoLabel, segmentSurfaceAreaLabel] = useFetch(
     async (): Promise<readonly [string, string, string]> => {
       if (segmentStatsTriggerDate == null) {
+        // Should never be rendered because segmentStatsTriggerDate is null.
         return isLoadingLabelTuple;
       }
       const { annotation, flycam } = Store.getState();
+      // The value that is returned if the context menu is closed is shown if it's still loading
       if (contextMenuPosition == null || !wasSegmentOrMeshClicked) return isLoadingLabelTuple;
       if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return isLoadingLabelTuple;
 
@@ -99,6 +101,8 @@ export function useSegmentStatistics(
       }
     },
     isLoadingLabelTuple,
+    // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
+    // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
     [contextMenuPosition, isSegmentIndexAvailable, clickedSegmentOrMeshId, segmentStatsTriggerDate],
   );
 

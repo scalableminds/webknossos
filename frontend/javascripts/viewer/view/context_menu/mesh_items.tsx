@@ -53,6 +53,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const segments = useWkSelector((state) =>
     volumeTracing != null ? getSegmentsForLayer(state, volumeTracing.tracingId) : null,
   );
+
   const minCutPartitions = useWkSelector((state) => {
     if (volumeTracing == null) return undefined;
     const layerId = volumeTracing.tracingId;
@@ -85,6 +86,10 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
     return [];
   }
 
+  // The cut and merge operations depend on the active segment. The volume tracing *always* has an activeCellId.
+  // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
+  // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
+  // by looking the segment id up the segments list and checking against null.
   const activeSegmentMissing = segments && segments.getNullable(activeCellId) == null;
 
   const getTooltip = (
@@ -117,6 +122,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
           key: "merge-agglomerate-skeleton",
           disabled: shouldAgglomerateSkeletonActionsBeDisabled || clickedMeshId === activeCellId,
           onClick: () => {
+            // Should not happen due to the disabled property.
             if (maybeUnmappedSegmentId == null) {
               return;
             }
@@ -134,6 +140,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
             activeUnmappedSegmentId == null ||
             maybeUnmappedSegmentId === activeUnmappedSegmentId,
           onClick: () => {
+            // Should not happen due to the disabled property.
             if (maybeUnmappedSegmentId == null) {
               return;
             }
@@ -149,6 +156,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
           key: "split-from-all-neighbors",
           disabled: maybeUnmappedSegmentId == null || meshFileMappingName != null,
           onClick: () => {
+            // Should not happen due to the disabled property.
             if (maybeUnmappedSegmentId == null) {
               return;
             }

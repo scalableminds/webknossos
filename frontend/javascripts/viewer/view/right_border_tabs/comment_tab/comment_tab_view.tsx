@@ -24,7 +24,6 @@ import useLifecycle from "beautiful-react-hooks/useLifecycle";
 import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
-import flatMap from "lodash-es/flatMap";
 import isEmpty from "lodash-es/isEmpty";
 import uniq from "lodash-es/uniq";
 import memoizeOne from "memoize-one";
@@ -465,12 +464,12 @@ function CommentTabView(props: Props) {
                       setExpandedTreeIds(uniq([...expandedTreeIds, tree.treeId.toString()]));
                     }
                   }}
-                  data={flatMap(getData(), (tree) =>
+                  data={getData().flatMap((tree) =>
                     tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
                   )}
                   searchKey="content"
                   provideShortcut
-                  targetId={commentListId}
+                  targetId={commentTabId}
                 >
                   <ButtonComponent
                     icon={<SearchOutlined />}

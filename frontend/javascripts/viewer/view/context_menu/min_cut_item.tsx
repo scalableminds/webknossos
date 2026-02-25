@@ -71,9 +71,10 @@ export function useMultiCutToolOptions(
   segmentOrSuperVoxel: string,
   segmentIdLabel: string | number,
 ): MenuItemType[] {
-  const volumeTracing = useWkSelector(getActiveSegmentationTracing);
   const minCutPartitions = useWkSelector((state) => {
+    const volumeTracing = getActiveSegmentationTracing(state);
     if (volumeTracing == null) return undefined;
+
     const layerId = volumeTracing.tracingId;
     return layerId in state.localSegmentationData
       ? state.localSegmentationData[layerId].minCutPartitions

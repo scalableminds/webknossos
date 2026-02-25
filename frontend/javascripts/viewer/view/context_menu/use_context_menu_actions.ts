@@ -1,4 +1,5 @@
 import type { MenuProps } from "antd";
+import { useMemo } from "react";
 import { useDispatch } from "react-redux";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
@@ -18,82 +19,85 @@ import Store from "viewer/store";
 export function useContextMenuActions() {
   const dispatch = useDispatch();
 
-  return {
-    deleteNode: (nodeId: number, treeId: number) => {
-      dispatch(deleteNodeAsUserAction(Store.getState(), nodeId, treeId));
-    },
+  return useMemo(
+    () => ({
+      deleteNode: (nodeId: number, treeId: number) => {
+        dispatch(deleteNodeAsUserAction(Store.getState(), nodeId, treeId));
+      },
 
-    setActiveCell: (
-      segmentId: number,
-      somePosition?: Vector3,
-      someAdditionalCoordinates?: AdditionalCoordinate[],
-      maybeUnmappedSegmentId?: number,
-    ) => {
-      dispatch(
-        setActiveCellAction(
-          segmentId,
-          somePosition,
-          someAdditionalCoordinates,
-          maybeUnmappedSegmentId,
-        ),
-      );
-    },
+      setActiveCell: (
+        segmentId: number,
+        somePosition?: Vector3,
+        someAdditionalCoordinates?: AdditionalCoordinate[],
+        maybeUnmappedSegmentId?: number,
+      ) => {
+        dispatch(
+          setActiveCellAction(
+            segmentId,
+            somePosition,
+            someAdditionalCoordinates,
+            maybeUnmappedSegmentId,
+          ),
+        );
+      },
 
-    setBoundingBoxName: (id: number, name: string) => {
-      dispatch(
-        changeUserBoundingBoxAction(id, {
-          name,
-        }),
-      );
-    },
+      setBoundingBoxName: (id: number, name: string) => {
+        dispatch(
+          changeUserBoundingBoxAction(id, {
+            name,
+          }),
+        );
+      },
 
-    setBoundingBoxColor: (id: number, color: Vector3) => {
-      dispatch(
-        changeUserBoundingBoxAction(id, {
-          color,
-        }),
-      );
-    },
+      setBoundingBoxColor: (id: number, color: Vector3) => {
+        dispatch(
+          changeUserBoundingBoxAction(id, {
+            color,
+          }),
+        );
+      },
 
-    deleteBoundingBox: (id: number) => {
-      dispatch(deleteUserBoundingBoxAction(id));
-    },
+      deleteBoundingBox: (id: number) => {
+        dispatch(deleteUserBoundingBoxAction(id));
+      },
 
-    hideBoundingBox: (id: number) => {
-      dispatch(
-        changeUserBoundingBoxAction(id, {
-          isVisible: false,
-        }),
-      );
-    },
+      hideBoundingBox: (id: number) => {
+        dispatch(
+          changeUserBoundingBoxAction(id, {
+            isVisible: false,
+          }),
+        );
+      },
 
-    removeMesh: (layerName: string, meshId: number) => {
-      dispatch(removeMeshAction(layerName, meshId));
-    },
+      removeMesh: (layerName: string, meshId: number) => {
+        dispatch(removeMeshAction(layerName, meshId));
+      },
 
-    hideMesh: (layerName: string, meshId: number) => {
-      dispatch(
-        updateMeshVisibilityAction(
-          layerName,
-          meshId,
-          false,
-          Store.getState().flycam.additionalCoordinates,
-        ),
-      );
-    },
+      hideMesh: (layerName: string, meshId: number) => {
+        dispatch(
+          updateMeshVisibilityAction(
+            layerName,
+            meshId,
+            false,
+            Store.getState().flycam.additionalCoordinates,
+          ),
+        );
+      },
 
-    setPosition: (position: Vector3) => {
-      dispatch(setPositionAction(position));
-    },
+      setPosition: (position: Vector3) => {
+        dispatch(setPositionAction(position));
+      },
 
-    refreshMesh: (layerName: string, segmentId: number) => {
-      dispatch(refreshMeshAction(layerName, segmentId));
-    },
+      refreshMesh: (layerName: string, segmentId: number) => {
+        dispatch(refreshMeshAction(layerName, segmentId));
+      },
 
-    hideContextMenu: () => {
-      dispatch(hideContextMenuAction());
-    },
-  };
+      hideContextMenu: () => {
+        dispatch(hideContextMenuAction());
+      },
+    }),
+    [dispatch],
+  );
 }
 
 // Keep the global hideContextMenu for non-React contexts or where it's simpler

@@ -298,12 +298,13 @@ export function useNoNodeContextMenuOptions(
     skeletonTracing != null &&
     globalPosition != null &&
     globalPositionForNode != null &&
+    viewport != null &&
     allowUpdate
       ? [
           {
             key: "create-node",
             onClick: () =>
-              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport!, false),
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false),
             label: "Create Node here",
             disabled: areGeometriesTransformed(state),
           },
@@ -311,7 +312,7 @@ export function useNoNodeContextMenuOptions(
             key: "create-node-with-tree",
             onClick: () => {
               dispatch(createTreeAction());
-              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport!, false);
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false);
             },
             label: (
               <>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 1025 1025" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
+    <g transform="matrix(1,0,0,1,-1312,-2527)">
+        <g id="Eraser" transform="matrix(1,0,0,1,1312.53,2527.78)">
+            <rect x="0" y="0" width="1024" height="1024" style="fill:none;"/>
+            <g transform="matrix(3.92946e-17,-1,0.640097,6.10766e-17,193.373,1283.49)">
+                <path d="M512,548.038L512,832" style="fill:none;stroke:rgb(241,241,241);stroke-width:85.76px;"/>
+            </g>
+            <g transform="matrix(0.707107,0.707107,-0.762574,0.762574,1642.76,-2833.95)">
+                <path d="M1584.31,3258.91L1458.82,3258.91L1458.82,2700.47L1772.61,2700.47L1772.61,3084.31L1584.31,3258.91Z" style="fill:none;stroke:rgb(241,241,241);stroke-width:69.23px;"/>
+            </g>
+            <g transform="matrix(0.927835,-0.0721652,-0.0721652,0.927835,-1204.2,-1849.09)">
+                <path d="M1857.96,2729.3L2117.27,2988.62" style="fill:none;stroke:rgb(241,241,241);stroke-width:84.14px;"/>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,7 +1,7 @@
 import { sleep } from "libs/utils";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
-import runAsync from "test/helpers/run-async";
+import runAsync from "test/helpers/run_async";
 import type { Vector3, Vector4 } from "viewer/constants";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { assertNonNullBucket, type DataBucket } from "viewer/model/bucket_data_handling/bucket";

@@ -107,7 +107,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { api, Model } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
-import { getDefaultBrushSizes } from "viewer/view/action-bar/tools/brush_presets";
+import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type ArbitraryView from "viewer/view/arbitrary_view";
 import type {
   KeyboardShortcutLoopedHandlerMap,

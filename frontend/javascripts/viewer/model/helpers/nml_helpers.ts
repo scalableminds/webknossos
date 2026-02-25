@@ -41,7 +41,7 @@ import type {
   UserBoundingBox,
   WebknossosState,
 } from "viewer/store";
-import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 import { min } from "./iterator_utils";

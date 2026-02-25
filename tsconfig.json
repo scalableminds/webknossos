@@ -13,7 +13,8 @@
     "skipLibCheck": true, //reconsider this later
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "*": ["./frontend/javascripts/*"]
+      "@images/*": ["./frontend/assets/images/*"],
+      "*": ["./frontend/javascripts/*"],
     }
   },
   "include": [

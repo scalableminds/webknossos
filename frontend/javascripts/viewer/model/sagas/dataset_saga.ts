@@ -5,9 +5,9 @@ import sum from "lodash-es/sum";
 import messages from "messages";
 import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { Identity4x4 } from "viewer/constants";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
-import { hasSegmentIndex } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
+import { hasSegmentIndex } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import {
   getEnabledLayers,
   getLayerByName,

@@ -20,7 +20,7 @@ import {
   reducerInternalMatrixToEulerAngle,
 } from "viewer/model/helpers/rotation_helpers";
 import Store from "viewer/store";
-import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { makeBasicGroupObject } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const toRadian = (arr: Vector3): Vector3 => [

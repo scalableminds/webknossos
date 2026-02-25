@@ -1,159 +1,52 @@
-import {
-  DatabaseOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  EllipsisOutlined,
-  InfoCircleOutlined,
-  LockOutlined,
-  MenuOutlined,
-  MergeCellsOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SaveOutlined,
-  ScanOutlined,
-  UnlockOutlined,
-  VerticalAlignMiddleOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { InfoCircleOutlined, PlusOutlined, SaveOutlined, WarningOutlined } from "@ant-design/icons";
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  clearCache,
-  findDataPositionForLayer,
-  findDataPositionForVolumeTracing,
-  startComputeSegmentIndexFileJob,
-  updateDatasetDefaultConfiguration,
-} from "admin/rest_api";
-import { Button, Col, Divider, Dropdown, Flex, type MenuProps, Modal, Row, Switch } from "antd";
-import type { ItemType } from "antd/es/menu/interface";
-import type { SwitchChangeEventHandler } from "antd/es/switch";
-import classnames from "classnames";
+import { clearCache, updateDatasetDefaultConfiguration } from "admin/rest_api";
+import { Button, Divider, Modal, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import { HoverIconButton } from "components/hover_icon_button";
 import update from "immutability-helper";
 import ErrorHandling from "libs/error_handling";
-import { M4x4, V3 } from "libs/mjs";
-import { useWkSelector } from "libs/react_hooks";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import { isUserAdminOrDatasetManager, isUserAdminOrManager, rgbToHex } from "libs/utils";
-import differenceWith from "lodash-es/differenceWith";
-import isEqual from "lodash-es/isEqual";
-import mapValues from "lodash-es/mapValues";
-import minBy from "lodash-es/minBy";
+import { isUserAdminOrDatasetManager } from "libs/utils";
 import partial from "lodash-es/partial";
-import {
-  layerViewConfigurations,
-  layerViewConfigurationTooltips,
-  type RecommendedConfiguration,
-  settings,
-  settingsTooltips,
-} from "messages";
-import React, { useCallback } from "react";
-import { connect, useDispatch } from "react-redux";
+import { type RecommendedConfiguration, settings, settingsTooltips } from "messages";
+import React from "react";
+import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import {
-  AnnotationLayerEnum,
-  type AnnotationLayerType,
-  APIAnnotationTypeEnum,
-  type APIDataLayer,
-  type APIDataset,
-  APIJobCommand,
-  type APISkeletonLayer,
-  type EditableLayerProperties,
-} from "types/api_types";
+import { APIAnnotationTypeEnum, type APIDataLayer } from "types/api_types";
 import type { ValueOf } from "types/globals";
-import {
-  defaultDatasetViewConfiguration,
-  getDefaultLayerViewConfiguration,
-} from "types/schemas/dataset_view_configuration.schema";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
-import { userSettings } from "types/schemas/user_settings.schema";
-import type { Vector3 } from "viewer/constants";
-import Constants, {
-  ControlModeEnum,
-  IdentityTransform,
-  LongUnitToShortUnitMap,
-  MappingStatusEnum,
-} from "viewer/constants";
-import defaultState from "viewer/default_state";
+import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import {
   getDefaultValueRangeOfLayer,
   getElementClass,
   isColorLayer as getIsColorLayer,
-  getLayerBoundingBox,
-  getLayerByName,
-  getMagInfo,
-  getWidestMags,
 } from "viewer/model/accessors/dataset_accessor";
+import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import { pushSaveQueueTransactionIsolated } from "viewer/model/actions/save_actions";
 import {
-  getTransformsForLayer,
-  getTransformsForLayerOrNull,
-  hasDatasetTransforms,
-  isLayerWithoutTransformationConfigSupport,
-} from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import {
-  getMaxZoomValueForMag,
-  getNewPositionAndZoomChangeFromTransformationChange,
-  getPosition,
-} from "viewer/model/accessors/flycam_accessor";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-} from "viewer/model/accessors/skeletontracing_accessor";
-import {
-  getAllReadableLayerNames,
-  getReadableNameByVolumeTracingId,
-  getVolumeDescriptorById,
-  getVolumeTracingById,
-} from "viewer/model/accessors/volumetracing_accessor";
-import { editAnnotationLayerAction } from "viewer/model/actions/annotation_actions";
-import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
-import {
-  pushSaveQueueTransaction,
-  pushSaveQueueTransactionIsolated,
-} from "viewer/model/actions/save_actions";
-import {
-  dispatchClipHistogramAsync,
   reloadHistogramAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
-  updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import {
-  setNodeRadiusAction,
-  setShowSkeletonsAction,
-} from "viewer/model/actions/skeletontracing_actions";
-import {
-  addLayerToAnnotation,
-  deleteAnnotationLayer,
-} from "viewer/model/sagas/volume/update_actions";
-import { api, Model } from "viewer/singletons";
+import { addLayerToAnnotation } from "viewer/model/sagas/volume/update_actions";
+import { Model } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
-  UserConfiguration,
-  VolumeTracing,
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action_bar/materialize_volume_annotation_modal";
-import ButtonComponent from "viewer/view/components/button_component";
-import EditableTextLabel from "viewer/view/components/editable_text_label";
-import {
-  ColorSetting,
-  LogSliderSetting,
-  NumberSliderSetting,
-  SETTING_LEFT_SPAN,
-  SETTING_MIDDLE_SPAN,
-  SETTING_VALUE_SPAN,
-  SwitchSetting,
-} from "viewer/view/components/setting_input_views";
-import { confirmAsync } from "../../../dashboard/dataset/helper_components";
-import { HideUnregisteredSegmentsSwitch } from "./hide_unregistered_segments_switch";
+import { NumberSliderSetting } from "viewer/view/components/setting_input_views";
+import ColorLayerSettings from "./components/color_layer_settings";
+import LayerSettingsHeader from "./components/layer_settings_header";
+import SegmentationLayerSettings from "./components/segmentation_layer_settings";
+import SkeletonLayerSettings from "./components/skeleton_layer_settings";
 import Histogram, { isHistogramSupported } from "./histogram_view";
-import MappingSettingsView from "./mapping_settings_view";
-import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
+import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 
 type DatasetSettingsProps = ReturnType<typeof mapStateToProps> &
   ReturnType<typeof mapDispatchToProps>;
@@ -165,427 +58,13 @@ type State = {
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
 
-function DragHandleIcon({ isDisabled = false }: { isDisabled?: boolean }) {
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        justifyContent: "center",
-        cursor: "grab",
-        alignItems: "center",
-        opacity: isDisabled ? 0.3 : 0.6,
-      }}
-    >
-      <MenuOutlined
-        style={{
-          display: "inline-block",
-          marginRight: 8,
-        }}
-      />
-    </div>
-  );
-}
-function DragHandle({ id }: { id: string }) {
-  const { attributes, listeners } = useSortable({
-    id,
-  });
-
-  return (
-    <div {...attributes} {...listeners}>
-      <DragHandleIcon />
-    </div>
-  );
-}
-
-function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
-  return (
-    <FastTooltip title={tooltipTitle}>
-      <DragHandleIcon isDisabled />
-    </FastTooltip>
-  );
-}
-
-function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer }) {
-  const dispatch = useDispatch();
-  const transform = useWkSelector((state) =>
-    getTransformsForLayerOrNull(
-      state.dataset,
-      layer,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    ),
-  );
-  const canLayerHaveTransforms = !isLayerWithoutTransformationConfigSupport(layer);
-  const hasLayerTransformsConfigured = useWkSelector(
-    (state) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
-  );
-
-  const showIcon = useWkSelector((state) => hasDatasetTransforms(state.dataset));
-  if (!showIcon) {
-    return null;
-  }
-  const isRenderedNatively = transform == null || transform === IdentityTransform;
-
-  const typeToLabel = {
-    affine: "an affine",
-    thin_plate_spline: "a thin-plate-spline",
-  };
-
-  const typeToImage = {
-    none: "icon-no-transformation.svg",
-    thin_plate_spline: "icon-tps-transformation.svg",
-    affine: "icon-affine-transformation.svg",
-  };
-
-  // Cannot toggle transforms for a layer that cannot have no transforms or turn them on in case the layer has no transforms.
-  // Layers that cannot have transformations like skeleton layer and volume tracing layers without fallback
-  // automatically copy to the dataset transformation if all other layers have the same transformation.
-  const isDisabled =
-    !canLayerHaveTransforms || (isRenderedNatively && !hasLayerTransformsConfigured);
-
-  const toggleLayerTransforms = () => {
-    const state = Store.getState();
-    // Set nativelyRenderedLayerName to null in case the current layer is already natively rendered or does not have its own transformations configured (e.g. a skeleton layer) .
-    const nextNativelyRenderedLayerName = isRenderedNatively ? null : layer.name;
-    const activeTransformation = getTransformsForLayer(
-      state.dataset,
-      layer,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    );
-    const nextTransform = getTransformsForLayer(
-      state.dataset,
-      layer,
-      nextNativelyRenderedLayerName,
-    );
-    const { scaleChange, newPosition } = getNewPositionAndZoomChangeFromTransformationChange(
-      activeTransformation,
-      nextTransform,
-      state,
-    );
-    dispatch(
-      updateDatasetSettingAction("nativelyRenderedLayerName", nextNativelyRenderedLayerName),
-    );
-    dispatch(setPositionAction(newPosition));
-    dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
-  };
-
-  return (
-    <ButtonComponent
-      variant="text"
-      color="default"
-      size="small"
-      onClick={toggleLayerTransforms}
-      disabled={isDisabled}
-      title={
-        isRenderedNatively
-          ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
-          : `This layer is rendered with ${
-              typeToLabel[transform.type]
-            } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
-      }
-      icon={
-        <img
-          src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
-          alt="Transformed Layer Icon"
-          style={{ width: "0.9em", height: "0.9em", marginTop: "-3px" }}
-        />
-      }
-    />
-  );
-}
-
-function LayerInfoIconWithTooltip({
-  layer,
-  dataset,
-}: {
-  layer: APIDataLayer;
-  dataset: APIDataset;
-}) {
-  const renderTooltipContent = useCallback(() => {
-    const elementClass = getElementClass(dataset, layer.name);
-    const magInfo = getMagInfo(layer.mags);
-    const mags = magInfo.getMagList();
-    return (
-      <div>
-        <div>Data Type: {elementClass}</div>
-        <div>
-          Available magnifications:
-          <ul>
-            {mags.map((r) => (
-              <li key={r.join()}>{r.join("-")}</li>
-            ))}
-          </ul>
-        </div>
-        Bounding Box:
-        <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
-          <tbody>
-            <tr>
-              <td />
-              <td style={{ fontSize: 10 }}>X</td>
-              <td style={{ fontSize: 10 }}>Y</td>
-              <td style={{ fontSize: 10 }}>Z</td>
-            </tr>
-            <tr>
-              <td style={{ fontSize: 10 }}>Min</td>
-              <td>{layer.boundingBox.topLeft[0]}</td>
-              <td>{layer.boundingBox.topLeft[1]}</td>
-              <td>{layer.boundingBox.topLeft[2]}</td>
-            </tr>
-            <tr>
-              <td style={{ fontSize: 10 }}>Max</td>
-              <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
-              <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
-              <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
-            </tr>
-            <tr>
-              <td style={{ fontSize: 10 }}>Size</td>
-              <td>{layer.boundingBox.width} </td>
-              <td>{layer.boundingBox.height} </td>
-              <td>{layer.boundingBox.depth}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  }, [layer, dataset]);
-
-  return (
-    <FastTooltip dynamicRenderer={renderTooltipContent} placement="left">
-      <ButtonComponent
-        icon={<InfoCircleOutlined />}
-        disabled
-        color="default"
-        size="small"
-        variant="text"
-      />
-    </FastTooltip>
-  );
-}
-
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
-  onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
   state: State = {
     isAddVolumeLayerModalVisible: false,
     preselectedSegmentationLayerName: undefined,
     segmentationLayerWasPreselected: false,
     layerToMergeWithFallback: null,
   };
-
-  constructor(props: DatasetSettingsProps) {
-    super(props);
-    this.onChangeUser = mapValues(this.props.userConfiguration, (__, propertyName) =>
-      partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
-    );
-  }
-
-  getFindDataItem = (
-    layerName: string,
-    isDisabled: boolean,
-    isColorLayer: boolean,
-    maybeVolumeTracing: VolumeTracing | null | undefined,
-  ): ItemType => {
-    let tooltipText = isDisabled
-      ? "You cannot search for data when the layer is disabled."
-      : "If you are having trouble finding your data, WEBKNOSSOS can try to find a position which contains data.";
-
-    if (!isColorLayer && maybeVolumeTracing && maybeVolumeTracing.fallbackLayer) {
-      tooltipText =
-        "WEBKNOSSOS will try to find data in your volume tracing first and in the fallback layer afterwards.";
-    }
-
-    return {
-      key: "findDataButton",
-      icon: <ScanOutlined />,
-      disabled: isDisabled,
-      label: (
-        <FastTooltip title={tooltipText}>
-          <span>Jump to data</span>
-        </FastTooltip>
-      ),
-      onClick: () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing),
-    };
-  };
-
-  getReloadDataItem = (
-    layerName: string,
-    isHistogramAvailable: boolean,
-    maybeFallbackLayerName: string | null,
-  ): ItemType => {
-    const tooltipText = "Use this when the data on the server changed.";
-    return {
-      key: "reloadDataButton",
-      icon: <ReloadOutlined />,
-      label: (
-        <FastTooltip title={tooltipText}>
-          <span>Reload data from server</span>
-        </FastTooltip>
-      ),
-      onClick: () => this.reloadLayerData(layerName, isHistogramAvailable, maybeFallbackLayerName),
-    };
-  };
-
-  getEditMinMaxItem = (layerName: string, isInEditMode: boolean): ItemType => {
-    const tooltipText = isInEditMode
-      ? "Stop editing the possible range of the histogram."
-      : "Manually set the possible range of the histogram.";
-    return {
-      key: "editMinMax",
-      icon: (
-        <EditOutlined
-          style={{
-            color: isInEditMode ? "var(--ant-color-primary)" : undefined,
-          }}
-        />
-      ),
-      label: (
-        <FastTooltip title={tooltipText}>
-          <span>{isInEditMode ? "Stop editing" : "Edit"} histogram range</span>
-        </FastTooltip>
-      ),
-      onClick: () => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode),
-    };
-  };
-
-  getMergeWithFallbackLayerItem = (layer: APIDataLayer): ItemType => ({
-    key: "mergeWithFallbackLayerButton",
-    icon: <MergeCellsOutlined />,
-    label: "Merge this volume annotation with its fallback layer",
-    onClick: () => this.setState({ layerToMergeWithFallback: layer }),
-  });
-
-  getDeleteAnnotationLayerButton = (
-    readableName: string,
-    type: AnnotationLayerType,
-    tracingId: string,
-  ) => (
-    <ButtonComponent
-      variant="text"
-      color="default"
-      size="small"
-      onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId)}
-      icon={<DeleteOutlined />}
-      title="Delete this annotation layer."
-    />
-  );
-
-  getDeleteAnnotationLayerItem = (
-    readableName: string,
-    type: AnnotationLayerType,
-    tracingId: string,
-    layer?: APIDataLayer,
-  ): ItemType => ({
-    key: "deleteAnnotationLayer",
-    icon: <DeleteOutlined />,
-    label: "Delete this annotation layer",
-    onClick: () => this.deleteAnnotationLayerIfConfirmed(readableName, type, tracingId, layer),
-  });
-
-  deleteAnnotationLayerIfConfirmed = async (
-    readableAnnotationLayerName: string,
-    type: AnnotationLayerType,
-    tracingId: string,
-    layer?: APIDataLayer,
-  ) => {
-    const fallbackLayerNote =
-      layer && layer.category === "segmentation" && layer.fallbackLayer
-        ? "Changes to the original segmentation layer will be discarded and the original state will be displayed again. "
-        : "";
-    const shouldDelete = await confirmAsync({
-      title: `Deleting an annotation layer makes its content and history inaccessible. ${fallbackLayerNote}This cannot be undone. Are you sure you want to delete this layer?`,
-      okText: `Yes, delete annotation layer “${readableAnnotationLayerName}”`,
-      cancelText: "Cancel",
-      okButtonProps: {
-        danger: true,
-        block: true,
-        style: { whiteSpace: "normal", height: "auto", margin: "10px 0 0 0" },
-      },
-      cancelButtonProps: {
-        block: true,
-      },
-    });
-    if (!shouldDelete) return;
-    this.props.deleteAnnotationLayer(tracingId, type, readableAnnotationLayerName);
-    await Model.ensureSavedState();
-    location.reload();
-  };
-
-  getClipItem = (layerName: string, isInEditMode: boolean): ItemType => {
-    const editModeAddendum = isInEditMode
-      ? "In Edit Mode, the histogram's range will be adjusted, too."
-      : "";
-    const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
-    return {
-      key: "clipButton",
-      icon: (
-        <VerticalAlignMiddleOutlined
-          style={{
-            transform: "rotate(90deg)",
-          }}
-        />
-      ),
-      label: (
-        <FastTooltip title={tooltipText}>
-          <span>Clip histogram</span>
-        </FastTooltip>
-      ),
-      onClick: () => this.props.onClipHistogram(layerName, isInEditMode),
-    };
-  };
-
-  getComputeSegmentIndexFileItem = (layerName: string, isSegmentation: boolean): ItemType => {
-    if (!(this.props.isSuperUser && isSegmentation)) return null;
-
-    const triggerComputeSegmentIndexFileJob = async () => {
-      await startComputeSegmentIndexFileJob(this.props.dataset.id, layerName);
-      Toast.info(
-        <React.Fragment>
-          Started a job for computating a segment index file.
-          <br />
-          See{" "}
-          <a target="_blank" href="/jobs" rel="noopener noreferrer">
-            Processing Jobs
-          </a>{" "}
-          for an overview of running jobs.
-        </React.Fragment>,
-      );
-    };
-
-    return {
-      key: "computeSegmentIndexFileButton",
-      icon: <DatabaseOutlined />,
-      label: "Compute a Segment Index file",
-      onClick: triggerComputeSegmentIndexFileJob,
-    };
-  };
-
-  setVisibilityForAllLayers = (isVisible: boolean) => {
-    const { layers } = this.props.datasetConfiguration;
-    Object.keys(layers).forEach((otherLayerName) => {
-      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible);
-    });
-  };
-
-  isLayerExclusivelyVisible = (layerName: string): boolean => {
-    const { layers } = this.props.datasetConfiguration;
-    const isOnlyGivenLayerVisible = Object.keys(layers).every((otherLayerName) => {
-      const { isDisabled } = layers[otherLayerName];
-      return layerName === otherLayerName ? !isDisabled : isDisabled;
-    });
-    return isOnlyGivenLayerVisible;
-  };
-
-  getEnableDisableLayerSwitch = (isDisabled: boolean, onChange: SwitchChangeEventHandler) => (
-    <FastTooltip title={isDisabled ? "Show" : "Hide"} placement="top">
-      {/* This div is necessary for the tooltip to be displayed */}
-      <div
-        style={{
-          display: "inline-block",
-          marginRight: 8,
-        }}
-      >
-        <Switch size="small" onChange={onChange} checked={!isDisabled} />
-      </div>
-    </FastTooltip>
-  );
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
@@ -612,313 +91,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getLayerSettingsHeader = (
-    isDisabled: boolean,
-    isColorLayer: boolean,
-    isInEditMode: boolean,
-    layerName: string,
-    layerSettings: DatasetLayerConfiguration,
-    isHistogramAvailable: boolean,
-    hasLessThanTwoColorLayers: boolean = true,
-  ) => {
-    const { annotation, dataset, isAdminOrManager } = this.props;
-    const { intensityRange } = layerSettings;
-    const layer = getLayerByName(dataset, layerName);
-    const isSegmentation = layer.category === "segmentation";
-    const layerType =
-      layer.category === "segmentation" ? AnnotationLayerEnum.Volume : AnnotationLayerEnum.Skeleton;
-    const canBeMadeEditable =
-      isSegmentation && layer.tracingId == null && this.props.controlMode === "TRACE";
-    const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
-    const isAnnotationLayer = isSegmentation && layer.tracingId != null;
-    const isOnlyAnnotationLayer =
-      isAnnotationLayer && annotation && annotation.annotationLayers.length === 1;
-    const maybeTracingId = isSegmentation ? layer.tracingId : null;
-    const maybeVolumeTracing =
-      maybeTracingId != null ? getVolumeTracingById(annotation, maybeTracingId) : null;
-    const maybeFallbackLayer =
-      maybeVolumeTracing?.fallbackLayer != null ? maybeVolumeTracing.fallbackLayer : null;
-
-    const setSingleLayerVisibility = (isVisible: boolean) => {
-      this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
-    };
-
-    const onChange = (
-      value: boolean,
-      event: React.MouseEvent<HTMLButtonElement> | React.KeyboardEvent<HTMLButtonElement>,
-    ) => {
-      if (!event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-        setSingleLayerVisibility(value);
-        return;
-      }
-
-      // If a modifier is pressed, toggle between "all layers visible" and
-      // "only selected layer visible".
-      if (this.isLayerExclusivelyVisible(layerName)) {
-        this.setVisibilityForAllLayers(true);
-      } else {
-        this.setVisibilityForAllLayers(false);
-        setSingleLayerVisibility(true);
-      }
-    };
-    const hasHistogram = this.props.histogramData[layerName] != null;
-    const volumeDescriptor =
-      "tracingId" in layer && layer.tracingId != null
-        ? getVolumeDescriptorById(annotation, layer.tracingId)
-        : null;
-    const readableName =
-      "tracingId" in layer && layer.tracingId != null
-        ? getReadableNameByVolumeTracingId(annotation, layer.tracingId)
-        : layerName;
-    const allReadableLayerNames = getAllReadableLayerNames(dataset, annotation);
-    const readableLayerNameValidationResult = validateReadableLayerName(
-      readableName,
-      allReadableLayerNames,
-      readableName,
-    );
-    const possibleItems: MenuProps["items"] = [
-      isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
-        ? this.getMergeWithFallbackLayerItem(layer)
-        : null,
-      this.props.dataset.isEditable
-        ? this.getReloadDataItem(layerName, isHistogramAvailable, maybeFallbackLayer)
-        : null,
-      this.getFindDataItem(layerName, isDisabled, isColorLayer, maybeVolumeTracing),
-      isAnnotationLayer && !isOnlyAnnotationLayer
-        ? this.getDeleteAnnotationLayerItem(readableName, layerType, layer.tracingId, layer)
-        : null,
-      !isDisabled ? this.getEditMinMaxItem(layerName, isInEditMode) : null,
-      hasHistogram && !isDisabled ? this.getClipItem(layerName, isInEditMode) : null,
-      this.props.dataset.dataStore.jobsEnabled &&
-      this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
-        APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE,
-      )
-        ? this.getComputeSegmentIndexFileItem(layerName, isSegmentation)
-        : null,
-    ];
-    const items = possibleItems.filter((el) => el);
-    const dragHandle = isColorLayer ? (
-      hasLessThanTwoColorLayers ? (
-        <DummyDragHandle tooltipTitle="Order is only changeable with more than one color layer." />
-      ) : (
-        <DragHandle id={layerName} />
-      )
-    ) : (
-      <DummyDragHandle tooltipTitle="Layer not movable: Volume layers are always rendered on top." />
-    );
-
-    return (
-      <Flex align="center">
-        {dragHandle}
-        {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-        <div
-          style={{
-            fontWeight: 700,
-            paddingRight: 5,
-            flexGrow: 1,
-            wordBreak: "break-all",
-          }}
-        >
-          {volumeDescriptor != null ? (
-            <FastTooltip
-              title={
-                readableLayerNameValidationResult.isValid
-                  ? null
-                  : readableLayerNameValidationResult.message
-              }
-            >
-              <span style={{ display: "inline-block" }}>
-                <EditableTextLabel
-                  width={150}
-                  value={readableName}
-                  isInvalid={!readableLayerNameValidationResult.isValid}
-                  trimValue
-                  onChange={(newName) => {
-                    this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
-                      name: newName,
-                    });
-                  }}
-                  rules={[
-                    {
-                      validator: (newReadableLayerName) =>
-                        validateReadableLayerName(
-                          newReadableLayerName,
-                          allReadableLayerNames,
-                          readableName,
-                        ),
-                    },
-                  ]}
-                  label="Volume Layer Name"
-                />
-              </span>
-            </FastTooltip>
-          ) : (
-            layerName
-          )}
-        </div>
-        <Flex
-          style={{
-            paddingRight: 1,
-          }}
-          align="center"
-        >
-          <LayerInfoIconWithTooltip layer={layer} dataset={this.props.dataset} />
-          {canBeMadeEditable ? (
-            <FastTooltip
-              title="Make this segmentation editable by adding a Volume Annotation Layer."
-              placement="left"
-            >
-              <HoverIconButton
-                variant="text"
-                color="default"
-                size="small"
-                icon={<LockOutlined />}
-                hoveredIcon={<UnlockOutlined />}
-                onClick={() => {
-                  this.setState({
-                    isAddVolumeLayerModalVisible: true,
-                    segmentationLayerWasPreselected: true,
-                    preselectedSegmentationLayerName: layer.name,
-                  });
-                }}
-              />
-            </FastTooltip>
-          ) : null}
-          <TransformationIcon layer={layer} />
-          {isVolumeTracing ? (
-            <ButtonComponent
-              variant="text"
-              color="default"
-              size="small"
-              disabled
-              title={`This layer is a volume annotation.${
-                maybeFallbackLayer
-                  ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
-                  : ""
-              }`}
-              tooltipPlacement="left"
-              icon={<i className="fas fa-paint-brush" />}
-            />
-          ) : null}
-          {intensityRange != null && intensityRange[0] === intensityRange[1] && !isDisabled ? (
-            <FastTooltip
-              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
-            If you want to hide this layer, you can also disable it with the switch on the left.`}
-            >
-              <WarningOutlined
-                style={{
-                  color: "var(--ant-color-warning)",
-                }}
-              />
-            </FastTooltip>
-          ) : null}
-          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
-          <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
-            <ButtonComponent
-              variant="text"
-              color="default"
-              size="small"
-              icon={<EllipsisOutlined rotate={90} />}
-            />
-          </Dropdown>
-        </Flex>
-      </Flex>
-    );
-  };
-
-  getColorLayerSpecificSettings = (
-    layerConfiguration: DatasetLayerConfiguration,
-    layerName: string,
-  ) => {
-    const defaultSettings = getDefaultLayerViewConfiguration();
-    return (
-      <div>
-        <LogSliderSetting
-          label={
-            <FastTooltip title={layerViewConfigurationTooltips.gammaCorrectionValue}>
-              {layerViewConfigurations.gammaCorrectionValue}
-            </FastTooltip>
-          }
-          min={0.01}
-          max={10}
-          roundToDigit={3}
-          value={layerConfiguration.gammaCorrectionValue}
-          onChange={partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
-          defaultValue={defaultSettings.gammaCorrectionValue}
-        />
-        <Row
-          style={{
-            marginBottom: "var(--ant-margin-sm)",
-            marginTop: 6,
-          }}
-        >
-          <Col span={SETTING_LEFT_SPAN}>
-            <label className="setting-label">Color</label>
-          </Col>
-          <Col span={SETTING_MIDDLE_SPAN}>
-            <ColorSetting
-              value={rgbToHex(layerConfiguration.color)}
-              onChange={partial(this.props.onChangeLayer, layerName, "color")}
-              style={{
-                marginLeft: 6,
-              }}
-            />
-          </Col>
-          <Col span={SETTING_VALUE_SPAN}>
-            <ButtonComponent
-              variant="text"
-              color="default"
-              size="small"
-              title="Invert the color of this layer."
-              onClick={() =>
-                this.props.onChangeLayer(
-                  layerName,
-                  "isInverted",
-                  layerConfiguration ? !layerConfiguration.isInverted : false,
-                )
-              }
-              icon={
-                <i
-                  className={classnames("fas", "fa-adjust", {
-                    "flip-horizontally": layerConfiguration.isInverted,
-                  })}
-                  style={{
-                    margin: 0,
-                    transition: "transform 0.5s ease 0s",
-                    color: layerConfiguration.isInverted ? "var(--ant-color-primary)" : undefined,
-                  }}
-                />
-              }
-              style={{
-                marginLeft: 10,
-              }}
-            />
-          </Col>
-        </Row>
-      </div>
-    );
-  };
-
-  getSegmentationSpecificSettings = (layerName: string) => {
-    const segmentationOpacitySetting = (
-      <NumberSliderSetting
-        label={settings.segmentationPatternOpacity}
-        min={0}
-        max={100}
-        step={1}
-        value={this.props.datasetConfiguration.segmentationPatternOpacity}
-        onChange={partial(this.props.onChange, "segmentationPatternOpacity")}
-        defaultValue={defaultDatasetViewConfiguration.segmentationPatternOpacity}
-      />
-    );
-
-    return (
-      <div>
-        {segmentationOpacitySetting}
-        <HideUnregisteredSegmentsSwitch layerName={layerName} />
-        <MappingSettingsView layerName={layerName} />
-      </div>
-    );
+  reloadHistogram = async (layerName: string): Promise<void> => {
+    await clearCache(this.props.dataset, layerName);
+    this.props.reloadHistogram(layerName);
   };
 
   LayerSettings = ({
@@ -970,15 +145,25 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <div key={layerName} style={style} ref={setNodeRef}>
-        {this.getLayerSettingsHeader(
-          isDisabled,
-          isColorLayer,
-          isInEditMode,
-          layerName,
-          layerConfiguration,
-          isHistogramAvailable,
-          hasLessThanTwoColorLayers,
-        )}
+        <LayerSettingsHeader
+          layerName={layerName}
+          layerSettings={layerConfiguration}
+          isColorLayer={isColorLayer}
+          isDisabled={isDisabled}
+          isInEditMode={isInEditMode}
+          isHistogramAvailable={isHistogramAvailable}
+          hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
+          onShowAddVolumeLayerModal={(preselectedLayerName) => {
+            this.setState({
+              isAddVolumeLayerModalVisible: true,
+              segmentationLayerWasPreselected: true,
+              preselectedSegmentationLayerName: preselectedLayerName,
+            });
+          }}
+          onSetLayerToMergeWithFallback={(layer) =>
+            this.setState({ layerToMergeWithFallback: layer })
+          }
+        />
         {isDisabled ? null : (
           <div
             style={{
@@ -995,305 +180,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               onChange={partial(this.props.onChangeLayer, layerName, "alpha")}
               defaultValue={layerSpecificDefaults.alpha}
             />
-            {isColorLayer
-              ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
-              : this.getSegmentationSpecificSettings(layerName)}
+            {isColorLayer ? (
+              <ColorLayerSettings layerName={layerName} layerConfiguration={layerConfiguration} />
+            ) : (
+              <SegmentationLayerSettings layerName={layerName} />
+            )}
           </div>
         )}
       </div>
-    );
-  };
-
-  handleFindData = async (
-    layerName: string,
-    isDataLayer: boolean,
-    volume: VolumeTracing | null | undefined,
-  ) => {
-    const { tracingStore } = Store.getState().annotation;
-    const { dataset } = this.props;
-    let foundPosition;
-    let foundMag;
-
-    if (volume && !isDataLayer) {
-      const { position, mag } = await findDataPositionForVolumeTracing(
-        tracingStore.url,
-        volume.tracingId,
-      );
-
-      if ((!position || !mag) && volume.fallbackLayer) {
-        await this.handleFindData(volume.fallbackLayer, true, volume);
-        return;
-      }
-
-      foundPosition = position;
-      foundMag = mag;
-    } else {
-      const { position, mag } = await findDataPositionForLayer(
-        dataset.dataStore.url,
-        dataset,
-        layerName,
-      );
-      foundPosition = position;
-      foundMag = mag;
-    }
-
-    if (foundPosition && foundMag) {
-      const layer = getLayerByName(dataset, layerName, true);
-      const transformMatrix = getTransformsForLayerOrNull(
-        dataset,
-        layer,
-        Store.getState().datasetConfiguration.nativelyRenderedLayerName,
-      )?.affineMatrix;
-      if (transformMatrix) {
-        const matrix = M4x4.transpose(transformMatrix);
-        // Transform the found position according to the matrix.
-        V3.mul4x4(matrix, foundPosition, foundPosition);
-      }
-    } else {
-      const centerPosition = getLayerBoundingBox(dataset, layerName).getCenter();
-      Toast.warning(
-        `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
-      );
-      this.props.onSetPosition(centerPosition);
-      return;
-    }
-
-    this.props.onSetPosition(foundPosition);
-    const zoomValue = this.props.onZoomToMag(layerName, foundMag);
-    Toast.success(
-      `Jumping to position ${foundPosition
-        .map((el) => Math.floor(el))
-        .join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
-    );
-  };
-
-  reloadLayerData = async (
-    layerName: string,
-    isHistogramAvailable: boolean,
-    maybeFallbackLayerName: string | null,
-  ): Promise<void> => {
-    await clearCache(this.props.dataset, maybeFallbackLayerName ?? layerName);
-    if (isHistogramAvailable) this.props.reloadHistogram(layerName);
-    await api.data.reloadBuckets(layerName);
-    Toast.success(`Successfully reloaded data of layer ${layerName}.`);
-  };
-
-  reloadHistogram = async (layerName: string): Promise<void> => {
-    await clearCache(this.props.dataset, layerName);
-    this.props.reloadHistogram(layerName);
-  };
-
-  getVolumeMagsToDownsample = (volumeTracing: VolumeTracing | null | undefined): Array<Vector3> => {
-    if (this.props.task != null) {
-      return [];
-    }
-
-    if (volumeTracing == null) {
-      return [];
-    }
-
-    const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
-    const { fallbackLayerInfo } = segmentationLayer;
-    const volumeTargetMags =
-      fallbackLayerInfo != null
-        ? fallbackLayerInfo.mags.map(({ mag }) => mag)
-        : // This is only a heuristic. At some point, user configuration
-          // might make sense here.
-          getWidestMags(this.props.dataset);
-
-    const getMaxDim = (mag: Vector3) => Math.max(...mag);
-
-    const volumeTracingMags = segmentationLayer.mags.map((magObj) => magObj.mag);
-
-    const sourceMag = minBy(volumeTracingMags, getMaxDim);
-    if (sourceMag === undefined) {
-      return [];
-    }
-
-    const possibleMags = volumeTargetMags.filter((mag) => getMaxDim(mag) >= getMaxDim(sourceMag));
-
-    const magsToDownsample = differenceWith(possibleMags, volumeTracingMags, isEqual);
-
-    return magsToDownsample;
-  };
-
-  getOptionalDownsampleVolumeIcon = (volumeTracing: VolumeTracing | null | undefined) => {
-    if (!volumeTracing) {
-      return null;
-    }
-
-    const magsToDownsample = this.getVolumeMagsToDownsample(volumeTracing);
-    const hasExtensiveMags = magsToDownsample.length === 0;
-
-    if (hasExtensiveMags) {
-      return null;
-    }
-
-    return (
-      <FastTooltip title="This volume tracing does not have data at all magnifications.">
-        <WarningOutlined
-          style={{
-            color: "var(--ant-color-warning)",
-          }}
-        />
-      </FastTooltip>
-    );
-  };
-
-  getSkeletonLayer = () => {
-    const {
-      controlMode,
-      annotation,
-      onChangeRadius,
-      userConfiguration,
-      onChangeShowSkeletons,
-      dataset,
-    } = this.props;
-    const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
-
-    if (isPublicViewMode || annotation.skeleton == null) {
-      return null;
-    }
-
-    const readableName = "Skeleton";
-    const skeletonTracing = enforceSkeletonTracing(annotation);
-    const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
-    const { showSkeletons, tracingId } = skeletonTracing;
-    const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
-    const unit = LongUnitToShortUnitMap[dataset.dataSource.scale.unit];
-    return (
-      <React.Fragment>
-        <Flex
-          style={{
-            paddingRight: 1,
-          }}
-          align="center"
-        >
-          <DummyDragHandle tooltipTitle="Layer not movable: Skeleton layers are always rendered on top." />
-          <div
-            style={{
-              flexGrow: 1,
-              marginRight: 8,
-              wordBreak: "break-all",
-            }}
-          >
-            <FastTooltip
-              title={showSkeletons ? "Hide skeleton layer" : "Show skeleton layer"}
-              placement="top"
-            >
-              {/* This div is necessary for the tooltip to be displayed */}
-              <div
-                style={{
-                  display: "inline-block",
-                  marginRight: 8,
-                }}
-              >
-                <Switch
-                  size="small"
-                  onChange={() => onChangeShowSkeletons(!showSkeletons)}
-                  checked={showSkeletons}
-                />
-              </div>
-            </FastTooltip>
-            <span
-              style={{
-                fontWeight: 700,
-                wordWrap: "break-word",
-                flex: 1,
-              }}
-            >
-              {readableName}
-            </span>
-          </div>
-          <Flex
-            style={{
-              paddingRight: 1,
-            }}
-          >
-            <TransformationIcon layer={{ category: "skeleton", name: tracingId }} />
-            {!isOnlyAnnotationLayer
-              ? this.getDeleteAnnotationLayerButton(
-                  readableName,
-                  AnnotationLayerEnum.Skeleton,
-                  annotation.skeleton.tracingId,
-                )
-              : null}
-          </Flex>
-        </Flex>
-        {showSkeletons ? (
-          <div
-            style={{
-              marginLeft: 10,
-            }}
-          >
-            <LogSliderSetting
-              label={`Node Radius (${unit})`}
-              min={userSettings.nodeRadius.minimum}
-              max={userSettings.nodeRadius.maximum}
-              roundToDigit={0}
-              value={activeNodeRadius}
-              onChange={onChangeRadius}
-              disabled={userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
-              defaultValue={Constants.DEFAULT_NODE_RADIUS}
-            />
-            <NumberSliderSetting
-              label={
-                (userConfiguration.overrideNodeRadius
-                  ? settings.particleSize
-                  : `Min. ${settings.particleSize}`) + ` (${unit})`
-              }
-              min={userSettings.particleSize.minimum}
-              max={userSettings.particleSize.maximum}
-              step={0.1}
-              value={userConfiguration.particleSize}
-              onChange={this.onChangeUser.particleSize}
-              defaultValue={defaultState.userConfiguration.particleSize}
-            />
-            {this.props.isArbitraryMode ? (
-              <NumberSliderSetting
-                label={settings.clippingDistanceArbitrary}
-                min={userSettings.clippingDistanceArbitrary.minimum}
-                max={userSettings.clippingDistanceArbitrary.maximum}
-                value={userConfiguration.clippingDistanceArbitrary}
-                onChange={this.onChangeUser.clippingDistanceArbitrary}
-                defaultValue={defaultState.userConfiguration.clippingDistanceArbitrary}
-              />
-            ) : (
-              <LogSliderSetting
-                label={settings.clippingDistance + ` (${unit})`}
-                roundToDigit={3}
-                min={userSettings.clippingDistance.minimum}
-                max={userSettings.clippingDistance.maximum}
-                value={userConfiguration.clippingDistance}
-                onChange={this.onChangeUser.clippingDistance}
-                defaultValue={defaultState.userConfiguration.clippingDistance}
-              />
-            )}
-            <SwitchSetting
-              label={settings.overrideNodeRadius}
-              value={userConfiguration.overrideNodeRadius}
-              onChange={this.onChangeUser.overrideNodeRadius}
-            />
-            <SwitchSetting
-              label={settings.centerNewNode}
-              value={userConfiguration.centerNewNode}
-              onChange={this.onChangeUser.centerNewNode}
-              tooltipText="When disabled, the active node will not be centered after node creation/deletion."
-            />
-            <SwitchSetting
-              label={settings.applyNodeRotationOnActivation}
-              value={userConfiguration.applyNodeRotationOnActivation}
-              onChange={this.onChangeUser.applyNodeRotationOnActivation}
-              tooltipText="If enabled, the rotation that was active when a node was created will be set when activating the node."
-            />
-            <SwitchSetting
-              label={settings.highlightCommentedNodes}
-              value={userConfiguration.highlightCommentedNodes}
-              onChange={this.onChangeUser.highlightCommentedNodes}
-            />{" "}
-          </div>
-        ) : null}
-      </React.Fragment>
     );
   };
 
@@ -1496,7 +390,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </DndContext>
 
         {segmentationLayerSettings}
-        {this.getSkeletonLayer()}
+        <SkeletonLayerSettings />
 
         {this.props.annotation.isUpdatingCurrentlyAllowed &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
@@ -1558,27 +452,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 }
 
 const mapStateToProps = (state: WebknossosState) => ({
-  userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
   annotation: state.annotation,
-  task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
-  isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
     state.activeUser != null ? isUserAdminOrDatasetManager(state.activeUser) : false,
-  isAdminOrManager: state.activeUser != null ? isUserAdminOrManager(state.activeUser) : false,
-  isSuperUser: state.activeUser?.isSuperUser || false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   onChange(propertyName: keyof DatasetConfiguration, value: ValueOf<DatasetConfiguration>) {
     dispatch(updateDatasetSettingAction(propertyName, value));
-  },
-
-  onChangeUser(propertyName: keyof UserConfiguration, value: ValueOf<UserConfiguration>) {
-    dispatch(updateUserSettingAction(propertyName, value));
   },
 
   onChangeLayer(
@@ -1587,32 +472,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     value: ValueOf<DatasetLayerConfiguration>,
   ) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
-  },
-
-  onClipHistogram(layerName: string, shouldAdjustClipRange: boolean) {
-    return dispatchClipHistogramAsync(layerName, shouldAdjustClipRange, dispatch);
-  },
-
-  onChangeRadius(radius: number) {
-    dispatch(setNodeRadiusAction(radius));
-  },
-
-  onSetPosition(position: Vector3) {
-    dispatch(setPositionAction(position));
-  },
-
-  onChangeShowSkeletons(showSkeletons: boolean) {
-    dispatch(setShowSkeletonsAction(showSkeletons));
-  },
-
-  onZoomToMag(layerName: string, mag: Vector3) {
-    const targetZoomValue = getMaxZoomValueForMag(Store.getState(), layerName, mag);
-    dispatch(setZoomStepAction(targetZoomValue));
-    return targetZoomValue;
-  },
-
-  onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {
-    dispatch(editAnnotationLayerAction(tracingId, layerProperties));
   },
 
   reloadHistogram(layerName: string) {
@@ -1629,10 +488,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
         }),
       ),
     );
-  },
-
-  deleteAnnotationLayer(tracingId: string, type: AnnotationLayerType, layerName: string) {
-    dispatch(pushSaveQueueTransaction([deleteAnnotationLayer(tracingId, layerName, type)]));
   },
 });
 

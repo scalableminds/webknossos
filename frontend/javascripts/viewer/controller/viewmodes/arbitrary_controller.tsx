@@ -250,6 +250,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           api.tracing.centerPositionAnimated(
             getNodePosition(activeNode, state),
             false,
+            true,
             activeNode.rotation,
           );
         }

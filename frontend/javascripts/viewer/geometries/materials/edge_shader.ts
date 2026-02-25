@@ -174,6 +174,7 @@ void main() {
       return;
     }
 
+    // As nodes are rendered in the center of a voxel, so are edges.
     vec3 positionWithOffset = position + vec3(0.5);
 
     <% if (tpsTransform != null) { %>

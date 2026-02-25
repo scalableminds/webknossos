@@ -284,6 +284,7 @@ void main() {
       return;
     }
 
+    // Nodes are rendered in the center of a voxel.
     vec3 positionWithOffset = position + vec3(0.5);
 
     <% if (tpsTransform != null) { %>

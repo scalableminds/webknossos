@@ -1212,7 +1212,8 @@ class TracingApi {
     if (!treeAndNode) return;
 
     const [_activeTree, node] = treeAndNode;
-    Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
+    const nodePosition = getNodePosition(node, Store.getState(), true);
+    Store.dispatch(setPositionAction(nodePosition));
   };
 
   /**
@@ -1416,6 +1417,7 @@ class TracingApi {
   centerPositionAnimated(
     position: Vector3,
     skipCenteringAnimationInThirdDimension: boolean = true,
+    useOffsetToCenterNode: boolean = false,
     rotation?: Vector3,
   ): void {
     const { viewModeData, flycam } = Store.getState();
@@ -1442,6 +1444,9 @@ class TracingApi {
       positionY: number;
       positionZ: number;
     };
+    // This offset is needed when dealing with node positions to compensate for the fact that
+    // nodes are rendered in the center of the voxel.
+    const maybeCenteringOffset = useOffsetToCenterNode ? 0.5 : 0;
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
@@ -1450,9 +1455,9 @@ class TracingApi {
     tween
       .to(
         {
-          positionX: position[0],
-          positionY: position[1],
-          positionZ: position[2],
+          positionX: position[0] + maybeCenteringOffset,
+          positionY: position[1] + maybeCenteringOffset,
+          positionZ: position[2] + maybeCenteringOffset,
         },
         200,
       )

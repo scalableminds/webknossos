@@ -1,6 +1,7 @@
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import svgr from "vite-plugin-svgr";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 import analyzer from "vite-bundle-analyzer";
@@ -8,26 +9,22 @@ import analyzer from "vite-bundle-analyzer";
 import path from "node:path";
 import fs from "node:fs";
 
-// https://vite.dev/config/
+// This alias is mostly for resolves in LESS-files
+// Code-related resolves are handled by "paths" in tsconfig.ts, tsconfigPaths-plugin respectively
+const alias = {
+  "@images": path.resolve(__dirname, "frontend/assets/images"),
+};
 
+// https://vite.dev/config/
 export const viteConfig = {
-  publicDir: "frontend/assets",
-  resolve: {
-    alias: {
-      libs: path.resolve(__dirname, "frontend/javascripts/libs"),
-      viewer: path.resolve(__dirname, "frontend/javascripts/viewer"),
-      admin: path.resolve(__dirname, "frontend/javascripts/admin"),
-      types: path.resolve(__dirname, "frontend/javascripts/types"),
-      dashboard: path.resolve(__dirname, "frontend/javascripts/dashboard"),
-      router: path.resolve(__dirname, "frontend/javascripts/router"),
-      messages: path.resolve(__dirname, "frontend/javascripts/messages.tsx"),
-      app: path.resolve(__dirname, "frontend/javascripts/app.ts"),
-      theme: path.resolve(__dirname, "frontend/javascripts/theme.tsx"),
-    },
-  },
+  // publicDir: "/assets",
+  resolve: { alias },
   plugins: [
     // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
     react(),
+    svgr({
+      svgrOptions: { icon: true },
+    }),
     tsconfigPaths(),
     wasm(),
     viteProtobufPlugin({
@@ -38,7 +35,7 @@ export const viteConfig = {
     exclude: ["three-mesh-bvh"],
   },
   build: {
-    copyPublicDir: true, // copy all frontend/assets (images, etc.) to public/assets
+    copyPublicDir: true, // copy all /assets (images, etc.) to public/assets
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,
     sourcemap: true,
@@ -54,7 +51,7 @@ export const viteConfig = {
   },
   worker: {
     format: "es",
-    plugins: () => [wasm()],
+    plugins: () => [wasm(), tsconfigPaths()],
   },
   server: {
     port: 9000,

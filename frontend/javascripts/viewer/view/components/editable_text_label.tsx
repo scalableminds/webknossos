@@ -14,6 +14,7 @@ type Rule = {
   min?: number;
   validator?: (arg0: string) => ValidationResult;
 };
+
 export type EditableTextLabelProp = {
   value: string;
   onChange: (newValue: string) => any;
@@ -33,6 +34,7 @@ export type EditableTextLabelProp = {
   onRenameStart?: (() => void) | undefined;
   onRenameEnd?: (() => void) | undefined;
 };
+
 function EditableTextLabel(props: EditableTextLabelProp) {
   const {
     value: propValue,

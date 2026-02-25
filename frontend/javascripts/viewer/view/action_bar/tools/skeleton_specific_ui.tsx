@@ -1,4 +1,6 @@
-import { ExportOutlined } from "@ant-design/icons";
+import Icon, { ExportOutlined } from "@ant-design/icons";
+import MergerModeIcon from "@images/icons/icon-merger-mode.svg?react";
+import SomaClickingIcon from "@images/icons/icon-soma-clicking.svg?react";
 import { Badge, Space } from "antd";
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -15,11 +17,7 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action_bar/materialize_volume_annotation_modal";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-import {
-  ACTIONBAR_MARGIN_LEFT,
-  IMG_STYLE_FOR_SPACEY_ICONS,
-  NARROW_BUTTON_STYLE,
-} from "./tool_helpers";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 export function SkeletonSpecificButtons() {
   const dispatch = useDispatch();
@@ -79,11 +77,7 @@ export function SkeletonSpecificButtons() {
           active={isNewNodeNewTreeModeOn}
           title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
         >
-          <img
-            style={IMG_STYLE_FOR_SPACEY_ICONS}
-            src="/images/soma-clicking-icon.svg"
-            alt="Single Node Tree Mode"
-          />
+          <Icon component={SomaClickingIcon} aria-label="Single Node Tree Mode" />
         </ToggleButton>
       )}
       {isSplitToolkit ? null : (
@@ -97,11 +91,7 @@ export function SkeletonSpecificButtons() {
           disabled={isMergerModeDisabled}
           title={mergerModeTooltipText}
         >
-          <img
-            style={IMG_STYLE_FOR_SPACEY_ICONS}
-            src="/images/merger-mode-icon.svg"
-            alt="Merger Mode"
-          />
+          <Icon component={MergerModeIcon} aria-label="Merger Mode" />
         </ToggleButton>
       )}
       <ToggleButton
@@ -156,7 +146,7 @@ function CreateTreeButton() {
     >
       <ButtonComponent
         onClick={handleCreateTree}
-        style={{ ...NARROW_BUTTON_STYLE, paddingRight: 5 }}
+        style={NARROW_BUTTON_STYLE}
         title={`Create a new Tree (C) – ${activeTreeHint}`}
       >
         <i

@@ -1,4 +1,7 @@
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
+import vxAlignmentSchema from "@images/vx/alignment-schema.png";
+import vxManualAnnotationsVertical from "@images/vx/manual-annotations-vertical.png";
+import vxSegmentationL4denseMottaEtAlDemoRotated from "@images/vx/segmentation-l4dense-motta-et-al-demo-rotated.jpg";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
@@ -125,7 +128,7 @@ const segmentationBanner = (
   <div
     className="crosslink-box"
     style={{
-      background: "url(/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
+      background: `url(${vxSegmentationL4denseMottaEtAlDemoRotated})`,
       height: 500,
       backgroundSize: "110%",
       padding: 0,
@@ -173,7 +176,7 @@ const alignBanner = (
       Are you looking for dataset alignment or stitching?
     </h4>
     <img
-      src="/images/vx/alignment-schema.png"
+      src={vxAlignmentSchema}
       alt="Schematic Alignment"
       style={{
         width: "100%",
@@ -202,7 +205,7 @@ const manualAnnotationBanner = (
   <div
     className="crosslink-box"
     style={{
-      background: "url(/images/vx/manual-annotations-vertical.png)",
+      background: `url(${vxManualAnnotationsVertical})`,
       height: 500,
       backgroundSize: "110%",
       padding: 0,

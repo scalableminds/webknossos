@@ -10,6 +10,7 @@ import {
 import { type MenuProps, notification, Space } from "antd";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
+import { ThemedIcon } from "components/themed_icon";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import difference from "lodash-es/difference";
@@ -55,7 +56,6 @@ import {
   type TreeNode,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
-import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
 
 type BatchActionsType = {
   type: BatchActionType;
@@ -213,7 +213,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
           hideContextMenu();
         },
         title: "Hide/Show Edges of This Tree",
-        icon: <HideTreeEdgesIcon />,
+        icon: <ThemedIcon name="icon-hide-skeleton-edges" aria-label="Hide Tree Edges Icon" />,
         label: "Hide/Show Edges of This Tree",
       },
       isAgglomerateSkeleton

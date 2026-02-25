@@ -1,3 +1,7 @@
+import Icon from "@ant-design/icons";
+import AffineTransformationIcon from "@images/icons/icon-affine-transformation.svg?react";
+import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react";
+import TpsTransformationIcon from "@images/icons/icon-tps-transformation.svg?react";
 import { useWkSelector } from "libs/react_hooks";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
@@ -44,9 +48,9 @@ export default function LayerTransformationIcon({
   };
 
   const typeToImage = {
-    none: "icon-no-transformation.svg",
-    thin_plate_spline: "icon-tps-transformation.svg",
-    affine: "icon-affine-transformation.svg",
+    none: NoTransformationIcon,
+    thin_plate_spline: TpsTransformationIcon,
+    affine: AffineTransformationIcon,
   };
 
   // Cannot toggle transforms for a layer that cannot have no transforms or turn them on in case the layer has no transforms.
@@ -96,10 +100,9 @@ export default function LayerTransformationIcon({
             } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
       }
       icon={
-        <img
-          src={`/assets/images/${typeToImage[isRenderedNatively ? "none" : transform.type]}`}
-          alt="Transformed Layer Icon"
-          style={{ width: "0.9em", height: "0.9em", marginTop: "-3px" }}
+        <Icon
+          component={typeToImage[isRenderedNatively ? "none" : transform.type]}
+          aria-label="Transformed Layer Icon"
         />
       }
     />

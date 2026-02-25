@@ -1,3 +1,7 @@
+import Icon from "@ant-design/icons";
+import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
+import LassoIcon from "@images/icons/icon-lasso.svg?react";
+import QuickSelectToolIcon from "@images/icons/icon-quick-select-tool.svg?react";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -11,7 +15,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
-import { IMG_STYLE_FOR_SPACEY_ICONS, ToolRadioButton } from "./tool_helpers";
+import { ToolRadioButton } from "./tool_helpers";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
@@ -180,13 +184,11 @@ function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled}
       value={AnnotationTool.TRACE.id}
     >
-      <img
-        src="/images/lasso.svg"
-        alt="Trace Tool Icon"
+      <Icon
+        component={LassoIcon}
+        aria-label="Trace Tool Icon"
         style={{
-          marginRight: 4,
           opacity: disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled ? 0.5 : 1,
-          ...IMG_STYLE_FOR_SPACEY_ICONS,
         }}
       />
       {adaptedActiveTool === AnnotationTool.TRACE ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
@@ -292,12 +294,11 @@ function QuickSelectTool(_props: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled}
       value={AnnotationTool.QUICK_SELECT.id}
     >
-      <img
-        src="/images/quick-select-tool.svg"
-        alt="Quick Select Icon"
+      <Icon
+        component={QuickSelectToolIcon}
+        aria-label="Quick Select Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled ? 0.5 : 1,
-          ...IMG_STYLE_FOR_SPACEY_ICONS,
         }}
       />
     </ToolRadioButton>
@@ -318,12 +319,11 @@ function BoundingBoxTool(_props: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled}
       value={AnnotationTool.BOUNDING_BOX.id}
     >
-      <img
-        src="/images/bounding-box.svg"
-        alt="Bounding Box Icon"
+      <Icon
+        component={BoundingBoxIcon}
+        aria-label="Bounding Box Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled ? 0.5 : 1,
-          ...IMG_STYLE_FOR_SPACEY_ICONS,
         }}
       />
     </ToolRadioButton>

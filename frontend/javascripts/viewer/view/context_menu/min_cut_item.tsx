@@ -39,7 +39,6 @@ export function useMaybeMinCutItem(clickedTree: Tree | null): SubMenuType | null
   return {
     key: "min-cut",
     label: "Perform Min-Cut (Experimental)",
-    popupClassName: "ant-dropdown",
     children: [
       {
         key: "choose-bbox-group",

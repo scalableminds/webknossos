@@ -170,6 +170,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   return [
     isProofreadingActive && activeUnmappedSegmentId != null && isAlreadySelected
       ? {
+          // If a supervoxel is selected (and thus highlighted), allow to select it.
           key: "deactivate-segment",
           onClick: () => actions.setActiveCell(clickedMeshId, undefined, undefined, undefined),
           label: `Deselect ${segmentOrSuperVoxel} (${segmentIdLabel})`,

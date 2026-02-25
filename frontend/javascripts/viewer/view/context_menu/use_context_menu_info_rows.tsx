@@ -39,6 +39,10 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
     setSegmentStatsTriggerDate(new Date());
   };
 
+  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
+  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+  // Thus the segment id is always unambiguous / clearly defined.
   const clickedSegmentOrMeshId =
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
@@ -176,7 +180,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
   if (wasSegmentOrMeshClicked) {
     infoRows.push(
       getInfoMenuItem(
-        "copy-cell",
+        "copy-segment-id",
         <Space size="small">
           <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
@@ -196,7 +200,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
           : segmentName;
       infoRows.push(
         getInfoMenuItem(
-          "copy-cell",
+          "copy-segment-name",
           <Space size="small">
             <TagOutlined />
             {`Segment Name: ${segmentNameLabel}`}

@@ -3,8 +3,6 @@
   "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
   sans-serif;
 
-
-
 :root {
   --color-wk-blue: #5660ff;
   --color-black: rgba(0, 0, 0, 0.85);
@@ -24,8 +22,8 @@
 .ant-app {
   // attach these variables to the antd <App> component otherwise these `--ant` variables are not in scope yet 
   // the <App> component is expected to be there only once and on a very high level in the DOM tree
-  --background-blue-organelles: url(/images/background_mixed_cells_drawn.svg) 0 / cover no-repeat, var(--ant-color-primary);
-  --background-blue-neurons: url(/images/background_neurons_drawn.svg) 0 / cover no-repeat, var(--ant-color-primary);
+  --background-blue-organelles: url("@images/backgrounds/background-mixed-cells-drawn.svg") 0 / cover no-repeat, var(--ant-color-primary);
+  --background-blue-neurons: url("@images/backgrounds/background-neurons-drawn.svg") 0 / cover no-repeat, var(--ant-color-primary);
 
   // Override react-tooltip colors
   --rt-color-error: var(--ant-color-error);

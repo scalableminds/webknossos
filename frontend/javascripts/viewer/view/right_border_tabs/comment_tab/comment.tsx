@@ -1,3 +1,4 @@
+import { CommentOutlined } from "@ant-design/icons";
 import { Popover } from "antd";
 import classNames from "classnames";
 import { document } from "libs/window";
@@ -85,7 +86,7 @@ function Comment({ comment, isActive }: CommentProps) {
             }}
           >
             <a onClick={handleClick}>
-              <i className="far fa-comment-dots" />
+              <CommentOutlined />
             </a>
           </span>
         </ActiveCommentPopover>

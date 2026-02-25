@@ -1,7 +1,7 @@
+import backgroundMixedCellsDrawn from "@images/backgrounds/background-mixed-cells-drawn.svg";
 import { Button, Card, ConfigProvider, Result, Row, Typography } from "antd";
 import useInterval from "beautiful-react-hooks/useInterval";
 import { ColorWKBlue, getAntdTheme } from "theme";
-import backgroundOrganelles from "/images/background_mixed_cells_drawn.svg";
 
 export function FailedToLoadView() {
   useInterval(() => {
@@ -18,7 +18,7 @@ export function FailedToLoadView() {
         style={{
           height: "100vh",
           marginTop: "calc(-1 * var(--navbar-height))",
-          backgroundImage: `url(${backgroundOrganelles})`,
+          backgroundImage: `url(${backgroundMixedCellsDrawn})`,
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
           backgroundAttachment: "fixed",

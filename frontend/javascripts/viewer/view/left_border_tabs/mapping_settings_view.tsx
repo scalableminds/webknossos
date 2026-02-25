@@ -1,10 +1,11 @@
 import { Select, type SelectProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import { localeCompareBy } from "libs/utils";
 import messages from "messages";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { MappingStatusEnum } from "viewer/constants";
+import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
 import {
   getMappingInfo,
@@ -60,6 +61,10 @@ function MappingSettingsView({ layerName }: Props) {
   );
   const isMergerModeEnabled = useSelector(
     (state: WebknossosState) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+
+  const isViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
   const allowUpdate = useSelector(
     (state: WebknossosState) => state.annotation.isUpdatingCurrentlyAllowed,
@@ -158,10 +163,14 @@ function MappingSettingsView({ layerName }: Props) {
     [mappingName, editableMapping],
   );
 
+  const isUpdatingAllowed = isViewMode ? true : allowUpdate;
   const isDisabled = useMemo(
     () =>
-      !allowUpdate || isEditableMappingActive || isMappingLockedState || isAnnotationLockedByOwner,
-    [allowUpdate, isEditableMappingActive, isMappingLockedState, isAnnotationLockedByOwner],
+      !isUpdatingAllowed ||
+      isEditableMappingActive ||
+      isMappingLockedState ||
+      isAnnotationLockedByOwner,
+    [isUpdatingAllowed, isEditableMappingActive, isMappingLockedState, isAnnotationLockedByOwner],
   );
 
   const disabledMessage = useMemo(() => {

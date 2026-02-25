@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="20"
+   height="20"
+   viewBox="0 0 5.2916665 5.2916668"
+   version="1.1"
+   id="svg5349"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="icon-downsampling.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview5351"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="22.627417"
+     inkscape:cx="5.5463688"
+     inkscape:cy="8.0654367"
+     inkscape:window-width="1920"
+     inkscape:window-height="1068"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs5346" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       x="0.59925056"
+       y="0.59925061"
+       width="4.0931654"
+       height="4.0931654"
+       style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.185208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+       id="rect44" />
+    <path
+       id="rect46"
+       style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.185208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+       d="M 0.65556836,2.0723111 H 3.2196312 v 2.599986"
+       sodipodi:nodetypes="ccc" />
+    <path
+       id="rect50"
+       style="clip-rule:evenodd;fill:none;fill-rule:evenodd;stroke:#5660ff;stroke-width:0.185208;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none"
+       d="M 0.65026235,3.1779036 H 2.1146746 v 1.4925112"
+       sodipodi:nodetypes="ccc" />
+  </g>
+</svg>

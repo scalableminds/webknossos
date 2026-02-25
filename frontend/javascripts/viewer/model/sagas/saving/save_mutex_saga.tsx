@@ -37,8 +37,8 @@ import { ensureWkInitialized } from "../ready_sagas";
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
-const ACQUIRE_MUTEX_INTERVAL = process.env.IS_TESTING ? 1 * 1000 : 60 * 1000;
-const DELAY_AFTER_FAILED_MUTEX_FETCH = process.env.IS_TESTING ? 1 * 1000 : 10 * 1000;
+const ACQUIRE_MUTEX_INTERVAL = import.meta.env.MODE === "test" ? 1 * 1000 : 60 * 1000;
+const DELAY_AFTER_FAILED_MUTEX_FETCH = import.meta.env.MODE === "test" ? 1 * 1000 : 10 * 1000;
 const RETRY_COUNT = 20; // 12 retries with 60/12=5 seconds backup delay
 const INITIAL_BACKOFF_TIME = 750;
 const BACKOFF_TIME_MULTIPLIER = 1.2;
@@ -207,7 +207,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         yield* put(setIsMutexAcquiredAction(canEdit));
       }
     } catch (error) {
-      if (process.env.IS_TESTING) {
+      if (import.meta.env.MODE === "test") {
         // In unit tests, that explicitly control this generator function,
         // the console.error after the next yield won't be printed, because
         // test assertions on the yield will already throw.
@@ -249,7 +249,7 @@ function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
         return;
       }
     } catch (error) {
-      if (process.env.IS_TESTING) {
+      if (import.meta.env.MODE === "test") {
         // In unit tests, that explicitly control this generator function,
         // the console.error after the next yield won't be printed, because
         // test assertions on the yield will already throw.

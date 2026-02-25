@@ -446,7 +446,7 @@ function TaskListView({ initialFieldValues }: Props) {
             rel="noopener noreferrer"
             style={{
               background:
-                'url("/assets/images/vx/manual-annotations-horizontal.png") center center / 110%',
+                'url("/images/vx/manual-annotations-horizontal.png") center center / 110%',
               height: "73px",
               padding: "0px",
               width: "800px",

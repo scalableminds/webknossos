@@ -95,7 +95,7 @@ function* restartableSaga(): Saga<void> {
     rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
 
-    if (!process.env.IS_TESTING) {
+    if (import.meta.env.MODE !== "test") {
       ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
 
       // Hide potentially old error highlighting which mentions a retry mechanism.

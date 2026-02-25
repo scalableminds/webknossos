@@ -50,6 +50,8 @@ public/commit.txt
 public/docs
 public/docs/frontend-api
 public/test-bundle
+public/images
+public/wasm
 public/index.html
 frontend/stylesheets/fontawesome*
 src/main/scala/rebel.xml
@@ -117,3 +119,6 @@ tools/debugging/version-visualizer/data/*
 !.yarn/sdks
 !.yarn/versions
 tools/**/.yarn/*
+public/index.html
+
+tsconfig.tsbuildinfo

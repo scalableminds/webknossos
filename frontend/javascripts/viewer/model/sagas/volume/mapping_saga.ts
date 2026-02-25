@@ -64,8 +64,8 @@ import {
   MAPPING_MESSAGE_KEY,
   setCacheResultForDiffMappings,
 } from "viewer/model/bucket_data_handling/mappings";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
 import { api, Model } from "viewer/singletons";
 import type {
@@ -84,7 +84,7 @@ import { ensureWkInitialized } from "../ready_sagas";
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
 
-const BUCKET_WATCHING_THROTTLE_DELAY = process.env.IS_TESTING ? 5 : 500;
+const BUCKET_WATCHING_THROTTLE_DELAY = import.meta.env.MODE === "test" ? 5 : 500;
 
 const takeLatestMappingChange = (
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
@@ -435,7 +435,7 @@ function* handleSetMapping(
       yield* call(setCustomColors, action, classes, layerName);
     }
 
-    if (process.env.IS_TESTING) {
+    if (import.meta.env.MODE === "test") {
       // in test context, the mapping.ts code is not executed (which is usually responsible
       // for finishing the initialization).
       // TODO #9064: Refactor this
@@ -593,7 +593,7 @@ function* updateLocalHdf5Mapping(
 
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
 
-  if (process.env.IS_TESTING) {
+  if (import.meta.env.MODE === "test") {
     // in test context, the mapping.ts code is not executed (which is usually responsible
     // for finishing the initialization).
     yield put(finishMappingInitializationAction(layerName));

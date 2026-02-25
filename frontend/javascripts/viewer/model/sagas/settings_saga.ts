@@ -9,7 +9,7 @@ import {
   type UpdateUserSettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { type Saga, select, take } from "viewer/model/sagas/effect-generators";
+import { type Saga, select, take } from "viewer/model/sagas/effect_generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,

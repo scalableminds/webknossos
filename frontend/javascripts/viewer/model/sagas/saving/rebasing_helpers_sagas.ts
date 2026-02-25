@@ -5,8 +5,8 @@ import { call, put } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type { Mapping, NumberLikeMap, SaveQueueEntry } from "viewer/store";
 import type {
   MergeAgglomerateUpdateAction,

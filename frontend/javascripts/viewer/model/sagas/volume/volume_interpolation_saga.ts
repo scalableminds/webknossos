@@ -31,8 +31,8 @@ import {
   registerLabelPointAction,
 } from "viewer/model/actions/volumetracing_actions";
 import Dimensions from "viewer/model/dimensions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type { VoxelBuffer2D } from "viewer/model/volumetracing/section_labeling";
 import { api, Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";

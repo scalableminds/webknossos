@@ -172,7 +172,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
 
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
-      val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      val edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
       if (nodeCount > edgeLimit) {
         throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
       }

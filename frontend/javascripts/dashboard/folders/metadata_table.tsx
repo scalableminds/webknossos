@@ -6,6 +6,7 @@ import {
   PlusOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
+import metadataTeaserImage from "@images/backgrounds/metadata-teaser.svg";
 import {
   Button,
   Dropdown,
@@ -86,7 +87,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
     <Tag variant="outlined">
       <div className="flex-center-child empty-metadata-placeholder">
         <img
-          src="/images/metadata-teaser.svg"
+          src={metadataTeaserImage}
           alt="Metadata preview"
           style={{ width: "60%", marginBottom: 16 }}
         />

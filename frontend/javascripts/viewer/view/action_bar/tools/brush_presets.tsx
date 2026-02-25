@@ -1,4 +1,5 @@
-import { SettingOutlined } from "@ant-design/icons";
+import Icon, { SettingOutlined } from "@ant-design/icons";
+import BrushSizeIcon from "@images/icons/icon-brush-size.svg?react";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
@@ -241,14 +242,7 @@ export function ChangeBrushSizePopover() {
             padding: 0,
           }}
         >
-          <img
-            src="/images/brush-size-icon.svg"
-            alt="Brush Size"
-            style={{
-              width: 20,
-              height: 20,
-            }}
-          />
+          <Icon component={BrushSizeIcon} aria-label="Brush Size" />
         </ButtonComponent>
       </Popover>
     </FastTooltip>

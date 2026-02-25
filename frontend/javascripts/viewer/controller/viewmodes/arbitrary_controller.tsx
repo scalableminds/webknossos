@@ -50,22 +50,22 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import ArbitraryView from "viewer/view/arbitrary_view";
+import {
+  ArbitraryControllerNavigationConfigKeyboardShortcuts,
+  ArbitraryControllerNavigationKeyboardShortcuts,
+  ArbitraryControllerNoLoopKeyboardShortcuts,
+} from "viewer/view/keyboard_shortcuts/arbitrary_mode_keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import type {
+  KeyboardShortcutLoopedHandlerMap,
+  KeyboardShortcutNoLoopedHandlerMap,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import {
   buildKeyBindingsFromConfigAndLoopedMapping,
   buildKeyBindingsFromConfigAndMapping,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { SkeletonToolController } from "../combinations/tool_controls";
-import {
-  ArbitraryControllerNavigationKeyboardShortcuts,
-  ArbitraryControllerNavigationConfigKeyboardShortcuts,
-  ArbitraryControllerNoLoopKeyboardShortcuts,
-} from "viewer/view/keyboard_shortcuts/arbitrary_mode_keyboard_shortcut_constants";
-import type {
-  KeyboardShortcutLoopedHandlerMap,
-  KeyboardShortcutNoLoopedHandlerMap,
-} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {

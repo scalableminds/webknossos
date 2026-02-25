@@ -50,8 +50,8 @@ import {
 import {
   DEFAULT_ORTHO_VOLUME_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
   DEFAULT_ORTHO_VOLUME_NO_LOOPED_KEYBOARD_SHORTCUTS,
-  OrthoVolumeLoopDelayedConfigKeyboardShortcuts,
   OrthoVolumeLoopDelayedConfigKeyboardShortcutMetaInfo,
+  OrthoVolumeLoopDelayedConfigKeyboardShortcuts,
   OrthoVolumeNoLoopedKeyboardShortcutMetaInfo,
   OrthoVolumeNoLoopedKeyboardShortcuts,
 } from "./plane_mode/volume_tools_shortcut_constants";
@@ -128,6 +128,75 @@ const GeneralEditingKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap
           ] as [GeneralEditingKeyboardShortcuts, KeyboardShortcutMetaInfo],
       ),
     ) as KeyboardShortcutHandlerMetaInfoMap<GeneralEditingKeyboardShortcuts>;
+  })();
+
+export enum GeneralLayoutKeyboardShortcuts {
+  MAXIMIZE = "MAXIMIZE",
+  TOGGLE_LEFT_BORDER = "TOGGLE_LEFT_BORDER",
+  TOGGLE_RIGHT_BORDER = "TOGGLE_RIGHT_BORDER",
+}
+
+export const DEFAULT_GENERAL_LAYOUT_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<GeneralLayoutKeyboardShortcuts> =
+  {
+    [GeneralLayoutKeyboardShortcuts.MAXIMIZE]: [[["."]]],
+    [GeneralLayoutKeyboardShortcuts.TOGGLE_LEFT_BORDER]: [[["k"]]],
+    [GeneralLayoutKeyboardShortcuts.TOGGLE_RIGHT_BORDER]: [[["l"]]],
+  } as const;
+
+export const GeneralLayoutKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<GeneralLayoutKeyboardShortcuts> =
+  (() => {
+    const withDescription: Record<GeneralLayoutKeyboardShortcuts, string> = {
+      [GeneralLayoutKeyboardShortcuts.MAXIMIZE]: "Toggle Viewport Maximization",
+      [GeneralLayoutKeyboardShortcuts.TOGGLE_LEFT_BORDER]: "Toggle left Sidebars",
+      [GeneralLayoutKeyboardShortcuts.TOGGLE_RIGHT_BORDER]: "Toggle right Sidebars",
+    };
+    return Object.fromEntries(
+      Object.entries(withDescription).map(
+        ([handlerId, description]) =>
+          [
+            handlerId,
+            {
+              description,
+              domain: KeyboardShortcutDomain.GENERAL_EDITING,
+              looped: false,
+              collisionDomains: [KeyboardShortcutCollisionDomain.GENERAL],
+            },
+          ] as [GeneralLayoutKeyboardShortcuts, KeyboardShortcutMetaInfo],
+      ),
+    ) as KeyboardShortcutHandlerMetaInfoMap<GeneralLayoutKeyboardShortcuts>;
+  })();
+
+export enum CommentsTabKeyboardShortcuts {
+  NEXT_COMMENT = "NEXT_COMMENT",
+  PREVIOUS_COMMENT = "PREVIOUS_COMMENT",
+}
+
+export const DEFAULT_COMMENTS_TAB_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<CommentsTabKeyboardShortcuts> =
+  {
+    [CommentsTabKeyboardShortcuts.NEXT_COMMENT]: [[["n"]]],
+    [CommentsTabKeyboardShortcuts.PREVIOUS_COMMENT]: [[["p"]]],
+  } as const;
+
+export const CommentsTabKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<CommentsTabKeyboardShortcuts> =
+  (() => {
+    const withDescription: Record<CommentsTabKeyboardShortcuts, string> = {
+      [CommentsTabKeyboardShortcuts.NEXT_COMMENT]: "Select next comment",
+      [CommentsTabKeyboardShortcuts.PREVIOUS_COMMENT]: "Select previous comment",
+    };
+    return Object.fromEntries(
+      Object.entries(withDescription).map(
+        ([handlerId, description]) =>
+          [
+            handlerId,
+            {
+              description,
+              domain: KeyboardShortcutDomain.GENERAL_EDITING,
+              looped: false,
+              collisionDomains: [KeyboardShortcutCollisionDomain.GENERAL],
+            },
+          ] as [CommentsTabKeyboardShortcuts, KeyboardShortcutMetaInfo],
+      ),
+    ) as KeyboardShortcutHandlerMetaInfoMap<CommentsTabKeyboardShortcuts>;
   })();
 
 // ----- combined objects, types and so on -------------------

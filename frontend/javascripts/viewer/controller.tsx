@@ -35,8 +35,8 @@ import {
   GeneralKeyboardShortcuts,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "./view/keyboard_shortcuts/keyboard_shortcut_persistence";
-import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
 import type { KeyboardShortcutNoLoopedHandlerMap } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {

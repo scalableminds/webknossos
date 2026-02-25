@@ -1,3 +1,9 @@
+import {
+  type BrowserKeyComboEventProps,
+  bindKeyCombo,
+  type KeyEvent,
+  unbindKeyCombo,
+} from "@rwh/keystrokes";
 import { Keyboard } from "keyboardjs";
 import { us } from "keyboardjs/locales/us";
 import Date from "libs/date";
@@ -5,14 +11,9 @@ import Hammer from "libs/hammerjs_wrapper";
 import window, { document } from "libs/window";
 import extend from "lodash-es/extend";
 import { createNanoEvents, type Emitter } from "nanoevents";
+import type { ValueOf } from "types/globals";
 import type { OrthoView, Point2 } from "viewer/constants";
 import constants from "viewer/constants";
-import {
-  bindKeyCombo,
-  unbindKeyCombo,
-  type BrowserKeyComboEventProps,
-  type KeyEvent,
-} from "@rwh/keystrokes";
 import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
 
 // This is the main Input implementation.
@@ -113,6 +114,7 @@ type FullMouseBindingMap = Record<MouseClickEvents, MouseClickEventHandler> &
   Record<MouseScrollEvents, MouseScrollEventHandler> &
   Record<MouseHoverEvents, MouseHoverEventHandler> &
   Record<HammerJSEvents, HammerJSHandler>;
+export type MouseEventHandler = ValueOf<FullMouseBindingMap>;
 export type MouseBindingMap = Partial<FullMouseBindingMap>;
 
 type HammerJsEvent = {

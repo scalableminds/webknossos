@@ -1,6 +1,6 @@
 import { Button, Flex, Modal, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { KeyboardComboChain } from "./keyboard_shortcut_constants";
+import type { KeyboardComboChain } from "./keyboard_shortcut_types";
 import { formatKeyCombo, formatKeyComboChain, normalizeKeyName } from "./keyboard_shortcut_utils";
 
 const { Text } = Typography;

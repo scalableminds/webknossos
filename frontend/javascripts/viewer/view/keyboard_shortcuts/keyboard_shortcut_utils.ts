@@ -2,8 +2,8 @@ import type { KeyBindingLoopMap, KeyBindingMap } from "libs/input";
 import { flatten } from "lodash-es";
 import type {
   KeyboardComboChain,
-  KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutLoopedHandlerMap,
+  KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
 

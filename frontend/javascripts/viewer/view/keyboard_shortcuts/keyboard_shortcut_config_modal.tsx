@@ -2,6 +2,7 @@ import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@an
 import { Button, Flex, Input, Modal, Space, Switch, Table, Typography } from "antd";
 import app from "app";
 import Toast from "libs/toast";
+import { isEqual } from "lodash-es";
 import { useMemo, useState } from "react";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
@@ -12,10 +13,9 @@ import {
   saveKeyboardShortcuts,
   validateShortcutMapText,
 } from "./keyboard_shortcut_persistence";
+import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { formatKeyComboChain } from "./keyboard_shortcut_utils";
 import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
-import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
-import { isEqual } from "lodash-es";
 
 const { Text, Title } = Typography;
 

@@ -39,6 +39,10 @@ import SkeletonTabView from "viewer/view/right-border-tabs/trees_tab/skeleton_ta
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
+import { GeneralLayoutKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcut_constants";
+import { loadKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcut_persistence";
+import type { KeyboardShortcutNoLoopedHandlerMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfigAndMapping } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   adjustModelToBorderOpenStatus,
   getBorderOpenStatus,
@@ -257,17 +261,25 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     this.onAction(toggleMaximiseAction);
   };
 
+  getLayoutKeyboardShortcuts(): KeyboardShortcutNoLoopedHandlerMap<GeneralLayoutKeyboardShortcuts> {
+    return {
+      [GeneralLayoutKeyboardShortcuts.MAXIMIZE]: { onPressed: this.toggleMaximize },
+      [GeneralLayoutKeyboardShortcuts.TOGGLE_LEFT_BORDER]: {
+        onPressed: () => this.toggleBorder("left"),
+      },
+      [GeneralLayoutKeyboardShortcuts.TOGGLE_RIGHT_BORDER]: {
+        onPressed: () => this.toggleBorder("right"),
+      },
+    };
+  }
+
   attachKeyboardShortcuts() {
-    const keyboardNoLoop = new InputKeyboardNoLoop(
-      {
-        ".": this.toggleMaximize,
-        k: () => this.toggleBorder("left"),
-        l: () => this.toggleBorder("right"),
-      },
-      {
-        supportInputElements: false,
-      },
+    const keybindingConfig = loadKeyboardShortcuts();
+    const keyboardControls = buildKeyBindingsFromConfigAndMapping(
+      keybindingConfig,
+      this.getLayoutKeyboardShortcuts(),
     );
+    const keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
     return () => keyboardNoLoop.destroy();
   }
 

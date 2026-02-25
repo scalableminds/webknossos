@@ -1,9 +1,11 @@
 import features from "features";
 import type { ModifierKeys, MouseBindingMap } from "libs/input";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import { clamp } from "libs/utils";
 import { document } from "libs/window";
 import { Color } from "three";
+import { userSettings } from "types/schemas/user_settings.schema";
 import {
   ContourModeEnum,
   type OrthoView,
@@ -58,6 +60,7 @@ import {
   handlePickCell,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
@@ -77,12 +80,13 @@ import {
   proofreadMergeAction,
   toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
+  createBranchPointAction,
+  createTreeAction,
+  requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
-  createTreeAction,
-  createBranchPointAction,
-  requestDeleteBranchPointAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import {
@@ -97,36 +101,30 @@ import {
   computeQuickSelectForPointAction,
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
-  hideBrushAction,
-} from "viewer/model/actions/volumetracing_actions";
-import { api, Model } from "viewer/singletons";
-import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
-import {
   createCellAction,
+  hideBrushAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
-import { getDefaultBrushSizes } from "viewer/view/action-bar/tools/brush_presets";
-import { userSettings } from "types/schemas/user_settings.schema";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { api, Model } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
+import { getDefaultBrushSizes } from "viewer/view/action-bar/tools/brush_presets";
 import type ArbitraryView from "viewer/view/arbitrary_view";
 import type {
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutNoLoopedHandlerMap,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { OrthoBoundingBoxNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/bounding_box_tool_shortcut_constants";
+import { OrthoProofreadingNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/proofreading_tool_shortcut_constants";
 import {
   OrthoSkeletonLoopedKeyboardShortcuts,
   OrthoSkeletonNoLoopedKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/plane_mode/skeleton_tool_shortcut_constants";
-import { OrthoBoundingBoxNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/bounding_box_tool_shortcut_constants";
-import { OrthoProofreadingNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/proofreading_tool_shortcut_constants";
-import type PlaneView from "viewer/view/plane_view";
-import Toast from "libs/toast";
 import {
   OrthoVolumeLoopDelayedConfigKeyboardShortcuts,
   OrthoVolumeNoLoopedKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/plane_mode/volume_tools_shortcut_constants";
+import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
+import type PlaneView from "viewer/view/plane_view";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -171,7 +169,7 @@ abstract class ToolController {
   static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<never> {
     return {};
   }
-  static getLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<never> {
+  static getDelayedLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<never> {
     return {};
   }
 
@@ -507,7 +505,7 @@ export class SkeletonToolController extends ToolController {
     };
   }
 
-  static getLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoSkeletonLoopedKeyboardShortcuts> {
+  static getDelayedLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoSkeletonLoopedKeyboardShortcuts> {
     return {
       [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: {
         onPressedWithRepeat: () => moveNode(-1, 0),
@@ -671,7 +669,7 @@ class VolumeToolController extends ToolController {
     };
   }
 
-  static getLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> {
+  static getDelayedLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> {
     return {
       [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
         onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(-1),

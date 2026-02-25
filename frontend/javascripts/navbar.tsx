@@ -829,11 +829,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         >
           {getCollapsibleMenuTitle(
             "WEBKNOSSOS",
-            <img
-              src="/assets/images/logo-icon-only.svg"
-              className="logo icon-margin-right"
-              alt="logo"
-            />,
+            <img src="/images/logo-icon-only.svg" className="logo icon-margin-right" alt="logo" />,
             collapseAllNavItems,
           )}
         </Link>

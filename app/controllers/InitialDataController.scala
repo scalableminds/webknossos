@@ -90,7 +90,7 @@ Samplecountry
     Organization(
       "sample_organization",
       additionalInformation,
-      "/assets/images/logo.svg",
+      "/images/logo.svg",
       "Sample Organization",
       PricingPlan.Custom,
       Some(AiPlan.Power_AI),

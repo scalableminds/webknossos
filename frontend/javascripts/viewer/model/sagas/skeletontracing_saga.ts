@@ -61,8 +61,8 @@ import {
   createMutableTreeMapFromTreeArray,
   generateTreeName,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import {
   createEdge,

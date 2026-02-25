@@ -4,9 +4,9 @@ import react from "@vitejs/plugin-react";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 import analyzer from "vite-bundle-analyzer";
-import { visualizer } from "rollup-plugin-visualizer";
 
 import path from "node:path";
+import fs from "node:fs";
 
 // https://vite.dev/config/
 
@@ -26,12 +26,12 @@ export const viteConfig = {
     },
   },
   plugins: [
-    analyzer(),
-    react({ skipFastRefresh: true, fastRefresh: false }),
+    // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
+    react(),
     tsconfigPaths(),
     wasm(),
     viteProtobufPlugin({
-      protoDir: "webknossos-datastore/proto", // Your proto directory
+      protoDir: "webknossos-datastore/proto",
     }),
   ],
   optimizeDeps: {
@@ -40,38 +40,67 @@ export const viteConfig = {
   build: {
     copyPublicDir: true, // copy all frontend/assets (images, etc.) to public/assets
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
-    emptyOutDir: false,
+    emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {
-      plugins: [
-        visualizer({
-          // filename: "stats.html",
-          template: "network",
-        }),
-      ],
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/html2canvas")) {
             return "html2canvas";
           }
-          // if (id.includes("node_modules")) {
-          //   return "vendor";
-          // }
         },
       },
     },
   },
+  worker: {
+    format: "es",
+    plugins: () => [wasm()],
+  },
   server: {
     port: 9000,
     cors: true,
+    // https: {
+    //   // Enable HTTPS with self-signed certificates for testing passkeys etc
+    //   // Make sure you've generated SSL certificates using the ./tools/gen-ssl-dev-certs.sh script
+    //   key: fs.readFileSync("./target/dev.key.pem"),
+    //   cert: fs.readFileSync("./target/dev.cert.pem"),
+    // },
     proxy: {
-      // You can add more routes here, e.g. "^/(api|binary|auth)"
-      "^/(api|data|tracings)": {
+      // Proxy to SAM service
+      "^/dist/": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+      // Proxy to Tracingstore / Datastore
+      "^/(api|data(?!set)|tracings)": {
         target: "http://localhost:9001",
         changeOrigin: true,
       },
     },
-    hmr: false,
+    hmr: false, // disable Hot Module Replacement for now
+    ignored: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/frontend/javascripts/test/**",
+      "**/app/**",
+      "**/webknossos-tracingstore/**",
+      "**/webknossos-datastore/**",
+      "**/util/**",
+      "**/webknossos-jni/**",
+      "**/conf/**",
+      "**/project/**",
+      "**/docs/**",
+      "**/fossildb/**",
+      "**/target/**",
+      "**/schema/**",
+      "**/tools/**",
+      "**/binaryData/**",
+      "**/coverage/**",
+      "**/public/**",
+      "**/public-test/**",
+      "**/unreleased_changes/**",
+      "**/test/**",
+    ],
   },
   define: {
     global: "globalThis",

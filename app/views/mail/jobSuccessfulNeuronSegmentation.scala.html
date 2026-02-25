@@ -1,0 +1,28 @@
+@(name: String, datasetName: String, jobLink: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  Your segmentation has successfully finished and is ready for exploration. 
+  Click the button below to open the new, segmented dataset, or find it amongst your other datasets in the WEBKNOSSOS dashboard.
+</p>
+
+@emailButton("Open segmentation in WEBKNOSSOS", jobLink)
+
+<p>
+  If you are happy with the results, you can now apply the model to the full dataset. If you have already segmented the full volume, continue with the proofreading tools to review and finalize the segmentation.
+</p>
+<p>
+  If the results are not quite what you expected, <a href="https://youtu.be/MlT4MgU6ayw?si=daGZoX5Y-Y3FXSC5">custom training or fine-tuning</a> of models can help improve performance on your specific data. For especially large or complex neuron segmentation projects, we also offer dedicated <a href="https://home.webknossos.org/services/automated-segmentation">automated segmentation</a> and <a href="https://home.webknossos.org/services/connectome-reconstruction">connectome reconstruction services</a>.
+</p>
+@emailImage(
+  src = "https://static.webknossos.org/mails/email-full-segmentation-preview.gif",
+  alt = "A preview of a full, automated segmentation of a WEBKNOSSOS dataset",
+  width = 300,
+  height = 300
+)
+
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

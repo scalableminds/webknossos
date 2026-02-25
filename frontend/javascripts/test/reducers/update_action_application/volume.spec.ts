@@ -28,7 +28,7 @@ import type {
 } from "viewer/model/sagas/volume/update_actions";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import { combinedReducer, type WebknossosState } from "viewer/store";
-import { makeBasicGroupObject } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { makeBasicGroupObject } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterAll, describe, expect, test } from "vitest";
 
 const enforceVolumeTracing = (state: WebknossosState) => {

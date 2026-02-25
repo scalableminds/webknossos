@@ -54,7 +54,7 @@ import {
   additionallyExpandGroup,
   GroupTypeEnum,
   getNodeKey,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";

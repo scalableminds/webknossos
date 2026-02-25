@@ -75,7 +75,7 @@ import type {
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 
 type Description = {
   description: string;
@@ -290,7 +290,7 @@ const descriptionFns: Record<
     action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
   ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
-    icon: <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
+    icon: <img src="/images/hide-skeleton-edges-icon-light.svg" alt="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (
     action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,

@@ -10,8 +10,8 @@ import {
   setIsMeasuringAction,
 } from "viewer/model/actions/ui_actions";
 import { getNextTool } from "viewer/model/reducers/reducer_helpers";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import { Toolkits } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";

@@ -5,7 +5,7 @@ import Hammer from "libs/hammerjs_wrapper";
 import window, { document } from "libs/window";
 import extend from "lodash-es/extend";
 import { createNanoEvents, type Emitter } from "nanoevents";
-import type { Point2 } from "viewer/constants";
+import type { OrthoView, Point2 } from "viewer/constants";
 import constants from "viewer/constants";
 import {
   bindKeyCombo,
@@ -29,19 +29,14 @@ import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
 
+// Keyboard related types
 export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 export type KeyboardKeyOrCombo = string;
-type MouseButton = string;
-export type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
+export type KeyboardHandlerFn = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
-export type KeyComboNoLoopHandler = {
-  onPressed: KeyboardHandler;
-  onRelease?: KeyboardHandler;
-};
-export type KeyComboLoopHandler = {
-  onPressed?: KeyboardHandler;
-  onPressedWithRepeat: KeyboardHandler;
-  onRelease?: KeyboardHandler;
+export type KeyboardNoLoopHandler = {
+  onPressed: KeyboardHandlerFn;
+  onRelease?: KeyboardHandlerFn;
 };
 type KeyboardLoopFn = {
   (arg0: number, isOriginalEvent: boolean, event: KeyboardEvent): void;
@@ -54,9 +49,8 @@ export type KeyboardLoopHandler = {
   onReleased?: KeyboardLoopFn;
 };
 // TODO: Improve type naming.
-export type KeyBindingMap = Record<KeyboardKeyOrCombo, KeyComboNoLoopHandler>;
+export type KeyBindingMap = Record<KeyboardKeyOrCombo, KeyboardNoLoopHandler>;
 export type KeyBindingLoopMap = Record<KeyboardKeyOrCombo, KeyboardLoopHandler>;
-export type MouseBindingMap = Record<MouseButton, MouseHandler>;
 type KeystrokesHandlerArgs = {
   keyCombo: string;
   keyEvents: KeyEvent<KeyboardEvent, BrowserKeyComboEventProps>[];
@@ -74,12 +68,53 @@ type KeyboardBindingLoopPress = {
   onPressedWithRepeat: KeystrokesHandler;
   onReleased?: KeystrokesHandler;
 };
+
+// Mouse related types
+type MouseClickEvents =
+  | "leftClick"
+  | "rightClick"
+  | "leftDoubleClick"
+  | "middleClick"
+  | "leftMouseDown"
+  | "rightMouseDown"
+  | "leftMouseUp"
+  | "rightMouseUp";
+type MouseMoveEvents = "mouseMove" | "leftDownMove" | "middleDownMove" | "rightDownMove";
+type MouseScrollEvents = "scroll";
+type MouseHoverEvents = "over" | "out";
 type MouseButtonWhich = 1 | 2 | 3;
 type MouseButtonString = "left" | "middle" | "right";
+type HammerJSEvents = "pinch";
+type MouseMoveEventHandler = (
+  delta: Point2,
+  position: Point2,
+  id: OrthoView,
+  event: MouseEvent,
+) => void;
+type MouseClickEventHandler = (
+  position: Point2,
+  id: OrthoView,
+  event: MouseEvent,
+  isTouch: boolean,
+) => void;
+type MouseScrollEventHandler = (
+  deltaYorX: number,
+  modifier: ModifierKeys | null | undefined,
+) => void;
+type MouseHoverEventHandler = () => void;
 export type MouseHandler =
-  | ((deltaYorX: number, modifier: ModifierKeys | null | undefined) => void)
-  | ((position: Point2, id: string, event: MouseEvent, isTouch: boolean) => void)
-  | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
+  | MouseMoveEventHandler
+  | MouseClickEventHandler
+  | MouseScrollEventHandler
+  | MouseHoverEventHandler;
+export type HammerJSHandler = (delta: number, center: Point2) => void;
+type FullMouseBindingMap = Record<MouseClickEvents, MouseClickEventHandler> &
+  Record<MouseMoveEvents, MouseMoveEventHandler> &
+  Record<MouseScrollEvents, MouseScrollEventHandler> &
+  Record<MouseHoverEvents, MouseHoverEventHandler> &
+  Record<HammerJSEvents, HammerJSHandler>;
+export type MouseBindingMap = Partial<FullMouseBindingMap>;
+
 type HammerJsEvent = {
   center: Point2;
   pointers: Record<string, any>[];
@@ -164,7 +199,7 @@ export class InputKeyboardNoLoop {
     }
   };
 
-  attach(combo: KeyboardKeyOrCombo, { onPressed, onRelease }: KeyComboNoLoopHandler) {
+  attach(combo: KeyboardKeyOrCombo, { onPressed, onRelease }: KeyboardNoLoopHandler) {
     const onPressedGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
       if (!this.isStarted) {
         return;

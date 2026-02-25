@@ -2,7 +2,7 @@ import type { KeyBindingLoopMap, KeyBindingMap } from "libs/input";
 import { flatten } from "lodash-es";
 import type {
   KeyboardComboChain,
-  KeyboardShortcutHandlerMap,
+  KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
@@ -85,7 +85,7 @@ export function formatKeyComboChain(comboChain: KeyboardComboChain): string {
 
 export const buildKeyBindingsFromConfigAndMapping = (
   config: KeyboardShortcutsMap<string>,
-  handlerIdMapping: KeyboardShortcutHandlerMap<string>,
+  handlerIdMapping: KeyboardShortcutNoLoopedHandlerMap<string>,
 ): KeyBindingMap => {
   const mappedShortcuts = flatten(
     Object.entries(config).map(([handlerId, keyChainCombos]) => {

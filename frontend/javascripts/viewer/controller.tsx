@@ -36,7 +36,7 @@ import {
 } from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "./view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
-import type { KeyboardShortcutHandlerMap } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
+import type { KeyboardShortcutNoLoopedHandlerMap } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
@@ -58,10 +58,11 @@ type State = {
   organizationToSwitchTo: APIOrganization | null | undefined;
 };
 
-type ControllerEditAllowedKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<
+type ControllerEditAllowedKeyboardHandlerIdMap = KeyboardShortcutNoLoopedHandlerMap<
   GeneralKeyboardShortcuts | GeneralEditingKeyboardShortcuts
 >;
-type ControllerViewOnlyKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<GeneralKeyboardShortcuts>;
+type ControllerViewOnlyKeyboardHandlerIdMap =
+  KeyboardShortcutNoLoopedHandlerMap<GeneralKeyboardShortcuts>;
 type ControllerKeyboardHandlerIdMap =
   | ControllerEditAllowedKeyboardHandlerIdMap
   | ControllerViewOnlyKeyboardHandlerIdMap;
@@ -257,52 +258,69 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     const isInViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const editRelatedHandlers: KeyboardShortcutHandlerMap<GeneralEditingKeyboardShortcuts> = {
-      [GeneralEditingKeyboardShortcuts.SAVE]: (event: KeyboardEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-        Model.forceSave();
-      },
-      // Undo
-      [GeneralEditingKeyboardShortcuts.UNDO]: (event: KeyboardEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-        Store.dispatch(undoAction());
-      },
-      [GeneralEditingKeyboardShortcuts.REDO]: (event: KeyboardEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-        Store.dispatch(redoAction());
-      },
-    };
+    const editRelatedHandlers: KeyboardShortcutNoLoopedHandlerMap<GeneralEditingKeyboardShortcuts> =
+      {
+        [GeneralEditingKeyboardShortcuts.SAVE]: {
+          onPressed: (event: KeyboardEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            Model.forceSave();
+          },
+        },
+        // Undo
+        [GeneralEditingKeyboardShortcuts.UNDO]: {
+          onPressed: (event: KeyboardEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            Store.dispatch(undoAction());
+          },
+        },
+        [GeneralEditingKeyboardShortcuts.REDO]: {
+          onPressed: (event: KeyboardEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            Store.dispatch(redoAction());
+          },
+        },
+      };
 
     // Wrapped in a function to ensure each time the map is used, a new instance of getHandleToggleSegmentation
     // is created and thus "leastRecentlyUsedSegmentationLayer" not being shared between key binding maps.
     const keyboardShortcutsHandlerMapForController: ControllerKeyboardHandlerIdMap = {
-      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: () => {
-        Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING));
+      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: {
+        onPressed: () => {
+          Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING));
+        },
       },
-      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: () => {
-        Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
+      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: {
+        onPressed: () => {
+          Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
+        },
       },
-      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: () => {
-        Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
+      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: {
+        onPressed: () => {
+          Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
+        },
       },
-      [GeneralKeyboardShortcuts.CYCLE_VIEWMODE]: () => {
-        // rotate allowed modes
-        const state = Store.getState();
-        const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-        const currentViewMode = state.temporaryConfiguration.viewMode;
-        if (isProofreadingActive && currentViewMode === constants.MODE_PLANE_TRACING) {
-          // Skipping cycling view mode as m in proofreading is used to toggle multi cut tool.
-          return;
-        }
-        const { allowedModes } = state.annotation.restrictions;
-        const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
-        Store.dispatch(setViewModeAction(allowedModes[index]));
+      [GeneralKeyboardShortcuts.CYCLE_VIEWMODE]: {
+        onPressed: () => {
+          // rotate allowed modes
+          const state = Store.getState();
+          const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+          const currentViewMode = state.temporaryConfiguration.viewMode;
+          if (isProofreadingActive && currentViewMode === constants.MODE_PLANE_TRACING) {
+            // Skipping cycling view mode as m in proofreading is used to toggle multi cut tool.
+            return;
+          }
+          const { allowedModes } = state.annotation.restrictions;
+          const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
+          Store.dispatch(setViewModeAction(allowedModes[index]));
+        },
       },
-      [GeneralKeyboardShortcuts.TOGGLE_SEGMENTATION]: toggleSegmentationOpacity,
-      ...(isInViewMode ? {} : editRelatedHandlers),
+      [GeneralKeyboardShortcuts.TOGGLE_SEGMENTATION]: {
+        onPressed: toggleSegmentationOpacity,
+        ...(isInViewMode ? {} : editRelatedHandlers),
+      },
     };
     return keyboardShortcutsHandlerMapForController;
   }

@@ -1,4 +1,4 @@
-import type { KeyboardHandler, KeyboardLoopHandler } from "libs/input";
+import type { KeyboardLoopHandler, KeyboardNoLoopHandler } from "libs/input";
 
 export enum KeyboardShortcutDomain {
   GENERAL = "General",
@@ -46,10 +46,10 @@ export type KeyboardShortcutHandlerMetaInfoMap<KeyboardShortcutHandlerId extends
   KeyboardShortcutMetaInfo
 >;
 
-export type KeyboardShortcutHandlerMap<KeyboardShortcutHandlerId extends string> = Record<
+export type KeyboardShortcutNoLoopedHandlerMap<KeyboardShortcutHandlerId extends string> = Record<
   KeyboardShortcutHandlerId,
   // looped is per default false.
-  KeyboardHandler
+  KeyboardNoLoopHandler
 >;
 export type KeyboardShortcutLoopedHandlerMap<KeyboardShortcutHandlerId extends string> = Record<
   KeyboardShortcutHandlerId,

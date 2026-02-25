@@ -154,8 +154,8 @@ function* centerActiveNode(action: Action): Saga<void> {
       api.tracing.centerPositionAnimated(
         activeNodePosition,
         false,
-        true,
         applyRotation ? nodeRotation : undefined,
+        true,
       );
     }
     if (activeNode.additionalCoordinates) {

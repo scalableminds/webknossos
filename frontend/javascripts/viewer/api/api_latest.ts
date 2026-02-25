@@ -1417,8 +1417,8 @@ class TracingApi {
   centerPositionAnimated(
     position: Vector3,
     skipCenteringAnimationInThirdDimension: boolean = true,
-    useOffsetToCenterNode: boolean = false,
     rotation?: Vector3,
+    useOffsetToCenterNode: boolean = false,
   ): void {
     const { viewModeData, flycam } = Store.getState();
     const { activeViewport } = viewModeData.plane;

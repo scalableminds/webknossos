@@ -376,6 +376,7 @@ export function createSkeletonNode(
     api.tracing.centerPositionAnimated(
       position.floating,
       skipCenteringAnimationInThirdDimension,
+      undefined,
       true,
     );
   }

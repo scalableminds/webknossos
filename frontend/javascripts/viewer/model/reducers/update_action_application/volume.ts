@@ -8,7 +8,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { ApplicableVolumeUpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Segment, WebknossosState } from "viewer/store";
-import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { mapGroups } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { updateUserBoundingBox } from "../annotation_reducer";
 import {
   setLargestSegmentIdReducer,

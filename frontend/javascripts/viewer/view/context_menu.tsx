@@ -162,9 +162,9 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 import Store from "viewer/store";
-import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
-import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { LoadMeshMenuItemLabel } from "./right_border_tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

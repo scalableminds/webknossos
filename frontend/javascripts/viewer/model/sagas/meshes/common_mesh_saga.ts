@@ -15,9 +15,9 @@ import {
   type UpdateMeshVisibilityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
-import { stlMeshConstants } from "viewer/view/right-border-tabs/segments_tab/segments_view";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
+import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import type { FlycamAction } from "../../actions/flycam_actions";
 import type {

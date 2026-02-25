@@ -52,8 +52,12 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val address: String = get[String]("datastore.redis.address")
       val port: Int = get[Int]("datastore.redis.port")
     }
+
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
+    }
+    object AgglomerateGraph {
+      val maxEdges: Int = get[Int]("datastore.agglomerateGraph.maxEdges")
     }
     object DataVaults {
       val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
@@ -63,7 +67,15 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
       val credentialName: String = get[String]("datastore.s3Upload.credentialName")
     }
-    val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton, DataVaults, S3Upload)
+    val children = List(WebKnossos,
+                        WatchFileSystem,
+                        Cache,
+                        AdHocMesh,
+                        Redis,
+                        AgglomerateSkeleton,
+                        AgglomerateGraph,
+                        DataVaults,
+                        S3Upload)
   }
 
   object SlackNotifications {

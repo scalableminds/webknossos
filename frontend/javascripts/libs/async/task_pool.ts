@@ -1,5 +1,5 @@
 import { call, type FixedTask, fork, join } from "typed-redux-saga";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
 
 /*
   Given an array of async tasks, processTaskWithPool

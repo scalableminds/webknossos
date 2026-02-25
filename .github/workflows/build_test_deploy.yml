@@ -117,7 +117,7 @@ jobs:
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
       - name: Assert non-empty e2e files
-        run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
+        run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type_check | wc -l) -gt 0 ]'
       - name: Check response types of e2e tests
         run: yarn tsc
 

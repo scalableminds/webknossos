@@ -28,8 +28,8 @@ import {
 } from "viewer/model/actions/save_actions";
 import type { UpdateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined

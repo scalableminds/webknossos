@@ -64,8 +64,8 @@ import {
   MAPPING_MESSAGE_KEY,
   setCacheResultForDiffMappings,
 } from "viewer/model/bucket_data_handling/mappings";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
 import { api, Model } from "viewer/singletons";
 import type {

@@ -1,4 +1,4 @@
-import {
+import Icon, {
   BarChartOutlined,
   BellOutlined,
   ExperimentOutlined,
@@ -8,6 +8,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import WkLogoIcon from "@images/wk-logo.svg?react";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -829,11 +830,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         >
           {getCollapsibleMenuTitle(
             "WEBKNOSSOS",
-            <img
-              src="/assets/images/logo-icon-only.svg"
-              className="logo icon-margin-right"
-              alt="logo"
-            />,
+            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
             collapseAllNavItems,
           )}
         </Link>

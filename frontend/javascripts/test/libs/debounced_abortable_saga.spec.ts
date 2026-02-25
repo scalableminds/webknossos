@@ -1,7 +1,7 @@
 import { createDebouncedAbortableCallable } from "libs/async/debounced_abortable_saga";
 import { sleep } from "libs/utils";
 import debounce from "lodash-es/debounce";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
 import { describe, expect, it } from "vitest";
 
 const createAbortableFnWithProtocol = () => {

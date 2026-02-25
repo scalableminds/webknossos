@@ -6,7 +6,7 @@ import AnnotationSagas from "viewer/model/sagas/annotation_saga";
 import toolSaga from "viewer/model/sagas/annotation_tool_saga";
 import listenToClipHistogramSaga from "viewer/model/sagas/clip_histogram_saga";
 import DatasetSagas from "viewer/model/sagas/dataset_saga";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
 import loadHistogramDataSaga from "viewer/model/sagas/load_histogram_data_saga";
 import { watchDataRelevantChanges } from "viewer/model/sagas/prefetch_saga";
 import ReadySagas from "viewer/model/sagas/ready_sagas";
@@ -95,7 +95,7 @@ function* restartableSaga(): Saga<void> {
     rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
 
-    if (!process.env.IS_TESTING) {
+    if (import.meta.env.MODE !== "test") {
       ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
 
       // Hide potentially old error highlighting which mentions a retry mechanism.

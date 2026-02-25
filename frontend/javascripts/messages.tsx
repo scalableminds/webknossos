@@ -376,8 +376,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":
     "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
-  "dataset.is_scratch":
-    "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.z1_downsampling_hint":
     "The currently rendered quality is not optimal due to the available magnifications and the viewport arrangement. To improve the quality try to increase the size of the XY viewport (e.g. by maximizing it).",
   "dataset.mag_explanation":

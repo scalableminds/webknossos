@@ -1,3 +1,4 @@
+import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
 import { convertBufferToImage } from "libs/utils";
 import {
@@ -112,7 +113,7 @@ export function renderToTexture(
 
 function getScreenshotLogoImage(): Promise<HTMLImageElement> {
   const logo = document.createElement("img");
-  logo.src = "/assets/images/logo-screenshot.svg";
+  logo.src = logoScreenshot;
   return new Promise((resolve) => {
     logo.onload = () => resolve(logo);
   });

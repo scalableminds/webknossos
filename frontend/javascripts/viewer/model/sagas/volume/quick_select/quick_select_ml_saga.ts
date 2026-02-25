@@ -14,8 +14,8 @@ import type {
   ComputeQuickSelectForRectAction,
 } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type { WebknossosState } from "viewer/store";
 import { getPlaneExtentInVoxelFromStore } from "../../../accessors/view_mode_accessor";
 import { setGlobalProgressAction } from "../../../actions/ui_actions";

@@ -21,8 +21,8 @@ import type DataCube from "viewer/model/bucket_data_handling/data_cube";
 import Dimensions, { type DimensionMap } from "viewer/model/dimensions";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedPositionToZoomedAddress } from "viewer/model/helpers/position_converter";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { getHalfViewportExtentsInVx } from "viewer/model/sagas/saga_selectors";
 import type SectionLabeler from "viewer/model/volumetracing/section_labeling";
 import {

@@ -37,8 +37,8 @@ import {
   setSegmentsAction,
   type UpdateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { UNDO_HISTORY_SIZE } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model } from "viewer/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "viewer/store";

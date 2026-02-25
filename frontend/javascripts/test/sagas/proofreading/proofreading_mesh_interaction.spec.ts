@@ -18,7 +18,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
@@ -134,7 +134,7 @@ describe("Proofreading (with mesh actions)", () => {
           [7, 6],
           // [1337, 1], not loaded due to no rebasing performed as this test has no injected updated actions.
           // If there would be injected updates (simulating other users' changes) the segment id 1337 would
-          // been looked up for rebasing adn thus added to the loaded mapping.
+          // been looked up for rebasing and thus added to the loaded mapping.
           // [1338, 1], not loaded
         ]),
       );

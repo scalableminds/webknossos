@@ -25,8 +25,8 @@ import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select, take } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
 import type { NumberLike, SkeletonTracing, VolumeTracing } from "viewer/store";
@@ -319,7 +319,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
 
   const channel = yield* actionChannel(
     ["ENSURE_HAS_NEWEST_VERSION"],
-    // If multiple actions are sent to this buffer (without consumption inbetween),
+    // If multiple actions are sent to this buffer (without consumption in between),
     // we want to flush them all at once. This is achieved by using an expanding buffer
     // and flushing all events and calling their callbacks every time an ensureHasNewestVersion
     // action is resolved.

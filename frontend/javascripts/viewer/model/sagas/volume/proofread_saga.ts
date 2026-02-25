@@ -83,8 +83,8 @@ import {
   updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import {
   mergeAgglomerate,
   splitAgglomerate,
@@ -1053,7 +1053,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     if (sourceAgglomerateId !== targetAgglomerateId) {
       const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
       const additionalErrorExplanation = isOthersMayEditEnabled
-        ? " Maybe another user already splitted the agglomerate in the meantime."
+        ? " Maybe another user already split the agglomerate in the meantime."
         : "";
       Toast.error(
         `The selected positions are not part of the same agglomerate and cannot be split.${additionalErrorExplanation}`,

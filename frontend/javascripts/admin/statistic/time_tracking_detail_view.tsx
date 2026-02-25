@@ -6,7 +6,7 @@ import { useFetch } from "libs/react_helpers";
 import groupBy from "lodash-es/groupBy";
 import type { APITimeTrackingPerAnnotation } from "types/api_types";
 import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
-import { AnnotationStats } from "viewer/view/right-border-tabs/dataset_info_tab_view";
+import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
 
 type TimeTrackingDetailViewProps = {
   userId: string;

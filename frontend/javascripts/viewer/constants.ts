@@ -331,8 +331,8 @@ const Constants = {
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
   FLOOD_FILL_EXTENTS: {
     // In 2D mode, the third axis is set to 1 later in the code.
-    _2D: (process.env.IS_TESTING ? [512, 512, 512] : [768, 768, 768]) as Vector3,
-    _3D: (process.env.IS_TESTING ? [64, 64, 32] : [200, 200, 200]) as Vector3,
+    _2D: (import.meta.env.MODE === "test" ? [512, 512, 512] : [768, 768, 768]) as Vector3,
+    _3D: (import.meta.env.MODE === "test" ? [64, 64, 32] : [200, 200, 200]) as Vector3,
   },
   // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
   // we are more lax with the flood fill extent.
@@ -345,6 +345,12 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
 } as const;
+
+/* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
+  compare https://github.com/scalableminds/webknossos/issues/5223.
+ */
+export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
 export default Constants;
 
 export type TypedArray =

@@ -31,7 +31,7 @@ const preTrainedModels: PretrainedModel[] = [
       "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "neuron-segmentation",
     jobType: APIJobCommand.INFER_NEURONS,
-    image: "/assets/images/neuron_inferral_example.jpg",
+    image: "/images/neuron_inferral_example.jpg",
   },
   {
     name: "Mitochondria Detection",
@@ -39,7 +39,7 @@ const preTrainedModels: PretrainedModel[] = [
       "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada).",
     id: "mitochondria-detection",
     jobType: APIJobCommand.INFER_MITOCHONDRIA,
-    image: "/assets/images/mito_inferral_example.jpg",
+    image: "/images/mito_inferral_example.jpg",
   },
   {
     name: "Nuclei Detection",
@@ -47,7 +47,7 @@ const preTrainedModels: PretrainedModel[] = [
     id: "nuclei-detection",
     disabled: true,
     jobType: APIJobCommand.INFER_NUCLEI,
-    image: "/assets/images/nuclei_inferral_example.jpg",
+    image: "/images/nuclei_inferral_example.jpg",
   },
 ];
 

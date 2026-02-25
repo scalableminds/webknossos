@@ -91,7 +91,7 @@ class JobService @Inject()(wkConf: WkConf,
         s"Successful job$superUserLabel",
         msg
       )
-      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
+      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(wkConf.Http.uri))
       _ = if (jobAfterChange.command == JobCommand.convert_to_wkw)
         mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
     } yield ()
@@ -112,13 +112,22 @@ class JobService @Inject()(wkConf: WkConf,
               "Tiff Export",
               "Your dataset has been exported as Tiff and is ready for download."
             ))
-        case JobCommand.infer_nuclei =>
-          Some(
-            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Nuclei Segmentation"))
         case JobCommand.infer_neurons =>
+          Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.infer_instances =>
           Some(
-            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Neuron Segmentation",
+            genericEmailTemplate(
+              "Instance Segmentation",
+              "Your instance segmentation is ready."
             ))
+        case JobCommand.infer_mitochondria =>
+          Some(defaultMails.jobSuccessfulMitoSegmentationMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.align_sections =>
+          Some(defaultMails.jobSuccessfulAlignmentMail(user, userEmail, datasetName, resultLink))
+        case JobCommand.train_neuron_model =>
+          Some(defaultMails.jobSuccessfulModelTrainingMail(user, userEmail, resultLink))
+        case JobCommand.train_instance_model =>
+          Some(defaultMails.jobSuccessfulModelTrainingMail(user, userEmail, resultLink))
         case JobCommand.materialize_volume_annotation =>
           Some(
             genericEmailTemplate(
@@ -129,13 +138,13 @@ class JobService @Inject()(wkConf: WkConf,
           Some(
             genericEmailTemplate(
               "Mesh Generation",
-              "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
+              "Your 3D meshes for the whole segmentation layer of your dataset are ready. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
             ))
         case JobCommand.render_animation =>
           Some(
             genericEmailTemplate(
               "Dataset Animation",
-              "Your animation of a WEBKNOSSOS dataset has been successfully created and is ready for download."
+              "Your WEBKNOSSOS dataset animation is ready."
             ))
         case _ => None
       }).toFox ?~> "job.emailNotifactionsDisabled"

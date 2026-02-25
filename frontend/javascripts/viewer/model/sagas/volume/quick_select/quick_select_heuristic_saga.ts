@@ -52,8 +52,8 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import Dimensions, { type DimensionIndices } from "viewer/model/dimensions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { api } from "viewer/singletons";
 import type {
   DatasetLayerConfiguration,

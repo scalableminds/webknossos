@@ -4,6 +4,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { getActiveUser } from "admin/rest_api";
 import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
+import { FailedToLoadView } from "components/failed_to_load_view";
 import { RootForFastTooltips } from "components/fast_tooltip";
 import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
@@ -107,7 +108,7 @@ async function initApp() {
     return;
   }
 
-  const react_root = createRoot(containerElement);
+  const reactRoot = createRoot(containerElement);
 
   try {
     await Promise.all([
@@ -120,9 +121,8 @@ async function initApp() {
       loadHasOrganizations(),
     ]);
     await loadOrganization();
-    sessionStorage.removeItem("wk_load_retries"); // auto reload while backend is still compiling/starting
 
-    react_root.render(
+    reactRoot.render(
       <ErrorBoundary>
         <Provider store={Store}>
           <PersistQueryClientProvider
@@ -149,5 +149,6 @@ async function initApp() {
     );
   } catch (e) {
     console.error("Failed to load WEBKNOSSOS due to the following error", e);
+    reactRoot.render(<FailedToLoadView />);
   }
 }

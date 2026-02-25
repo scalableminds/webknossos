@@ -25,8 +25,8 @@ import type { UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
   useTracingViewMenuItems,
-} from "../action-bar/use_tracing_view_menu_items";
-import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
+} from "../action_bar/use_tracing_view_menu_items";
+import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 

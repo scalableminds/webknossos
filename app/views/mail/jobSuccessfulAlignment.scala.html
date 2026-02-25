@@ -1,0 +1,29 @@
+@(name: String, datasetName: String, jobLink: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  The automated alignment for your dataset <i>@{datasetName}</i> has finished successfully. 
+  Click the button below to open the new, aligned dataset, or find it amongst your other datasets in the WEBKNOSSOS dashboard.
+</p>
+
+@emailButton("Open dataset in WEBKNOSSOS", jobLink)
+
+<p>
+  Next, you can run our pre-trained models for neuron segmentation and mitochondria detection, or train a custom model tailored to your data. <a href="https://www.youtube.com/playlist?list=PLpizOgyiA4kH-MbmYUpLcYf9RV8zuhDJ9">Step-by-step tutorials</a> are available to guide you through these workflows.
+</p>
+
+<p>
+  If the alignment quality is not sufficient due to challenging raw data, our <a href="https://home.webknossos.org/services/alignment">custom alignment and preprocessing services</a> can provide additional support.
+</p>
+@emailImage(
+  src = "https://static.webknossos.org/mails/email-alignment-preview.gif",
+  alt = "A preview of an aligned WEBKNOSSOS dataset",
+  width = 300,
+  height = 300
+)
+
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

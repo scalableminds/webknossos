@@ -159,8 +159,9 @@ function MappingSettingsView({ layerName }: Props) {
   );
 
   const isDisabled = useMemo(
-    () => isEditableMappingActive || isMappingLockedState || isAnnotationLockedByOwner,
-    [isEditableMappingActive, isMappingLockedState, isAnnotationLockedByOwner],
+    () =>
+      !allowUpdate || isEditableMappingActive || isMappingLockedState || isAnnotationLockedByOwner,
+    [allowUpdate, isEditableMappingActive, isMappingLockedState, isAnnotationLockedByOwner],
   );
 
   const disabledMessage = useMemo(() => {

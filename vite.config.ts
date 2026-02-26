@@ -33,7 +33,7 @@ export const viteConfig = {
     }),
   ],
   optimizeDeps: {
-    exclude: ["three-mesh-bvh"],
+    exclude: ["three-mesh-bvh", "ndarray", "ndarray-ops", "ndarray-moments"],
   },
   build: {
     copyPublicDir: true, // copy all /assets (images, etc.) to public/assets

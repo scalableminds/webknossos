@@ -153,7 +153,7 @@ export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInf
 
 const isEqual = cwise({
   args: ["array", "scalar"],
-  body: `function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = a === b ? 1 : 0;
   }` as unknown as () => void,
 });
@@ -164,7 +164,7 @@ const isEqualFromBigUint64: (
   b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: `function body(output: number, a: bigint, b: bigint) {
+  body: `function body(output, a, b) {
     output = a === b ? 1 : 0;
   }` as unknown as () => void,
 });
@@ -192,21 +192,21 @@ const isNonZero = cwise({
 
 const mul = cwise({
   args: ["array", "scalar"],
-  body: `function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = a * b;
   }` as unknown as () => void,
 });
 
 const absMax = cwise({
   args: ["array", "array"],
-  body: `function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = Math.abs(a) > Math.abs(b) ? a : b;
   }` as unknown as () => void,
 });
 
 const assign = cwise({
   args: ["array", "array"],
-  body: `function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = b;
   }` as unknown as () => void,
 });

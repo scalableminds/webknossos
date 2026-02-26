@@ -1,5 +1,14 @@
-import type { KeyBindingLoopMap, KeyBindingMap } from "libs/input";
+import type {
+  KeyBindingLoopMap,
+  KeyBindingMap,
+  KeyboardHandlerFn,
+  KeyboardLoopFn,
+  KeyboardLoopHandler,
+  KeyboardNoLoopHandler,
+} from "libs/input";
 import { flatten } from "lodash-es";
+import type { AnnotationToolId } from "viewer/model/accessors/tool_accessor";
+import { Store } from "viewer/singletons";
 import type {
   KeyboardComboChain,
   KeyboardShortcutLoopedHandlerMap,
@@ -48,6 +57,13 @@ export function normalizeKeyName(raw: string): string {
   }
 }
 
+function escapeReservedKeystrokeCharacters(key: string): string {
+  if (["+", ">", ","].includes(key)) {
+    return `\\${key}`;
+  }
+  return key;
+}
+
 export function formatKeyCombo(combo: string[]): string {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
@@ -62,8 +78,8 @@ export function formatKeyCombo(combo: string[]): string {
       seen.add(n);
     } else {
       if (!seen.has(n)) {
-        // only add non-modifier if not a modifier (keeps uniqueness)
-        nonModifiers.push(n);
+        // only add non-modifier if not a modifier (keeps uniqueness) and escape reserved characters.
+        nonModifiers.push(escapeReservedKeystrokeCharacters(n));
         seen.add(n);
       }
     }
@@ -81,6 +97,10 @@ export function formatKeyCombo(combo: string[]): string {
 
 export function formatKeyComboChain(comboChain: KeyboardComboChain): string {
   return comboChain.map((combo) => formatKeyCombo(combo)).join(", ");
+}
+
+export function formatComparableKeyComboChain(comboChain: ComparableKeyComboChain): string {
+  return comboChain.map((combo) => formatKeyCombo([...combo])).join(", ");
 }
 
 export const buildKeyBindingsFromConfigAndMapping = (
@@ -121,4 +141,128 @@ export const buildKeyBindingsFromConfigAndLoopedMapping = (
     }),
   ).filter((mapping) => mapping != null);
   return Object.fromEntries(mappedShortcuts);
+};
+
+type ComparableKeyComboChain = Set<string>[];
+function keyComboChainToSetArray(comboChain: KeyboardComboChain): ComparableKeyComboChain {
+  return comboChain.map((keyCombo: string[]) => new Set<string>(keyCombo));
+}
+
+function areComboChainsEqual(
+  chain1: ComparableKeyComboChain,
+  chain2: ComparableKeyComboChain,
+): boolean {
+  if (chain1.length !== chain2.length) {
+    return false;
+  }
+  for (let index = 0; index < chain1.length; ++index) {
+    if (chain1[index].symmetricDifference(chain2[index]).size !== 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function invertKeyboardShortcutMap<T extends string>(
+  config: KeyboardShortcutsMap<T>,
+): [ComparableKeyComboChain, T[]][] {
+  const result: [ComparableKeyComboChain, T[]][] = [];
+
+  for (const handlerId in config) {
+    for (const chain of config[handlerId]) {
+      const comparableComboChain = keyComboChainToSetArray(chain);
+      const existingEntry = result.find(([otherChain, _]) =>
+        areComboChainsEqual(comparableComboChain, otherChain),
+      );
+
+      if (existingEntry) {
+        existingEntry[1].push(handlerId);
+      } else {
+        result.push([comparableComboChain, [handlerId]]);
+      }
+    }
+  }
+  return result;
+}
+
+function buildToolDependentNoLoppedHandler(
+  toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardNoLoopHandler>>,
+): KeyboardNoLoopHandler {
+  return {
+    onPressed: (...args: Parameters<KeyboardHandlerFn>) => {
+      const activeToolId = Store.getState().uiInformation.activeTool.id;
+      toolToHandlerMap[activeToolId]?.onPressed(...args);
+    },
+    onReleased: (...args: Parameters<KeyboardHandlerFn>) => {
+      const activeToolId = Store.getState().uiInformation.activeTool.id;
+      toolToHandlerMap[activeToolId]?.onReleased?.(...args);
+    },
+  };
+}
+
+function buildToolDependentLoppedHandler(
+  toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardLoopHandler>>,
+): KeyboardLoopHandler {
+  return {
+    onPressedWithRepeat: (...args: Parameters<KeyboardLoopFn>) => {
+      const activeToolId = Store.getState().uiInformation.activeTool.id;
+      toolToHandlerMap[activeToolId]?.onPressedWithRepeat(...args);
+    },
+    onReleased: (...args: Parameters<KeyboardLoopFn>) => {
+      const activeToolId = Store.getState().uiInformation.activeTool.id;
+      toolToHandlerMap[activeToolId]?.onReleased?.(...args);
+    },
+  };
+}
+
+export const buildKeyBindingsFromConfigAndMappingForTools = (
+  config: KeyboardShortcutsMap<string>,
+  handlerIdMappingPerAnnotationTool: Record<
+    AnnotationToolId,
+    KeyboardShortcutNoLoopedHandlerMap<string>
+  >,
+): KeyBindingMap => {
+  const keyComboChainAndHandlerIds = invertKeyboardShortcutMap(config);
+  const bindings: KeyBindingMap = {};
+  keyComboChainAndHandlerIds.forEach(([comparableComboChain, handlers]) => {
+    const stringifiedComboChain = formatComparableKeyComboChain(comparableComboChain);
+    const toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardNoLoopHandler>> = {};
+    for (const handler of handlers) {
+      for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {
+        const annotationToolId = annotationToolIdStr as AnnotationToolId;
+        if (handler in handlerIdMappingPerAnnotationTool[annotationToolId]) {
+          toolToHandlerMap[annotationToolId] =
+            handlerIdMappingPerAnnotationTool[annotationToolId][handler];
+        }
+      }
+    }
+    bindings[stringifiedComboChain] = buildToolDependentNoLoppedHandler(toolToHandlerMap);
+  });
+  return bindings;
+};
+
+export const buildKeyBindingsFromConfigAndLoopedMappingForTools = (
+  config: KeyboardShortcutsMap<string>,
+  handlerIdMappingPerAnnotationTool: Record<
+    AnnotationToolId,
+    KeyboardShortcutLoopedHandlerMap<string>
+  >,
+): KeyBindingLoopMap => {
+  const keyComboChainAndHandlerIds = invertKeyboardShortcutMap(config);
+  const bindings: KeyBindingLoopMap = {};
+  keyComboChainAndHandlerIds.forEach(([comparableComboChain, handlers]) => {
+    const stringifiedComboChain = formatComparableKeyComboChain(comparableComboChain);
+    const toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardLoopHandler>> = {};
+    for (const handler of handlers) {
+      for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {
+        const annotationToolId = annotationToolIdStr as AnnotationToolId;
+        if (handler in handlerIdMappingPerAnnotationTool[annotationToolId]) {
+          toolToHandlerMap[annotationToolId] =
+            handlerIdMappingPerAnnotationTool[annotationToolId][handler];
+        }
+      }
+    }
+    bindings[stringifiedComboChain] = buildToolDependentLoppedHandler(toolToHandlerMap);
+  });
+  return bindings;
 };

@@ -37,9 +37,9 @@ export type KeyboardHandlerFn = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 export type KeyboardNoLoopHandler = {
   onPressed: KeyboardHandlerFn;
-  onRelease?: KeyboardHandlerFn;
+  onReleased?: KeyboardHandlerFn;
 };
-type KeyboardLoopFn = {
+export type KeyboardLoopFn = {
   (arg0: number, isOriginalEvent: boolean, event: KeyboardEvent): void;
   delayed?: boolean;
   lastTime?: number | null | undefined;
@@ -194,7 +194,7 @@ export class InputKeyboardNoLoop {
     }
   };
 
-  attach(combo: KeyboardKeyOrCombo, { onPressed, onRelease }: KeyboardNoLoopHandler) {
+  attach(combo: KeyboardKeyOrCombo, { onPressed, onReleased: onRelease }: KeyboardNoLoopHandler) {
     const onPressedGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
       if (!this.isStarted) {
         return;
@@ -360,8 +360,12 @@ export class InputKeyboard {
       onPressedWithRepeat: onPressedWithRepeatGuarded,
       onReleased: onReleaseGuarded,
     };
-
-    bindKeyCombo(keyCombo, binding);
+    try {
+      bindKeyCombo(keyCombo, binding);
+    } catch (e) {
+      debugger;
+      console.error(e);
+    }
     this.bindings.push(binding);
   }
 

@@ -17,6 +17,8 @@ import type { OrthoView, OrthoViewMap } from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { moveU, moveV, moveW, zoom } from "viewer/controller/combinations/move_handlers";
 import {
+  AllLoopDelayedToolKeyboardControls,
+  AllNoLoopedToolKeyboardControls,
   AreaMeasurementToolController,
   BoundingBoxToolController,
   DrawToolController,
@@ -57,7 +59,9 @@ import type {
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import {
   buildKeyBindingsFromConfigAndLoopedMapping,
+  buildKeyBindingsFromConfigAndLoopedMappingForTools,
   buildKeyBindingsFromConfigAndMapping,
+  buildKeyBindingsFromConfigAndMappingForTools,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   PlaneControllerLoopDelayedNavigationKeyboardShortcuts,
@@ -376,19 +380,25 @@ class PlaneController extends PureComponent<Props> {
     const keybindingConfig = loadKeyboardShortcuts();
 
     // looped keyboard
-    const loopedBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+    const loopedControllerBindings = buildKeyBindingsFromConfigAndLoopedMapping(
       keybindingConfig,
       this.getLoopedHandlerMap(),
     );
-    this.input.keyboard = new InputKeyboard(loopedBindings);
+    this.input.keyboard = new InputKeyboard(loopedControllerBindings);
+
+    const toolDependentLoopedBindings = buildKeyBindingsFromConfigAndLoopedMappingForTools(
+      keybindingConfig,
+      AllLoopDelayedToolKeyboardControls,
+    );
 
     // delayed looped keyboard
-    const delayedBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+    const delayedControllerBindings = buildKeyBindingsFromConfigAndLoopedMapping(
       keybindingConfig,
       this.getLoopDelayedHandlerMap(),
     );
     const withAdditionalActions: KeyBindingLoopMap = {
-      ...delayedBindings,
+      ...delayedControllerBindings,
+      ...toolDependentLoopedBindings,
       // Enter & Escape need to be separate due to being constant and not configurable.
       enter: {
         onPressedWithRepeat: (_, _isOriginalEvent, event) => Store.dispatch(enterAction(event)),
@@ -400,14 +410,19 @@ class PlaneController extends PureComponent<Props> {
     });
 
     // no-loop keyboard
-    const noLoopBindings = buildKeyBindingsFromConfigAndMapping(
+    const noLoopControllerBindings = buildKeyBindingsFromConfigAndMapping(
       keybindingConfig,
       this.getNoLoopHandlerMap(),
     );
+    const toolDependentNoLoopedBindings = buildKeyBindingsFromConfigAndMappingForTools(
+      keybindingConfig,
+      AllNoLoopedToolKeyboardControls,
+    );
 
-    // TODO: migrate to keystrokes and implement tool dependant keyboard shortcuts.
-
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(noLoopBindings, {});
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
+      { ...noLoopControllerBindings, ...toolDependentNoLoopedBindings },
+      {},
+    );
   }
 
   initKeyboard(): void {

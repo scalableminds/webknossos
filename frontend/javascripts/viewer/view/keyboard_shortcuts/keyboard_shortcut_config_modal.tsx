@@ -194,6 +194,13 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       width={1000}
       style={{ padding: 20 }}
       title="Keyboard Shortcut Configuration"
+      styles={{
+        body: {
+          maxHeight: "70vh",
+          overflowY: "auto",
+          paddingRight: 8, // prevents scrollbar overlap
+        },
+      }}
     >
       <Flex justify={"flex-end"} align={"flex-start"}>
         <Space style={{ marginBottom: 16 }}>

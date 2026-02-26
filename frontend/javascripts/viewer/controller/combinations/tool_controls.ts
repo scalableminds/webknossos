@@ -169,7 +169,7 @@ abstract class ToolController {
   static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<never> {
     return {};
   }
-  static getDelayedLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<never> {
+  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<never> {
     return {};
   }
 
@@ -505,7 +505,7 @@ export class SkeletonToolController extends ToolController {
     };
   }
 
-  static getDelayedLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoSkeletonLoopedKeyboardShortcuts> {
+  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoSkeletonLoopedKeyboardShortcuts> {
     return {
       [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: {
         onPressedWithRepeat: () => moveNode(-1, 0),
@@ -669,7 +669,7 @@ class VolumeToolController extends ToolController {
     };
   }
 
-  static getDelayedLoopedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> {
+  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> {
     return {
       [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
         onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(-1),
@@ -1002,7 +1002,7 @@ export class BoundingBoxToolController extends ToolController {
       },
       [OrthoBoundingBoxNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_MOVING]: {
         onPressed: handleReactToModifier,
-        onRelease: handleReactToModifier,
+        onReleased: handleReactToModifier,
       },
     };
   }
@@ -1499,3 +1499,44 @@ const toolToToolController = {
 export function getToolControllerForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolController[activeTool.id];
 }
+
+/*static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<never> {
+    return {};
+  }
+  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<never> {
+    return {};
+  }
+*/
+export const AllNoLoopedToolKeyboardControls = {
+  [AnnotationTool.MOVE.id]: MoveToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.SKELETON.id]: SkeletonToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.QUICK_SELECT.id]: QuickSelectToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.PROOFREAD.id]: ProofreadToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.BRUSH.id]: DrawToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.TRACE.id]: DrawToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.ERASE_TRACE.id]: EraseToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.ERASE_BRUSH.id]: EraseToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.FILL_CELL.id]: FillCellToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementToolController.getNoLoopedKeyboardControls(),
+  [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementToolController.getNoLoopedKeyboardControls(),
+};
+
+export const AllLoopDelayedToolKeyboardControls = {
+  [AnnotationTool.MOVE.id]: MoveToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.SKELETON.id]: SkeletonToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.QUICK_SELECT.id]: QuickSelectToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.PROOFREAD.id]: ProofreadToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.BRUSH.id]: DrawToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.TRACE.id]: DrawToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.ERASE_TRACE.id]: EraseToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.ERASE_BRUSH.id]: EraseToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.FILL_CELL.id]: FillCellToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.LINE_MEASUREMENT.id]:
+    LineMeasurementToolController.getLoopDelayedKeyboardControls(),
+  [AnnotationTool.AREA_MEASUREMENT.id]:
+    AreaMeasurementToolController.getLoopDelayedKeyboardControls(),
+};

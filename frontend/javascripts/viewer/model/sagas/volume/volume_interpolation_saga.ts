@@ -153,8 +153,14 @@ export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInf
 
 const isEqual = cwise({
   args: ["array", "scalar"],
+  pre: function () {
+    this.noop = function (a: number) {
+      return a;
+    };
+  },
   body: function body(a: number, b: number) {
     a = a === b ? 1 : 0;
+    this.noop(a);
   },
 });
 
@@ -164,8 +170,14 @@ const isEqualFromBigUint64: (
   b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
+  pre: function () {
+    this.noop = function (a: number) {
+      return a;
+    };
+  },
   body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
+    this.noop(output);
   },
 });
 
@@ -192,22 +204,42 @@ const isNonZero = cwise({
 
 const mul = cwise({
   args: ["array", "scalar"],
+  pre: function () {
+    this.noop = function (a: number) {
+      return a;
+    };
+  },
   body: function body(a: number, b: number) {
     a = a * b;
+    this.noop(a);
   },
 });
 
+const a = 1;
+
 const absMax = cwise({
   args: ["array", "array"],
+  pre: function () {
+    this.noop = function (a: number) {
+      return a;
+    };
+  },
   body: function body(a: number, b: number) {
     a = Math.abs(a) > Math.abs(b) ? a : b;
+    this.noop(a);
   },
 });
 
 const assign = cwise({
   args: ["array", "array"],
+  pre: function () {
+    this.noop = function (a: number) {
+      return a;
+    };
+  },
   body: function body(a: number, b: number) {
     a = b;
+    this.noop(a);
   },
 });
 

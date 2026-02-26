@@ -151,6 +151,20 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
 
 export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInfo);
 
+/*
+ A general note about cwise usages:
+ cwise parses and compiles the 'body' function into a minimal, optimized JS loop
+ that is applied to each element of the input arrays. However, since the body
+ function does not return anything, our build system (Vite/Rollup)
+ incorrectly treats it as dead code and eliminates it during the production build.
+
+ As a workaround, we pass the function as a stringified version to prevent it from
+ being dropped by the optimizer.
+
+ In case the approach here is changed in the future, it should be tested both in
+ dev and production, because the behavior can differ.
+ */
+
 const isEqual = cwise({
   args: ["array", "scalar"],
   body: `function body(a, b) {
@@ -351,13 +365,13 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   const adaptedInterpolationRange = onlyExtrude
     ? // When extruding and...
-      directionFactor > 0
+    directionFactor > 0
       ? // ...tracing forwards, the latest (== current) slice also has to be labeled
-        [1, interpolationDepth + 1]
+      [1, interpolationDepth + 1]
       : // ...tracing backwards, the first (== current) slice also has to be labeled
-        [0, interpolationDepth]
+      [0, interpolationDepth]
     : // When interpolating, only the slices between start and end slice have to be labeled
-      [1, interpolationDepth];
+    [1, interpolationDepth];
 
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
   for (

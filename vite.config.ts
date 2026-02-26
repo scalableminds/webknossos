@@ -40,7 +40,6 @@ export const viteConfig = {
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,
     sourcemap: true,
-    minify: true,
     rollupOptions: {
       output: {
         manualChunks(id) {

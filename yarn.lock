@@ -4559,13 +4559,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bisect@npm:~0.0.0":
-  version: 0.0.0
-  resolution: "bisect@npm:0.0.0"
-  checksum: 10c0/d382ceb8a632aa26d898612047daa850d18d139dfaa41eaf49970d50a914f282646e72b3b67ba2f61b9bbc86ed13c959033c8289dc9a8e94a90b3da63d3df8d2
-  languageName: node
-  linkType: hard
-
 "bit-twiddle@npm:^1.0.0":
   version: 1.0.2
   resolution: "bit-twiddle@npm:1.0.2"
@@ -5278,16 +5271,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cwise-parser@npm:~0.0.1":
-  version: 0.0.1
-  resolution: "cwise-parser@npm:0.0.1"
-  dependencies:
-    esprima: "npm:~1.0.3"
-    uniq: "npm:~0.0.2"
-  checksum: 10c0/c7ce87af7679978b8b93b7441c2f18b04d9e12ff455551be50bcbb49e629447a2970ce6d6634be2f252038f18dea19c0275cbffd6f33dcd51dfb3349df9c547c
-  languageName: node
-  linkType: hard
-
 "cwise@npm:^1.0.0, cwise@npm:^1.0.10, cwise@npm:^1.0.6":
   version: 1.0.10
   resolution: "cwise@npm:1.0.10"
@@ -5297,16 +5280,6 @@ __metadata:
     static-module: "npm:^1.0.0"
     uglify-js: "npm:^2.6.0"
   checksum: 10c0/76c15d8325badbc52ab45d33aefafc9e57d2f7d3fa5300c661927d11edf8dccbc5f7d5bc362d00d7b83c3195625b94ec0fe2c4e4478680137bbef31d18aa01b7
-  languageName: node
-  linkType: hard
-
-"cwise@npm:~0.3.2":
-  version: 0.3.4
-  resolution: "cwise@npm:0.3.4"
-  dependencies:
-    cwise-compiler: "npm:~0.0.0"
-    cwise-parser: "npm:~0.0.1"
-  checksum: 10c0/2f54e07edb9f71b1bf828f75af8da4709a9b8ad688276533bff055dd1db4ad3a5fbd9db86f253244caa9808e5646e8d4a2fbbf582c7117353ee5e243d237b07f
   languageName: node
   linkType: hard
 
@@ -5588,19 +5561,6 @@ __metadata:
     ndarray-ops: "npm:^1.2.2"
     typedarray-pool: "npm:^1.1.0"
   checksum: 10c0/3bce7601ab3910b651871cf9e3898ebf6f6a20b2665ed7eaeae22420760ea0b7aad1af2d885846a9929f719a350237acce44ac2a8fdaf00d4309207fdd168206
-  languageName: node
-  linkType: hard
-
-"distance-transform@npm:~0.1.0":
-  version: 0.1.0
-  resolution: "distance-transform@npm:0.1.0"
-  dependencies:
-    bisect: "npm:~0.0.0"
-    cwise: "npm:~0.3.2"
-    ndarray: "npm:~1.0.0"
-    ndarray-ops: "npm:~1.1.0"
-    typedarray-pool: "npm:~0.1.1"
-  checksum: 10c0/a44f302338fa401c2786324cf58035594f5a1e9704ab8950a721cfe9264d2dd437d1c13eaebe498dac4c2eddad0cd81dbc65a2b42ddfb3667ad7e416b087f1cf
   languageName: node
   linkType: hard
 
@@ -6067,7 +6027,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esprima@npm:~1.0.2, esprima@npm:~1.0.3":
+"esprima@npm:~1.0.2":
   version: 1.0.4
   resolution: "esprima@npm:1.0.4"
   bin:

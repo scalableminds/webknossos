@@ -199,9 +199,7 @@
     "url-join": "^4.0.0"
   },
   "packageManager": "yarn@4.9.2",
-  "overrides": {
-    "ball-morphology": {
-      "distance-transform": "https://github.com/scalableminds/distance-transform"
-    }
+  "resolutions": {
+    "distance-transform": "https://github.com/scalableminds/distance-transform"
   }
 }

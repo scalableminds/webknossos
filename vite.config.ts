@@ -33,14 +33,14 @@ export const viteConfig = {
     }),
   ],
   optimizeDeps: {
-    exclude: ["three-mesh-bvh", "ndarray", "ndarray-ops", "ndarray-moments"],
+    exclude: ["three-mesh-bvh"],
   },
   build: {
     copyPublicDir: true, // copy all /assets (images, etc.) to public/assets
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,
     sourcemap: true,
-    minify: false,
+    minify: true,
     rollupOptions: {
       output: {
         manualChunks(id) {

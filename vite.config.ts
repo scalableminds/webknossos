@@ -13,6 +13,7 @@ import fs from "node:fs";
 // Code-related resolves are handled by "paths" in tsconfig.ts, tsconfigPaths-plugin respectively
 const alias = {
   "@images": path.resolve(__dirname, "frontend/assets/images"),
+  "@wasm": path.resolve(__dirname, "frontend/assets/wasm"),
 };
 
 // https://vite.dev/config/

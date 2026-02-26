@@ -155,7 +155,7 @@ const isEqual = cwise({
   args: ["array", "scalar"],
   body: `function body(a: number, b: number) {
     a = a === b ? 1 : 0;
-  }`,
+  }` as unknown as () => void,
 });
 
 const isEqualFromBigUint64: (
@@ -166,7 +166,7 @@ const isEqualFromBigUint64: (
   args: ["array", "array", "scalar"],
   body: `function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
-  }`,
+  }` as unknown as () => void,
 });
 
 const isNonZero = cwise({
@@ -194,21 +194,21 @@ const mul = cwise({
   args: ["array", "scalar"],
   body: `function body(a: number, b: number) {
     a = a * b;
-  }`,
+  }` as unknown as () => void,
 });
 
 const absMax = cwise({
   args: ["array", "array"],
   body: `function body(a: number, b: number) {
     a = Math.abs(a) > Math.abs(b) ? a : b;
-  }`,
+  }` as unknown as () => void,
 });
 
 const assign = cwise({
   args: ["array", "array"],
   body: `function body(a: number, b: number) {
     a = b;
-  }`,
+  }` as unknown as () => void,
 });
 
 export function copyNdArray(
@@ -351,13 +351,13 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   const adaptedInterpolationRange = onlyExtrude
     ? // When extruding and...
-    directionFactor > 0
+      directionFactor > 0
       ? // ...tracing forwards, the latest (== current) slice also has to be labeled
-      [1, interpolationDepth + 1]
+        [1, interpolationDepth + 1]
       : // ...tracing backwards, the first (== current) slice also has to be labeled
-      [0, interpolationDepth]
+        [0, interpolationDepth]
     : // When interpolating, only the slices between start and end slice have to be labeled
-    [1, interpolationDepth];
+      [1, interpolationDepth];
 
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
   for (

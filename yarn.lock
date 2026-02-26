@@ -5578,16 +5578,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"distance-transform@npm:^1.0.2":
+"distance-transform@https://github.com/scalableminds/distance-transform":
   version: 1.0.2
-  resolution: "distance-transform@npm:1.0.2"
+  resolution: "distance-transform@https://github.com/scalableminds/distance-transform.git#commit=3624f3943347debf18202522b7d732ce5eda58f2"
   dependencies:
     bisect: "npm:^1.0.0"
     cwise: "npm:^1.0.6"
     ndarray: "npm:^1.0.18"
     ndarray-ops: "npm:^1.2.2"
     typedarray-pool: "npm:^1.1.0"
-  checksum: 10c0/1545efd272ce660e93c137257e3cd9b4c219aacbb201a206416dc980373e5ba17746fb5360e027a96620bedea845aedaac9ddd20c5caa53f2fdbbd131ca9b3cc
+  checksum: 10c0/3bce7601ab3910b651871cf9e3898ebf6f6a20b2665ed7eaeae22420760ea0b7aad1af2d885846a9929f719a350237acce44ac2a8fdaf00d4309207fdd168206
   languageName: node
   linkType: hard
 
@@ -12611,7 +12611,7 @@ __metadata:
     deep-for-each: "npm:^2.0.3"
     deep-freeze: "npm:0.0.1"
     dice-coefficient: "npm:^2.1.0"
-    distance-transform: "npm:^1.0.2"
+    distance-transform: "https://github.com/scalableminds/distance-transform"
     documentation: "npm:^14.0.2"
     dompurify: "npm:^3.3.0"
     dpdm: "npm:^3.14.0"

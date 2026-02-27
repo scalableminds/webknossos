@@ -20,8 +20,8 @@ import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_action
 import { finishAnnotationStrokeAction } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { takeEveryUnlessBusy } from "viewer/model/sagas/saga_helpers";
 import type { MutableNode, Node } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";

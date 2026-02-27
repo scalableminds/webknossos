@@ -19,7 +19,7 @@ class DRACOLoader extends Loader {
   constructor(manager) {
     super(manager);
 
-    this.decoderPath = "";
+    this.decoderUri = "";
     this.decoderConfig = {};
     this.decoderBinary = null;
     this.decoderPending = null;
@@ -42,8 +42,8 @@ class DRACOLoader extends Loader {
     };
   }
 
-  setDecoderPath(path) {
-    this.decoderPath = path;
+  setDecoderUri(uri) {
+    this.decoderUri = uri;
 
     return this;
   }
@@ -63,13 +63,12 @@ class DRACOLoader extends Loader {
   load(url, onLoad, onProgress, onError) {
     const loader = new FileLoader(this.manager);
 
-    loader.setPath(this.path);
     loader.setResponseType("arraybuffer");
     loader.setRequestHeader(this.requestHeader);
     loader.setWithCredentials(this.withCredentials);
 
     loader.load(
-      url,
+      this.decoderUri,
       (buffer) => {
         this.parse(buffer, onLoad, onError);
       },
@@ -207,7 +206,6 @@ class DRACOLoader extends Loader {
 
   _loadLibrary(url, responseType) {
     const loader = new FileLoader(this.manager);
-    loader.setPath(this.decoderPath);
     loader.setResponseType(responseType);
     loader.setWithCredentials(this.withCredentials);
 
@@ -225,7 +223,7 @@ class DRACOLoader extends Loader {
   _initDecoder() {
     if (this.decoderPending) return this.decoderPending;
 
-    const wasmLibraryPromise = this._loadLibrary("draco_decoder.wasm", "arraybuffer");
+    const wasmLibraryPromise = this._loadLibrary(this.decoderUri, "arraybuffer");
 
     this.decoderPending = wasmLibraryPromise.then((library) => {
       this.decoderConfig.wasmBinary = library;
@@ -237,7 +235,6 @@ class DRACOLoader extends Loader {
   _getWorker(taskID, taskCost) {
     return this._initDecoder().then(() => {
       if (this.workerPool.length < this.workerLimit) {
-        // See https://webpack.js.org/guides/web-workers/
         const worker = new Worker(new URL("./DRACOWorker.worker.js", import.meta.url));
 
         worker._callbacks = {};

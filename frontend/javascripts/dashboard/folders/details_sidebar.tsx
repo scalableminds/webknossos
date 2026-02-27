@@ -24,7 +24,7 @@ import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
-} from "viewer/view/right-border-tabs/dataset_info_tab_view";
+} from "viewer/view/right_border_tabs/dataset_info_tab_view";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";

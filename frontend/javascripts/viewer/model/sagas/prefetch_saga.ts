@@ -18,8 +18,8 @@ import {
 } from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import type DataLayer from "viewer/model/data_layer";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { ensureWkInitialized } from "./ready_sagas";

@@ -1,10 +1,14 @@
-import {
+import Icon, {
   BarChartOutlined,
   CopyOutlined,
   PushpinOutlined,
   TagOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import IconCell from "@images/icons/icon-cell.svg?react";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
@@ -158,9 +162,9 @@ import type {
   VolumeTracing,
 } from "viewer/store";
 import Store from "viewer/store";
-import { withMappingActivationConfirmation } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "./layouting/layout_persistence";
-import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { LoadMeshMenuItemLabel } from "./right_border_tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -292,10 +296,9 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
     switch (name) {
       case "leftMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left.svg"
-            alt="Mouse Left Click"
+          <Icon
+            component={IconStatusbarMouseLeft}
+            aria-label="Mouse Left Click"
             style={mouseIconStyle}
           />
         );
@@ -303,10 +306,9 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "rightMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-right.svg"
-            alt="Mouse Right Click"
+          <Icon
+            component={IconStatusbarMouseRight}
+            aria-label="Mouse Right Click"
             style={mouseIconStyle}
           />
         );
@@ -314,10 +316,9 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "middleMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-wheel.svg"
-            alt="Mouse Wheel"
+          <Icon
+            component={IconStatusbarMouseWheel}
+            aria-label="Mouse Wheel"
             style={mouseIconStyle}
           />
         );
@@ -1888,7 +1889,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "copy-cell",
         <Space size="small">
-          <div className="cell-context-icon" />
+          <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
           {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
         </Space>,

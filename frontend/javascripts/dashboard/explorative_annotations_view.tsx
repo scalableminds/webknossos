@@ -61,7 +61,7 @@ import CategorizationLabel, {
 } from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
-import { AnnotationStats } from "viewer/view/right-border-tabs/dataset_info_tab_view";
+import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const { Search } = Input;

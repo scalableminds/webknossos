@@ -162,14 +162,14 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       nodeCount <- tryo(positionsRange.getLong(1) - positionsRange.getLong(0)).toFox
       edgesOffset <- tryo(edgesRange.getLong(0)).toFox
       edgeCount <- tryo(edgesRange.getLong(1) - edgesOffset).toFox
-      edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
       _ <- Fox.fromBool(nodeCount <= edgeLimit) ?~> s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)"
       _ <- Fox.fromBool(edgeCount <= edgeLimit) ?~> s"Agglomerate has too many edges ($edgeCount > $edgeLimit)"
       agglomerateToPositions <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToPositions)
       positions: MultiArray <- agglomerateToPositions.readAsMultiArray(offset = Array(positionsRange.getLong(0), 0),
                                                                        shape = Array(nodeCount.toInt, 3))
       agglomerateToSegments <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegments)
-      segmentIdsMA: MultiArray <- agglomerateToSegments.readAsMultiArray(offset = positionsRange.getInt(0),
+      segmentIdsMA: MultiArray <- agglomerateToSegments.readAsMultiArray(offset = positionsRange.getLong(0),
                                                                          shape = nodeCount.toInt)
       segmentIds: Array[Long] <- MultiArrayUtils.toLongArray(segmentIdsMA).toFox
       agglomerateToEdges <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToEdges)
@@ -177,24 +177,35 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                                                shape = Array(edgeCount.toInt, 2))
       agglomerateToAffinities <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToAffinities)
       affinities: MultiArray <- agglomerateToAffinities.readAsMultiArray(offset = edgesOffset, shape = edgeCount.toInt)
-
+      computedEdges <- tryo {
+        (0 until edges.getShape()(0)).map { edgeIdx: Int =>
+          AgglomerateEdge(
+            source = segmentIds(
+              // Note that getInt is fine (even for uint64) because “edges” stores
+              // per-agglomerate local indices, which should never exceed int range.
+              edges.getInt(edges.getIndex.set(Array(edgeIdx, 0)))
+            ),
+            target = segmentIds(
+              edges.getInt(edges.getIndex.set(Array(edgeIdx, 1)))
+            )
+          )
+        }
+      }.toFox
+      computedPositions <- tryo {
+        (0 until nodeCount.toInt).map { nodeIdx: Int =>
+          Vec3IntProto(
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),
+            positions.getInt(positions.getIndex.set(Array(nodeIdx, 2)))
+          )
+        }
+      }.toFox
       agglomerateGraph <- tryo {
         AgglomerateGraph(
           // unsafeWrapArray is fine, because the underlying arrays are never mutated
           segments = ArraySeq.unsafeWrapArray(segmentIds),
-          edges = (0 until edges.getShape()(0)).map { edgeIdx: Int =>
-            AgglomerateEdge(
-              source = segmentIds(edges.getInt(edges.getIndex.set(Array(edgeIdx, 0)))),
-              target = segmentIds(edges.getInt(edges.getIndex.set(Array(edgeIdx, 1))))
-            )
-          },
-          positions = (0 until nodeCount.toInt).map { nodeIdx: Int =>
-            Vec3IntProto(
-              positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
-              positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),
-              positions.getInt(positions.getIndex.set(Array(nodeIdx, 2)))
-            )
-          },
+          edges = computedEdges,
+          positions = computedPositions,
           affinities = ArraySeq.unsafeWrapArray(affinities.getStorage.asInstanceOf[Array[Float]])
         )
       }.toFox

@@ -139,7 +139,7 @@ function DatasetAddRemoteView(props: Props) {
       coordinateTransformations: layersWithCoordTransformationsJSON,
     });
 
-    form.setFieldValue("transformationsMode", TransformationsMode.SIMPLE);
+    form.setFieldValue("transformationsMode", TransformationsMode.NONE);
   };
 
   const hasFormAnyErrors = (form: FormInstance) =>

@@ -47,7 +47,7 @@ type DatasetSettingsProviderProps = {
 };
 
 const NULLED_AXIS_ROTATION_SETTING = { rotationInDegrees: 0, isMirrored: false };
-const INITIAL_DS_ROTATION_SETTINGS = {
+const NULLED_DS_ROTATION_SETTINGS = {
   x: NULLED_AXIS_ROTATION_SETTING,
   y: NULLED_AXIS_ROTATION_SETTING,
   z: NULLED_AXIS_ROTATION_SETTING,
@@ -62,7 +62,7 @@ export function getRotationFromCoordinateTransformations(
       !firstLayerTransformations ||
       firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
     ) {
-      initialDatasetRotationSettings = INITIAL_DS_ROTATION_SETTINGS;
+      initialDatasetRotationSettings = NULLED_DS_ROTATION_SETTINGS;
     } else {
       initialDatasetRotationSettings = {
         x: getRotationSettingsFromTransformationIn90DegreeSteps(firstLayerTransformations[1], "x"),
@@ -142,8 +142,10 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         datasetRotation: initialRotationSettings,
       });
 
-      const isRotationOnly = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
-      form.setFieldValue("isRotationOnly", isRotationOnly);
+      // This reads the coordinate transformations from the backend, thus it does not
+      // need to be updated when the user changes rotation settings in the form.
+      const isRotationOnlyInBackend = doAllLayersHaveTheSameRotation(dataSource.dataLayers);
+      form.setFieldValue("isRotationOnly", isRotationOnlyInBackend);
 
       const dataLayersWithTransformations: DataLayerWithTransformations[] =
         dataSource.dataLayers.map((layer: APIDataLayer) => ({
@@ -159,10 +161,13 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
         coordinateTransformations: layersWithCoordTransformationsJSON,
       });
 
-      let initialTransformationsMode =
-        initialRotationSettings == null ? TransformationsMode.ADVANCED : TransformationsMode.SIMPLE;
-      if (initialRotationSettings === INITIAL_DS_ROTATION_SETTINGS) {
+      let initialTransformationsMode;
+      if (initialRotationSettings === NULLED_DS_ROTATION_SETTINGS) {
         initialTransformationsMode = TransformationsMode.NONE;
+      } else if (isRotationOnlyInBackend) {
+        initialTransformationsMode = TransformationsMode.SIMPLE;
+      } else {
+        initialTransformationsMode = TransformationsMode.ADVANCED;
       }
       form.setFieldValue("transformationsMode", initialTransformationsMode);
 

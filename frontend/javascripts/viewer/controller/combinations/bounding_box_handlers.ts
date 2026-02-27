@@ -402,23 +402,16 @@ export function handleMovingBoundingBox(
 
   const accumulatedDelta = V3.add(movementAccumulator, globalDelta);
 
-  const roundedDeltaForIntegerMovement: Vector3 = [
-    Math.round(accumulatedDelta[0]),
-    Math.round(accumulatedDelta[1]),
-    Math.round(accumulatedDelta[2]),
-  ];
+  // As bounding box positions are stored as integers, only move by whole numbers.
+  const roundedDelta = V3.round(accumulatedDelta);
 
-  if (roundedDeltaForIntegerMovement.find((delta) => delta !== 0)) {
-    const minPosition = V3.toArray(
-      V3.add(bboxToResize.boundingBox.min, roundedDeltaForIntegerMovement),
-    );
-    const maxPosition = V3.toArray(
-      V3.add(bboxToResize.boundingBox.max, roundedDeltaForIntegerMovement),
-    );
+  if (roundedDelta.some((delta) => delta !== 0)) {
+    const minPosition = V3.add(bboxToResize.boundingBox.min, roundedDelta);
+    const maxPosition = V3.add(bboxToResize.boundingBox.max, roundedDelta);
 
     const updatedBounds = {
-      min: minPosition as Vector3,
-      max: maxPosition as Vector3,
+      min: minPosition,
+      max: maxPosition,
     };
 
     Store.dispatch(
@@ -430,9 +423,9 @@ export function handleMovingBoundingBox(
 
   // Store the fractional remainder for next time
   movementAccumulator = [
-    accumulatedDelta[0] - roundedDeltaForIntegerMovement[0],
-    accumulatedDelta[1] - roundedDeltaForIntegerMovement[1],
-    accumulatedDelta[2] - roundedDeltaForIntegerMovement[2],
+    accumulatedDelta[0] - roundedDelta[0],
+    accumulatedDelta[1] - roundedDelta[1],
+    accumulatedDelta[2] - roundedDelta[2],
   ];
   return movementAccumulator;
 }

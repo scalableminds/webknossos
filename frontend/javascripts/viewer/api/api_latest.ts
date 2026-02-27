@@ -1418,7 +1418,7 @@ class TracingApi {
     position: Vector3,
     skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
-    useOffsetToCenterNode: boolean = false,
+    useVoxelCenter: boolean = false,
   ): void {
     const { viewModeData, flycam } = Store.getState();
     const { activeViewport } = viewModeData.plane;
@@ -1444,9 +1444,10 @@ class TracingApi {
       positionY: number;
       positionZ: number;
     };
-    // This offset is needed when dealing with node positions to compensate for the fact that
-    // nodes are rendered in the center of the voxel.
-    const maybeCenteringOffset = useOffsetToCenterNode ? 0.5 : 0;
+
+    // The given offset is added when going to a position in the center of a voxel.
+    const targetPosition = useVoxelCenter ? V3.add(V3.floor(position), [0.5, 0.5, 0.5]) : position;
+
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
@@ -1455,9 +1456,9 @@ class TracingApi {
     tween
       .to(
         {
-          positionX: position[0] + maybeCenteringOffset,
-          positionY: position[1] + maybeCenteringOffset,
-          positionZ: position[2] + maybeCenteringOffset,
+          positionX: targetPosition[0],
+          positionY: targetPosition[1],
+          positionZ: targetPosition[2],
         },
         200,
       )

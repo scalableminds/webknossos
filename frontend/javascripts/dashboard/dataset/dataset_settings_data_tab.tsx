@@ -23,7 +23,6 @@ import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import type React from "react";
 import { cloneElement, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { type APIDataLayer, type APIDataset, APIJobCommand } from "types/api_types";
 import type { DataLayer, DataLayerWithTransformations } from "types/schemas/datasource.types";
 import { syncValidator, validateTransformationsJSON } from "types/validation";
@@ -73,9 +72,13 @@ function AdvancedDatasetTransformationsCard() {
           label={
             <Space size="small">
               Coordinate Transformations JSON.
-              <Link to="https://docs.webknossos.org/webknossos/datasets/settings.html">
+              <a
+                href="https://docs.webknossos.org/webknossos/datasets/settings.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Read more about the format
-              </Link>
+              </a>
             </Space>
           }
           rules={[

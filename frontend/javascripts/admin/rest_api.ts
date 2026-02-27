@@ -1232,10 +1232,10 @@ export function createResumableUpload(
             // Note that "terminalFileError" is an event which is only triggered by WK
             // and not by the ResumableUpload library itself. We merely use the event bus
             // of the ResumableUpload object.
-            resumable.dispatch("terminalFileError", { file, message });
+            resumable.dispatch("terminalFileError", { type: "terminalFileError", file, message });
           });
       } else {
-        resumable.dispatch("terminalFileError", { file, message });
+        resumable.dispatch("terminalFileError", { type: "terminalFileError", file, message });
       }
 
       lastFileErrorTimestamp = Date.now();

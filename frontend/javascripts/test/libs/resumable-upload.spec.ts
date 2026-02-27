@@ -114,7 +114,11 @@ describe("Resumable", () => {
       const mockFile = {} as ResumableFile;
 
       // In the new lib, fileError bubbles to error
-      resumable.dispatch("fileError", { file: mockFile, message: "error message" });
+      resumable.dispatch("fileError", {
+        type: "fileError",
+        file: mockFile,
+        message: "error message",
+      });
 
       // Check fileError
       expect(fileErrorCallback).toHaveBeenCalled();
@@ -132,7 +136,7 @@ describe("Resumable", () => {
     it("should fire progress event on fileProgress", () => {
       const progressCallback = vi.fn();
       resumable.addEventListener("fileProgress", progressCallback);
-      resumable.dispatch("fileProgress", { file: {} as ResumableFile });
+      resumable.dispatch("fileProgress", { type: "fileProgress", file: {} as ResumableFile });
       expect(progressCallback).toHaveBeenCalled();
     });
   });

@@ -175,15 +175,25 @@ interface ExtendedFile extends File {
   uniqueIdentifier?: string;
 }
 
-export interface ResumableEventDetail {
-  file?: ResumableFile;
-  message?: string;
-  error?: any;
-  event?: Event;
-  files?: ResumableFile[];
-  skippedFiles?: File[];
-  didUploadCompleteSuccessfully?: boolean; // this property only exists for success events
-}
+export type ResumableEventDetail =
+  | { type: "chunkingStart"; file: ResumableFile }
+  | { type: "chunkingProgress"; file: ResumableFile; message: string }
+  | { type: "chunkingComplete"; file: ResumableFile }
+  | { type: "fileProgress"; file: ResumableFile; message?: string }
+  | { type: "fileError"; file: ResumableFile; message?: string }
+  | { type: "fileSuccess"; file: ResumableFile; message?: string }
+  | { type: "fileRetry"; file: ResumableFile }
+  | { type: "filesAdded"; files: ResumableFile[]; skippedFiles?: File[] }
+  | { type: "fileAdded"; file: ResumableFile; event: Event }
+  | { type: "error"; error?: any; file?: ResumableFile }
+  | { type: "progress" }
+  | { type: "uploadStart" }
+  | { type: "pause" }
+  | { type: "cancel" }
+  | { type: "beforeCancel" }
+  | { type: "beforeAdd" }
+  | { type: "complete"; didUploadCompleteSuccessfully?: boolean }
+  | { type: "terminalFileError"; file: ResumableFile; message: string };
 
 export class ResumableUploadErrorEvent extends CustomEvent<ResumableEventDetail> {}
 
@@ -612,7 +622,7 @@ export class ResumableFile {
     this.uniqueIdentifier = uniqueIdentifier;
     this._error = uniqueIdentifier === undefined;
 
-    this.resumableObj.dispatch("chunkingStart", { file: this });
+    this.resumableObj.dispatch("chunkingStart", { type: "chunkingStart", file: this });
     this.bootstrap();
   }
 
@@ -631,23 +641,23 @@ export class ResumableFile {
   private chunkEvent(event: "progress" | "success" | "error" | "retry", message?: string): void {
     switch (event) {
       case "progress":
-        this.resumableObj.dispatch("fileProgress", { file: this, message });
+        this.resumableObj.dispatch("fileProgress", { type: "fileProgress", file: this, message });
         break;
       case "error":
         this.abort();
         this._error = true;
         this.chunks = [];
-        this.resumableObj.dispatch("fileError", { file: this, message });
+        this.resumableObj.dispatch("fileError", { type: "fileError", file: this, message });
         break;
       case "success":
         if (this._error) return;
-        this.resumableObj.dispatch("fileProgress", { file: this, message });
+        this.resumableObj.dispatch("fileProgress", { type: "fileProgress", file: this, message });
         if (this.isComplete()) {
-          this.resumableObj.dispatch("fileSuccess", { file: this, message });
+          this.resumableObj.dispatch("fileSuccess", { type: "fileSuccess", file: this, message });
         }
         break;
       case "retry":
-        this.resumableObj.dispatch("fileRetry", { file: this });
+        this.resumableObj.dispatch("fileRetry", { type: "fileRetry", file: this });
         break;
     }
   }
@@ -664,7 +674,7 @@ export class ResumableFile {
       }
     }
     if (abortCount > 0) {
-      this.resumableObj.dispatch("fileProgress", { file: this });
+      this.resumableObj.dispatch("fileProgress", { type: "fileProgress", file: this });
     }
   }
 
@@ -681,7 +691,7 @@ export class ResumableFile {
       }
     }
     this.resumableObj.removeFile(this);
-    this.resumableObj.dispatch("fileProgress", { file: this });
+    this.resumableObj.dispatch("fileProgress", { type: "fileProgress", file: this });
   }
 
   /**
@@ -719,13 +729,14 @@ export class ResumableFile {
         ),
       );
       this.resumableObj.dispatch("chunkingProgress", {
+        type: "chunkingProgress",
         file: this,
         message: (offset / maxOffset).toString(),
       });
     }
 
     setTimeout(() => {
-      this.resumableObj.dispatch("chunkingComplete", { file: this });
+      this.resumableObj.dispatch("chunkingComplete", { type: "chunkingComplete", file: this });
     }, 0);
   }
 
@@ -954,7 +965,7 @@ export class ResumableUpload implements EventTarget {
     return (value !== undefined ? value : this.defaults[option]) as Required<ConfigurationHash>[T];
   }
 
-  dispatch(event: string, detail: ResumableEventDetail = {}): void {
+  dispatch(event: string, detail: ResumableEventDetail = { type: "progress" }): void {
     const e =
       event === "error"
         ? new ResumableUploadErrorEvent(event, { detail })
@@ -963,10 +974,14 @@ export class ResumableUpload implements EventTarget {
     this.dispatchEvent(e);
 
     if (event === "fileError") {
-      this.dispatch("error", { error: detail.message, file: detail.file });
+      this.dispatch("error", {
+        type: "error",
+        error: "message" in detail ? detail.message : undefined,
+        file: "file" in detail ? detail.file : undefined,
+      });
     }
     if (event === "fileProgress") {
-      this.dispatch("progress");
+      this.dispatch("progress", { type: "progress" });
     }
   }
   /**
@@ -1115,7 +1130,11 @@ export class ResumableUpload implements EventTarget {
           // no succeeded files, just skip
           return;
         setTimeout(() => {
-          this.dispatch("filesAdded", { files: files, skippedFiles: filesSkipped });
+          this.dispatch("filesAdded", {
+            type: "filesAdded",
+            files: files,
+            skippedFiles: filesSkipped,
+          });
         }, 0);
       }
     };
@@ -1174,7 +1193,7 @@ export class ResumableUpload implements EventTarget {
           files.push(f);
           f.container = typeof event !== "undefined" ? event.target : null;
           setTimeout(() => {
-            this.dispatch("fileAdded", { file: f, event });
+            this.dispatch("fileAdded", { type: "fileAdded", file: f, event });
           }, 0);
         } else {
           filesSkipped.push(file);
@@ -1239,6 +1258,7 @@ export class ResumableUpload implements EventTarget {
     if (!outstanding && !this._completeDispatched) {
       this._completeDispatched = true;
       this.dispatch("complete", {
+        type: "complete",
         didUploadCompleteSuccessfully: this.files.every((file) => !file.hasError()),
       });
     }
@@ -1266,7 +1286,8 @@ export class ResumableUpload implements EventTarget {
 
     // Kick off the queue
     this._completeDispatched = false;
-    this.dispatch("uploadStart");
+    console.log("this._completeDispatched = false");
+    this.dispatch("uploadStart", { type: "uploadStart" });
     for (let num = 1; num <= (this.getOpt("simultaneousUploads") as number); num++) {
       this.uploadNextChunk();
     }
@@ -1286,16 +1307,16 @@ export class ResumableUpload implements EventTarget {
       file.abort();
       file.pause(true);
     }
-    this.dispatch("pause");
+    this.dispatch("pause", { type: "pause" });
   }
 
   /**
    * Cancel upload of all `ResumableFile` objects and remove them from the list.
    */
   cancel(): void {
-    this.dispatch("beforeCancel");
+    this.dispatch("beforeCancel", { type: "beforeCancel" });
     for (let i = this.files.length - 1; i >= 0; i--) this.files[i].cancel();
-    this.dispatch("cancel");
+    this.dispatch("cancel", { type: "cancel" });
   }
 
   /**
@@ -1315,7 +1336,7 @@ export class ResumableUpload implements EventTarget {
    * Add a HTML5 File object to the list of files.
    */
   addFile(file: File, event?: Event): void {
-    this.dispatch("beforeAdd");
+    this.dispatch("beforeAdd", { type: "beforeAdd" });
     this.appendFilesFromFileList([file], event || new Event("addFile"));
   }
 
@@ -1323,7 +1344,7 @@ export class ResumableUpload implements EventTarget {
    * Add an Array of HTML5 File objects to the list of files.
    */
   addFiles(files: File[], event?: Event): void {
-    this.dispatch("beforeAdd");
+    this.dispatch("beforeAdd", { type: "beforeAdd" });
     this.appendFilesFromFileList(files, event || new Event("addFiles"));
   }
 

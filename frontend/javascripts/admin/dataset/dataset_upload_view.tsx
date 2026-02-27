@@ -440,6 +440,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     // terminalFileError is triggered by the RestApi when a normal fileError could not be
     // recovered by refreshing the user token.
     resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadErrorEvent) => {
+      if (event.detail.type !== "terminalFileError") {
+        return;
+      }
       Toast.error(event.detail.message);
       this.setState({
         isUploading: false,

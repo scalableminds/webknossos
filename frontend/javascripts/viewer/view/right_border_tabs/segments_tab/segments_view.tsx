@@ -485,6 +485,12 @@ class SegmentsView extends React.Component<Props, State> {
       ) {
         const selectedId = this.props.selectedIds.segments[0];
         this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+      } else if (
+        this.props.selectedIds.group != null &&
+        prevProps.selectedIds.group !== this.props.selectedIds.group
+      ) {
+        const selectedGroupId = this.props.selectedIds.group;
+        this.tree.current.scrollTo({ key: getGroupNodeKey(selectedGroupId) });
       }
     }, 100);
   }

@@ -227,8 +227,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return [
       {
         name: "Copy Organization ID",
-        command: () => {
-          navigator.clipboard.writeText(activeUser.organization);
+        command: async () => {
+          await navigator.clipboard.writeText(activeUser.organization);
           Toast.success("Organization ID copied to clipboard");
         },
         color: commandEntryColor,
@@ -238,7 +238,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
         command: async () => {
           try {
             const token = await getAuthToken();
-            navigator.clipboard.writeText(token);
+            await navigator.clipboard.writeText(token);
             Toast.success("Auth token copied to clipboard");
           } catch (error) {
             Toast.error("Failed to fetch auth token. Please refresh the page to try again.");

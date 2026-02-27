@@ -176,24 +176,14 @@ interface ExtendedFile extends File {
 }
 
 export type ResumableEventDetail =
-  | { type: "chunkingStart"; file: ResumableFile }
-  | { type: "chunkingProgress"; file: ResumableFile; message: string }
-  | { type: "chunkingComplete"; file: ResumableFile }
-  | { type: "fileProgress"; file: ResumableFile; message?: string }
-  | { type: "fileError"; file: ResumableFile; message?: string }
-  | { type: "fileSuccess"; file: ResumableFile; message?: string }
-  | { type: "fileRetry"; file: ResumableFile }
+  | { type: "chunkingStart" | "chunkingComplete" | "fileRetry"; file: ResumableFile }
+  | { type: "chunkingProgress" | "terminalFileError"; file: ResumableFile; message: string }
+  | { type: "fileProgress" | "fileError" | "fileSuccess"; file: ResumableFile; message?: string }
   | { type: "filesAdded"; files: ResumableFile[]; skippedFiles?: File[] }
   | { type: "fileAdded"; file: ResumableFile; event: Event }
   | { type: "error"; error?: any; file?: ResumableFile }
-  | { type: "progress" }
-  | { type: "uploadStart" }
-  | { type: "pause" }
-  | { type: "cancel" }
-  | { type: "beforeCancel" }
-  | { type: "beforeAdd" }
-  | { type: "complete"; didUploadCompleteSuccessfully?: boolean }
-  | { type: "terminalFileError"; file: ResumableFile; message: string };
+  | { type: "progress" | "uploadStart" | "pause" | "cancel" | "beforeCancel" | "beforeAdd" }
+  | { type: "complete"; didUploadCompleteSuccessfully?: boolean };
 
 export class ResumableUploadErrorEvent extends CustomEvent<ResumableEventDetail> {}
 

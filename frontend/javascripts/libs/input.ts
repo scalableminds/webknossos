@@ -120,7 +120,7 @@ export type MouseBindingMap = Partial<FullMouseBindingMap>;
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
 function shouldIgnore(event: KeyboardEvent, key: KeyboardKeyOrCombo) {
-  const bindingHasCtrl = key.toLowerCase().indexOf("ctrl") !== -1;
+  const bindingHasCtrl = key.toLowerCase().indexOf("control") !== -1;
   const bindingHasShift = key.toLowerCase().indexOf("shift") !== -1;
   const bindingHasSuper = key.toLowerCase().indexOf("super") !== -1;
   const bindingHasCommand = key.toLowerCase().indexOf("command") !== -1;
@@ -175,7 +175,7 @@ export class InputKeyboardNoLoop {
     }
 
     const hasLegacyExtendedKeyboardShortcut = Object.keys(initialBindings).some((keyCombo) =>
-      keyCombo.includes("ctrl + k"),
+      keyCombo.includes("control + k"),
     );
     if (hasLegacyExtendedKeyboardShortcut) {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);

@@ -86,10 +86,10 @@ export enum OrthoSkeletonLoopedKeyboardShortcuts {
 
 export const DEFAULT_ORTHO_SKELETON_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoSkeletonLoopedKeyboardShortcuts> =
   {
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["ctrl" + "left"]]],
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["ctrl" + "right"]]],
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["ctrl" + "up"]]],
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["ctrl" + "down"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["ctrl", "left"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["ctrl", "right"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["ctrl", "up"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["ctrl", "down"]]],
   };
 
 export const OrthoSkeletonLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoSkeletonLoopedKeyboardShortcuts> =

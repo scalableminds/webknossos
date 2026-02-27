@@ -57,6 +57,32 @@ export function normalizeKeyName(raw: string): string {
   }
 }
 
+export function keyToKeyEventName(raw: string): string {
+  if (!raw) return raw;
+  // unify common names
+  switch (raw) {
+    case " ":
+    case "spacebar":
+      return "space";
+    case "esc":
+      return "escape";
+    case "left":
+      return "arrowleft";
+    case "right":
+      return "arrowright";
+    case "up":
+      return "arrowup";
+    case "down":
+      return "arrowdown";
+    case "meta":
+      return "super";
+    case "ctrl":
+      return "control";
+    default:
+      return raw;
+  }
+}
+
 function escapeReservedKeystrokeCharacters(key: string): string {
   if (["+", ">", ","].includes(key)) {
     return `\\${key}`;
@@ -67,9 +93,10 @@ function escapeReservedKeystrokeCharacters(key: string): string {
 export function formatKeyCombo(combo: string[]): string {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
-  const modifiersOrder = ["ctrl", "super", "alt", "shift"];
+  const modifiersOrder = ["ctrl", "meta", "super", "alt", "shift"];
   const presentModifiers: string[] = [];
   const nonModifiers: string[] = [];
+  const adjustKey = (key: string) => escapeReservedKeystrokeCharacters(keyToKeyEventName(key));
 
   const seen = new Set<string>();
   for (const k of combo) {
@@ -79,14 +106,14 @@ export function formatKeyCombo(combo: string[]): string {
     } else {
       if (!seen.has(n)) {
         // only add non-modifier if not a modifier (keeps uniqueness) and escape reserved characters.
-        nonModifiers.push(escapeReservedKeystrokeCharacters(n));
+        nonModifiers.push(adjustKey(n));
         seen.add(n);
       }
     }
   }
 
   for (const m of modifiersOrder) {
-    if (seen.has(m)) presentModifiers.push(m);
+    if (seen.has(m)) presentModifiers.push(adjustKey(m));
   }
 
   // But order may have modifiers after non-modifiers in `order`. We already fixed ordering.
@@ -236,7 +263,10 @@ export const buildKeyBindingsFromConfigAndMappingForTools = (
         }
       }
     }
-    bindings[stringifiedComboChain] = buildToolDependentNoLoppedHandler(toolToHandlerMap);
+    const hasAtLeastOneToolWithCurrentShortcut = Object.keys(toolToHandlerMap).length > 0;
+    if (hasAtLeastOneToolWithCurrentShortcut) {
+      bindings[stringifiedComboChain] = buildToolDependentNoLoppedHandler(toolToHandlerMap);
+    }
   });
   return bindings;
 };
@@ -262,7 +292,10 @@ export const buildKeyBindingsFromConfigAndLoopedMappingForTools = (
         }
       }
     }
-    bindings[stringifiedComboChain] = buildToolDependentLoppedHandler(toolToHandlerMap);
+    const hasAtLeastOneToolWithCurrentShortcut = Object.keys(toolToHandlerMap).length > 0;
+    if (hasAtLeastOneToolWithCurrentShortcut) {
+      bindings[stringifiedComboChain] = buildToolDependentLoppedHandler(toolToHandlerMap);
+    }
   });
   return bindings;
 };

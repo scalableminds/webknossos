@@ -1500,13 +1500,6 @@ export function getToolControllerForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolController[activeTool.id];
 }
 
-/*static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<never> {
-    return {};
-  }
-  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<never> {
-    return {};
-  }
-*/
 export const AllNoLoopedToolKeyboardControls = {
   [AnnotationTool.MOVE.id]: MoveToolController.getNoLoopedKeyboardControls(),
   [AnnotationTool.SKELETON.id]: SkeletonToolController.getNoLoopedKeyboardControls(),

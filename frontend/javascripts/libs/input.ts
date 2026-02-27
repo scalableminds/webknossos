@@ -360,12 +360,7 @@ export class InputKeyboard {
       onPressedWithRepeat: onPressedWithRepeatGuarded,
       onReleased: onReleaseGuarded,
     };
-    try {
-      bindKeyCombo(keyCombo, binding);
-    } catch (e) {
-      debugger;
-      console.error(e);
-    }
+    bindKeyCombo(keyCombo, binding);
     this.bindings.push(binding);
   }
 

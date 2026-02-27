@@ -182,6 +182,7 @@ export interface ResumableEventDetail {
   event?: Event;
   files?: ResumableFile[];
   skippedFiles?: File[];
+  didUploadCompleteSuccessfully?: boolean; // this property only exists for success events
 }
 
 export class ResumableUploadErrorEvent extends CustomEvent<ResumableEventDetail> {}
@@ -613,6 +614,10 @@ export class ResumableFile {
 
     this.resumableObj.dispatch("chunkingStart", { file: this });
     this.bootstrap();
+  }
+
+  hasError() {
+    return this._error;
   }
 
   getOpt<T extends keyof ConfigurationHash>(key: T): Required<ConfigurationHash>[T] {
@@ -1233,7 +1238,9 @@ export class ResumableUpload implements EventTarget {
     const outstanding = this.files.some((file) => !file.isComplete());
     if (!outstanding && !this._completeDispatched) {
       this._completeDispatched = true;
-      this.dispatch("complete");
+      this.dispatch("complete", {
+        didUploadCompleteSuccessfully: this.files.every((file) => !file.hasError()),
+      });
     }
 
     return false;

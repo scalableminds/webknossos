@@ -2,7 +2,7 @@ import { sleep } from "libs/utils";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResumableUpload, ResumableUploadEvent } from "../../libs/resumable-upload";
+import { ResumableUpload, type ResumableUploadEvent } from "../../libs/resumable-upload";
 import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
 describe("Resumable Use Cases (WebKnossos Patterns)", () => {

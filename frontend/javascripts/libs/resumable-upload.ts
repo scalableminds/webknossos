@@ -926,6 +926,10 @@ export class ResumableUpload implements EventTarget {
     );
   }
 
+  dispatchEvent(event: Event): boolean {
+    return this._eventTarget.dispatchEvent(event);
+  }
+
   removeEventListener(
     type: string,
     callback: EventListener | null,
@@ -953,7 +957,8 @@ export class ResumableUpload implements EventTarget {
 
   dispatch(eventName: string, detail: ResumableEventDetail = { type: "progress" }): void {
     const event = new ResumableUploadEvent(eventName, { detail });
-    this._eventTarget.dispatchEvent(event);
+
+    this.dispatchEvent(event);
 
     // In case of file-scoped `fileError` or `fileProgress` events, we also dispatch
     // the upload-scoped `error` and `progress` events.

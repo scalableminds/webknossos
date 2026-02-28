@@ -2,7 +2,7 @@ import { sleep } from "libs/utils";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResumableUpload } from "../../libs/resumable-upload";
+import { ResumableUpload, ResumableUploadEvent } from "../../libs/resumable-upload";
 import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
 describe("Resumable Use Cases (WebKnossos Patterns)", () => {
@@ -563,14 +563,20 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       backendMock.failUploadOnNthRequest(1, 500, "Permanent");
 
       const successLog: boolean[] = [];
-      const completeSpy = vi.fn((evt) => {
-        successLog.push(evt.detail.didUploadCompleteSuccessfully);
+      const completeSpy = vi.fn((event: ResumableUploadEvent) => {
+        if (event.detail.type !== "complete") {
+          return;
+        }
+        successLog.push(event.detail.didUploadCompleteSuccessfully as boolean);
       });
       resumable.addEventListener("complete", completeSpy);
 
-      resumable.addEventListener("fileError", async (event: Event) => {
-        const { file } = (event as CustomEvent).detail;
-        await sleep(50); // in wk, we fetch a new token here
+      resumable.addEventListener("fileError", async (event: ResumableUploadEvent) => {
+        if (event.detail.type !== "fileError") {
+          return;
+        }
+        const { file } = event.detail;
+        await sleep(50); // in wk, we might fetch a new token here
         file.retry();
       });
 

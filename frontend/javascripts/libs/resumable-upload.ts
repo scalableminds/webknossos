@@ -185,7 +185,7 @@ export type ResumableEventDetail =
   | { type: "progress" | "uploadStart" | "pause" | "cancel" | "beforeCancel" | "beforeAdd" }
   | { type: "complete"; didUploadCompleteSuccessfully?: boolean };
 
-export class ResumableUploadErrorEvent extends CustomEvent<ResumableEventDetail> {}
+export class ResumableUploadEvent extends CustomEvent<ResumableEventDetail> {}
 
 function isFileSystemDirectoryEntry(
   entry: FileSystemEntry | null | undefined,
@@ -926,10 +926,6 @@ export class ResumableUpload implements EventTarget {
     );
   }
 
-  dispatchEvent(event: Event): boolean {
-    return this._eventTarget.dispatchEvent(event);
-  }
-
   removeEventListener(
     type: string,
     callback: EventListener | null,
@@ -955,22 +951,20 @@ export class ResumableUpload implements EventTarget {
     return (value !== undefined ? value : this.defaults[option]) as Required<ConfigurationHash>[T];
   }
 
-  dispatch(event: string, detail: ResumableEventDetail = { type: "progress" }): void {
-    const e =
-      event === "error"
-        ? new ResumableUploadErrorEvent(event, { detail })
-        : new CustomEvent(event, { detail });
+  dispatch(eventName: string, detail: ResumableEventDetail = { type: "progress" }): void {
+    const event = new ResumableUploadEvent(eventName, { detail });
+    this._eventTarget.dispatchEvent(event);
 
-    this.dispatchEvent(e);
-
-    if (event === "fileError") {
+    // In case of file-scoped `fileError` or `fileProgress` events, we also dispatch
+    // the upload-scoped `error` and `progress` events.
+    if (eventName === "fileError") {
       this.dispatch("error", {
         type: "error",
         error: "message" in detail ? detail.message : undefined,
         file: "file" in detail ? detail.file : undefined,
       });
     }
-    if (event === "fileProgress") {
+    if (eventName === "fileProgress") {
       this.dispatch("progress", { type: "progress" });
     }
   }
@@ -1276,7 +1270,6 @@ export class ResumableUpload implements EventTarget {
 
     // Kick off the queue
     this._completeDispatched = false;
-    console.log("this._completeDispatched = false");
     this.dispatch("uploadStart", { type: "uploadStart" });
     for (let num = 1; num <= (this.getOpt("simultaneousUploads") as number); num++) {
       this.uploadNextChunk();

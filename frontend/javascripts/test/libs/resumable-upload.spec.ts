@@ -98,9 +98,13 @@ describe("Resumable", () => {
 
     it("should dispatch events with details", () => {
       const callback = vi.fn();
-      resumable.addEventListener("test", callback);
+      resumable.addEventListener("chunkingProgress", callback);
 
-      resumable.dispatchFromDetail({ message: "hello" } as any);
+      resumable.dispatchFromDetail({
+        type: "chunkingProgress",
+        file: {} as ResumableFile,
+        message: "hello",
+      });
 
       expect(callback).toHaveBeenCalled();
       // Check event.detail

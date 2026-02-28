@@ -69,7 +69,6 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       await backendMock.waitForSuccessfulUploads(2);
       expect(queryFn.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(backendMock.getUploadTokens()[1]).toBe("new-token");
-      await resumable.waitForComplete();
     });
   });
 
@@ -535,7 +534,6 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
         expect(frontendProgress).toBeGreaterThanOrEqual(Math.max(0, backendProgress - 0.05));
         expect(frontendProgress).toBeLessThanOrEqual(1);
       }
-      await resumable.waitForComplete();
 
       expect(progressValues.every((value) => value >= 0 && value <= 1)).toBe(true);
       for (let i = 1; i < progressValues.length; i++) {

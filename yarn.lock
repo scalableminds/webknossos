@@ -1032,13 +1032,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fortawesome/fontawesome-free@npm:^5.15.4":
-  version: 5.15.4
-  resolution: "@fortawesome/fontawesome-free@npm:5.15.4"
-  checksum: 10c0/0a12f11b17b3073475df965d423ac485715e281d11ecde17250fab5dc0a177fb29ced59242f6c024bef59429c502ba8fe831ed9500e14713cc30138e70df8fbc
-  languageName: node
-  linkType: hard
-
 "@github/webauthn-json@npm:^2.1.1":
   version: 2.1.1
   resolution: "@github/webauthn-json@npm:2.1.1"
@@ -12561,7 +12554,6 @@ __metadata:
     "@biomejs/biome": "npm:^2.3.13"
     "@dnd-kit/core": "npm:^6.1.0"
     "@dnd-kit/sortable": "npm:^8.0.0"
-    "@fortawesome/fontawesome-free": "npm:^5.15.4"
     "@github/webauthn-json": "npm:^2.1.1"
     "@redux-saga/testing-utils": "npm:^1.1.5"
     "@scalableminds/prop-types": "npm:^15.8.1"

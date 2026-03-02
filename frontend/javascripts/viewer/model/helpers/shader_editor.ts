@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import GripLinesIcon from "@images/icons/icon-grip-lines.svg?react";
+import GripLinesIcon from "@images/icons/icon-grip-lines.svg";
 import app from "app";
 import window, { document } from "libs/window";
 
@@ -156,7 +156,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   outerContainer.appendChild(buttonContainer);
 
   const dragIcon = document.createElement("div");
-  dragIcon.innerHTML = `${GripLinesIcon}`;
+  dragIcon.innerHTML = `<img src="${GripLinesIcon}" alt="" draggable="false" style="width:100%;height:100%;" />`;
   dragIcon.setAttribute(
     "style",
     `position: absolute;

@@ -20,6 +20,7 @@ const replaceSvgColorWithCurrentColor = (
     (name === "stroke" && patchStroke) || (name === "fill" && patchFill);
   const getReplacementValue = (name: "stroke" | "fill") =>
     name === "stroke" ? "currentColor" : "none";
+  const isNoneColorValue = (value: unknown) => String(value ?? "").toLowerCase() === "none";
 
   return {
     visitor: {
@@ -31,7 +32,10 @@ const replaceSvgColorWithCurrentColor = (
 
         if (isPatchedAttribute(attributeName.name)) {
           const attributeValuePath = path.get("value");
-          if (attributeValuePath.isStringLiteral() && attributeValuePath.node.value !== "none") {
+          if (
+            attributeValuePath.isStringLiteral() &&
+            !isNoneColorValue(attributeValuePath.node.value)
+          ) {
             attributeValuePath.replaceWith(
               t.stringLiteral(getReplacementValue(attributeName.name as "stroke" | "fill")),
             );
@@ -73,7 +77,10 @@ const replaceSvgColorWithCurrentColor = (
           }
 
           const propertyValuePath = propertyPath.get("value");
-          if (propertyValuePath.isStringLiteral() && propertyValuePath.node.value !== "none") {
+          if (
+            propertyValuePath.isStringLiteral() &&
+            !isNoneColorValue(propertyValuePath.node.value)
+          ) {
             propertyValuePath.replaceWith(
               t.stringLiteral(getReplacementValue(shouldPatchStroke ? "stroke" : "fill")),
             );

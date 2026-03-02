@@ -9,6 +9,7 @@ import Icon, {
   ShrinkOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
+import HideSkeletonEdgesIcon from "@images/icons/icon-hide-skeleton-edges.svg?react";
 import InvertIcon from "@images/icons/icon-invert.svg?react";
 import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
@@ -16,7 +17,6 @@ import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import { type MenuProps, notification, Space } from "antd";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
-import { ThemedIcon } from "components/themed_icon";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import cloneDeep from "lodash-es/cloneDeep";
 import difference from "lodash-es/difference";
@@ -219,7 +219,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
           hideContextMenu();
         },
         title: "Hide/Show Edges of This Tree",
-        icon: <ThemedIcon name="icon-hide-skeleton-edges" aria-label="Hide Tree Edges Icon" />,
+        icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
         label: "Hide/Show Edges of This Tree",
       },
       isAgglomerateSkeleton

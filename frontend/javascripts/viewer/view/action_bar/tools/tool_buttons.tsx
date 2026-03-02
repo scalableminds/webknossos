@@ -30,7 +30,7 @@ import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
 // Negative offset to hide eraser button when it is not visible.
-const ERASER_OFFSET_LEFT = -33; // button width 32px + 1px border
+const ERASER_OFFSET_LEFT = -35.2; // button width 34.2px + 1px border
 
 export const ToolIdToComponent: Record<
   AnnotationToolId,

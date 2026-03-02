@@ -52,8 +52,8 @@ import {
   toggleAllSegmentsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import { Store } from "viewer/singletons";
 import type { ContextMenuInfo } from "viewer/store";
-import Store from "viewer/store";
 import { withMappingActivationConfirmation } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { LoadMeshMenuItemLabel } from "../right_border_tabs/segments_tab/load_mesh_menu_item_label";
@@ -125,15 +125,14 @@ export function useNoNodeContextMenuOptions(
     segmentIdLabel,
   );
 
-  // Remaining hook logic needs full state inspection for dispatch
-  const state = Store.getState();
-  const disabledVolumeInfo = getDisabledInfoForTools(state);
-  const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
-  const isConnectomeMappingEnabled = hasConnectomeFile(state);
-  const { isMultiSplitActive } = state.userConfiguration;
-  const maybeMinCutPartitions = volumeTracing
-    ? state.localSegmentationData[volumeTracing.tracingId]?.minCutPartitions
-    : null;
+  const disabledVolumeInfo = useWkSelector(getDisabledInfoForTools);
+  const isAgglomerateMappingEnabled = useWkSelector(hasAgglomerateMapping);
+  const isConnectomeMappingEnabled = useWkSelector(hasConnectomeFile);
+  const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
+  const maybeMinCutPartitions = useWkSelector((state) =>
+    volumeTracing ? state.localSegmentationData[volumeTracing.tracingId]?.minCutPartitions : null,
+  );
+  const areSkeletonGeometriesTransformed = useWkSelector(areGeometriesTransformed);
 
   const dispatch = useDispatch();
 
@@ -141,15 +140,16 @@ export function useNoNodeContextMenuOptions(
     dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
   }, [dispatch, visibleSegmentationLayer, dataset]);
 
-  const positionInLayerSpace =
+  const positionInLayerSpace = useWkSelector((state) =>
     globalPosition != null && visibleSegmentationLayer != null
       ? globalToLayerTransformedPosition(
           globalPosition,
           visibleSegmentationLayer.name,
           "segmentation",
-          Store.getState(),
+          state,
         )
-      : null;
+      : null,
+  );
 
   const loadPrecomputedMesh = async () => {
     if (
@@ -306,7 +306,7 @@ export function useNoNodeContextMenuOptions(
             onClick: () =>
               handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false),
             label: "Create Node here",
-            disabled: areGeometriesTransformed(state),
+            disabled: areSkeletonGeometriesTransformed,
           },
           {
             key: "create-node-with-tree",
@@ -322,7 +322,7 @@ export function useNoNodeContextMenuOptions(
                   : null}
               </>
             ),
-            disabled: areGeometriesTransformed(state),
+            disabled: areSkeletonGeometriesTransformed,
           },
           {
             key: "load-agglomerate-skeleton",

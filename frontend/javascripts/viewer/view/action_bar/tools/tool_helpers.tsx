@@ -8,7 +8,6 @@ export const ACTIONBAR_MARGIN_LEFT = "var(--ant-margin-xs)"; // keep in sync wit
 export const NARROW_BUTTON_STYLE = {
   paddingLeft: "var(--ant-margin-xs)",
   paddingRight: "var(--ant-margin-xs)",
-  width: 32,
 };
 
 export function RadioButtonWithTooltip({
@@ -52,7 +51,7 @@ export function RadioButtonWithTooltip({
     >
       <FastTooltip title={disabled ? disabledTitle : title} onMouseEnter={onMouseEnter}>
         {/* See comments above. */}
-        <span style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</span>
+        <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
       </FastTooltip>
     </Radio.Button>
   );

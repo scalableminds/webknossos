@@ -107,17 +107,17 @@ export function recalculateInputCatcherSizes() {
 const cursorForTool: Record<AnnotationToolId, string> = {
   MOVE: "move",
   SKELETON: "crosshair",
-  BRUSH: `url(${paintBrushSolidBorderCursor}) 0 10,auto`,
-  ERASE_BRUSH: `url(${eraserSolidBorderCursor}) 0 8,auto`,
-  TRACE: `url(${lassoPointedSolidBorderCursor}) 0 14,auto`,
-  ERASE_TRACE: `url(${eraserPointedSolidBorderCursor}) 0 16,auto`,
-  FILL_CELL: `url(${fillPointedSolidBorderCursor}) 0 16,auto`,
-  VOXEL_PIPETTE: `url(${eyeDropperSolidBorderCursor}) 0 12,auto`,
+  BRUSH: `url("${paintBrushSolidBorderCursor}") 0 10,auto`,
+  ERASE_BRUSH: `url("${eraserSolidBorderCursor}") 0 8,auto`,
+  TRACE: `url("${lassoPointedSolidBorderCursor}") 0 14,auto`,
+  ERASE_TRACE: `url("${eraserPointedSolidBorderCursor}") 0 16,auto`,
+  FILL_CELL: `url("${fillPointedSolidBorderCursor}") 0 16,auto`,
+  VOXEL_PIPETTE: `url("${eyeDropperSolidBorderCursor}") 0 12,auto`,
   BOUNDING_BOX: "copy",
   QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",
-  LINE_MEASUREMENT: `url(${rulerPointedBorderCursor}) 0 14,auto`,
-  AREA_MEASUREMENT: `url(${lassoPointedSolidBorderCursor}) 0 14,auto`,
+  LINE_MEASUREMENT: `url("${rulerPointedBorderCursor}") 0 14,auto`,
+  AREA_MEASUREMENT: `url("${lassoPointedSolidBorderCursor}") 0 14,auto`,
 };
 
 function InputCatcher({

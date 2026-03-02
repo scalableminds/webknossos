@@ -7,15 +7,15 @@ import org.scalatestplus.play.PlaySpec
 class TextUtilsTestSuite extends PlaySpec {
 
   "renderTemplateReplacements" should {
-    "replace all provided placeholders" in {
-      val template = "Hello, {{name}}! Welcome to {{site}}."
+    "replace all provided placeholders (even multiple occurrences)" in {
+      val template = "Hello, {{name}}! Welcome to {{site}}. Goodbye, {{name}}."
       val result = TextUtils.renderTemplateReplacements(
         template,
         "{{name}}" -> "Alice",
         "{{site}}" -> "WEBKNOSSOS"
       )
 
-      assert(result == Full("Hello, Alice! Welcome to WEBKNOSSOS."))
+      assert(result == Full("Hello, Alice! Welcome to WEBKNOSSOS. Goodbye, Alice."))
     }
 
     "support dollar signs in replacement values" in {

@@ -56,7 +56,7 @@ export function serializeProtoListOfLong<T extends number | bigint>(
   if (errMsg) throw Error(errMsg);
   const message = messageType.create(listOfLong);
 
-  return messageType.encode(message).finish().slice();
+  return messageType.encode(message).finish() as Uint8Array<ArrayBuffer>;
 }
 
 export function parseProtoListOfLong<T extends number | bigint>(

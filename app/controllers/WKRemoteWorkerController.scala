@@ -32,7 +32,8 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
     for {
       worker <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
       _ = workerDAO.updateHeartBeat(worker._id)
-      _ = workerVersion.map(workerDAO.updateLastReportedVersion(worker._id, _))
+      _ = if (workerVersion != worker.lastReportedVersion)
+        workerVersion.map(workerDAO.updateLastReportedVersion(worker._id, _))
       _ <- reserveNextJobs(worker, pendingIterationCount = 10)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
       jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)

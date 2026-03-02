@@ -161,7 +161,6 @@ function SimpleDatasetForm({
   const dataSource: Record<string, any> = Form.useWatch("dataSource", { form, preserve: true });
   const transformationsMode: TransformationsMode = Form.useWatch(["transformationsMode"], form);
   const coordinateTransformationsJSON: string = Form.useWatch(["coordinateTransformations"], form);
-  const isRotationOnly = Form.useWatch(["isRotationOnly"], form);
 
   // If the transformation mode changes, the currently visible transformation settings need to be set
   // in the internal datalayer model of the form.
@@ -186,9 +185,8 @@ function SimpleDatasetForm({
       return;
     }
     if (transformationsMode === TransformationsMode.SIMPLE) {
-      if (!isRotationOnly) {
-        return;
-      }
+      const isRotationOnly = form.getFieldValue(["isRotationOnly"]);
+      if (!isRotationOnly) return;
       const rotationValues: {
         x: RotationAndMirroringSettings;
         y: RotationAndMirroringSettings;

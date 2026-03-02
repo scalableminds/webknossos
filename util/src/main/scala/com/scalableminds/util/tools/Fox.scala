@@ -108,6 +108,16 @@ object Fox extends FoxImplicits {
     runNext(Nil)
   }
 
+  def batchCombined[A, B](seq: Seq[A], batchSize: Int = 10)(f: A => Fox[B])(
+      implicit ec: ExecutionContext): Fox[List[B]] =
+    for {
+      batchResults: Seq[List[B]] <- Fox.serialCombined(seq.grouped(batchSize)) { batch =>
+        for {
+          res <- Fox.combined(batch.map(f))
+        } yield res
+      }
+    } yield batchResults.toList.flatten
+
   def foldLeft[A, B](l: List[A], initial: B)(f: (B, A) => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
     serialCombined(l.iterator)(a => f(initial, a))
 

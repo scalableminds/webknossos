@@ -53,4 +53,23 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
     }
   }
 
+  def testLoadingS3Chunks: Action[AnyContent] = Action.async { implicit request =>
+    val path = UPath.fromStringUnsafe(
+      "s3://fsn1.your-objectstorage.com/webknossos-wkorg-0002/7c9243814eeed5e6/ZF_retina_opl_ipl_model_v5_segmentation_v1-6904132501000035025c5d64/segmentation/agglomerates/agglomerate_view_70/segment_to_agglomerate/c/0")
+    val chunkLength = 5000
+    for {
+      vaultPath <- dataVaultService.vaultPathFor(path)
+      before = Instant.now
+      _ <- Fox.batchSerialCombined((0 until 200), batchSize = 20) { i =>
+        val byteRange = ByteRange.startEndExclusive(i * chunkLength, (i + 1) * chunkLength)
+        val before = Instant.now
+        for {
+          _ <- vaultPath.readBytes(byteRange)
+          _ = Instant.logSince(before, s"loading $chunkLength bytes", logger)
+        } yield ()
+      }
+      _ = Instant.logSince(before, "whole test", logger)
+    } yield Ok
+  }
+
 }

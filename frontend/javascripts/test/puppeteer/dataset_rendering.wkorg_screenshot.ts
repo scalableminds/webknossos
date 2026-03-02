@@ -21,7 +21,7 @@ process.on("unhandledRejection", (err, promise) => {
 
 const SCREENSHOTS_BASE_PATH = path.join(
   __dirname,
-  "../../../../frontend/javascripts/test/screenshots-wkorg",
+  "../../../../frontend/javascripts/test/screenshots_wkorg",
 );
 const URL = "https://webknossos.org";
 

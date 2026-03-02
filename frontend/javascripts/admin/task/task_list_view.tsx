@@ -10,6 +10,7 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
+import vxManualAnnotationsHorizontal from "@images/vx/manual-annotations-horizontal.png";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
   assignTaskToUser as assignTaskToUserAPI,
@@ -445,8 +446,7 @@ function TaskListView({ initialFieldValues }: Props) {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              background:
-                'url("/assets/images/vx/manual-annotations-horizontal.png") center center / 110%',
+              background: `url(${vxManualAnnotationsHorizontal}) center center / 110%`,
               height: "73px",
               padding: "0px",
               width: "800px",

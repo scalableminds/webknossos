@@ -33,15 +33,15 @@ import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_acti
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
-import DatasetPositionAndRotationView from "viewer/view/action-bar/dataset_position_view";
-import ToolbarView from "viewer/view/action-bar/tools/toolbar_view";
+import AddNewLayoutModal from "viewer/view/action_bar/add_new_layout_modal";
+import DatasetPositionAndRotationView from "viewer/view/action_bar/dataset_position_view";
+import ToolbarView from "viewer/view/action_bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
   type LayoutProps,
-} from "viewer/view/action-bar/tracing_actions_view";
-import ViewDatasetActionsView from "viewer/view/action-bar/view_dataset_actions_view";
-import ViewModesView from "viewer/view/action-bar/view_modes_view";
+} from "viewer/view/action_bar/tracing_actions_view";
+import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
+import ViewModesView from "viewer/view/action_bar/view_modes_view";
 import {
   addNewLayout,
   deleteLayout,
@@ -49,9 +49,9 @@ import {
   LayoutEvents,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { ACTIONBAR_MARGIN_LEFT } from "./action-bar/tools/tool_helpers";
+import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
 
-import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
+import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (

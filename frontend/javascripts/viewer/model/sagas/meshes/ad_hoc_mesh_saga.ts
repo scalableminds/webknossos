@@ -47,8 +47,8 @@ import type { LayerSourceInfo } from "viewer/model/bucket_data_handling/wkstore_
 import type DataLayer from "viewer/model/data_layer";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "viewer/model/helpers/position_converter";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { Model } from "viewer/singletons";
 import Store, { type StoreDataset, type VolumeTracing } from "viewer/store";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";

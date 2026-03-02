@@ -49,10 +49,10 @@ import {
   updateMeshFileListAction,
 } from "viewer/model/actions/annotation_actions";
 import type { LoadPrecomputedMeshAction } from "viewer/model/actions/segmentation_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import Store from "viewer/store";
-import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
 

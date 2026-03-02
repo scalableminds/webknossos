@@ -1,0 +1,3 @@
+
+import type { APIScript } from "types/api_types";
+const a: APIScript = {"id":"5aead7aaf5be4b070173295b","name":"merger","gist":"https://gist.github.com/heikowissler/d5ff5d490ab381af9405c9078096c723","owner":{"id":"570b9f4d2a7c0e4d008da6ef","email":"user_a@scalableminds.com","firstName":"user_A","lastName":"last_A","isAdmin":true,"isDatasetManager":true,"isAnonymous":false,"teams":[{"id":"570b9f4b2a7c0e3b008da6ec","name":"team_X1","isTeamManager":true},{"id":"59882b370d889b84020efd3f","name":"team_X3","isTeamManager":false},{"id":"59882b370d889b84020efd6f","name":"team_X4","isTeamManager":true}]}}

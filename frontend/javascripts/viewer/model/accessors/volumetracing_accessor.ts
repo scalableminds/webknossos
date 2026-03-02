@@ -51,11 +51,11 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
-import type { SegmentHierarchyNode } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import type { SegmentHierarchyNode } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import {
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
 

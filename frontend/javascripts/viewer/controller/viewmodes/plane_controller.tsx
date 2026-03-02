@@ -78,7 +78,7 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api, Model } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { getDefaultBrushSizes } from "viewer/view/action-bar/tools/brush_presets";
+import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";

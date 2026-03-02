@@ -34,8 +34,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import type {
   ServerUpdateAction,

@@ -1,3 +1,6 @@
+import Icon from "@ant-design/icons";
+import RedoIcon from "@images/icons/icon-redo.svg?react";
+import UndoIcon from "@images/icons/icon-undo.svg?react";
 import { Space } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { useCallback } from "react";
@@ -28,7 +31,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleUndo}
         disabled={isBusy}
         hideContentWhenLoading
-        icon={<i className="fas fa-undo" aria-hidden="true" />}
+        icon={<Icon component={UndoIcon} aria-label="undo" />}
       />
       <AsyncButton
         className="narrow undo-redo-button hide-on-small-screen"
@@ -37,7 +40,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleRedo}
         disabled={isBusy}
         hideContentWhenLoading
-        icon={<i className="fas fa-redo" aria-hidden="true" />}
+        icon={<Icon component={RedoIcon} aria-label="redo" />}
       />
     </Space.Compact>
   );

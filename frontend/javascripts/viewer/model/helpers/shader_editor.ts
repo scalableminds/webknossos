@@ -1,4 +1,6 @@
 // @ts-nocheck
+
+import GripLinesIcon from "@images/icons/icon-grip-lines.svg?react";
 import app from "app";
 import window, { document } from "libs/window";
 
@@ -154,7 +156,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   outerContainer.appendChild(buttonContainer);
 
   const dragIcon = document.createElement("div");
-  dragIcon.innerHTML = '<i class="fas fa-grip-lines"></i>';
+  dragIcon.innerHTML = `${GripLinesIcon}`;
   dragIcon.setAttribute(
     "style",
     `position: absolute;

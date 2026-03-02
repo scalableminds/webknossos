@@ -1,7 +1,17 @@
 import Icon from "@ant-design/icons";
 import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
+import BrushIcon from "@images/icons/icon-brush.svg?react";
+import EraserIcon from "@images/icons/icon-eraser.svg?react";
+import FillIcon from "@images/icons/icon-fill.svg?react";
 import LassoIcon from "@images/icons/icon-lasso.svg?react";
-import QuickSelectToolIcon from "@images/icons/icon-quick-select-tool.svg?react";
+import LayerGroupIcon from "@images/icons/icon-layer-group.svg?react";
+import MoveIcon from "@images/icons/icon-move.svg?react";
+import PipetteIcon from "@images/icons/icon-pipette.svg?react";
+import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
+import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
+import RulerIcon from "@images/icons/icon-ruler.svg?react";
+import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
+
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -44,8 +54,8 @@ function MaybeMultiSliceAnnotationInfoIcon() {
   const hasMagWithHigherDimension = (labeledMag || []).some((val) => val > 1);
   const maybeMultiSliceAnnotationInfoIcon = hasMagWithHigherDimension ? (
     <FastTooltip title="You are annotating in a low magnification. Depending on the used viewport, you might be annotating multiple slices at once.">
-      <i
-        className="fas fa-layer-group"
+      <Icon
+        component={LayerGroupIcon}
         style={{
           marginLeft: 4,
         }}
@@ -64,7 +74,7 @@ function MoveTool(_props: ToolButtonProps) {
       disabled={false}
       value={AnnotationTool.MOVE.id}
     >
-      <i className="fas fa-arrows-alt" />
+      <Icon component={MoveIcon} />
     </ToolRadioButton>
   );
 }
@@ -90,11 +100,11 @@ function SkeletonTool(_props: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
       value={AnnotationTool.SKELETON.id}
     >
-      <i
+      <Icon
+        component={SkeletonIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
         }}
-        className="fas fa-project-diagram"
       />
     </ToolRadioButton>
   );
@@ -122,8 +132,8 @@ function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
       value={AnnotationTool.BRUSH.id}
     >
-      <i
-        className="fas fa-paint-brush"
+      <Icon
+        component={BrushIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
         }}
@@ -157,8 +167,8 @@ function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
       }}
       value={AnnotationTool.ERASE_BRUSH.id}
     >
-      <i
-        className="fas fa-eraser"
+      <Icon
+        component={EraserIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled ? 0.5 : 1,
         }}
@@ -218,8 +228,8 @@ function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
       }}
       value={AnnotationTool.ERASE_TRACE.id}
     >
-      <i
-        className="fas fa-eraser"
+      <Icon
+        component={EraserIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled ? 0.5 : 1,
         }}
@@ -246,8 +256,8 @@ function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
       value={AnnotationTool.FILL_CELL.id}
     >
-      <i
-        className="fas fa-fill-drip"
+      <Icon
+        component={FillIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
           transform: "scaleX(-1)",
@@ -270,8 +280,8 @@ function VoxelPipetteTool(_props: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled}
       value={AnnotationTool.VOXEL_PIPETTE.id}
     >
-      <i
-        className="fas fa-eye-dropper"
+      <Icon
+        component={PipetteIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled ? 0.5 : 1,
         }}
@@ -366,8 +376,8 @@ function ProofreadTool(_props: ToolButtonProps) {
         dispatch(ensureLayerMappingsAreLoadedAction());
       }}
     >
-      <i
-        className="fas fa-clipboard-check"
+      <Icon
+        component={ProofreadingIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.PROOFREAD.id].isDisabled ? 0.5 : 1,
           padding: "0 4px",
@@ -386,7 +396,7 @@ function LineMeasurementTool(_props: ToolButtonProps) {
       disabled={false}
       value={AnnotationTool.LINE_MEASUREMENT.id}
     >
-      <i className="fas fa-ruler" />
+      <Icon component={RulerIcon} />
     </ToolRadioButton>
   );
 }

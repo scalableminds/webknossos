@@ -1,7 +1,8 @@
 import Icon, { InfoCircleOutlined } from "@ant-design/icons";
+import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
+import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
 import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
-import NewBoundingBoxIcon from "@images/icons/icon-new-bounding-box.svg?react";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -200,8 +201,9 @@ function ToolSpecificSettings({
             onClick={toggleQuickSelectStrategy}
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
+            icon={<Icon component={AiAnalysisIcon} />}
           >
-            <i className="fas fa-magic icon-margin-right" /> AI
+            AI
           </ToggleButton>
 
           <QuickSelectSettingsPopover />

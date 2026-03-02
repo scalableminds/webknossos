@@ -1,4 +1,4 @@
-import { actionChannel, call, flush, put, take } from "redux-saga/effects";
+import { actionChannel, ActionPattern, call, flush, put, take } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -25,6 +25,9 @@ import {
   performCutFromAllNeighbours,
   prepareGetNeighborsForAgglomerateNode,
 } from "./proofreading_test_utils";
+import { VERSION_POLL_INTERVAL_COLLAB } from "viewer/model/sagas/saving/save_saga";
+import { delay } from "typed-redux-saga";
+import type { Action } from "viewer/model/actions/actions";
 
 describe("Proofreading (Multi User)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -768,6 +771,63 @@ describe("Proofreading (Multi User)", () => {
       // Asserting no rebasing relevant actions were triggered.
       const rebasingActions = yield flush(rebaseActionChannel);
       expect(rebasingActions.length).toBe(0);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should not dead lock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends up in the busy waiting for the ui busy lock", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context);
+    const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      yield call(initializeMappingAndTool, context, tracingId);
+      const mapping0 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping0).toEqual(initialMapping);
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+
+      yield makeMappingEditableHelper();
+
+      // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+      const mapping1 = yield select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
+      expect(mapping1).toEqual(initialMapping);
+      yield call(() => context.api.tracing.save());
+      context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
+        canEdit: false,
+        blockedByUser: blockingUser,
+      }));
+      // Execute the actual merge and wait for the finished mapping.
+      yield put(
+        proofreadMergeAction(
+          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
+          1, // unmappedId=1 maps to 1
+        ),
+      );
+      const waitingTimeTillPollingTimeoutWasTriggered = VERSION_POLL_INTERVAL_COLLAB * 2 + 100;
+      yield delay(waitingTimeTillPollingTimeoutWasTriggered);
+      context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
+        canEdit: true,
+        blockedByUser: null,
+      }));
+      // Wait till not busy anymore to check that no dead lock happens.
+      yield take(
+        ((action: Action) =>
+          action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
+      );
     });
 
     await task.toPromise();

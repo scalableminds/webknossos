@@ -90,9 +90,9 @@ function* setupSavingToServer(): Saga<void> {
   yield* takeEvery("WK_READY", watchForNumberOfBucketsInSaveQueue);
 }
 
-const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
-const VERSION_POLL_INTERVAL_READ_ONLY = 5 * 1000;
-const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+export const VERSION_POLL_INTERVAL_COLLAB = process.env.IS_TESTING ? 500 : 10 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = process.env.IS_TESTING ? 250 : 5 * 1000;
+const VERSION_POLL_INTERVAL_SINGLE_EDITOR = process.env.IS_TESTING ? 1 * 1000 : 30 * 1000;
 // interval at which the number of buckets in save queue is checked
 const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS = 10 * 1000;
 // sliding time window for which the number of buckets in save queue is summed up

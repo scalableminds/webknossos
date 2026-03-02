@@ -365,13 +365,13 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   const adaptedInterpolationRange = onlyExtrude
     ? // When extruding and...
-    directionFactor > 0
+      directionFactor > 0
       ? // ...tracing forwards, the latest (== current) slice also has to be labeled
-      [1, interpolationDepth + 1]
+        [1, interpolationDepth + 1]
       : // ...tracing backwards, the first (== current) slice also has to be labeled
-      [0, interpolationDepth]
+        [0, interpolationDepth]
     : // When interpolating, only the slices between start and end slice have to be labeled
-    [1, interpolationDepth];
+      [1, interpolationDepth];
 
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
   for (

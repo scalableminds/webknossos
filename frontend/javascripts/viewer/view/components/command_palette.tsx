@@ -222,7 +222,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     color: commandEntryColor,
   };
 
-  const getCopyTokenOrIdCommands = () => {
+  const getAuthCommands = () => {
     if (activeUser == null) return [];
     return [
       {
@@ -404,7 +404,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getSuperUserItems(),
-    ...getCopyTokenOrIdCommands(),
+    ...getAuthCommands(),
   ];
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);

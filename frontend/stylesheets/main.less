@@ -128,19 +128,6 @@ body {
   margin: auto;
 }
 
-
-
-
-/** Styling for compact buttons, typically used in toolbars (e.g. undo/redo). */
-button.narrow {
-  // undo/redo + toolbar buttons
-  padding: 0 10px;
-
-  i {
-    margin-right: 0 !important;
-  }
-}
-
 /** Utility alias for Ant Design small margin at the start of an element. */
 .icon-margin-left {
   margin-inline-start: var(--ant-margin-xs);
@@ -151,10 +138,8 @@ button.narrow {
   margin-inline-end: var(--ant-margin-xs);
 }
 
-/** Enforces no right margin for specific Ant Design and FontAwesome interactive elements. */
-.ant-spin-dot,
-.ant-spin-dot i,
-.ant-avatar i {
+/** Enforces no right margin for specific Ant Design interactive elements. */
+.ant-spin-dot {
   margin-right: 0;
 }
 

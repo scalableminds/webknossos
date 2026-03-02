@@ -241,7 +241,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationTool.LINE_MEASUREMENT.id}
       >
-        <Icon component={LineMeasurementIcon} aria-label="Measurement Tool Icon" />
+        <Icon component={LineMeasurementIcon} aria-label="Line Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         disabledTitle={explanation}
@@ -252,7 +252,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         value={AnnotationTool.AREA_MEASUREMENT.id}
         disabled={isDisabled}
       >
-        <Icon component={AreaMeasurementIcon} aria-label="Measurement Tool Icon" />
+        <Icon component={AreaMeasurementIcon} aria-label="Area Measurement Tool Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

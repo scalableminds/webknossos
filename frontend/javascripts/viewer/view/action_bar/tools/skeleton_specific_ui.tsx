@@ -78,9 +78,8 @@ export function SkeletonSpecificButtons() {
           onClick={toggleNewNodeNewTreeMode}
           active={isNewNodeNewTreeModeOn}
           title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
-        >
-          <Icon component={SomaClickingIcon} aria-label="Single Node Tree Mode" />
-        </ToggleButton>
+          icon={<Icon component={SomaClickingIcon} aria-label="Single Node Tree Mode" />}
+        />
       )}
       {isSplitToolkit ? null : (
         <ToggleButton
@@ -92,27 +91,24 @@ export function SkeletonSpecificButtons() {
           onClick={toggleMergerMode}
           disabled={isMergerModeDisabled}
           title={mergerModeTooltipText}
-        >
-          <Icon component={MergerModeIcon} aria-label="Merger Mode" />
-        </ToggleButton>
+          icon={<Icon component={MergerModeIcon} aria-label="Merger Mode" />}
+        />
       )}
       <ToggleButton
         active={isContinuousNodeCreationEnabled}
         onClick={toggleContinuousNodeCreation}
         style={NARROW_BUTTON_STYLE}
         title="When activated, clicking and dragging creates nodes like a drawing tool."
-      >
-        <Icon component={PenIcon} />
-      </ToggleButton>
+        icon={<Icon component={PenIcon} />}
+      />
 
       {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrManager && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}
           onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
           title="Materialize this merger mode annotation into a new dataset."
-        >
-          <ExportOutlined />
-        </ButtonComponent>
+          icon={<ExportOutlined />}
+        />
       )}
       {isMaterializeVolumeAnnotationEnabled && showMaterializeVolumeAnnotationModal && (
         <MaterializeVolumeAnnotationModal

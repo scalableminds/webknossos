@@ -192,7 +192,7 @@ export function ChangeBrushSizePopover() {
                   trigger={["click", "contextMenu", "hover"]}
                   placement="bottomLeft"
                 >
-                  <SettingOutlined />
+                  <ButtonComponent icon={<SettingOutlined />} />
                 </Dropdown>
               </Col>
             </Row>
@@ -242,9 +242,8 @@ export function ChangeBrushSizePopover() {
             width: 36,
             padding: 0,
           }}
-        >
-          <Icon component={BrushSizeIcon} aria-label="Brush Size" />
-        </ButtonComponent>
+          icon={<Icon component={BrushSizeIcon} aria-label="Brush Size" />}
+        />
       </Popover>
     </FastTooltip>
   );

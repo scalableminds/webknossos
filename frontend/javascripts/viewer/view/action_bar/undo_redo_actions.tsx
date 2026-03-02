@@ -25,7 +25,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
   return (
     <Space.Compact>
       <AsyncButton
-        className="narrow undo-redo-button"
+        className="undo-redo-button"
         key="undo-button"
         title="Undo (Ctrl+Z)"
         onClick={handleUndo}
@@ -34,7 +34,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         icon={<Icon component={UndoIcon} aria-label="undo" />}
       />
       <AsyncButton
-        className="narrow undo-redo-button hide-on-small-screen"
+        className="undo-redo-button hide-on-small-screen"
         key="redo-button"
         title="Redo (Ctrl+Y)"
         onClick={handleRedo}

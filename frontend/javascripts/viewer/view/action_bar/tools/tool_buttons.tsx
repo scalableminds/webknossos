@@ -25,9 +25,12 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
-import { ToolRadioButton } from "./tool_helpers";
+import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
+
+// Negative offset to hide eraser button when it is not visible.
+const ERASER_OFFSET_LEFT = -33; // button width 32px + 1px border
 
 export const ToolIdToComponent: Record<
   AnnotationToolId,
@@ -161,7 +164,7 @@ function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
       disabledExplanation={disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled}
       style={{
-        marginLeft: showEraseBrushTool ? 0 : -38,
+        marginLeft: showEraseBrushTool ? 0 : ERASER_OFFSET_LEFT,
         zIndex: showEraseBrushTool ? "initial" : -10,
         transition: "margin 0.3s",
       }}
@@ -222,7 +225,7 @@ function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
       disabledExplanation={disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled}
       style={{
-        marginLeft: showEraseTraceTool ? 0 : -38,
+        marginLeft: showEraseTraceTool ? 0 : ERASER_OFFSET_LEFT,
         zIndex: showEraseTraceTool ? "initial" : -10,
         transition: "margin 0.3s",
       }}
@@ -375,12 +378,12 @@ function ProofreadTool(_props: ToolButtonProps) {
       onMouseEnter={() => {
         dispatch(ensureLayerMappingsAreLoadedAction());
       }}
+      style={NARROW_BUTTON_STYLE}
     >
       <Icon
         component={ProofreadingIcon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.PROOFREAD.id].isDisabled ? 0.5 : 1,
-          padding: "0 4px",
         }}
       />
     </ToolRadioButton>
@@ -395,6 +398,7 @@ function LineMeasurementTool(_props: ToolButtonProps) {
       disabledExplanation=""
       disabled={false}
       value={AnnotationTool.LINE_MEASUREMENT.id}
+      style={NARROW_BUTTON_STYLE}
     >
       <Icon component={RulerIcon} />
     </ToolRadioButton>

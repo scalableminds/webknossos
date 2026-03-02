@@ -8,6 +8,7 @@ export const ACTIONBAR_MARGIN_LEFT = "var(--ant-margin-xs)"; // keep in sync wit
 export const NARROW_BUTTON_STYLE = {
   paddingLeft: "var(--ant-margin-xs)",
   paddingRight: "var(--ant-margin-xs)",
+  width: 32,
 };
 
 export function RadioButtonWithTooltip({

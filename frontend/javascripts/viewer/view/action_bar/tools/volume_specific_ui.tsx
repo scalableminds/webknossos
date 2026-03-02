@@ -278,12 +278,11 @@ export function CreateSegmentButton() {
       <ButtonComponent
         onClick={handleCreateCell}
         style={{
-          width: 36,
+          ...NARROW_BUTTON_STYLE,
         }}
         title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
-      >
-        <Icon component={NewSegmentIcon} aria-label="New Segment Icon" />
-      </ButtonComponent>
+        icon={<Icon component={NewSegmentIcon} aria-label="New Segment Icon" />}
+      />
     </Badge>
   );
 }
@@ -344,12 +343,10 @@ export function QuickSelectSettingsPopover() {
         <ToggleButton
           title="Configure Quick Select"
           tooltipPlacement="right"
-          className="narrow"
           active={isQuickSelectActive || showNux}
-          style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
-        >
-          <SettingOutlined />
-        </ToggleButton>
+          style={{ ...NARROW_BUTTON_STYLE, marginLeft: ACTIONBAR_MARGIN_LEFT }}
+          icon={<SettingOutlined />}
+        />
       </Popover>
     </Wrapper>
   );
@@ -375,6 +372,7 @@ export function FloodFillSettings() {
 
       <ButtonComponent
         style={{
+          ...NARROW_BUTTON_STYLE,
           marginLeft: ACTIONBAR_MARGIN_LEFT,
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
@@ -427,18 +425,16 @@ export function ProofreadingComponents() {
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
-        className="narrow"
-      >
-        <ClearOutlined />
-      </ButtonComponent>
+        style={NARROW_BUTTON_STYLE}
+        icon={<ClearOutlined />}
+      />
       <ToggleButton
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
         active={autoRenderMeshes}
         style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
-      >
-        <Icon component={LoadMeshesIcon} />
-      </ToggleButton>
+        icon={<Icon component={LoadMeshesIcon} />}
+      />
       <ToggleButton
         active={selectiveVisibilityInProofreading}
         title={`${
@@ -448,9 +444,8 @@ export function ProofreadingComponents() {
         onClick={() =>
           handleToggleSelectiveVisibilityInProofreading(!selectiveVisibilityInProofreading)
         }
-      >
-        <Icon component={HighlighterIcon} />
-      </ToggleButton>
+        icon={<Icon component={HighlighterIcon} />}
+      />
       <ToggleButton
         active={isMultiSplitActive}
         title={`${
@@ -458,9 +453,8 @@ export function ProofreadingComponents() {
         } multi splitting. When enabled, two partitions can be selected in the orthogonal or 3D viewports to split more accurately.`}
         style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleIsMultiSplitActive(!isMultiSplitActive)}
-      >
-        <ScissorOutlined />
-      </ToggleButton>
+        icon={<ScissorOutlined />}
+      />
     </Space.Compact>
   );
 }

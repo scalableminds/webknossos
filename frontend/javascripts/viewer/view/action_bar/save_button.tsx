@@ -112,7 +112,6 @@ function SaveButton() {
       type="primary"
       onClick={handleSave}
       icon={saveButtonIcon}
-      className="narrow"
       style={{
         background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
       }}

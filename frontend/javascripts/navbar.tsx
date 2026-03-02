@@ -433,6 +433,7 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
+    className: "hide-on-small-screen",
     label: getCollapsibleMenuTitle(
       "Help",
       <QuestionCircleOutlined className="icon-margin-right" />,

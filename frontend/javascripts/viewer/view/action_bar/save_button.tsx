@@ -106,6 +106,20 @@ function SaveButton() {
 
   const totalBucketsToCompress =
     saveInfo.waitingForCompressionBucketCount + saveInfo.compressingBucketCount;
+  const isSmallScreen = window.matchMedia("(max-width: 1200px)").matches;
+
+  if (isSmallScreen && !shouldShowProgress && !showUnsavedWarning) {
+    return (
+      <ButtonComponent
+        key="save-button"
+        type="primary"
+        onClick={handleSave}
+        icon={saveButtonIcon}
+        className="narrow"
+      />
+    );
+  }
+
   return (
     <ButtonComponent
       key="save-button"

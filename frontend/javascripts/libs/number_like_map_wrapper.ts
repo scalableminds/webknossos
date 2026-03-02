@@ -32,6 +32,10 @@ export class NumberLikeMapWrapper<T extends number | bigint> {
     return this.map.get(this.convertKey(key));
   }
 
+  getAsNumber(key: number): number {
+    return Number(this.get(key));
+  }
+
   has(key: number): boolean {
     return this.map.has(this.convertKey(key));
   }

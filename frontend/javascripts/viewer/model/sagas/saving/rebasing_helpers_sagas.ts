@@ -2,19 +2,27 @@ import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
-import type { APIUpdateActionBatch } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  APIUpdateActionBatch,
+  MetadataEntryProto,
+} from "types/api_types";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import type { Mapping, NumberLikeMap, SaveQueueEntry } from "viewer/store";
+import type { ActiveMappingInfo, Mapping, NumberLikeMap, SaveQueueEntry } from "viewer/store";
 import type {
+  CreateSegmentUpdateAction,
   MergeAgglomerateUpdateAction,
   MergeSegmentItemsUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
   UpdateSegmentPartialUpdateAction,
 } from "../volume/update_actions";
+import { api } from "viewer/singletons";
+import { Vector3 } from "viewer/constants";
+import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,
@@ -36,19 +44,23 @@ export function saveQueueEntriesToServerUpdateActionBatches(
 }
 
 type IdsToReloadPerMappingId = Record<string, number[]>;
+type AnchorPositionToUnmappedIdByMappingId = Record<string, Record<string, number>>;
 
 // Gathers mapped agglomerate ids for unknown but relevant segments to apply the passed save queue entries correctly.
 // This is needed in case proofreading was done via mesh interactions whose mapping info is present in the meshes
 // but not in the activeMappingByLayer.mapping. Due to incorporating backend updates the agglomerate ids of the
 // meshes might be outdated, thus we reload this info and store it in the local mapping to perform the correct merge.
 // Returns a list of segment ids to reload for each needed volume / editable tracing id.
-function* getAllUnknownSegmentIdsInPendingUpdates(
-  saveQueue: SaveQueueEntry[],
-): Saga<IdsToReloadPerMappingId> {
+function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): Saga<{
+  idsToReloadByMappingId: IdsToReloadPerMappingId;
+  anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId;
+}> {
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
   const idsToReloadByMappingId = {} as IdsToReloadPerMappingId;
+  const anchorPositionToUnmappedIdByMappingId: Record<string, Record<string, number>> = {};
+  const promises = [];
   for (const saveQueueEntry of saveQueue) {
     for (const action of saveQueueEntry.actions) {
       switch (action.name) {
@@ -69,22 +81,70 @@ function* getAllUnknownSegmentIdsInPendingUpdates(
           const updatedAgglomerateId1 = mappingSyncedWithBackend.get(segmentId1);
           const updatedAgglomerateId2 = mappingSyncedWithBackend.get(segmentId2);
           if (!updatedAgglomerateId1) {
-            if (!(actionTracingId in idsToReloadByMappingId)) {
-              idsToReloadByMappingId[actionTracingId] = [];
-            }
-            idsToReloadByMappingId[actionTracingId].push(segmentId1);
+            appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, segmentId1);
           }
           if (!updatedAgglomerateId2) {
-            if (!(actionTracingId in idsToReloadByMappingId)) {
-              idsToReloadByMappingId[actionTracingId] = [];
-            }
-            idsToReloadByMappingId[actionTracingId].push(segmentId2);
+            appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, segmentId2);
           }
+          break;
+        }
+        case "createSegment": {
+          promises.push(
+            action,
+            appendIdToReloadFromPositionAsync(
+              action,
+              idsToReloadByMappingId,
+              anchorPositionToUnmappedIdByMappingId,
+            ),
+          );
+          break;
         }
       }
     }
   }
-  return idsToReloadByMappingId;
+  yield call([Promise, Promise.all], promises);
+  return { idsToReloadByMappingId, anchorPositionToUnmappedIdByMappingId };
+}
+
+function appendToIdsToReloadMapping(
+  actionTracingId: string,
+  idsToReloadByMappingId: IdsToReloadPerMappingId,
+  segmentId2: number,
+) {
+  if (!(actionTracingId in idsToReloadByMappingId)) {
+    idsToReloadByMappingId[actionTracingId] = [];
+  }
+  idsToReloadByMappingId[actionTracingId].push(segmentId2);
+}
+
+async function appendIdToReloadFromPositionAsync(
+  action: CreateSegmentUpdateAction,
+  idsToReloadByMappingId: IdsToReloadPerMappingId,
+  anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId,
+) {
+  const { actionTracingId, anchorPosition, additionalCoordinates } = action.value;
+  if (anchorPosition == null) {
+    return;
+  }
+  const unmappedId = await api.data.getDataValue(
+    actionTracingId,
+    anchorPosition,
+    null,
+    additionalCoordinates,
+  );
+  const anchorPositionKey = segmentPositionToKey(anchorPosition, additionalCoordinates);
+  if (anchorPositionToUnmappedIdByMappingId[actionTracingId] == null) {
+    anchorPositionToUnmappedIdByMappingId[actionTracingId] = {};
+  }
+  anchorPositionToUnmappedIdByMappingId[actionTracingId][anchorPositionKey] = unmappedId;
+  appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, unmappedId);
+}
+
+function segmentPositionToKey(
+  anchorPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+) {
+  return `${anchorPosition.join(",")}-${getAdditionalCoordinatesAsString(additionalCoordinates)}`;
 }
 
 // For each passed mapping, reload the segment ids' mapping information and store it in the local mapping.
@@ -164,7 +224,10 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
     }
 > {
   const saveQueue = yield* select((state) => state.save.queue);
-  const idsToFetch = yield* call(getAllUnknownSegmentIdsInPendingUpdates, saveQueue);
+  const { idsToReloadByMappingId: idsToFetch, anchorPositionToUnmappedIdByMappingId } = yield* call(
+    getAllUnknownSegmentIdsInPendingUpdates,
+    saveQueue,
+  );
   yield* call(addMissingSegmentsToLoadedMappings, idsToFetch);
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
@@ -248,11 +311,16 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               // createSegment update actions might need to be changed to updateSegmentPartial
               // if another user created that segment in the meantime.
               const { actionTracingId } = action.value;
-
+              const segmentId = getUpToDateSegmentIdViaPosition(
+                action,
+                activeMappingByLayer,
+                anchorPositionToUnmappedIdByMappingId,
+              );
               const tracing = annotationBeforeUpdate.volumes.find(
                 (v) => v.tracingId === actionTracingId,
               );
-              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+
+              const maybeExistingSegment = tracing?.segments.getNullable(segmentId);
 
               if (!maybeExistingSegment) {
                 return action;
@@ -266,7 +334,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 value: {
                   ...omitBy(action.value, (value) => value == null),
                   actionTracingId: action.value.actionTracingId,
-                  id: action.value.id,
+                  id: segmentId,
                 },
               };
               return newAction;
@@ -313,4 +381,27 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
     return { success: true, updatedSaveQueue };
   }
   return { success: false, updatedSaveQueue: undefined };
+}
+
+function getUpToDateSegmentIdViaPosition(
+  action: CreateSegmentUpdateAction,
+  activeMappingByLayer: Record<string, ActiveMappingInfo>,
+  anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId,
+) {
+  const { actionTracingId } = action.value;
+
+  const originalSegmentId = action.value.id;
+  const mappingSyncedWithBackendUnwrapped = activeMappingByLayer[actionTracingId]?.mapping;
+
+  if (action.value.anchorPosition == null || mappingSyncedWithBackendUnwrapped == null) {
+    return originalSegmentId;
+  }
+
+  const unmappedId =
+    anchorPositionToUnmappedIdByMappingId[actionTracingId][
+      segmentPositionToKey(action.value.anchorPosition, action.value.additionalCoordinates)
+    ];
+
+  const mappingSyncedWithBackend = new NumberLikeMapWrapper(mappingSyncedWithBackendUnwrapped);
+  return mappingSyncedWithBackend.getAsNumber(unmappedId);
 }

@@ -711,8 +711,6 @@ describe("Proofreading (Multi User)", () => {
 
       yield take("DONE_SAVING");
 
-      yield call(publishDebuggingState, backendMock);
-
       const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.slice(-2)).toEqual([
         {
@@ -1271,6 +1269,82 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId: 1337,
         },
       });
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should adapt created segment item if it was merged into another segment by another user", async (context: WebknossosTestContext) => {
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
+
+    backendMock.planVersionInjection(5, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
+        },
+      },
+      {
+        name: "mergeSegmentItems",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      const initialExpectedMapping = new Map([
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
+      ]);
+      yield* prepareEditableMapping(context, tracingId, 5, [5, 5, 5], initialExpectedMapping);
+
+      yield put(
+        updateSegmentAction(
+          4,
+          {
+            name: "Some segment name",
+            anchorPosition: [4, 4, 4],
+          },
+          tracingId,
+        ),
+      );
+
+      yield call(() => api.tracing.save());
+
+      yield call(publishDebuggingState, backendMock);
+
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const currentSegments = state.annotation.volumes[0].segments;
+        expect(currentSegments.size()).toEqual(2);
+
+        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        expect(segment1337AfterSaving).toMatchObject({
+          name: "Some segment name",
+          anchorPosition: [4, 4, 4],
+        });
+      }
     });
 
     await task.toPromise();

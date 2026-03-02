@@ -17,6 +17,7 @@ import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers
 import { Model, Store } from "viewer/singletons";
 import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
+import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 const SAVE_POLLING_INTERVAL = 1000; // 1s
 
@@ -113,6 +114,7 @@ function SaveButton() {
       onClick={handleSave}
       icon={saveButtonIcon}
       style={{
+        ...NARROW_BUTTON_STYLE,
         background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
       }}
     >

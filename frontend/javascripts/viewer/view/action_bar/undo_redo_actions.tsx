@@ -6,6 +6,7 @@ import { AsyncButton } from "components/async_clickables";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { dispatchRedoAsync, dispatchUndoAsync } from "viewer/model/actions/save_actions";
+import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 type Props = {
   hasTracing: boolean;
@@ -31,6 +32,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleUndo}
         disabled={isBusy}
         hideContentWhenLoading
+        style={NARROW_BUTTON_STYLE}
         icon={<Icon component={UndoIcon} aria-label="undo" />}
       />
       <AsyncButton
@@ -40,6 +42,7 @@ function UndoRedoActions({ hasTracing, isBusy }: Props) {
         onClick={handleRedo}
         disabled={isBusy}
         hideContentWhenLoading
+        style={NARROW_BUTTON_STYLE}
         icon={<Icon component={RedoIcon} aria-label="redo" />}
       />
     </Space.Compact>

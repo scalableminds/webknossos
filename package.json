@@ -145,7 +145,7 @@
     "deep-for-each": "^2.0.3",
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^2.1.0",
-    "distance-transform": "^1.0.2",
+    "distance-transform": "https://github.com/scalableminds/distance-transform",
     "dompurify": "^3.3.0",
     "file-saver": "^2.0.1",
     "flexlayout-react": "0.7.15",
@@ -197,5 +197,8 @@
     "url": "^0.11.0",
     "url-join": "^4.0.0"
   },
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "yarn@4.9.2",
+  "resolutions": {
+    "distance-transform": "https://github.com/scalableminds/distance-transform"
+  }
 }

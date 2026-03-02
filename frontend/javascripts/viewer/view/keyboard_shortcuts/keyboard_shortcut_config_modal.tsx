@@ -1,5 +1,5 @@
 import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
-import { Button, Flex, Input, Modal, Space, Switch, Table, Typography } from "antd";
+import { Button, Flex, Input, Modal, Space, Switch, Table, TabsProps, Typography } from "antd";
 import app from "app";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
@@ -16,12 +16,44 @@ import {
 import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { formatKeyComboChain } from "./keyboard_shortcut_utils";
 import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
+import { ColumnsType } from "antd/es/table";
 
 const { Text, Title } = Typography;
 
 export type ShortcutConfigModalProps = {
   isOpen: boolean;
   onClose: () => void;
+};
+type TableDataEntry = {
+  key: string;
+  combos: KeyboardComboChain[];
+  handlerId: string;
+  domain: string;
+  description: string;
+};
+type ShortcutDomainTableProps = {
+  domainName: KeyboardShortcutDomain;
+  tableData: TableDataEntry[];
+  columns: ColumnsType<TableDataEntry>;
+};
+
+const ShortcutDomainTable: React.FC<ShortcutDomainTableProps> = ({
+  domainName,
+  tableData,
+  columns,
+}) => {
+  return (
+    <div key={domainName}>
+      <Title level={5}>{domainName} Shortcuts</Title>
+      <Table
+        dataSource={tableData}
+        columns={columns}
+        pagination={false}
+        size="small"
+        style={{ marginBottom: 24 }}
+      />
+    </div>
+  );
 };
 
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
@@ -51,29 +83,33 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   };
 
   // Convert config into grouped table rows
-  type TableDataEntry = {
-    key: string;
-    combos: KeyboardComboChain[];
-    handlerId: string;
-    domain: string;
-    description: string;
-  };
-
-  const tableData = useMemo(() => {
-    const rows: TableDataEntry[] = Object.entries(localConfig).map(([handlerId, keyCombos]) => {
+  const tableDataMap = useMemo(() => {
+    const domainToEntries: Record<KeyboardShortcutDomain, TableDataEntry[]> = {
+      [KeyboardShortcutDomain.GENERAL]: [],
+      [KeyboardShortcutDomain.GENERAL_EDITING]: [],
+      [KeyboardShortcutDomain.ARBITRARY_NAVIGATION]: [],
+      [KeyboardShortcutDomain.ARBITRARY_EDITING]: [],
+      [KeyboardShortcutDomain.PLANE_NAVIGATION]: [],
+      [KeyboardShortcutDomain.PLANE_CONFIGURATIONS]: [],
+      [KeyboardShortcutDomain.PLANE_SKELETON_TOOL]: [],
+      [KeyboardShortcutDomain.PLANE_VOLUME_TOOL]: [],
+      [KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL]: [],
+      [KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL]: [],
+    };
+    Object.entries(localConfig).forEach(([handlerId, keyCombos]) => {
       const metaInfo =
         ALL_KEYBOARD_SHORTCUT_META_INFOS[
           handlerId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
         ];
-      return {
+      domainToEntries[metaInfo.domain].push({
         key: handlerId,
         combos: keyCombos,
         handlerId,
         domain: metaInfo.domain,
         description: metaInfo.description,
-      };
+      });
     });
-    return rows;
+    return domainToEntries;
   }, [localConfig]);
 
   const columns = [
@@ -186,6 +222,28 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     setLocalConfig(getAllDefaultKeyboardShortcuts());
   };
 
+  // TODOM: continue
+  const shortcutsTabItems: TabsProps["items"] = [
+    {
+      key: "general",
+      label: "General",
+      children: (
+        <>
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.GENERAL}
+            tableData={tableDataMap[KeyboardShortcutDomain.GENERAL]}
+            columns={columns}
+          />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.GENERAL_EDITING}
+            tableData={tableDataMap[KeyboardShortcutDomain.GENERAL_EDITING]}
+            columns={columns}
+          />
+        </>
+      ),
+    },
+  ];
+
   return (
     <Modal
       open={isOpen}
@@ -220,7 +278,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           <div key={domainName}>
             <Title level={5}>{domainName} Shortcuts</Title>
             <Table
-              dataSource={tableData.filter((r) => r.domain === domainName)}
+              dataSource={tableDataMap[domainName]}
               columns={columns}
               pagination={false}
               size="small"

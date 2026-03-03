@@ -5,6 +5,19 @@
  *
  * It handles both direct JSX attributes (`stroke`, `fill`) and
  * inline style object properties (`style={{ stroke: ..., fill: ... }}`).
+ *
+ * When designing SVG icons, tools like Inkscape or Affinity Designer typically assign
+ * fixed colors to paths (e.g., #000 or rgb(123, 123, 123)). While these colors may
+ * look good on a light background, they often don't work on dark backgrounds and vice-versa.
+ *
+ * By setting the color to `currentColor`, the icon will instead inherit the current font color,
+ * allowing it to adapt automatically to both dark and light modes.
+ *
+ * Important limitations:
+ * - `currentColor` is a browser-level SVG feature rather than a standard setting in design
+ *   software.
+ * - SVG paths that already have hardcoded `stroke` or `fill` attributes cannot be styled
+ *   from external CSS. This plugin solves that by transforming the SVG source itself.
  */
 type ReplaceSvgColorOptions = {
   patchStroke?: boolean;

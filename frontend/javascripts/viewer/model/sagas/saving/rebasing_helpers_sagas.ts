@@ -48,8 +48,8 @@ export function saveQueueEntriesToServerUpdateActionBatches(
   }));
 }
 
-type IdsToReloadPerMappingId = Record<string, number[]>;
-type AnchorPositionToUnmappedIdByMappingId = Record<string, Record<string, number>>;
+type IdsToReloadPerMappingId = Map<string, number[]>;
+type AnchorPositionToUnmappedIdByMappingId = Map<string, Map<string, number>>;
 
 // Gathers mapped agglomerate ids for unknown but relevant segments to apply the passed save queue entries correctly.
 // This is needed in case proofreading was done via mesh interactions whose mapping info is present in the meshes
@@ -63,8 +63,8 @@ function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): 
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  const idsToReloadByMappingId = {} as IdsToReloadPerMappingId;
-  const anchorPositionToUnmappedIdByMappingId: Record<string, Record<string, number>> = {};
+  const idsToReloadByMappingId = new Map();
+  const anchorPositionToUnmappedIdByMappingId: Map<string, Map<string, number>> = new Map();
   const promises = [];
   for (const saveQueueEntry of saveQueue) {
     for (const action of saveQueueEntry.actions) {
@@ -116,10 +116,10 @@ function appendToIdsToReloadMapping(
   idsToReloadByMappingId: IdsToReloadPerMappingId,
   segmentId2: number,
 ) {
-  if (!(actionTracingId in idsToReloadByMappingId)) {
-    idsToReloadByMappingId[actionTracingId] = [];
+  if (!idsToReloadByMappingId.has(actionTracingId)) {
+    idsToReloadByMappingId.set(actionTracingId, []);
   }
-  idsToReloadByMappingId[actionTracingId].push(segmentId2);
+  idsToReloadByMappingId.get(actionTracingId)!.push(segmentId2);
 }
 
 async function appendIdToReloadFromPositionAsync(
@@ -138,10 +138,10 @@ async function appendIdToReloadFromPositionAsync(
     additionalCoordinates,
   );
   const anchorPositionKey = segmentPositionToKey(anchorPosition, additionalCoordinates);
-  if (anchorPositionToUnmappedIdByMappingId[actionTracingId] == null) {
-    anchorPositionToUnmappedIdByMappingId[actionTracingId] = {};
+  if (!anchorPositionToUnmappedIdByMappingId.has(actionTracingId)) {
+    anchorPositionToUnmappedIdByMappingId.set(actionTracingId, new Map());
   }
-  anchorPositionToUnmappedIdByMappingId[actionTracingId][anchorPositionKey] = unmappedId;
+  anchorPositionToUnmappedIdByMappingId.get(actionTracingId)!.set(anchorPositionKey, unmappedId);
   appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, unmappedId);
 }
 
@@ -155,15 +155,20 @@ function segmentPositionToKey(
 // For each passed mapping, reload the segment ids' mapping information and store it in the local mapping.
 // Needed after getAllUnknownSegmentIdsInPendingUpdates to load updated mapping info for segment ids of
 // mesh interaction proofreading actions to ensure reapplying these actions is done with up-to-date mapping info.
-function* addMissingSegmentsToLoadedMappings(idsToReload: IdsToReloadPerMappingId): Saga<void> {
+function* addMissingSegmentsToLoadedMappings(
+  idsToReloadPerMapping: IdsToReloadPerMappingId,
+): Saga<void> {
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const version = yield* select((state) => state.annotation.version);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  for (const volumeTracingId of Object.keys(idsToReload)) {
-    if (idsToReload[volumeTracingId].length === 0) {
+  console.log("idsToReloadPerMapping", idsToReloadPerMapping);
+  console.log("idsToReloadPerMapping.keys", idsToReloadPerMapping.keys);
+  for (const volumeTracingId of idsToReloadPerMapping.keys()) {
+    const idsToReload = idsToReloadPerMapping.get(volumeTracingId);
+    if (idsToReload == null || idsToReload.length === 0) {
       continue;
     }
     const activeMapping = activeMappingByLayer[volumeTracingId];
@@ -173,7 +178,7 @@ function* addMissingSegmentsToLoadedMappings(idsToReload: IdsToReloadPerMappingI
       getAgglomeratesForSegmentsFromTracingstore,
       tracingStoreUrl,
       volumeTracingId,
-      idsToReload[volumeTracingId],
+      idsToReload,
       annotationId,
       version,
     );
@@ -456,10 +461,12 @@ function getUpToDateSegmentIdViaPosition(
     return originalSegmentId;
   }
 
-  const unmappedId =
-    anchorPositionToUnmappedIdByMappingId[actionTracingId][
-      segmentPositionToKey(anchorPosition, additionalCoordinates)
-    ];
+  const unmappedId = anchorPositionToUnmappedIdByMappingId
+    .get(actionTracingId)
+    ?.get(segmentPositionToKey(anchorPosition, additionalCoordinates));
+  if (unmappedId == null) {
+    return originalSegmentId;
+  }
 
   const mappingSyncedWithBackend = new NumberLikeMapWrapper(mappingSyncedWithBackendUnwrapped);
   return mappingSyncedWithBackend.getAsNumber(unmappedId);

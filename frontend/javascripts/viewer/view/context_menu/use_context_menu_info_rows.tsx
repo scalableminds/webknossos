@@ -1,5 +1,7 @@
 import Icon, { BarChartOutlined, PushpinOutlined, TagOutlined } from "@ant-design/icons";
+import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
 import IconCell from "@images/icons/icon-cell.svg?react";
+import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import { Space } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
@@ -166,7 +168,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
       getInfoMenuItem(
         "distanceInfo",
         <Space size="small">
-          <i className="fas fa-ruler" />
+          <Icon component={RulerIcon} />
           <FastTooltip title="Distance to the active Node of the active Tree">
             {`${distanceToSelection[0]} (${distanceToSelection[1]}) to this
             ${maybeClickedNodeId != null ? "Node" : "Position"}`}
@@ -238,7 +240,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
       getInfoMenuItem(
         "boundingBoxPositionInfo",
         <Space size="small">
-          <i className="fas fa-dice-d6 " />
+          <Icon component={BoundingBoxIcon} />
           {`Bounding Box: ${boundingBoxInfoLabel}`}
           <CopyIconWithTooltip
             value={boundingBoxInfoLabel}

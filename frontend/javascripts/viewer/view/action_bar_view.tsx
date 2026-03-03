@@ -1,4 +1,5 @@
-import { ExperimentOutlined } from "@ant-design/icons";
+import Icon from "@ant-design/icons";
+import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
@@ -50,7 +51,6 @@ import {
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
 import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
-
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
@@ -339,7 +339,11 @@ class ActionBarView extends PureComponent<Props, State> {
           }}
           disabled={disabled}
         >
-          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
+          <Button
+            disabled={disabled}
+            icon={<Icon component={AiAnalysisIcon} />}
+            title={tooltipText}
+          >
             AI Analysis
           </Button>
         </Dropdown>

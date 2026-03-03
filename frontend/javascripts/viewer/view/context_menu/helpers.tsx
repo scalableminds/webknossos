@@ -1,4 +1,5 @@
 import Icon from "@ant-design/icons";
+import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
 import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
 import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
@@ -45,7 +46,7 @@ export function measureAndShowLengthBetweenNodes(
       lengthInUnit,
       LongUnitToShortUnitMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
-    icon: <i className="fas fa-ruler" />,
+    icon: <Icon component={RulerIcon} />,
   });
 }
 
@@ -74,7 +75,7 @@ export function measureAndShowFullTreeLength(
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
     ),
-    icon: <i className="fas fa-ruler" />,
+    icon: <Icon component={RulerIcon} />,
   });
 }
 

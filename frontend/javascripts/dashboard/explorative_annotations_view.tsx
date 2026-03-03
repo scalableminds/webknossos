@@ -1,4 +1,4 @@
-import {
+import Icon, {
   DownloadOutlined,
   FolderOpenOutlined,
   InboxOutlined,
@@ -10,6 +10,7 @@ import {
   UploadOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
   downloadAnnotation,
@@ -92,13 +93,6 @@ const persistence = new Persistence<PartialState>(
     shouldShowArchivedAnnotations: PropTypes.bool,
   },
   "explorativeList",
-);
-
-const READ_ONLY_ICON = (
-  <span className="fa-stack fa-1x" style={{ width: "1em" }}>
-    <i className="fas fa-pen fa-stack-1x" />
-    <i className="fas fa-slash fa-stack-1x" />
-  </span>
 );
 
 function formatUserName(user: APIUserCompact) {
@@ -628,7 +622,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
             <FormattedId id={annotation.id} />
 
             {!this.isAnnotationEditable(annotation) ? (
-              <LinkButton disabled icon={READ_ONLY_ICON}>
+              <LinkButton disabled icon={<Icon component={ReadOnlyIcon} />}>
                 read-only
               </LinkButton>
             ) : null}

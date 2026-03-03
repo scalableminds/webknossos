@@ -135,7 +135,7 @@ export function createSkeletonTracingFromAdjacency(
     type: 1 as any as TreeType, // Needed as encoding only accepts enum ids and not the representative string.
     edgesAreVisible: true,
     metadata: [],
-    agglomerateInfo: { agglomerateId, tracingId: editableMappingId },
+    agglomerateInfo: { agglomerateId, tracingId: editableMappingId /*, mappingName: undefined*/ },
   };
 
   type ServerSkeletonTracingProtoCompatible = ServerSkeletonTracing & {

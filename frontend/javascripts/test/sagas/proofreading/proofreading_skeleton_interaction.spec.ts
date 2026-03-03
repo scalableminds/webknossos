@@ -434,6 +434,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(injectedMergeRequest.version).toEqual(8);
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
         getNestedUpdateActions(context).slice(-5);
+      const all = getNestedUpdateActions(context);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_simple.json",
       );
@@ -497,6 +498,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
       const splitTreeAndAgglomerateAndDeleteSegmentActions =
         getNestedUpdateActions(context).slice(-5);
+      const all = getNestedUpdateActions(context);
+      console.log(all);
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_more_complex.json",
       );

@@ -134,8 +134,8 @@ export function findTreeByAgglomerateId(
       (tree: Tree) =>
         tree.agglomerateInfo &&
         tree.agglomerateInfo.agglomerateId === agglomerateId &&
-        tree.agglomerateInfo.tracingId === editableMappingId &&
-        tree.agglomerateInfo.tracingId === mappingName,
+        (tree.agglomerateInfo.tracingId === editableMappingId ||
+          tree.agglomerateInfo.mappingName === mappingName),
     );
 }
 

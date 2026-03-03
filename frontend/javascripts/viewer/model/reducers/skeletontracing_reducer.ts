@@ -1202,7 +1202,7 @@ function SkeletonTracingReducer(
       });
     }
 
-    case "SET_TREE_AGGLOMERATE_INFO": {
+    case "SET_TREE_AGGLOMERATE_INFO_AGGLOMERATE_ID": {
       const tree = getTree(skeletonTracing, action.treeId);
       if (tree == null || tree.agglomerateInfo == null) {
         return state;

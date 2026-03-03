@@ -82,7 +82,7 @@ import {
   deleteEdgeAction,
   type MergeTreesAction,
   type SetNodePositionAction,
-  setTreeAgglomerateInfoAction,
+  setTreeAgglomerateInfoAgglomerateIdAction,
   setTreeNameAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
@@ -738,7 +738,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       updatedSourceTree.treeId,
     ),
   );
-  yield* put(setTreeAgglomerateInfoAction(newSourceAgglomerateId, updatedSourceTree.treeId));
+  yield* put(
+    setTreeAgglomerateInfoAgglomerateIdAction(newSourceAgglomerateId, updatedSourceTree.treeId),
+  );
 
   if (updatedSourceTree.treeId !== updatedTargetTree.treeId) {
     // A split between the trees was done. Create a segment for the new tree and update its name.
@@ -748,7 +750,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         updatedTargetTree.treeId,
       ),
     );
-    yield* put(setTreeAgglomerateInfoAction(newTargetAgglomerateId, updatedTargetTree.treeId));
+    yield* put(
+      setTreeAgglomerateInfoAgglomerateIdAction(newTargetAgglomerateId, updatedTargetTree.treeId),
+    );
     const newSegmentName =
       (yield* select(
         (state) =>

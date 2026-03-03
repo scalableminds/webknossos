@@ -143,7 +143,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
           edges = skeletonEdges,
           name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
           `type` = Some(TreeTypeProto.AGGLOMERATE),
-          agglomerateInfo = Some(AgglomerateInfo(agglomerateId, agglomerateFileKey.attachment.name))
+          agglomerateInfo = Some(AgglomerateInfo(agglomerateId, None, Some(agglomerateFileKey.attachment.name)))
         ))
 
       skeleton = SkeletonTracingDefaults.createInstance.copy(trees = trees)

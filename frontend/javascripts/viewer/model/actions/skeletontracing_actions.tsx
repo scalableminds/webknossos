@@ -49,7 +49,7 @@ type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAc
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
 type SetTreeMetadataAction = ReturnType<typeof setTreeMetadataAction>;
-type SetTreeAgglomerateIdAction = ReturnType<typeof setTreeAgglomerateInfoAction>;
+type SetTreeAgglomerateIdAction = ReturnType<typeof setTreeAgglomerateInfoAgglomerateIdAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -500,12 +500,12 @@ export const setTreeMetadataAction = (
     treeId,
   }) as const;
 
-export const setTreeAgglomerateInfoAction = (
+export const setTreeAgglomerateInfoAgglomerateIdAction = (
   agglomerateId: number,
   treeId?: number | null | undefined,
 ) =>
   ({
-    type: "SET_TREE_AGGLOMERATE_INFO",
+    type: "SET_TREE_AGGLOMERATE_INFO_AGGLOMERATE_ID",
     agglomerateId,
     treeId,
   }) as const;

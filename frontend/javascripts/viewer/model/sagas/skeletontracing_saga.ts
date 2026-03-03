@@ -468,7 +468,7 @@ function* loadAgglomerateSkeletonWithId(
         yield* call(unsubscribeFromAnnotationMutex);
       } else {
         console.warn(
-          "Loaded agglomerate skeleton in live collab mode, but there was no mutex subscription to be release, although this is to be expected.",
+          "Loaded agglomerate skeleton in live collab mode, but there was no mutex subscription to be released, although this is to be expected.",
         );
       }
     }
@@ -626,7 +626,8 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
     prevTree.groupId !== tree.groupId ||
     prevTree.type !== tree.type ||
     prevTree.agglomerateInfo?.agglomerateId !== tree.agglomerateInfo?.agglomerateId ||
-    prevTree.agglomerateInfo?.tracingId !== tree.agglomerateInfo?.tracingId;
+    prevTree.agglomerateInfo?.tracingId !== tree.agglomerateInfo?.tracingId ||
+    prevTree.agglomerateInfo?.mappingName !== tree.agglomerateInfo?.mappingName;
 
   if (doPrimitivesDiffer) {
     return true;

@@ -41,7 +41,6 @@ import TracingActionsView, {
   type LayoutProps,
 } from "viewer/view/action_bar/tracing_actions_view";
 import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
-import ViewModesView from "viewer/view/action_bar/view_modes_view";
 import {
   addNewLayout,
   deleteLayout,
@@ -250,8 +249,6 @@ function CreateAnnotationButton() {
 }
 
 function ModesView() {
-  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
-  const is2d = useWkSelector((state) => is2dDataset(state.dataset));
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isReadOnly = useWkSelector((state) => !state.annotation.isUpdatingCurrentlyAllowed);
@@ -259,13 +256,10 @@ function ModesView() {
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
 
-  const isArbitrarySupported = hasSkeleton || isViewMode;
-
   // The outer div is necessary for proper spacing.
   return (
     <div>
       <Space.Compact>
-        {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
         {isViewMode || isReadOnly || !isOrthoMode ? null : <ToolkitView />}
       </Space.Compact>
     </div>
@@ -329,6 +323,17 @@ class ActionBarView extends PureComponent<Props, State> {
       },
     ];
 
+    const isNarrowScreen = window.matchMedia("(max-width: 1400px)").matches;
+    const isVeryNarrowScreen = window.matchMedia("(max-width: 1200px)").matches;
+
+    let buttonText = "AI Analysis";
+    if (isNarrowScreen) {
+      buttonText = "AI";
+    }
+    if (isVeryNarrowScreen) {
+      buttonText = "";
+    }
+
     return (
       // div is for left spacing through CSS
       <div>
@@ -339,8 +344,13 @@ class ActionBarView extends PureComponent<Props, State> {
           }}
           disabled={disabled}
         >
-          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
-            AI Analysis
+          <Button
+            disabled={disabled}
+            icon={<ExperimentOutlined />}
+            title={tooltipText}
+            type={isVeryNarrowScreen ? "primary" : "default"}
+          >
+            {buttonText}
           </Button>
         </Dropdown>
       </div>

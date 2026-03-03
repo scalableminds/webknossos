@@ -495,7 +495,15 @@ function NotificationIcon({
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
         <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
+          <Button
+            onClick={handleShowWhatsNewView}
+            shape="circle"
+            icon={<BellOutlined />}
+            type="text"
+          >
+            {" "}
+            What's New{" "}
+          </Button>
         </Badge>
       </Tooltip>
     </div>
@@ -624,6 +632,17 @@ function LoggedInAvatar({
           label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
           style: { padding: 0 },
           children: [
+            {
+              key: "whatsNew",
+              label: (
+                <NotificationIcon
+                  key="notification-icon"
+                  activeUser={activeUser}
+                  navbarHeight={navbarHeight}
+                />
+              ),
+            },
+            { type: "divider" },
             {
               key: "userName",
               label: `${firstName} ${lastName}`,
@@ -877,13 +896,6 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         />,
       );
     }
-    trailingNavItems.push(
-      <NotificationIcon
-        key="notification-icon"
-        activeUser={loggedInUser}
-        navbarHeight={navbarHeight}
-      />,
-    );
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"

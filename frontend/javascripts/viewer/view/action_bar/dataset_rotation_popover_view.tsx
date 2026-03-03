@@ -8,7 +8,8 @@ import type { EmptyObject } from "types/globals";
 import type { Vector3 } from "viewer/constants";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
-import { NumberSliderSetting } from "../components/setting_input_views";
+import { setViewModeAction } from "viewer/model/actions/settings_actions";
+import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 
 const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",
@@ -21,6 +22,13 @@ const PopoverContent: React.FC<EmptyObject> = () => {
   const handleChangeRotation = useCallback(
     (rotation: Vector3) => {
       dispatch(setRotationAction(rotation));
+    },
+    [dispatch],
+  );
+
+  const setViewMode = useCallback(
+    (checked: boolean) => {
+      dispatch(setViewModeAction(checked ? "flight" : "orthogonal"));
     },
     [dispatch],
   );
@@ -93,6 +101,13 @@ const PopoverContent: React.FC<EmptyObject> = () => {
               Reset all
             </Button>
           </Col>
+        </Row>
+        <Row>
+          <SwitchSetting
+            onChange={setViewMode}
+            value={useWkSelector((state) => state.temporaryConfiguration.viewMode) === "flight"}
+            label="Flight Mode"
+          />
         </Row>
       </div>
     </div>

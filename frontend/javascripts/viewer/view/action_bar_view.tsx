@@ -1,7 +1,6 @@
 import Icon from "@ant-design/icons";
 import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -305,7 +304,6 @@ class ActionBarView extends PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
-    const orgaHasSomePaidPlan = hasSomePaidPlan(this.props.activeOrganization);
 
     const menuItems = [
       {
@@ -313,15 +311,11 @@ class ActionBarView extends PureComponent<Props, State> {
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
         label: "Run AI model",
       },
-      ...(orgaHasSomePaidPlan
-        ? [
-            {
-              key: "open_ai_training_button",
-              onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
-              label: "Train new AI model",
-            },
-          ]
-        : []),
+      {
+        key: "open_ai_training_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
+        label: "Train new AI model",
+      },
       {
         key: "open_ai_alignment_button",
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment")),

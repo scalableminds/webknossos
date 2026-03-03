@@ -1,7 +1,8 @@
 import Icon, { InfoCircleOutlined } from "@ant-design/icons";
+import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
+import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
 import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
-import NewBoundingBoxIcon from "@images/icons/icon-new-bounding-box.svg?react";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -200,8 +201,9 @@ function ToolSpecificSettings({
             onClick={toggleQuickSelectStrategy}
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
+            icon={<Icon component={AiAnalysisIcon} />}
           >
-            <i className="fas fa-magic icon-margin-right" /> AI
+            AI
           </ToggleButton>
 
           <QuickSelectSettingsPopover />
@@ -239,7 +241,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationTool.LINE_MEASUREMENT.id}
       >
-        <Icon component={LineMeasurementIcon} aria-label="Measurement Tool Icon" />
+        <Icon component={LineMeasurementIcon} aria-label="Line Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         disabledTitle={explanation}
@@ -250,7 +252,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         value={AnnotationTool.AREA_MEASUREMENT.id}
         disabled={isDisabled}
       >
-        <Icon component={AreaMeasurementIcon} aria-label="Measurement Tool Icon" />
+        <Icon component={AreaMeasurementIcon} aria-label="Area Measurement Tool Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

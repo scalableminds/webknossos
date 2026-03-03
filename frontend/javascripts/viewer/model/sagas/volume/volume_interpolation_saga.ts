@@ -151,11 +151,25 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
 
 export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInfo);
 
+/*
+ A general note about cwise usages:
+ cwise parses and compiles the 'body' function into a minimal, optimized JS loop
+ that is applied to each element of the input arrays. However, since the body
+ function does not return anything, our build system (Vite/Rollup)
+ incorrectly treats it as dead code and eliminates it during the production build.
+
+ As a workaround, we pass the function as a stringified version to prevent it from
+ being dropped by the optimizer.
+
+ In case the approach here is changed in the future, it should be tested both in
+ dev and production, because the behavior can differ.
+ */
+
 const isEqual = cwise({
   args: ["array", "scalar"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = a === b ? 1 : 0;
-  },
+  }` as unknown as () => void,
 });
 
 const isEqualFromBigUint64: (
@@ -164,9 +178,9 @@ const isEqualFromBigUint64: (
   b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: bigint, b: bigint) {
+  body: `function body(output, a, b) {
     output = a === b ? 1 : 0;
-  },
+  }` as unknown as () => void,
 });
 
 const isNonZero = cwise({
@@ -192,23 +206,23 @@ const isNonZero = cwise({
 
 const mul = cwise({
   args: ["array", "scalar"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = a * b;
-  },
+  }` as unknown as () => void,
 });
 
 const absMax = cwise({
   args: ["array", "array"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = Math.abs(a) > Math.abs(b) ? a : b;
-  },
+  }` as unknown as () => void,
 });
 
 const assign = cwise({
   args: ["array", "array"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = b;
-  },
+  }` as unknown as () => void,
 });
 
 export function copyNdArray(

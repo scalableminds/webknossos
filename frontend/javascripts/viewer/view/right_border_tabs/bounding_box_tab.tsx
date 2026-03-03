@@ -1,4 +1,4 @@
-import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { Divider, type MenuProps, Space, Table, type TableProps, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
@@ -28,7 +28,7 @@ import { getContextMenuPositionFromEvent } from "../context_menu";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 
-const ADD_BBOX_BUTTON_HEIGHT = 32;
+const BBOX_BUTTONS_HEADER_HEIGHT = 40;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
 const BOUNDING_BOX_TAB_ID = "bounding-box-tab";
 
@@ -312,6 +312,18 @@ export default function BoundingBoxTab() {
           onClick={addNewBoundingBox}
           icon={<PlusOutlined />}
         />
+        <ButtonComponent
+          disabled={!allowUpdate || selectedRowKeys.length === 0}
+          variant="text"
+          color="default"
+          title={
+            selectedRowKeys.length > 1
+              ? `Delete ${selectedRowKeys.length} selected bounding boxes`
+              : "Delete selected bounding box"
+          }
+          onClick={deleteSelectedBoundingBoxes}
+          icon={<DeleteOutlined />}
+        />
       </Space>
       <Divider size="small" />
       <ContextMenuContainer
@@ -344,7 +356,7 @@ export default function BoundingBoxTab() {
                   getCheckboxProps: () => ({ disabled: true }),
                 }}
                 virtual
-                scroll={{ y: height - 40 }} // If the scroll height is exactly
+                scroll={{ y: height - BBOX_BUTTONS_HEADER_HEIGHT }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
                 onRow={getPropsForRow}
               />

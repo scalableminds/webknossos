@@ -5,7 +5,7 @@ import vxSegmentationL4denseMottaEtAlDemoRotated from "@images/vx/segmentation-l
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
-import { Button, Layout, Modal, Tabs, type TabsProps } from "antd";
+import { Button, Flex, Layout, Modal, Tabs, type TabsProps } from "antd";
 import features from "features";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -150,18 +150,19 @@ const segmentationBanner = (
       >
         Are you looking for an automated segmentation of this dataset?
       </h4>
-      <Button
-        href="https://webknossos.org/services/automated-segmentation"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "block",
-          margin: "10px auto",
-          width: "50%",
-        }}
-      >
-        Learn More
-      </Button>
+      <Flex justify="center">
+        <Button
+          size="middle"
+          href="https://webknossos.org/services/automated-segmentation"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            width: "50%",
+          }}
+        >
+          Learn More
+        </Button>
+      </Flex>
     </div>
   </div>
 );
@@ -229,18 +230,19 @@ const manualAnnotationBanner = (
         <br />
         Have a look at our annotation services.
       </h4>
-      <Button
-        href="https://webknossos.org/services/annotations"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "block",
-          margin: "10px auto",
-          width: "50%",
-        }}
-      >
-        Learn More
-      </Button>
+      <Flex justify="center">
+        <Button
+          size="middle"
+          href="https://webknossos.org/services/annotations"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            width: "50%",
+          }}
+        >
+          Learn More
+        </Button>
+      </Flex>
     </div>
   </div>
 );

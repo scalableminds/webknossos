@@ -5,10 +5,14 @@ import Icon, {
   ScissorOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import NewCellIcon from "@images/icons/icon-new-cell.svg?react";
-import OverwriteAllIcon from "@images/icons/icon-overwrite-all.svg?react";
+import AlignCenterIcon from "@images/icons/icon-align-center.svg?react";
+import HighlighterIcon from "@images/icons/icon-highlighter.svg?react";
+import InterpolateIcon from "@images/icons/icon-interpolate.svg?react";
+import LoadMeshesIcon from "@images/icons/icon-load-meshes.svg?react";
 import OverwriteEmptyIcon from "@images/icons/icon-overwrite-empty.svg?react";
-import IconRestrictFloodfillToBbox from "@images/icons/icon-restrict-floodfill-to-bbox.svg?react";
+import OverwriteEverythingIcon from "@images/icons/icon-overwrite-everything.svg?react";
+import RestrictFloodfillToBboxIcon from "@images/icons/icon-restrict-to-bounding-box.svg?react";
+import NewSegmentIcon from "@images/icons/icon-segment-new.svg?react";
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import {
   Badge,
@@ -158,7 +162,7 @@ export function OverwriteModeSwitch({
         title="Overwrite everything. This setting can be toggled by holding CTRL."
         value={OverwriteModeEnum.OVERWRITE_ALL}
       >
-        <Icon component={OverwriteAllIcon} aria-label="Overwrite All Icon" />
+        <Icon component={OverwriteEverythingIcon} aria-label="Overwrite All Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
@@ -171,8 +175,8 @@ export function OverwriteModeSwitch({
 }
 
 const INTERPOLATION_ICON = {
-  [InterpolationModeEnum.INTERPOLATE]: <i className="fas fa-align-center fa-rotate-90" />,
-  [InterpolationModeEnum.EXTRUDE]: <i className="fas fa-align-justify fa-rotate-90" />,
+  [InterpolationModeEnum.INTERPOLATE]: <Icon component={InterpolateIcon} />,
+  [InterpolationModeEnum.EXTRUDE]: <Icon component={AlignCenterIcon} rotate={90} />,
 };
 
 export function VolumeInterpolationButton() {
@@ -274,12 +278,11 @@ export function CreateSegmentButton() {
       <ButtonComponent
         onClick={handleCreateCell}
         style={{
-          width: 36,
+          ...NARROW_BUTTON_STYLE,
         }}
         title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
-      >
-        <Icon component={NewCellIcon} aria-label="New Segment Icon" />
-      </ButtonComponent>
+        icon={<Icon component={NewSegmentIcon} aria-label="New Segment Icon" />}
+      />
     </Badge>
   );
 }
@@ -340,12 +343,10 @@ export function QuickSelectSettingsPopover() {
         <ToggleButton
           title="Configure Quick Select"
           tooltipPlacement="right"
-          className="narrow"
           active={isQuickSelectActive || showNux}
-          style={{ marginLeft: ACTIONBAR_MARGIN_LEFT }}
-        >
-          <SettingOutlined />
-        </ToggleButton>
+          style={{ ...NARROW_BUTTON_STYLE, marginLeft: ACTIONBAR_MARGIN_LEFT }}
+          icon={<SettingOutlined />}
+        />
       </Popover>
     </Wrapper>
   );
@@ -371,6 +372,7 @@ export function FloodFillSettings() {
 
       <ButtonComponent
         style={{
+          ...NARROW_BUTTON_STYLE,
           marginLeft: ACTIONBAR_MARGIN_LEFT,
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
@@ -378,7 +380,7 @@ export function FloodFillSettings() {
         title={
           "When enabled, the floodfill will be restricted to the bounding box enclosed by the clicked position. If multiple bounding boxes enclose that position, the smallest is used."
         }
-        icon={<Icon component={IconRestrictFloodfillToBbox} aria-label="Restrict floodfill" />}
+        icon={<Icon component={RestrictFloodfillToBboxIcon} aria-label="Restrict floodfill" />}
       />
     </div>
   );
@@ -423,18 +425,16 @@ export function ProofreadingComponents() {
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
-        className="narrow"
-      >
-        <ClearOutlined />
-      </ButtonComponent>
+        style={NARROW_BUTTON_STYLE}
+        icon={<ClearOutlined />}
+      />
       <ToggleButton
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
         active={autoRenderMeshes}
         style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
-      >
-        <i className="fas fa-dice-d20" />
-      </ToggleButton>
+        icon={<Icon component={LoadMeshesIcon} />}
+      />
       <ToggleButton
         active={selectiveVisibilityInProofreading}
         title={`${
@@ -444,9 +444,8 @@ export function ProofreadingComponents() {
         onClick={() =>
           handleToggleSelectiveVisibilityInProofreading(!selectiveVisibilityInProofreading)
         }
-      >
-        <i className="fas fa-highlighter" />
-      </ToggleButton>
+        icon={<Icon component={HighlighterIcon} />}
+      />
       <ToggleButton
         active={isMultiSplitActive}
         title={`${
@@ -454,9 +453,8 @@ export function ProofreadingComponents() {
         } multi splitting. When enabled, two partitions can be selected in the orthogonal or 3D viewports to split more accurately.`}
         style={NARROW_BUTTON_STYLE}
         onClick={() => handleToggleIsMultiSplitActive(!isMultiSplitActive)}
-      >
-        <ScissorOutlined />
-      </ToggleButton>
+        icon={<ScissorOutlined />}
+      />
     </Space.Compact>
   );
 }

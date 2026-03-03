@@ -152,6 +152,20 @@ export default function BoundingBoxTab() {
     [userBoundingBoxes, setPosition, hideContextMenu],
   );
 
+  const handleSelectAllMatchingBoundingBoxes = useCallback(
+    (matchingBoundingBoxes: UserBoundingBox[]) => {
+      if (matchingBoundingBoxes.length === 0) {
+        return;
+      }
+      const matchingBoundingBoxIds = matchingBoundingBoxes.map((boundingBox) => boundingBox.id);
+      const firstMatchingBoundingBoxId = matchingBoundingBoxIds[0];
+      setSelectedRowKeys(matchingBoundingBoxIds);
+      handleGoToBoundingBox(firstMatchingBoundingBoxId);
+      dispatch(setActiveUserBoundingBoxId(firstMatchingBoundingBoxId));
+    },
+    [dispatch, handleGoToBoundingBox],
+  );
+
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -267,6 +281,7 @@ export default function BoundingBoxTab() {
       style={{
         minWidth: 300,
         height: "100%",
+        overflow: "hidden",
       }}
     >
       <Space>
@@ -277,6 +292,7 @@ export default function BoundingBoxTab() {
             setSelectedRowKeys([boundingBox.id]);
             dispatch(setActiveUserBoundingBoxId(boundingBox.id));
           }}
+          onSelectAllMatches={handleSelectAllMatchingBoundingBoxes}
           searchKey="name"
           provideShortcut
           targetId={BOUNDING_BOX_TAB_ID}
@@ -328,7 +344,7 @@ export default function BoundingBoxTab() {
                   getCheckboxProps: () => ({ disabled: true }),
                 }}
                 virtual
-                scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
+                scroll={{ y: height - 40 }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
                 onRow={getPropsForRow}
               />

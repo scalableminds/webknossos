@@ -115,9 +115,10 @@ export default class AdvancedSearchPopover<S extends Record<string, any>> extend
     currentPosition =
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
-    const availableOptionsToSelectAllMatches = availableOptions.filter(
-      (result) => result.type === "Tree" || result.type === "segment",
-    );
+    const availableOptionsToSelectAllMatches = availableOptions.filter((result) => {
+      const resultType = result.type;
+      return resultType == null || (resultType !== "Group" && resultType !== "group");
+    });
     const isSelectAllMatchesDisabled = availableOptionsToSelectAllMatches.length < 2;
     const additionalInputStyle =
       hasNoResults && searchQuery !== ""

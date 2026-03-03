@@ -32,7 +32,8 @@ fetch("/creationTime")
     const d = new Date(iso);
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
-    publishedAtEl.textContent = `Published at ${hh}:${mm}`;
+    const ss = String(d.getSeconds()).padStart(2, "0");
+    publishedAtEl.textContent = `Published at ${hh}:${mm}:${ss}`;
   })
   .catch(() => {});
 

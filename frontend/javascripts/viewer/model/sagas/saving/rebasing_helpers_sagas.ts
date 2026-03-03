@@ -2,27 +2,32 @@ import { getAgglomeratesForSegmentsFromTracingstore } from "admin/rest_api";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import omitBy from "lodash-es/omitBy";
 import { call, put } from "typed-redux-saga";
-import type {
-  AdditionalCoordinate,
-  APIUpdateActionBatch,
-  MetadataEntryProto,
-} from "types/api_types";
+import type { AdditionalCoordinate, APIUpdateActionBatch } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
+import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { replaceSaveQueueAction } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import type { ActiveMappingInfo, Mapping, NumberLikeMap, SaveQueueEntry } from "viewer/store";
+import { api } from "viewer/singletons";
+import type {
+  ActiveMappingInfo,
+  Mapping,
+  NumberLikeMap,
+  SaveQueueEntry,
+  StoreAnnotation,
+} from "viewer/store";
 import type {
   CreateSegmentUpdateAction,
+  DeleteSegmentUpdateAction,
   MergeAgglomerateUpdateAction,
   MergeSegmentItemsUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
+  UpdateMetadataOfSegmentUpdateAction,
   UpdateSegmentPartialUpdateAction,
+  UpdateSegmentVisibilityVolumeAction,
 } from "../volume/update_actions";
-import { api } from "viewer/singletons";
-import { Vector3 } from "viewer/constants";
-import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 
 export function saveQueueEntriesToServerUpdateActionBatches(
   data: Array<SaveQueueEntry>,
@@ -213,6 +218,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
   // during rebase. These actions can be used as additional information to adapt the local, pending
   // save queue entries to the rebase.
   _appliedBackendUpdateActions: APIUpdateActionBatch[],
+  annotationBeforeRebase: StoreAnnotation,
 ): Saga<
   | {
       success: false;
@@ -312,7 +318,10 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               // if another user created that segment in the meantime.
               const { actionTracingId } = action.value;
               const segmentId = getUpToDateSegmentIdViaPosition(
-                action,
+                actionTracingId,
+                action.value.id,
+                action.value.anchorPosition,
+                action.value.additionalCoordinates,
                 activeMappingByLayer,
                 anchorPositionToUnmappedIdByMappingId,
               );
@@ -347,10 +356,26 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
               // when another user already removed that segment in the meantime.
               const { actionTracingId } = action.value;
 
-              const tracing = annotationBeforeUpdate.volumes.find(
+              const tracingBeforeRebase = annotationBeforeRebase.volumes.find(
                 (v) => v.tracingId === actionTracingId,
               );
-              const maybeExistingSegment = tracing?.segments.getNullable(action.value.id);
+              const maybeExistingSegmentBeforeRebase = tracingBeforeRebase?.segments.getNullable(
+                action.value.id,
+              );
+
+              const segmentId = getUpToDateSegmentIdViaPosition(
+                actionTracingId,
+                action.value.id,
+                maybeExistingSegmentBeforeRebase?.anchorPosition,
+                maybeExistingSegmentBeforeRebase?.additionalCoordinates,
+                activeMappingByLayer,
+                anchorPositionToUnmappedIdByMappingId,
+              );
+
+              const tracingBeforeUpdate = annotationBeforeUpdate.volumes.find(
+                (v) => v.tracingId === actionTracingId,
+              );
+              const maybeExistingSegment = tracingBeforeUpdate?.segments.getNullable(segmentId);
 
               if (!maybeExistingSegment) {
                 // Another user removed the segment. The update action of the current user gets lost now.
@@ -359,7 +384,17 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
 
               // Since the update action precisely encodes what changed within the segment,
               // we don't need to adapt the action itself.
-              return action;
+              return {
+                ...action,
+                value: {
+                  ...action.value,
+                  id: segmentId,
+                },
+              } as
+                | UpdateSegmentVisibilityVolumeAction
+                | UpdateMetadataOfSegmentUpdateAction
+                | UpdateSegmentPartialUpdateAction
+                | DeleteSegmentUpdateAction;
             }
 
             default:
@@ -384,22 +419,46 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
 }
 
 function getUpToDateSegmentIdViaPosition(
-  action: CreateSegmentUpdateAction,
+  actionTracingId: string,
+  originalSegmentId: number,
+  anchorPosition: Vector3 | undefined | null,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   activeMappingByLayer: Record<string, ActiveMappingInfo>,
   anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId,
 ) {
-  const { actionTracingId } = action.value;
-
-  const originalSegmentId = action.value.id;
+  /*
+   * Update actions for segments always refer to a specific segment id. However,
+   * it might happen that that ID doesn't match the user's intention anymore, because
+   * agglomerates could have been split or merged in the meantime.
+   * Example:
+   * - User 1 updates segment 1
+   * - In the meantime, user 2 merged segment 1 into 2 so that only segment 2 exists afterwards.
+   * This function would map id 1 to 2 in that case so that the update of user 1 doesn't get lost.
+   *
+   * Mapping from old to new id is done by using the anchor position of the segment item and
+   * looking up the unmapped and mapped id in the provided dictionaries.
+   *
+   * Note:
+   * The id adaption can only work if the anchor position exists. In rare cases, no anchor position
+   * will be known (e.g., when using a script to change the color of segments, no anchor position will
+   * be provided usually).
+   * Another (more realistic) case where the mapping won't work is when a user removed a segment
+   * (then, the local store won't have the item and therefore no anchor position).
+   * In that case, the id won't be adapted and the segment look up in the forwarded state
+   * won't find anything if the segment was merged/split by another user.
+   * Therefore, the update action will be dropped.
+   * The impact of this is low, though, because one could also argue that the removal should be
+   * ignored *because* another user merged/split that segment anyway.
+   */
   const mappingSyncedWithBackendUnwrapped = activeMappingByLayer[actionTracingId]?.mapping;
 
-  if (action.value.anchorPosition == null || mappingSyncedWithBackendUnwrapped == null) {
+  if (anchorPosition == null || mappingSyncedWithBackendUnwrapped == null) {
     return originalSegmentId;
   }
 
   const unmappedId =
     anchorPositionToUnmappedIdByMappingId[actionTracingId][
-      segmentPositionToKey(action.value.anchorPosition, action.value.additionalCoordinates)
+      segmentPositionToKey(anchorPosition, additionalCoordinates)
     ];
 
   const mappingSyncedWithBackend = new NumberLikeMapWrapper(mappingSyncedWithBackendUnwrapped);

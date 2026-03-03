@@ -14,6 +14,7 @@ import {
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
+  removeSegmentAction,
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -1274,7 +1275,12 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should adapt created segment item if it was merged into another segment by another user", async (context: WebknossosTestContext) => {
+  it("should update correct segment item if that one was merged into another segment by another user", async (context: WebknossosTestContext) => {
+    /*
+     * The local user updates segment item 4. However, another user already merged 1337 and 4 so that
+     * segment item does not exist, anymore. All updates to segment item 4 should now be adapted
+     * so that they are applied to segment 1337.
+     */
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
@@ -1317,16 +1323,41 @@ describe("Proofreading (Multi User)", () => {
       ]);
       yield* prepareEditableMapping(context, tracingId, 5, [5, 5, 5], initialExpectedMapping);
 
+      let name = "Some segment name";
+      const anchorPosition: Vector3 = [4, 4, 4];
+      const metadata = [{ key: "key", stringValue: "stringValue" }];
       yield put(
+        // Will result in a createSegment action (at least locally; it will
+        // be converted to an updateSegmentPartial action during rebasing
+        // because segment 1337 (to which that anchorPosition will
+        // refer to) already exists).
         updateSegmentAction(
           4,
           {
-            name: "Some segment name",
-            anchorPosition: [4, 4, 4],
+            name,
+            anchorPosition,
           },
           tracingId,
         ),
       );
+      name = "Some other segment name";
+      yield put(
+        // Will result in multiple actions:
+        // - updateSegmentPartial action
+        // - updateMetadataOfSegment action
+        // - updateSegmentVisibility action
+        updateSegmentAction(
+          4,
+          {
+            name,
+            metadata,
+            isVisible: false,
+          },
+          tracingId,
+        ),
+      );
+
+      // yield put(removeSegmentAction(4, tracingId));
 
       yield call(() => api.tracing.save());
 
@@ -1341,7 +1372,85 @@ describe("Proofreading (Multi User)", () => {
 
         const segment1337AfterSaving = currentSegments.getNullable(1337);
         expect(segment1337AfterSaving).toMatchObject({
-          name: "Some segment name",
+          name,
+          anchorPosition,
+          metadata,
+          isVisible: false,
+        });
+      }
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("should ignore segment item removal if that one was merged into another segment by another user", async (context: WebknossosTestContext) => {
+    /*
+     * The local user removes segment item 4. However, another user already merged 1337 and 4 so that
+     * segment item does not exist, anymore (instead segment item 1337 will exist).
+     * The removal will now be ignored. One can argue whether the removal should now be applied to
+     * segment 1337, but the implementation of that would more complicated which is why the code
+     * behaves like this currently. The reason for why it would be more complicated is that the
+     * look up from old id to new id is done by using the anchor position of the segment item.
+     * However, the segment item doesn't exist locally anymore (because it was removed by the user).
+     */
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
+
+    backendMock.planVersionInjection(5, [
+      {
+        name: "mergeAgglomerate",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
+        },
+      },
+      {
+        name: "mergeSegmentItems",
+        value: {
+          actionTracingId: VOLUME_TRACING_ID,
+          segmentId1: 1337,
+          segmentId2: 5,
+          agglomerateId1: 1337,
+          agglomerateId2: 4,
+        },
+      },
+    ]);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      const initialExpectedMapping = new Map([
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 4],
+        [5, 4],
+        [6, 1337],
+        [7, 1337],
+        // [1337, 1337], not loaded
+      ]);
+      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4], initialExpectedMapping);
+
+      yield put(removeSegmentAction(4, tracingId));
+
+      yield call(() => api.tracing.save());
+
+      yield call(publishDebuggingState, backendMock);
+
+      const backendState = backendMock.getState();
+      const frontendState = Store.getState();
+
+      for (const state of [frontendState, backendState]) {
+        const currentSegments = state.annotation.volumes[0].segments;
+        expect(currentSegments.size()).toEqual(1);
+
+        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        expect(segment1337AfterSaving).toMatchObject({
+          name: "Segment 1337 and Segment 4",
           anchorPosition: [4, 4, 4],
         });
       }

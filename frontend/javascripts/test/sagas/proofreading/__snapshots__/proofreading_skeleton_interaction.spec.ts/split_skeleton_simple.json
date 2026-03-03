@@ -1,6 +1,54 @@
 [
   [
     {
+      "name": "createTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateInfo": {
+          "agglomerateId": 1339,
+          "tracingId": "volumeTracingId",
+        },
+        "branchPoints": [],
+        "color": [
+          1,
+          0.8392156862745098,
+          0.23921568627450981,
+        ],
+        "comments": [],
+        "edgesAreVisible": true,
+        "groupId": undefined,
+        "id": 5,
+        "isVisible": true,
+        "metadata": [],
+        "name": "agglomerate 1339 (volumeTracingId)",
+        "timestamp": 1494695001688,
+        "type": "AGGLOMERATE",
+        "updatedId": undefined,
+      },
+    },
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          6,
+        ],
+        "sourceId": 4,
+        "targetId": 5,
+      },
+    },
+    {
+      "name": "deleteEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 5,
+        "target": 6,
+        "treeId": 4,
+      },
+    },
+  ],
+  [
+    {
       "name": "splitAgglomerate",
       "value": {
         "actionTracingId": "volumeTracingId",
@@ -16,7 +64,7 @@
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
         "agglomerateInfo": {
-          "agglomerateId": 1339,
+          "agglomerateId": 1340,
           "tracingId": "volumeTracingId",
         },
         "branchPoints": [],
@@ -50,34 +98,6 @@
         "id": 1340,
         "metadata": [],
         "name": "Agglomerate 1340",
-      },
-    },
-  ],
-  [
-    {
-      "name": "updateTree",
-      "value": {
-        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-        "agglomerateInfo": {
-          "agglomerateId": 1340,
-          "tracingId": "volumeTracingId",
-        },
-        "branchPoints": [],
-        "color": [
-          1,
-          0.8392156862745098,
-          0.23921568627450981,
-        ],
-        "comments": [],
-        "edgesAreVisible": true,
-        "groupId": undefined,
-        "id": 5,
-        "isVisible": true,
-        "metadata": [],
-        "name": "agglomerate 1340 (volumeTracingId)",
-        "timestamp": 1494695001688,
-        "type": "AGGLOMERATE",
-        "updatedId": 5,
       },
     },
   ],

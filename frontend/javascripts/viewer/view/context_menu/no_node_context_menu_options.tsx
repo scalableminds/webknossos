@@ -533,11 +533,11 @@ export function useNoNodeContextMenuOptions(
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
-          allowUpdate && !disabledVolumeInfo.FILL_CELL.isDisabled
+          allowUpdate && !disabledVolumeInfo.FILL_CELL.isDisabled && viewport
             ? {
                 key: "fill-cell",
                 onClick: () =>
-                  handleFloodFillFromGlobalPosition(Store.getState(), globalPosition, viewport!),
+                  handleFloodFillFromGlobalPosition(Store.getState(), globalPosition, viewport),
                 label: "Fill Segment (flood-fill region)",
               }
             : null,

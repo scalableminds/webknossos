@@ -211,7 +211,7 @@ export default function BoundingBoxTab() {
           disabled={!allowUpdate}
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}
-          onOpenContextMenu={(menu, event) => onOpenContextMenu(menu, event, bb.id)}
+          onOpenContextMenu={(menu, event) => onOpenContextMenu(menu, event)}
           onHideContextMenu={hideContextMenu}
         />
       ),

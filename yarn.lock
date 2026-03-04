@@ -1032,13 +1032,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fortawesome/fontawesome-free@npm:^5.15.4":
-  version: 5.15.4
-  resolution: "@fortawesome/fontawesome-free@npm:5.15.4"
-  checksum: 10c0/0a12f11b17b3073475df965d423ac485715e281d11ecde17250fab5dc0a177fb29ced59242f6c024bef59429c502ba8fe831ed9500e14713cc30138e70df8fbc
-  languageName: node
-  linkType: hard
-
 "@github/webauthn-json@npm:^2.1.1":
   version: 2.1.1
   resolution: "@github/webauthn-json@npm:2.1.1"
@@ -3735,12 +3728,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^25.0.10":
-  version: 25.0.10
-  resolution: "@types/node@npm:25.0.10"
+"@types/node@npm:^25.3.0":
+  version: 25.3.0
+  resolution: "@types/node@npm:25.3.0"
   dependencies:
-    undici-types: "npm:~7.16.0"
-  checksum: 10c0/9edc3c812b487c32c76eebac7c87acae1f69515a0bc3f6b545806d513eb9e918c3217bf751dc93da39f60e06bf1b0caa92258ef3a6dd6457124b2e761e54f61f
+    undici-types: "npm:~7.18.0"
+  checksum: 10c0/7b2b18c9d68047157367fc2f786d4f166d22dc0ad9f82331ca02fb16f2f391854123dbe604dcb938cda119c87051e4bb71dcb9ece44a579f483a6f96d4bd41de
   languageName: node
   linkType: hard
 
@@ -4559,13 +4552,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bisect@npm:~0.0.0":
-  version: 0.0.0
-  resolution: "bisect@npm:0.0.0"
-  checksum: 10c0/d382ceb8a632aa26d898612047daa850d18d139dfaa41eaf49970d50a914f282646e72b3b67ba2f61b9bbc86ed13c959033c8289dc9a8e94a90b3da63d3df8d2
-  languageName: node
-  linkType: hard
-
 "bit-twiddle@npm:^1.0.0":
   version: 1.0.2
   resolution: "bit-twiddle@npm:1.0.2"
@@ -5278,16 +5264,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cwise-parser@npm:~0.0.1":
-  version: 0.0.1
-  resolution: "cwise-parser@npm:0.0.1"
-  dependencies:
-    esprima: "npm:~1.0.3"
-    uniq: "npm:~0.0.2"
-  checksum: 10c0/c7ce87af7679978b8b93b7441c2f18b04d9e12ff455551be50bcbb49e629447a2970ce6d6634be2f252038f18dea19c0275cbffd6f33dcd51dfb3349df9c547c
-  languageName: node
-  linkType: hard
-
 "cwise@npm:^1.0.0, cwise@npm:^1.0.10, cwise@npm:^1.0.6":
   version: 1.0.10
   resolution: "cwise@npm:1.0.10"
@@ -5297,16 +5273,6 @@ __metadata:
     static-module: "npm:^1.0.0"
     uglify-js: "npm:^2.6.0"
   checksum: 10c0/76c15d8325badbc52ab45d33aefafc9e57d2f7d3fa5300c661927d11edf8dccbc5f7d5bc362d00d7b83c3195625b94ec0fe2c4e4478680137bbef31d18aa01b7
-  languageName: node
-  linkType: hard
-
-"cwise@npm:~0.3.2":
-  version: 0.3.4
-  resolution: "cwise@npm:0.3.4"
-  dependencies:
-    cwise-compiler: "npm:~0.0.0"
-    cwise-parser: "npm:~0.0.1"
-  checksum: 10c0/2f54e07edb9f71b1bf828f75af8da4709a9b8ad688276533bff055dd1db4ad3a5fbd9db86f253244caa9808e5646e8d4a2fbbf582c7117353ee5e243d237b07f
   languageName: node
   linkType: hard
 
@@ -5578,29 +5544,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"distance-transform@npm:^1.0.2":
+"distance-transform@https://github.com/scalableminds/distance-transform":
   version: 1.0.2
-  resolution: "distance-transform@npm:1.0.2"
+  resolution: "distance-transform@https://github.com/scalableminds/distance-transform.git#commit=3624f3943347debf18202522b7d732ce5eda58f2"
   dependencies:
     bisect: "npm:^1.0.0"
     cwise: "npm:^1.0.6"
     ndarray: "npm:^1.0.18"
     ndarray-ops: "npm:^1.2.2"
     typedarray-pool: "npm:^1.1.0"
-  checksum: 10c0/1545efd272ce660e93c137257e3cd9b4c219aacbb201a206416dc980373e5ba17746fb5360e027a96620bedea845aedaac9ddd20c5caa53f2fdbbd131ca9b3cc
-  languageName: node
-  linkType: hard
-
-"distance-transform@npm:~0.1.0":
-  version: 0.1.0
-  resolution: "distance-transform@npm:0.1.0"
-  dependencies:
-    bisect: "npm:~0.0.0"
-    cwise: "npm:~0.3.2"
-    ndarray: "npm:~1.0.0"
-    ndarray-ops: "npm:~1.1.0"
-    typedarray-pool: "npm:~0.1.1"
-  checksum: 10c0/a44f302338fa401c2786324cf58035594f5a1e9704ab8950a721cfe9264d2dd437d1c13eaebe498dac4c2eddad0cd81dbc65a2b42ddfb3667ad7e416b087f1cf
+  checksum: 10c0/3bce7601ab3910b651871cf9e3898ebf6f6a20b2665ed7eaeae22420760ea0b7aad1af2d885846a9929f719a350237acce44ac2a8fdaf00d4309207fdd168206
   languageName: node
   linkType: hard
 
@@ -6067,7 +6020,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esprima@npm:~1.0.2, esprima@npm:~1.0.3":
+"esprima@npm:~1.0.2":
   version: 1.0.4
   resolution: "esprima@npm:1.0.4"
   bin:
@@ -11924,13 +11877,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:~5.8.0":
-  version: 5.8.3
-  resolution: "typescript@npm:5.8.3"
+"typescript@npm:~5.9.0":
+  version: 5.9.3
+  resolution: "typescript@npm:5.9.3"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/5f8bb01196e542e64d44db3d16ee0e4063ce4f3e3966df6005f2588e86d91c03e1fb131c2581baf0fb65ee79669eea6e161cd448178986587e9f6844446dbb48
+  checksum: 10c0/6bd7552ce39f97e711db5aa048f6f9995b53f1c52f7d8667c1abdc1700c68a76a308f579cd309ce6b53646deb4e9a1be7c813a93baaf0a28ccd536a30270e1c5
   languageName: node
   linkType: hard
 
@@ -11944,13 +11897,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A~5.8.0#optional!builtin<compat/typescript>":
-  version: 5.8.3
-  resolution: "typescript@patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"
+"typescript@patch:typescript@npm%3A~5.9.0#optional!builtin<compat/typescript>":
+  version: 5.9.3
+  resolution: "typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/39117e346ff8ebd87ae1510b3a77d5d92dae5a89bde588c747d25da5c146603a99c8ee588c7ef80faaf123d89ed46f6dbd918d534d641083177d5fac38b8a1cb
+  checksum: 10c0/ad09fdf7a756814dce65bc60c1657b40d44451346858eea230e10f2e95a289d9183b6e32e5c11e95acc0ccc214b4f36289dcad4bf1886b0adb84d711d336a430
   languageName: node
   linkType: hard
 
@@ -11994,10 +11947,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~7.16.0":
-  version: 7.16.0
-  resolution: "undici-types@npm:7.16.0"
-  checksum: 10c0/3033e2f2b5c9f1504bdc5934646cb54e37ecaca0f9249c983f7b1fc2e87c6d18399ebb05dc7fd5419e02b2e915f734d872a65da2e3eeed1813951c427d33cc9a
+"undici-types@npm:~7.18.0":
+  version: 7.18.2
+  resolution: "undici-types@npm:7.18.2"
+  checksum: 10c0/85a79189113a238959d7a647368e4f7c5559c3a404ebdb8fc4488145ce9426fcd82252a844a302798dfc0e37e6fb178ff481ed03bc4caf634c5757d9ef43521d
   languageName: node
   linkType: hard
 
@@ -12561,7 +12514,6 @@ __metadata:
     "@biomejs/biome": "npm:^2.3.13"
     "@dnd-kit/core": "npm:^6.1.0"
     "@dnd-kit/sortable": "npm:^8.0.0"
-    "@fortawesome/fontawesome-free": "npm:^5.15.4"
     "@github/webauthn-json": "npm:^2.1.1"
     "@redux-saga/testing-utils": "npm:^1.1.5"
     "@scalableminds/prop-types": "npm:^15.8.1"
@@ -12580,7 +12532,7 @@ __metadata:
     "@types/merge-img": "npm:^2.1.1"
     "@types/ndarray": "npm:^1.0.14"
     "@types/ndarray-ops": "npm:^1.2.7"
-    "@types/node": "npm:^25.0.10"
+    "@types/node": "npm:^25.3.0"
     "@types/pako": "npm:^2.0.3"
     "@types/pixelmatch": "npm:^5.2.4"
     "@types/pngjs": "npm:^6.0.1"
@@ -12611,7 +12563,7 @@ __metadata:
     deep-for-each: "npm:^2.0.3"
     deep-freeze: "npm:0.0.1"
     dice-coefficient: "npm:^2.1.0"
-    distance-transform: "npm:^1.0.2"
+    distance-transform: "https://github.com/scalableminds/distance-transform"
     documentation: "npm:^14.0.2"
     dompurify: "npm:^3.3.0"
     dpdm: "npm:^3.14.0"
@@ -12674,7 +12626,7 @@ __metadata:
     three-mesh-bvh: "npm:^0.9.5"
     tween.js: "npm:^16.3.1"
     typed-redux-saga: "npm:^1.4.0"
-    typescript: "npm:~5.8.0"
+    typescript: "npm:~5.9.0"
     typescript-coverage-report: "npm:^0.8.0"
     url: "npm:^0.11.0"
     url-join: "npm:^4.0.0"

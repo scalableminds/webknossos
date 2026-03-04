@@ -1,3 +1,5 @@
+import Icon from "@ant-design/icons";
+import InvertIcon from "@images/icons/icon-invert.svg?react";
 import { Col, Row } from "antd";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";
@@ -87,8 +89,9 @@ export default function ColorLayerSettings({
             title="Invert the color of this layer."
             onClick={onToggleInvert}
             icon={
-              <i
-                className={classnames("fas", "fa-adjust", {
+              <Icon
+                component={InvertIcon}
+                className={classnames({
                   "flip-horizontally": layerConfiguration.isInverted,
                 })}
                 style={{

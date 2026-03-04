@@ -29,7 +29,6 @@ import Store from "viewer/throttled_store";
 import "../stylesheets/main.less";
 import { checkAnyOrganizationExists, getOrganization } from "admin/api/organization";
 import { CheckCertificateModal } from "components/check_certificate_modal";
-import TabTitle from "viewer/view/components/tab_title_component";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import { RouterProvider } from "react-router-dom";

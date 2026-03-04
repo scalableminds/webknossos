@@ -1,6 +1,6 @@
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Form, Input, Select } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -53,7 +53,7 @@ function ScriptCreateView() {
 
   const titlePrefix = scriptId ? "Update" : "Create";
   return (
-    <AdminListPage
+    <AdminPage
       title={`${titlePrefix} Script`}
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/scripts.html"
       description="Create or update reusable frontend scripts and assign ownership."
@@ -121,7 +121,7 @@ function ScriptCreateView() {
           </Button>
         </FormItem>
       </Form>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

@@ -24,7 +24,7 @@ import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import { Alert, App, Button, Input, Modal, Spin, Tag, Typography } from "antd";
 import type { ColumnType } from "antd/lib/table/interface";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import AnnotationServicesAd from "admin/ads/annotation_services_alert";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
@@ -421,7 +421,7 @@ function TaskListView({ initialFieldValues }: Props) {
   ];
 
   return (
-    <AdminListPage
+    <AdminPage
       title="Tasks"
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description="Search, inspect, and manage task instances across projects and datasets."
@@ -465,7 +465,7 @@ function TaskListView({ initialFieldValues }: Props) {
 
         {getAnonymousTaskLinkModal()}
       </Spin>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

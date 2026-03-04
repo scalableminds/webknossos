@@ -5,7 +5,7 @@ import RecommendedConfigurationView, {
 } from "admin/tasktype/recommended_configuration_view";
 import { Button, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
 import type { RuleObject } from "antd/es/form";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
 import merge from "lodash-es/merge";
@@ -174,7 +174,7 @@ function TaskTypeCreateView() {
   const isEditingMode = taskTypeId != null;
   const titlePrefix = isEditingMode ? "Update" : "Create";
   return (
-    <AdminListPage
+    <AdminPage
       title={`${titlePrefix} Task Type`}
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/concepts.html"
       description="Define task type behavior, allowed modes, annotation settings, and optional recommended configuration."
@@ -483,7 +483,7 @@ function TaskTypeCreateView() {
           </Button>
         </FormItem>
       </Form>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

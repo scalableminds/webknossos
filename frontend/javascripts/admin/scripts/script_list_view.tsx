@@ -1,8 +1,8 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
-import { App, Button, Input, Spin, Table } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import { App, Button, Input, Space, Spin, Table } from "antd";
+import AdminPage from "admin/admin_page";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
@@ -88,7 +88,7 @@ function ScriptListView() {
   }
 
   return (
-    <AdminListPage
+    <AdminPage
       title="Scripts"
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/scripts.html"
       description="Maintain reusable frontend scripts for automated task workflows."
@@ -160,22 +160,20 @@ function ScriptListView() {
             fixed="right"
             width={180}
             render={(__, script: APIScript) => (
-              <span>
+              <Space vertical size={0}>
                 <Link to={`/scripts/${script.id}/edit`}>
                   <EditOutlined className="icon-margin-right" />
                   Edit
                 </Link>
-                <br />
-                <LinkButton onClick={partial(deleteScript, script)}>
-                  <DeleteOutlined className="icon-margin-right" />
+                <LinkButton onClick={partial(deleteScript, script)} icon={<DeleteOutlined />}>
                   Delete
                 </LinkButton>
-              </span>
+              </Space>
             )}
           />
         </Table>
       </Spin>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

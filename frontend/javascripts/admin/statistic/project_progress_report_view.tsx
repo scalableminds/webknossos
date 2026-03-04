@@ -1,7 +1,7 @@
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { getProjectProgressReport } from "admin/rest_api";
 import { Badge, Button, Space, Spin, Table } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
@@ -72,7 +72,7 @@ function ProjectProgressReportView() {
   return (
     <>
       <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
-      <AdminListPage
+      <AdminPage
         title="Project Progress"
         descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
         description="Monitor project throughput, task instance status, and billed annotation time."
@@ -232,7 +232,7 @@ function ProjectProgressReportView() {
             </ColumnGroup>
           </Table>
         </Spin>
-      </AdminListPage>
+      </AdminPage>
     </>
   );
 }

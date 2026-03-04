@@ -36,7 +36,7 @@ type Props = {
   children: ReactNode;
 };
 
-export default function AdminListPage({
+export default function AdminPage({
   title,
   description,
   descriptionURI,
@@ -61,11 +61,11 @@ export default function AdminListPage({
       }}
     >
       <Space vertical size="large" style={{ width: "100%" }}>
-        <Card>
+        <div>
           <Flex justify="space-between" align="flex-start" wrap gap="middle">
             <div style={{ maxWidth: "min(100ch, 100%)" }}>
               <Typography.Title
-                level={3}
+                level={2}
                 style={{
                   margin: 0,
                   letterSpacing: "0.01em",
@@ -112,7 +112,7 @@ export default function AdminListPage({
               </Space>
             ) : null}
           </Flex>
-        </Card>
+        </div>
         {alerts != null ? (
           <Flex vertical gap="small">
             {alerts}

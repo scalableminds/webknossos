@@ -6,7 +6,7 @@ import {
   updateProject,
 } from "admin/rest_api";
 import { Button, Checkbox, Form, Input, InputNumber, Select } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -70,7 +70,7 @@ function ProjectCreateView() {
     width: "100%",
   };
   return (
-    <AdminListPage
+    <AdminPage
       title={title}
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
       description="Create or update project metadata and assignment settings."
@@ -189,7 +189,7 @@ function ProjectCreateView() {
           </Button>
         </FormItem>
       </Form>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

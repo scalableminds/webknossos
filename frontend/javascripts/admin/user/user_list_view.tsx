@@ -33,7 +33,7 @@ import {
   Tag,
   Tooltip,
 } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
@@ -292,12 +292,12 @@ function UserListView() {
   const mayChangeNameForUsers = features().isWkorgInstance === false && activeUser.isAdmin;
 
   return (
-    <AdminListPage
+    <AdminPage
       title="Users"
       descriptionURI="https://docs.webknossos.org/webknossos/users/index.html"
       description="Manage members, permissions, and activation status in your organization."
       actions={
-        <Space wrap>
+        <Space wrap size="middle">
           {hasRowsSelected ? <span>{selectedUserIds.length} selected user(s)</span> : null}
           <Button
             onClick={() => setIsTeamRoleModalOpen(true)}
@@ -614,7 +614,7 @@ function UserListView() {
         onCancel={() => setIsTeamRoleModalOpen(false)}
         activeUser={activeUser}
       />
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

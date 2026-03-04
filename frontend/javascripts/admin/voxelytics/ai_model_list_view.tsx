@@ -4,7 +4,7 @@ import { getUsersOrganizations } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
 import { App, Button, Col, Flex, Input, Modal, Row, Select, Table, Typography } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
 import { useFetch } from "libs/react_helpers";
@@ -54,7 +54,7 @@ export default function AiModelListView() {
           owningOrganization={activeUser.organization}
         />
       ) : null}
-      <AdminListPage
+      <AdminPage
         className="voxelytics-view"
         title="AI Models"
         descriptionURI="https://docs.webknossos.org/webknossos/automation/index.html"
@@ -140,7 +140,7 @@ export default function AiModelListView() {
             searchQuery,
           )}
         />
-      </AdminListPage>
+      </AdminPage>
     </>
   );
 }

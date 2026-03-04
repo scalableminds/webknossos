@@ -13,7 +13,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { App, Input, Spin, Table, Tooltip } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -496,7 +496,7 @@ function JobListView() {
   }));
 
   return (
-    <AdminListPage
+    <AdminPage
       title="Jobs"
       descriptionURI="https://docs.webknossos.org/webknossos/automation/jobs.html"
       description={
@@ -577,7 +577,7 @@ function JobListView() {
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>
       </Spin>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

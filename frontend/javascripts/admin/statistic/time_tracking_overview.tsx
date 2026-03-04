@@ -1,7 +1,7 @@
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/rest_api";
 import { Button, DatePicker, Select, Space, Spin, Table, type TimeRangePickerProps } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
@@ -223,7 +223,7 @@ function TimeTrackingOverview() {
   };
 
   return (
-    <AdminListPage
+    <AdminPage
       title="Annotation Time per User"
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description="Analyze time spent on annotations and tasks by project, annotation type, state, team, and date range."
@@ -305,7 +305,7 @@ function TimeTrackingOverview() {
           summary={getSummaryRow}
         />
       </Spin>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

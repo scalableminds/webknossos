@@ -1,6 +1,6 @@
 import { getAvailableTasksReport } from "admin/rest_api";
 import { Spin, Table, Tag, Tooltip } from "antd";
-import AdminListPage from "admin/admin_list_page";
+import AdminPage from "admin/admin_page";
 import { handleGenericError } from "libs/error_handling";
 import { compareBy, localeCompareBy } from "libs/utils";
 import { useState } from "react";
@@ -35,7 +35,7 @@ function AvailableTasksReportView() {
   }
 
   return (
-    <AdminListPage
+    <AdminPage
       title="Available Task Assignments"
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description={
@@ -104,7 +104,7 @@ function AvailableTasksReportView() {
           />
         </Table>
       </Spin>
-    </AdminListPage>
+    </AdminPage>
   );
 }
 

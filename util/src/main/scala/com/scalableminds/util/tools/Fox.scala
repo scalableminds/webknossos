@@ -108,8 +108,8 @@ object Fox extends FoxImplicits {
     runNext(Nil)
   }
 
-  def batchCombined[A, B](seq: Seq[A], batchSize: Int = 10)(f: A => Fox[B])(
-      implicit ec: ExecutionContext): Fox[List[B]] =
+  // Run in parallel batches. After a batch completes, serially run the next batch. Fail on first batch that contains a failure.
+  def batchCombined[A, B](seq: Seq[A], batchSize: Int)(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
     for {
       batchResults: Seq[List[B]] <- Fox.serialCombined(seq.grouped(batchSize)) { batch =>
         for {

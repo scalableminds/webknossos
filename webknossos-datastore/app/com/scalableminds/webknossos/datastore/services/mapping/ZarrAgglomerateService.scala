@@ -232,7 +232,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       tc: TokenContext): Fox[Seq[Long]] =
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
-      agglomerateIds <- Fox.batchCombined(segmentIds, batchSize = 20) { segmentId =>
+      agglomerateIds <- Fox.batchCombined(segmentIds, batchSize = 30) { segmentId =>
         mapSingleSegment(segmentToAgglomerate, segmentId)
       }
     } yield agglomerateIds

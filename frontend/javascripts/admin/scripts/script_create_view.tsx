@@ -1,6 +1,6 @@
+import AdminPage from "admin/admin_page";
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Form, Input, Select } from "antd";
-import AdminPage from "admin/admin_page";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";

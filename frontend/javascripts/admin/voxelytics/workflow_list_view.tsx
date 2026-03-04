@@ -1,9 +1,9 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
 import { getVoxelyticsWorkflows } from "admin/rest_api";
 import { Button, Input, Progress, Spin, Table, Tooltip } from "antd";
-import AdminPage from "admin/admin_page";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";

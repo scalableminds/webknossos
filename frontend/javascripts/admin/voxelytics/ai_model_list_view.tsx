@@ -1,10 +1,10 @@
 import { FileTextOutlined, SyncOutlined, TeamOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
 import { getUsersOrganizations } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
 import { App, Button, Col, Flex, Input, Modal, Row, Select, Table, Typography } from "antd";
-import AdminPage from "admin/admin_page";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
 import { useFetch } from "libs/react_helpers";
@@ -55,16 +55,9 @@ export default function AiModelListView() {
         />
       ) : null}
       <AdminPage
-        className="voxelytics-view"
         title="AI Models"
         descriptionURI="https://docs.webknossos.org/webknossos/automation/index.html"
-        description={
-          <>
-            This list shows all AI models available in your organization for AI segmentation jobs.
-            <br />
-            Model training functionality is coming soon.
-          </>
-        }
+        description="Review available AI models, compare training status and ownership, and manage cross-organization access for models owned by your organization."
         actions={
           <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
             Refresh

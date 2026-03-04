@@ -7,13 +7,13 @@ import {
   ScheduleOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import {
   deleteTaskType as deleteTaskTypeAPI,
   downloadAnnotation,
   getTaskTypes,
 } from "admin/rest_api";
 import { App, Button, Input, Space, Spin, Table, Tag } from "antd";
-import AdminPage from "admin/admin_page";
 import { AsyncLink } from "components/async_clickables";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";

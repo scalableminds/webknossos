@@ -1,6 +1,6 @@
+import AdminPage from "admin/admin_page";
 import { getAvailableTasksReport } from "admin/rest_api";
 import { Spin, Table, Tag, Tooltip } from "antd";
-import AdminPage from "admin/admin_page";
 import { handleGenericError } from "libs/error_handling";
 import { compareBy, localeCompareBy } from "libs/utils";
 import { useState } from "react";

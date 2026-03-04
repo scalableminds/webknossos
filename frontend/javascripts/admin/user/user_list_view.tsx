@@ -11,6 +11,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
@@ -33,7 +34,6 @@ import {
   Tag,
   Tooltip,
 } from "antd";
-import AdminPage from "admin/admin_page";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";

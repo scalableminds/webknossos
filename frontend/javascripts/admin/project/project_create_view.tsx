@@ -1,3 +1,4 @@
+import AdminPage from "admin/admin_page";
 import {
   createProject,
   getEditableTeams,
@@ -6,7 +7,6 @@ import {
   updateProject,
 } from "admin/rest_api";
 import { Button, Checkbox, Form, Input, InputNumber, Select } from "antd";
-import AdminPage from "admin/admin_page";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";

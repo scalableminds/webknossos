@@ -1,11 +1,11 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { createTaskType, getEditableTeams, getTaskType, updateTaskType } from "admin/rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
 import { Button, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
 import type { RuleObject } from "antd/es/form";
-import AdminPage from "admin/admin_page";
 import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
 import merge from "lodash-es/merge";

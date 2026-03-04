@@ -11,6 +11,7 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import { getTasks } from "admin/api/tasks";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import {
@@ -24,7 +25,6 @@ import {
   resumeProject,
 } from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tooltip } from "antd";
-import AdminPage from "admin/admin_page";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";

@@ -77,6 +77,7 @@ type OwnProps = {
 type Props = OwnProps & StateProps;
 type State = {
   isNewLayoutModalOpen: boolean;
+  windowWidth: number;
 };
 
 function AdditionalCoordinatesInputView() {
@@ -269,7 +270,20 @@ function ModesView() {
 class ActionBarView extends PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
+    windowWidth: window.innerWidth,
   };
+
+  handleResize = () => {
+    this.setState({ windowWidth: window.innerWidth });
+  };
+
+  componentDidMount() {
+    window.addEventListener("resize", this.handleResize);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.handleResize);
+  }
 
   handleResetLayout = () => {
     layoutEmitter.emit(
@@ -323,14 +337,11 @@ class ActionBarView extends PureComponent<Props, State> {
       },
     ];
 
-    const isNarrowScreen = window.matchMedia("(max-width: 1400px)").matches;
-    const isVeryNarrowScreen = window.matchMedia("(max-width: 1200px)").matches;
-
     let buttonText = "AI Analysis";
-    if (isNarrowScreen) {
+    if (this.state.windowWidth < constants.NARROW_SCREEN_WIDTH) {
       buttonText = "AI";
     }
-    if (isVeryNarrowScreen) {
+    if (this.state.windowWidth < constants.VERY_NARROW_SCREEN_WIDTH) {
       buttonText = "";
     }
 
@@ -348,7 +359,9 @@ class ActionBarView extends PureComponent<Props, State> {
             disabled={disabled}
             icon={<ExperimentOutlined />}
             title={tooltipText}
-            type={isVeryNarrowScreen ? "primary" : "default"}
+            type={
+              this.state.windowWidth < constants.VERY_NARROW_SCREEN_WIDTH ? "primary" : "default"
+            }
           >
             {buttonText}
           </Button>
@@ -414,11 +427,11 @@ class ActionBarView extends PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
-          <ModesView />
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}
+          <ModesView />
           {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
         </div>
         <AddNewLayoutModal

@@ -1,5 +1,5 @@
 import { RollbackOutlined, SyncOutlined } from "@ant-design/icons";
-import { Button, Col, Popover, Row } from "antd";
+import { Button, Col, Popover, Row, Switch } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useCallback } from "react";
@@ -9,7 +9,7 @@ import type { Vector3 } from "viewer/constants";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
-import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
+import { NumberSliderSetting } from "../components/setting_input_views";
 
 const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",
@@ -102,14 +102,16 @@ const PopoverContent: React.FC<EmptyObject> = () => {
             </Button>
           </Col>
         </Row>
-        <Row>
-          <SwitchSetting
+      </div>
+      <Row>
+        <Col>Flight Mode</Col>
+        <Col offset={11}>
+          <Switch
             onChange={setViewMode}
             value={useWkSelector((state) => state.temporaryConfiguration.viewMode) === "flight"}
-            label="Flight Mode"
           />
-        </Row>
-      </div>
+        </Col>
+      </Row>
     </div>
   );
 };

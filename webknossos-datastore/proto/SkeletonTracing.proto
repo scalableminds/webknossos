@@ -46,7 +46,8 @@ message TreeBody {
 
 message AgglomerateInfo {
   required int64 agglomerateId = 1;
-  required string tracingId = 2;
+  optional string tracingId = 2;
+  optional string mappingName = 3;
 }
 
 message Tree {

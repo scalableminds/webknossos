@@ -3,7 +3,7 @@ import type { MinCutTargetEdge } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { cancel, delay, select, takeEvery } from "typed-redux-saga";
+import { cancel, delay, takeEvery } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -21,7 +21,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Saga } from "viewer/model/sagas/effect_generators";
+import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";

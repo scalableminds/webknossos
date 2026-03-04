@@ -340,7 +340,7 @@ class EditableMappingService @Inject()(
         edges = skeletonEdges,
         name = s"agglomerate $agglomerateId ($tracingId)",
         `type` = Some(TreeTypeProto.AGGLOMERATE),
-        agglomerateInfo = Some(AgglomerateInfo(agglomerateId, tracingId)),
+        agglomerateInfo = Some(AgglomerateInfo(agglomerateId, Some(tracingId), None)),
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(

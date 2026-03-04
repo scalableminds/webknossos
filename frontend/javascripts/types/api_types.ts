@@ -916,7 +916,8 @@ export type ServerBoundingBoxMinMaxTypeTuple = {
 
 export type TreeAgglomerateInfo = {
   agglomerateId: number;
-  tracingId: string;
+  tracingId?: string | undefined;
+  mappingName?: string | undefined;
 };
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>;

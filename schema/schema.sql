@@ -590,7 +590,8 @@ CREATE TABLE webknossos.jobs(
   ended TIMESTAMPTZ,
   lastRetry TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
 );
 
 

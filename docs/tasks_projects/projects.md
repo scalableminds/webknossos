@@ -56,7 +56,7 @@ The report provides:
 
 - Per-user totals for annotation/task count and tracked time.
 - Average time per task/annotation.
-- Expandable rows for detailed per-user time tracking entries.
+- Expandable rows for detailed per-user time-tracking entries.
 - CSV export for the current overview.
 - Per-user CSV export of detailed time spans.
 

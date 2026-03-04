@@ -283,7 +283,7 @@ function TaskTypeCreateView() {
             mode="multiple"
             allowClear
             placeholder="Select all Allowed Modes"
-            optionFilterProp="label"
+            showSearch={{ optionFilterProp: "label" }}
             style={{
               width: "100%",
             }}

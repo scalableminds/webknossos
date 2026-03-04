@@ -160,7 +160,7 @@ function ScriptListView() {
             fixed="right"
             width={180}
             render={(__, script: APIScript) => (
-              <Space vertical size={0}>
+              <Space orientation="vertical" size={0}>
                 <Link to={`/scripts/${script.id}/edit`}>
                   <EditOutlined className="icon-margin-right" />
                   Edit

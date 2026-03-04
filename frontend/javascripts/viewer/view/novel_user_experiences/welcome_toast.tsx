@@ -18,7 +18,7 @@ function showWelcomeToast(notification: NotificationInstance) {
     placement: "bottomRight",
     icon: (
       <img
-        src="/assets/images/logo-icon-only.svg"
+        src="/images/logo-icon-only.svg"
         alt="logo"
         style={{
           filter: "brightness(4)",
@@ -49,7 +49,7 @@ function showWelcomeToast(notification: NotificationInstance) {
           </Button>
           <span style={{ position: "relative" }}>
             <img
-              src="/assets/images/drawings/waving-person.svg"
+              src="/images/drawings/waving-person.svg"
               alt="waving person"
               style={{
                 height: 100,

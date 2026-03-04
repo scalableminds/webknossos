@@ -52,8 +52,8 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select, take } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select, take } from "viewer/model/sagas/effect_generators";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryUnlessBusy,

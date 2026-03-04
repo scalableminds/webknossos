@@ -53,7 +53,7 @@ import {
 } from "viewer/model/types/tree_types";
 import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
-import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { mapGroups } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {

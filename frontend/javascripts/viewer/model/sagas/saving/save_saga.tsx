@@ -25,11 +25,11 @@ import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select, take } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type { NumberLike, SkeletonTracing, VolumeTracing } from "viewer/store";
+import type { NumberLike, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
@@ -241,6 +241,7 @@ function* reapplyUpdateActionsFromSaveQueue(
   // during rebase. These actions can be used as additional information to adapt the local, pending
   // save queue entries to the rebase.
   appliedBackendUpdateActions: APIUpdateActionBatch[],
+  annotationBeforeRebase: StoreAnnotation,
 ): Saga<{ successful: boolean }> {
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const currentVersion = yield* select((state) => state.annotation.version);
@@ -253,6 +254,7 @@ function* reapplyUpdateActionsFromSaveQueue(
   const { success, updatedSaveQueue } = yield* call(
     updateSaveQueueEntriesToStateAfterRebase,
     appliedBackendUpdateActions,
+    annotationBeforeRebase,
   );
   if (success) {
     const saveQueueAsServerUpdateActionBatches = saveQueueEntriesToServerUpdateActionBatches(
@@ -287,7 +289,10 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     othersMayEdit &&
     missingUpdateActions.length > 0 &&
     saveQueueEntries.length > 0;
+  const annotationBeforeRebase = yield* select((state) => state.annotation);
   if (needsRebasing) {
+    // As a side-effect of this call,
+    // the annotation in the store will be set to the info stored in RebaseRelevantAnnotationState.
     yield* call(diffTracingsAndPrepareRebase);
   }
 
@@ -300,7 +305,11 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     }
     if (needsRebasing) {
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
-      const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue, missingUpdateActions);
+      const { successful } = yield* call(
+        reapplyUpdateActionsFromSaveQueue,
+        missingUpdateActions,
+        annotationBeforeRebase,
+      );
       if (!successful) {
         return { successful: false, shouldTerminate: false };
       }

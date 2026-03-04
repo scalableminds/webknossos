@@ -20,8 +20,8 @@ import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type {
   ApplicableSkeletonServerUpdateAction,
   ApplicableVolumeServerUpdateAction,

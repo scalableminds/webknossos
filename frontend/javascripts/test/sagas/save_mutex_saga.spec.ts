@@ -23,7 +23,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";

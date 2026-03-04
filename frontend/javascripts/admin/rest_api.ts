@@ -772,7 +772,7 @@ export async function getTracingForAnnotationType(
   });
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
     console.log(`Parsed protobuf ${tracingType} tracing:`, tracing);
   }
@@ -851,7 +851,7 @@ export async function getAnnotationProto(
     );
   });
   const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
     console.log("Parsed protobuf annotation:", annotationProto);
   }

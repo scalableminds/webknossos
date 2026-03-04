@@ -1,6 +1,6 @@
 import isEqual from "lodash-es/isEqual";
 import range from "lodash-es/range";
-import runAsync from "test/helpers/run-async";
+import runAsync from "test/helpers/run_async";
 import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { beforeEach, describe, expect, it, vi } from "vitest";

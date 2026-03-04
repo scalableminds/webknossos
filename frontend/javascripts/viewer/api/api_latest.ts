@@ -190,7 +190,7 @@ import {
   MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }

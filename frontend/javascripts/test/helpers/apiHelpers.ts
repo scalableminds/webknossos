@@ -215,7 +215,7 @@ vi.mock("admin/rest_api.ts", async () => {
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
     getMappingsForDatasetLayer: vi.fn(() => []),
-    getMeshFilesForDatasetLayer: getMeshFilesForDatasetLayer,
+    getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
@@ -277,7 +277,7 @@ vi.mock("admin/api/mesh", async () => {
 
   return {
     ...actual,
-    getMeshFileChunksForSegment: getMeshFileChunksForSegment,
+    getMeshFileChunksForSegment,
   };
 });
 

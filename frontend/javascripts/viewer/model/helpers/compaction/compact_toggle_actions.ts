@@ -23,7 +23,7 @@ import {
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
   MISSING_GROUP_ID,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 
 type GroupNode = {
   children: GroupNode[];

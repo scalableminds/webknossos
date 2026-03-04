@@ -107,7 +107,7 @@ function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): 
       }
     }
   }
-  yield call([Promise, Promise.all], promises);
+  yield* call([Promise, Promise.all], promises);
   return { idsToReloadByMappingId, anchorPositionToUnmappedIdByMappingId };
 }
 

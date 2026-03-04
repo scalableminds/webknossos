@@ -1,4 +1,4 @@
-import {
+import Icon, {
   ClockCircleOutlined,
   CloudUploadOutlined,
   CodeOutlined,
@@ -12,6 +12,7 @@ import {
   UserAddOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import BuildingIcon from "@images/icons/icon-building.svg?react";
 import { useQuery } from "@tanstack/react-query";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -522,7 +523,7 @@ function OnboardingView() {
             of Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
           </Fragment>
         }
-        icon={<i className="far fa-building icon-big" />}
+        icon={<Icon component={BuildingIcon} />}
       >
         <OrganizationForm onComplete={onCreateOrganizationComplete} />
       </StepHeader>

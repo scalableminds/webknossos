@@ -1,5 +1,6 @@
-import {
+import Icon, {
   ArrowRightOutlined,
+  BarChartOutlined,
   CloseOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -15,7 +16,10 @@ import {
   SearchOutlined,
   SettingOutlined,
   ShrinkOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
+import LoadMeshesIcon from "@images/icons/icon-load-meshes.svg?react";
+import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import {
   ConfigProvider,
   Divider,
@@ -485,6 +489,12 @@ class SegmentsView extends React.Component<Props, State> {
       ) {
         const selectedId = this.props.selectedIds.segments[0];
         this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+      } else if (
+        this.props.selectedIds.group != null &&
+        prevProps.selectedIds.group !== this.props.selectedIds.group
+      ) {
+        const selectedGroupId = this.props.selectedIds.group;
+        this.tree.current.scrollTo({ key: getGroupNodeKey(selectedGroupId) });
       }
     }, 100);
   }
@@ -823,7 +833,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "changeGroupColor",
-      icon: <i className="fas fa-eye-dropper fa-sm fa-icon fa-fw" />,
+      icon: <Icon component={PipetteIcon} />,
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
@@ -843,7 +853,7 @@ class SegmentsView extends React.Component<Props, State> {
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "resetGroupColor",
-      icon: <i className="fas fa-undo" />,
+      icon: <UndoOutlined />,
       label: (
         <div
           onClick={() => {
@@ -892,7 +902,7 @@ class SegmentsView extends React.Component<Props, State> {
   getComputeMeshesAdHocMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "computeAdHoc",
-      icon: <i className="fas fa-dice-d20 fa-fw fa-icon" />,
+      icon: <Icon component={LoadMeshesIcon} />,
       label: (
         <div
           onClick={() => {
@@ -926,7 +936,7 @@ class SegmentsView extends React.Component<Props, State> {
           </div>
         </>
       ),
-      icon: <i className="fas fa-ruler fa-fw fa-icon" />,
+      icon: <BarChartOutlined />,
     };
   };
 
@@ -934,7 +944,7 @@ class SegmentsView extends React.Component<Props, State> {
     return {
       key: "loadByFile",
       disabled: this.props.currentMeshFile == null,
-      icon: <i className="fas fa-dice-d20 fa-icon fa-fw" />,
+      icon: <Icon component={LoadMeshesIcon} />,
       label: (
         <div
           onClick={() => {

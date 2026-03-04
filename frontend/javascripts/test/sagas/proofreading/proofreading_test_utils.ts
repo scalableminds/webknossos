@@ -202,7 +202,6 @@ export class BackendMock {
 
     // Process received update actions and update agglomerateMapping.
     for (const item of newItems) {
-      console.log(`Updating mocked server to: v=${item.version} with`, item.value);
       let isFirstUpdateAction = true;
       for (const updateAction of item.value) {
         const bumpVersion = isFirstUpdateAction;

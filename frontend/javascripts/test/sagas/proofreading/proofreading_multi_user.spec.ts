@@ -38,7 +38,6 @@ import {
 import type { Vector3 } from "viewer/constants";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
-import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import type { Action } from "viewer/model/actions/actions";
 
 function* prepareEditableMapping(
@@ -784,6 +783,8 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId2: 4,
         },
       },
+    ]);
+    backendMock.planVersionInjection(6, [
       {
         name: "mergeSegmentItems",
         value: {
@@ -1166,6 +1167,8 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId2: 4,
         },
       },
+    ]);
+    backendMock.planVersionInjection(6, [
       {
         name: "mergeSegmentItems",
         value: {
@@ -1295,6 +1298,8 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId2: 4,
         },
       },
+    ]);
+    backendMock.planVersionInjection(6, [
       {
         name: "mergeSegmentItems",
         value: {
@@ -1357,11 +1362,7 @@ describe("Proofreading (Multi User)", () => {
         ),
       );
 
-      // yield put(removeSegmentAction(4, tracingId));
-
       yield call(() => api.tracing.save());
-
-      yield call(publishDebuggingState, backendMock);
 
       const backendState = backendMock.getState();
       const frontendState = Store.getState();
@@ -1407,6 +1408,8 @@ describe("Proofreading (Multi User)", () => {
           agglomerateId2: 4,
         },
       },
+    ]);
+    backendMock.planVersionInjection(6, [
       {
         name: "mergeSegmentItems",
         value: {
@@ -1438,8 +1441,6 @@ describe("Proofreading (Multi User)", () => {
       yield put(removeSegmentAction(4, tracingId));
 
       yield call(() => api.tracing.save());
-
-      yield call(publishDebuggingState, backendMock);
 
       const backendState = backendMock.getState();
       const frontendState = Store.getState();

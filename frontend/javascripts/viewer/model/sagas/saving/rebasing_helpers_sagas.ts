@@ -51,6 +51,47 @@ export function saveQueueEntriesToServerUpdateActionBatches(
 type IdsToReloadPerMappingId = Map<string, number[]>;
 type AnchorPositionToUnmappedIdByMappingId = Map<string, Map<string, number>>;
 
+function appendToIdsToReloadMapping(
+  actionTracingId: string,
+  idsToReloadByMappingId: IdsToReloadPerMappingId,
+  segmentId2: number,
+) {
+  if (!idsToReloadByMappingId.has(actionTracingId)) {
+    idsToReloadByMappingId.set(actionTracingId, []);
+  }
+  idsToReloadByMappingId.get(actionTracingId)!.push(segmentId2);
+}
+
+async function appendIdToReloadFromPositionAsync(
+  action: CreateSegmentUpdateAction,
+  idsToReloadByMappingId: IdsToReloadPerMappingId,
+  anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId,
+) {
+  const { actionTracingId, anchorPosition, additionalCoordinates } = action.value;
+  if (anchorPosition == null) {
+    return;
+  }
+  const unmappedId = await api.data.getDataValue(
+    actionTracingId,
+    anchorPosition,
+    null,
+    additionalCoordinates,
+  );
+  const anchorPositionKey = segmentPositionToKey(anchorPosition, additionalCoordinates);
+  if (!anchorPositionToUnmappedIdByMappingId.has(actionTracingId)) {
+    anchorPositionToUnmappedIdByMappingId.set(actionTracingId, new Map());
+  }
+  anchorPositionToUnmappedIdByMappingId.get(actionTracingId)!.set(anchorPositionKey, unmappedId);
+  appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, unmappedId);
+}
+
+function segmentPositionToKey(
+  anchorPosition: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+) {
+  return `${anchorPosition.join(",")}-${getAdditionalCoordinatesAsString(additionalCoordinates)}`;
+}
+
 // Gathers mapped agglomerate ids for unknown but relevant segments to apply the passed save queue entries correctly.
 // This is needed in case proofreading was done via mesh interactions whose mapping info is present in the meshes
 // but not in the activeMappingByLayer.mapping. Due to incorporating backend updates the agglomerate ids of the
@@ -111,47 +152,6 @@ function* getAllUnknownSegmentIdsInPendingUpdates(saveQueue: SaveQueueEntry[]): 
   return { idsToReloadByMappingId, anchorPositionToUnmappedIdByMappingId };
 }
 
-function appendToIdsToReloadMapping(
-  actionTracingId: string,
-  idsToReloadByMappingId: IdsToReloadPerMappingId,
-  segmentId2: number,
-) {
-  if (!idsToReloadByMappingId.has(actionTracingId)) {
-    idsToReloadByMappingId.set(actionTracingId, []);
-  }
-  idsToReloadByMappingId.get(actionTracingId)!.push(segmentId2);
-}
-
-async function appendIdToReloadFromPositionAsync(
-  action: CreateSegmentUpdateAction,
-  idsToReloadByMappingId: IdsToReloadPerMappingId,
-  anchorPositionToUnmappedIdByMappingId: AnchorPositionToUnmappedIdByMappingId,
-) {
-  const { actionTracingId, anchorPosition, additionalCoordinates } = action.value;
-  if (anchorPosition == null) {
-    return;
-  }
-  const unmappedId = await api.data.getDataValue(
-    actionTracingId,
-    anchorPosition,
-    null,
-    additionalCoordinates,
-  );
-  const anchorPositionKey = segmentPositionToKey(anchorPosition, additionalCoordinates);
-  if (!anchorPositionToUnmappedIdByMappingId.has(actionTracingId)) {
-    anchorPositionToUnmappedIdByMappingId.set(actionTracingId, new Map());
-  }
-  anchorPositionToUnmappedIdByMappingId.get(actionTracingId)!.set(anchorPositionKey, unmappedId);
-  appendToIdsToReloadMapping(actionTracingId, idsToReloadByMappingId, unmappedId);
-}
-
-function segmentPositionToKey(
-  anchorPosition: Vector3,
-  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-) {
-  return `${anchorPosition.join(",")}-${getAdditionalCoordinatesAsString(additionalCoordinates)}`;
-}
-
 // For each passed mapping, reload the segment ids' mapping information and store it in the local mapping.
 // Needed after getAllUnknownSegmentIdsInPendingUpdates to load updated mapping info for segment ids of
 // mesh interaction proofreading actions to ensure reapplying these actions is done with up-to-date mapping info.
@@ -164,8 +164,6 @@ function* addMissingSegmentsToLoadedMappings(
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  console.log("idsToReloadPerMapping", idsToReloadPerMapping);
-  console.log("idsToReloadPerMapping.keys", idsToReloadPerMapping.keys);
   for (const volumeTracingId of idsToReloadPerMapping.keys()) {
     const idsToReload = idsToReloadPerMapping.get(volumeTracingId);
     if (idsToReload == null || idsToReload.length === 0) {
@@ -243,7 +241,8 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
   );
-  const annotationBeforeUpdate = yield* select((state) => state.annotation);
+  // Reminder: Rebase = Rewind (local actions) + Forward (to newest backend state) + Reapply (local actions)
+  const annotationBeforeReapplying = yield* select((state) => state.annotation);
 
   let success = true;
   const updatedSaveQueue = saveQueue
@@ -330,7 +329,7 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 activeMappingByLayer,
                 anchorPositionToUnmappedIdByMappingId,
               );
-              const tracing = annotationBeforeUpdate.volumes.find(
+              const tracing = annotationBeforeReapplying.volumes.find(
                 (v) => v.tracingId === actionTracingId,
               );
 
@@ -377,13 +376,14 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
                 anchorPositionToUnmappedIdByMappingId,
               );
 
-              const tracingBeforeUpdate = annotationBeforeUpdate.volumes.find(
+              const tracingBeforeReapplying = annotationBeforeReapplying.volumes.find(
                 (v) => v.tracingId === actionTracingId,
               );
-              const maybeExistingSegment = tracingBeforeUpdate?.segments.getNullable(segmentId);
+              const maybeExistingSegment = tracingBeforeReapplying?.segments.getNullable(segmentId);
 
               if (!maybeExistingSegment) {
-                // Another user removed the segment. The update action of the current user gets lost now.
+                // Another user removed the segment, causing the current user's update to be lost
+                // (which is acceptable).
                 return null;
               }
 

@@ -531,8 +531,10 @@ export async function enableMergerMode(
   );
   // Register the additional key handler
   unregisterKeyHandlers.push(
-    api.utils.registerKeyHandler("9", () => {
-      changeOpacity(mergerModeState);
+    api.utils.registerKeyHandler("9", {
+      onPressed: () => {
+        changeOpacity(mergerModeState);
+      },
     }),
   );
   // wait for preprocessing the already existing trees before returning

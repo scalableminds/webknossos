@@ -48,6 +48,10 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
+import { CommentsTabKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import type { KeyboardShortcutLoopedHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfigAndLoopedMapping } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import Comment, { commentListId } from "viewer/view/right_border_tabs/comment_tab/comment";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
@@ -148,19 +152,20 @@ function CommentTabView(props: Props) {
       // Instead of directly attaching callback function, we need to rely on React.refs instead
       // to prevent the callbacks from becoming stale and outdated as the component changes
       // its state or props.
-      const newKeyboard = new InputKeyboard(
-        {
-          n: () => {
-            if (nextCommentRef?.current) nextCommentRef.current();
-          },
-          p: () => {
-            if (previousCommentRef?.current) previousCommentRef.current();
-          },
+      const keyboardHandlers: KeyboardShortcutLoopedHandlerMap<CommentsTabKeyboardShortcuts> = {
+        [CommentsTabKeyboardShortcuts.NEXT_COMMENT]: {
+          onPressedWithRepeat: () => nextCommentRef?.current?.(),
         },
-        {
-          delay: keyboardDelay,
+        [CommentsTabKeyboardShortcuts.PREVIOUS_COMMENT]: {
+          onPressedWithRepeat: () => previousCommentRef?.current?.(),
         },
+      };
+      const keybindingConfig = loadKeyboardShortcuts();
+      const keyboardControls = buildKeyBindingsFromConfigAndLoopedMapping(
+        keybindingConfig,
+        keyboardHandlers,
       );
+      const newKeyboard = new InputKeyboard(keyboardControls);
       if (keyboard === null) setKeyboard(newKeyboard);
     },
     () => {

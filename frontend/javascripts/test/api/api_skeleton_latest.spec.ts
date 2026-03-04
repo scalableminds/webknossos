@@ -221,7 +221,7 @@ describe("API Skeleton", () => {
     const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockReturnThis();
     const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockReturnThis();
 
-    const binding = api.utils.registerKeyHandler("g", () => {});
+    const binding = api.utils.registerKeyHandler("g", { onPressed: () => {} });
     expect(bindSpy).toHaveBeenCalled();
 
     binding.unregister();

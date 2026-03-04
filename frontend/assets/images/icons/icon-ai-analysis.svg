@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <rect id="Robot" x="0" y="0" width="1024" height="1024" style="fill:none;"/>
-    <g id="Robot1" serif:id="Robot">
+    <rect id="icon-ai-analysis" x="0" y="0" width="1024" height="1024" style="fill:none;"/>
+    <g id="icon-ai-analysis1" serif:id="icon-ai-analysis">
         <g transform="matrix(5.76344e-15,94.1241,-69.3641,4.24733e-15,29419.5,-18652.1)">
             <path d="M205.749,413.574L205.749,419.926C205.749,420.691 205.291,421.312 204.728,421.312L202.934,421.312C202.37,421.312 201.913,420.691 201.913,419.926L201.913,413.574C201.913,412.81 202.37,412.189 202.934,412.189L204.728,412.189C205.291,412.189 205.749,412.81 205.749,413.574Z" style="fill:none;stroke:rgb(241,241,241);stroke-width:0.87px;"/>
         </g>

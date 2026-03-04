@@ -17,6 +17,17 @@
   &>div {
     margin-left: var(--ant-margin-xs);
   }
+
+  // slightly increase the icon size for all tool icons in the action bar
+  .ant-space-compact .ant-btn .anticon,
+  .ant-radio-button-label .anticon {
+    vertical-align: -0.35em;
+
+    svg {
+      width: 1.3em;
+      height: 1.3em;
+    }
+  }
 }
 
 .merge-modal .ant-form-item-label {

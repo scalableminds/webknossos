@@ -76,7 +76,7 @@ object TextUtils {
   def renderTemplateReplacements(template: String, replacements: (String, String)*): Box[String] =
     replacements.toSeq.foldLeft[Box[String]](Full(template)) {
       case (Full(currentTemplate), (replacementSrc, replacementDst)) =>
-        if (currentTemplate.contains(replacementSrc)) Full(currentTemplate.replaceAll(replacementSrc, replacementDst))
+        if (currentTemplate.contains(replacementSrc)) Full(currentTemplate.replace(replacementSrc, replacementDst))
         else Failure(s"Expected “$replacementSrc” in template.")
       case (f: Failure, _) => f
       case _               => Failure("Unknown error rendering template replacements.")

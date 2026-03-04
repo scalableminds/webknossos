@@ -1,4 +1,8 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
+import Icon, { InfoCircleOutlined } from "@ant-design/icons";
+import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
+import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
+import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
+import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -22,12 +26,7 @@ import ButtonComponent, { ToggleButton } from "viewer/view/components/button_com
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
-import {
-  ACTIONBAR_MARGIN_LEFT,
-  IMG_STYLE_FOR_SPACEY_ICONS,
-  NARROW_BUTTON_STYLE,
-  RadioButtonWithTooltip,
-} from "./tool_helpers";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, RadioButtonWithTooltip } from "./tool_helpers";
 import {
   CreateSegmentButton,
   FloodFillSettings,
@@ -47,17 +46,10 @@ function CreateNewBoundingBoxButton() {
   return (
     <ButtonComponent
       onClick={handleAddNewUserBoundingBox}
-      style={{
-        paddingLeft: 9,
-        paddingRight: 9,
-      }}
+      style={NARROW_BUTTON_STYLE}
       title="Create a new bounding box centered around the current position."
     >
-      <img
-        src="/images/new-bounding-box.svg"
-        alt="New Bounding Box Icon"
-        style={IMG_STYLE_FOR_SPACEY_ICONS}
-      />
+      <Icon component={NewBoundingBoxIcon} aria-label="New Bounding Box Icon" />
     </ButtonComponent>
   );
 }
@@ -209,8 +201,9 @@ function ToolSpecificSettings({
             onClick={toggleQuickSelectStrategy}
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
+            icon={<Icon component={AiAnalysisIcon} />}
           >
-            <i className="fas fa-magic icon-margin-right" /> AI
+            AI
           </ToggleButton>
 
           <QuickSelectSettingsPopover />
@@ -248,7 +241,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         style={NARROW_BUTTON_STYLE}
         value={AnnotationTool.LINE_MEASUREMENT.id}
       >
-        <img src="/images/line-measurement.svg" alt="Measurement Tool Icon" />
+        <Icon component={LineMeasurementIcon} aria-label="Line Measurement Tool Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         disabledTitle={explanation}
@@ -259,11 +252,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
         value={AnnotationTool.AREA_MEASUREMENT.id}
         disabled={isDisabled}
       >
-        <img
-          src="/images/area-measurement.svg"
-          alt="Measurement Tool Icon"
-          style={IMG_STYLE_FOR_SPACEY_ICONS}
-        />
+        <Icon component={AreaMeasurementIcon} aria-label="Area Measurement Tool Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
   );

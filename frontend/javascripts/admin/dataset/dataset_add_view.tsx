@@ -1,8 +1,11 @@
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
+import vxAlignmentSchema from "@images/vx/alignment-schema.png";
+import vxManualAnnotationsVertical from "@images/vx/manual-annotations-vertical.png";
+import vxSegmentationL4denseMottaEtAlDemoRotated from "@images/vx/segmentation-l4dense-motta-et-al-demo-rotated.jpg";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { getDatastores } from "admin/rest_api";
-import { Button, Layout, Modal, Tabs, type TabsProps } from "antd";
+import { Button, Flex, Layout, Modal, Tabs, type TabsProps } from "antd";
 import features from "features";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -125,7 +128,7 @@ const segmentationBanner = (
   <div
     className="crosslink-box"
     style={{
-      background: "url(/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
+      background: `url(${vxSegmentationL4denseMottaEtAlDemoRotated})`,
       height: 500,
       backgroundSize: "110%",
       padding: 0,
@@ -147,18 +150,19 @@ const segmentationBanner = (
       >
         Are you looking for an automated segmentation of this dataset?
       </h4>
-      <Button
-        href="https://webknossos.org/services/automated-segmentation"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "block",
-          margin: "10px auto",
-          width: "50%",
-        }}
-      >
-        Learn More
-      </Button>
+      <Flex justify="center">
+        <Button
+          size="middle"
+          href="https://webknossos.org/services/automated-segmentation"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            width: "50%",
+          }}
+        >
+          Learn More
+        </Button>
+      </Flex>
     </div>
   </div>
 );
@@ -173,7 +177,7 @@ const alignBanner = (
       Are you looking for dataset alignment or stitching?
     </h4>
     <img
-      src="/images/vx/alignment-schema.png"
+      src={vxAlignmentSchema}
       alt="Schematic Alignment"
       style={{
         width: "100%",
@@ -202,7 +206,7 @@ const manualAnnotationBanner = (
   <div
     className="crosslink-box"
     style={{
-      background: "url(/images/vx/manual-annotations-vertical.png)",
+      background: `url(${vxManualAnnotationsVertical})`,
       height: 500,
       backgroundSize: "110%",
       padding: 0,
@@ -226,18 +230,19 @@ const manualAnnotationBanner = (
         <br />
         Have a look at our annotation services.
       </h4>
-      <Button
-        href="https://webknossos.org/services/annotations"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "block",
-          margin: "10px auto",
-          width: "50%",
-        }}
-      >
-        Learn More
-      </Button>
+      <Flex justify="center">
+        <Button
+          size="middle"
+          href="https://webknossos.org/services/annotations"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            width: "50%",
+          }}
+        >
+          Learn More
+        </Button>
+      </Flex>
     </div>
   </div>
 );

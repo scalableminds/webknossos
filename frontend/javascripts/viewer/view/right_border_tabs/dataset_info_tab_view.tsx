@@ -1,12 +1,19 @@
-import {
+import Icon, {
   EditOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import IconDownsampling from "@images/icons/icon-downsampling.svg?react";
+import IconExtent from "@images/icons/icon-extent.svg?react";
+import IconMousewheel from "@images/icons/icon-mousewheel.svg?react";
+import IconSegments from "@images/icons/icon-segments.svg?react";
+import IconSkeletons from "@images/icons/icon-skeletons.svg?react";
+import IconVoxelsize from "@images/icons/icon-voxelsize.svg?react";
 import { getOrganization } from "admin/api/organization";
-import { Tag, Typography } from "antd";
+import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { ThemedIcon } from "components/themed_icon";
 import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
@@ -44,6 +51,7 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions";
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
+import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
@@ -68,23 +76,17 @@ const shortcuts = [
   {
     key: "1",
     keybinding: [
-      <span key="zoom-1" className="keyboard-key-icon">
-        I
-      </span>,
+      <KeyboardKeyIcon label="I" key="zoom-1" className="keyboard-key-icon" />,
       "/",
-      <span key="zoom-2" className="keyboard-key-icon">
-        O
-      </span>,
+      <KeyboardKeyIcon label="O" key="zoom-2" className="keyboard-key-icon" />,
       "or",
-      <span key="zoom-3" className="keyboard-key-icon">
-        ALT
-      </span>,
+      <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
       "+",
-      <img
+      <Icon
+        component={IconMousewheel}
         key="zoom-4"
         className="keyboard-mouse-icon"
-        src="/images/icon-mousewheel.svg"
-        alt="Mouse Wheel"
+        aria-label="Mouse Wheel"
         title="Mouse Wheel"
       />,
     ],
@@ -93,31 +95,28 @@ const shortcuts = [
   {
     key: "2",
     keybinding: [
-      <img
+      <Icon
+        component={IconMousewheel}
         key="move-1"
         className="keyboard-mouse-icon"
-        src="/images/icon-mousewheel.svg"
-        alt="Mouse Wheel"
+        aria-label="Mouse Wheel"
         title="Mouse Wheel"
       />,
       "or",
-      <span key="move-2" className="keyboard-key-icon">
-        D
-      </span>,
+      <KeyboardKeyIcon label="D" key="move-2" className="keyboard-key-icon" />,
       "/",
-      <span key="move-3" className="keyboard-key-icon">
-        F
-      </span>,
+      <KeyboardKeyIcon label="F" key="move-3" className="keyboard-key-icon" />,
     ],
     action: "Move Along 3rd Axis",
   },
   {
     key: "3",
     keybinding: [
-      <div
+      <ThemedIcon
+        name="icon-mouse-left"
         key="move"
-        title="Left Mouse Button Drag"
-        className="keyboard-mouse-icon icon-mouse-left"
+        className="keyboard-mouse-icon"
+        aria-label="Left Mouse Button Drag"
       />,
     ],
     action: "Move",
@@ -125,10 +124,11 @@ const shortcuts = [
   {
     key: "4",
     keybinding: [
-      <div
+      <ThemedIcon
+        name="icon-mouse-right"
         key="rotate"
-        title="Right Mouse Button Drag"
-        className="keyboard-mouse-icon icon-mouse-right"
+        className="keyboard-mouse-icon"
+        aria-label="Right Mouse Button Drag"
       />,
       "in 3D View",
     ],
@@ -171,7 +171,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
           paddingTop: 10,
         }}
       >
-        <img className="info-tab-icon" src="/images/icon-extent.svg" alt="Dataset extent" />
+        <Icon component={IconExtent} className="info-tab-icon" aria-label="Dataset extent" />
       </td>
       <td
         style={{
@@ -193,7 +193,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
           paddingRight: 20,
         }}
       >
-        <img className="info-tab-icon" src="/images/icon-voxelsize.svg" alt="Voxel size" />
+        <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
       </td>
       <td>{formatScale(dataset.dataSource.scale)}</td>
     </FastTooltip>
@@ -253,7 +253,7 @@ export function AnnotationStats({
               wrapper="tr"
             >
               <td>
-                <img className="info-tab-icon" src="/images/icon-skeletons.svg" alt="Skeletons" />
+                <Icon component={IconSkeletons} className="info-tab-icon" aria-label="Skeletons" />
               </td>
               <td>
                 {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
@@ -271,7 +271,7 @@ export function AnnotationStats({
               wrapper="tr"
             >
               <td>
-                <img className="info-tab-icon" src="/images/icon-segments.svg" alt="Segments" />
+                <Icon component={IconSegments} className="info-tab-icon" aria-label="Segments" />
               </td>
               <td>
                 {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
@@ -335,7 +335,9 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                     width: 170,
                   }}
                 >
-                  {shortcut.keybinding}
+                  <Space size={4} align="center">
+                    {shortcut.keybinding}
+                  </Space>
                 </td>
                 <td>{shortcut.action}</td>
               </tr>
@@ -603,7 +605,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             paddingTop: 8,
           }}
         >
-          <img className="info-tab-icon" src="/images/icon-downsampling.svg" alt="Magnification" />
+          <Icon component={IconDownsampling} className="info-tab-icon" aria-label="Magnification" />
         </td>
         <td
           style={{

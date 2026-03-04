@@ -1,10 +1,16 @@
-import {
+import Icon, {
   BarChartOutlined,
   CopyOutlined,
   PushpinOutlined,
   TagOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
+import IconCell from "@images/icons/icon-cell.svg?react";
+import RulerIcon from "@images/icons/icon-ruler.svg?react";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
@@ -247,7 +253,7 @@ function measureAndShowLengthBetweenNodes(
       lengthInUnit,
       LongUnitToShortUnitMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
-    icon: <i className="fas fa-ruler" />,
+    icon: <Icon component={RulerIcon} />,
   });
 }
 
@@ -272,7 +278,7 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSiz
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
     ),
-    icon: <i className="fas fa-ruler" />,
+    icon: <Icon component={RulerIcon} />,
   });
 }
 
@@ -292,10 +298,9 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
     switch (name) {
       case "leftMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/images/icon-statusbar-mouse-left.svg"
-            alt="Mouse Left Click"
+          <Icon
+            component={IconStatusbarMouseLeft}
+            aria-label="Mouse Left Click"
             style={mouseIconStyle}
           />
         );
@@ -303,10 +308,9 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "rightMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/images/icon-statusbar-mouse-right.svg"
-            alt="Mouse Right Click"
+          <Icon
+            component={IconStatusbarMouseRight}
+            aria-label="Mouse Right Click"
             style={mouseIconStyle}
           />
         );
@@ -314,10 +318,9 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
 
       case "middleMouse": {
         return (
-          <img
-            className="keyboard-mouse-icon"
-            src="/images/icon-statusbar-mouse-wheel.svg"
-            alt="Mouse Wheel"
+          <Icon
+            component={IconStatusbarMouseWheel}
+            aria-label="Mouse Wheel"
             style={mouseIconStyle}
           />
         );
@@ -1872,7 +1875,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "distanceInfo",
         <Space size="small">
-          <i className="fas fa-ruler" />
+          <Icon component={RulerIcon} />
           <FastTooltip title="Distance to the active Node of the active Tree">
             {`${distanceToSelection[0]} (${distanceToSelection[1]}) to this
             ${maybeClickedNodeId != null ? "Node" : "Position"}`}
@@ -1888,7 +1891,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "copy-cell",
         <Space size="small">
-          <div className="cell-context-icon" />
+          <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
           {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
         </Space>,
@@ -1943,7 +1946,7 @@ function ContextMenuInner() {
       getInfoMenuItem(
         "boundingBoxPositionInfo",
         <Space size="small">
-          <i className="fas fa-dice-d6 " />
+          <Icon component={BoundingBoxIcon} />
           {`Bounding Box: ${boundingBoxInfoLabel}`}
           {copyIconWithTooltip(boundingBoxInfoLabel, "Copy BBox top left point and extent")}
         </Space>,

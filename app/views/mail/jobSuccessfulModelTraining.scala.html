@@ -1,0 +1,30 @@
+@(name: String, jobLink: String, additionalFooter: String)
+
+@emailBaseTemplate(additionalFooter) {
+<p>Hi @{name},</p>
+
+<p>
+  Your custom machine learning model has been successfully trained and is now available in WEBKNOSSOS. You can access it under AI Analysis → AI Models, or via the button below.
+</p>
+
+@emailButton("Open WEBKNOSSOS", jobLink)
+
+
+<p>
+To run your model, open the dataset you would like to segment, define a bounding box for testing, and select <i>Run AI Model</i>. Your custom model will appear below the pre-trained models and can be selected from there.
+</p>
+
+
+@emailImage(
+  src = "https://static.webknossos.org/mails/email-manual-annotation-service.gif",
+  alt = "A preview of manual annotation of a WEBKNOSSOS dataset",
+  width = 300,
+  height = 300
+)
+
+<p>
+If you require additional ground truth annotations to further improve model performance, our <a href="https://home.webknossos.org/services/annotations">manual annotation services</a> are available to support your project.
+</p>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

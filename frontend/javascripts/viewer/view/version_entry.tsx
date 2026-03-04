@@ -1,4 +1,4 @@
-import {
+import Icon, {
   ArrowsAltOutlined,
   BackwardOutlined,
   CodepenOutlined,
@@ -14,6 +14,7 @@ import {
   ShrinkOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
+import HideSkeletonEdgesIcon from "@images/icons/icon-hide-skeleton-edges.svg?react";
 import { Avatar, Button, List } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
@@ -323,7 +324,7 @@ const descriptionFns: Record<
     action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
   ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
-    icon: <img src="/images/hide-skeleton-edges-icon-light.svg" alt="Hide Tree Edges Icon" />,
+    icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (
     action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,

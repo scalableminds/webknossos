@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 1024 1025" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
+    <g id="icon-lasso" transform="matrix(1,0,0,1,-6.30607e-14,0.99)">
+        <g>
+            <g transform="matrix(1.27273,0,0,1.39752,-221.091,-5503.68)">
+                <path d="M576,4017.99C770.274,4017.99 928,4118.36 928,4241.99C928,4365.61 770.274,4465.99 576,4465.99C381.726,4465.99 224,4365.61 224,4241.99C224,4118.36 381.726,4017.99 576,4017.99ZM576,4069.51C475.679,4069.51 386.127,4099.16 330.981,4147.03C300.125,4173.81 280.571,4206.27 280.571,4241.99C280.571,4277.71 300.125,4310.16 330.981,4336.94C386.127,4384.81 475.679,4414.47 576,4414.47C676.321,4414.47 765.873,4384.81 821.019,4336.94C851.875,4310.16 871.429,4277.71 871.429,4241.99C871.429,4206.27 851.875,4173.81 821.019,4147.03C765.873,4099.16 676.321,4069.51 576,4069.51Z" style="fill:rgb(241,241,241);"/>
+            </g>
+            <g transform="matrix(1.36655,0,0,1.16667,202.215,-4546.09)">
+                <path d="M90.095,4460.21C72.833,4318.62 -37.384,4496.48 90.095,4460.21C116.554,4452.68 -7.604,4620.14 131.905,4684.21" style="fill:none;stroke:rgb(241,241,241);stroke-width:56.67px;"/>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -6,15 +6,8 @@ import type React from "react";
 
 export const ACTIONBAR_MARGIN_LEFT = "var(--ant-margin-xs)"; // keep in sync with stylesheets/trace_view/_action_bar.less
 export const NARROW_BUTTON_STYLE = {
-  paddingLeft: 10,
-  paddingRight: 8,
-};
-export const IMG_STYLE_FOR_SPACEY_ICONS = {
-  width: 19,
-  height: 19,
-  lineHeight: 10,
-  marginTop: -2,
-  verticalAlign: "middle",
+  paddingLeft: "var(--ant-margin-xs)",
+  paddingRight: "var(--ant-margin-xs)",
 };
 
 export function RadioButtonWithTooltip({
@@ -58,7 +51,7 @@ export function RadioButtonWithTooltip({
     >
       <FastTooltip title={disabled ? disabledTitle : title} onMouseEnter={onMouseEnter}>
         {/* See comments above. */}
-        <span style={{ padding: "0 10px", display: "block" }}>{children}</span>
+        <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
       </FastTooltip>
     </Radio.Button>
   );

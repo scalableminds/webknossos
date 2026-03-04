@@ -1,12 +1,19 @@
-import {
+import Icon, {
   ArrowRightOutlined,
+  CopyOutlined,
   DeleteOutlined,
   ExpandAltOutlined,
+  EyeOutlined,
   FolderOutlined,
   PlusOutlined,
   ShrinkOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
+import HideSkeletonEdgesIcon from "@images/icons/icon-hide-skeleton-edges.svg?react";
+import InvertIcon from "@images/icons/icon-invert.svg?react";
+import PipetteIcon from "@images/icons/icon-pipette.svg?react";
+import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
+import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import { type MenuProps, notification, Space } from "antd";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
@@ -55,7 +62,6 @@ import {
   type TreeNode,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
-import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
 
 type BatchActionsType = {
   type: BatchActionType;
@@ -95,7 +101,7 @@ export function renderTreeNode(
   const maybeProofreadingIcon =
     tree.type === TreeTypeEnum.AGGLOMERATE ? (
       <FastTooltip title="Agglomerate Skeleton">
-        <i className="fas fa-clipboard-check icon-margin-right" />
+        <Icon component={ProofreadingIcon} />
       </FastTooltip>
     ) : null;
 
@@ -138,7 +144,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       {
         key: "changeTreeColor",
         disabled: isEditingDisabled,
-        icon: <i className="fas fa-eye-dropper fa-sm " />,
+        icon: <Icon component={PipetteIcon} />,
         label: (
           <ChangeColorMenuItemContent
             key={`changeTreeColor-${tree.treeId}`}
@@ -156,7 +162,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         onClick: () => shuffleTreeColor(tree.treeId),
         title: "Shuffle Tree Color",
         disabled: isEditingDisabled,
-        icon: <i className="fas fa-adjust" />,
+        icon: <Icon component={InvertIcon} />,
         label: "Shuffle Tree Color",
       },
       {
@@ -169,7 +175,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         },
         title: "Duplicate Tree",
         disabled: isEditingDisabled,
-        icon: <i className="fas fa-clone" />,
+        icon: <CopyOutlined />,
         label: "Duplicate Tree",
       },
       {
@@ -181,7 +187,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         },
         title: "Delete Tree",
         disabled: isEditingDisabled,
-        icon: <i className="fas fa-trash" />,
+        icon: <DeleteOutlined />,
         label: "Delete Tree",
       },
       {
@@ -191,7 +197,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
           hideContextMenu();
         },
         title: "Measure Tree Length",
-        icon: <i className="fas fa-ruler" />,
+        icon: <Icon component={RulerIcon} />,
         label: "Measure Tree Length",
       },
       {
@@ -202,7 +208,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
           hideContextMenu();
         },
         title: "Hide/Show All Other Trees",
-        icon: <i className="fas fa-eye" />,
+        icon: <EyeOutlined />,
         label: "Hide/Show All Other Trees",
       },
       {
@@ -213,7 +219,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
           hideContextMenu();
         },
         title: "Hide/Show Edges of This Tree",
-        icon: <HideTreeEdgesIcon />,
+        icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
         label: "Hide/Show Edges of This Tree",
       },
       isAgglomerateSkeleton
@@ -224,7 +230,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
               hideContextMenu();
             },
             title: "Convert to Normal Tree",
-            icon: <span className="fas fa-clipboard-check" />,
+            icon: <Icon component={ProofreadingIcon} />,
             label: "Convert to Normal Tree",
           }
         : null,
@@ -456,7 +462,7 @@ const createMenuForTreeGroup = (
           toggleHideInactiveTrees();
           hideContextMenu();
         },
-        icon: <i className="fas fa-eye" />,
+        icon: <EyeOutlined />,
         label: "Hide/Show all other trees",
       },
       {
@@ -465,13 +471,13 @@ const createMenuForTreeGroup = (
           if (id === MISSING_GROUP_ID) shuffleAllTreeColors();
           else shuffleTreeGroupColors(id);
         },
-        icon: <i className="fas fa-adjust" />,
+        icon: <Icon component={InvertIcon} />,
         label: "Shuffle Tree Group Colors",
       },
       {
         key: "setTreeGroupColor",
         disabled: isEditingDisabled,
-        icon: <i className="fas fa-eye-dropper fa-sm " />,
+        icon: <Icon component={PipetteIcon} />,
         label: (
           <ChangeColorMenuItemContent
             key={`changeTreeGroupColor-${id}`}
@@ -546,6 +552,6 @@ function handleMeasureSkeletonLength(treeId: number, treeName: string) {
       formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
       formatLengthAsVx(lengthInVx),
     ),
-    icon: <i className="fas fa-ruler" />,
+    icon: <Icon component={RulerIcon} />,
   });
 }

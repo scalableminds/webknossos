@@ -1,4 +1,6 @@
-import { SettingOutlined } from "@ant-design/icons";
+import Icon, { SettingOutlined } from "@ant-design/icons";
+import BrushSizeIcon from "@images/icons/icon-brush-size.svg?react";
+import CircleIcon from "@images/icons/icon-circle.svg?react";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
@@ -30,7 +32,7 @@ function BrushPresetButton({
   return (
     <>
       <div style={{ textAlign: "center" }}>
-        <ButtonComponent onClick={onClick}>{icon}</ButtonComponent>
+        <ButtonComponent onClick={onClick} icon={icon} />
       </div>
       <div style={{ textAlign: "center" }}>{name}</div>
       <div style={{ lineHeight: "50%", opacity: 0.6, textAlign: "center", fontSize: 12 }}>
@@ -190,7 +192,7 @@ export function ChangeBrushSizePopover() {
                   trigger={["click", "contextMenu", "hover"]}
                   placement="bottomLeft"
                 >
-                  <SettingOutlined />
+                  <ButtonComponent aria-label="Settings" icon={<SettingOutlined />} />
                 </Dropdown>
               </Col>
             </Row>
@@ -200,7 +202,7 @@ export function ChangeBrushSizePopover() {
                 <BrushPresetButton
                   name="Small"
                   onClick={() => handleUpdateBrushSize(smallBrushSize)}
-                  icon={<i className="fas fa-circle fa-xs" style={{ transform: "scale(0.6)" }} />}
+                  icon={<Icon component={CircleIcon} style={{ transform: "scale(0.6)" }} />}
                   brushSize={Math.round(smallBrushSize)}
                 />
               </Col>
@@ -208,7 +210,7 @@ export function ChangeBrushSizePopover() {
                 <BrushPresetButton
                   name="Medium"
                   onClick={() => handleUpdateBrushSize(mediumBrushSize)}
-                  icon={<i className="fas fa-circle fa-sm" />}
+                  icon={<Icon component={CircleIcon} style={{ transform: "scale(0.8)" }} />}
                   brushSize={Math.round(mediumBrushSize)}
                 />
               </Col>
@@ -216,7 +218,7 @@ export function ChangeBrushSizePopover() {
                 <BrushPresetButton
                   name="Large"
                   onClick={() => handleUpdateBrushSize(largeBrushSize)}
-                  icon={<i className="fas fa-circle fa-lg" />}
+                  icon={<Icon component={CircleIcon} style={{ transform: "scale(1.2)" }} />}
                   brushSize={Math.round(largeBrushSize)}
                 />
               </Col>
@@ -236,20 +238,13 @@ export function ChangeBrushSizePopover() {
         }}
       >
         <ButtonComponent
+          aria-label="Brush Size"
           style={{
             width: 36,
             padding: 0,
           }}
-        >
-          <img
-            src="/images/brush-size-icon.svg"
-            alt="Brush Size"
-            style={{
-              width: 20,
-              height: 20,
-            }}
-          />
-        </ButtonComponent>
+          icon={<Icon component={BrushSizeIcon} />}
+        />
       </Popover>
     </FastTooltip>
   );

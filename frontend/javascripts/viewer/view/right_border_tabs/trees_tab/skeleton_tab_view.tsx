@@ -1,4 +1,4 @@
-import {
+import Icon, {
   ArrowLeftOutlined,
   ArrowRightOutlined,
   ArrowsAltOutlined,
@@ -13,14 +13,9 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import {
-  BlobReader,
-  BlobWriter,
-  type Entry,
-  TextReader,
-  ZipReader,
-  ZipWriter,
-} from "@zip.js/zip.js";
+import ToggleOffIcon from "@images/icons/icon-toggle-off.svg?react";
+import ToggleOnIcon from "@images/icons/icon-toggle-on.svg?react";
+import type { Entry } from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import {
   Divider,
@@ -215,6 +210,10 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const tryParsingFileAsZip = async (file: File) => {
       try {
+        // @zip.js is a fairly large module
+        // Dynamically import it to avoid loading it on Dashboard/admin pages.
+        const { BlobReader, ZipReader, BlobWriter } = await import("@zip.js/zip.js");
+
         const reader = new ZipReader(new BlobReader(file));
         const entries = await reader.getEntries();
         const nmlFileEntry = entries.find((entry: Entry) =>
@@ -601,6 +600,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
 
     try {
+      // @zip.js is a fairly large module
+      // Dynamically import it to avoid loading it on Dashboard/admin pages.
+      const { BlobWriter, ZipWriter, TextReader } = await import("@zip.js/zip.js");
+
       const treesCsv = getTreesAsCSV(annotationId, skeletonTracing, datasetUnit);
       const nodesCsv = getTreeNodesAsCSV(
         Store.getState(),
@@ -986,7 +989,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
                     disabled={isEditingDisabled}
-                    icon={<i className="fas fa-toggle-on" />}
+                    icon={<Icon component={ToggleOnIcon} />}
                     variant="text"
                     color="default"
                   />
@@ -994,7 +997,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
                     disabled={isEditingDisabled}
-                    icon={<i className="fas fa-toggle-off" />}
+                    icon={<Icon component={ToggleOffIcon} />}
                     variant="text"
                     color="default"
                   />

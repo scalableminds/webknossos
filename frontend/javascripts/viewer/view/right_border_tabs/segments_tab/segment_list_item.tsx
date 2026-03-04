@@ -1,4 +1,4 @@
-import {
+import Icon, {
   DeleteOutlined,
   EllipsisOutlined,
   LoadingOutlined,
@@ -6,6 +6,8 @@ import {
   TagsOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
+import BrushIcon from "@images/icons/icon-brush.svg?react";
+import CrosshairsIcon from "@images/icons/icon-crosshairs.svg?react";
 import { App, Checkbox, List, type MenuProps, Space } from "antd";
 import type { MenuItemType } from "antd/es/menu/interface";
 import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
@@ -654,12 +656,12 @@ function _SegmentListItem({
           {segment.name != null ? <SegmentIdAddendum id={segment.id} /> : null}
           {isCentered ? (
             <FastTooltip title="This segment is currently centered in the data viewports.">
-              <i className="fas fa-crosshairs deemphasized" />
+              <Icon component={CrosshairsIcon} className="deemphasized" />
             </FastTooltip>
           ) : null}
           {segment.id === activeCellId ? (
             <FastTooltip title="The currently active segment id belongs to this segment.">
-              <i className="fas fa-paint-brush deemphasized" />
+              <Icon component={BrushIcon} className="deemphasized" />
             </FastTooltip>
           ) : null}
         </Space>

@@ -37,7 +37,7 @@ function ActionsMenu({ layoutMenu }: Props) {
   return (
     <div>
       <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-        <ButtonComponent className="narrow">
+        <ButtonComponent>
           Menu
           <DownOutlined />
         </ButtonComponent>

@@ -72,7 +72,7 @@ export function MaterializeVolumeAnnotationModal({
       <>
         <div style={{ textAlign: "center" }}>
           <img
-            src={`/images/${jobNameToImagePath[jobName]}`}
+            src={jobNameToImagePath[jobName]}
             alt={`${jobName} example`}
             style={{ width: 400, height: "auto", borderRadius: 3 }}
           />

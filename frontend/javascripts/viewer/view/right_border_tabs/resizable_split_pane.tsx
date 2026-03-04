@@ -60,19 +60,19 @@ export function ResizableSplitPane({
     document.body.style.cursor = "row-resize";
   };
 
-  if (secondChild == null) {
-    return firstChild;
-  }
-
   return (
     <div ref={containerRef} className="resizable-two-split-pane">
       <div className="child-1">{firstChild}</div>
-      <div ref={dividerRef} onMouseDown={handleMouseDown} className="resizable-divider">
-        <Divider />
-      </div>
-      <div className="child-2" style={{ height: heightForSecondChild }}>
-        {secondChild}
-      </div>
+      {secondChild != null && (
+        <>
+          <div ref={dividerRef} onMouseDown={handleMouseDown} className="resizable-divider">
+            <Divider />
+          </div>
+          <div className="child-2" style={{ height: heightForSecondChild }}>
+            {secondChild}
+          </div>
+        </>
+      )}
     </div>
   );
 }

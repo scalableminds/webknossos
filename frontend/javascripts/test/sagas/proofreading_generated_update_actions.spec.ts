@@ -121,7 +121,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(
         proofreadMergeAction([targetSegmentId, targetSegmentId, targetSegmentId], targetSegmentId),
       );
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
     });
@@ -186,7 +186,7 @@ describe("Proofreading should generate correct update actions", () => {
           sourceAgglomerateId,
         ),
       );
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
     });

@@ -776,7 +776,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should not dead lock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends up in the busy waiting for the ui busy lock", async (context: WebknossosTestContext) => {
+  it("should not dead lock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends in the waiting-loop for the ui busy lock", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context);
     const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 

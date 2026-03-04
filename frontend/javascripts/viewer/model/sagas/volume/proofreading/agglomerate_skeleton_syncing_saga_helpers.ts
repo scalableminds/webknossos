@@ -79,7 +79,7 @@ function* getAllAgglomerateTreesFromServerAndRemap(
     const remappedTrees = remapNodeIdsWithPositionMap(
       treesOfTracing,
       positionToIdMap,
-      skeletonTracing,
+      skeletonTracing.cachedMaxNodeId,
     );
     remappedTrees[0] = { ...remappedTrees[0], treeId: treeIds[index] };
     return aggloTrees.concat(remappedTrees);
@@ -106,9 +106,9 @@ export function createPositionToIdMap(trees: MapIterator<Tree> | Tree[]) {
 export function remapNodeIdsWithPositionMap(
   trees: Tree[],
   positionToIdMap: PositionToIdMap,
-  skeletonTracing: SkeletonTracing,
+  maxNodeId: number,
 ): Tree[] {
-  let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
+  let newNodeId = maxNodeId + 1;
   const getNextFreeNodeId = () => newNodeId++;
   return trees.map((tree) => {
     let updatedNodes = new DiffableMap<number, Node>();

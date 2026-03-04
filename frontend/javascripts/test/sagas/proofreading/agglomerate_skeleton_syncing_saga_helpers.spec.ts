@@ -92,13 +92,11 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
     const edges2 = new EdgeCollection().addEdges([{ source: 13, target: 14 }]);
     const tree1 = createTree(10, nodes1, edges1);
     const tree2 = createTree(11, nodes2, edges2);
-    // Fill in required skeletontracing with initialSkeletonTracing as only its cachedMaxNodeId is used.
-    // cachedMaxNodeId needs to be 5 as this it the max id in positionToIdMap.
-    const dummyTracing = { ...initialSkeletonTracing, cachedMaxNodeId: 5 };
+    const currentMaxNodeId = 5;
     const [remappedTree1, remappedTree2] = remapNodeIdsWithPositionMap(
       [tree1, tree2],
       positionToIdMap,
-      dummyTracing,
+      currentMaxNodeId,
     );
     expect([...remappedTree1.nodes.values()]).toStrictEqual([
       createNode(1),
@@ -129,12 +127,11 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
       { source: 13, target: 14 },
     ]);
     const tree = createTree(10, nodes, edges);
-    // Fill in required skeletontracing with initialSkeletonTracing as only its cachedMaxNodeId is used.
-    // cachedMaxNodeId needs to be at least 3 as this it the max id in positionToIdMap.
+    // currentMaxNodeId needs to be at least 3 as this it the max id in positionToIdMap.
     // Here we take 5 to simulate, that there is another tree present which has 2 nodes but is not considered in this operation.
     // Thus, the no mappable nodes should start their id with 6 and then increase it.
-    const dummyTracing = { ...initialSkeletonTracing, cachedMaxNodeId: 5 };
-    const [remappedTree] = remapNodeIdsWithPositionMap([tree], positionToIdMap, dummyTracing);
+    const currentMaxNodeId = 5;
+    const [remappedTree] = remapNodeIdsWithPositionMap([tree], positionToIdMap, currentMaxNodeId);
     expect([...remappedTree.nodes.values()]).toStrictEqual([
       createNode(1),
       createNode(2),
@@ -168,13 +165,11 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
     const edges2 = new EdgeCollection().addEdges([{ source: 13, target: 14 }]);
     const tree1 = createTree(10, nodes1, edges1);
     const tree2 = createTree(11, nodes2, edges2);
-    // Fill in required skeletontracing with initialSkeletonTracing as only its cachedMaxNodeId is used.
-    // cachedMaxNodeId needs to be 5 as this it the max id in positionToIdMap.
-    const dummyTracing = { ...initialSkeletonTracing, cachedMaxNodeId: 5 };
+    const currentMaxNodeId = 5;
     const [remappedTree1, remappedTree2] = remapNodeIdsWithPositionMap(
       [tree1, tree2],
       positionToIdMap,
-      dummyTracing,
+      currentMaxNodeId,
     );
     expect([...remappedTree1.nodes.values()]).toStrictEqual([
       createNode(1),

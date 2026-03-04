@@ -632,6 +632,13 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
   if (doPrimitivesDiffer) {
     return true;
   }
+  // In case of a deep diff, also diff the color and metadata deeply, which is not needed for shallow diffing.
+  const doesMetadataOrColorDiffer = useDeepEqualityCheck
+  ? !isEqual(prevTree.color, tree.color) || !isEqual(prevTree.metadata, tree.metadata)
+  : prevTree.color !== tree.color || prevTree.metadata !== tree.metadata;
+  if(doesMetadataOrColorDiffer){
+    return true;
+  }
   // branchPoints and comments are arrays and therefore checked for
   // equality. This avoids unnecessary updates in certain cases (e.g.,
   // when two trees are merged, the comments are concatenated, even
@@ -639,11 +646,7 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
   const doArraysDiffer =
     !isEqual(prevTree.branchPoints, tree.branchPoints) ||
     !isEqual(prevTree.comments, tree.comments);
-  // In case of a deep diff, also diff the color and metadata deeply, which is not needed for shallow diffing.
-  const doesMetadataOrColorDiffer = useDeepEqualityCheck
-    ? !isEqual(prevTree.color, tree.color) || !isEqual(prevTree.metadata, tree.metadata)
-    : prevTree.color !== tree.color || prevTree.metadata !== tree.metadata;
-  return doArraysDiffer || doesMetadataOrColorDiffer;
+  return doArraysDiffer;
 }
 
 export function* diffTrees(

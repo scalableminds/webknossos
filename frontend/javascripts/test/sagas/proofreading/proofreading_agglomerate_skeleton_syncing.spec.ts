@@ -132,7 +132,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction([4, 4, 4], 4));
-        // Wait till while proofreading action is finished including agglomerate skeleton refresh
+        // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
@@ -184,7 +184,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction([4, 4, 4], 1));
-        // Wait till while proofreading action is finished including agglomerate skeleton refresh
+        // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
@@ -251,7 +251,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Execute the split and wait for the finished mapping.
         yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
-        // Wait till while proofreading action is finished including agglomerate skeleton refresh
+        // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
@@ -305,7 +305,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Execute the split and wait for the finished mapping.
         yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
-        // Wait till while proofreading action is finished including agglomerate skeleton refresh
+        // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
@@ -513,7 +513,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
   // --------- Multi user tests with injected updates ---------
 
-  it("should merge two agglomerates, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates, apply injected merge update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
     backendMock.planVersionInjection(10, [
@@ -571,7 +571,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction([6, 6, 6], 6));
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
@@ -603,7 +603,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     await task.toPromise();
   });
 
-  it("should merge two agglomerates, apply injected split update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates, apply injected split update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
     backendMock.planVersionInjection(10, [
@@ -689,7 +689,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield* loadAgglomerateSkeletons(context, [1, 6, 4], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction([1, 1, 1], 1));
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
@@ -719,7 +719,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     await task.toPromise();
   });
 
-  it("should split an agglomerate, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+  it("should split an agglomerate, apply injected merge update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
@@ -789,7 +789,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh.
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons..
       yield take(
         ((action: Action) =>
           action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
@@ -815,7 +815,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     await task.toPromise();
   });
 
-  it("should split an agglomerate, apply injected split update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+  it("should split an agglomerate, apply injected split update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
@@ -913,7 +913,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction([3, 3, 3], 3, 1));
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh.
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons..
       yield take(
         ((action: Action) =>
           action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy) as ActionPattern,
@@ -947,7 +947,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     await task.toPromise();
   });
 
-  it("should split an agglomerate from all neighbors, apply injected merge update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+  it("should split an agglomerate from all neighbors, apply injected merge update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
@@ -1053,7 +1053,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     await task.toPromise();
   });
 
-  it("should split agglomerate via partitioned min-cut, apply injected split update action included agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
+  it("should split agglomerate via partitioned min-cut, apply injected split update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     // Initial mapping should be
     // [[1, 1],
     //  [2, 1],
@@ -1178,7 +1178,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction([4, 4, 4], 4));
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 
@@ -1241,7 +1241,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
-      // Wait till while proofreading action is finished including agglomerate skeleton refresh
+      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
 

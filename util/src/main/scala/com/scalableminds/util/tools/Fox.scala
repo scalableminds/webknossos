@@ -110,13 +110,15 @@ object Fox extends FoxImplicits {
 
   // Run in parallel batches. After a batch completes, serially run the next batch. Fail on first batch that contains a failure.
   def batchCombined[A, B](seq: Seq[A], batchSize: Int)(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
-    for {
-      batchResults: Seq[List[B]] <- Fox.serialCombined(seq.grouped(batchSize)) { batch =>
-        for {
-          res <- Fox.combined(batch.map(f))
-        } yield res
-      }
-    } yield batchResults.toList.flatten
+    if (batchSize <= 0) Fox.failure("Fox.batchCombined must be called with positive batchSize.")
+    else
+      for {
+        batchResults: Seq[List[B]] <- Fox.serialCombined(seq.grouped(batchSize)) { batch =>
+          for {
+            res <- Fox.combined(batch.map(f))
+          } yield res
+        }
+      } yield batchResults.toList.flatten
 
   def foldLeft[A, B](l: List[A], initial: B)(f: (B, A) => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
     serialCombined(l.iterator)(a => f(initial, a))

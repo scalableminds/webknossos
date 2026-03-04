@@ -254,10 +254,10 @@ class ZarrStreamingController @Inject()(
       reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
       (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
         coordinates,
-        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
+        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> BAD_REQUEST
       magParsed <- Vec3Int
         .fromMagLiteral(mag, allowScalar = true)
-        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> BAD_REQUEST
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
       request = DataServiceDataRequest(
@@ -276,7 +276,7 @@ class ZarrStreamingController @Inject()(
         DataServiceRequestSettings(halfByte = false, additionalCoordinates = additionalCoordinates)
       )
       (data, notFoundIndices) <- binaryDataService.handleDataRequests(List(request))
-      _ <- Fox.fromBool(notFoundIndices.isEmpty) ~> "zarr.chunkNotFound" ~> NOT_FOUND
+      _ <- Fox.fromBool(notFoundIndices.isEmpty) ~> "zarr.chunkLoadingError" ~> INTERNAL_SERVER_ERROR
     } yield Ok(data)
 
   def requestZArray(

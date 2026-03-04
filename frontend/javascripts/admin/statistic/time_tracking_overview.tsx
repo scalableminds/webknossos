@@ -238,7 +238,7 @@ function TimeTrackingOverview() {
         </Button>
       }
       filters={
-        <Space wrap>
+        <Space>
           <ProjectAndAnnotationTypeDropdown
             setSelectedProjectIds={setSelectedProjectIds}
             selectedProjectIds={selectedProjectIds}
@@ -252,7 +252,7 @@ function TimeTrackingOverview() {
             placeholder="Filter teams"
             defaultValue={[]}
             disabled={!isCurrentUserAdminOrManager}
-            style={{ width: 200 }}
+            style={{ width: 400 }}
             options={allTeams.map((team) => {
               return {
                 label: team.name,

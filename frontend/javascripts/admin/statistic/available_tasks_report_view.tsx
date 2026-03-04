@@ -1,11 +1,12 @@
+import { FilterOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
 import { getAvailableTasksReport } from "admin/rest_api";
 import { Spin, Table, Tag, Tooltip } from "antd";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { handleGenericError } from "libs/error_handling";
 import { compareBy, localeCompareBy } from "libs/utils";
 import { useState } from "react";
 import type { APIAvailableTasksReport } from "types/api_types";
-import TeamSelectionForm from "./team_selection_form";
 
 const { Column } = Table;
 
@@ -39,16 +40,18 @@ function AvailableTasksReportView() {
       title="Available Task Assignments"
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description={
-        <>
-          Select a team to show an overview of its users and the number of available task
-          assignments they qualify for. Task availability for each user is determined by assigned
-          experiences, team memberships, the number of pending task instances, etc. For tasks with
-          multiple instances, each user will get at most one. Note that individual tasks may be
-          listed as available to multiple users here, but each will only be handed to the first user
-          to request it.
-        </>
+        "Select a team to show an overview of its users and the number of available task assignments they qualify for. Task availability for each user is determined by assigned experiences, team memberships, the number of pending task instances, etc. For tasks with multiple instances, each user will get at most one. Note that individual tasks may be listed as available to multiple users here, but each will only be handed to the first user to request it."
       }
-      filters={<TeamSelectionForm onChange={(team) => fetchData(team.id)} />}
+      filters={
+        <TeamSelectionComponent
+          onChange={(selectedTeam) => {
+            if (!Array.isArray(selectedTeam) && selectedTeam != null) {
+              fetchData(selectedTeam.id);
+            }
+          }}
+          prefix={<FilterOutlined />}
+        />
+      }
     >
       <Spin spinning={isLoading}>
         <Table

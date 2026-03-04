@@ -1,16 +1,21 @@
-import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  FilterOutlined,
+  PauseCircleOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
 import { getProjectProgressReport } from "admin/rest_api";
 import { Badge, Button, Space, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
 import { compareBy, localeCompareBy, millisecondsToHours } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import type { APIProjectProgressReport, APITeam } from "types/api_types";
-import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
@@ -86,7 +91,7 @@ function ProjectProgressReportView() {
               onClick={handleOpenSettings}
             />
             <Button
-              icon={<ReloadOutlined />}
+              icon={<ReloadOutlined spin={isLoading} />}
               shape="circle"
               variant="outlined"
               onClick={handleReload}
@@ -94,7 +99,17 @@ function ProjectProgressReportView() {
           </Space>
         }
         filters={
-          areSettingsVisible ? <TeamSelectionForm value={team} onChange={handleTeamChange} /> : null
+          areSettingsVisible ? (
+            <TeamSelectionComponent
+              value={team}
+              onChange={(selectedTeam) => {
+                if (!Array.isArray(selectedTeam) && selectedTeam != null) {
+                  handleTeamChange(selectedTeam);
+                }
+              }}
+              prefix={<FilterOutlined />}
+            />
+          ) : null
         }
       >
         <Spin spinning={isLoading}>

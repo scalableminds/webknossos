@@ -84,14 +84,15 @@ function* getAllAgglomerateTreesFromServerAndRemap(
     remappedTrees[0] = { ...remappedTrees[0], treeId: treeIds[index] };
     return aggloTrees.concat(remappedTrees);
   }, [] as Tree[]);
-  const tracingWithNewAggloTreesFromServer = yield* agglomerateTreesToSkeleton(aggloTrees);
+  const tracingWithNewAggloTreesFromServer = yield* call(agglomerateTreesToSkeleton, aggloTrees);
   return tracingWithNewAggloTreesFromServer;
 }
 
 // This function creates an object mapping from a position (stringified) to a node id.
 // The goal is to be able to remap the node ids of the refreshed agglomerate skeleton to keep
-// the changes made to the skeleton minimal. Therefore, the active node id stays the same.
-// Resulting in not deactivating different nodes when syncing agglomerate skeletons with a non-skeleton based proofreading action.
+// the changes made to the skeleton minimal. Therefore, the active node id stays the same, too.
+// Otherwise, the active node can get "deactivated" when doing a non-skeleton based proofreading
+// action (would happen while syncing agglomerate skeletons).
 type PositionToIdMap = Record<string, number>;
 export function createPositionToIdMap(trees: MapIterator<Tree> | Tree[]) {
   const positionToIdMap: Record<string, number> = {};

@@ -1,6 +1,7 @@
-import { Card, ConfigProvider, Flex, Grid, Space, theme, Typography } from "antd";
-import { cloneElement, isValidElement } from "react";
+import { InfoCircleOutlined } from "@ant-design/icons";
+import { Card, ConfigProvider, Flex, Grid, Space, Tooltip, Typography, theme } from "antd";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
+import { cloneElement, isValidElement } from "react";
 
 function normalizeTitle(title: ReactNode) {
   if (typeof title !== "string") {
@@ -27,6 +28,7 @@ function renderSearch(search: ReactNode, isCompact: boolean) {
 type Props = {
   title: ReactNode;
   description?: ReactNode;
+  descriptionURI?: string;
   actions?: ReactNode;
   search?: ReactNode;
   alerts?: ReactNode;
@@ -37,6 +39,7 @@ type Props = {
 export default function AdminListPage({
   title,
   description,
+  descriptionURI,
   actions,
   search,
   alerts,
@@ -77,6 +80,20 @@ export default function AdminListPage({
                   style={{ margin: `${token.marginXXS}px 0 0` }}
                 >
                   {description}
+                  {descriptionURI != null ? (
+                    <a
+                      href={descriptionURI}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        marginInlineStart: token.marginXS,
+                      }}
+                    >
+                      <Tooltip title="Read more in the documentation">
+                        <InfoCircleOutlined />
+                      </Tooltip>
+                    </a>
+                  ) : null}
                 </Typography.Paragraph>
               ) : null}
             </div>

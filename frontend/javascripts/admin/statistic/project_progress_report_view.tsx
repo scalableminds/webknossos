@@ -1,7 +1,7 @@
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { getProjectProgressReport } from "admin/rest_api";
 import { Badge, Button, Space, Spin, Table } from "antd";
-import AdminListPage from "components/admin_list_page";
+import AdminListPage from "admin/admin_list_page";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
@@ -74,6 +74,7 @@ function ProjectProgressReportView() {
       <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
       <AdminListPage
         title="Project Progress"
+        descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
         description="Monitor project throughput, task instance status, and billed annotation time."
         actions={
           <Space>
@@ -92,7 +93,9 @@ function ProjectProgressReportView() {
             />
           </Space>
         }
-        filters={areSettingsVisible ? <TeamSelectionForm value={team} onChange={handleTeamChange} /> : null}
+        filters={
+          areSettingsVisible ? <TeamSelectionForm value={team} onChange={handleTeamChange} /> : null
+        }
       >
         <Spin spinning={isLoading}>
           <Table
@@ -104,129 +107,129 @@ function ProjectProgressReportView() {
             size="small"
             className="large-table"
           >
-          <Column
-            title="Project"
-            dataIndex="projectName"
-            defaultSortOrder="ascend"
-            sorter={localeCompareBy<APIProjectProgressReport>((project) => project.projectName)}
-            render={(text: string, item: APIProjectProgressReport) => (
-              <span>
-                {item.paused ? <PauseCircleOutlined /> : null} {text}
-              </span>
-            )}
-          />
-          <Column
-            title="Tasks"
-            dataIndex="totalTasks"
-            sorter={compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
-            render={(number) => number.toLocaleString()}
-          />
-          <Column
-            title="Priority"
-            dataIndex="priority"
-            sorter={compareBy<APIProjectProgressReport>((project) => project.priority)}
-            render={(number) => number.toLocaleString()}
-          />
-          <Column
-            title="Time [h]"
-            dataIndex="billedMilliseconds"
-            sorter={compareBy<APIProjectProgressReport>((project) => project.billedMilliseconds)}
-            render={(number) =>
-              millisecondsToHours(number).toLocaleString(undefined, {
-                maximumFractionDigits: 1,
-              })
-            }
-          />
-          <ColumnGroup title="Instances">
             <Column
-              title="Total"
-              width={100}
-              dataIndex="totalInstances"
-              sorter={compareBy<APIProjectProgressReport>((project) => project.totalInstances)}
+              title="Project"
+              dataIndex="projectName"
+              defaultSortOrder="ascend"
+              sorter={localeCompareBy<APIProjectProgressReport>((project) => project.projectName)}
+              render={(text: string, item: APIProjectProgressReport) => (
+                <span>
+                  {item.paused ? <PauseCircleOutlined /> : null} {text}
+                </span>
+              )}
+            />
+            <Column
+              title="Tasks"
+              dataIndex="totalTasks"
+              sorter={compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
               render={(number) => number.toLocaleString()}
             />
             <Column
-              title="Progress"
-              key="progress"
-              dataIndex="finishedInstances"
-              width={100}
-              sorter={compareBy<APIProjectProgressReport>(
-                ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
-              )}
-              render={(finishedInstances, item) =>
-                finishedInstances === item.totalInstances ? (
+              title="Priority"
+              dataIndex="priority"
+              sorter={compareBy<APIProjectProgressReport>((project) => project.priority)}
+              render={(number) => number.toLocaleString()}
+            />
+            <Column
+              title="Time [h]"
+              dataIndex="billedMilliseconds"
+              sorter={compareBy<APIProjectProgressReport>((project) => project.billedMilliseconds)}
+              render={(number) =>
+                millisecondsToHours(number).toLocaleString(undefined, {
+                  maximumFractionDigits: 1,
+                })
+              }
+            />
+            <ColumnGroup title="Instances">
+              <Column
+                title="Total"
+                width={100}
+                dataIndex="totalInstances"
+                sorter={compareBy<APIProjectProgressReport>((project) => project.totalInstances)}
+                render={(number) => number.toLocaleString()}
+              />
+              <Column
+                title="Progress"
+                key="progress"
+                dataIndex="finishedInstances"
+                width={100}
+                sorter={compareBy<APIProjectProgressReport>(
+                  ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
+                )}
+                render={(finishedInstances, item) =>
+                  finishedInstances === item.totalInstances ? (
+                    <Badge
+                      count="100%"
+                      style={{
+                        backgroundColor: colors.finished,
+                      }}
+                    />
+                  ) : (
+                    <span>{Math.floor((100 * finishedInstances) / item.totalInstances)} %</span>
+                  )
+                }
+              />
+              <Column
+                title={
                   <Badge
-                    count="100%"
+                    count="Finished"
                     style={{
-                      backgroundColor: colors.finished,
+                      background: colors.finished,
                     }}
                   />
-                ) : (
-                  <span>{Math.floor((100 * finishedInstances) / item.totalInstances)} %</span>
-                )
-              }
-            />
-            <Column
-              title={
-                <Badge
-                  count="Finished"
-                  style={{
-                    background: colors.finished,
-                  }}
-                />
-              }
-              dataIndex="finishedInstances"
-              sorter={compareBy<APIProjectProgressReport>((project) => project.finishedInstances)}
-              render={(_text, item: APIProjectProgressReport) => ({
-                props: {
-                  colSpan: 3,
-                },
-                children: (
-                  <StackedBarChart
-                    a={item.finishedInstances}
-                    b={item.activeInstances}
-                    c={item.pendingInstances}
+                }
+                dataIndex="finishedInstances"
+                sorter={compareBy<APIProjectProgressReport>((project) => project.finishedInstances)}
+                render={(_text, item: APIProjectProgressReport) => ({
+                  props: {
+                    colSpan: 3,
+                  },
+                  children: (
+                    <StackedBarChart
+                      a={item.finishedInstances}
+                      b={item.activeInstances}
+                      c={item.pendingInstances}
+                    />
+                  ),
+                })}
+              />
+              <Column
+                title={
+                  <Badge
+                    count="Active"
+                    style={{
+                      background: colors.active,
+                    }}
                   />
-                ),
-              })}
-            />
-            <Column
-              title={
-                <Badge
-                  count="Active"
-                  style={{
-                    background: colors.active,
-                  }}
-                />
-              }
-              dataIndex="activeInstances"
-              sorter={compareBy<APIProjectProgressReport>((project) => project.activeInstances)}
-              render={() => ({
-                props: {
-                  colSpan: 0,
-                },
-                children: null,
-              })}
-            />
-            <Column
-              title={
-                <Badge
-                  count="Pending"
-                  style={{
-                    background: colors.open,
-                  }}
-                />
-              }
-              dataIndex="pendingInstances"
-              sorter={compareBy<APIProjectProgressReport>((project) => project.pendingInstances)}
-              render={() => ({
-                props: {
-                  colSpan: 0,
-                },
-                children: null,
-              })}
-            />
-          </ColumnGroup>
+                }
+                dataIndex="activeInstances"
+                sorter={compareBy<APIProjectProgressReport>((project) => project.activeInstances)}
+                render={() => ({
+                  props: {
+                    colSpan: 0,
+                  },
+                  children: null,
+                })}
+              />
+              <Column
+                title={
+                  <Badge
+                    count="Pending"
+                    style={{
+                      background: colors.open,
+                    }}
+                  />
+                }
+                dataIndex="pendingInstances"
+                sorter={compareBy<APIProjectProgressReport>((project) => project.pendingInstances)}
+                render={() => ({
+                  props: {
+                    colSpan: 0,
+                  },
+                  children: null,
+                })}
+              />
+            </ColumnGroup>
           </Table>
         </Spin>
       </AdminListPage>

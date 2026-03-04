@@ -1,7 +1,6 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
 import { getAvailableTasksReport } from "admin/rest_api";
 import { Spin, Table, Tag, Tooltip } from "antd";
-import AdminListPage from "components/admin_list_page";
+import AdminListPage from "admin/admin_list_page";
 import { handleGenericError } from "libs/error_handling";
 import { compareBy, localeCompareBy } from "libs/utils";
 import { useState } from "react";
@@ -38,23 +37,15 @@ function AvailableTasksReportView() {
   return (
     <AdminListPage
       title="Available Task Assignments"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description={
         <>
           Select a team to show an overview of its users and the number of available task
           assignments they qualify for. Task availability for each user is determined by assigned
           experiences, team memberships, the number of pending task instances, etc. For tasks with
           multiple instances, each user will get at most one. Note that individual tasks may be
-          listed as available to multiple users here, but each will only be handed to the first
-          user to request it.
-          <a
-            href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Tooltip title="Read more in the documentation">
-              <InfoCircleOutlined className="icon-margin-left" />
-            </Tooltip>
-          </a>
+          listed as available to multiple users here, but each will only be handed to the first user
+          to request it.
         </>
       }
       filters={<TeamSelectionForm onChange={(team) => fetchData(team.id)} />}

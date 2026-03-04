@@ -13,8 +13,8 @@ import {
   getTaskTypes,
 } from "admin/rest_api";
 import { App, Button, Input, Space, Spin, Table, Tag } from "antd";
+import AdminListPage from "admin/admin_list_page";
 import { AsyncLink } from "components/async_clickables";
-import AdminListPage from "components/admin_list_page";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
@@ -100,6 +100,7 @@ function TaskTypeListView() {
   return (
     <AdminListPage
       title="Task Types"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/concepts.html"
       description="Define task templates, supported modes, and settings for annotation projects."
       actions={
         <Link to="/taskTypes/create">

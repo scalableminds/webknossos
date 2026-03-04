@@ -2,7 +2,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
 import { App, Button, Input, Spin, Table } from "antd";
-import AdminListPage from "components/admin_list_page";
+import AdminListPage from "admin/admin_list_page";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
@@ -90,6 +90,7 @@ function ScriptListView() {
   return (
     <AdminListPage
       title="Scripts"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/scripts.html"
       description="Maintain reusable frontend scripts for automated task workflows."
       actions={
         <Link to="/scripts/create">
@@ -98,9 +99,7 @@ function ScriptListView() {
           </Button>
         </Link>
       }
-      search={
-        <Search allowClear onChange={handleSearch} value={searchQuery} />
-      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
     >
       <Spin spinning={isLoading} size="large">
         <Table

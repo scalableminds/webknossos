@@ -1,27 +1,10 @@
-import {
-  FileTextOutlined,
-  InfoCircleOutlined,
-  SyncOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
+import { FileTextOutlined, SyncOutlined, TeamOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getUsersOrganizations } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
-import {
-  App,
-  Button,
-  Col,
-  Flex,
-  Input,
-  Modal,
-  Row,
-  Select,
-  Table,
-  Tooltip,
-  Typography,
-} from "antd";
-import AdminListPage from "components/admin_list_page";
+import { App, Button, Col, Flex, Input, Modal, Row, Select, Table, Typography } from "antd";
+import AdminListPage from "admin/admin_list_page";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
 import { useFetch } from "libs/react_helpers";
@@ -74,18 +57,10 @@ export default function AiModelListView() {
       <AdminListPage
         className="voxelytics-view"
         title="AI Models"
+        descriptionURI="https://docs.webknossos.org/webknossos/automation/index.html"
         description={
           <>
             This list shows all AI models available in your organization for AI segmentation jobs.
-            <a
-              href="https://docs.webknossos.org/webknossos/automation/ai_segmentation.html"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Tooltip title="Read more in the documentation">
-                <InfoCircleOutlined className="icon-margin-left" />
-              </Tooltip>
-            </a>
             <br />
             Model training functionality is coming soon.
           </>

@@ -33,7 +33,7 @@ import {
   Tag,
   Tooltip,
 } from "antd";
-import AdminListPage from "components/admin_list_page";
+import AdminListPage from "admin/admin_list_page";
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
@@ -294,6 +294,7 @@ function UserListView() {
   return (
     <AdminListPage
       title="Users"
+      descriptionURI="https://docs.webknossos.org/webknossos/users/index.html"
       description="Manage members, permissions, and activation status in your organization."
       actions={
         <Space wrap>
@@ -350,9 +351,7 @@ function UserListView() {
           ) : null}
         </Space>
       }
-      search={
-        <Search allowClear onChange={handleSearch} value={searchQuery} />
-      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
       alerts={
         <Space orientation="vertical" style={{ width: "100%" }}>
           {activationFilterWarning}

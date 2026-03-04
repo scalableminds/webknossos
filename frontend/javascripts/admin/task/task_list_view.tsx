@@ -24,9 +24,9 @@ import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import { Alert, App, Button, Input, Modal, Spin, Tag, Typography } from "antd";
 import type { ColumnType } from "antd/lib/table/interface";
-import AnnotationServicesAlert from "components/annotation_services_alert";
+import AdminListPage from "admin/admin_list_page";
+import AnnotationServicesAd from "admin/ads/annotation_services_alert";
 import { AsyncLink } from "components/async_clickables";
-import AdminListPage from "components/admin_list_page";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -423,6 +423,7 @@ function TaskListView({ initialFieldValues }: Props) {
   return (
     <AdminListPage
       title="Tasks"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description="Search, inspect, and manage task instances across projects and datasets."
       actions={
         <Link to="/tasks/create">
@@ -431,10 +432,8 @@ function TaskListView({ initialFieldValues }: Props) {
           </Button>
         </Link>
       }
-      search={
-        <Search allowClear onChange={handleSearch} value={searchQuery} />
-      }
-      alerts={features().isWkorgInstance ? <AnnotationServicesAlert /> : null}
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+      alerts={features().isWkorgInstance ? <AnnotationServicesAd /> : null}
       filters={
         <>
           <Typography.Title level={5}>Search for Tasks</Typography.Title>

@@ -2,8 +2,8 @@ import { SyncOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery } from "@tanstack/react-query";
 import { getVoxelyticsWorkflows } from "admin/rest_api";
-import { Button, Input, Progress, Space, Spin, Table, Tooltip } from "antd";
-import AdminListPage from "components/admin_list_page";
+import { Button, Input, Progress, Spin, Table, Tooltip } from "antd";
+import AdminListPage from "admin/admin_list_page";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
@@ -172,7 +172,6 @@ export default function WorkflowListView() {
 
   return (
     <AdminListPage
-      className="voxelytics-view"
       title="Voxelytics Workflows"
       description="Inspect workflow runs, progress, and storage footprint over time."
       actions={

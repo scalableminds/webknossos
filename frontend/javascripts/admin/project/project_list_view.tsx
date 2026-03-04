@@ -24,8 +24,8 @@ import {
   resumeProject,
 } from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tooltip } from "antd";
+import AdminListPage from "admin/admin_list_page";
 import { AsyncLink } from "components/async_clickables";
-import AdminListPage from "components/admin_list_page";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
@@ -224,6 +224,7 @@ function ProjectListView() {
   return (
     <AdminListPage
       title={taskTypeName ? `Projects for task type ${taskTypeName}` : "Projects"}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
       description="Create projects, monitor progress, and manage annotation workload."
       actions={
         taskTypeId ? null : (

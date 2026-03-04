@@ -5,7 +5,6 @@ import {
   CloseCircleTwoTone,
   DownloadOutlined,
   EyeOutlined,
-  InfoCircleOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
   QuestionCircleTwoTone,
@@ -14,8 +13,8 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { App, Input, Spin, Table, Tooltip } from "antd";
+import AdminListPage from "admin/admin_list_page";
 import { AsyncLink } from "components/async_clickables";
-import AdminListPage from "components/admin_list_page";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -499,25 +498,15 @@ function JobListView() {
   return (
     <AdminListPage
       title="Jobs"
+      descriptionURI="https://docs.webknossos.org/webknossos/automation/jobs.html"
       description={
         <>
           Some actions such as dataset conversions or TIFF exports require background processing.
-          <a
-            href="https://docs.webknossos.org/webknossos/automation/jobs.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Tooltip title="Read more in the documentation">
-              <InfoCircleOutlined className="icon-margin-left" />
-            </Tooltip>
-          </a>
           <br />
           WEBKNOSSOS notifies you by email once background jobs finish.
         </>
       }
-      search={
-        <Search allowClear onChange={handleSearch} value={searchQuery} />
-      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
     >
       <Spin spinning={isLoading} size="large">
         <Table

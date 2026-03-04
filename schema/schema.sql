@@ -564,6 +564,7 @@ CREATE TABLE webknossos.workers(
   maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
   supportedJobCommands TEXT[] NOT NULL DEFAULT array[]::TEXT[],
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
+  lastReportedVersion TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );

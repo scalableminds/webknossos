@@ -1,4 +1,4 @@
-import {
+import Icon, {
   ArrowLeftOutlined,
   ArrowRightOutlined,
   ArrowsAltOutlined,
@@ -13,6 +13,8 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import ToggleOffIcon from "@images/icons/icon-toggle-off.svg?react";
+import ToggleOnIcon from "@images/icons/icon-toggle-on.svg?react";
 import type { Entry } from "@zip.js/zip.js";
 import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import {
@@ -987,7 +989,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
                     disabled={isEditingDisabled}
-                    icon={<i className="fas fa-toggle-on" />}
+                    icon={<Icon component={ToggleOnIcon} />}
                     variant="text"
                     color="default"
                   />
@@ -995,7 +997,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
                     disabled={isEditingDisabled}
-                    icon={<i className="fas fa-toggle-off" />}
+                    icon={<Icon component={ToggleOffIcon} />}
                     variant="text"
                     color="default"
                   />

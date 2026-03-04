@@ -23,8 +23,9 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/rest_api";
-import { App, Button, Flex, Input, Space, Spin, Table, Tooltip } from "antd";
+import { App, Button, Input, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
+import AdminListPage from "components/admin_list_page";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
@@ -221,36 +222,26 @@ function ProjectListView() {
   );
 
   return (
-    <div className="container TestProjectListView">
-      <Flex justify="space-between" align="flex-start">
-        <h3>{taskTypeName ? `Projects for task type ${taskTypeName}` : "Projects"}</h3>
-        <Space>
-          {taskTypeId ? null : (
-            <Link to="/projects/create">
-              <Button icon={<PlusOutlined />} type="primary">
-                Add Project
-              </Button>
-            </Link>
-          )}
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-
+    <AdminListPage
+      title={taskTypeName ? `Projects for task type ${taskTypeName}` : "Projects"}
+      description="Create projects, monitor progress, and manage annotation workload."
+      actions={
+        taskTypeId ? null : (
+          <Link to="/projects/create">
+            <Button icon={<PlusOutlined />} type="primary">
+              Add Project
+            </Button>
+          </Link>
+        )
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={filteredProjects}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
           }}
           locale={{
             emptyText: renderPlaceholder(),
@@ -456,7 +447,7 @@ function ProjectListView() {
           onComplete={onTaskTransferComplete}
         />
       ) : null}
-    </div>
+    </AdminListPage>
   );
 }
 

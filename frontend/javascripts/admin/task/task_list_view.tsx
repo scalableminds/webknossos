@@ -10,7 +10,6 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import vxManualAnnotationsHorizontal from "@images/vx/manual-annotations-horizontal.png";
 import { PropTypes } from "@scalableminds/prop-types";
 import {
   assignTaskToUser as assignTaskToUserAPI,
@@ -23,9 +22,11 @@ import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Card, Flex, Input, Modal, Space, Spin, Tag } from "antd";
+import { Alert, App, Button, Input, Modal, Spin, Tag, Typography } from "antd";
 import type { ColumnType } from "antd/lib/table/interface";
+import AnnotationServicesAlert from "components/annotation_services_alert";
 import { AsyncLink } from "components/async_clickables";
+import AdminListPage from "components/admin_list_page";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -420,81 +421,32 @@ function TaskListView({ initialFieldValues }: Props) {
   ];
 
   return (
-    <div className="container">
-      <Flex justify="space-between" align="flex-start">
-        <h3>Tasks</h3>
-        <Space>
-          <Link to="/tasks/create">
-            <Button icon={<PlusOutlined />} type="primary">
-              Add Task
-            </Button>
-          </Link>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-      {features().isWkorgInstance ? (
+    <AdminListPage
+      title="Tasks"
+      description="Search, inspect, and manage task instances across projects and datasets."
+      actions={
+        <Link to="/tasks/create">
+          <Button icon={<PlusOutlined />} type="primary">
+            Add Task
+          </Button>
+        </Link>
+      }
+      search={
+        <Search allowClear onChange={handleSearch} value={searchQuery} />
+      }
+      alerts={features().isWkorgInstance ? <AnnotationServicesAlert /> : null}
+      filters={
         <>
-          <a
-            href="https://webknossos.org/services/annotations"
-            className="crosslink-box"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: `url(${vxManualAnnotationsHorizontal}) center center / 110%`,
-              height: "73px",
-              padding: "0px",
-              width: "800px",
-              overflow: "hidden",
-              display: "inline-block",
-              marginLeft: "100px",
-              marginBottom: 0,
-              opacity: "0.9",
-              marginTop: 0,
-            }}
-          >
-            <div
-              style={{
-                padding: "10px 170px",
-                background:
-                  "linear-gradient(181deg, #1414147a, rgb(59 59 59 / 45%), rgba(20, 19, 31, 0.84))",
-              }}
-            >
-              <h4
-                style={{
-                  color: "white",
-                  textAlign: "center",
-                }}
-              >
-                Need more workforce for annotating your dataset?
-                <br />
-                Have a look at our annotation services.
-              </h4>
-            </div>
-          </a>
-          <div
-            className="clearfix"
-            style={{
-              margin: "20px 0px",
-            }}
+          <Typography.Title level={5}>Search for Tasks</Typography.Title>
+          <TaskSearchForm
+            onChange={(queryObject) => fetchData(queryObject)}
+            initialFieldValues={initialFieldValues}
+            isLoading={isLoading}
+            onDownloadAllTasks={downloadSettingsFromAllTasks}
           />
         </>
-      ) : null}
-
-      <Card title="Search for Tasks">
-        <TaskSearchForm
-          onChange={(queryObject) => fetchData(queryObject)}
-          initialFieldValues={initialFieldValues}
-          isLoading={isLoading}
-          onDownloadAllTasks={downloadSettingsFromAllTasks}
-        />
-      </Card>
-
+      }
+    >
       <Spin spinning={isLoading} size="large">
         <FixedExpandableTable
           dataSource={getFilteredTasks()}
@@ -503,10 +455,7 @@ function TaskListView({ initialFieldValues }: Props) {
           pagination={{
             defaultPageSize: 50,
           }}
-          style={{
-            marginTop: 30,
-            marginBottom: 30,
-          }}
+          style={{ marginBottom: 30 }}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,
           }}
@@ -517,7 +466,7 @@ function TaskListView({ initialFieldValues }: Props) {
 
         {getAnonymousTaskLinkModal()}
       </Spin>
-    </div>
+    </AdminListPage>
   );
 }
 

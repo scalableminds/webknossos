@@ -1,6 +1,7 @@
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { getProjectProgressReport } from "admin/rest_api";
-import { Badge, Button, Card, Flex, Space, Spin, Table } from "antd";
+import { Badge, Button, Space, Spin, Table } from "antd";
+import AdminListPage from "components/admin_list_page";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
@@ -69,46 +70,40 @@ function ProjectProgressReportView() {
   }
 
   return (
-    <div className="container">
+    <>
       <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
-      <Flex justify="space-between" align="flex-start">
-        <h3>Project Progress</h3>
-        <Space>
-          {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}{" "}
-          <Button
-            icon={<SettingOutlined />}
-            shape="circle"
-            variant="outlined"
-            onClick={handleOpenSettings}
-          />
-          <Button
-            icon={<ReloadOutlined />}
-            shape="circle"
-            variant="outlined"
-            onClick={handleReload}
-          />
-        </Space>
-      </Flex>
-
-      {areSettingsVisible ? (
-        <Card>
-          <TeamSelectionForm value={team} onChange={handleTeamChange} />
-        </Card>
-      ) : null}
-
-      <Spin spinning={isLoading}>
-        <Table
-          dataSource={data}
-          pagination={{
-            defaultPageSize: 100,
-          }}
-          rowKey="projectName"
-          style={{
-            marginTop: 30,
-          }}
-          size="small"
-          className="large-table"
-        >
+      <AdminListPage
+        title="Project Progress"
+        description="Monitor project throughput, task instance status, and billed annotation time."
+        actions={
+          <Space>
+            {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}
+            <Button
+              icon={<SettingOutlined />}
+              shape="circle"
+              variant="outlined"
+              onClick={handleOpenSettings}
+            />
+            <Button
+              icon={<ReloadOutlined />}
+              shape="circle"
+              variant="outlined"
+              onClick={handleReload}
+            />
+          </Space>
+        }
+        filters={areSettingsVisible ? <TeamSelectionForm value={team} onChange={handleTeamChange} /> : null}
+      >
+        <Spin spinning={isLoading}>
+          <Table
+            dataSource={data}
+            pagination={{
+              defaultPageSize: 100,
+            }}
+            rowKey="projectName"
+            size="small"
+            className="large-table"
+          >
           <Column
             title="Project"
             dataIndex="projectName"
@@ -232,9 +227,10 @@ function ProjectProgressReportView() {
               })}
             />
           </ColumnGroup>
-        </Table>
-      </Spin>
-    </div>
+          </Table>
+        </Spin>
+      </AdminListPage>
+    </>
   );
 }
 

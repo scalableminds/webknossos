@@ -1,7 +1,8 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
-import { App, Button, Flex, Input, Space, Spin, Table } from "antd";
+import { App, Button, Input, Spin, Table } from "antd";
+import AdminListPage from "components/admin_list_page";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
@@ -87,25 +88,20 @@ function ScriptListView() {
   }
 
   return (
-    <div className="container">
-      <Flex justify="space-between" align="flex-start">
-        <h3>Scripts</h3>
-        <Space>
-          <Link to="/scripts/create">
-            <Button icon={<PlusOutlined />} type="primary">
-              Add Script
-            </Button>
-          </Link>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-
+    <AdminListPage
+      title="Scripts"
+      description="Maintain reusable frontend scripts for automated task workflows."
+      actions={
+        <Link to="/scripts/create">
+          <Button icon={<PlusOutlined />} type="primary">
+            Add Script
+          </Button>
+        </Link>
+      }
+      search={
+        <Search allowClear onChange={handleSearch} value={searchQuery} />
+      }
+    >
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={filterWithSearchQueryAND(
@@ -116,9 +112,6 @@ function ScriptListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
           }}
           locale={{
             emptyText: renderPlaceholder(),
@@ -183,7 +176,7 @@ function ScriptListView() {
           />
         </Table>
       </Spin>
-    </div>
+    </AdminListPage>
   );
 }
 

@@ -13,8 +13,9 @@ import {
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { App, Flex, Input, Spin, Table, Tooltip, Typography } from "antd";
+import { App, Input, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
+import AdminListPage from "components/admin_list_page";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -496,35 +497,28 @@ function JobListView() {
   }));
 
   return (
-    <div className="container">
-      <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
-        <div>
-          <h3>Jobs</h3>
-          <Typography.Paragraph type="secondary">
-            Some actions such as dataset conversions or export as Tiff files require some time for
-            processing in the background.
-            <a
-              href="https://docs.webknossos.org/webknossos/automation/jobs.html"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Tooltip title="Read more in the documentation">
-                <InfoCircleOutlined className="icon-margin-left" />
-              </Tooltip>
-            </a>
-            <br />
-            WEBKNOSSOS will notify you via email when a background job has finished. Alternatively,
-            reload this page to track the progress.
-          </Typography.Paragraph>
-        </div>
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </Flex>
+    <AdminListPage
+      title="Jobs"
+      description={
+        <>
+          Some actions such as dataset conversions or TIFF exports require background processing.
+          <a
+            href="https://docs.webknossos.org/webknossos/automation/jobs.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Tooltip title="Read more in the documentation">
+              <InfoCircleOutlined className="icon-margin-left" />
+            </Tooltip>
+          </a>
+          <br />
+          WEBKNOSSOS notifies you by email once background jobs finish.
+        </>
+      }
+      search={
+        <Search allowClear onChange={handleSearch} value={searchQuery} />
+      }
+    >
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={filterWithSearchQueryAND(
@@ -535,9 +529,6 @@ function JobListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
           }}
         >
           <Column
@@ -597,7 +588,7 @@ function JobListView() {
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>
       </Spin>
-    </div>
+    </AdminListPage>
   );
 }
 

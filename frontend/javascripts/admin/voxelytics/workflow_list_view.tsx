@@ -2,7 +2,8 @@ import { SyncOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery } from "@tanstack/react-query";
 import { getVoxelyticsWorkflows } from "admin/rest_api";
-import { Button, Flex, Input, Progress, Space, Spin, Table, Tooltip } from "antd";
+import { Button, Input, Progress, Space, Spin, Table, Tooltip } from "antd";
+import AdminListPage from "components/admin_list_page";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import Toast from "libs/toast";
@@ -170,22 +171,17 @@ export default function WorkflowListView() {
   }
 
   return (
-    <div className="container voxelytics-view">
-      <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
-        <h3>Voxelytics Workflows</h3>
-        <Space>
-          <Button onClick={() => refetch()}>
-            <SyncOutlined spin={isFetching} /> Refresh
-          </Button>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
+    <AdminListPage
+      className="voxelytics-view"
+      title="Voxelytics Workflows"
+      description="Inspect workflow runs, progress, and storage footprint over time."
+      actions={
+        <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
+          Refresh
+        </Button>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
       <Spin spinning={isLoading} size="large">
         <Table
           bordered
@@ -279,6 +275,6 @@ export default function WorkflowListView() {
           locale={{ emptyText: null }}
         />
       </Spin>
-    </div>
+    </AdminListPage>
   );
 }

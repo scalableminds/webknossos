@@ -1,4 +1,5 @@
 import type { DataNode } from "antd/es/tree";
+import cloneDeep from "lodash-es/cloneDeep";
 import groupBy from "lodash-es/groupBy";
 import orderBy from "lodash-es/orderBy";
 import memoizeOne from "memoize-one";
@@ -125,7 +126,7 @@ export function callDeep(
     }
   });
 }
-function callDeepWithChildren(
+export function callDeepWithChildren(
   groups: TreeGroup[],
   groupId: number | undefined,
   callback: (
@@ -242,6 +243,11 @@ export function getGroupByIdWithSubgroups(
   treeGroups: TreeGroup[],
   groupId: number | undefined,
 ): number[] {
+  /*
+   * Given a nested array of groups and a group id,
+   * returns the ids of the given group and all its
+   * subgroups.
+   */
   const groupWithSubgroups: number[] = [];
   callDeepWithChildren(treeGroups, groupId, (treeGroup) => {
     groupWithSubgroups.push(treeGroup.groupId);
@@ -254,6 +260,10 @@ export function moveGroupsHelper(
   groupId: number,
   targetGroupId: number | null | undefined,
 ): TreeGroup[] | SegmentGroup[] {
+  if (targetGroupId == null) {
+    // Guard against explicitly passed null or undefined.
+    targetGroupId = MISSING_GROUP_ID;
+  }
   const movedGroup = findGroup(groups, groupId);
   if (!movedGroup) {
     throw new Error("Could not find group to move");
@@ -271,6 +281,50 @@ export function moveGroupsHelper(
         : parentGroup.children,
   }));
   return newGroups;
+}
+
+export function createGroupHelper(
+  segmentGroups: TreeGroup[],
+  name: string | null | undefined,
+  newGroupId: number,
+  parentGroupId: number | null | undefined,
+) {
+  if (parentGroupId == null) {
+    // Guard against explicitly passed null or undefined.
+    parentGroupId = MISSING_GROUP_ID;
+  }
+
+  const newSegmentGroups = cloneDeep(segmentGroups);
+  const newGroup = {
+    name: name || `Group ${newGroupId}`,
+    groupId: newGroupId,
+    children: [],
+  };
+
+  if (parentGroupId === MISSING_GROUP_ID) {
+    newSegmentGroups.push(newGroup);
+  } else {
+    callDeep(newSegmentGroups, parentGroupId, (item) => {
+      item.children.push(newGroup);
+    });
+  }
+  return { newSegmentGroups, newGroupId };
+}
+
+export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
+  nodes: T[],
+  predicate: (node: T) => boolean,
+): T[] {
+  // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
+  return nodes.reduce((acc: T[], node: T) => {
+    if (predicate(node)) {
+      acc.push({
+        ...node,
+        children: deepFilter(node.children as T[], predicate),
+      });
+    }
+    return acc;
+  }, []);
 }
 
 export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(

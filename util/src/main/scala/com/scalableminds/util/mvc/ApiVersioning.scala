@@ -25,7 +25,7 @@ trait ApiVersioning {
   }
 
   private def extractRequestedApiVersion(request: RequestHeader): Int =
-    "^/(api|data|tracings)/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
+    "^/(?:api|data|tracings)/v(\\d+)".r.findFirstMatchIn(request.uri) match {
       case Some(m) =>
         m.group(2).toInt
       case None => CURRENT_API_VERSION

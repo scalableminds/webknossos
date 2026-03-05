@@ -55,6 +55,7 @@ export function renderToTexture(
   // this behavior is not problematic for us.
   withFarClipping?: boolean,
   clearColor?: number,
+  enableAntialiasing: boolean = false,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
@@ -98,7 +99,7 @@ export function renderToTexture(
   renderer.setScissorTest(false);
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
   const renderTarget = new WebGLRenderTarget(width, height);
-  if (state.userConfiguration.antialiasRendering) renderTarget.samples = 4;
+  if (enableAntialiasing) renderTarget.samples = 4;
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {
@@ -122,7 +123,7 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
 
 export async function downloadScreenshot() {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
-  const { renderWatermark } = userConfiguration;
+  const { antialiasRendering, renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
@@ -136,7 +137,14 @@ export async function downloadScreenshot() {
     if (width === 0 || height === 0) continue;
     const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
 
-    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor);
+    const buffer = renderToTexture(
+      planeId,
+      undefined,
+      undefined,
+      false,
+      clearColor,
+      antialiasRendering,
+    );
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
     const drawImageIntoCanvasCallback =

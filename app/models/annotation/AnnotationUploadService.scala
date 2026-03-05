@@ -128,20 +128,24 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
       if (segmentGroups.isEmpty) 0
       else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
-    def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
-      val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
-      val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
-      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups, isExpanded = Some(true)))
-      tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
-    }
+    def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing =
+      if (tracing.trees.isEmpty && tracing.treeGroups.isEmpty) tracing
+      else {
+        val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
+        val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
+        val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups, isExpanded = Some(true)))
+        tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
+      }
 
-    def wrapSegmentsInGroup(name: String, tracing: VolumeTracing): VolumeTracing = {
-      val unusedGroupId = getMaximumSegmentGroupId(tracing.segmentGroups) + 1
-      val newSegments =
-        tracing.segments.map(segment => segment.copy(groupId = Some(segment.groupId.getOrElse(unusedGroupId))))
-      val newSegmentGroups = Seq(SegmentGroup(name, unusedGroupId, tracing.segmentGroups))
-      tracing.copy(segments = newSegments, segmentGroups = newSegmentGroups)
-    }
+    def wrapSegmentsInGroup(name: String, tracing: VolumeTracing): VolumeTracing =
+      if (tracing.segments.isEmpty && tracing.segmentGroups.isEmpty) tracing
+      else {
+        val unusedGroupId = getMaximumSegmentGroupId(tracing.segmentGroups) + 1
+        val newSegments =
+          tracing.segments.map(segment => segment.copy(groupId = Some(segment.groupId.getOrElse(unusedGroupId))))
+        val newSegmentGroups = Seq(SegmentGroup(name, unusedGroupId, tracing.segmentGroups))
+        tracing.copy(segments = newSegments, segmentGroups = newSegmentGroups)
+      }
 
     def wrapVolumeLayers(name: String, volumeLayers: List[UploadedVolumeLayer]): List[UploadedVolumeLayer] =
       volumeLayers.map(v => v.copy(tracing = wrapSegmentsInGroup(name, v.tracing)))

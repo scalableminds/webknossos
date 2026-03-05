@@ -90,7 +90,7 @@ const getLoadPrecomputedMeshMenuItem = (
         if (!currentMeshFile) {
           return;
         }
-        if (!segment.somePosition) {
+        if (!segment.anchorPosition) {
           Toast.info(
             <React.Fragment>
               Cannot load a mesh for this segment, because its position is unknown.
@@ -102,8 +102,8 @@ const getLoadPrecomputedMeshMenuItem = (
         hideContextMenu(
           loadPrecomputedMesh(
             segment.id,
-            segment.somePosition,
-            segment.someAdditionalCoordinates,
+            segment.anchorPosition,
+            segment.additionalCoordinates,
             currentMeshFile?.name,
           ),
         );
@@ -136,7 +136,7 @@ const getComputeMeshAdHocMenuItem = (
   return {
     key: "loadAdHocMesh",
     onClick: () => {
-      if (!segment.somePosition) {
+      if (!segment.anchorPosition) {
         Toast.info(
           <React.Fragment>
             Cannot load a mesh for this segment, because its position is unknown.
@@ -148,7 +148,7 @@ const getComputeMeshAdHocMenuItem = (
       hideContextMenu(
         loadAdHocMesh(
           segment.id,
-          segment.somePosition,
+          segment.anchorPosition,
           Store.getState().flycam.additionalCoordinates,
         ),
       );
@@ -162,8 +162,8 @@ const getMakeSegmentActiveMenuItem = (
   segment: Segment,
   setActiveCell: (
     arg0: number,
-    somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    anchorPosition?: Vector3 | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void,
   activeCellId: number | null | undefined,
   isEditingDisabled: boolean,
@@ -177,7 +177,7 @@ const getMakeSegmentActiveMenuItem = (
     key: "setActiveCell",
     onClick: () =>
       hideContextMenu(
-        setActiveCell(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
+        setActiveCell(segment.id, segment.anchorPosition, segment.additionalCoordinates),
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
@@ -208,8 +208,8 @@ type Props = {
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
     segmentId: number,
-    somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+    anchorPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
   loadPrecomputedMesh: (
     segmentId: number,
@@ -219,8 +219,8 @@ type Props = {
   ) => void;
   setActiveCell: (
     arg0: number,
-    somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    anchorPosition?: Vector3 | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void;
   mesh: MeshInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;

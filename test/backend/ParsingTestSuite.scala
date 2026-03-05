@@ -1,8 +1,9 @@
 package backend
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Full, Empty}
+import com.scalableminds.util.tools.Full
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
@@ -84,6 +85,33 @@ class ParsingTestSuite extends PlaySpec with WKWDataFormatHelper with VolumeData
       assert(parseWKWFilePath("/absolute/path/to/32-32-16/z6/5/x4.wkw").isEmpty)
       assert(parseWKWFilePath("/absolute/path/to/3232-16/z6/y5/x4.wkw").isEmpty)
       assert(parseWKWFilePath("15.3/z6/y5/x4.wkw").isEmpty)
+    }
+  }
+
+  "parseZarrChunkPath" should {
+    "correctly parse a simple zarr chunk path with scalar mag" in {
+      assert(
+        parseZarrChunkPath("1/0.4.3.6", Zarr3ArrayHeader.dummy).contains(
+          BucketPosition(4 * 1 * DataLayer.bucketLength,
+                         3 * 1 * DataLayer.bucketLength,
+                         6 * 1 * DataLayer.bucketLength,
+                         Vec3Int(1, 1, 1),
+                         None)))
+    }
+
+    "correctly parse a zarr chunk path with legacy c. prefix" in {
+      assert(
+        parseZarrChunkPath("some/prefix/2-2-1/c.0.1.2.3", Zarr3ArrayHeader.dummy).contains(
+          BucketPosition(1 * 2 * DataLayer.bucketLength,
+                         2 * 2 * DataLayer.bucketLength,
+                         3 * 1 * DataLayer.bucketLength,
+                         Vec3Int(2, 2, 1),
+                         None)))
+    }
+
+    "refuse invalid zarr chunk paths" in {
+      assert(parseZarrChunkPath("missing-mag/0.1.2.3", Zarr3ArrayHeader.dummy).isEmpty)
+      assert(parseZarrChunkPath("not-a-valid-path", Zarr3ArrayHeader.dummy).isEmpty)
     }
   }
 

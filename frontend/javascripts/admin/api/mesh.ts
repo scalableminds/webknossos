@@ -27,7 +27,7 @@ type ListMeshChunksRequest = {
   annotationVersion: number | undefined | null;
 };
 
-export function getMeshfileChunksForSegment(
+export function getMeshFileChunksForSegment(
   dataStoreUrl: string,
   datasetId: string,
   layerName: string,
@@ -79,7 +79,7 @@ export type MeshChunkDataRequestList = {
   requests: MeshChunkDataRequest[];
 };
 
-export function getMeshfileChunkData(
+export function getMeshFileChunkData(
   dataStoreUrl: string,
   datasetId: string,
   layerName: string,

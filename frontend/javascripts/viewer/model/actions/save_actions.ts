@@ -83,6 +83,8 @@ export type SaveAction =
   | SetPendingProofreadingOperationInfoAction
   | ReplaceSaveQueueAction;
 
+// The following actions can be used to "push" update actions into the local save queue
+// of the Store.
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
 // From this point on, we can assume that the groups fulfill the isolation requirement.

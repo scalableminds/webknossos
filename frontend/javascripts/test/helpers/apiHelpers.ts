@@ -1,4 +1,5 @@
 import type { MeshChunkDataRequestList, MeshSegmentInfo } from "admin/api/mesh.ts";
+import type { MeshSegmentInfo } from "admin/api/mesh";
 import {
   acquireAnnotationMutex,
   getDataset,
@@ -16,6 +17,8 @@ import { __setFeatures } from "features";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
+import flattenDeep from "lodash-es/flattenDeep";
+import { dummyMeshFile } from "test/fixtures/dummy_mesh_file";
 import dummyOrga from "test/fixtures/dummy_organization";
 import dummyUser from "test/fixtures/dummy_user";
 import {
@@ -40,7 +43,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
@@ -49,6 +52,7 @@ import CustomLOD from "viewer/controller/custom_lod";
 import type { BufferGeometryWithInfo } from "viewer/controller/mesh_helpers";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import type { SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
+import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
@@ -116,6 +120,33 @@ export interface WebknossosTestContext extends BaseTestContext {
 }
 
 export function getNestedUpdateActions(context: WebknossosTestContext) {
+  const versions = [];
+  for (const saveQueueEntries of context.receivedDataPerSaveRequest) {
+    for (const entry of saveQueueEntries) {
+      versions.push(entry.actions);
+    }
+  }
+
+  return versions;
+}
+
+export function getFlattenedUpdateActions(context: WebknossosTestContext) {
+  /*
+   * Returns a list of all update actions
+   */
+  return flattenDeep(
+    context.receivedDataPerSaveRequest.map((saveQueueEntries) =>
+      saveQueueEntries.map((entry) => entry.actions),
+    ),
+  );
+}
+
+export function getNestedUpdateActions(context: WebknossosTestContext) {
+  /*
+   * Returns a nested list of all update actions. Each sublist groups
+   * update actions that were sent in the same request (not necessarily
+   * in the same transaction).
+   */
   const versions = [];
   for (const saveQueueEntries of context.receivedDataPerSaveRequest) {
     for (const entry of saveQueueEntries) {
@@ -197,12 +228,17 @@ vi.mock("admin/rest_api.ts", async () => {
     },
   );
 
+  const getMeshFilesForDatasetLayer = vi.fn(async () => {
+    return [dummyMeshFile];
+  });
+
   return {
     ...actual,
     getDataset: vi.fn(),
     sendSaveRequestWithToken: mockedSendRequestWithToken,
     getAgglomeratesForDatasetLayer: vi.fn(() => [sampleHdf5AgglomerateName]),
     getMappingsForDatasetLayer: vi.fn(() => []),
+    getMeshFilesForDatasetLayer,
     getAgglomeratesForSegmentsFromTracingstore: getAgglomeratesForSegmentsFromTracingstoreMock,
     getAgglomeratesForSegmentsFromDatastore: getAgglomeratesForSegmentsFromDatastoreMock,
     getEdgesForAgglomerateMinCut: vi.fn(
@@ -333,6 +369,22 @@ vi.mock("admin/api/mesh.ts", async () => {
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock("admin/api/mesh", async () => {
+  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
+  const getMeshFileChunksForSegment = async (..._args: any[]): Promise<MeshSegmentInfo> => {
+    return {
+      meshFormat: "draco",
+      lods: [],
+      chunkScale: [1, 1, 1],
+    };
+  };
+
+  return {
+    ...actual,
+    getMeshFileChunksForSegment,
+  };
+});
 
 vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
@@ -598,7 +650,6 @@ export async function setupWebknossosForTesting(
     delete segmentLodGroups[key];
   });
   setSceneController({
-    name: "This is a dummy scene controller so that getSceneController works in the tests.",
     // @ts-expect-error
     segmentMeshController: {
       meshesGroupsPerSegmentId: {},
@@ -662,6 +713,8 @@ export async function setupWebknossosForTesting(
         },
       ),
     },
+    // todop: check whether this would work too
+    // segmentMeshController: new SegmentMeshController(),
   });
 
   Store.dispatch(sceneControllerInitializedAction());
@@ -689,6 +742,7 @@ export async function setupWebknossosForTesting(
     if (!options?.dontDispatchWkInitialized) {
       // Dispatch the wkInitializedAction, so the sagas are started
       Store.dispatch(wkInitializedAction());
+      Store.dispatch(sceneControllerInitializedAction());
     }
   } catch (error) {
     console.error("model.fetch() failed", error);

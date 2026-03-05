@@ -1,3 +1,4 @@
+import { V3 } from "libs/mjs";
 import {
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
@@ -264,8 +265,16 @@ export function isSkeletonLayerVisible(annotation: StoreAnnotation) {
   return skeletonLayer == null ? false : skeletonLayer.showSkeletons;
 }
 
-export function getNodePosition(node: Node, state: WebknossosState): Vector3 {
-  return transformNodePosition(node.untransformedPosition, state);
+export function getNodePosition(
+  node: Node,
+  state: WebknossosState,
+  useOffsetToCenterNode: boolean = false,
+): Vector3 {
+  let position = transformNodePosition(node.untransformedPosition, state);
+  if (useOffsetToCenterNode) {
+    return V3.add(position, [0.5, 0.5, 0.5]);
+  }
+  return position;
 }
 
 export function transformNodePosition(position: Vector3, state: WebknossosState): Vector3 {

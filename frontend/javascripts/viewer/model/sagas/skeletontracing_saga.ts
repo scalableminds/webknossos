@@ -83,13 +83,20 @@ import {
 import { api, Model } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+<<<<<<< HEAD
 import { dispatchEnsureHasNewestVersionAsync } from "../actions/save_actions";
 import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
+||||||| 5175fc18c9
+import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
+=======
+>>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
+import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
+import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 import {
@@ -161,6 +168,7 @@ function* centerActiveNode(action: Action): Saga<void> {
         activeNodePosition,
         false,
         applyRotation ? nodeRotation : undefined,
+        true,
       );
     }
     if (activeNode.additionalCoordinates) {

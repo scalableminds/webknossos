@@ -2,7 +2,7 @@ import { sleep } from "libs/utils";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResumableUpload } from "../../libs/resumable-upload";
+import { ResumableUpload, type ResumableUploadEvent } from "../../libs/resumable-upload";
 import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
 describe("Resumable Use Cases (WebKnossos Patterns)", () => {
@@ -544,6 +544,18 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should not fire complete twice when the last file fails permanently", async () => {
+      /*
+        This test will make the last chunk fail and only retry after some time has passed.
+        In detail, the following will happen:
+        - A fileError event is triggered because a chunk (the last one) could not be uploaded.
+        - The handler for fileError is async and doesn't trigger a retry immediately (e.g.,
+          happens when fetching a new token for the retry).
+        - Because no retry was triggered immediately, ResumableUpload doesn't have anything to
+          do anymore and triggers `complete` (with success=false).
+        - Now, the fileError handler dispatches a retry.
+        - The second `complete` event (with success=true) is dispatched.
+      */
+
       resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 4,
@@ -551,20 +563,51 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
         simultaneousUploads: 2,
       });
 
-      const payload = "permanent-error";
-      const file = new File([payload], "error.txt", { type: "text/plain" });
-      resumable.addFile(file);
+      const fileContent1 = "file-content-1";
+      const fileContent2 = "file-content-2";
+      const file1 = new File([fileContent1], "file1.txt", { type: "text/plain" });
+      const file2 = new File([fileContent2], "file2.txt", { type: "text/plain" });
+      resumable.addFile(file1);
+      resumable.addFile(file2);
+      const identifier1 = resumable.files[0].uniqueIdentifier;
+      const identifier2 = resumable.files[1].uniqueIdentifier;
 
       backendMock.failUploadOnNthRequest(1, 500, "Permanent");
-      backendMock.failUploadOnNthRequest(2, 500, "Permanent");
 
-      const completeSpy = vi.fn();
+      const successLog: boolean[] = [];
+      const completeSpy = vi.fn((event: ResumableUploadEvent) => {
+        if (event.detail.type !== "complete") {
+          // Satisfy TS.
+          return;
+        }
+        successLog.push(event.detail.didUploadCompleteSuccessfully as boolean);
+      });
       resumable.addEventListener("complete", completeSpy);
 
-      resumable.upload();
-      await sleep(50);
+      resumable.addEventListener("fileError", async (event: ResumableUploadEvent) => {
+        if (event.detail.type !== "fileError") {
+          // Satisfy TS.
+          return;
+        }
+        const { file } = event.detail;
+        await sleep(50); // in wk, we might fetch a new token here
+        file.retry();
+      });
 
-      expect(completeSpy).toHaveBeenCalledTimes(1);
+      resumable.upload();
+      await resumable.waitForComplete(); // this should be a failure because one chunk could not be uploaded
+      await resumable.waitForComplete(); // this should be a success because of the retry
+
+      expect(successLog).toEqual([false, true]);
+
+      const uploadedBytes1 = backendMock.getFinalUploadData(identifier1);
+      const uploadedBytes2 = backendMock.getFinalUploadData(identifier2);
+      const originalBytes1 = new Uint8Array(await file1.arrayBuffer());
+      const originalBytes2 = new Uint8Array(await file2.arrayBuffer());
+
+      expect(uploadedBytes1).toEqual(originalBytes1);
+      expect(uploadedBytes2).toEqual(originalBytes2);
+      expect(backendMock.getInvariantViolations()).toEqual([]);
     });
   });
 });

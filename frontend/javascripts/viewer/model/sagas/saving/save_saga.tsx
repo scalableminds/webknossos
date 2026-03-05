@@ -69,7 +69,7 @@ import {
   takeEveryWithBatchActionSupport,
 } from "../saga_helpers";
 import {
-  refreshAffectedMeshes,
+  refreshAffectedSegmentItemsAndMeshes,
   splitAgglomerateInMapping,
   updateMappingWithMerge,
 } from "../volume/proofreading/proofread_saga";
@@ -939,7 +939,7 @@ function* reloadMeshes(
         });
       }
     }
-    refreshAffectedMeshesEffects.push(call(refreshAffectedMeshes, tracingId, refreshList));
+    refreshAffectedMeshesEffects.push(call(refreshAffectedSegmentItemsAndMeshes, tracingId, refreshList));
   }
 }
 

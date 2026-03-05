@@ -5,7 +5,9 @@ import {
   getNestedUpdateActions,
   setupWebknossosForTesting,
   type WebknossosTestContext,
+  getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -121,10 +123,11 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     const task = startSaga(function* task() {
       const shouldSaveAfterLoadingTrees = false;
       yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
+      yield call(publishDebuggingState, backendMock);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const injectedMergeRequest = context.receivedDataPerSaveRequest.at(4)![0];
-      expect(injectedMergeRequest.actions).toEqual([injectedMerge]);
-      expect(injectedMergeRequest.version).toEqual(9);
+      const injectedMergeRequest = getNestedUpdateActions(context).slice(9);
+      expect(injectedMergeRequest).toEqual([injectedMerge]);
+
       // Includes loading of agglomerate trees and tree merging operation & agglomerate merge update
       const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(-3)!;
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(

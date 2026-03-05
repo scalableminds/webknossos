@@ -8,6 +8,7 @@ import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
 import {
   actionChannel,
+  all,
   call,
   delay,
   flush,
@@ -746,7 +747,7 @@ export function* tryToIncorporateActions(
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
           const { agglomerateId, actionTracingId } = action.value;
-          if (agglomerateId) {
+          if (agglomerateId != null) {
             // The action already contains the info about what agglomerate was split.
             // As the split could have happened between segments not loaded in this client,
             // we need to reload in case any segment of the agglomerate is loaded and
@@ -830,8 +831,10 @@ export function* tryToIncorporateActions(
       }
     }
     yield* put(setVersionNumberAction(actionBatch.version));
-    for (const tracingId of Object.keys(agglomerateIdsToRefreshPerLayer)) {
-      const agglomerateIdsToRefreshSet = agglomerateIdsToRefreshPerLayer.get(tracingId);
+    for (const [
+      tracingId,
+      agglomerateIdsToRefreshSet,
+    ] of agglomerateIdsToRefreshPerLayer.entries()) {
       if (agglomerateIdsToRefreshSet && agglomerateIdsToRefreshSet.size > 0) {
         //  TODO: Add 64 bit support
         const agglomerateIdToRefresh = [...agglomerateIdsToRefreshSet.values().map(Number)];
@@ -949,6 +952,7 @@ function* reloadMeshes(
       call(refreshAffectedSegmentItemsAndMeshes, tracingId, refreshList),
     );
   }
+  yield* all(refreshAffectedMeshesEffects);
 }
 
 export default [setupSavingToServer, watchForNewerAnnotationVersion];

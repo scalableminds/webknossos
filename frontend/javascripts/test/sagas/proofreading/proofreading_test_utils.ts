@@ -318,6 +318,7 @@ export class BackendMock {
         }
       });
     }
+    this.injectionsPerVersion[targetVersion] = updateActions;
   }
 
   planMultipleVersionInjections(
@@ -328,7 +329,6 @@ export class BackendMock {
     updateActionBatches.forEach((actions, index) => {
       this.planVersionInjection(startingVersion + index, actions);
     });
-    this.injectionsPerVersion[targetVersion] = updateActions;
   }
 
   injectVersion(updateActions: UpdateActionWithoutIsolationRequirement[], targetVersion: number) {

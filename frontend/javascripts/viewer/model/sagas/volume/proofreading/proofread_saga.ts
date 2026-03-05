@@ -96,6 +96,7 @@ import {
   removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";

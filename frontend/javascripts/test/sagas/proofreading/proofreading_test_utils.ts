@@ -1,13 +1,8 @@
 import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import type { RequestOptionsWithData } from "libs/request";
-<<<<<<< HEAD
 import { sleep } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import sortBy from "lodash-es/sortBy";
-||||||| 5175fc18c9
-import { sleep } from "libs/utils";
-=======
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
@@ -20,21 +15,15 @@ import {
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { delay } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-<<<<<<< HEAD
 import Constants, { type Vector2, type Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-||||||| 5175fc18c9
-import Constants, { type Vector2, type Vector3 } from "viewer/constants";
-=======
 import type { Vector2, Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-<<<<<<< HEAD
 import {
   cutAgglomerateFromNeighborsAction,
   minCutPartitionsAction,
@@ -49,33 +38,21 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
-||||||| 5175fc18c9
-import { setMappingAction } from "viewer/model/actions/settings_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
-import type { Saga } from "viewer/model/sagas/effect_generators";
-import { select } from "viewer/model/sagas/effect_generators";
-=======
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
 import type {
   ApplicableSkeletonServerUpdateAction,
   ApplicableVolumeServerUpdateAction,
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-<<<<<<< HEAD
 import type { NumberLike, SaveQueueEntry } from "viewer/store";
-||||||| 5175fc18c9
-import type { SaveQueueEntry } from "viewer/store";
-=======
 import type { SaveQueueEntry, WebknossosState } from "viewer/store";
 import { combinedReducer } from "viewer/store";
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
 import {
@@ -377,12 +354,7 @@ export class BackendMock {
   ): Promise<ArrayBuffer> => {
     // Does not currently support versioning as this would require a versioned adjacency list.
     const version = this.agglomerateMapping.currentVersion;
-<<<<<<< HEAD
-    const adjacencyList = this.agglomerateMapping.getAdjacencyList();
-||||||| 5175fc18c9
-=======
     const adjacencyList = this.agglomerateMapping.getAdjacencyList(version);
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
     const someSegmentOfAgglomerate = mapping.find(
       ([_segment, agglomerate]) => agglomerate === agglomerateId,
@@ -394,18 +366,10 @@ export class BackendMock {
     }
     const segmentId = someSegmentOfAgglomerate[0];
     const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
-<<<<<<< HEAD
       adjacencyList,
       segmentId,
       agglomerateId,
       tracingId,
-||||||| 5175fc18c9
-      mapping,
-      agglomerateId,
-=======
-      adjacencyList,
-      segmentId,
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
       "agglomerateSkeleton",
       version,
     );
@@ -462,7 +426,6 @@ export function mockInitialBucketAndAgglomerateData(
 
   return backendMock;
 }
-<<<<<<< HEAD
 
 export function* makeMappingEditableHelper(): Saga<void> {
   // Usually the user creates an editable mapping via the first proofreading action.
@@ -507,21 +470,21 @@ export function prepareGetNeighborsForAgglomerateNode(
       if (segmentInfo.segmentId === 2) {
         const neighbors = includeSegmentIdToOne
           ? [
-              {
-                segmentId: 1,
-                position: [1, 1, 1] as Vector3,
-              },
-              {
-                segmentId: 3,
-                position: [3, 3, 3] as Vector3,
-              },
-            ]
+            {
+              segmentId: 1,
+              position: [1, 1, 1] as Vector3,
+            },
+            {
+              segmentId: 3,
+              position: [3, 3, 3] as Vector3,
+            },
+          ]
           : [
-              {
-                segmentId: 3,
-                position: [3, 3, 3] as Vector3,
-              },
-            ];
+            {
+              segmentId: 3,
+              position: [3, 3, 3] as Vector3,
+            },
+          ];
         return {
           segmentId: 2,
           neighbors,
@@ -574,7 +537,7 @@ export function* performCutFromAllNeighbours(
   }
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+  yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
   yield put(setActiveCellAction(2));
 
   yield makeMappingEditableHelper();
@@ -625,7 +588,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(6, { somePosition: [1337, 1337, 1337] }, tracingId));
+  yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
   yield put(setActiveCellAction(6, undefined, null, 1337));
 
   yield makeMappingEditableHelper();
@@ -693,8 +656,6 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
       throw new Error("Unexpected min cut request");
     },
   );
-||||||| 5175fc18c9
-=======
 
 export function* expectMapping(
   tracingId: string,
@@ -705,4 +666,3 @@ export function* expectMapping(
   );
   expect(mapping0).toEqual(expectedMapping);
 }
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3

@@ -16,8 +16,8 @@ import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { APIAnnotationTypeEnum, type APIDataLayer } from "types/api_types";
-import type { ValueOf } from "types/globals";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
+import type { ValueOf } from "types/type_utils";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import {
   getDefaultValueRangeOfLayer,

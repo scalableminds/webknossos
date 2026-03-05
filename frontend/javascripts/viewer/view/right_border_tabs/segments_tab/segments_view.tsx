@@ -1,5 +1,6 @@
-import {
+import Icon, {
   ArrowRightOutlined,
+  BarChartOutlined,
   CloseOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -15,7 +16,10 @@ import {
   SearchOutlined,
   SettingOutlined,
   ShrinkOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
+import LoadMeshesIcon from "@images/icons/icon-load-meshes.svg?react";
+import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import {
   ConfigProvider,
   Divider,
@@ -107,7 +111,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import SegmentListItem from "viewer/view/right_border_tabs/segments_tab/segment_list_item";
 import {
   formatMagWithLabel,
@@ -213,7 +217,7 @@ const mapStateToProps = (state: WebknossosState) => {
 };
 
 const getCleanedSelectedSegmentsOrGroup = (state: WebknossosState) => {
-  const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
+  const { maybeUpdateStoreAction, ...cleanedSelectedIds } = getSelectedIds(state);
   if (maybeUpdateStoreAction != null) {
     maybeUpdateStoreAction();
   }
@@ -252,10 +256,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   setActiveCell(
     segmentId: number,
-    somePositionInLayerSpace?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    anchorPositionInLayerSpace?: Vector3 | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
-    dispatch(setActiveCellAction(segmentId, somePositionInLayerSpace, someAdditionalCoordinates));
+    dispatch(setActiveCellAction(segmentId, anchorPositionInLayerSpace, additionalCoordinates));
   },
 
   setCurrentMeshFile(layerName: string, fileName: string) {
@@ -485,6 +489,12 @@ class SegmentsView extends React.Component<Props, State> {
       ) {
         const selectedId = this.props.selectedIds.segments[0];
         this.tree.current.scrollTo({ key: `segment-${selectedId}` });
+      } else if (
+        this.props.selectedIds.group != null &&
+        prevProps.selectedIds.group !== this.props.selectedIds.group
+      ) {
+        const selectedGroupId = this.props.selectedIds.group;
+        this.tree.current.scrollTo({ key: getGroupNodeKey(selectedGroupId) });
       }
     }, 100);
   }
@@ -677,7 +687,7 @@ class SegmentsView extends React.Component<Props, State> {
       setSelectedSegmentsOrGroupAction([segment.id], null, visibleSegmentationLayer.name),
     );
 
-    if (!segment.somePosition) {
+    if (!segment.anchorPosition) {
       Toast.info(
         <React.Fragment>
           Cannot go to this segment, because its position is unknown.
@@ -686,13 +696,13 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
     const transformedPosition = layerToGlobalTransformedPosition(
-      segment.somePosition,
+      segment.anchorPosition,
       visibleSegmentationLayer.name,
       "segmentation",
       Store.getState(),
     );
     this.props.setPosition(transformedPosition);
-    const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
+    const segmentAdditionalCoordinates = segment.additionalCoordinates;
     if (segmentAdditionalCoordinates != null) {
       this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
     }
@@ -823,7 +833,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "changeGroupColor",
-      icon: <i className="fas fa-eye-dropper fa-sm fa-icon fa-fw" />,
+      icon: <Icon component={PipetteIcon} />,
       label: (
         <ChangeColorMenuItemContent
           title="Change Segment Color"
@@ -843,7 +853,7 @@ class SegmentsView extends React.Component<Props, State> {
   getResetGroupColorMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "resetGroupColor",
-      icon: <i className="fas fa-undo" />,
+      icon: <UndoOutlined />,
       label: (
         <div
           onClick={() => {
@@ -892,7 +902,7 @@ class SegmentsView extends React.Component<Props, State> {
   getComputeMeshesAdHocMenuItem = (groupId: number | null): ItemType => {
     return {
       key: "computeAdHoc",
-      icon: <i className="fas fa-dice-d20 fa-fw fa-icon" />,
+      icon: <Icon component={LoadMeshesIcon} />,
       label: (
         <div
           onClick={() => {
@@ -926,7 +936,7 @@ class SegmentsView extends React.Component<Props, State> {
           </div>
         </>
       ),
-      icon: <i className="fas fa-ruler fa-fw fa-icon" />,
+      icon: <BarChartOutlined />,
     };
   };
 
@@ -934,7 +944,7 @@ class SegmentsView extends React.Component<Props, State> {
     return {
       key: "loadByFile",
       disabled: this.props.currentMeshFile == null,
-      icon: <i className="fas fa-dice-d20 fa-icon fa-fw" />,
+      icon: <Icon component={LoadMeshesIcon} />,
       label: (
         <div
           onClick={() => {
@@ -1153,8 +1163,8 @@ class SegmentsView extends React.Component<Props, State> {
     const { flycam } = Store.getState();
 
     this.handlePerSegment(groupId, (segment) => {
-      if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(segment.id, segment.somePosition, flycam.additionalCoordinates);
+      if (segment.anchorPosition == null) return;
+      this.props.loadAdHocMesh(segment.id, segment.anchorPosition, flycam.additionalCoordinates);
     });
   };
 
@@ -1163,7 +1173,7 @@ class SegmentsView extends React.Component<Props, State> {
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
     const segmentsWithoutPosition = relevantSegments
-      .filter((segment) => segment.somePosition == null)
+      .filter((segment) => segment.anchorPosition == null)
       .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();
   };
@@ -1217,11 +1227,11 @@ class SegmentsView extends React.Component<Props, State> {
 
   handleLoadMeshesFromFile = (groupId: number | null) => {
     this.handlePerSegment(groupId, (segment: Segment) => {
-      if (segment.somePosition == null || this.props.currentMeshFile == null) return;
+      if (segment.anchorPosition == null || this.props.currentMeshFile == null) return;
       this.props.loadPrecomputedMesh(
         segment.id,
-        segment.somePosition,
-        segment.someAdditionalCoordinates,
+        segment.anchorPosition,
+        segment.additionalCoordinates,
         this.props.currentMeshFile.name,
       );
     });

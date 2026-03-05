@@ -11,7 +11,7 @@ export const initialMapping = new Map([
 ]);
 
 export const edgesForInitialMapping: Vector2[] = [
-  [1, 2],
+  [1, 2], // read as: 1 swallows 2
   [2, 3],
   [4, 5],
   [6, 7],
@@ -26,6 +26,17 @@ export const expectedMappingAfterMerge = new Map([
   [5, 1],
   [6, 6],
   [7, 6],
+  // [1337, 1337],
+]);
+
+export const expectedMappingAfterMerge2 = new Map([
+  [1, 1],
+  [2, 1],
+  [3, 1],
+  [4, 4],
+  [5, 4],
+  [6, 4],
+  [7, 4],
   // [1337, 1337],
 ]);
 

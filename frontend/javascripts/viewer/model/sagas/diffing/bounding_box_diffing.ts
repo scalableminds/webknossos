@@ -14,56 +14,6 @@ import {
   updateUserBoundingBoxVisibilityInVolumeTracing,
 } from "viewer/model/sagas/volume/update_actions";
 import type { UserBoundingBox } from "viewer/store";
-import type { TreeGroup } from "../types/tree_types";
-
-function stripIsExpanded(groups: TreeGroup[]): TreeGroup[] {
-  return groups.map((group) => ({
-    name: group.name,
-    groupId: group.groupId,
-    children: stripIsExpanded(group.children),
-  }));
-}
-
-function gatherIdToExpandedState(
-  groups: TreeGroup[],
-  outputMap: { expanded: Set<number>; notExpanded: Set<number> } = {
-    expanded: new Set(),
-    notExpanded: new Set(),
-  },
-) {
-  for (const group of groups) {
-    if (group.isExpanded) {
-      outputMap.expanded.add(group.groupId);
-    } else {
-      outputMap.notExpanded.add(group.groupId);
-    }
-    gatherIdToExpandedState(group.children, outputMap);
-  }
-  return outputMap;
-}
-
-export function diffGroups(prevGroups: TreeGroup[], groups: TreeGroup[]) {
-  if (prevGroups === groups) {
-    return {
-      didContentChange: false,
-      newlyExpandedIds: [],
-      newlyNotExpandedIds: [],
-    };
-  }
-  const didContentChange = !isEqual(stripIsExpanded(prevGroups), stripIsExpanded(groups));
-
-  const prevExpandedState = gatherIdToExpandedState(prevGroups);
-  const expandedState = gatherIdToExpandedState(groups);
-
-  const newlyExpandedIds = Array.from(
-    expandedState.expanded.difference(prevExpandedState.expanded),
-  );
-  const newlyNotExpandedIds = Array.from(
-    expandedState.notExpanded.difference(prevExpandedState.notExpanded),
-  );
-
-  return { didContentChange, newlyExpandedIds, newlyNotExpandedIds };
-}
 
 function stripIsVisible(boxes: UserBoundingBox[]): Omit<UserBoundingBox, "isVisible">[] {
   return boxes.map((box) => {

@@ -14,14 +14,17 @@ import scala.concurrent.ExecutionContext
 
 case class MergedVolumeStats(
     largestSegmentId: Option[Long],
-    sortedMagsList: Option[Seq[Vec3IntProto]], // None means do not touch the mag list
+    seenMags: Set[Vec3Int],
     idMaps: Seq[Map[Long, Long]],
     createdSegmentIndex: Boolean
-)
+) extends ProtoGeometryImplicits {
+  def magsMergedWith(other: Seq[Vec3IntProto]): Seq[Vec3IntProto] =
+    (seenMags ++ other.map(vec3IntFromProto).toSet).toSeq.sortBy(_.maxDim).map(vec3IntToProto)
+}
 
 object MergedVolumeStats {
   def empty(createdSegmentIndex: Boolean): MergedVolumeStats =
-    MergedVolumeStats(Some(0L), None, List.empty, createdSegmentIndex)
+    MergedVolumeStats(Some(0L), Set.empty, List.empty, createdSegmentIndex)
 }
 
 class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Long = 0)
@@ -148,7 +151,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
     MergedVolumeStats(
       Some(largestSegmentId),
-      Some(presentMags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
+      presentMags.map(vec3IntToProto),
       idMaps.map(idMap => idMap._1.zip(idMap._2).toMap),
       createdSegmentIndex
     )

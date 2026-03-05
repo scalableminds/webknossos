@@ -352,7 +352,7 @@ class VolumeTracingService @Inject()(
           Fox.successful(
             MergedVolumeStats(
               tracing.largestSegmentId,
-              Some(tracing.mags),
+              Set.empty,
               Seq.empty,
               tracing.getHasSegmentIndex
             ))
@@ -753,7 +753,7 @@ class VolumeTracingService @Inject()(
         mappingName = newEditableMappingIdOpt,
         hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
         userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes),
-        mags = mergedVolumeStats.sortedMagsList.getOrElse(tracing.mags),
+        mags = mergedVolumeStats.magsMergedWith(tracing.mags),
         largestSegmentId = mergedVolumeStats.largestSegmentId.orElse(tracing.largestSegmentId)
       )
   }

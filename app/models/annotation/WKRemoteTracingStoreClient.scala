@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   SkeletonTracings,
   SkeletonTracingsWithIds
 }
-import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
@@ -211,7 +211,7 @@ class WKRemoteTracingStoreClient(
       _ <- rpc(s"${tracingStore.url}/tracings/volume/initializeForMerge")
         .addQueryParam("newTracingId", newTracingId)
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
-        .postProto[VolumeTracings](tracings)
+        .postProto[VolumeTracings](thinOutVolumeTracings(tracings))
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
       _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource, datasetId)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
@@ -224,6 +224,22 @@ class WKRemoteTracingStoreClient(
         .postProto[VolumeTracings](tracings)
     } yield ()
   }
+
+  // The initializeForMerge step expects tracings without segments, groups, bboxes, user states.
+  // They don’t hurt but create unneeded traffic. So we’ll strip them here.
+  private def thinOutVolumeTracings(tracings: VolumeTracings): VolumeTracings =
+    tracings.copy(
+      tracings = tracings.tracings.map { tracingOpt: VolumeTracingOpt =>
+        tracingOpt.copy(
+          tracing = tracingOpt.tracing.map(
+            _.copy(
+              segments = Seq.empty,
+              segmentGroups = Seq.empty,
+              userBoundingBoxes = Seq.empty,
+              userStates = Seq.empty
+            )))
+      }
+    )
 
   private def packVolumeDataZips(files: List[File]): File =
     ZipIO.zipToTempFile(files)

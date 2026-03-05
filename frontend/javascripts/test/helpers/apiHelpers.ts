@@ -118,17 +118,6 @@ export interface WebknossosTestContext extends BaseTestContext {
   segmentLodGroups: Record<string, CustomLOD>;
 }
 
-export function getNestedUpdateActions(context: WebknossosTestContext) {
-  const versions = [];
-  for (const saveQueueEntries of context.receivedDataPerSaveRequest) {
-    for (const entry of saveQueueEntries) {
-      versions.push(entry.actions);
-    }
-  }
-
-  return versions;
-}
-
 export function getFlattenedUpdateActions(context: WebknossosTestContext) {
   /*
    * Returns a list of all update actions

@@ -85,7 +85,7 @@ const _UserScriptsModalView: React.FC<UserScriptsModalViewProps> = ({ onOK, isOp
     <Modal
       open={isOpen}
       title="Add User Script"
-      okText="Add"
+      okText="Run Script"
       cancelText="Close"
       onOk={handleClick}
       onCancel={onOK}

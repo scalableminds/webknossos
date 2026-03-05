@@ -1,8 +1,9 @@
 import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { Alert, App, Button, Flex, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
+import { Alert, App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -191,33 +192,23 @@ function TeamListView() {
   }
 
   return (
-    <div className="container">
-      <Flex
-        justify="space-between"
-        align="flex-start"
-        style={{ marginBottom: "var(--ant-padding-xs)" }}
-      >
-        <h3>Teams</h3>
-        <Space>
-          <Button
-            icon={<PlusOutlined />}
-            type="primary"
-            onClick={() => setIsTeamCreationModalVisible(true)}
-          >
-            Add Team
-          </Button>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-
+    <AdminPage
+      title="Teams"
+      descriptionURI="https://docs.webknossos.org/webknossos/users/teams.html"
+      description="Manage team membership and dataset access boundaries."
+      actions={
+        <Button
+          icon={<PlusOutlined />}
+          type="primary"
+          onClick={() => setIsTeamCreationModalVisible(true)}
+        >
+          Add Team
+        </Button>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+      alerts={teams.length <= 1 ? renderPlaceholder() : null}
+    >
       <Spin spinning={isLoading} size="large">
-        {teams.length <= 1 ? renderPlaceholder() : null}
         <Table
           dataSource={filterWithSearchQueryAND(teams, ["name"], searchQuery)}
           rowKey="id"
@@ -227,9 +218,6 @@ function TeamListView() {
           expandable={{
             expandedRowRender: (team) => renderUsersForTeam(team, users),
             rowExpandable: (_team) => true,
-          }}
-          style={{
-            marginTop: 30,
           }}
         >
           <Column
@@ -277,7 +265,7 @@ function TeamListView() {
         }}
         team={selectedTeam}
       />
-    </div>
+    </AdminPage>
   );
 }
 

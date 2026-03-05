@@ -137,6 +137,64 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  /*
+   * First, create tracing that is *like* the final merged one but is “emptied” (no segments, bboxes, groups, user state)
+   * (Note that this can already be done on the client side to save bandwidth)
+   * After volumeData is merged, this tracing object (version 0L will later be overwritten by the actual merged tracing)
+   */
+  def initializeForMerge(newTracingId: String): Action[VolumeTracings] =
+    Action.async(validateProto[VolumeTracings]) { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          val tracingsFlat = request.body.flatten
+          val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracingsFlat)
+          for {
+            mergedTracingRaw <- volumeTracingService
+              .merge(tracingsFlat,
+                     MergedVolumeStats.empty(shouldCreateSegmentIndex),
+                     None,
+                     newVersion = 0L,
+                     additionalBoundingBoxes = Seq.empty)
+              .toFox
+            mergedTracing = mergedTracingRaw.copy(segments = Seq.empty,
+                                                  segmentGroups = Seq.empty,
+                                                  userBoundingBoxes = Seq.empty,
+                                                  userStates = Seq.empty)
+            _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
+          } yield Ok
+        }
+      }
+    }
+
+  /*
+   * Assume initializeForMerge has already run. We can now merge the actual volume data an store the resulting stats
+   */
+  def initialDataMultiple(annotationId: ObjectId, tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            for {
+              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
+              // The annotation object may not yet exist here. Caller is responsible to save that too.
+              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
+              mags <- volumeTracingService.initializeWithDataMultiple(annotationId,
+                                                                      tracingId,
+                                                                      tracing.value,
+                                                                      initialData)
+              // TODO store resulting stats (include mag list?)
+              _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
+            } yield Ok(Json.toJson(tracingId))
+          }
+        }
+      }
+    }
+
+  /*
+   * Assume initializeForMerge and initialDataMultiple has already run.
+   * We now have the mergedVolumeStats to do the “real” merge of the
+   * VolumeTracing objects and overwrite the initialized one.
+   */
   def mergedFromContents(newTracingId: String): Action[VolumeTracings] =
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
@@ -155,26 +213,6 @@ class VolumeTracingController @Inject()(
             mergedTracing = mergedTracingRaw.copy(segments = List.empty)
             _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
           } yield Ok
-        }
-      }
-    }
-
-  def initialDataMultiple(annotationId: ObjectId, tracingId: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-            for {
-              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
-              // The annotation object may not yet exist here. Caller is responsible to save that too.
-              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
-              mags <- volumeTracingService.initializeWithDataMultiple(annotationId,
-                                                                      tracingId,
-                                                                      tracing.value,
-                                                                      initialData)
-              _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
-            } yield Ok(Json.toJson(tracingId))
-          }
         }
       }
     }

@@ -208,7 +208,7 @@ class WKRemoteTracingStoreClient(
     logger.debug(
       s"Called to merge ${tracings.tracings.length} VolumeTracings by contents into $newAnnotationId/$newTracingId." + baseInfo)
     for {
-      _ <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/initializeForMerge")
         .addQueryParam("newTracingId", newTracingId)
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .postProto[VolumeTracings](tracings)
@@ -218,6 +218,10 @@ class WKRemoteTracingStoreClient(
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .addQueryParam("annotationId", newAnnotationId.toString)
         .postFile(packedVolumeDataZips)
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
+        .addQueryParam("newTracingId", newTracingId)
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .postProto[VolumeTracings](tracings)
     } yield ()
   }
 

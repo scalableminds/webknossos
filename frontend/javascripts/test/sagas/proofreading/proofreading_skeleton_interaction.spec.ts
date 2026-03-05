@@ -92,7 +92,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       const shouldSaveAfterLoadingTrees = false;
       yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const loadTreesAndMergeUpdateActions = getNestedUpdateActions(context).slice(-5)!;
+      const loadTreesAndMergeUpdateActions = getNestedUpdateActions(context).slice(-6)!;
       yield expect(loadTreesAndMergeUpdateActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/perform_merge_trees_proofreading_update_actions.json",
       );

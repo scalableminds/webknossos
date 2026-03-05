@@ -783,8 +783,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     // A merge happened. Adapt the segment items.
     yield* put(
       mergeSegmentItemsAction(
-        newSourceAgglomerateId,
-        newTargetAgglomerateId,
+        sourceInfo.agglomerateId,
+        targetInfo.agglomerateId,
         sourceInfo.unmappedId,
         targetInfo.unmappedId,
         volumeTracingId,

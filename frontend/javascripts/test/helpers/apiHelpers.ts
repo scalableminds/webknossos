@@ -90,6 +90,7 @@ import {
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
 import { createUnitCubeBufferGeometry, makeSimpleMesh } from "./geometry_helpers";
+import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -637,74 +638,12 @@ export async function setupWebknossosForTesting(
   Object.keys(segmentLodGroups).forEach((key) => {
     delete segmentLodGroups[key];
   });
-  setSceneController({
-    // @ts-expect-error
-    segmentMeshController: {
-      meshesGroupsPerSegmentId: {},
-      updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
-      getLODGroupOfLayer(layerName: string): CustomLOD | undefined {
-        return segmentLodGroups[layerName];
-      },
-      addMeshFromGeometry: vi.fn(
-        (
-          geometry: BufferGeometryWithInfo,
-          segmentId: number,
-          _scale: Vector3 | null = null,
-          _lod: number,
-          layerName: string,
-          _additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-          _opacity: number | undefined,
-          _isMerged: boolean,
-        ) => {
-          // TODOM: make geometry, make mesh, add to internal structure
-          console.error("adding mesh", segmentId);
-          const mesh = makeSimpleMesh(geometry);
-          const group = new Group() as SceneGroupForMeshes;
-          group.add(mesh);
-          group.segmentId = segmentId;
-          if (!segmentLodGroups[layerName]) {
-            segmentLodGroups[layerName] = new CustomLOD();
-          }
-          const lodGroup = segmentLodGroups[layerName];
-          lodGroup.addNoLODSupportedMesh(group);
-        },
-      ),
-      removeMeshById: vi.fn((segmentId: number, layerName: string, _options?: { lod: number }) => {
-        console.error("removing mesh", segmentId);
-        let groupToRemove = null;
-        segmentLodGroups[layerName]?.traverse((group) => {
-          if ((group as SceneGroupForMeshes)?.segmentId === segmentId) {
-            groupToRemove = group;
-          }
-        }) as SceneGroupForMeshes | undefined;
-        if (groupToRemove) {
-          segmentLodGroups[layerName]?.removeNoLODSupportedMesh(groupToRemove);
-        } else {
-          console.warn(
-            `Tried to remove mesh for segment ${segmentId} in mocked segmentMeshController.`,
-          );
-        }
-      }),
-      setMeshVisibility: vi.fn(
-        (
-          id: number,
-          visibility: boolean,
-          layerName: string,
-          _additionalCoordinates?: AdditionalCoordinate[] | null,
-        ) => {
-          const lodGroup = segmentLodGroups[layerName];
-          lodGroup.children.forEach((group) => {
-            if ((group as SceneGroupForMeshes).segmentId === id) {
-              group.visible = visibility;
-            }
-          });
-        },
-      ),
-    },
-    // todop: check whether this would work too
-    // segmentMeshController: new SegmentMeshController(),
-  });
-
+  setSceneController(
+    {
+      // @ts-expect-error
+      name: "This is a dummy scene controller so that getSceneController works in the tests.",
+      segmentMeshController: new SegmentMeshController(),
+    });
   Store.dispatch(sceneControllerInitializedAction());
 
   __setFeatures({});

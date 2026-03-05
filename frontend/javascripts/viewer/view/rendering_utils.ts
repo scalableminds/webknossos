@@ -98,6 +98,7 @@ export function renderToTexture(
   renderer.setScissorTest(false);
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
   const renderTarget = new WebGLRenderTarget(width, height);
+  if (state.userConfiguration.antialiasRendering) renderTarget.samples = 4;
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {

@@ -133,7 +133,9 @@ function TDViewControls({
         XZ
       </Button>
       <Dropdown menu={settingsMenu} placement="bottomRight" trigger={["click"]}>
-        <Button size="small" icon={<SettingOutlined />} />
+        <Button size="small">
+          <SettingOutlined />
+        </Button>
       </Dropdown>
     </Space.Compact>
   );

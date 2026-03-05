@@ -28,6 +28,7 @@ import type {
   TracingType,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType, BoundingBoxObject } from "types/bounding_box";
+import { ensureExactKeys } from "types/type_utils";
 import type {
   AdditionalCoordinate,
   BLEND_MODES,
@@ -162,19 +163,41 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   readonly id: number;
   readonly name: string | null | undefined;
-  readonly somePosition: Vector3 | undefined; // in layer space
-  readonly someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
+  readonly anchorPosition?: Vector3 | null | undefined; // in layer space
+  readonly additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
   readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
+type SegmentWithoutUserState = Omit<Segment, "isVisible">;
+
+export const SegmentPropertiesWithoutUserState = ensureExactKeys<SegmentWithoutUserState>()([
+  "id",
+  "name",
+  "anchorPosition",
+  "additionalCoordinates",
+  "creationTime",
+  "color",
+  "groupId",
+  "metadata",
+] as const) as unknown as Array<keyof SegmentWithoutUserState>;
+
 export type SegmentMap = DiffableMap<number, Segment>;
 
 export type LabelAction = {
   centroid: Vector3; // centroid of the label action
   plane: OrthoViewWithoutTD; // plane that was labeled
+};
+
+export type SegmentJournalEntry = {
+  entryIndex: number;
+  type: "MERGE_SEGMENTS_ITEMS";
+  agglomerateId1: number; // aka source
+  agglomerateId2: number; // aka target; will be swallowed by source
+  segmentId1: number; // the unmapped ID (supervoxel) that belongs to agglomerateId1
+  segmentId2: number; // the unmapped ID (supervoxel) that belongs to agglomerateId2
 };
 
 export type VolumeTracing = TracingBase & {
@@ -203,6 +226,20 @@ export type VolumeTracing = TracingBase & {
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
   readonly hideUnregisteredSegments: boolean;
+  // The segmentJournal keeps track of how segments were edited. Currently,
+  // this only includes mergeSegments actions which can be created during
+  // proofreading.
+  // This is necessary so that the differ can correctly emit mergeSegments
+  // update actions.
+  //
+  // Note the following:
+  //  - These entries should always be stored with ascending entryIndex.
+  //  - This list only grows right now which should be alright. Even
+  //    when we assume 150 B per entry (which is very pessimistic as
+  //    it's simply the JSON-encoded length) and 10,000 merge requests
+  //    per session (which is also quite far fetched), we are in the
+  //    realm of 1.5 MB of RAM.
+  readonly segmentJournal: Array<SegmentJournalEntry>;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -437,6 +474,7 @@ export type RebaseRelevantAnnotationState = {
   readonly annotationDescription: string;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
+  readonly volumes: Array<VolumeTracing>;
   readonly isRebasing: boolean;
 };
 export type SaveState = {

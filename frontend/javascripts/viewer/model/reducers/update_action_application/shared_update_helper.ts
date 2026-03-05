@@ -11,7 +11,7 @@ export function withoutServerSpecificFields<T extends { value: Record<string, an
   return {
     ...ua,
     value: rest as Omit<T["value"], "actionTimestamp" | "actionTracingId">,
-  } as WithoutServerSpecificFields<T>;
+  } as unknown as WithoutServerSpecificFields<T>;
 }
 
 export function withoutActionTimestamp<T extends { value: Record<string, any> }>(ua: T) {

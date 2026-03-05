@@ -13,15 +13,15 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 case class MergedVolumeStats(
-    largestSegmentId: Long,
-    sortedMagsList: Option[List[Vec3IntProto]], // None means do not touch the mag list
+    largestSegmentId: Option[Long],
+    sortedMagsList: Option[Seq[Vec3IntProto]], // None means do not touch the mag list
     idMaps: Seq[Map[Long, Long]],
     createdSegmentIndex: Boolean
 )
 
 object MergedVolumeStats {
   def empty(createdSegmentIndex: Boolean): MergedVolumeStats =
-    MergedVolumeStats(0L, None, List.empty, createdSegmentIndex)
+    MergedVolumeStats(Some(0L), None, List.empty, createdSegmentIndex)
 }
 
 class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Long = 0)
@@ -140,14 +140,14 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
       }
     } yield ()
 
-  def presentMags: Set[Vec3Int] =
+  private def presentMags: Set[Vec3Int] =
     mergedVolume.map {
       case (bucketPosition: BucketPosition, _) => bucketPosition.mag
     }.toSet
 
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
     MergedVolumeStats(
-      largestSegmentId,
+      Some(largestSegmentId),
       Some(presentMags.toList.sortBy(_.maxDim).map(vec3IntToProto)),
       idMaps.map(idMap => idMap._1.zip(idMap._2).toMap),
       createdSegmentIndex

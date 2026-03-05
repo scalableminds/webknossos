@@ -332,7 +332,7 @@ class VolumeTracingService @Inject()(
 
   def initializeWithDataMultiple(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing, initialData: File)(
       implicit mp: MessagesProvider,
-      tc: TokenContext): Fox[Set[Vec3Int]] =
+      tc: TokenContext): Fox[MergedVolumeStats] =
     if (tracing.version != 0L)
       Fox.failure("Tracing has already been edited.")
     else {
@@ -349,7 +349,13 @@ class VolumeTracingService @Inject()(
         mags <-
         // if none of the tracings contained any volume data do not save buckets, use full mag list, as already initialized on wk-side
         if (magSets.isEmpty)
-          Fox.successful(tracing.mags.map(vec3IntFromProto).toSet)
+          Fox.successful(
+            MergedVolumeStats(
+              tracing.largestSegmentId,
+              Some(tracing.mags),
+              Seq.empty,
+              tracing.getHasSegmentIndex
+            ))
         else {
           val magsDoMatch = magSets.headOption.forall { head =>
             magSets.forall(_ == head)
@@ -395,7 +401,7 @@ class VolumeTracingService @Inject()(
                 } yield ()
               }
               _ <- segmentIndexBuffer.flush()
-            } yield mergedVolume.presentMags
+            } yield mergedVolume.stats(tracing.getHasSegmentIndex)
           }
         }
       } yield mags
@@ -747,6 +753,7 @@ class VolumeTracingService @Inject()(
         mappingName = newEditableMappingIdOpt,
         hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
         userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
+        // TODO set mag list from mergedVolumeStats?
       )
   }
 

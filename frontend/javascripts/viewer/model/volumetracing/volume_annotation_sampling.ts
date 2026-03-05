@@ -1,7 +1,7 @@
 import { map3 } from "libs/utils";
 import once from "lodash-es/once";
 import messages from "messages";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type { BucketAddress, LabeledVoxelsMap, Vector3 } from "viewer/constants";
 import constants from "viewer/constants";
 import type { Bucket } from "viewer/model/bucket_data_handling/bucket";

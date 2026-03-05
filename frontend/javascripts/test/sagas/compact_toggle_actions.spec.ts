@@ -1,9 +1,10 @@
 import DiffableMap from "libs/diffable_map";
-import { withoutUpdateSegment, withoutUpdateTree } from "test/helpers/saveHelpers";
+import { withoutUpdateTree } from "test/helpers/saveHelpers";
 import defaultState from "viewer/default_state";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
+import { diffVolumeTracing } from "viewer/model/sagas/diffing/volume_diffing";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import {
   updateSegmentGroupVisibilityVolumeAction,
@@ -11,7 +12,6 @@ import {
   updateTreeGroupVisibility,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
 import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { Segment, SegmentGroup, WebknossosState } from "viewer/store";
 import { describe, expect, it } from "vitest";
@@ -37,9 +37,9 @@ const createSegment = (id: number, groupId: number | null, isVisible: boolean): 
   name: "TestSegment",
   color: [23, 23, 23],
   creationTime: 12345678,
-  somePosition: [0, 0, 0],
+  anchorPosition: [0, 0, 0],
   isVisible,
-  someAdditionalCoordinates: [],
+  additionalCoordinates: [],
   groupId,
   metadata: [],
 });
@@ -124,6 +124,7 @@ const createStateWithSegments = (
         segments: new DiffableMap(segments.map((s) => [s.id, s])),
         hideUnregisteredSegments: false,
         proofreadingMarkerPosition: undefined,
+        segmentJournal: [],
       },
     ],
   },
@@ -169,12 +170,8 @@ function testSkeletonDiffing(prevState: WebknossosState, nextState: WebknossosSt
 }
 
 function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosState) {
-  // Let's remove updateTree actions as well, as these will occur here
-  // because we don't do shallow updates within the tests (instead, we are
-  // are creating completely new trees, so that we don't have to go through the
-  // action->reducer pipeline)
-  return withoutUpdateSegment(
-    Array.from(diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0])),
+  return Array.from(
+    diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0]),
   );
 }
 

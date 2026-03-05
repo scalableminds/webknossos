@@ -93,7 +93,6 @@ import {
   clickSegmentAction,
   initializeEditableMappingAction,
   mergeSegmentItemsAction,
-  removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
   updateSegmentAction,
@@ -781,12 +780,16 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       ),
     );
   } else {
-    // A merge happened. Remove the segment that doesn't exist anymore.
-    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
-  }
-  yield* call(syncWithBackend);
-  if (unsubscribeFromAnnotationMutex) {
-    yield* call(unsubscribeFromAnnotationMutex);
+    // A merge happened. Adapt the segment items.
+    yield* put(
+      mergeSegmentItemsAction(
+        newSourceAgglomerateId,
+        newTargetAgglomerateId,
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
+        volumeTracingId,
+      ),
+    );
   }
 
   const pack = (oldAgglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
@@ -795,10 +798,19 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     nodePosition,
   });
 
+  // todom/todop: this needs to be rewritten so that mesh loading does not block
+  // mutex unsubscription (segment item should still be created within mutex
+  // to produce atomic version groups).
+  // the same needs to be done for the other sagas.
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     pack(sourceInfo.agglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetInfo.agglomerateId, newTargetAgglomerateId, targetNodePosition),
   ]);
+
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
+  }
 }
 
 // Returns a tuple of whether the min cut failed and if successful a list of edges removed by the min cut.
@@ -1012,11 +1024,6 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     newMapping,
   );
 
-  yield* call(syncWithBackend);
-  if (unsubscribeFromAnnotationMutex) {
-    yield* call(unsubscribeFromAnnotationMutex);
-  }
-
   // Get positions of new meshes from first split edge information.
   const firstEdgeFirstSegmentNewAgglomerate = yield* call(
     preparation.mapSegmentId,
@@ -1032,6 +1039,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       ? edgesToRemove[0].position1
       : edgesToRemove[0].position2;
 
+  // todo: see above
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       oldAgglomerateId: agglomerateIdBeforeSplit,
@@ -1044,6 +1052,10 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       nodePosition: meshLoadingPositionForPartition2,
     },
   ]);
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
+  }
 }
 
 function* performCutFromNeighbors(
@@ -1369,11 +1381,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   }
 
   /* Reload meshes */
-  yield* call(syncWithBackend);
-  if (unsubscribeFromAnnotationMutex) {
-    yield* call(unsubscribeFromAnnotationMutex);
-  }
 
+  // todo: see other refreshAffectedSegmentItemsAndMeshes comments
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       oldAgglomerateId: sourceInfo.agglomerateId,
@@ -1386,6 +1395,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       nodePosition: targetInfo.position,
     },
   ]);
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
+  }
 }
 
 function* handleProofreadCutFromNeighbors(action: Action) {
@@ -1515,12 +1528,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     ),
   ]);
 
-  yield* call(syncWithBackend);
-  if (unsubscribeFromAnnotationMutex) {
-    yield* call(unsubscribeFromAnnotationMutex);
-  }
-
   /* Reload meshes */
+  // todo: see other refreshAffectedSegmentItemsAndMeshes comments
   yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
     {
       oldAgglomerateId: targetAgglomerateIdBeforeSplit,
@@ -1533,6 +1542,11 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       nodePosition: neighbor.position,
     })),
   ]);
+
+  yield* call(syncWithBackend);
+  if (unsubscribeFromAnnotationMutex) {
+    yield* call(unsubscribeFromAnnotationMutex);
+  }
 }
 
 // Helper functions

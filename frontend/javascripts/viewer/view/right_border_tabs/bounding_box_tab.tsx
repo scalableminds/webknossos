@@ -24,7 +24,7 @@ import type { UserBoundingBox } from "viewer/store";
 import UserBoundingBoxInput from "viewer/view/components/setting_input_views";
 import DownloadModalView from "../action_bar/download_modal_view";
 import ButtonComponent from "../components/button_component";
-import { getContextMenuPositionFromEvent } from "../context_menu";
+import { getContextMenuPositionFromEvent } from "../context_menu/helpers";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 

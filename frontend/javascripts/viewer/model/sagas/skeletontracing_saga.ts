@@ -155,6 +155,7 @@ function* centerActiveNode(action: Action): Saga<void> {
         activeNodePosition,
         false,
         applyRotation ? nodeRotation : undefined,
+        true,
       );
     }
     if (activeNode.additionalCoordinates) {

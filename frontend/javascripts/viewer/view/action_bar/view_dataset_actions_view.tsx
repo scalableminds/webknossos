@@ -111,8 +111,10 @@ export default function ViewDatasetActionsView(props: Props) {
           style={{
             padding: "0 10px",
           }}
+          icon={<DownOutlined />}
+          iconPlacement="end"
         >
-          Menu <DownOutlined />
+          Menu
         </ButtonComponent>
       </Dropdown>
     </div>

@@ -1,5 +1,4 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
-<<<<<<< HEAD
 import type {
   AdditionalCoordinate,
   APIMagRestrictions,
@@ -7,14 +6,7 @@ import type {
   TreeAgglomerateInfo,
 } from "types/api_types";
 import type { TreeType, Vector3 } from "viewer/constants";
-||||||| 5175fc18c9
-import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
-=======
-import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
-import type { Vector3 } from "viewer/constants";
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type {
@@ -163,8 +155,8 @@ export type ApplicableVolumeServerUpdateAction = AsServerAction<ApplicableVolume
 
 export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = T extends any
   ? Omit<T, "value"> & {
-      value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
-    }
+    value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
+  }
   : never;
 
 export type ApplicableSkeletonUpdateAction =
@@ -890,8 +882,8 @@ export function updateSegmentPartialVolumeAction(
   const maybeMetadataWrapper =
     metadata != null
       ? {
-          metadata: enforceValidMetadata(metadata),
-        }
+        metadata: enforceValidMetadata(metadata),
+      }
       : ({} as EmptyObject);
   return {
     name: "updateSegmentPartial",

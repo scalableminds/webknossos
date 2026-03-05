@@ -90,7 +90,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     // assume additionalAxes,x,y,z
     // the c. at the beginning of chunk names is optional
     // (used in "default" chunk encoding, which was used for volume downloads previously)
-    val chunkPathRegex = """(?:[^/]*/)*(\d+-\d+-\d+|\d+)/(?:c\.)?(.+)""".r
+    val chunkPathRegex = """^(?:[^/]*+/)*(\d+-\d+-\d+|\d+)/(?:c\.)?(.+)$""".r
 
     path match {
       case chunkPathRegex(magStr, dimsStr) =>

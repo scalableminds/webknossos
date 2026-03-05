@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
+  MissingBucketHeaders,
   ProtoGeometryImplicits,
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased
@@ -62,6 +63,7 @@ class VolumeTracingController @Inject()(
     val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with ProtoGeometryImplicits
+    with MissingBucketHeaders
     with KeyValueStoreImplicits {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
@@ -226,16 +228,10 @@ class VolumeTracingController @Inject()(
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
             } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
         }
       }
     }
-
-  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
-
-  private def formatMissingBucketList(indices: List[Int]): String =
-    "[" + indices.mkString(", ") + "]"
 
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>

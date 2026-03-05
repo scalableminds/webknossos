@@ -66,7 +66,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -121,7 +121,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the merge-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -173,7 +173,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the merge-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -228,7 +228,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -282,7 +282,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -347,7 +347,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1, undefined, null, 1));
 
         // Execute the actual merge via meshes merging segment 1 with segment 6.
@@ -391,7 +391,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1, undefined, null, 1));
 
         // Prepare the server's reply for the upcoming split.
@@ -471,7 +471,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+        yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
         yield put(setActiveCellAction(2));
 
         // Execute the actual merge and wait for the finished mapping.
@@ -562,7 +562,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(4, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(4));
       yield makeMappingEditableHelper();
       const othersMayEdit = true;
@@ -680,7 +680,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [4, 4, 4] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       const othersMayEdit = true;
@@ -768,7 +768,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -892,7 +892,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+      yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
       yield put(setActiveCellAction(2));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -1011,7 +1011,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield call(initializeMappingAndTool, context, tracingId);
 
       // Activate segment 2, setup editable mapping, make it shared and load agglomerate skeletons.
-      yield put(updateSegmentAction(2, { somePosition: [2, 2, 2] }, tracingId));
+      yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
       yield put(setActiveCellAction(2));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -1105,7 +1105,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1339, { somePosition: [1337, 1337, 1337] }, tracingId));
+      yield put(updateSegmentAction(1339, { anchorPosition: [1337, 1337, 1337] }, tracingId));
       yield put(setActiveCellAction(1339, undefined, null, 1337));
 
       yield makeMappingEditableHelper();
@@ -1171,7 +1171,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -1222,7 +1222,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));

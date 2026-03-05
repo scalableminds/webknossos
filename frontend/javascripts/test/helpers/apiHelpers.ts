@@ -1,5 +1,5 @@
-import type { MeshChunkDataRequestList, MeshSegmentInfo } from "admin/api/mesh.ts";
 import type { MeshSegmentInfo } from "admin/api/mesh";
+import type { MeshChunkDataRequestList, MeshSegmentInfo } from "admin/api/mesh.ts";
 import {
   acquireAnnotationMutex,
   getDataset,

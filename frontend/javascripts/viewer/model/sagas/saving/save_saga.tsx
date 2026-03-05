@@ -63,7 +63,13 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type { NumberLike, NumberLikeMap, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
+import type {
+  NumberLike,
+  NumberLikeMap,
+  SkeletonTracing,
+  StoreAnnotation,
+  VolumeTracing,
+} from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
@@ -293,8 +299,8 @@ function* updatePendingProofreadingOperationInfoAction() {
     )?.get(adaptToType(sourceInfo.unmappedId));
     const targetAgglomerateIdFromServer = targetInfo
       ? (agglomerateInfoFromServer as NumberLikeMap | undefined)?.get(
-        adaptToType(targetInfo.unmappedId),
-      )
+          adaptToType(targetInfo.unmappedId),
+        )
       : 0;
     yield* put(
       setPendingProofreadingOperationInfoAction({
@@ -305,9 +311,9 @@ function* updatePendingProofreadingOperationInfoAction() {
         },
         targetInfo: targetInfo
           ? {
-            ...targetInfo,
-            agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
-          }
+              ...targetInfo,
+              agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
+            }
           : null,
       }),
     );
@@ -521,13 +527,13 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     const guardAsBlocking = WkDevFlags.liveCollab && isUpdatingCurrentlyAllowed;
     const { successful, shouldTerminate } = guardAsBlocking
       ? yield* call(
-        // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
-        enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
-        performRebasingIfNecessary,
-        REBASING_BUSY_BLOCK_REASON,
-        // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
-        SagaIdentifier.SAVE_SAGA,
-      )
+          // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
+          enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
+          performRebasingIfNecessary,
+          REBASING_BUSY_BLOCK_REASON,
+          // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
+          SagaIdentifier.SAVE_SAGA,
+        )
       : yield* call(performRebasingIfNecessary);
 
     if (shouldTerminate) {
@@ -930,7 +936,7 @@ function* reloadMeshes(
     const segments = yield* select((state) => getSegmentsForLayer(state, tracingId));
 
     for (const agglomerateId of meshIdsToReload) {
-      const segmentPosition = segments.getNullable(agglomerateId)?.somePosition;
+      const segmentPosition = segments.getNullable(agglomerateId)?.anchorPosition;
       // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
       if (segmentPosition || hasSegmentIndex) {
         refreshList.push({
@@ -939,7 +945,9 @@ function* reloadMeshes(
         });
       }
     }
-    refreshAffectedMeshesEffects.push(call(refreshAffectedSegmentItemsAndMeshes, tracingId, refreshList));
+    refreshAffectedMeshesEffects.push(
+      call(refreshAffectedSegmentItemsAndMeshes, tracingId, refreshList),
+    );
   }
 }
 

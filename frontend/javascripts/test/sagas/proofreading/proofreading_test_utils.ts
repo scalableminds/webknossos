@@ -1,6 +1,5 @@
 import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import type { RequestOptionsWithData } from "libs/request";
-import { sleep } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
@@ -15,8 +14,6 @@ import {
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { delay } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import Constants, { type Vector2, type Vector3 } from "viewer/constants";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import type { Vector2, Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
@@ -31,27 +28,23 @@ import {
   toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
 import { setMappingAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
 import {
+  applyVolumeUpdateActionsFromServerAction,
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { type Saga, select } from "viewer/model/sagas/effect_generators";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
-import { setMappingAction } from "viewer/model/actions/settings_actions";
-import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
-import { setToolAction } from "viewer/model/actions/ui_actions";
-import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import type {
   ApplicableSkeletonServerUpdateAction,
   ApplicableVolumeServerUpdateAction,
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { NumberLike, SaveQueueEntry } from "viewer/store";
-import type { SaveQueueEntry, WebknossosState } from "viewer/store";
+import type { NumberLike, SaveQueueEntry, WebknossosState } from "viewer/store";
 import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
@@ -470,21 +463,21 @@ export function prepareGetNeighborsForAgglomerateNode(
       if (segmentInfo.segmentId === 2) {
         const neighbors = includeSegmentIdToOne
           ? [
-            {
-              segmentId: 1,
-              position: [1, 1, 1] as Vector3,
-            },
-            {
-              segmentId: 3,
-              position: [3, 3, 3] as Vector3,
-            },
-          ]
+              {
+                segmentId: 1,
+                position: [1, 1, 1] as Vector3,
+              },
+              {
+                segmentId: 3,
+                position: [3, 3, 3] as Vector3,
+              },
+            ]
           : [
-            {
-              segmentId: 3,
-              position: [3, 3, 3] as Vector3,
-            },
-          ];
+              {
+                segmentId: 3,
+                position: [3, 3, 3] as Vector3,
+              },
+            ];
         return {
           segmentId: 2,
           neighbors,

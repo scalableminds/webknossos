@@ -101,11 +101,11 @@ export function* setupSavingForTracingType(
   const tracingActionChannel = yield* actionChannel(
     tracingType === "skeleton"
       ? [
-        ...SkeletonTracingSaveRelevantActions,
-        // SET_SKELETON_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
-        // should not create its own Undo/Redo stack entry
-        "SET_SKELETON_TRACING",
-      ]
+          ...SkeletonTracingSaveRelevantActions,
+          // SET_SKELETON_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
+          // should not create its own Undo/Redo stack entry
+          "SET_SKELETON_TRACING",
+        ]
       : VolumeTracingSaveRelevantActions,
     actionBuffer,
   );

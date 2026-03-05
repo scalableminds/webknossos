@@ -67,7 +67,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(
         updateSegmentAction(
           1,
-          { somePosition: [agglomerateId, agglomerateId, agglomerateId] },
+          { anchorPosition: [agglomerateId, agglomerateId, agglomerateId] },
           tracingId,
         ),
       );
@@ -100,7 +100,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(
         updateSegmentAction(
           sourceSegmentId,
-          { somePosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
+          { anchorPosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
           tracingId,
         ),
       );
@@ -147,7 +147,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(
         updateSegmentAction(
           sourceSegmentId,
-          { somePosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
+          { anchorPosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
           tracingId,
         ),
       );

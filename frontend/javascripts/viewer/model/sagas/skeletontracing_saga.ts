@@ -372,8 +372,8 @@ export function* getAgglomerateSkeletonTracing(
 function handleAgglomerateLoadingError(
   e:
     | {
-      messages: Array<Message>;
-    }
+        messages: Array<Message>;
+      }
     | Error,
 ) {
   if (!(e instanceof Error)) {

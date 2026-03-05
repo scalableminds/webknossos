@@ -118,7 +118,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // due to the user's interactions.
         yield loadAgglomerateMeshes([1, 6]);
 
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
         const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
@@ -169,7 +169,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // due to the user's interactions.
         yield loadAgglomerateMeshes([1, 4]);
 
-        yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
         const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
@@ -368,7 +368,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield makeMappingEditableHelper();
@@ -445,7 +445,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield makeMappingEditableHelper();
@@ -507,7 +507,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
 
@@ -590,7 +590,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
 

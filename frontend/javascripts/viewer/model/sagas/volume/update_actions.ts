@@ -5,8 +5,8 @@ import type {
   MetadataEntryProto,
   TreeAgglomerateInfo,
 } from "types/api_types";
-import type { TreeType, Vector3 } from "viewer/constants";
 import type { EmptyObject } from "types/type_utils";
+import type { TreeType, Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type {
@@ -155,8 +155,8 @@ export type ApplicableVolumeServerUpdateAction = AsServerAction<ApplicableVolume
 
 export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = T extends any
   ? Omit<T, "value"> & {
-    value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
-  }
+      value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
+    }
   : never;
 
 export type ApplicableSkeletonUpdateAction =
@@ -882,8 +882,8 @@ export function updateSegmentPartialVolumeAction(
   const maybeMetadataWrapper =
     metadata != null
       ? {
-        metadata: enforceValidMetadata(metadata),
-      }
+          metadata: enforceValidMetadata(metadata),
+        }
       : ({} as EmptyObject);
   return {
     name: "updateSegmentPartial",

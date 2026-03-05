@@ -243,9 +243,7 @@ describe("Proofreading (with mesh actions)", () => {
       },
     );
 
-  function* simulateSplitAgglomeratesViaMeshes(
-    context: WebknossosTestContext,
-  ): Saga<void> {
+  function* simulateSplitAgglomeratesViaMeshes(context: WebknossosTestContext): Saga<void> {
     // Splits segments 1337 and 1338 which are assumed to both be mapped to agglomerate 6.
     const { api } = context;
     const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);

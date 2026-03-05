@@ -1,22 +1,22 @@
-import { type ActionPattern, actionChannel, call, flush, put, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { delay } from "typed-redux-saga";
+import type { NeighborInfo } from "admin/rest_api";
+import { type ActionPattern, type ActionPattern, actionChannel, actionChannel, call, call, flush, flush, put, put, take, take } from "redux-saga/effects";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
+  getFlattenedUpdateActions, setupWebknossosForTesting,
+  setupWebknossosForTesting, type WebknossosTestContext,
   type WebknossosTestContext,
-  setupWebknossosForTesting,
-  getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
-import type { NeighborInfo } from "admin/rest_api";
-import { actionChannel, type ActionPattern, call, flush, put, take } from "redux-saga/effects";
+import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
+import { delay, select } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import type { Action } from "viewer/model/actions/actions";
+import type { Action, Action } from "viewer/model/actions/actions";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
-import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
 import {
   cutAgglomerateFromNeighborsAction,
-  minCutAgglomerateWithPositionAction,
+  minCutAgglomerateWithPositionAction, proofreadMergeAction,
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
@@ -28,10 +28,8 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { VERSION_POLL_INTERVAL_COLLAB } from "viewer/model/sagas/saving/save_saga";
 import { Store } from "viewer/singletons";
-import { startSaga } from "viewer/store";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type NumberLike, startSaga } from "viewer/store";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { type NumberLike, startSaga, startSaga } from "viewer/store";
+import { afterEach, afterEach, beforeEach, beforeEach, describe, describe, expect, expect, it, it, vi } from "vitest";
 import {
   expectedMappingAfterMerge,
   expectedMappingAfterMerge2,
@@ -46,10 +44,6 @@ import {
   performCutFromAllNeighbours,
   prepareGetNeighborsForAgglomerateNode,
 } from "./proofreading_test_utils";
-import type { Vector3 } from "viewer/constants";
-import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
-import type { Action } from "viewer/model/actions/actions";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -651,7 +645,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(3, { somePosition: [3, 3, 3] }, tracingId));
+      yield put(updateSegmentAction(3, { anchorPosition: [3, 3, 3] }, tracingId));
       yield put(setActiveCellAction(3));
 
       yield call(createEditableMapping);
@@ -1133,7 +1127,7 @@ describe("Proofreading (Multi User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield makeMappingEditableHelper();

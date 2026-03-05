@@ -9,7 +9,7 @@ import {
 import { setModel } from "viewer/singletons";
 import { describe, expect, it, vi } from "vitest";
 import DATASET from "../fixtures/dataset_server_object";
-import { execCall, expectValueDeepEqual } from "../helpers/sagaHelpers";
+import { execCall, expectValueDeepEqual } from "../helpers/saga_test_helpers";
 
 setModel(Model);
 

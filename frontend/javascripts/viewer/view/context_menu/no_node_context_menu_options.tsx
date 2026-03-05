@@ -215,8 +215,8 @@ export function useNoNodeContextMenuOptions(
         clickedSegmentId,
         {
           isVisible: true,
-          somePosition: globalPosition,
-          someAdditionalCoordinates: additionalCoordinates,
+          anchorPosition: globalPosition,
+          additionalCoordinates: additionalCoordinates,
         },
         visibleSegmentationLayer.name,
         undefined,

@@ -10,7 +10,7 @@ import type React from "react";
 import { type Key, useCallback, useEffect, useRef, useState } from "react";
 import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import type { FolderItem } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
   type DatasetCollectionContextValue,

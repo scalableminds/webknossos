@@ -27,15 +27,15 @@ export function useContextMenuActions() {
 
       setActiveCell: (
         segmentId: number,
-        somePosition?: Vector3,
-        someAdditionalCoordinates?: AdditionalCoordinate[],
+        anchorPosition?: Vector3,
+        additionalCoordinates?: AdditionalCoordinate[],
         maybeUnmappedSegmentId?: number,
       ) => {
         dispatch(
           setActiveCellAction(
             segmentId,
-            somePosition,
-            someAdditionalCoordinates,
+            anchorPosition,
+            additionalCoordinates,
             maybeUnmappedSegmentId,
           ),
         );

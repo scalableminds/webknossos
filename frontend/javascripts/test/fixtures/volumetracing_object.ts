@@ -8,9 +8,9 @@ import { preprocessDataset } from "viewer/model_initialization";
 import { combinedReducer } from "viewer/store";
 import { apiDatasetForVolumeTracing } from "./dataset_server_object";
 import { FlycamMatrixWithDefaultRotation } from "./flycam_object";
-import { tracing as serverVolumeTracing } from "./volumetracing_server_objects";
+import { tracing as serverVolumeTracing, VOLUME_TRACING_ID } from "./volumetracing_server_objects";
 
-export const VOLUME_TRACING_ID = "volumeTracingId";
+export { VOLUME_TRACING_ID };
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 

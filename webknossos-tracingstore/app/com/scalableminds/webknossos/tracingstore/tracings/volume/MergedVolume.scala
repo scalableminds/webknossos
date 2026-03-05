@@ -151,7 +151,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
   def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
     MergedVolumeStats(
       Some(largestSegmentId),
-      presentMags.map(vec3IntToProto),
+      presentMags,
       idMaps.map(idMap => idMap._1.zip(idMap._2).toMap),
       createdSegmentIndex
     )

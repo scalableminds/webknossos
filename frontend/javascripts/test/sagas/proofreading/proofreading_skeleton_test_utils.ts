@@ -28,6 +28,7 @@ import type { NumberLike, SkeletonTracing, WebknossosState } from "viewer/store"
 import { expect, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
 import {
+  expectMapping,
   getAllCurrentlyLoadedMeshIds,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
@@ -214,25 +215,19 @@ export function* performMergeTreesProofreading(
 ): Saga<void> {
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     yield loadInitialMeshes(context);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
   yield makeMappingEditableHelper();
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   const agglomerateTrees = yield loadAgglomerateSkeletons(
     context,
@@ -254,26 +249,20 @@ export function* performSplitTreesProofreading(
 ): Saga<void> {
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     yield loadInitialMeshes(context);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield makeMappingEditableHelper();
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
 
   const agglomerateTrees = yield loadAgglomerateSkeletons(context, [1], true, true);
@@ -292,26 +281,20 @@ export function* performMinCutWithNodesProofreading(
   const { api } = context;
   const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     yield loadInitialMeshes(context);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield makeMappingEditableHelper();
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping1).toEqual(initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
   // Load agglomerate skeleton for agglomerate id 1.
   yield call(loadAgglomerateSkeletons, context, [1], true, true);

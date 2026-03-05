@@ -83,13 +83,7 @@ import {
 import { api, Model } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-<<<<<<< HEAD
 import { dispatchEnsureHasNewestVersionAsync } from "../actions/save_actions";
-import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
-||||||| 5175fc18c9
-import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
-=======
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
@@ -378,8 +372,8 @@ export function* getAgglomerateSkeletonTracing(
 function handleAgglomerateLoadingError(
   e:
     | {
-        messages: Array<Message>;
-      }
+      messages: Array<Message>;
+    }
     | Error,
 ) {
   if (!(e instanceof Error)) {
@@ -642,9 +636,9 @@ function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: b
   }
   // In case of a deep diff, also diff the color and metadata deeply, which is not needed for shallow diffing.
   const doesMetadataOrColorDiffer = useDeepEqualityCheck
-  ? !isEqual(prevTree.color, tree.color) || !isEqual(prevTree.metadata, tree.metadata)
-  : prevTree.color !== tree.color || prevTree.metadata !== tree.metadata;
-  if(doesMetadataOrColorDiffer){
+    ? !isEqual(prevTree.color, tree.color) || !isEqual(prevTree.metadata, tree.metadata)
+    : prevTree.color !== tree.color || prevTree.metadata !== tree.metadata;
+  if (doesMetadataOrColorDiffer) {
     return true;
   }
   // branchPoints and comments are arrays and therefore checked for

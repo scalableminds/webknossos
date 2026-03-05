@@ -1,5 +1,5 @@
 import type { MeshSegmentInfo } from "admin/api/mesh";
-import type { MeshChunkDataRequestList, MeshSegmentInfo } from "admin/api/mesh.ts";
+import type { MeshChunkDataRequestList } from "admin/api/mesh.ts";
 import {
   acquireAnnotationMutex,
   getDataset,
@@ -52,7 +52,6 @@ import CustomLOD from "viewer/controller/custom_lod";
 import type { BufferGeometryWithInfo } from "viewer/controller/mesh_helpers";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import type { SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
-import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";

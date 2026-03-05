@@ -1,10 +1,9 @@
-import type { NeighborInfo } from "admin/rest_api";
-import { type ActionPattern, type ActionPattern, actionChannel, actionChannel, call, call, flush, flush, put, put, take, take } from "redux-saga/effects";
+import { type ActionPattern, actionChannel, call, flush, put, take } from "redux-saga/effects";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
-  getFlattenedUpdateActions, setupWebknossosForTesting,
-  setupWebknossosForTesting, type WebknossosTestContext,
+  getFlattenedUpdateActions,
+  setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
@@ -12,11 +11,10 @@ import { delay, select } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import type { Action, Action } from "viewer/model/actions/actions";
+import type { Action } from "viewer/model/actions/actions";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
-  cutAgglomerateFromNeighborsAction,
-  minCutAgglomerateWithPositionAction, proofreadMergeAction,
+  minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
 } from "viewer/model/actions/proofread_actions";
 import {
@@ -28,8 +26,8 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { VERSION_POLL_INTERVAL_COLLAB } from "viewer/model/sagas/saving/save_saga";
 import { Store } from "viewer/singletons";
-import { type NumberLike, startSaga, startSaga } from "viewer/store";
-import { afterEach, afterEach, beforeEach, beforeEach, describe, describe, expect, expect, it, it, vi } from "vitest";
+import { startSaga } from "viewer/store";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   expectedMappingAfterMerge,
   expectedMappingAfterMerge2,
@@ -834,7 +832,6 @@ describe("Proofreading (Multi User)", () => {
 
       The resulting mapping correctly incorporates all backend split and merge actions, including those involving initially not-loaded segments.
      */
-    const { api } = context;
 
     /* Initial mapping should now be
      * [[ 1, 1 ],

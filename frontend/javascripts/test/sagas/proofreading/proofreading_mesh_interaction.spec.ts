@@ -1,14 +1,12 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
-import {
-  type WebknossosTestContext,
-  setupWebknossosForTesting,
-  getFlattenedUpdateActions,
-} from "test/helpers/apiHelpers";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { delay } from "typed-redux-saga";
+import {
+  getFlattenedUpdateActions,
+  setupWebknossosForTesting,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -21,13 +19,13 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { type Saga, select } from "viewer/model/sagas/effect_generators";
+import { select, type Saga } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import {
+  startSaga,
   type ActiveMappingInfo,
   type NumberLike,
-  startSaga,
   type WebknossosState,
 } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -12,7 +12,6 @@ import type {
 } from "types/api_types";
 import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";

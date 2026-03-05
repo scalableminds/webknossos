@@ -1,11 +1,11 @@
-import { type ActionPattern, actionChannel, call, flush, put, take } from "redux-saga/effects";
-import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   getFlattenedUpdateActions,
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { type ActionPattern, actionChannel, call, flush, put, take } from "redux-saga/effects";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 import { delay } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -504,8 +504,7 @@ describe("Proofreading (Multi User)", () => {
     const task = startSaga(function* task() {
       yield performCutFromAllNeighbours(context, tracingId, false);
 
-      const splitSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
-
+      const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-3);
       expect(splitSaveActionBatch).toEqual([
         {
           name: "splitAgglomerate",
@@ -514,6 +513,34 @@ describe("Proofreading (Multi User)", () => {
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1339,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [2, 2, 2],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
+            metadata: [],
+            name: null,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [3, 3, 3],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1340,
+            metadata: [],
+            name: null,
           },
         },
       ]);
@@ -574,7 +601,7 @@ describe("Proofreading (Multi User)", () => {
     const task = startSaga(function* task() {
       yield performCutFromAllNeighbours(context, tracingId, false);
 
-      const splitSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-3);
 
       expect(splitSaveActionBatch).toEqual([
         {
@@ -584,6 +611,34 @@ describe("Proofreading (Multi User)", () => {
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [2, 2, 2],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 4,
+            metadata: [],
+            name: null,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: [3, 3, 3],
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
+            metadata: [],
+            name: null,
           },
         },
       ]);

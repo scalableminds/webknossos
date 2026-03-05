@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Mesh, MeshBasicMaterial } from "three";
+import { BufferAttribute, BufferGeometry } from "three";
 
 // This function should only be used for mocking.
 export function createUnitCubeBufferGeometry() {
@@ -34,9 +34,4 @@ export function createUnitCubeBufferGeometry() {
   geometry.computeVertexNormals();
 
   return geometry;
-}
-
-// This function should only be used for mocking.
-export function makeSimpleMesh(geometry: BufferGeometry) {
-  return new Mesh(geometry, new MeshBasicMaterial({ color: 0xffffff, wireframe: true }));
 }

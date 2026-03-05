@@ -276,12 +276,13 @@ function renderVersion(index) {
     const nodes = [...trees.values().flatMap((tree) => tree.nodes.values())].map((node) => ({
       id: node.id,
     }));
-    console.log("nodes", nodes);
 
     const links = [];
     for (const tree of trees.values()) {
-      for (const edge of tree.edges.outMap.values()) {
-        links.push({ source: edge[0].source, target: edge[0].target });
+      for (const edgeChunk of tree.edges.outMap.values()) {
+        for (const edge of edgeChunk) {
+          links.push({ source: edge.source, target: edge.target });
+        }
       }
     }
     const nodeIdToComponentId = (nodeId) => treeByNodeId.get(nodeId).treeId;

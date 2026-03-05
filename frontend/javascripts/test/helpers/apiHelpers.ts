@@ -31,9 +31,7 @@ import {
   annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
   tracings as MULTI_VOLUME_TRACINGS,
 } from "test/fixtures/multivolume_server_objects";
-import { Group } from "three";
 import type {
-  AdditionalCoordinate,
   APIAnnotation,
   APIDataset,
   APIMeshFileInfo,
@@ -47,11 +45,10 @@ import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
-import Constants, { ControlModeEnum, type Vector2, type Vector3 } from "viewer/constants";
-import CustomLOD from "viewer/controller/custom_lod";
-import type { BufferGeometryWithInfo } from "viewer/controller/mesh_helpers";
+import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
+import type CustomLOD from "viewer/controller/custom_lod";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
-import type { SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
+import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
@@ -89,7 +86,7 @@ import {
   annotationProto as VOLUME_ANNOTATION_PROTO,
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
-import { createUnitCubeBufferGeometry, makeSimpleMesh } from "./geometry_helpers";
+import { createUnitCubeBufferGeometry } from "./geometry_helpers";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -639,70 +636,8 @@ export async function setupWebknossosForTesting(
   });
   setSceneController({
     // @ts-expect-error
-    segmentMeshController: {
-      meshesGroupsPerSegmentId: {},
-      updateActiveUnmappedSegmentIdHighlighting: vi.fn(),
-      getLODGroupOfLayer(layerName: string): CustomLOD | undefined {
-        return segmentLodGroups[layerName];
-      },
-      addMeshFromGeometry: vi.fn(
-        (
-          geometry: BufferGeometryWithInfo,
-          segmentId: number,
-          _scale: Vector3 | null = null,
-          _lod: number,
-          layerName: string,
-          _additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-          _opacity: number | undefined,
-          _isMerged: boolean,
-        ) => {
-          // TODOM: make geometry, make mesh, add to internal structure
-          console.error("adding mesh", segmentId);
-          const mesh = makeSimpleMesh(geometry);
-          const group = new Group() as SceneGroupForMeshes;
-          group.add(mesh);
-          group.segmentId = segmentId;
-          if (!segmentLodGroups[layerName]) {
-            segmentLodGroups[layerName] = new CustomLOD();
-          }
-          const lodGroup = segmentLodGroups[layerName];
-          lodGroup.addNoLODSupportedMesh(group);
-        },
-      ),
-      removeMeshById: vi.fn((segmentId: number, layerName: string, _options?: { lod: number }) => {
-        console.error("removing mesh", segmentId);
-        let groupToRemove = null;
-        segmentLodGroups[layerName]?.traverse((group) => {
-          if ((group as SceneGroupForMeshes)?.segmentId === segmentId) {
-            groupToRemove = group;
-          }
-        }) as SceneGroupForMeshes | undefined;
-        if (groupToRemove) {
-          segmentLodGroups[layerName]?.removeNoLODSupportedMesh(groupToRemove);
-        } else {
-          console.warn(
-            `Tried to remove mesh for segment ${segmentId} in mocked segmentMeshController.`,
-          );
-        }
-      }),
-      setMeshVisibility: vi.fn(
-        (
-          id: number,
-          visibility: boolean,
-          layerName: string,
-          _additionalCoordinates?: AdditionalCoordinate[] | null,
-        ) => {
-          const lodGroup = segmentLodGroups[layerName];
-          lodGroup.children.forEach((group) => {
-            if ((group as SceneGroupForMeshes).segmentId === id) {
-              group.visible = visibility;
-            }
-          });
-        },
-      ),
-    },
-    // todop: check whether this would work too
-    // segmentMeshController: new SegmentMeshController(),
+    name: "This is a dummy scene controller so that getSceneController works in the tests.",
+    segmentMeshController: new SegmentMeshController(),
   });
 
   __setFeatures({});

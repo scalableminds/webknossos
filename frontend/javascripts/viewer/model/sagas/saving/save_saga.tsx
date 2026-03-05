@@ -63,13 +63,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-<<<<<<< HEAD
-import type { NumberLike, NumberLikeMap, SkeletonTracing, VolumeTracing } from "viewer/store";
-||||||| 5175fc18c9
-import type { NumberLike, SkeletonTracing, VolumeTracing } from "viewer/store";
-=======
-import type { NumberLike, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
+import type { NumberLike, NumberLikeMap, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
@@ -299,8 +293,8 @@ function* updatePendingProofreadingOperationInfoAction() {
     )?.get(adaptToType(sourceInfo.unmappedId));
     const targetAgglomerateIdFromServer = targetInfo
       ? (agglomerateInfoFromServer as NumberLikeMap | undefined)?.get(
-          adaptToType(targetInfo.unmappedId),
-        )
+        adaptToType(targetInfo.unmappedId),
+      )
       : 0;
     yield* put(
       setPendingProofreadingOperationInfoAction({
@@ -311,9 +305,9 @@ function* updatePendingProofreadingOperationInfoAction() {
         },
         targetInfo: targetInfo
           ? {
-              ...targetInfo,
-              agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
-            }
+            ...targetInfo,
+            agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
+          }
           : null,
       }),
     );
@@ -396,19 +390,13 @@ function* fulfillAllEnsureHasNewestVersionActions(
   }
 }
 
-<<<<<<< HEAD
-function* reapplyUpdateActionsFromSaveQueue(): Saga<ApplyingUpdateResults> {
-||||||| 5175fc18c9
-function* reapplyUpdateActionsFromSaveQueue(): Saga<{ successful: boolean }> {
-=======
 function* reapplyUpdateActionsFromSaveQueue(
   // appliedBackendUpdateActions contains the backend actions that were used to forward the local state
   // during rebase. These actions can be used as additional information to adapt the local, pending
   // save queue entries to the rebase.
   appliedBackendUpdateActions: APIUpdateActionBatch[],
   annotationBeforeRebase: StoreAnnotation,
-): Saga<{ successful: boolean }> {
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
+): Saga<ApplyingUpdateResults> {
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const currentVersion = yield* select((state) => state.annotation.version);
   if (saveQueueEntries.length === 0) {
@@ -475,17 +463,11 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     }
     if (needsRebasing) {
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
-<<<<<<< HEAD
-      const { success: successful } = yield* call(reapplyUpdateActionsFromSaveQueue);
-||||||| 5175fc18c9
-      const { successful } = yield* call(reapplyUpdateActionsFromSaveQueue);
-=======
-      const { successful } = yield* call(
+      const { success: successful } = yield* call(
         reapplyUpdateActionsFromSaveQueue,
         missingUpdateActions,
         annotationBeforeRebase,
       );
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
       if (!successful) {
         return { successful: false, shouldTerminate: false };
       }
@@ -539,13 +521,13 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     const guardAsBlocking = WkDevFlags.liveCollab && isUpdatingCurrentlyAllowed;
     const { successful, shouldTerminate } = guardAsBlocking
       ? yield* call(
-          // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
-          enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
-          performRebasingIfNecessary,
-          REBASING_BUSY_BLOCK_REASON,
-          // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
-          SagaIdentifier.SAVE_SAGA,
-        )
+        // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
+        enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
+        performRebasingIfNecessary,
+        REBASING_BUSY_BLOCK_REASON,
+        // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
+        SagaIdentifier.SAVE_SAGA,
+      )
       : yield* call(performRebasingIfNecessary);
 
     if (shouldTerminate) {

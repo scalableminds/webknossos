@@ -705,8 +705,6 @@ export async function setupWebknossosForTesting(
     // segmentMeshController: new SegmentMeshController(),
   });
 
-  Store.dispatch(sceneControllerInitializedAction());
-
   __setFeatures({});
 
   try {

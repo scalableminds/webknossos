@@ -84,6 +84,12 @@ export function createSkeletonTracingFromAdjacency(
         queue.push(nb);
       }
     }
+    for (const [segmentId, adjacentSet] of adjacencyList) {
+      if (adjacentSet.has(n)) {
+        visited.add(segmentId);
+        queue.push(segmentId);
+      }
+    }
   }
 
   // If visited only contains startNode but startNode is present in adjacency pairs,

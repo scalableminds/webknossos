@@ -210,7 +210,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 5, 6, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment4And6WithAgglomerateTree1And4);
     });
 
@@ -222,7 +222,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 3, 4, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1And4);
     });
 
@@ -234,7 +234,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 3, 4, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1);
     });
 
@@ -246,7 +246,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 5, 6, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1And4);
     });
 
@@ -259,7 +259,7 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 5, 6, false);
       // There are no agglomerate tree updates as no loaded tree is affected by the merge
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-1)!;
+      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1);
     });
 
@@ -271,7 +271,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 3, 6, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And6WithAgglomerateTree1);
     });
 
@@ -291,7 +291,7 @@ describe("Proofreading should generate correct update actions", () => {
         } as MinCutTargetEdge,
       ];
       yield call(makeProofreadSplit, context, [1], 2, 3, 1, minCutEdges, false);
-      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment2And3WithAgglomerateTree1);
     });
 
@@ -311,7 +311,7 @@ describe("Proofreading should generate correct update actions", () => {
         } as MinCutTargetEdge,
       ];
       yield call(makeProofreadSplit, context, [1], 1, 2, 1, minCutEdges, false);
-      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2WithAgglomerateTree1);
     });
 
@@ -341,8 +341,10 @@ describe("Proofreading should generate correct update actions", () => {
       ];
 
       yield call(makeProofreadSplit, context, [1, 4, 6], 2, 3, 1, minCutEdges, false);
-      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-2)!;
-      expect(splitAndTreeUpdates).toStrictEqual(splitSegment2And3WithAgglomerateTrees1And4And6);
+      const splitAndTreeAndSegmentUpdates = getNestedUpdateActions(context).slice(-4)!;
+      expect(splitAndTreeAndSegmentUpdates).toStrictEqual(
+        splitSegment2And3WithAgglomerateTrees1And4And6,
+      );
     });
 
     await task.toPromise();
